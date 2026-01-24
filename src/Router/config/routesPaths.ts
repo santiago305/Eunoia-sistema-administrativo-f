@@ -15,17 +15,8 @@
  */
 
 export const RoutesPaths = {
-  // 📖 Rutas públicas
-  home: "/",
-  about: "/about",
-  contact: "/contact",
-  products: "/products",
-  productShow: (productId: string) => `/products/${productId}`,
-
   // 🔐 Rutas de autenticación
   login: "/login",
-  register: "/register",
-  clientsRegister: "/clients-register",
 
   // 📊 Rutas de Dashboard
   dashboard: "/dashboard",

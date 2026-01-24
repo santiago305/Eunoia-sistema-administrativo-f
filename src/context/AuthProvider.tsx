@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { checkTokenValidity, loginUser, logoutUser, registerUser } from "@/services/authService";
 import { LoginCredentials, RegisterCredentials } from "@/types/auth";
-import { PropsUrl } from "@/router/guards/typeGuards";
 import { AuthContext } from "./AuthContext";
 import { checkExistingClient } from "@/services/clientsService";
 import { findOwnUser } from "@/services/userService";
 import { AuthResponse } from "@/types/AuthResponse";
+import { PropsUrl } from "@/Router/guards/typeGuards";
 
 /**
  * Proveedor de autenticación.

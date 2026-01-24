@@ -16,9 +16,9 @@ import { adminRoutes } from "./dashboard/adminRoutes";
 import { monitorRoutes } from "./dashboard/monitorRoutes";
 import { usersRoutes } from "./dashboard/usersRoutes";
 import { RoutesPaths } from "../config/routesPaths";
+import { Home } from "@/pages";
 
-const DashboardLayout = lazy(() => import("@/pages/dashboard/DashboardLayout"));
-const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
+
 const ErrorPage = lazy(() => import("@/pages/Error404"));
 
 export const dashboardRoutes: RouteObject[] = [
@@ -26,12 +26,12 @@ export const dashboardRoutes: RouteObject[] = [
     path: RoutesPaths.dashboard,
     element: (
       <PrivateRoute>
-        <DashboardLayout />
+        <Home />
       </PrivateRoute>
     ),
     errorElement: <ErrorPage />,
     children: [
-      { index: true, element: <Dashboard /> }, // /dashboard
+      { index: true, element: <Home /> }, // /dashboard
       ...dashboardPublicRoutes,
       ...adminRoutes,
       ...monitorRoutes,

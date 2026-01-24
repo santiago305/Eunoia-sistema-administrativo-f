@@ -1,24 +1,14 @@
 
 import { RouteMetadata } from "../types/RouterTypes";
-import { RoutesPaths } from "./routesPaths";
 
 // Carga dinámica de componentes
 
 export const routesConfig: RouteMetadata[] = [
 
-  // 📄 Rutas públicas
-  { path: RoutesPaths.home, name: "Home", isPublic: true },
-  { path: RoutesPaths.about, name: "About", isPublic: true },
-  { path: RoutesPaths.contact, name: "Contact", isPublic: true },
-  { path: "/products", name: "Products", isPublic: true },
-  { path: "/products/:product", name: "Product.Show", isPublic: true },
 
   // 🔐 Rutas de autenticación
   { path: "/login", name: "Login", isAuthRoute: true },
-  { path: "/register", name: "Register", isAuthRoute: true },
 
-  // 👤 Registro de cliente (protegido)
-  { path: "/clientsregister", name: "ClientsRegister", requiresClientRegister: true },
 
   // 📊 Dashboard y rutas anidadas bajo DashboardLayout
   { path: "/dashboard", name: "Dashboard", isProtected: true },
