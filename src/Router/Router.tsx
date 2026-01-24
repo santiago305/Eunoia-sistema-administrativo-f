@@ -20,11 +20,16 @@
  */
 
 import ErrorPage from "@/pages/Error404";
-import { createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 import { authRoutes } from "./modules/AuthRoutes";
 import { dashboardRoutes } from "./modules/DashboardRoutes";
+import { RoutesPaths } from "./config/routesPaths";
 
 export const router = createBrowserRouter([
+  {
+    path: RoutesPaths.home,
+    element: <Navigate to={RoutesPaths.login} replace />,
+  },
   ...authRoutes,
   ...dashboardRoutes,
   {

@@ -29,7 +29,9 @@ export const AuthProvider = ({ children }: PropsUrl) => {
    */
   const checkAuth = async () => {
     try {
+      console.log("[AuthProvider.checkAuth] start");
       const valid = await checkTokenValidity();
+      console.log("[AuthProvider.checkAuth] token valid:", valid);
       if (!valid) {
         setIsAuthenticated(false);
         setUserRole(null);
@@ -39,12 +41,14 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       }
       const response = await findOwnUser();
       const role = response.rol;
+      console.log("[AuthProvider.checkAuth] role:", role);
   
       setUserRole(role);
       setIsAuthenticated(true);
   
       if (role === 'user') {
         const exists = await checkExistingClient();
+        console.log("[AuthProvider.checkAuth] hasClient:", exists);
         setHasClient(exists);
       } else {
         setHasClient(null);
@@ -72,7 +76,9 @@ export const AuthProvider = ({ children }: PropsUrl) => {
    */
   const login = async (payload: LoginCredentials): Promise<AuthResponse> => {
     try {
+      console.log("[AuthProvider.login] start", { email: payload.email });
       const data = await loginUser(payload);
+      console.log("[AuthProvider.login] login response has token:", Boolean(data?.access_token));
       if (data?.access_token) {
         await checkAuth();
         return { success: true, message: "Inicio de sesión exitoso" };
