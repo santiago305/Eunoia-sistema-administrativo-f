@@ -9,6 +9,11 @@ interface AuthService {
   [key: string]: any;
 }
 
+export interface UserInfoAuthResponse {
+  user_id: string;
+  rol: string;
+}
+
 /**
  * Inicia sesión de usuario.
  * @param {LoginCredentials} payload - Credenciales de acceso.
@@ -23,7 +28,15 @@ export const loginUser = async (payload: LoginCredentials):Promise<AuthService> 
     throw error;
   }
 };
-
+export const userInfoAuth = async (): Promise<UserInfoAuthResponse> => {
+  try {
+    const response = await axiosInstance.get(API_AUTH_GROUP.userAuth);
+    return response.data;
+  } catch (error) {
+    console.error("error en userInfoAuth",error);
+    throw error;
+  }
+}
 /**
  * Verifica la validez del token JWT.
  * @returns {Promise<boolean>} `true` si el token es válido.

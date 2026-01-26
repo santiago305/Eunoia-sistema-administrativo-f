@@ -6,7 +6,8 @@ export const API_AUTH_GROUP = {
   register: '/auth/register',
   logout: '/auth/logout',
   refreshToken: '/auth/refresh',
-  validateToken: '/auth/validate-token'
+  validateToken: '/auth/validate-token',
+  userAuth: '/auth/me',
 };
 
 /**

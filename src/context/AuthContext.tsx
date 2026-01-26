@@ -11,6 +11,7 @@ import { AuthResponse } from "@/types/AuthResponse";
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: string | null;
+  userId: string | null;
   login: (payload: LoginCredentials) => Promise<AuthResponse>;
   logout: () => void;
   checkAuth: () => Promise<AuthResponse>;

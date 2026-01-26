@@ -1,18 +1,9 @@
 import ShimmerLoader from "@/components/loadings.tsx/ShimmerLoader";
 import { useLocationFlashMessage } from "@/hooks/useLocationFlashMessage";
-import { checkTokenValidity } from "@/services/authService";
-import { useEffect } from "react";
 
 
 export default function Home() {
   useLocationFlashMessage();
-  useEffect(() => {
-    async function check() {
-        const valid = await checkTokenValidity();
-        console.log("checkTokenValidity returned:", valid);
-    }
-    check();
-  }, []);
     return (
         
         <div className="flex flex-col items-center justify-center min-h-screen py-2">
