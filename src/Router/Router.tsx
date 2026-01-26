@@ -5,7 +5,6 @@
  * - Las rutas se estructuran en módulos separados para mejorar la escalabilidad y organización:
  *   - `publicRoutes`: Rutas públicas accesibles sin autenticación.
  *   - `authRoutes`: Rutas relacionadas con autenticación (Login, Registro).
- *   - `clientsRoutes`: Rutas para completar el registro de cliente.
  *   - `dashboardRoutes`: Rutas protegidas bajo el layout de Dashboard.
  * 
  * - Se incluye una ruta wildcard (`*`) para manejar las rutas no encontradas (404), utilizando el componente `ErrorPage`.

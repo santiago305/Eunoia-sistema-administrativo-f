@@ -1,6 +1,6 @@
 import axiosInstance from "@/common/utils/axios";
 import { API_AUTH_GROUP } from "./APIs"
-import { LoginCredentials, RegisterCredentials } from "@/types/auth";
+import { LoginCredentials } from "@/types/auth";
 
 interface AuthService {
   access_token: string;
@@ -23,21 +23,6 @@ export const loginUser = async (payload: LoginCredentials):Promise<AuthService> 
     throw error;
   }
 };
-
-/**
- * Registra un nuevo usuario.
- * @param {RegisterCredentials} payload - Datos de registro.
- * @returns {Promise<AuthService>} Respuesta con tokens y datos del usuario registrado.
- */
-export const registerUser = async (payload: RegisterCredentials):Promise<AuthService> => {
-  try {
-    const response = await axiosInstance.post(API_AUTH_GROUP.register, payload)
-    return response.data;
-  } catch (error) {
-    console.error("error en registerUser",error);
-    throw error;
-  }
-}
 
 /**
  * Verifica la validez del token JWT.

@@ -7,8 +7,6 @@ export const RoutesPaths = {
 
   // Base routes
   home: "/",
-  clientsRegister: "/clientsregister",
-
   // Dashboard routes
   dashboard: "/dashboard",
   dashboardProducts: "/dashboard/products",

@@ -1,22 +1,12 @@
-import { z } from 'zod';
-import { createClientsSchema } from './clientsSchemas';
+import { z } from "zod";
 
 /**
- * Esquema de validación para el inicio de sesión.
+ * Schema de validacion para el inicio de sesion.
  */
 export const LoginSchema = z.object({
-  email: z.string().min(1, 'El email es obligatorio').email('Email inválido'),
-  password: z.string().min(1, 'La Contraseña es obligatoria').min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  email: z.string().min(1, "El email es obligatorio").email("Email invalido"),
+  password: z
+    .string()
+    .min(1, "La contrasena es obligatoria")
+    .min(6, "La contrasena debe tener al menos 6 caracteres"),
 });
-
-/**
- * Esquema de validación para el registro de usuarios.
- */
-export const RegisterSchema = LoginSchema.extend({
-  name: z.string().min(1, 'El nombre es obligatorio'),
-});
-
-/**
- * Esquema de validación para un registro completo (usuario + cliente).
- */
-export const fullRegisterSchema = RegisterSchema.merge(createClientsSchema);

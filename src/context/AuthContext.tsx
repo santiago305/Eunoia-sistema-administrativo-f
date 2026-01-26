@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import { LoginCredentials, RegisterCredentials } from "@/types/auth";
+import { LoginCredentials } from "@/types/auth";
 import { AuthResponse } from "@/types/AuthResponse";
 
 /**
@@ -11,9 +11,7 @@ import { AuthResponse } from "@/types/AuthResponse";
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: string | null;
-  hasClient: boolean | null;
   login: (payload: LoginCredentials) => Promise<AuthResponse>;
-  clientUserRegister: (payload: RegisterCredentials) => Promise<AuthResponse>;
   logout: () => void;
   checkAuth: () => Promise<AuthResponse>;
   loading: boolean;

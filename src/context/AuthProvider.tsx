@@ -1,125 +1,94 @@
-import { useState, useEffect } from "react";
-import { checkTokenValidity, loginUser, logoutUser, registerUser } from "@/services/authService";
-import { LoginCredentials, RegisterCredentials } from "@/types/auth";
+import { useEffect, useState } from "react";
+import { loginUser, logoutUser } from "@/services/authService";
+import { LoginCredentials } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
-import { checkExistingClient } from "@/services/clientsService";
-import { findOwnUser } from "@/services/userService";
+import { findById } from "@/services/userService";
 import { AuthResponse } from "@/types/AuthResponse";
 import { PropsUrl } from "@/Router/guards/typeGuards";
 
-/**
- * Proveedor de autenticación.
- * 
- * Maneja la lógica de autenticación, almacenamiento de tokens, 
- * verificación de roles y control de estados relacionados a 
- * la sesión del usuario. 
- * 
- * @param {PropsUrl} props Contiene los elementos hijos a renderizar.
- * @returns {JSX.Element} Contexto de autenticación aplicado a los componentes hijos.
- */
 export const AuthProvider = ({ children }: PropsUrl) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [hasClient, setHasClient] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
-  /**
-   * Verifica la validez del token y actualiza los estados de autenticación.
-   * También determina si el usuario tiene un cliente asociado (para el rol 'user').
-   */
-  const checkAuth = async () => {
+  const USER_ID_STORAGE_KEY = "auth.userId";
+
+  const extractUserId = (data: any) =>
+    data?.id || data?.userId || data?.user?.id || data?.user?.userId || data?.data?.id || null;
+
+  const extractRole = (data: any) =>
+    data?.rol || data?.role || data?.data?.rol || data?.data?.role || null;
+
+  const checkAuth = async (): Promise<AuthResponse> => {
     try {
+      setLoading(true);
       console.log("[AuthProvider.checkAuth] start");
-      const valid = await checkTokenValidity();
-      console.log("[AuthProvider.checkAuth] token valid:", valid);
-      if (!valid) {
+      const storedUserId = localStorage.getItem(USER_ID_STORAGE_KEY);
+      console.log("[AuthProvider.checkAuth] storedUserId:", storedUserId);
+
+      if (!storedUserId) {
         setIsAuthenticated(false);
         setUserRole(null);
-        setHasClient(null);
-        setLoading(false); 
-        return { success: false, message: "Token inválido o expirado" };
+        setLoading(false);
+        return { success: false, message: "No hay usuario en sesion" };
       }
-      const response = await findOwnUser();
-      const role = response.rol;
+
+      const response = await findById(storedUserId);
+      const role = extractRole(response);
       console.log("[AuthProvider.checkAuth] role:", role);
-  
+
+      if (!role) {
+        setIsAuthenticated(false);
+        setUserRole(null);
+        setLoading(false);
+        return { success: false, message: "No se pudo obtener el rol del usuario" };
+      }
+
       setUserRole(role);
       setIsAuthenticated(true);
-  
-      if (role === 'user') {
-        const exists = await checkExistingClient();
-        console.log("[AuthProvider.checkAuth] hasClient:", exists);
-        setHasClient(exists);
-      } else {
-        setHasClient(null);
-      }
       setLoading(false);
-      return { success: true, message: "Autenticación validada" };
+      return { success: true, message: "Autenticacion validada" };
     } catch (error: any) {
       console.error("Error en checkAuth:", error);
       setIsAuthenticated(false);
       setUserRole(null);
-      setHasClient(null);
       setLoading(false);
-      const message = error.response?.data?.message || "Error inesperado en autenticación";
+      const message = error.response?.data?.message || "Error inesperado en autenticacion";
       return { success: false, message };
-    } 
+    }
   };
 
   useEffect(() => {
     checkAuth();
   }, []);
-  /**
-   * Inicia sesión del usuario.
-   * 
-   * @param {LoginCredentials} payload Credenciales del usuario.
-   */
+
   const login = async (payload: LoginCredentials): Promise<AuthResponse> => {
     try {
       console.log("[AuthProvider.login] start", { email: payload.email });
       const data = await loginUser(payload);
       console.log("[AuthProvider.login] login response has token:", Boolean(data?.access_token));
-      if (data?.access_token) {
+
+      const userId = extractUserId(data);
+      console.log("[AuthProvider.login] userId:", userId);
+
+      if (data?.access_token && userId) {
+        localStorage.setItem(USER_ID_STORAGE_KEY, String(userId));
         await checkAuth();
-        return { success: true, message: "Inicio de sesión exitoso" };
-      } else {
-        return { success: false, message: "No se pudo iniciar sesión" };
+        return { success: true, message: "Inicio de sesion exitoso" };
       }
+
+      return { success: false, message: "No se pudo iniciar sesion" };
     } catch (error: any) {
-      const message = error.response?.data?.message || "Error en la autenticación";
+      const message = error.response?.data?.message || "Error en la autenticacion";
       return { success: false, message };
     }
   };
 
-  /**
-   * Registra a un cliente como usuario.
-   * 
-   * @param {RegisterCredentials} payload Datos de registro.
-   * @returns {Promise<boolean>} `true` si el registro fue exitoso.
-   */
-  const clientUserRegister = async (payload: RegisterCredentials): Promise<AuthResponse> => {
-    try {
-      const data = await registerUser(payload);
-      if (data?.access_token) {
-        await checkAuth();
-        return { success: true, message: "Registro exitoso" };
-      } else {
-        return { success: false, message: "Error al registrar usuario" };
-      }
-    } catch (error: any) {
-      const message = error.response?.data?.message || "Error en el registro";
-      return { success: false, message };
-    }
-  };
-
-  /**
-   * Cierra la sesión actual del usuario.
-   */
   const logout = () => {
-    logoutUser()
+    logoutUser();
+    localStorage.removeItem(USER_ID_STORAGE_KEY);
     setIsAuthenticated(false);
     setUserRole(null);
-    setHasClient(null);
   };
 
   return (
@@ -127,12 +96,10 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       value={{
         isAuthenticated,
         userRole,
-        hasClient,
         login,
-        clientUserRegister,
         logout,
         loading,
-        checkAuth
+        checkAuth,
       }}
     >
       {children}

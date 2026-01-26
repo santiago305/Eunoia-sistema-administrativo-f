@@ -23,18 +23,3 @@ export const API_USERS_GROUP = {
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
 };
-
-/**
- * Grupo de rutas para la gestión de clientes.
- */
-export const API_CLIENTS_GROUP = {
-  createClients: '/clients/create',
-  findAll: '/clients/findAll',
-  findActives: '/clients/actives',
-  findOwnUser: '/clients/client-me',
-  checkExistingClient: '/clients/check-existing-clients/me',
-  findById: (id: string) => `/clients/search/${id}`,
-  findByEmail: (email: string) => `/clients/email/${email}`,
-  updateUser: (id: string) => `/clients/update/${id}`,
-  deleteUser: (id: string) => `/clients/delete/${id}`,
-};
