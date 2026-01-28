@@ -11,10 +11,6 @@
 import { lazy } from "react";
 import { RouteObject } from "react-router-dom";
 import PrivateRoute from "../guards/PrivateRoute";
-import { dashboardPublicRoutes } from "./dashboard/publicDashboardRoutes";
-import { adminRoutes } from "./dashboard/adminRoutes";
-import { monitorRoutes } from "./dashboard/monitorRoutes";
-import { usersRoutes } from "./dashboard/usersRoutes";
 import { RoutesPaths } from "../config/routesPaths";
 import { Home } from "@/pages";
 
@@ -32,10 +28,6 @@ export const dashboardRoutes: RouteObject[] = [
     errorElement: <ErrorPage />,
     children: [
       { index: true, element: <Home /> }, // /dashboard
-      ...dashboardPublicRoutes,
-      ...adminRoutes,
-      ...monitorRoutes,
-      ...usersRoutes,
     ],
   },
 ];
