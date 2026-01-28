@@ -7,7 +7,7 @@ interface AuthService {
   access_token: string;
   refresh_token?: string;
   role: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UserInfoAuthResponse {

@@ -5,7 +5,7 @@ export interface RouteMetadata {
   path: string;
   name: string;
   isPublic?: boolean;               // Ruta pública accesible sin autenticación
-  isAuthRoute?: boolean;            // Ruta de login o registro
+  isAuthRoute?: boolean;            // Ruta de autenticacion
   isProtected?: boolean;            // Ruta protegida (requiere autenticación)
   rolesAllowed?: string[];          // Roles permitidos para acceder (futuro control de roles)
 }

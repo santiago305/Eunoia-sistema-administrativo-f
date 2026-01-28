@@ -3,7 +3,6 @@
  */
 export const API_AUTH_GROUP = {
   authentication: '/auth/login',
-  register: '/auth/register',
   logout: '/auth/logout',
   refreshToken: '/auth/refresh',
   validateToken: '/auth/validate-token',

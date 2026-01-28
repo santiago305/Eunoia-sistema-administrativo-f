@@ -12,12 +12,15 @@ import { userData } from "@/pages/dashboard/app-dashboard/user-data";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import ShimmerLoader from "./loadings.tsx/ShimmerLoader";
 import { Link } from "react-router-dom";
-import { UrlPage } from "@/router/types/RouterTypes";
+import { routesConfig } from "@/router/config/routesConfig";
+import type { RouteMetadata } from "@/router/types/RouterTypes";
+
+type SidebarData = typeof adminData;
 
 export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { userRole } = useAuth();
-  const [data, setData] = useState<any>(null);
-  const dashboardRoute = UrlPage.find(route => route.name === "Dashboard");
+  const [data, setData] = useState<SidebarData | null>(null);
+  const dashboardRoute = routesConfig.find((route: RouteMetadata) => route.name === "Dashboard");
 
   useEffect(() => {
     if (userRole === "admin") {
@@ -37,7 +40,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <Link to={`${dashboardRoute?.url}`}>
+              <Link to={`${dashboardRoute?.path ?? "/dashboard"}`}>
                 <IconInnerShadowTop className="!size-5" />
                 <span className="text-base font-semibold">LAPIN</span>
               </Link>

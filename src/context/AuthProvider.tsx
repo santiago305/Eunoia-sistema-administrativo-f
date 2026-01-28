@@ -3,7 +3,8 @@ import { loginUser, logoutUser, userInfoAuth, type UserInfoAuthResponse } from "
 import { LoginCredentials } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
 import { AuthResponse } from "@/types/AuthResponse";
-import { PropsUrl } from "@/Router/guards/typeGuards";
+import { PropsUrl } from "@/router/guards/typeGuards";
+import { getApiErrorMessage } from "@/common/utils/apiError";
 
 export const AuthProvider = ({ children }: PropsUrl) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -38,13 +39,13 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       setIsAuthenticated(true);
       setLoading(false);
       return { success: true, message: "Autenticacion validada" };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error en checkAuth:", error);
       setIsAuthenticated(false);
       setUserRole(null);
       setUserId(null);
       setLoading(false);
-      const message = error.response?.data?.message || "Error inesperado en autenticacion";
+      const message = getApiErrorMessage(error, "Error inesperado en autenticacion");
       return { success: false, message };
     }
   };
@@ -60,8 +61,8 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       console.log("[AuthProvider.login] login response has token:", Boolean(data?.access_token));
       await checkAuth();
       return { success: true, message: "Inicio de sesion exitoso" };
-    } catch (error: any) {
-      const message = error.response?.data?.message || "Error en la autenticacion";
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Error en la autenticacion");
       return { success: false, message };
     }
   };

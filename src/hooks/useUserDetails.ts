@@ -3,7 +3,7 @@ import axiosInstance from "@/common/utils/axios";
 import { API_USERS_GROUP } from "@/services/APIs";
 
 export const useUserDetails = () => {
-  const [userDetails, setUserDetails] = useState<any>(null);
+  const [userDetails, setUserDetails] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

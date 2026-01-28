@@ -1,5 +1,5 @@
 import { logoutUser, refresh_token } from '@/services/authService';
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 
 const axiosInstance = axios.create({
   baseURL: 'http://localhost:3000/api',
@@ -7,12 +7,14 @@ const axiosInstance = axios.create({
 });
 
 let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value?: any) => void,
-  reject: (error: any) => void
-}> = [];
+type FailedQueueItem = {
+  resolve: (value?: unknown) => void;
+  reject: (error: unknown) => void;
+};
 
-const processQueue = (error: any, token: string | null = null) => {
+let failedQueue: FailedQueueItem[] = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach(prom => {
     if (error) {
       prom.reject(error);
@@ -26,9 +28,9 @@ const processQueue = (error: any, token: string | null = null) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    const isAuthEndpoint = originalRequest.url.includes('/auth/refresh');
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/refresh') ?? false;
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

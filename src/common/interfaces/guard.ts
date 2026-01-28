@@ -12,6 +12,8 @@ export function isTypeResponse(response: unknown): response is ErrorResponse {
     typeof response === 'object' &&
     response !== null &&
     'type' in response &&
-    Object.values(statusMessage).includes((response as any).type)
+    Object.values(statusMessage).includes(
+      (response as { type?: unknown }).type as statusMessage
+    )
   );
 }
