@@ -43,6 +43,16 @@ export const findActives = async (params: {
   return response.data
 }
 
+export const findDesactive = async (params: {
+  page?: number;
+  role?: string;
+  sortBy?: string;
+  order?: "ASC" | "DESC";
+}) => {
+  const response = await axiosInstance.get(API_USERS_GROUP.findDesactive, { params });
+  return response.data;
+};
+
 /**
  * Busca un usuario por ID.
  * @param {string} id - ID del usuario.
@@ -84,6 +94,21 @@ export const updateUser = async (id: string, payload: UpdateUserDto) => {
   const response = await axiosInstance.patch(API_USERS_GROUP.updateUser(id), payload)
   return response.data
 }
+
+export const updateAvatar = async (id: string, file: File) => {
+  const formData = new FormData();
+  formData.append("avatar", file); 
+
+  const response = await axiosInstance.post(
+    API_USERS_GROUP.updateAvatar(id),
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+
+  return response.data;
+};
+
+
 
 /**
  * Elimina un usuario.

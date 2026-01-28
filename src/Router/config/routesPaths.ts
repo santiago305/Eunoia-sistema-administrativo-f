@@ -4,8 +4,19 @@
 export const RoutesPaths = {
   // Auth routes
   login: "/login",
-  // Dashboard routes
+  logout: "/logout",
+
+  // Base routes
   dashboard: "/",
+  // Dashboard routes
+  home: "/dashboard/home",
+  settings: "/dashboard/settings",
+  users: "/dashboard/users",
+  createUser: "/dashboard/users/create",
+  dashboardProducts: "/dashboard/products",
+  dashboardProductShow: (id: string) => `/dashboard/products/${id}`,
+  dashboardProfile: "/dashboard/profile",
+  dashboardSettings: "/dashboard/settings",
 } as const;
 
 /**

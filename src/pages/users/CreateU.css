@@ -1,0 +1,22 @@
+.conteiner__user--form{
+    width: 100%;
+    min-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+.card__user--form{
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+    min-width: 80vh;
+    padding-bottom: 20px;
+}
+.title__user--form{
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin: 20px;
+    text-align: center;
+}

@@ -9,7 +9,7 @@
 
 import { lazy } from "react";
 import { RouteObject } from "react-router-dom";
-import RedirectIfAuth from "../guards/RedirectIfAuth";
+import RedirectIfAuth from "../../Router/guards/RedirectIfAuth";
 import { RoutesPaths } from "../config/routesPaths";
 
 const Login = lazy(() => import("@/pages/Auth/Login"));

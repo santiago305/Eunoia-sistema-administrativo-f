@@ -1,0 +1,38 @@
+ .content-table {
+     caption-side: bottom;
+     border-collapse: collapse;
+     margin: 8px 0;
+     font-size: 0.9;
+     min-width: 500px;
+     width: 100%;
+     border-radius: 5px 5px 0 0;
+     overflow: hidden;
+     box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+ }
+
+ .content-table thead tr {
+     background-color: #007bff;
+     color: white;
+     text-align: center;
+     font-weight: bold;
+ }
+
+ .content-table th,
+ .content-table td {
+     padding: 12px 8px;
+     text-align: center;
+
+ }
+
+ .content-table tbody tr {
+     border-bottom: 1px solid #dddddd;
+ }
+
+ .content-table tbody tr:last-of-type(even) {
+     border-bottom: 2px solid #007bff;
+ }
+
+ .content-table tbody tr.active-row:hover {
+     font-weight: bold;
+     color: #0753a4;
+ }
