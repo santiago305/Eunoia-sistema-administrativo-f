@@ -32,7 +32,7 @@ export function Sidebar({
     return (n[0] || "U").toUpperCase()
   }, [user.name])
 
-  const sidebarW = collapsed ? "w-[60px]" : "w-[260px]"
+  const sidebarW = collapsed ? "w-[60px]" : "w-[200px]"
   const handleLogout = async () => {
     clearFlash();
     try {
@@ -48,7 +48,7 @@ export function Sidebar({
         sidebarW,
         "h-full bg-white",
         "shadow-[0_10px_30px_rgba(2,6,23,0.08)]",
-        "transition-[width] duration-200"
+        "transition-[width] duration-200 overflow-hidden"
       )}
     >
       <div className="h-full flex flex-col">
