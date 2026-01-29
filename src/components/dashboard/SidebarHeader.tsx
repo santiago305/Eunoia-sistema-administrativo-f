@@ -18,7 +18,7 @@ export function SidebarHeader({
         layout
         transition={{ type: "spring", stiffness: 420, damping: 32 }}
         className={cn(
-          "w-full h-12",
+          "w-full h-auto py-4",
           "flex items-center justify-start", // 👈 clave: centra siempre
           "hover:bg-slate-100 transition"
         )}
