@@ -18,8 +18,11 @@ export function LogoLarge() {
         </svg>
       </div>
       <div className="leading-tight">
-        <div className="text-[13px] font-semibold text-slate-900">Panel</div>
-        <div className="text-[11px] text-slate-500">Admin Dashboard</div>
+        <div className="text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-[#21b8a6] sm:text-4xl">
+            EUNOIA
+          </h1>
+        </div>
       </div>
     </div>
   )
