@@ -20,6 +20,7 @@ const Users = lazy(() => import("@/pages/users/Users"));
 const CreateUser = lazy(() => import("@/pages/users/CreateU"));
 const Dashboard = lazy(() => import("@/pages/dashboard/dashboard"));
 const Profile = lazy(() => import("@/pages/users/Profile"));
+const ChangePassword = lazy(() => import("@/pages/settings/ChangePassword"));
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -43,6 +44,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.profile,
                 element: <Profile />, 
+            },
+            {
+                path: RoutesPaths.changePassword,
+                element: <ChangePassword />, 
             },
         ],
     },

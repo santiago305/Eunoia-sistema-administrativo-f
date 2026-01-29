@@ -4,8 +4,8 @@ import "./profile.css";
 
 function Profile() {
     return (
-        <div className="flex justify-start px-2">
-            <div className="px-20 mb-10 mt-5 text-center">
+        <div className="flex px-2 h-full w-full items-start justify-start bg-slate-50 p-6">
+            <div className="px-10 mb-10 mt-10 text-center">
                 <ProfileForm />
             </div>
         </div>

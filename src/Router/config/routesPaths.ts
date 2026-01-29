@@ -10,6 +10,7 @@ export const RoutesPaths = {
   users: "/dashboard/users",
   createUser: "/dashboard/users/create",
   profile: "/dashboard/profile",
+  changePassword: "/dashboard/change-password",
 } as const;
 
 /**
