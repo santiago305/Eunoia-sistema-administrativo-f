@@ -28,6 +28,29 @@ export const findAll = async (params: {
   
 }
 
+export const findDesactive = async (params: {
+  page?: number;
+  role?: string;
+  sortBy?: string;
+  order?: "ASC" | "DESC";
+}) => {
+  const response = await axiosInstance.get(API_USERS_GROUP.findDesactive, { params });
+  return response.data;
+};
+
+export const updateAvatar = async (id: string, file: File) => {
+  const formData = new FormData();
+  formData.append("avatar", file); 
+
+  const response = await axiosInstance.post(
+    API_USERS_GROUP.updateAvatar(id),
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+
+  return response.data;
+};
+
 /**
  * Obtiene usuarios activos.
  * @param {Object} params - Parámetros de búsqueda.

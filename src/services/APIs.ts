@@ -16,10 +16,15 @@ export const API_USERS_GROUP = {
   createUser: '/users/create',
   findAll: '/users/findAll',
   findActives: '/users/actives',
+  findDesactive: '/users/desactive',
   findOwnUser: '/users/me',
   findById: (id: string) => `/users/search/${id}`,
   findByEmail: (email: string) => `/users/email/${email}`,
   updateUser: (id: string) => `/users/update/${id}`,
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
+  updateAvatar: (id: string) => `/users/${id}/avatar`,
+};
+export const API_ROLES_GROUP = {
+  findAll: "/roles",
 };
