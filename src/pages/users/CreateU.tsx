@@ -61,20 +61,21 @@ export default function CreateUserPage() {
   };
 
   return (
-      <div className="grid grid-cols-1 conteiner__user--form">
-          <div>
-            <div className="w-full max-w-lg px-10 card__user--form">
-                <h1 className="title__user--form">{isEdit ? "Edición de Usuarios" : "Creación de Usuarios"}</h1>
-                <UserForm onSubmit={handleSubmit} formId="create-user-form" user={user} />
+      <div className="h-full w-full flex items-start justify-start bg-slate-50 p-6">
+          <div className="w-full mt-10 max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
+              <div className="border-b border-slate-200 px-6 py-4">
+                  <h2 className="text-lg font-semibold text-slate-900">Creación de Usuarios</h2>
+                  <p className="mt-1 text-sm text-slate-500">Mantén tu cuenta segura actualizando tu clave.</p>
+              </div>
+              <div className="px-6 py-5">
+                  <UserForm onSubmit={handleSubmit} formId="create-user-form" />
 
-                <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                    <Button className="w-50" type="submit" form="create-user-form" variant="contained" 
-                      sx={{ textTransform: "none", color: "white", backgroundColor: "#009578", width: "100%" }}>
-                        {isEdit ? "Guardar cambios" : "Guardar"}
-                    </Button>
-                </Box>
-            </div>
-
+                  <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                      <Button className="w-50" type="submit" form="create-user-form" variant="contained" sx={{ textTransform: "none", color: "white", backgroundColor: "#009578", width: "100%" }}>
+                          {isEdit ? "Guardar cambios" : "Guardar"}
+                      </Button>
+                  </Box>
+              </div>
           </div>
       </div>
   );

@@ -8,5 +8,15 @@ export const LoginSchema = z.object({
   password: z
     .string()
     .min(1, "La contrasena es obligatoria")
-    .min(6, "La contrasena debe tener al menos 6 caracteres"),
+    .min(8, "La contrasena debe tener al menos 6 caracteres"),
+});
+export const ChangePasswordSchema = z.object({
+  password: z
+  .string()
+  .min(1, "La contrasena actual es obligatoria")
+  .min(8, "La contrasena debe tener al menos 6 caracteres"),
+  newPassword: z
+  .string()
+  .min(1, "La nueva contraseña es obligatoria")
+  .min(8, "La contrasena debe tener al menos 6 caracteres"),
 });
