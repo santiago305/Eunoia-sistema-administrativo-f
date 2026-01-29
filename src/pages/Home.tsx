@@ -3,12 +3,36 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { getSidebarItems } from "@/components/dashboard/sidebarItems";
 import { useLocationFlashMessage } from "@/hooks/useLocationFlashMessage";
 import { Outlet } from "react-router-dom";
+import { SidebarItem } from "@/components/dashboard/types";
+import { IconHome, IconSettings, IconUsers } from "@tabler/icons-react";
+import { RoutesPaths } from "@/router/config/routesPaths";
 
 
 export default function Home() {
   useLocationFlashMessage();
 
-  const sidebarItems = useMemo(() => getSidebarItems(), []);
+  const sidebarItems: SidebarItem[] = useMemo(
+    () => [
+      { label: "Home", href: RoutesPaths.dashboard, icon: <IconHome className="text-slate-700" /> },
+      {
+        label: "Usuarios",
+        icon: <IconUsers className="text-slate-700" />,
+        children: [
+          { label: "Crear", href: RoutesPaths.createUser },
+          { label: "Listar", href: RoutesPaths.users },
+        ],
+      },
+      {
+        label: "Configuracion",
+        icon: <IconSettings className="text-slate-700" />,
+        children: [
+          { label: "General", href: "/settings" },
+          { label: "Seguridad", href: "/settings/security" },
+        ],
+      },
+    ],
+    []
+  );
 
   const user = { name: "Giancarlos", photoUrl: null as string | null };
 

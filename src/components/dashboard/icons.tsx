@@ -30,6 +30,18 @@ export function IconUsers({ className }: { className?: string }) {
     </svg>
   )
 }
+export function IconLock({ className }: { className?: string }) {
+    return (
+        <svg className={cn("h-5 w-5", className)} viewBox="0 0 24 24" fill="none">
+            <rect 
+             x="5" y="10" width="14" height="10" rx="2" 
+             stroke="currentColor" strokeWidth="1.8" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor"
+             strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="12" cy="15" r="1.5" fill="currentColor" />
+        </svg>
+    );
+}
 
 export function IconSettings({ className }: { className?: string }) {
   return (
