@@ -26,7 +26,7 @@ export function Sidebar({
     return (n[0] || "U").toUpperCase()
   }, [user.name])
 
-  const sidebarW = collapsed ? "w-[76px]" : "w-[260px]"
+  const sidebarW = collapsed ? "w-[60px]" : "w-[260px]"
 
   return (
     <aside
@@ -38,7 +38,7 @@ export function Sidebar({
       )}
     >
       <div className="h-full flex flex-col">
-        <div className="px-3 pt-3">
+        <div className="px-1.5 pt-1.5">
           <button
             type="button"
             onClick={() => setCollapsed((v) => !v)}
@@ -54,7 +54,7 @@ export function Sidebar({
         </div>
 
         <div
-          className="flex-1 px-3 pt-3 pb-3 overflow-y-auto"
+          className="flex-1 px-1.5 pt-1.5 pb-1.5 overflow-y-auto"
           onClick={() => setUserMenuOpen(false)}
         >
           <div className="space-y-2">
@@ -146,7 +146,7 @@ export function Sidebar({
           </div>
         </div>
 
-        <div className="px-3 pb-3">
+        <div className="px-1.5 pb-1.5">
           <div className="relative">
             <button
               type="button"
@@ -158,7 +158,7 @@ export function Sidebar({
               )}
               title={collapsed ? user.name : undefined}
             >
-              <div className="h-9 w-9 rounded-full overflow-hidden bg-[#21b8a6]/15 text-[#0f766e] grid place-items-center font-semibold">
+              <div className="h-9 w-9 min-w-9 shrink-0 rounded-full overflow-hidden bg-[#21b8a6]/15 text-[#0f766e] grid place-items-center font-semibold">
                 {user.photoUrl ? (
                   <img
                     src={user.photoUrl}
@@ -223,4 +223,3 @@ export function Sidebar({
     </aside>
   )
 }
-
