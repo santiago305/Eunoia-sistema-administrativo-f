@@ -9,6 +9,13 @@ import {
 } from "@/components/dashboard/icons"
 import { LogoLarge, LogoSmall } from "@/components/dashboard/logos"
 import type { SidebarItem, SidebarUser } from "@/components/dashboard/types"
+import { useAuth } from "@/hooks/useAuth";
+import { errorResponse, successResponse } from "@/common/utils/response";
+import { useLocationFlashMessage } from "@/hooks/useLocationFlashMessage";
+import  { RoutesPaths }  from "@/router/config/routesPaths"
+import { useNavigate } from "react-router-dom"
+
+import { useFlashMessage } from "@/hooks/useFlashMessage";
 
 export function Sidebar({
   items,
@@ -17,6 +24,10 @@ export function Sidebar({
   items: SidebarItem[]
   user: SidebarUser
 }) {
+  useLocationFlashMessage();
+  const { logout } = useAuth();
+  const navegate  = useNavigate();
+  const { showFlash, clearFlash } = useFlashMessage();
   const [collapsed, setCollapsed] = useState(false)
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -27,7 +38,15 @@ export function Sidebar({
   }, [user.name])
 
   const sidebarW = collapsed ? "w-[60px]" : "w-[260px]"
-
+      const handleLogout = async () => {
+          clearFlash();
+          try {
+              await logout();
+              showFlash(successResponse("Session out"));
+          } catch {
+              showFlash(errorResponse("Session can not close"));
+          }
+      };
   return (
     <aside
       className={cn(
@@ -204,15 +223,18 @@ export function Sidebar({
                   <FooterMenuItem
                     icon={<IconSettings className="text-slate-600" />}
                     label="Perfil"
+                    onClick={ ()=> navegate(RoutesPaths.profile)}
                   />
                   <FooterMenuItem
                     icon={<IconUsers className="text-slate-600" />}
                     label="Sesiones"
+
                   />
                   <FooterMenuItem
                     icon={<IconLogout className="text-red-600" />}
                     label="Cerrar sesion"
                     danger
+                    onClick={handleLogout} 
                   />
                 </div>
               </div>
