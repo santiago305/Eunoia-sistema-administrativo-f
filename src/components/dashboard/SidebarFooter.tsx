@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils"
 import { FooterMenuItem } from "@/components/dashboard/FooterMenuItem"
 import {
   IconChevron,
+  IconLock,
   IconLogout,
   IconSettings,
   IconUsers,
@@ -17,6 +18,7 @@ export function SidebarFooter({
   onToggleUserMenu,
   onProfile,
   onLogout,
+  onChangePassword
 }: {
   user: SidebarUser
   collapsed: boolean
@@ -25,6 +27,7 @@ export function SidebarFooter({
   onToggleUserMenu: () => void
   onProfile: () => void
   onLogout: () => void
+  onChangePassword: () => void
 }) {
   return (
     <div className="p-1.5">
@@ -145,6 +148,11 @@ export function SidebarFooter({
                   icon={<IconUsers className="text-slate-600" />}
                   label="Sesiones"
                 />
+                 <FooterMenuItem
+                    icon={<IconLock className="text-slate-600" />}
+                    label="Cambiar contraseña"
+                    onClick={onChangePassword}
+                  />
                 <FooterMenuItem
                   icon={<IconLogout className="text-red-600" />}
                   label="Cerrar sesion"
