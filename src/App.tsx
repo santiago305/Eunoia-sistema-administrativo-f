@@ -1,6 +1,7 @@
 import { FlashMessageRoot } from './components/flashMessage/FlashMessageRoot'
 import { AuthProvider } from './context/AuthProvider'
 import { FlashMessageProvider } from './context/FlashMessageProvider'
+import { TooltipProvider } from './components/ui/tooltip'
 /*
  * Componente raíz de la aplicación.
  * 
@@ -18,7 +19,9 @@ function App({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <FlashMessageProvider>
         <FlashMessageRoot />
+        <TooltipProvider delayDuration={200}>
           {children}
+        </TooltipProvider>
       </FlashMessageProvider>
     </AuthProvider>
   )

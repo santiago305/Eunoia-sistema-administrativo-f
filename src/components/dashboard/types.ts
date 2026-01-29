@@ -1,18 +1,23 @@
-import type React from "react"
+import { ReactNode } from "react";
 
-export type SidebarChild = {
-  label: string
-  href: string
+export interface SidebarItem {
+  label: string;
+  href?: string;
+  icon?: ReactNode;
+  children?: Omit<SidebarItem, "icon" | "children">[];
 }
 
-export type SidebarItem = {
-  label: string
-  href?: string
-  icon: React.ReactNode
-  children?: SidebarChild[]
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
 }
 
-export type SidebarUser = {
-  name: string
-  photoUrl?: string | null
+export interface Session {
+  id: string;
+  device: string;
+  location: string;
+  lastActive: string;
+  isCurrent: boolean;
 }
