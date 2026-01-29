@@ -11,14 +11,14 @@
 import { lazy } from "react";
 import { RouteObject } from "react-router-dom";
 import PrivateRoute from "../guards/PrivateRoute";
+import { getRouteMetaByPath } from "../config/routesConfig";
 import { RoutesPaths } from "../config/routesPaths";
-import { Home } from "@/pages";
 
-
+const DashboardLayout = lazy(() => import("@/pages/dashboard/DashboardLayout"));
 const ErrorPage = lazy(() => import("@/pages/Error404"));
+const Dashboard = lazy(() => import("@/pages/dashboard/dashboard"));
 const Users = lazy(() => import("@/pages/users/Users"));
 const CreateUser = lazy(() => import("@/pages/users/CreateU"));
-const Dashboard = lazy(() => import("@/pages/dashboard/dashboard"));
 const Profile = lazy(() => import("@/pages/users/Profile"));
 
 export const dashboardRoutes: RouteObject[] = [
@@ -26,10 +26,12 @@ export const dashboardRoutes: RouteObject[] = [
         path: RoutesPaths.dashboard,
         element: (
             <PrivateRoute>
-                <Home />
+                <DashboardLayout />
             </PrivateRoute>
         ),
         errorElement: <ErrorPage />,
+        handle: getRouteMetaByPath(RoutesPaths.dashboard),
+
         children: [
             { index: true, element: <Dashboard/> }, 
             {

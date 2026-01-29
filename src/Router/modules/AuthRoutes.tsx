@@ -10,6 +10,7 @@
 import { lazy } from "react";
 import { RouteObject } from "react-router-dom";
 import RedirectIfAuth from "../guards/RedirectIfAuth";
+import { getRouteMetaByPath } from "../config/routesConfig";
 import { RoutesPaths } from "../config/routesPaths";
 
 const Login = lazy(() => import("@/pages/Auth/Login"));
@@ -24,5 +25,6 @@ export const authRoutes: RouteObject[] = [
       </RedirectIfAuth>
     ),
     errorElement: <ErrorPage />,
+    handle: getRouteMetaByPath(RoutesPaths.login),
   },
 ];
