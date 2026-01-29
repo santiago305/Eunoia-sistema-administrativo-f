@@ -26,7 +26,7 @@ import { RoutesPaths } from "./config/routesPaths";
 
 export const router = createBrowserRouter([
   {
-    path: RoutesPaths.home,
+    path: RoutesPaths.dashboard,
     element: <Navigate to={RoutesPaths.login} replace />,
   },
   ...authRoutes,
