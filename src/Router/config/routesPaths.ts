@@ -1,4 +1,5 @@
-﻿/**
+﻿
+/**
  * Central route paths for the app.
  */
 export const RoutesPaths = {
@@ -9,6 +10,7 @@ export const RoutesPaths = {
   // paginas de usuario propio
   profile: "/profile",
   sessions: "/sessions-actives",
+  changePassword: "/changePassword",
 
   
   createUser: "/users/create",

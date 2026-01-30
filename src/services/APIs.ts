@@ -1,3 +1,4 @@
+
 /**
  * Grupo de rutas para la autenticación.
  */
@@ -24,7 +25,12 @@ export const API_USERS_GROUP = {
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
   updateAvatar: (id: string) => `/users/${id}/avatar`,
+  changePassword: (id: string) => `/users/change-password/${id}`,
 };
 export const API_ROLES_GROUP = {
   findAll: "/roles",
+};
+
+export const API_SESSIONS_GROUP = {
+  findMe:`/sessions/me`,
 };

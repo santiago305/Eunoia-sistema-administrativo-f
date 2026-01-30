@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { IconLogout, IconUser, IconMonitor } from "./icons";
+import { IconLogout, IconUser, IconMonitor, IconLock } from "./icons";
 import { useSidebarContext } from "./SidebarContext";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import type { User } from "./types";
@@ -73,15 +73,22 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to={RoutesPaths.settings} className="cursor-pointer">
+          <Link to={RoutesPaths.profile} className="cursor-pointer">
             <IconUser className="mr-2" />
             <span>Perfil</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to={RoutesPaths.settingsSessions} className="cursor-pointer">
+          <Link to={RoutesPaths.sessions} className="cursor-pointer">
             <IconMonitor className="mr-2" />
             <span>Sesiones activas</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to={RoutesPaths.changePassword} className="cursor-pointer">
+            <IconLock className="mr-2" />
+            <span>Cambiar contraseña</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
