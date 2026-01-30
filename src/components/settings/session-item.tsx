@@ -1,6 +1,6 @@
 import type { SessionDto } from "@/common/utils/sessionDetect";
 import { detectSessionMeta } from "@/common/utils/sessionDetect";
-import { Trash2 } from "lucide-react";
+import { ReactNode } from "react";
 
 
 export const LaptopIcon = () => (
@@ -27,9 +27,8 @@ function formatDate(iso: string) {
     return d.toLocaleString();
 }
 
-export const SessionItem = ({ session }: { session: SessionDto }) => {
+export const SessionItem = ({ session, children }: { session: SessionDto; children: ReactNode }) => {
     const meta = detectSessionMeta(session);
-
     return (
         <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -46,17 +45,7 @@ export const SessionItem = ({ session }: { session: SessionDto }) => {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
-                <div
-                    className="hidden sm:flex items-center justify-center h-10 w-10 rounded-lg bg-slate-50 border border-slate-200 hover:scale-[1.02]
-                    cursor-pointer"
-                >
-                    <Trash2 className="text-red-600" size={25} />
-                </div>
-
-                {/* Aquí luego puedes poner botón "Cerrar sesión" */}
-                {/* <button className="text-sm font-medium text-red-600 hover:text-red-700">Cerrar</button> */}
-            </div>
+            {children}
         </div>
     );
 };

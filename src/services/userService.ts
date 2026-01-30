@@ -1,5 +1,5 @@
 import axiosInstance from "@/common/utils/axios"
-import { API_USERS_GROUP } from "./APIs"
+import { API_AUTH_GROUP, API_SESSIONS_GROUP, API_USERS_GROUP } from "./APIs"
 import { CreateUserDto, UpdateUserDto } from "@/types/user"
 
 /**
@@ -57,6 +57,16 @@ export const changePassword = async (
 ) => {
   const response = await axiosInstance.patch(
     API_USERS_GROUP.changePassword(id),
+    payload
+  );
+  return response.data;
+};
+
+export const verifyPassword = async (
+  payload: { currentPassword: string; }
+) => {
+  const response = await axiosInstance.post(
+    API_AUTH_GROUP.verifyPassword,
     payload
   );
   return response.data;
