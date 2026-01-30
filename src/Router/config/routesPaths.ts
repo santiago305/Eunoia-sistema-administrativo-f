@@ -6,11 +6,13 @@ export const RoutesPaths = {
   login: "/login",
   // Dashboard routes
   dashboard: "/",
-  settings: "/dashboard/settings",
-  users: "/dashboard/users",
-  createUser: "/dashboard/users/create",
-  profile: "/dashboard/profile",
-  changePassword: "/dashboard/change-password",
+  // paginas de usuario propio
+  profile: "/profile",
+  sessions: "/sessions-actives",
+
+  
+  createUser: "/users/create",
+  users: "/users",
 } as const;
 
 /**

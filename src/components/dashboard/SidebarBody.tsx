@@ -1,45 +1,18 @@
-import type { SidebarItem } from "@/components/dashboard/types"
-import { SidebarGroup } from "@/components/dashboard/sidebar-body/SidebarGroup"
-import { SidebarItemLink } from "@/components/dashboard/sidebar-body/SidebarItemLink"
+import { getSidebarItems } from "@/config/sidebarConfig";
+import SidebarItemComponent from "./SidebarItem";
 
-export function SidebarBody({
-  items,
-  collapsed,
-  openGroup,
-  onToggleGroup,
-  onCloseUserMenu,
-}: {
-  items: SidebarItem[]
-  collapsed: boolean
-  openGroup: string | null
-  onToggleGroup: (label: string) => void
-  onCloseUserMenu: () => void
-}) {
+const SidebarBody = () => {
+  const items = getSidebarItems();
+
   return (
-    <div
-      className="flex-1 p-1.5 overflow-y-auto overflow-x-hidden"
-      onClick={onCloseUserMenu}
-    >
-      <div className="space-y-0.5">
-        {items.map((it) => {
-          const hasChildren = Boolean(it.children?.length)
-          const isOpen = openGroup === it.label
-
-          if (hasChildren) {
-            return (
-              <SidebarGroup
-                key={it.label}
-                item={it}
-                collapsed={collapsed}
-                isOpen={isOpen}
-                onToggle={() => onToggleGroup(it.label)}
-              />
-            )
-          }
-
-          return <SidebarItemLink key={it.label} item={it} collapsed={collapsed} />
-        })}
-      </div>
+    <div className="flex-1 overflow-y-auto px-3 py-4">
+      <nav>
+        {items.map((item, index) => (
+          <SidebarItemComponent key={item.label + index} item={item} />
+        ))}
+      </nav>
     </div>
-  )
-}
+  );
+};
+
+export default SidebarBody;

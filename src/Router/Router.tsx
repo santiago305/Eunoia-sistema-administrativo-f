@@ -18,21 +18,12 @@
  * @returns {Router} Instancia de enrutador de la aplicación.
  */
 
-import ErrorPage from "@/pages/Error404";
-import { Navigate, createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { authRoutes } from "./modules/AuthRoutes";
 import { dashboardRoutes } from "./modules/DashboardRoutes";
-import { RoutesPaths } from "./config/routesPaths";
+
 
 export const router = createBrowserRouter([
-  {
-    path: RoutesPaths.home,
-    element: <Navigate to={RoutesPaths.login} replace />,
-  },
   ...authRoutes,
   ...dashboardRoutes,
-  {
-    path: "*",
-    element: <ErrorPage />, // Ruta para manejar errores 404 (página no encontrada)
-  },
 ]);

@@ -25,8 +25,9 @@ import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { RouterProvider } from 'react-router-dom';
-import { router } from './router/Router.tsx';
-
+import { router } from './router/Router.tsx'
+import './globals.css'
+import './app.css'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App>
