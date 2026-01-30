@@ -8,6 +8,7 @@ export const API_AUTH_GROUP = {
   refreshToken: '/auth/refresh',
   validateToken: '/auth/validate-token',
   userAuth: '/auth/me',
+  verifyPassword: `/auth/verify-password`,
 };
 
 /**
@@ -33,4 +34,6 @@ export const API_ROLES_GROUP = {
 
 export const API_SESSIONS_GROUP = {
   findMe:`/sessions/me`,
+  revokeSession: (id: string) => `/sessions/${id}/revoke`,
+  revokeAllSessionsLessMe: '/sessions/revoke/allLessMe'
 };

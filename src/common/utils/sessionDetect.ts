@@ -9,6 +9,7 @@ export type SessionDto = {
   lastSeenAt: string;
   revokedAt?: string | null;
   expiresAt: string;
+  isCurrent: boolean | null;
 };
 
 export type SessionMeta = {

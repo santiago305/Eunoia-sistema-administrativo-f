@@ -84,7 +84,6 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
             <span>Sesiones activas</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link to={RoutesPaths.changePassword} className="cursor-pointer">
             <IconLock className="mr-2" />
