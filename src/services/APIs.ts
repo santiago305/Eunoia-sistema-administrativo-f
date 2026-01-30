@@ -30,3 +30,7 @@ export const API_USERS_GROUP = {
 export const API_ROLES_GROUP = {
   findAll: "/roles",
 };
+
+export const API_SESSIONS_GROUP = {
+  findMe:`/sessions/me`,
+};
