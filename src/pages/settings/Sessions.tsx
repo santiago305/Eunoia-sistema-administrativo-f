@@ -5,19 +5,19 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import type { SessionDto } from "@/common/utils/sessionDetect";
 import { ModalDeleteSessions } from "@/components/settings/modal-delete-sessions";
 import { revokeAllSessionsLessMe, revokeSession, findSessionsMe } from "@/services/sessionService";
-import { verifyPassword } from '@/services/userService'
-import { useForm } from "react-hook-form"
+import { verifyPassword } from "@/services/userService";
+import { useForm } from "react-hook-form";
 import { TextField } from "@mui/material";
 import { Trash2 } from "lucide-react";
 
 const Sessions = () => {
     const { showFlash, clearFlash } = useFlashMessage();
     const [sessions, setSessions] = useState<SessionDto[]>([]);
-    const [ openModal, setOpenModal] = useState(false);
+    const [openModal, setOpenModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [oneSession, setOneSession] = useState(false);
     const [selectedSession, setSelectedSession] = useState("");
-    
+
     type FormValues = { password: string };
     const {
         register,
@@ -26,13 +26,12 @@ const Sessions = () => {
         formState: { errors },
     } = useForm<FormValues>();
 
-
-    const verifyPasswordPass = async(data:FormValues)=>{
+    const verifyPasswordPass = async (data: FormValues) => {
         clearFlash();
         setSubmitting(true);
         try {
             const res = await verifyPassword({
-                currentPassword: data.password
+                currentPassword: data.password,
             });
             if (res?.pass === true) {
                 reset({
@@ -42,36 +41,38 @@ const Sessions = () => {
             } else {
                 showFlash(errorResponse("Contraseña incorrecta"));
             }
-        } catch{
+        } catch {
             showFlash(errorResponse("Error al verificar contraseña"));
         }
         setSubmitting(false);
-    }
+    };
+
     const sessionsRecords = async () => {
         clearFlash();
         try {
-        const res = await findSessionsMe();
-        setSessions(res);
+            const res = await findSessionsMe();
+            setSessions(res);
         } catch {
-            showFlash(errorResponse("Error al ver sessiones"));
+            showFlash(errorResponse("Error al ver sesiones"));
         }
     };
 
     const revokeSessionsLessMe = async () => {
         clearFlash();
         try {
-        const res = await revokeAllSessionsLessMe();
-         if (res?.revoked === true) {
-             showFlash(successResponse("Sesiones cerradas correctamente"));
-             sessionsRecords();
-             setOpenModal(false);
-         } else {
-             showFlash(errorResponse("No se pudieron cerrar las sesiones"));
-         }
+            const res = await revokeAllSessionsLessMe();
+            if (res?.revoked === true) {
+                showFlash(successResponse("Sesiones cerradas correctamente"));
+                sessionsRecords();
+                setOpenModal(false);
+            } else {
+                showFlash(errorResponse("No se pudieron cerrar las sesiones"));
+            }
         } catch {
-            showFlash(errorResponse("Error al ver sessiones"));
+            showFlash(errorResponse("Error al ver sesiones"));
         }
     };
+
     const revokeOneSession = async () => {
         clearFlash();
         if (!selectedSession) {
@@ -84,26 +85,26 @@ const Sessions = () => {
                 showFlash(successResponse("Sesión cerrada correctamente"));
                 sessionsRecords();
                 setOpenModal(false);
-         } else {
-             showFlash(errorResponse("No se pudieron cerrar las sesiones"));
-         }
+            } else {
+                showFlash(errorResponse("No se pudieron cerrar las sesiones"));
+            }
         } catch {
-            showFlash(errorResponse("Error al ver sessiones"));
+            showFlash(errorResponse("Error al ver sesiones"));
         }
     };
+
     useEffect(() => {
-        console.log("useEffect fired");
         (async () => {
             await sessionsRecords();
         })();
     }, []);
 
     return (
-        <div className="h-full w-full flex items-start justify-start bg-slate-50 p-6 overflow-scroll">
-            <div className="w-full mt-10 max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-                <div className="border-b border-slate-200 px-6 py-4">
+        <div className="page-shell flex items-start justify-center">
+            <div className="page-card">
+                <div className="page-card-header">
                     <div className="grid grid-cols-2">
-                        <h2 className="text-lg font-semibold text-slate-900">Sesiones activas</h2>
+                        <h2 className="page-card-title">Sesiones activas</h2>
                         <button
                             className={`
                                 hidden sm:flex items-center justify-center
@@ -124,10 +125,10 @@ const Sessions = () => {
                             }}
                             disabled={sessions.length === 1}
                         >
-                            Eliminar sessiones
+                            Eliminar sesiones
                         </button>
                     </div>
-                    <p className="mt-1 text-sm text-slate-500">Revisa dónde tienes tu cuenta abierta.</p>
+                    <p className="page-card-subtitle">Revisa dónde tienes tu cuenta abierta.</p>
                 </div>
                 <div className="px-6 py-5 space-y-3">
                     {sessions.map((s) => (
@@ -140,7 +141,7 @@ const Sessions = () => {
                                 ) : (
                                     <div
                                         className="hidden sm:flex items-center justify-center h-10 w-10 rounded-lg bg-slate-50 border border-slate-200 hover:scale-[1.02]
-                                    cursor-pointer  hover:bg-red-400 hover:text-white text-red-600"
+                                    cursor-pointer hover:bg-red-400 hover:text-white text-red-600"
                                         onClick={() => {
                                             setOneSession(true);
                                             setOpenModal(true);
@@ -156,8 +157,13 @@ const Sessions = () => {
                 </div>
             </div>
             {openModal && (
-                <ModalDeleteSessions onClose={() => setOpenModal(false)} title={oneSession ? "Esta seguro de cerrar la sesión " : "Esta seguro de cerrar todas tus sessiones"}>
-                    <p className="mt-0 text-slate-500">{oneSession ? "Esto cerrará la sesión" : "Esto cerrará todas tus sesiones activas en otros dispositivos."}</p>
+                <ModalDeleteSessions
+                    onClose={() => setOpenModal(false)}
+                    title={oneSession ? "¿Está seguro de cerrar la sesión?" : "¿Está seguro de cerrar todas sus sesiones?"}
+                >
+                    <p className="mt-0 text-slate-500">
+                        {oneSession ? "Esto cerrará la sesión." : "Esto cerrará todas sus sesiones activas en otros dispositivos."}
+                    </p>
                     <form className="mt-2" onSubmit={handleSubmit(verifyPasswordPass)}>
                         <TextField
                             label="Ingrese contraseña"

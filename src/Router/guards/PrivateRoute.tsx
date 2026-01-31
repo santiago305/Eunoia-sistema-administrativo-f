@@ -11,15 +11,12 @@ import { RoutesPaths } from "../config/routesPaths";
 const PrivateRoute = ({ children }: PropsUrl) => {
   const { isAuthenticated, loading, userRole } = useAuth();
 
-  console.log("[PrivateRoute] loading:", loading, "isAuthenticated:", isAuthenticated, "userRole:", userRole);
   if (loading) return <div>Cargando... Redirigiendo a Dashboard...</div>;
 
   if (!isAuthenticated) {
-    console.log("[PrivateRoute] Redirect -> login (not authenticated)");
     return <Navigate to={RoutesPaths.login} replace />;
   }
 
-  console.log("[PrivateRoute] Access granted");
   return children;
 };
 

@@ -62,11 +62,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        align={isCollapsed ? "center" : "start"}
-        side="top"
-        className="w-56 mb-2"
-      >
+      <DropdownMenuContent align={isCollapsed ? "center" : "start"} side="top" className="w-56 mb-2">
         <div className="px-2 py-1.5">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -91,10 +87,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={onLogout}
-          className="cursor-pointer text-destructive focus:text-destructive"
-        >
+        <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
           <IconLogout className="mr-2" />
           <span>Cerrar sesión</span>
         </DropdownMenuItem>

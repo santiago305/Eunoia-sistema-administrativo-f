@@ -11,8 +11,6 @@ export const useAfterLoginRedirect = () => {
   useEffect(() => {
     if (!isAuthenticated || loading) return;
 
-    console.log("[useAfterLoginRedirect] isAuthenticated:", isAuthenticated, "userRole:", userRole);
-
     if (userRole) {
       navigate(RoutesPaths.dashboard, {
         replace: true,

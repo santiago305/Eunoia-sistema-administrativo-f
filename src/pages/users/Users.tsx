@@ -1,7 +1,7 @@
-import { FormControl, InputLabel, Select, MenuItem, TextField, FormControlLabel, Checkbox} from "@mui/material";
+import { FormControl, InputLabel, Select, MenuItem, TextField, FormControlLabel, Checkbox } from "@mui/material";
 import "./users.css";
-import { useState } from "react";
-import {  ArrowBigRightDash, ArrowBigLeftDash, RotateCcwSquare, Eraser } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowBigRightDash, ArrowBigLeftDash, RotateCcwSquare, Eraser } from "lucide-react";
 import { usePagination } from "@/hooks/usePagination";
 import { useFilter } from "@/hooks/useFilter";
 import { useUsers, type UserRow } from "../../hooks/useUser";
@@ -10,7 +10,11 @@ export default function Userse() {
     const [role, setRole] = useState("");
     const { users, loading, error, showUsersActive, toggleActive, removeUser, restore } = useUsers();
     const { query, setQuery, filteredData } = useFilter(users, ["user_name", "user_email"]);
-    const roleFiltered = role ? filteredData.filter((u: UserRow) => u.roleId === role || u.rol === role) : filteredData;
+
+    const roleFiltered = useMemo(() => {
+        return role ? filteredData.filter((u: UserRow) => u.roleId === role || u.rol === role) : filteredData;
+    }, [filteredData, role]);
+
     const { paginatedData, page, totalPages, setPage } = usePagination(roleFiltered, 8);
 
     const handleChange = (event: any) => {
@@ -19,11 +23,13 @@ export default function Userse() {
     };
 
     return (
-        <div className="h-full w-full flex items-center justify-center bg-slate-50 p-6">
-            <div className="w-full max-w-lx overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-                <div className="border-b border-slate-200 px-6 py-4">
-                    <h2 className="text-lg font-semibold text-slate-900">Lista de usuarios</h2>
-                    <p className="mt-1 text-sm text-slate-500">Solo puede desabilitar roles menores al suyo: Administrador - moderador - asesor</p>
+        <div className="page-shell flex items-center justify-center">
+            <div className="page-card page-card-wide">
+                <div className="page-card-header">
+                    <h2 className="page-card-title">Lista de usuarios</h2>
+                    <p className="page-card-subtitle">
+                        Solo puede deshabilitar roles menores al suyo: administrador, moderador y asesor.
+                    </p>
                 </div>
                 <div className="px-6 py-5">
                     <FormControl size="small" sx={{ ml: 1 }}>
@@ -53,7 +59,7 @@ export default function Userse() {
 
                             <FormControlLabel
                                 sx={{ justifySelf: "start", m: 0 }}
-                                label={showUsersActive ? "Actives" : "Desactives"}
+                                label={showUsersActive ? "Activos" : "Desactivados"}
                                 control={
                                     <Checkbox
                                         checked={showUsersActive}
@@ -67,12 +73,13 @@ export default function Userse() {
                         </div>
                     </FormControl>
                     {error ? <p style={{ color: "red" }}>{error}</p> : null}
+                    {loading ? <p className="text-sm text-slate-500 px-2">Cargando...</p> : null}
                     <table className="content-table">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
                                 <th>Email</th>
-                                <th>Role</th>
+                                <th>Rol</th>
                                 <th>Opciones</th>
                             </tr>
                         </thead>
@@ -113,11 +120,12 @@ export default function Userse() {
                             <button className="expand-btn" disabled={page === 1} onClick={() => setPage(page - 1)}>
                                 <ArrowBigLeftDash />
                             </button>
-                            <span>
-                                {" "}
-                                Página {page} de {totalPages}{" "}
-                            </span>
-                            <button className="expand-btn" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+                            <span> Página {page} de {totalPages} </span>
+                            <button
+                                className="expand-btn"
+                                disabled={page === totalPages || totalPages === 0}
+                                onClick={() => setPage(page + 1)}
+                            >
                                 <ArrowBigRightDash />
                             </button>
                         </div>

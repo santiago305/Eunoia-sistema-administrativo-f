@@ -23,7 +23,6 @@ import { RoutesPaths } from "../config/routesPaths";
 const RedirectIfAuth = ({ children }: PropsUrl) => {
   const { isAuthenticated } = useAuth();
 
-  console.log("[RedirectIfAuth] isAuthenticated:", isAuthenticated);
   if (isAuthenticated) return <Navigate to={RoutesPaths.dashboard} replace />;
 
   return children;

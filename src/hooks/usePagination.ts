@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export function usePagination<T>(data: T[], initialPageSize = 8) {
   const [page, setPage] = useState(1);
@@ -12,10 +12,12 @@ export function usePagination<T>(data: T[], initialPageSize = 8) {
     return data.slice(start, start + pageSize);
   }, [data, page, pageSize]);
 
-  // seguridad: si cambia data y la página ya no existe
-  if (page > totalPages) {
-    setPage(1);
-  }
+  // seguridad: si cambia data y la pagina ya no existe
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(1);
+    }
+  }, [page, totalPages]);
 
   return {
     page,

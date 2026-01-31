@@ -1,8 +1,9 @@
+import { useMemo } from "react";
 import { getSidebarItems } from "@/config/sidebarConfig";
 import SidebarItemComponent from "./SidebarItem";
 
 const SidebarBody = () => {
-  const items = getSidebarItems();
+  const items = useMemo(() => getSidebarItems(), []);
 
   return (
     <div className="flex-1 overflow-y-auto px-3 py-4">

@@ -1,8 +1,4 @@
-import {
-  IconHome,
-  IconSettings,
-  IconUsers,
-} from "@/components/dashboard/icons";
+import { IconHome, IconSettings, IconUsers } from "@/components/dashboard/icons";
 import type { SidebarItem } from "@/components/dashboard/types";
 import { RoutesPaths } from "@/router/config/routesPaths";
 

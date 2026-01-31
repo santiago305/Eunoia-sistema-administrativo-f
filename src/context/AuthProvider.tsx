@@ -20,12 +20,9 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const checkAuth = async (): Promise<AuthResponse> => {
     try {
       setLoading(true);
-      console.log("[AuthProvider.checkAuth] start");
       const response = await userInfoAuth();
       const role = extractRole(response);
       const id = extractUserId(response);
-      console.log("[AuthProvider.checkAuth] role:", role);
-
       if (!role || !id) {
         setIsAuthenticated(false);
         setUserRole(null);
@@ -56,9 +53,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
 
   const login = async (payload: LoginCredentials): Promise<AuthResponse> => {
     try {
-      console.log("[AuthProvider.login] start", { email: payload.email });
       const data = await loginUser(payload);
-      console.log("[AuthProvider.login] login response has token:", Boolean(data?.access_token));
       await checkAuth();
       return { success: true, message: "Inicio de sesion exitoso" };
     } catch (error: unknown) {
