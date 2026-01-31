@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 
-const ChangePassword = () => {
+const ChangePassword = ({ embedded = false }: { embedded?: boolean }) => {
     const [submitting, setSubmitting] = useState(false);
     const { userId } = useAuth();
     const { showFlash, clearFlash } = useFlashMessage();
@@ -48,52 +48,54 @@ const ChangePassword = () => {
         }
     };
 
-    return (
-        <div className="page-shell flex items-start justify-center">
-            <div className="page-card">
-                <div className="page-card-header">
-                    <h2 className="page-card-title">Cambiar contraseña</h2>
-                    <p className="page-card-subtitle">Mantén tu cuenta segura actualizando tu clave.</p>
-                </div>
-                <div className="px-6 py-5">
-                    <form onSubmit={handleSubmit(Submit)} className="grid gap-4">
-                        <TextField
-                            label="Contraseña"
-                            placeholder="********"
-                            type="password"
-                            size="small"
-                            fullWidth
-                            {...register("password")}
-                            error={!!errors.password}
-                            helperText={errors.password?.message}
-                        />
-                        <TextField
-                            label="Nueva contraseña"
-                            placeholder="********"
-                            type="password"
-                            size="small"
-                            fullWidth
-                            {...register("newPassword")}
-                            error={!!errors.newPassword}
-                            helperText={errors.newPassword?.message}
-                        />
+    const content = (
+        <div className="page-card">
+            <div className="page-card-header">
+                <h2 className="page-card-title">Cambiar contraseña</h2>
+                <p className="page-card-subtitle">Mantén tu cuenta segura actualizando tu clave.</p>
+            </div>
+            <div className="px-6 py-5">
+                <form onSubmit={handleSubmit(Submit)} className="grid gap-4">
+                    <TextField
+                        label="Contraseña"
+                        placeholder="********"
+                        type="password"
+                        size="small"
+                        fullWidth
+                        {...register("password")}
+                        error={!!errors.password}
+                        helperText={errors.password?.message}
+                    />
+                    <TextField
+                        label="Nueva contraseña"
+                        placeholder="********"
+                        type="password"
+                        size="small"
+                        fullWidth
+                        {...register("newPassword")}
+                        error={!!errors.newPassword}
+                        helperText={errors.newPassword?.message}
+                    />
 
-                        <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                            <Button
-                                className="w-50"
-                                type="submit"
-                                variant="contained"
-                                disabled={submitting}
-                                sx={{ textTransform: "none", color: "white", backgroundColor: "#009578", width: "100%" }}
-                            >
-                                {submitting ? "Guardando..." : "Guardar"}
-                            </Button>
-                        </Box>
-                    </form>
-                </div>
+                    <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                        <Button
+                            className="w-50"
+                            type="submit"
+                            variant="contained"
+                            disabled={submitting}
+                            sx={{ textTransform: "none", color: "white", backgroundColor: "#009578", width: "100%" }}
+                        >
+                            {submitting ? "Guardando..." : "Guardar"}
+                        </Button>
+                    </Box>
+                </form>
             </div>
         </div>
     );
+
+    if (embedded) return content;
+
+    return <div className="page-shell flex items-start justify-center">{content}</div>;
 };
 
 export default ChangePassword;

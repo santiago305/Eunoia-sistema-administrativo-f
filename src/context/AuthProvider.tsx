@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
-import { loginUser, logoutUser, userInfoAuth, type UserInfoAuthResponse } from "@/services/authService";
+import { useCallback, useEffect, useState } from "react";
+import {
+  loginUser,
+  logoutUser,
+  userInfoAuth,
+  type UserInfoAuthResponse,
+} from "@/services/authService";
 import { LoginCredentials } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
 import { AuthResponse } from "@/types/AuthResponse";
@@ -14,60 +19,72 @@ export const AuthProvider = ({ children }: PropsUrl) => {
 
   const extractRole = (data: UserInfoAuthResponse | null | undefined) =>
     data?.rol ?? null;
+
   const extractUserId = (data: UserInfoAuthResponse | null | undefined) =>
     data?.user_id ?? null;
 
-  const checkAuth = async (): Promise<AuthResponse> => {
+  const resetAuthState = useCallback(() => {
+    setIsAuthenticated(false);
+    setUserRole(null);
+    setUserId(null);
+  }, []);
+
+  const checkAuth = useCallback(async (): Promise<AuthResponse> => {
+    setLoading(true);
     try {
-      setLoading(true);
       const response = await userInfoAuth();
       const role = extractRole(response);
       const id = extractUserId(response);
+
       if (!role || !id) {
-        setIsAuthenticated(false);
-        setUserRole(null);
-        setUserId(null);
-        setLoading(false);
-        return { success: false, message: "No se pudo obtener el usuario autenticado" };
+        resetAuthState();
+        return {
+          success: false,
+          message: "No se pudo obtener el usuario autenticado",
+        };
       }
 
       setUserRole(role);
       setUserId(String(id));
       setIsAuthenticated(true);
-      setLoading(false);
-      return { success: true, message: "Autenticacion validada" };
+
+      return { success: true, message: "Autenticación validada" };
     } catch (error: unknown) {
       console.error("Error en checkAuth:", error);
-      setIsAuthenticated(false);
-      setUserRole(null);
-      setUserId(null);
-      setLoading(false);
-      const message = getApiErrorMessage(error, "Error inesperado en autenticacion");
+      resetAuthState();
+      const message = getApiErrorMessage(
+        error,
+        "Error inesperado en autenticación"
+      );
       return { success: false, message };
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [resetAuthState]);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    // Si te molesta que el efecto no sea async, esto es lo normal
+    void checkAuth();
+  }, [checkAuth]);
 
-  const login = async (payload: LoginCredentials): Promise<AuthResponse> => {
+  const login = useCallback(async (payload: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const data = await loginUser(payload);
+      await loginUser(payload);
       await checkAuth();
-      return { success: true, message: "Inicio de sesion exitoso" };
+      return { success: true, message: "Inicio de sesión exitoso" };
     } catch (error: unknown) {
-      const message = getApiErrorMessage(error, "Error en la autenticacion");
+      const message = getApiErrorMessage(error, "Error en la autenticación");
       return { success: false, message };
     }
-  };
+  }, [checkAuth]);
 
-  const logout = () => {
-    logoutUser();
-    setIsAuthenticated(false);
-    setUserRole(null);
-    setUserId(null);
-  };
+  const logout = useCallback(async () => {
+    try {
+      await logoutUser();
+    } finally {
+      resetAuthState();
+    }
+  }, [resetAuthState]);
 
   return (
     <AuthContext.Provider

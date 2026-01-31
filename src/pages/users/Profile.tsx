@@ -1,12 +1,22 @@
 import ProfileForm from "@/components/users/profile-form-settings";
+import ChangePassword from "@/pages/settings/ChangePassword";
 
 import "./profile.css";
 
 function Profile() {
     return (
-        <div className="flex px-2 h-full w-full items-start justify-start bg-slate-50 p-6">
-            <div className="px-10 mb-10 mt-10 text-center">
-                <ProfileForm />
+        <div className="page-shell flex items-start justify-center">
+            <div className="w-full max-w-6xl grid gap-6 lg:grid-cols-[3fr_2fr]">
+                <div className="page-card">
+                    <div className="page-card-header">
+                        <h2 className="page-card-title">Perfil</h2>
+                        <p className="page-card-subtitle">Actualiza tu información personal y tu foto.</p>
+                    </div>
+                    <div className="px-6 py-5">
+                        <ProfileForm />
+                    </div>
+                </div>
+                <ChangePassword embedded />
             </div>
         </div>
     );

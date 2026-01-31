@@ -1,5 +1,5 @@
 ﻿import { Outlet } from "react-router-dom";
-import { SidebarProvider } from "@/components/dashboard/SidebarContext";
+import { SidebarProvider } from "@/components/dashboard/SidebarProvider";
 import Sidebar from "@/components/dashboard/Sidebar";
 import type { User } from "@/components/dashboard/types";
 import { useToast } from "@/hooks/use-toast";

@@ -6,7 +6,7 @@ const SidebarBody = () => {
   const items = useMemo(() => getSidebarItems(), []);
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 py-4">
+    <div className="flex-1 overflow-y-auto px-3 py-4 select-none">
       <nav>
         {items.map((item, index) => (
           <SidebarItemComponent key={item.label + index} item={item} />

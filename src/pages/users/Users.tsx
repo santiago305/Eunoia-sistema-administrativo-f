@@ -6,7 +6,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useFilter } from "@/hooks/useFilter";
 import { useUsers, type UserRow } from "../../hooks/useUser";
 
-export default function Userse() {
+export default function Users() {
     const [role, setRole] = useState("");
     const { users, loading, error, showUsersActive, toggleActive, removeUser, restore } = useUsers();
     const { query, setQuery, filteredData } = useFilter(users, ["user_name", "user_email"]);

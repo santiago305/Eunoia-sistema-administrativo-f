@@ -20,7 +20,6 @@ const Dashboard = lazy(() => import("@/pages/dashboard/Index"));
 const Users = lazy(() => import("@/pages/users/Users"));
 const CreateUser = lazy(() => import("@/pages/users/CreateU"));
 const Profile = lazy(() => import("@/pages/users/Profile"));
-const ChangePassword = lazy(() => import("@/pages/settings/ChangePassword"));
 const Sessions = lazy(() => import("@/pages/settings/Sessions"));
 
 export const dashboardRoutes: RouteObject[] = [
@@ -51,10 +50,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.sessions,
                 element: <Sessions />, 
-            },
-            {
-                path: RoutesPaths.changePassword,
-                element: <ChangePassword />, 
             },
         ],
     },

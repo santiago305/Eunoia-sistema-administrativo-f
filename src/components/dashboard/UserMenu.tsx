@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { IconLogout, IconUser, IconMonitor, IconLock } from "./icons";
+import { IconLogout, IconUser, IconMonitor } from "./icons";
 import { useSidebarContext } from "./SidebarContext";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import type { User } from "./types";
@@ -35,7 +35,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "w-full flex items-center rounded-lg transition-all duration-200 hover:bg-sidebar-accent",
+            "w-full flex items-center rounded-lg transition-all duration-200 hover:bg-sidebar-accent cursor-pointer select-none",
             isCollapsed ? "justify-center p-2" : "gap-3 px-3 py-2"
           )}
         >
@@ -48,7 +48,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
 
           <div
             className={cn(
-              "flex flex-col items-start overflow-hidden transition-all duration-200",
+              "flex flex-col items-start overflow-hidden transition-all duration-200 select-none",
               isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
             )}
           >
@@ -63,31 +63,25 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align={isCollapsed ? "center" : "start"} side="top" className="w-56 mb-2">
-        <div className="px-2 py-1.5">
+        <div className="px-2 py-1.5 select-none">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-muted-foreground">{user.email}</p>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to={RoutesPaths.profile} className="cursor-pointer">
+          <Link to={RoutesPaths.profile} className="cursor-pointer select-none">
             <IconUser className="mr-2" />
             <span>Perfil</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to={RoutesPaths.sessions} className="cursor-pointer">
+          <Link to={RoutesPaths.sessions} className="cursor-pointer select-none">
             <IconMonitor className="mr-2" />
             <span>Sesiones activas</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to={RoutesPaths.changePassword} className="cursor-pointer">
-            <IconLock className="mr-2" />
-            <span>Cambiar contraseña</span>
-          </Link>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
+        <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive select-none">
           <IconLogout className="mr-2" />
           <span>Cerrar sesión</span>
         </DropdownMenuItem>
