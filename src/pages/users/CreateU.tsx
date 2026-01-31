@@ -4,7 +4,7 @@ import type { CreateUserDto, UpdateUserDto } from "@/types/user";
 import { createUser, updateUser } from "@/services/userService";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { UserForm } from "@/components/users/formUser";
+import { UserForm } from "./components/formUser";
 import './users.css'
 
 type User = {

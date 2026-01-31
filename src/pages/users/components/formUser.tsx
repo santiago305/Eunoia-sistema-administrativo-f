@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { UpdateUserDto } from "@/types/user";
-import { findAllRoles } from "../../services/roleService";
+import { findAllRoles } from "@/services/roleService";
 import { Box, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from "@mui/material";
 
 type UserFormData = UpdateUserDto & { avatarUrl?: string };

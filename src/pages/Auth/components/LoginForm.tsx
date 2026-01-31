@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginCredentials } from "@/types/auth";
 import { LoginSchema } from "@/schemas/authSchemas";
 import { useAuth } from "@/hooks/useAuth";
-import FormField from "./ui/formField";
+import FormField from "@/components/ui/formField";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -46,7 +46,6 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 
   return (
     <div className={cn("w-full", className)} {...props}>
-      {/* Header */}
       <div className="mb-5 text-center sm:mb-6">
         <p className="text-[10px] tracking-[0.25em] text-black/60 sm:text-[11px]">
           ADMINISTRACIÓN
@@ -56,7 +55,6 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
         </h1>
       </div>
 
-      {/* Caja */}
       <div
         className={cn(
           "rounded-2xl border border-black/10 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08)]",

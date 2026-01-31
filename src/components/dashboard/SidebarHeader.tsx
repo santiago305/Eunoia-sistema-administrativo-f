@@ -4,7 +4,7 @@ const SidebarHeader = () => {
   const { isCollapsed } = useSidebarContext();
 
   return (
-    <div className="h-[60px] flex items-center justify-center border-b border-sidebar-border px-3 select-none">
+    <div className="h-[60px] flex items-center justify-center px-3 select-none">
       {isCollapsed ? (
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <span className="text-primary-foreground font-bold text-sm">E</span>

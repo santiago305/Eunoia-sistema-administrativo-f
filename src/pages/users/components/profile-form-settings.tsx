@@ -49,7 +49,7 @@ const ProfileForm = () => {
       email: user.email ?? "",
     });
     setEditable({ name: false, email: false });
-  }, [userId, reset]); // clave: depende del id, no del objeto entero
+  }, [userId, reset]);
 
   const onSubmit = async (data: UpdateUserForm) => {
     clearFlash();
@@ -71,7 +71,7 @@ const ProfileForm = () => {
 
   const onAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const avatar = event.target.files?.[0];
-    event.target.value = ""; // límpialo de una
+    event.target.value = "";
     if (!avatar) return;
 
     clearFlash();
@@ -95,10 +95,8 @@ const ProfileForm = () => {
     const raw = user?.avatarUrl;
     if (!raw) return Img;
 
-    // Si ya es absoluta, úsala
     if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
 
-    // Normaliza: si viene /assets/ -> /api/assets/
     const normalized = raw.startsWith("/api/assets/")
       ? raw
       : raw.replace("/assets/", "/api/assets/");

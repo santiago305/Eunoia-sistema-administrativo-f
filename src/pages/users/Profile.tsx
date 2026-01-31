@@ -1,4 +1,4 @@
-import ProfileForm from "@/components/users/profile-form-settings";
+import ProfileForm from "./components/profile-form-settings";
 import ChangePassword from "@/pages/settings/ChangePassword";
 
 // import "./profile.css";

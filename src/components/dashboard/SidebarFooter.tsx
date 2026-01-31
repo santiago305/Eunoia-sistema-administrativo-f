@@ -8,7 +8,7 @@ interface SidebarFooterProps {
 
 const SidebarFooter = ({ user, onLogout }: SidebarFooterProps) => {
   return (
-    <div className="border-t border-sidebar-border p-3 select-none">
+    <div className="p-3 select-none">
       <UserMenu user={user} onLogout={onLogout} />
     </div>
   );

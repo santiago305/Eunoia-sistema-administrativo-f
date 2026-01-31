@@ -12,7 +12,6 @@ const SidebarToggle = () => {
 
   return (
     <div className={cn(
-      "border-b border-sidebar-border",
       isCollapsed ? "px-2 py-2" : "px-3 py-2"
     )}>
       <Tooltip delayDuration={0}>

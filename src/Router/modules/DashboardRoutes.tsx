@@ -20,7 +20,7 @@ const Dashboard = lazy(() => import("@/pages/dashboard/Index"));
 const Users = lazy(() => import("@/pages/users/Users"));
 const CreateUser = lazy(() => import("@/pages/users/CreateU"));
 const Profile = lazy(() => import("@/pages/users/Profile"));
-const Sessions = lazy(() => import("@/pages/settings/Sessions"));
+const Sessions = lazy(() => import("@/pages/users/Sessions"));
 
 export const dashboardRoutes: RouteObject[] = [
     {
