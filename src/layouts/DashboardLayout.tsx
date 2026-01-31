@@ -1,22 +1,17 @@
 ﻿import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/dashboard/SidebarProvider";
 import Sidebar from "@/components/dashboard/Sidebar";
-import type { User } from "@/components/dashboard/types";
+// import type { User } from "@/components/dashboard/types";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationFlashMessage } from "@/hooks/useLocationFlashMessage";
 import { useAuth } from "@/hooks/useAuth";
-
-const mockUser: User = {
-  id: "1",
-  name: "Juan Pérez",
-  email: "juan.perez@example.com",
-  avatar: undefined,
-};
+import { useUserDetails } from "@/hooks/useUserDetails";
 
 const DashboardLayout = () => {
   useLocationFlashMessage();
   const { toast } = useToast();
   const { logout } = useAuth();
+  const { userDetails } = useUserDetails();
   
   const handleLogout = async () => {
       try {
@@ -35,7 +30,15 @@ const DashboardLayout = () => {
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden">
-        <Sidebar user={mockUser} onLogout={handleLogout} />
+        <Sidebar
+          user={{
+            id: userDetails?.data?.id ?? "unknown",
+            name: userDetails?.data?.name ?? "Usuario",
+            email: userDetails?.data?.email ?? "correo@ejemplo.com",
+            avatar: userDetails?.data?.avatarUrl ?? undefined,
+          }}
+          onLogout={handleLogout}
+        />
         <main className="flex-1 h-full overflow-y-auto">
           <Outlet />
         </main>

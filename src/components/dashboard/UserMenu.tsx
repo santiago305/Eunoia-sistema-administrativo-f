@@ -48,14 +48,14 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
 
           <div
             className={cn(
-              "flex flex-col items-start overflow-hidden transition-all duration-200 select-none",
+              "min-w-0 flex flex-col items-start overflow-hidden transition-all duration-200 select-none",
               isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
             )}
           >
             <span className="text-sm font-medium text-sidebar-foreground truncate max-w-[120px]">
               {user.name}
             </span>
-            <span className="text-xs text-sidebar-muted truncate max-w-[120px]">
+            <span className="text-[10px] text-sidebar-muted truncate w-full">
               {user.email}
             </span>
           </div>
