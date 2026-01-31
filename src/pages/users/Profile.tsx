@@ -1,7 +1,7 @@
 import ProfileForm from "@/components/users/profile-form-settings";
 import ChangePassword from "@/pages/settings/ChangePassword";
 
-import "./profile.css";
+// import "./profile.css";
 
 function Profile() {
     return (
@@ -13,7 +13,7 @@ function Profile() {
                         <p className="page-card-subtitle">Actualiza tu información personal y tu foto.</p>
                     </div>
                     <div className="px-6 py-5">
-                        <ProfileForm />
+                        {/* <ProfileForm /> */}
                     </div>
                 </div>
                 <ChangePassword embedded />
