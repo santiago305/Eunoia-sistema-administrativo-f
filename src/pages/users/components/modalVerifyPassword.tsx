@@ -4,6 +4,7 @@ import { Modal } from "@/components/settings/modal";
 import { verifyPassword } from "@/services/userService";
 import { useForm } from "react-hook-form";
 import { TextField } from "@mui/material";
+import { useEffect } from "react";
 
 type FormValues = { password: string };
 
@@ -24,6 +25,12 @@ export default function ModalVerifyPassword({ open, onClose, onVerified, submitt
         formState: { errors },
     } = useForm<FormValues>();
 
+    useEffect(() => {
+        if (open) {
+            reset({ password: "" });
+        }
+    }, [open, reset]);
+
     const verifyPasswordPass = async (data: FormValues) => {
         clearFlash();
         try {
@@ -42,14 +49,12 @@ export default function ModalVerifyPassword({ open, onClose, onVerified, submitt
     };
 
     if (!open) return null;
-
     return (
-        <Modal onClose={onClose} title="Verificar contraseña">
-            <p className="mt-0 text-slate-500">Es necesario validar su contraseña por su seguridad.</p>
-
+        <Modal onClose={onClose} title="Continue con la validación">
+            <p className="mt-0 text-slate-500">Es necesario validar con su contraseña actual por su seguridad.</p>
             <form className="mt-4" onSubmit={handleSubmit(verifyPasswordPass)}>
                 <TextField
-                    label="Ingrese contraseña"
+                    label="Ingrese su actual contraseña"
                     placeholder="********"
                     type="password"
                     size="small"
@@ -84,7 +89,7 @@ export default function ModalVerifyPassword({ open, onClose, onVerified, submitt
 
                         /* background */
                         "& .MuiOutlinedInput-root": {
-                            backgroundColor: "#F3F4F6", // gray-100 (cámbialo si quieres)
+                            backgroundColor: "#F3F4F6", // gray-100 
                         },
                     }}
                 />
@@ -96,7 +101,8 @@ export default function ModalVerifyPassword({ open, onClose, onVerified, submitt
                         Cancelar
                     </button>
 
-                    <button className="rounded-md bg-[#21b8a6] px-3 py-1 text-sm text-white cursor-pointer hover:scale-[1.02]" type="submit" disabled={!!submitting}>
+                    <button className="rounded-md bg-[#21b8a6] px-3 py-1 text-sm text-white cursor-pointer hover:scale-[1.02]" type="submit" disabled={!!submitting}
+                    >
                         {submitting ? "Guardando..." : "Validar"}
                     </button>
                 </div>

@@ -1,21 +1,26 @@
 
-﻿import Avatar from "@/components/users/avatar";
+﻿import AvatarPhoto from "@/pages/users/components/avatar";
 import ProfileForm from "@/pages/users/components/profile-form-settings";
-import ModalVerifyPassword from "@/components/users/modalVerifyPassword";
-import { useCallback, useState } from "react";
+import ModalVerifyPassword from "@/pages/users/components/modalVerifyPassword";
+import { useCallback, useEffect, useState } from "react";
 import { changePassword } from "@/services/userService";
 import { useAuth } from "@/hooks/useAuth";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
+import { UpdateUserDto } from "@/types/user";
+import { findOwnUser } from "@/services/userService";
+
 
 type PendingUpdate = { password: string };
 
-export default function SettingsUnifiedFull() {
+
+export default function Profile() {
     const { userId } = useAuth();
     const { showFlash, clearFlash } = useFlashMessage();
     const [openModal, setOpenModal] = useState(false);
     const [pendingUpdate, setPendingUpdate] = useState<PendingUpdate | null>(null);
     const [saving, setSaving] = useState(false);
+    const [user, setUser] = useState<UpdateUserDto>();
 
     const requestVerify = useCallback((password: string) => {
         setPendingUpdate({ password });
@@ -43,18 +48,32 @@ export default function SettingsUnifiedFull() {
             showFlash(errorResponse("Error al actualizar datos"));
         } finally {
             setSaving(false);
+            getUser();
         }
     }, [userId, pendingUpdate, clearFlash, showFlash]);
 
+        const getUser = useCallback(async () => {
+            try {
+                const res = await findOwnUser();
+                setUser(res.data);
+            } catch {
+                showFlash(errorResponse("Error al cargar usuario"));
+            }
+        }, [showFlash]);
+
+        useEffect(() => {
+            getUser();
+        }, [getUser]);
+
     return (
-        <div className="h-screen w-screen bg-white text-black">
+        <div className="h-screen w-screen bg-white text-black overflow-hidden">
             <div className="relative px-10 py-4 border-b border-black/10">
                 <h1 className="text-3xl font-semibold text-gray-700">Personalizar tu perfil</h1>
             </div>
 
-            <Avatar />
+            <AvatarPhoto getUser={getUser} user={user} />
 
-            <ProfileForm onRequestVerify={requestVerify} />
+            <ProfileForm getUser={getUser} user={user} onRequestVerify={requestVerify} />
 
             <ModalVerifyPassword open={openModal} onClose={closeModal} onVerified={applyPendingUpdate} submitting={saving} />
         </div>

@@ -1,48 +1,42 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { findOwnUser, updateUser } from "@/services/userService";
+import { updateUser } from "@/services/userService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { UpdateUserDto } from "@/types/user";
 import { updateUserSchema } from "@/schemas/userSchemas";
 import { useAuth } from "@/hooks/useAuth";
-import { Pencil } from "lucide-react";
+import { Check, Eye, EyeOff, Pencil } from "lucide-react";
 
 type Props = {
-    onRequestVerify: (password:  string ) => void;
+    onRequestVerify: (password: string) => void;
+    getUser?: () => Promise<void> | void;
+    user?: UpdateUserDto;
 };
-const ProfileForm = ({ onRequestVerify }: Props) => {
+const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
     const { showFlash, clearFlash } = useFlashMessage();
     const { userId } = useAuth();
-    const [user, setUser] = useState<UpdateUserDto>();
     const [disableName, setDisableName] = useState(true);
     const [disableEmail, setDisableEmail] = useState(true);
     const [disablePassword, setDisablePassword] = useState(true);
-    const [password, setPassword] = useState("");
+    const [eyeBool, setEyeBool] = useState(true);
+    const [check, setCheck] = useState(false);
 
     const { register, reset, trigger, getValues, setFocus, formState: {errors} } = useForm<UpdateUserDto>({
         resolver: zodResolver(updateUserSchema),
         defaultValues: { name: "", email: "", password: "" },
     });
 
-    const getUser = useCallback(async () => {
-        try {
-            const res = await findOwnUser();
-            setUser(res.data);
-            reset({
-                name: res.data.name ?? "",
-                email: res.data.email ?? "",
-                password: "",
-            });
-        } catch {
-            showFlash(errorResponse("Error al cargar usuario"));
-        }
-    }, [showFlash, reset]);
-
     useEffect(() => {
-        getUser();
-    }, [getUser]);
+        reset({
+            name: user?.name ?? "",
+            email: user?.email ?? "",
+        },{
+            keepDirtyValues: true, 
+        }
+    );
+    }, [user, reset]);
 
     const updateData = async (data: UpdateUserDto) => {
         clearFlash();
@@ -66,19 +60,16 @@ const ProfileForm = ({ onRequestVerify }: Props) => {
         if (!ok) return;
 
         const value = getValues(field);
-        const originalValue = user[field];
-
-        if (field === "password" && !value) return;
+        
         if (field === "password"){
-            setPassword(value)
-            onRequestVerify( password );
-            await getUser();
+            onRequestVerify( value );
             return;
         };
-
+        
+        const originalValue = user?.[field];
         if (value != originalValue) {
             await updateData({ [field]: value } as UpdateUserDto);
-            await getUser();
+            getUser?.();
             return;
         }
     };
@@ -149,19 +140,18 @@ const ProfileForm = ({ onRequestVerify }: Props) => {
                         </button>
                     </div>
                 </div>
-                <div className="grid max-w-7/12 gap-2">
-                    <label className="text-gl font-semibold text-gray-900">Contraseña</label>
+                <div className="grid max-w-7/12 gap-1">
+                    <label className="text-gl font-semibold text-gray-900">Ingrese nueva contraseña</label>
                     <div className="flex gap-2">
                         <div className=" w-full">
                             <input
                                 disabled={disablePassword}
-                                type="password"
+                                type={eyeBool ? "password" : "text"}
                                 placeholder="**************"
                                 className="h-15 w-full rounded-xl bg-gray-100 text-gray-600 px-4 text-lg outline-none focus:border-[#21b8a6]
                             focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
                                 {...register("password", {
                                     onBlur: () => {
-                                        saveField("password");
                                         setDisablePassword(true);
                                     },
                                 })}
@@ -170,14 +160,31 @@ const ProfileForm = ({ onRequestVerify }: Props) => {
                         </div>
                         <button
                             type="button"
-                            className="h-14 w-13 text-gray-600 rounded-xl bg-green-200 hover:bg-green-300
-                            cursor-pointer hover:text-gray-700"
+                            className={`h-14 w-13 text-gray-600 rounded-xl ${check ? "bg-blue-200 hover:bg-blue-300" : "bg-green-200 hover:bg-green-300"} 
+                            cursor-pointer hover:text-gray-700`}
                             onClick={() => {
-                                setDisablePassword(false);
-                                queueMicrotask(() => setFocus("password"));
+                                if(check){
+                                    saveField("password");
+                                    setCheck(false);
+                                }else{
+                                    setDisablePassword(false);
+                                    queueMicrotask(() => setFocus("password"));
+                                    setCheck(true);
+                                }
                             }}
                         >
-                            <Pencil className="ml-3" />
+                            {!check ? <Pencil className="ml-2" /> : <Check className="ml-2" />}
+                        </button>
+
+                        <button
+                            type="button"
+                            className="h-14 w-13 text-gray-600 rounded-xl bg-gray-200 hover:bg-gray-300
+                            cursor-pointer hover:text-gray-700"
+                            onClick={() => {
+                                setEyeBool((prev) => !prev);
+                            }}
+                        >
+                            {eyeBool ? <Eye className="ml-3" /> : <EyeOff className="ml-3" />}
                         </button>
                     </div>
                 </div>

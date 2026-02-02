@@ -12,6 +12,7 @@ import { useSidebarContext } from "./SidebarContext";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import type { User } from "./types";
 import { cn } from "@/lib/utils";
+import { getInitials } from "@/utils/getInitials";
 
 interface UserMenuProps {
   user: User;
@@ -20,16 +21,6 @@ interface UserMenuProps {
 
 const UserMenu = ({ user, onLogout }: UserMenuProps) => {
   const { isCollapsed } = useSidebarContext();
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
