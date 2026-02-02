@@ -1,5 +1,4 @@
 import { FormControl, InputLabel, Select, MenuItem, TextField, FormControlLabel, Checkbox } from "@mui/material";
-import "./users.css";
 import { useMemo, useState } from "react";
 import { ArrowBigRightDash, ArrowBigLeftDash, RotateCcwSquare, Eraser } from "lucide-react";
 import { usePagination } from "@/hooks/usePagination";

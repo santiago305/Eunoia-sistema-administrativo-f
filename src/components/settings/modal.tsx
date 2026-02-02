@@ -7,7 +7,7 @@ interface ModalDeleteSessionsProps {
   onClose?: () => void;
 }
 
-export function ModalDeleteSessions({
+export function Modal({
   title,
   children,
   onClose,
