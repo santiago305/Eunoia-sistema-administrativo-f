@@ -1,196 +1,189 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { IconEdit } from "@tabler/icons-react";
-
-import { updateAvatar, updateUser } from "@/services/userService";
+import { findOwnUser, updateUser } from "@/services/userService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { useUserDetails } from "@/hooks/useUserDetails";
-import { updateUserSchema } from "@/schemas/userSchemas";
 import { errorResponse, successResponse } from "@/common/utils/response";
+import { UpdateUserDto } from "@/types/user";
+import { updateUserSchema } from "@/schemas/userSchemas";
+import { useAuth } from "@/hooks/useAuth";
+import { Pencil } from "lucide-react";
 
-import Img from "@/assets/react.svg";
-import "./profile-form-settings.css";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-
-type UpdateUserForm = {
-  name: string;
-  email: string;
+type Props = {
+    onRequestVerify: (password:  string ) => void;
 };
+const ProfileForm = ({ onRequestVerify }: Props) => {
+    const { showFlash, clearFlash } = useFlashMessage();
+    const { userId } = useAuth();
+    const [user, setUser] = useState<UpdateUserDto>();
+    const [disableName, setDisableName] = useState(true);
+    const [disableEmail, setDisableEmail] = useState(true);
+    const [disablePassword, setDisablePassword] = useState(true);
+    const [password, setPassword] = useState("");
 
-const ProfileForm = () => {
-  const { userDetails, refetchUserDetails } = useUserDetails();
-  const { showFlash, clearFlash } = useFlashMessage();
-
-  const user = userDetails?.data;
-  const userId = user?.id;
-
-  const [editable, setEditable] = useState<{ name: boolean; email: boolean }>({
-    name: false,
-    email: false,
-  });
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm<UpdateUserForm>({
-    resolver: zodResolver(updateUserSchema),
-    mode: "onSubmit",
-    defaultValues: { name: "", email: "" },
-  });
-
-  useEffect(() => {
-    if (!user) return;
-    reset({
-      name: user.name ?? "",
-      email: user.email ?? "",
+    const { register, reset, trigger, getValues, setFocus, formState: {errors} } = useForm<UpdateUserDto>({
+        resolver: zodResolver(updateUserSchema),
+        defaultValues: { name: "", email: "", password: "" },
     });
-    setEditable({ name: false, email: false });
-  }, [userId, reset]);
 
-  const onSubmit = async (data: UpdateUserForm) => {
-    clearFlash();
-    if (!userId) {
-      showFlash(errorResponse("User id is missing."));
-      return;
-    }
+    const getUser = useCallback(async () => {
+        try {
+            const res = await findOwnUser();
+            setUser(res.data);
+            reset({
+                name: res.data.name ?? "",
+                email: res.data.email ?? "",
+                password: "",
+            });
+        } catch {
+            showFlash(errorResponse("Error al cargar usuario"));
+        }
+    }, [showFlash, reset]);
 
-    try {
-      const res = await updateUser(userId, data);
-      await refetchUserDetails();
-      showFlash(successResponse(res?.message ?? "Profile updated successfully."));
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to update profile.";
-      showFlash(errorResponse(message));
-    }
-  };
+    useEffect(() => {
+        getUser();
+    }, [getUser]);
 
-  const onAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const avatar = event.target.files?.[0];
-    event.target.value = "";
-    if (!avatar) return;
+    const updateData = async (data: UpdateUserDto) => {
+        clearFlash();
+        if (!userId) {
+            showFlash(errorResponse("User id is missing."));
+            return;
+        }
+        try {
+            const res = await updateUser(userId, data);
+            if(res?.type === "success"){
+                showFlash(successResponse("Campo actualizado correctamente"));
+            }else{
+                showFlash(errorResponse("Error al actualizar los datos"));
+            }
+        } catch {
+            showFlash(errorResponse("Error al actualizar datos"));
+        }
+    };
+    const saveField = async (field: keyof UpdateUserDto) => {
+        const ok = await trigger(field);
+        if (!ok) return;
 
-    clearFlash();
-    if (!userId) {
-      showFlash(errorResponse("User id is missing."));
-      return;
-    }
+        const value = getValues(field);
+        const originalValue = user[field];
 
-    try {
-      const res = await updateAvatar(userId, avatar);
-      await refetchUserDetails();
-      showFlash(successResponse(res?.message ?? "Avatar updated successfully."));
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to update avatar.";
-      showFlash(errorResponse(message));
-    }
-  };
+        if (field === "password" && !value) return;
+        if (field === "password"){
+            setPassword(value)
+            onRequestVerify( password );
+            await getUser();
+            return;
+        };
 
-  const avatarSrc = useMemo(() => {
-    const raw = user?.avatarUrl;
-    if (!raw) return Img;
-
-    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-
-    const normalized = raw.startsWith("/api/assets/")
-      ? raw
-      : raw.replace("/assets/", "/api/assets/");
-
-    return `${API_BASE_URL}${normalized}`;
-  }, [user?.avatarUrl]);
-
-  return (
-    <div className="container__profile">
-      <header className="header__profile">
-        <div className="avatar-upload flex justify-center">
-          <input
-            id="avatarUrl"
-            type="file"
-            accept="image/*"
-            className="avatar-input"
-            onChange={onAvatarChange}
-          />
-          <label htmlFor="avatarUrl" className="avatar-label">
-            <img src={avatarSrc} alt="Avatar" className="img__profile" />
-            <span className="avatar-overlay">
-              <span className="avatar-overlay-text">Subir foto</span>
-            </span>
-          </label>
-        </div>
-        <hr />
-      </header>
-
-      <div className="card__profile">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="form__container mt-5">
-            <label className="form__label">Name</label>
-            <input
-              type="text"
-              className="form__input"
-              id="name"
-              {...register("name")}
-              disabled={!editable.name}
-            />
-            {errors.name && <span>{String(errors.name.message)}</span>}
-            <button
-              type="button"
-              className="form__icon-button"
-              aria-label="Edit name"
-              onClick={() => setEditable((p) => ({ ...p, name: !p.name }))}
-            >
-              <IconEdit />
-            </button>
-          </div>
-
-          <div className="form__container">
-            <label className="form__label">Email</label>
-            <input
-              type="email"
-              className="form__email"
-              id="email"
-              {...register("email")}
-              disabled={!editable.email}
-            />
-            {errors.email && <span>{String(errors.email.message)}</span>}
-            <button
-              type="button"
-              className="form__icon-button"
-              aria-label="Edit email"
-              onClick={() => setEditable((p) => ({ ...p, email: !p.email }))}
-            >
-              <IconEdit />
-            </button>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button
-              type="submit"
-              className="btn-save"
-              disabled={!isDirty || isSubmitting}
-            >
-              Guardar cambios
-            </button>
-
-            <button
-              type="button"
-              className="btn-cancel"
-              onClick={() =>
-                reset({ name: user?.name ?? "", email: user?.email ?? "" })
-              }
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </button>
-          </div>
+        if (value != originalValue) {
+            await updateData({ [field]: value } as UpdateUserDto);
+            await getUser();
+            return;
+        }
+    };
+    return (
+        <form onSubmit={(e) => e.preventDefault()}>
+            <div className="pl-4 ml-5 grid grid-rows-3 gap-4">
+                <div className="grid max-w-7/12 gap-2">
+                    <label className="text-gl font-semibold text-gray-900">Nombre</label>
+                    <div className="flex gap-2">
+                        <div className=" w-full">
+                            <input
+                                disabled={disableName}
+                                type="text"
+                                placeholder="Tu nombre"
+                                className="h-15 w-full rounded-xl bg-gray-100 text-gray-600 px-4 text-lg outline-none focus:border-[#21b8a6]
+                            focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
+                                {...register("name", {
+                                    onBlur: () => {
+                                        saveField("name");
+                                        setDisableName(true);
+                                    },
+                                })}
+                            />
+                            <p className={`text-sm text-center mt-1 text-red-400 ${errors.name ? "visible" : "invisible"}`}>{errors.name?.message ?? "placeholder"}</p>
+                        </div>
+                        <button
+                            type="button"
+                            className="h-14 w-13 rounded-xl bg-green-200 hover:bg-green-300
+                            cursor-pointer text-gray-600 hover:text-gray-700"
+                            onClick={() => {
+                                setDisableName(false);
+                                queueMicrotask(() => setFocus("name"));
+                            }}
+                        >
+                            <Pencil className="ml-3" />
+                        </button>
+                    </div>
+                </div>
+                <div className="grid max-w-7/12 gap-2">
+                    <label className="text-gl font-semibold text-gray-900">Email</label>
+                    <div className="flex gap-2">
+                        <div className=" w-full">
+                            <input
+                                disabled={disableEmail}
+                                type="email"
+                                placeholder="Tu email"
+                                className="h-15 w-full rounded-xl bg-gray-100 text-gray-600 px-4 text-lg outline-none focus:border-[#21b8a6]
+                            focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
+                                {...register("email", {
+                                    onBlur: () => {
+                                        saveField("email");
+                                        setDisableEmail(true);
+                                    },
+                                })}
+                            />
+                            <p className={`text-sm text-center mt-1 text-red-400 ${errors.email ? "visible" : "invisible"}`}>{errors.email?.message ?? "placeholder"}</p>
+                        </div>
+                        <button
+                            type="button"
+                            className="h-14 w-13 rounded-xl bg-green-200 hover:bg-green-300
+                            cursor-pointer text-gray-600 hover:text-gray-700"
+                            onClick={() => {
+                                setDisableEmail(false);
+                                queueMicrotask(() => setFocus("email"));
+                            }}
+                        >
+                            <Pencil className="ml-3" />
+                        </button>
+                    </div>
+                </div>
+                <div className="grid max-w-7/12 gap-2">
+                    <label className="text-gl font-semibold text-gray-900">Contraseña</label>
+                    <div className="flex gap-2">
+                        <div className=" w-full">
+                            <input
+                                disabled={disablePassword}
+                                type="password"
+                                placeholder="**************"
+                                className="h-15 w-full rounded-xl bg-gray-100 text-gray-600 px-4 text-lg outline-none focus:border-[#21b8a6]
+                            focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
+                                {...register("password", {
+                                    onBlur: () => {
+                                        saveField("password");
+                                        setDisablePassword(true);
+                                    },
+                                })}
+                            />
+                            <p className={`text-sm text-center mt-1 text-red-400 ${errors.password ? "visible" : "invisible"}`}>{errors.password?.message ?? "placeholder"}</p>
+                        </div>
+                        <button
+                            type="button"
+                            className="h-14 w-13 text-gray-600 rounded-xl bg-green-200 hover:bg-green-300
+                            cursor-pointer hover:text-gray-700"
+                            onClick={() => {
+                                setDisablePassword(false);
+                                queueMicrotask(() => setFocus("password"));
+                            }}
+                        >
+                            <Pencil className="ml-3" />
+                        </button>
+                    </div>
+                </div>
+            </div>
         </form>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default ProfileForm;
