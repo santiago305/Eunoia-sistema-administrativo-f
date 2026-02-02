@@ -51,6 +51,13 @@ export const updateAvatar = async (id: string, file: File) => {
   return response.data;
 };
 
+export const removeAvatar = async (id: string) => {
+  const response = await axiosInstance.patch(
+    API_USERS_GROUP.removeAvatar(id)
+  );
+  return response.data;
+};
+
 export const changePassword = async (
   id: string,
   payload: { currentPassword: string; newPassword: string }

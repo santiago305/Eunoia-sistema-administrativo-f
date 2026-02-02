@@ -1,8 +1,9 @@
 import { logoutUser, refresh_token } from '@/services/authService';
 import axios, { type AxiosRequestConfig } from 'axios';
+import { env } from '@/env'
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: env.apiBaseUrl,
   withCredentials: true,
 });
 
