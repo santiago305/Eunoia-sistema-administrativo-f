@@ -18,6 +18,7 @@ export type UserRow = {
   user_created_at: string;
   rol: string;
   roleId: string;
+  avatarUrl?:string;
 };
 
 type ApiListResponse<T> = T[] | { data?: T[] } | undefined | null;
