@@ -14,6 +14,7 @@ export const getSidebarItems = (): SidebarItem[] => [
     icon: <IconUsers className="text-sidebar-foreground" />,
     children: [
       { label: "Listar", href: RoutesPaths.users },
+      { label: "Sesiones", href: RoutesPaths.sessions },
     ],
   },
 ];

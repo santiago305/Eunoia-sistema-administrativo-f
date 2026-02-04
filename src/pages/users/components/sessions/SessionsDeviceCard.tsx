@@ -4,9 +4,10 @@ interface SessionsDeviceCardProps {
   session: Session;
   revokingId: string | null;
   onRevoke: (id: string) => void;
+  onOpenDetails: (session: Session) => void;
 }
 
-const SessionsDeviceCard = ({ session, revokingId, onRevoke }: SessionsDeviceCardProps) => {
+const SessionsDeviceCard = ({ session, revokingId, onRevoke, onOpenDetails }: SessionsDeviceCardProps) => {
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-md transition hover:shadow-lg">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -16,7 +17,7 @@ const SessionsDeviceCard = ({ session, revokingId, onRevoke }: SessionsDeviceCar
             {session.isCurrent && (
               <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-[#E6F0FA] text-[#145DA0]">
                 <span className="h-2 w-2 rounded-full bg-[#145DA0]" />
-                Sesión actual
+                Sesion actual
               </span>
             )}
           </div>
@@ -25,14 +26,9 @@ const SessionsDeviceCard = ({ session, revokingId, onRevoke }: SessionsDeviceCar
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-black/60">
             <span className="rounded-full bg-black/5 px-2 py-1">
-              Última actividad: <span className="text-black">{session.lastActive}</span>
+              Ultima actividad: <span className="text-black">{session.lastActive}</span>
             </span>
-            {session.location && (
-              <span className="rounded-full bg-black/5 px-2 py-1">{session.location}</span>
-            )}
-            {session.ip && (
-              <span className="rounded-full bg-black/5 px-2 py-1">IP: {session.ip}</span>
-            )}
+            {session.ip && <span className="rounded-full bg-black/5 px-2 py-1">IP: {session.ip}</span>}
           </div>
         </div>
 
@@ -48,10 +44,11 @@ const SessionsDeviceCard = ({ session, revokingId, onRevoke }: SessionsDeviceCar
                 : "border-black/15 text-black hover:bg-black/5",
             ].join(" ")}
           >
-            {session.isCurrent ? "Estás aquí" : "Cerrar sesión"}
+            {session.isCurrent ? "Estas aqui" : "Eliminar 1 sesion"}
           </button>
           <button
             type="button"
+            onClick={() => onOpenDetails(session)}
             className="rounded-xl px-4 py-2 text-sm font-medium text-black border border-black/10 hover:bg-black/5 transition"
             title="Ver detalles"
           >
@@ -74,9 +71,17 @@ const SessionsDeviceCard = ({ session, revokingId, onRevoke }: SessionsDeviceCar
             <p className="text-xs text-black/60">Estado</p>
             <p>{session.isCurrent ? "Activa (actual)" : "Activa"}</p>
           </div>
+          <div>
+            <p className="text-xs text-black/60">Creada</p>
+            <p>{session.createdAt}</p>
+          </div>
+          <div>
+            <p className="text-xs text-black/60">Expira</p>
+            <p>{session.expiresAt}</p>
+          </div>
         </div>
         <p className="mt-3 text-xs text-black/50">
-          La ubicación es aproximada. Si no reconoces esta sesión, ciérrala y cambia tu contraseña.
+          La ubicacion es aproximada. Si no reconoces esta sesion, cierrala y cambia tu contrasena.
         </p>
       </div>
     </div>

@@ -1,14 +1,27 @@
 import axiosInstance from "@/common/utils/axios";
 import { API_SESSIONS_GROUP } from "./APIs";
+import type { SessionApiDto, SessionMessageResponse } from "@/types/session";
+import { mapSessionApiToSessionDto } from "@/common/utils/sessionDetect";
 
+export const findSessions = async () => {
+  const response = await axiosInstance.get<SessionApiDto[]>(API_SESSIONS_GROUP.findAll);
+  return response.data;
+};
 
 export const findSessionsMe = async () => {
-    return await axiosInstance.get(API_SESSIONS_GROUP.findMe).then( res => res.data );
+  const sessions = await findSessions();
+  return sessions.map(mapSessionApiToSessionDto);
 };
+
 export const revokeAllSessionsLessMe = async () => {
-    return await axiosInstance.patch(API_SESSIONS_GROUP.revokeAllSessionsLessMe).then( res => res.data );
+  const response = await axiosInstance.delete<SessionMessageResponse>(API_SESSIONS_GROUP.revokeAll);
+  return response.data;
 };
+
+export const revokeAllSessions = revokeAllSessionsLessMe;
+
 export const revokeSession = async (id: string) => {
-    return await axiosInstance.patch(API_SESSIONS_GROUP.revokeSession(id)).then( res => res.data );
+  const response = await axiosInstance.delete<SessionMessageResponse>(API_SESSIONS_GROUP.revokeSession(id));
+  return response.data;
 };
 

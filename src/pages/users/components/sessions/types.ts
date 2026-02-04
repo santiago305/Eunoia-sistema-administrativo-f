@@ -3,8 +3,10 @@ export type Session = {
   deviceName: string;
   browser: string;
   os: string;
-  location?: string;
   ip?: string;
+  userAgent?: string;
   lastActive: string;
-  isCurrent: boolean;
+  isCurrent?: boolean;
+  createdAt: string;
+  expiresAt: string;
 };

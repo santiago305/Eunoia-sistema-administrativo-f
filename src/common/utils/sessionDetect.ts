@@ -1,7 +1,8 @@
+import type { SessionApiDto } from "@/types/session";
+
 export type SessionDto = {
   id: string;
   userId: string;
-  deviceId: string;
   deviceName?: string | null;
   userAgent?: string | null;
   ipAddress?: string | null;
@@ -10,6 +11,21 @@ export type SessionDto = {
   revokedAt?: string | null;
   expiresAt: string;
   isCurrent: boolean | null;
+};
+
+export const mapSessionApiToSessionDto = (session: SessionApiDto): SessionDto => {
+  return {
+    id: session.id,
+    userId: session.userId,
+    deviceName: session.deviceName,
+    userAgent: session.userAgent,
+    ipAddress: session.ip,
+    createdAt: session.createdAt,
+    lastSeenAt: session.lastUsedAt,
+    revokedAt: session.revokedAt,
+    expiresAt: session.expiresAt,
+    isCurrent: session.isCurrent,
+  };
 };
 
 export type SessionMeta = {

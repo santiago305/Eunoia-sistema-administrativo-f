@@ -26,7 +26,7 @@ export const API_USERS_GROUP = {
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
   updateAvatar: (id: string) => `/users/${id}/avatar`,
-  removeAvatar: `/users/remove-avatar/me`,
+  removeAvatar: (id: string) => `/users/remove-avatar/${id}`,
   changePassword: (id: string) => `/users/change-password/${id}`,
 };
 export const API_ROLES_GROUP = {
@@ -34,7 +34,7 @@ export const API_ROLES_GROUP = {
 };
 
 export const API_SESSIONS_GROUP = {
-  findMe:`/sessions/me`,
-  revokeSession: (id: string) => `/sessions/${id}/revoke`,
-  revokeAllSessionsLessMe: '/sessions/revoke/allLessMe'
+  findAll: "/sessions",
+  revokeSession: (id: string) => `/sessions/${id}`,
+  revokeAll: "/sessions",
 };

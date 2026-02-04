@@ -15,9 +15,28 @@ export interface UserInfoAuthResponse {
   rol: string;
 }
 
+const getDeviceNameHeader = () => {
+  if (typeof window === "undefined") return "Unknown device";
+
+  const ua = window.navigator.userAgent || "";
+  const platform = window.navigator.platform || "Unknown OS";
+
+  if (/iPhone|iPad|iPod/i.test(ua)) return `Apple ${platform}`;
+  if (/Android/i.test(ua)) return `Android ${platform}`;
+  if (/Windows/i.test(ua)) return "Windows device";
+  if (/Macintosh|Mac OS X/i.test(ua)) return "Mac device";
+  if (/Linux/i.test(ua)) return "Linux device";
+
+  return platform || "Unknown device";
+};
+
 export const loginUser = async (payload: LoginCredentials): Promise<AuthService> => {
   try {
-    const response = await axiosInstance.post(API_AUTH_GROUP.authentication, payload);
+    const response = await axiosInstance.post(API_AUTH_GROUP.authentication, payload, {
+      headers: {
+        "x-device-name": getDeviceNameHeader(),
+      },
+    });
     return response.data;
   } catch (error: unknown) {
     const message = getApiErrorMessage(error, "Error en loginUser");
