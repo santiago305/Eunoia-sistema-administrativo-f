@@ -43,7 +43,7 @@ export function useUsers() {
       const res = active ? await findActives({}) : await findDesactive({});
       setUsers(normalizeList<UserRow>(res));
     } catch {
-      setError("Failed to load users.");
+      setError("Error al cargar usuarios.");
       setUsers([]);
     } finally {
       setLoading(false);
@@ -58,7 +58,7 @@ export function useUsers() {
       const res = await findAll({});
       setUsers(normalizeList<UserRow>(res));
     } catch {
-      setError("Failed to load users.");
+      setError("Error al cargar usuarios.");
       setUsers([]);
     } finally {
       setLoading(false);

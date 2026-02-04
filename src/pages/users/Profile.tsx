@@ -1,7 +1,7 @@
 
-﻿import AvatarPhoto from "@/pages/users/components/avatar";
-import ProfileForm from "@/pages/users/components/profile-form-settings";
-import ModalVerifyPassword from "@/pages/users/components/modalVerifyPassword";
+﻿import AvatarPhoto from "@/pages/users/components/profile/avatar";
+import ProfileForm from "@/pages/users/components/profile/profile-form-settings";
+import ModalVerifyPassword from "@/pages/users/components/profile/modalVerifyPassword";
 import { useCallback, useEffect, useState } from "react";
 import { changePassword } from "@/services/userService";
 import { useAuth } from "@/hooks/useAuth";
