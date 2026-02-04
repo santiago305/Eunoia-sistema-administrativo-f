@@ -47,7 +47,7 @@ const AvatarPhoto = ({ getUser, user }: Props) => {
 
     const onRemoveAvatar = async()=> {
         try {
-            const res = await removeAvatar(user.id);
+            const res = await removeAvatar();
             if(res?.type === 'success'){
                 showFlash(successResponse("Foto removida con exito"));
                 getUser?.();

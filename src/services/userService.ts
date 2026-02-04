@@ -51,9 +51,9 @@ export const updateAvatar = async (id: string, file: File) => {
   return response.data;
 };
 
-export const removeAvatar = async (id: string) => {
-  const response = await axiosInstance.patch(
-    API_USERS_GROUP.removeAvatar(id)
+export const removeAvatar = async () => {
+  const response = await axiosInstance.get(
+    API_USERS_GROUP.removeAvatar
   );
   return response.data;
 };
