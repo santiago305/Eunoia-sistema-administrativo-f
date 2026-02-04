@@ -1,28 +1,33 @@
-import React, { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import type { UpdateUserDto } from "@/types/user";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { findAllRoles } from "@/services/roleService";
-import { Box, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from "@mui/material";
+import type { CreateUserDto } from "@/types/user";
+import { createUser } from "@/services/userService";
+import { errorResponse, successResponse } from "@/common/utils/response";
+import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { Eye, EyeOff } from "lucide-react";
+import { FormInput } from "@/components/formInput"; // ajusta el path
+import { RolePicker } from "@/components/users/roleButton";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createUserSchema } from "@/schemas/userSchemas";
 
-type UserFormData = UpdateUserDto & { avatarUrl?: string };
-
-interface UserFormProps {
-    onSubmit: (data: UserFormData) => Promise<{ type: string; message?: string } | void>;
-    formId?: string;
-    resetOnSubmit?: boolean;
+interface UserFormProps{
+    closeModal?: () => void;
 }
-
-export const UserForm: React.FC<UserFormProps> = ({ onSubmit, formId, resetOnSubmit = true }) => {
+export const UserForm = ({closeModal}: UserFormProps) => {
+    const { showFlash, clearFlash } = useFlashMessage();
     const [roles, setRoles] = useState<any[]>([]);
+    const [eyeBool, setEyeBool] = useState(true);
 
     const {
         register,
         handleSubmit,
-        setError,
         reset,
-        control,
+        setValue,
+        watch,
         formState: { errors },
-    } = useForm<UserFormData>({
+    } = useForm<CreateUserDto>({
+        resolver: zodResolver(createUserSchema),
         defaultValues: {
             name: "",
             email: "",
@@ -31,6 +36,8 @@ export const UserForm: React.FC<UserFormProps> = ({ onSubmit, formId, resetOnSub
             password: "",
         } as any,
     });
+
+    const roleId = watch("roleId");
 
     const getRoles = async () => {
         try {
@@ -50,98 +57,84 @@ export const UserForm: React.FC<UserFormProps> = ({ onSubmit, formId, resetOnSub
             name: "",
             email: "",
             roleId: "",
-            avatarUrl: "",
             password: "",
         } as any);
     }, [reset]);
 
-    const onSubmitForm = async (data: UserFormData) => {
+    const submit = async (data: CreateUserDto) => {
+        clearFlash();
         try {
-            const res = await onSubmit(data);
+            const res = await createUser(data);
 
-            if (resetOnSubmit && res?.type === "success") {
-                reset({
-                    name: "",
-                    email: "",
-                    roleId: "",
-                    avatarUrl: "",
-                    password: "",
-                } as any);
+            if (res.data?.type?.error){
+                showFlash(errorResponse(res.data?.type?.error)); 
+            }else{
+                showFlash(successResponse("¡Usuario creado con satisfactoriamente!"));
+                closeModal?.();
             }
-        } catch (error: any) {
-            const message: string | undefined = error?.response?.data?.message || error?.message;
-            if (!message) return;
-
-            const parts = message.split(" | ");
-            for (const part of parts) {
-                const lower = part.toLowerCase();
-                if (lower.includes("name")) {
-                    setError("name", { type: "server", message: part });
-                } else if (lower.includes("email")) {
-                    setError("email", { type: "server", message: part });
-                } else if (lower.includes("password")) {
-                    setError("password" as any, { type: "server", message: part });
-                } else if (lower.includes("role")) {
-                    setError("roleId", { type: "server", message: part });
-                }
-            }
+            reset({
+                name: "",
+                email: "",
+                roleId: "",
+                password: ""
+            }) 
+        } catch {
+            showFlash(errorResponse("No se pudo crear el usuario"));
         }
     };
 
     return (
-        <Box component="form" id={formId} onSubmit={handleSubmit(onSubmitForm)} sx={{ display: "grid", gap: 2 }}>
-            <TextField label="Nombre" placeholder="Nombre completo" size="small" fullWidth {...register("name")} error={!!errors.name} helperText={errors.name?.message} />
+        <div>
+            <form onSubmit={handleSubmit(submit)}>
+                <div className="px-1 grid grid-rows-3 gap-2 mt-8">
+                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl">
+                        <FormInput placeholder="Ingrese nombre" error={errors.name?.message} {...register("name")} />
+                    </div>
 
-            <TextField
-                label="Correo Electrónico"
-                placeholder="correo@edominio.com"
-                type="email"
-                size="small"
-                fullWidth
-                {...register("email")}
-                error={!!errors.email}
-                helperText={errors.email?.message}
-            />
+                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl">
+                        <FormInput type="email" placeholder="Ingrese email" error={errors.email?.message} {...register("email")} />
+                    </div>
 
-            <FormControl size="small" fullWidth error={!!errors.roleId}>
-                <InputLabel id="roleId-label">Rol</InputLabel>
-                <Controller
-                    control={control}
-                    name="roleId"
-                    render={({ field }) => (
-                        <Select {...field} labelId="roleId-label" label="Rol" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value)}>
-                            <MenuItem value="" disabled>
-                                Selecciona un rol
-                            </MenuItem>
-                            {roles.map((role: any) => (
-                                <MenuItem key={role.id} value={role.id}>
-                                    {role.description === "adviser" ? "Asesor"
-                                    : role.description === "admin" ? "Administrador"
-                                    : role.description === "moderator" ? "Moderador"
-                                    : role.description}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    )}
-                />
+                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl">
+                        <div className="flex gap-2">
+                            <div className="w-full">
+                                <FormInput
+                                    type={eyeBool ? "password" : "text"}
+                                    placeholder="Ingrese contraseña"
+                                    error={errors.password?.message}
+                                    {...register("password", {
+                                        required: "La contraseña es obligatoria",
+                                        minLength: { value: 8, message: "Mínimo 8 caracteres" },
+                                    })}
+                                />
+                            </div>
 
-                {errors.roleId?.message ? (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                        {errors.roleId.message}
-                    </Typography>
-                ) : null}
-            </FormControl>
+                            <button
+                                type="button"
+                                className="outline-none focus:ring-4 focus:ring-[#21b8a6]/20 h-14 w-13 text-gray-500 rounded-xl
+                                 bg-gray-200 hover:bg-gray-300 cursor-pointer hover:text-gray-700"
+                                onClick={() => setEyeBool((prev) => !prev)}
+                            >
+                                {eyeBool ? <Eye className="ml-3" /> : <EyeOff className="ml-3" />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="grid max-w-12/12 mb-0 mr-7">
+                        <input type="hidden" {...register("roleId", { required: "Selecciona un rol" })} />
+                        <RolePicker roles={roles} value={roleId} onChange={(id) => setValue("roleId", id, { shouldValidate: true, shouldDirty: true })} error={errors.roleId?.message} />
+                    </div>
 
-            <TextField
-                label="Contraseña"
-                placeholder="Contraseña"
-                type="password"
-                size="small"
-                fullWidth
-                {...register("password" as any)}
-                error={!!errors.password}
-                helperText={errors.password?.message}
-            />
-        </Box>
+                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl mb-5">
+                        <button
+                            type="submit"
+                            className="w-full h-15 rounded-xl bg-green-200 hover:bg-green-100 cursor-pointer
+                            text-gray-600 px-4 text-lg outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                        >
+                            <p className="text-center text-gray-700 text-[1.5rem] font-medium">Guardar</p>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     );
 };

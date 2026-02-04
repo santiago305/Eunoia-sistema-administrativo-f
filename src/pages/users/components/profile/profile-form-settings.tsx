@@ -75,7 +75,7 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
     };
     return (
         <form onSubmit={(e) => e.preventDefault()}>
-            <div className="pl-4 ml-5 grid grid-rows-3 gap-4">
+            <div className="pl-4 ml-5 grid grid-rows-3 gap-3">
                 <div className="grid max-w-7/12 gap-2">
                     <label className="text-gl font-semibold text-gray-900">Nombre</label>
                     <div className="flex gap-2">
@@ -85,7 +85,7 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
                                 type="text"
                                 placeholder="Tu nombre"
                                 className="h-15 w-full rounded-xl bg-gray-100 text-gray-600 px-4 text-lg outline-none focus:border-[#21b8a6]
-                            focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
+                                focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
                                 {...register("name", {
                                     onBlur: () => {
                                         saveField("name");
@@ -97,8 +97,8 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
                         </div>
                         <button
                             type="button"
-                            className="h-14 w-13 rounded-xl bg-green-200 hover:bg-green-300
-                            cursor-pointer text-gray-600 hover:text-gray-700"
+                            className="h-14 w-13 rounded-xl bg-green-300 hover:bg-green-200
+                            cursor-pointer text-gray-700 hover:text-gray-500"
                             onClick={() => {
                                 setDisableName(false);
                                 queueMicrotask(() => setFocus("name"));
@@ -116,7 +116,7 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
                                 disabled={disableEmail}
                                 type="email"
                                 placeholder="Tu email"
-                                className="h-15 w-full rounded-xl bg-gray-100 text-gray-600 px-4 text-lg outline-none focus:border-[#21b8a6]
+                                className="h-15 w-full rounded-xl bg-gray-100 text-gray-500 px-4 text-lg outline-none focus:border-[#21b8a6]
                             focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
                                 {...register("email", {
                                     onBlur: () => {
@@ -129,8 +129,8 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
                         </div>
                         <button
                             type="button"
-                            className="h-14 w-13 rounded-xl bg-green-200 hover:bg-green-300
-                            cursor-pointer text-gray-600 hover:text-gray-700"
+                            className="h-14 w-13 rounded-xl bg-green-300 hover:bg-green-200
+                            cursor-pointer text-gray-700 hover:text-gray-500"
                             onClick={() => {
                                 setDisableEmail(false);
                                 queueMicrotask(() => setFocus("email"));
@@ -149,23 +149,20 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
                                 type={eyeBool ? "password" : "text"}
                                 placeholder="**************"
                                 className="h-15 w-full rounded-xl bg-gray-100 text-gray-600 px-4 text-lg outline-none focus:border-[#21b8a6]
-                            focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
-                                {...register("password", {
-                                    onBlur: () => {
-                                        setDisablePassword(true);
-                                    },
-                                })}
+                                focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
+                                {...register("password")}
                             />
                             <p className={`text-sm text-center mt-1 text-red-400 ${errors.password ? "visible" : "invisible"}`}>{errors.password?.message ?? "placeholder"}</p>
                         </div>
                         <button
                             type="button"
-                            className={`h-14 w-13 text-gray-600 rounded-xl ${check ? "bg-blue-200 hover:bg-blue-300" : "bg-green-200 hover:bg-green-300"} 
-                            cursor-pointer hover:text-gray-700`}
+                            className={`h-14 w-13 text-gray-700 rounded-xl ${check ? "bg-blue-300 hover:bg-blue-200" : "bg-green-300 hover:bg-green-200"} 
+                            cursor-pointer hover:text-gray-500`}
                             onClick={() => {
                                 if(check){
                                     saveField("password");
                                     setCheck(false);
+                                    setDisablePassword(true)
                                 }else{
                                     setDisablePassword(false);
                                     queueMicrotask(() => setFocus("password"));
@@ -178,8 +175,8 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
 
                         <button
                             type="button"
-                            className="h-14 w-13 text-gray-600 rounded-xl bg-gray-200 hover:bg-gray-300
-                            cursor-pointer hover:text-gray-700"
+                            className="h-14 w-13 text-gray-700 rounded-xl bg-gray-300 hover:bg-gray-200
+                            cursor-pointer hover:text-gray-500"
                             onClick={() => {
                                 setEyeBool((prev) => !prev);
                             }}
