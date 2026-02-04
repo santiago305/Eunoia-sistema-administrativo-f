@@ -6,10 +6,17 @@ export type ApiErrorPayload = {
 
 export function parseApiError(
   error: unknown,
-  fallbackMessage = "OcurriÃ³ un error inesperado."
+  fallbackMessage = "Ocurrio un error inesperado."
 ) {
   if (typeof error === "object" && error !== null) {
     const axiosError = error as AxiosError<ApiErrorPayload>;
+
+    if (axiosError?.response?.status === 403) {
+      return (
+        axiosError?.response?.data?.message ||
+        "Token CSRF invalido o expirado. Inicia sesion nuevamente."
+      );
+    }
 
     return (
       axiosError?.response?.data?.message ||

@@ -15,6 +15,16 @@ type FailedQueueItem = {
 
 let failedQueue: FailedQueueItem[] = [];
 
+const getCookieValue = (name: string) => {
+  if (typeof document === "undefined") return "";
+  const item = document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith(`${name}=`));
+
+  if (!item) return "";
+  return decodeURIComponent(item.split("=")[1] ?? "");
+};
+
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach(prom => {
     if (error) {
@@ -25,6 +35,15 @@ const processQueue = (error: unknown, token: string | null = null) => {
   });
   failedQueue = [];
 };
+
+axiosInstance.interceptors.request.use((config) => {
+  const csrfToken = getCookieValue("csrf_token");
+  if (csrfToken) {
+    config.headers = config.headers ?? {};
+    config.headers["x-csrf-token"] = csrfToken;
+  }
+  return config;
+});
 
 axiosInstance.interceptors.response.use(
   (response) => response,
