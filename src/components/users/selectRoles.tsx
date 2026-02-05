@@ -31,8 +31,8 @@ export function RoleSelect({ value, onChange }: { value: string; onChange: (val:
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-100 px-4
-                   text-left text-lg 
+                className="flex h-11 w-full items-center justify-between rounded-xl bg-gray-100 px-4
+                   text-left text-md 
                    outline-none ring-1 ring-transparent
                    focus:ring-4 focus:ring-[#21b8a6]/20
                    hover:bg-gray-200/60 transition"
