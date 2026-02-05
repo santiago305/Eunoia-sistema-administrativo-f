@@ -23,14 +23,14 @@ export default function ItemMobile({ user, avatarSrc, showUsersActive, onRemove,
     return (
         <div
             className="bg-gray-100 p-4 rounded-lg shadow-[inset_0_2px_6px_hsla(0,0%,0%,.12)]
-      min-h-[110px] flex flex-col justify-between"
-        >
+            min-h-[110px] flex flex-col justify-between"
+                >
             <div className="flex items-start gap-3">
                 <div className="shrink-0">
                     <div
                         className="h-20 w-20 bg-gray-50 overflow-hidden rounded-lg
-            shadow-[0_2px_6px_hsla(0,0%,0%,.12)] flex items-center justify-center"
-                    >
+                        shadow-[0_2px_6px_hsla(0,0%,0%,.12)] flex items-center justify-center"
+                                >
                         {avatarSrc ? (
                             <img src={avatarSrc} alt={user.user_name} className="h-full w-full object-cover" />
                         ) : (
@@ -48,9 +48,9 @@ export default function ItemMobile({ user, avatarSrc, showUsersActive, onRemove,
                         <div className="flex items-center">
                             {showUsersActive ? (
                                 <button
-                                    className="h-7 rounded-xl bg-red-100 ring-1 ring-red-400 hover:bg-red-200 cursor-pointer
-                  text-[#d63737ba] hover:text-red-500 text-md px-3
-                  focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
+                                className="h-7 rounded-xl bg-red-100 ring-1 ring-red-400 hover:bg-red-200 cursor-pointer
+                                text-[#d63737ba] hover:text-red-500 text-md px-3
+                                focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                                     onClick={() => void onRemove(user.user_id)}
                                     aria-label="Desactivar usuario"
                                 >
@@ -59,8 +59,8 @@ export default function ItemMobile({ user, avatarSrc, showUsersActive, onRemove,
                             ) : (
                                 <button
                                     className="h-7 rounded-xl bg-blue-100 hover:bg-blue-200 cursor-pointer
-                  text-[#4f60e5b2] hover:text-blue-500 text-lg ring-1 ring-blue-400 px-3
-                  focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
+                                    text-[#4f60e5b2] hover:text-blue-500 text-lg ring-1 ring-blue-400 px-3
+                                    focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                                     onClick={() => void onRestore(user.user_id)}
                                     aria-label="Restaurar usuario"
                                 >

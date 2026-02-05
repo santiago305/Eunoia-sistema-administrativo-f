@@ -29,8 +29,8 @@ export default function Navbar({ query, setQuery, role, setRole, page, setPage, 
                         setQuery(e.target.value);
                         setPage(1);
                     }}
-                    className="h-12 w-70 ms:w-[50%] rounded-xl bg-gray-100 text-gray-500 px-4 text-lg outline-none
-          focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
+                    className="h-11 w-60 ms:w-[50%] rounded-xl bg-gray-100 text-gray-500 px-4 text-md outline-none
+                    focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800"
                 />
 
                 <div className="md:w-60 w-70 ms:w-[50%] md:mt-0 mt-2">
@@ -48,8 +48,8 @@ export default function Navbar({ query, setQuery, role, setRole, page, setPage, 
                         type="button"
                         className={`${
                             check ? "bg-blue-500 hover:bg-blue-400 w-28 md:w-40" : "bg-red-500 hover:bg-red-400 w-33 md:w-50"
-                        } h-[47px] rounded-xl cursor-pointer flex text-md font-semibold text-white p-3 overflow-hidden
-            focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none`}
+                        } h-11 rounded-xl cursor-pointer flex text-md font-semibold text-white p-[10px] overflow-hidden
+                        focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none`}
                         onClick={() => {
                             const next = !check;
                             setCheck(next);
@@ -74,9 +74,9 @@ export default function Navbar({ query, setQuery, role, setRole, page, setPage, 
 
                     <button
                         type="button"
-                        className="h-[47px] w-28 md:w-41 rounded-xl bg-[#107168b7] hover:bg-[#067d71f8]
-            cursor-pointer flex text-md font-semibold text-white overflow-hidden p-3
-            focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
+                        className="h-11 w-28 md:w-41 rounded-xl bg-[#107168b7] hover:bg-[#067d71f8]
+                        cursor-pointer flex text-md font-semibold text-white overflow-hidden p-[10px]
+                        focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                         onClick={() => setOpenModal(true)}
                     >
                         <span className="hidden md:block">Crear Usuario</span>

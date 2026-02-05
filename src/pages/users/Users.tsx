@@ -69,8 +69,8 @@ export default function Users() {
                 >
                     <div className="w-full h-full">
                         <table className="w-full min-h-20 border-separate border-spacing-0 table-fixed">
-                            <thead className="bg-[#21b8a6] font-semibold text-[18px] sticky top-0 z-20">
-                                <tr className="h-12">
+                            <thead className="bg-[#21b8a6] font-semibold text-md sticky top-0 z-20">
+                                <tr className="h-11">
                                     <th className="px-5 text-left text-white w-[25%]">Nombre</th>
                                     <th className="px-5 text-left text-white w-[35%]">Email</th>
                                     <th className="px-5 text-left text-white w-[20%]">Rol</th>
@@ -90,41 +90,41 @@ export default function Users() {
                                 )}
 
                                 {paginatedData.map((user) => (
-                                    <tr key={user.user_id} className="group h-13 transition-colors odd:bg-green-50 even:bg-white">
+                                    <tr key={user.user_id} className="group h-11 transition-colors odd:bg-green-50 even:bg-white">
                                         <td className="px-5 py-1">
-                                            <p className="text-md font-semibold text-gray-700">{user.user_name}</p>
+                                            <p className="text-sm font-semibold text-gray-700">{user.user_name}</p>
                                         </td>
 
                                         <td className="px-5 py-1">
-                                            <p className="text-md font-semibold text-gray-700">{user.user_email}</p>
+                                            <p className="text-sm font-semibold text-gray-700">{user.user_email}</p>
                                         </td>
 
                                         <td className="px-5 py-1">
-                                            <span className="inline-flex items-center rounded-xl bg-gray-50 px-5 py-1 text-md font-semibold text-gray-700">{user.rol}</span>
+                                            <span className="inline-flex items-center rounded-xl bg-gray-50 px-5 py-1 text-sm font-semibold text-gray-700">{user.rol}</span>
                                         </td>
 
                                         <td className="px-5 py-1">
                                             <div className="flex justify-center">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-0">
                                                     {showUsersActive ? (
                                                         <button
-                                                            className="w-full h-10 rounded-xl bg-red-100 ring-1 ring-red-400 hover:bg-red-200 cursor-pointer
-                                                            text-[#d63737ba] hover:text-red-500 px-4 text-md focus:border-[#21b8a6]
+                                                            className="w-11 h-8 rounded-xl bg-red-100 ring-1 ring-red-400 hover:bg-red-200 cursor-pointer
+                                                            text-[#d63737ba] hover:text-red-500 text-sm focus:border-[#21b8a6]
                                                             focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                                                             onClick={() => void removeUser(user.user_id)}
                                                             aria-label="Desactivar usuario"
                                                         >
-                                                            <Eraser size={20} />
+                                                            <Eraser size={20} className="ml-3" />
                                                         </button>
                                                     ) : (
                                                         <button
-                                                            className="w-full h-10 rounded-xl bg-blue-100 hover:bg-blue-200 cursor-pointer
-                                                            text-[#4f60e5b2] hover:text-blue-500 px-4 text-lg ring-1 ring-blue-400 focus:border-[#21b8a6]
+                                                            className="w-11 h-8 rounded-xl bg-blue-100 hover:bg-blue-200 cursor-pointer
+                                                            text-[#4f60e5b2] hover:text-blue-500 text-lg ring-1 ring-blue-400 focus:border-[#21b8a6]
                                                             focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                                                             onClick={() => void restore(user.user_id)}
                                                             aria-label="Restaurar usuario"
                                                         >
-                                                            <RotateCcwSquare size={20} />
+                                                            <RotateCcwSquare size={20} className="ml-3" />
                                                         </button>
                                                     )}
                                                 </div>
@@ -145,19 +145,13 @@ export default function Users() {
 
                     {roleFiltered.map((user) => {
                         const avatarSrc = buildAvatarSrc(user.avatarUrl, env.apiBaseUrl);
-                        return <ItemMobile 
-                        key={user.user_id} 
-                        user={user} 
-                        avatarSrc={avatarSrc} 
-                        showUsersActive={showUsersActive} 
-                        onRemove={removeUser} 
-                        onRestore={restore} />;
+                        return <ItemMobile key={user.user_id} user={user} avatarSrc={avatarSrc} showUsersActive={showUsersActive} onRemove={removeUser} onRestore={restore} />;
                     })}
                 </div>
                 <div className="mt-2 hidden md:flex items-center justify-center shrink-0">
                     <div className="inline-flex items-center gap-3 rounded-2xl bg-gray-200 px-4 py-2">
                         <button
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-gray-700
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-white text-gray-700
                             hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:hover:bg-gray-50 cursor-pointer focus:border-[#21b8a6]
                             focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                             disabled={page === 1}
@@ -172,7 +166,7 @@ export default function Users() {
                         </span>
 
                         <button
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-gray-700
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-white text-gray-700
                             hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:hover:bg-gray-50 cursor-pointer focus:border-[#21b8a6]
                             focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                             disabled={page === totalPages || totalPages === 0}
