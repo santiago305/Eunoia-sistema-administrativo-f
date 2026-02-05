@@ -1,5 +1,9 @@
 export interface AuthResponse {
   success: boolean;
   message: string;
-  data?: unknown;
+  data?: {
+    retryAfterSeconds?: number;
+    lockedUntil?: string;
+    status?: number;
+  };
 }

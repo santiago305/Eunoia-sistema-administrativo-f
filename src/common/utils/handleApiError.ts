@@ -11,6 +11,13 @@ export function parseApiError(
   if (typeof error === "object" && error !== null) {
     const axiosError = error as AxiosError<ApiErrorPayload>;
 
+    if (axiosError?.response?.status === 429) {
+      return "Demasiados intentos. Intenta de nuevo en 1 minuto.";
+    }
+    if (axiosError?.response?.status === 423) {
+      return axiosError?.response?.data?.message || "Cuenta bloqueada temporalmente.";
+    }
+
     if (axiosError?.response?.status === 403) {
       return (
         axiosError?.response?.data?.message ||

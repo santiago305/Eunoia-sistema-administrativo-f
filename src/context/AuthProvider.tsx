@@ -10,6 +10,7 @@ import { AuthContext } from "./AuthContext";
 import { AuthResponse } from "@/types/AuthResponse";
 import { PropsUrl } from "@/router/guards/typeGuards";
 import { getApiErrorMessage } from "@/common/utils/apiError";
+import type { AxiosError } from "axios";
 
 export const AuthProvider = ({ children }: PropsUrl) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,14 +49,11 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       setUserId(String(id));
       setIsAuthenticated(true);
 
-      return { success: true, message: "Autenticación validada" };
+      return { success: true, message: "Autenticacion validada" };
     } catch (error: unknown) {
       console.error("Error en checkAuth:", error);
       resetAuthState();
-      const message = getApiErrorMessage(
-        error,
-        "Error inesperado en autenticación"
-      );
+      const message = getApiErrorMessage(error, "Error inesperado en autenticacion");
       return { success: false, message };
     } finally {
       setLoading(false);
@@ -63,7 +61,6 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   }, [resetAuthState]);
 
   useEffect(() => {
-    // Si te molesta que el efecto no sea async, esto es lo normal
     void checkAuth();
   }, [checkAuth]);
 
@@ -71,10 +68,16 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     try {
       await loginUser(payload);
       await checkAuth();
-      return { success: true, message: "Inicio de sesión exitoso" };
+      return { success: true, message: "Inicio de sesion exitoso" };
     } catch (error: unknown) {
-      const message = getApiErrorMessage(error, "Error en la autenticación");
-      return { success: false, message };
+      const message = getApiErrorMessage(error, "Error en la autenticacion");
+      const err = error as AxiosError<{
+        message?: string;
+        details?: { retryAfterSeconds?: number; lockedUntil?: string };
+      }>;
+      const status = err?.response?.status;
+      const details = err?.response?.data?.details;
+      return { success: false, message, data: { status, ...details } };
     }
   }, [checkAuth]);
 

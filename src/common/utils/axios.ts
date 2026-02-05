@@ -37,8 +37,10 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 axiosInstance.interceptors.request.use((config) => {
+  const method = String(config.method ?? "get").toLowerCase();
+  const needsCsrf = ["post", "put", "patch", "delete"].includes(method);
   const csrfToken = getCookieValue("csrf_token");
-  if (csrfToken) {
+  if (needsCsrf && csrfToken) {
     config.headers = config.headers ?? {};
     config.headers["x-csrf-token"] = csrfToken;
   }
@@ -49,9 +51,19 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    const status = error.response?.status;
+    const responseMessage = String(error.response?.data?.message ?? "");
+
+    if (status === 429) {
+      console.warn("Demasiados intentos. Intenta de nuevo en 1 minuto.");
+    }
+
+    if (status === 403 && responseMessage.toLowerCase().includes("csrf")) {
+      console.warn("Tu sesion de seguridad expiro. Recarga la pagina e intenta de nuevo.");
+    }
 
     const isAuthEndpoint = originalRequest.url?.includes('/auth/refresh') ?? false;
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });

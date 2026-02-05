@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 
 function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [submitting, setSubmitting] = useState(false);
+  const [lockSeconds, setLockSeconds] = useState<number>(0);
   const navigate = useNavigate();
   const { showFlash, clearFlash } = useFlashMessage();
   const { login } = useAuth();
@@ -26,7 +27,52 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
     resolver: zodResolver(LoginSchema),
   });
 
+  const isTemporarilyBlocked = useMemo(() => lockSeconds > 0, [lockSeconds]);
+
+  useEffect(() => {
+    if (!isTemporarilyBlocked) return;
+    const timer = setInterval(() => {
+      setLockSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isTemporarilyBlocked]);
+
+  const formatSeconds = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const hh = String(hours).padStart(2, "0");
+    const mm = String(minutes).padStart(2, "0");
+    const ss = String(seconds).padStart(2, "0");
+    return `${hh}:${mm}:${ss}`;
+  };
+
+  const humanizeLockTime = (totalSeconds: number) => {
+    if (totalSeconds <= 0) return "0 minutos";
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.ceil((totalSeconds % 3600) / 60);
+
+    if (days > 0) {
+      const hourPart = hours > 0 ? ` y ${hours} hora${hours === 1 ? "" : "s"}` : "";
+      return `${days} d${days === 1 ? "ia" : "ias"}${hourPart}`;
+    }
+    if (hours > 0) {
+      return `${hours} hora${hours === 1 ? "" : "s"} y ${minutes} minuto${minutes === 1 ? "" : "s"}`;
+    }
+    return `${minutes} minuto${minutes === 1 ? "" : "s"}`;
+  };
+
   const onSubmit = async (data: LoginCredentials) => {
+    if (isTemporarilyBlocked) {
+      showFlash(
+        errorResponse(
+          `Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(lockSeconds)}`
+        )
+      );
+      return;
+    }
+
     clearFlash();
     setSubmitting(true);
     try {
@@ -35,10 +81,23 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
         showFlash(successResponse(response.message));
         navigate(RoutesPaths.dashboard, { replace: true });
       } else {
-        showFlash(errorResponse(response.message));
+        const retrySeconds = response.data?.retryAfterSeconds ?? 0;
+        if (retrySeconds > 0) {
+          showFlash(
+            errorResponse(
+              `Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(retrySeconds)}`
+            )
+          );
+          setLockSeconds(retrySeconds);
+        } else if (response.data?.status === 423) {
+          showFlash(errorResponse("Cuenta bloqueada. Intenta nuevamente en 1 minuto"));
+          setLockSeconds(60);
+        } else {
+          showFlash(errorResponse(response.message));
+        }
       }
     } catch {
-      showFlash(errorResponse("Credenciales inválidas o error de red"));
+      showFlash(errorResponse("Credenciales invalidas o error de red"));
     } finally {
       setSubmitting(false);
     }
@@ -47,12 +106,8 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div className={cn("w-full", className)} {...props}>
       <div className="mb-5 text-center sm:mb-6">
-        <p className="text-[10px] tracking-[0.25em] text-black/60 sm:text-[11px]">
-          ADMINISTRACIÓN
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-[#21b8a6] sm:text-4xl">
-          EUNOIA
-        </h1>
+        <p className="text-[10px] tracking-[0.25em] text-black/60 sm:text-[11px]">ADMINISTRACION</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-[#21b8a6] sm:text-4xl">EUNOIA</h1>
       </div>
 
       <div
@@ -61,17 +116,13 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
           "p-5 sm:p-6"
         )}
       >
-        <h2 className="text-sm font-semibold text-black sm:text-base">
-          Inicia sesión
-        </h2>
-        <p className="mt-1 text-xs text-black/60 sm:text-sm">
-          Ingresa tus credenciales para continuar.
-        </p>
+        <h2 className="text-sm font-semibold text-black sm:text-base">Inicia sesion</h2>
+        <p className="mt-1 text-xs text-black/60 sm:text-sm">Ingresa tus credenciales para continuar.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4 sm:mt-6">
           <FormField<LoginCredentials>
             name="email"
-            label="Correo electrónico"
+            label="Correo electronico"
             placeholder="correo@ejemplo.com"
             register={register}
             error={errors.email?.message}
@@ -79,8 +130,8 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 
           <FormField<LoginCredentials>
             name="password"
-            label="Contraseña"
-            placeholder="••••••••"
+            label="Contrasena"
+            placeholder="********"
             type="password"
             register={register}
             error={errors.password?.message}
@@ -88,7 +139,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 
           <Button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || isTemporarilyBlocked}
             className={cn(
               "mt-2 w-full rounded-xl text-white cursor-pointer",
               "bg-[#21b8a6] hover:bg-[#19a897]",
@@ -97,13 +148,17 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
               "disabled:cursor-not-allowed disabled:opacity-70"
             )}
           >
-            {submitting ? "Ingresando..." : "Ingresar"}
+            {submitting
+              ? "Ingresando..."
+              : isTemporarilyBlocked
+                ? `Espera ${formatSeconds(lockSeconds)}`
+                : "Ingresar"}
           </Button>
         </form>
       </div>
 
       <p className="mt-4 text-center text-[11px] text-black/40 sm:mt-5 sm:text-xs">
-        © {new Date().getFullYear()} Eunoia
+        {new Date().getFullYear()} Eunoia
       </p>
     </div>
   );

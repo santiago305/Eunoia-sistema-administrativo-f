@@ -31,18 +31,12 @@ const getDeviceNameHeader = () => {
 };
 
 export const loginUser = async (payload: LoginCredentials): Promise<AuthService> => {
-  try {
-    const response = await axiosInstance.post(API_AUTH_GROUP.authentication, payload, {
-      headers: {
-        "x-device-name": getDeviceNameHeader(),
-      },
-    });
-    return response.data;
-  } catch (error: unknown) {
-    const message = getApiErrorMessage(error, "Error en loginUser");
-    console.error("error en loginUser", message);
-    throw new Error(message);
-  }
+  const response = await axiosInstance.post(API_AUTH_GROUP.authentication, payload, {
+    headers: {
+      "x-device-name": getDeviceNameHeader(),
+    },
+  });
+  return response.data;
 };
 
 export const userInfoAuth = async (): Promise<UserInfoAuthResponse> => {
@@ -70,7 +64,7 @@ export const checkTokenValidity = async () => {
 
 export const refresh_token = async () => {
   try {
-    const response = await axiosInstance.get(API_AUTH_GROUP.refreshToken);
+    const response = await axiosInstance.post(API_AUTH_GROUP.refreshToken);
     return response.data;
   } catch (error: unknown) {
     const message = getApiErrorMessage(error, "Error al refrescar token");
