@@ -43,7 +43,7 @@ export default function Users() {
             </div>
             <TagUser totals={totals} />
 
-            <div className="px-10 flex flex-col flex-1 overflow-hidden mb-2">
+            <div className="px-10 flex flex-col flex-1 overflow-hidden mb-1">
                 <UsersNavbar
                     query={query}
                     setQuery={setQuery}
@@ -60,7 +60,7 @@ export default function Users() {
                 />
                 <div
                     className="mt-1 w-full flex-1 overflow-y-auto md:overflow-x-hidden overflow-x-auto rounded-sm
-                    shadow-[0_2px_6px_0_hsla(0,0%,0%,0.4)] hidden md:block bg-gray-100
+                    shadow-[0_2px_4px_0_hsla(0,0%,0%,0.4)] hidden md:block bg-gray-100
                     [scrollbar-width:thin]
                     [&::-webkit-scrollbar]:w-[6px]
                     [&::-webkit-scrollbar-track]:bg-transparent
@@ -148,7 +148,7 @@ export default function Users() {
                         return <ItemMobile key={user.user_id} user={user} avatarSrc={avatarSrc} showUsersActive={showUsersActive} onRemove={removeUser} onRestore={restore} />;
                     })}
                 </div>
-                <div className="mt-2 hidden md:flex items-center justify-center shrink-0">
+                <div className="mt-1 hidden md:flex items-center justify-center shrink-0">
                     <div className="inline-flex items-center gap-3 rounded-2xl bg-gray-200 px-4 py-2">
                         <button
                             className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-white text-gray-700
