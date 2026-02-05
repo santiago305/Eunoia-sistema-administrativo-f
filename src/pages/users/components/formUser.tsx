@@ -123,18 +123,31 @@ export const UserForm = ({closeModal}: UserFormProps) => {
                         <input type="hidden" {...register("roleId", { required: "Selecciona un rol" })} />
                         <RolePicker roles={roles} value={roleId} onChange={(id) => setValue("roleId", id, { shouldValidate: true, shouldDirty: true })} error={errors.roleId?.message} />
                     </div>
-
-                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl mb-5">
-                        <button
-                            type="submit"
-                            className="w-full h-15 rounded-xl bg-green-200 hover:bg-green-100 cursor-pointer
-                            text-gray-600 px-4 text-lg outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
-                        >
-                            <p className="text-center text-gray-700 text-[1.5rem] font-medium">Guardar</p>
-                        </button>
-                    </div>
                 </div>
             </form>
+            <div className="flex gap-4 p-5 w-full h-full">
+                <div className="w-1/2 mb-3">
+                    <button
+                        type="button"
+                        className="w-full h-[50px] rounded-xl bg-gray-100 hover:bg-gray-200
+                        px-4 text-lg outline-none focus:ring-4 focus:ring-[#21b8a6]/20 cursor-pointer
+                        "
+                        onClick={closeModal}
+                    >
+                        <p className="text-center text-gray-700 text-md font-medium">Cancelar</p>
+                    </button>
+                </div>
+                <div className="w-1/2 mb-2">
+                    <button
+                        type="submit"
+                        className="w-full h-[50px] rounded-xl bg-blue-500 hover:bg-blue-400
+                        px-4 text-lg outline-none focus:ring-4 focus:ring-[#21b8a6]/20 cursor-pointer
+                        "
+                    >
+                        <p className="text-center text-white text-md font-medium">Guardar</p>
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };
