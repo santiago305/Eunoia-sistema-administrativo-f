@@ -34,6 +34,7 @@ export function useUsers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUsersActive, setShowUsersActive] = useState(true);
+  const [totals, setTotals] = useState({ active: 0, inactive: 0, total: 0 });
 
   const { showFlash, clearFlash } = useFlashMessage();
 
@@ -48,6 +49,17 @@ export function useUsers() {
       setUsers([]);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const refreshTotals = useCallback(async () => {
+    try {
+      const [actRes, desRes] = await Promise.all([findActives({}), findDesactive({})]);
+      const active = normalizeList<UserRow>(actRes).length;
+      const inactive = normalizeList<UserRow>(desRes).length;
+      setTotals({ active, inactive, total: active + inactive });
+    } catch {
+      setTotals({ active: 0, inactive: 0, total: 0 });
     }
   }, []);
 
@@ -69,11 +81,8 @@ export function useUsers() {
   // Carga inicial (elige UNO):
   useEffect(() => {
     // Opción A: cargar activos por defecto
-    void fetchUsers(true);
-
-    // Opción B: cargar todos
-    // void fetchAll();
-  }, [fetchUsers]);
+    void fetchUsers(true);  void refreshTotals();
+  }, [fetchUsers, refreshTotals]);
 
   const toggleActive = useCallback(
     async (checked: boolean) => {
@@ -131,7 +140,7 @@ export function useUsers() {
 
   return {
     users,
-    setUsers, // opcional (si quieres poder setear desde afuera)
+    setUsers, 
     loading,
     error,
     showUsersActive,
@@ -140,5 +149,6 @@ export function useUsers() {
     toggleActive,
     removeUser,
     restore,
+    totals
   };
 }
