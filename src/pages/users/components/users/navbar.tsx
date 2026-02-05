@@ -47,7 +47,7 @@ export default function Navbar({ query, setQuery, role, setRole, page, setPage, 
                     <button
                         type="button"
                         className={`${
-                            check ? "bg-blue-500 hover:bg-blue-400 w-28 md:w-40" : "bg-red-500 hover:bg-red-400 w-33 md:w-50"
+                            check ? "bg-blue-500 hover:bg-blue-400 w-28 md:w-24" : "bg-red-500 hover:bg-red-400 w-33 md:w-24"
                         } h-11 rounded-xl cursor-pointer flex text-md font-semibold text-white p-[10px] overflow-hidden
                         focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none`}
                         onClick={() => {
@@ -59,27 +59,27 @@ export default function Navbar({ query, setQuery, role, setRole, page, setPage, 
                     >
                         {!check ? (
                             <>
-                                <span className="hidden md:block">Listar desabilitados</span>
+                                <span className="hidden md:block">Listar</span>
                                 <span className="md:hidden">Desactivos</span>
                                 <UserRoundX className="ml-1 pb-1" size={30} />
                             </>
                         ) : (
                             <>
-                                <span className="hidden md:block">Listar Activos</span>
+                                <span className="hidden md:block">Listar</span>
                                 <span className="md:hidden">Activos</span>
-                                <UserRoundCheck className="ml-2 mr-0 pb-1" size={30} />
+                                <UserRoundCheck className="ml-1 mr-0 pb-1" size={30} />
                             </>
                         )}
                     </button>
 
                     <button
                         type="button"
-                        className="h-11 w-28 md:w-41 rounded-xl bg-[#107168b7] hover:bg-[#067d71f8]
+                        className="h-11 w-28 md:w-23 rounded-xl bg-[#107168b7] hover:bg-[#067d71f8]
                         cursor-pointer flex text-md font-semibold text-white overflow-hidden p-[10px]
                         focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
                         onClick={() => setOpenModal(true)}
                     >
-                        <span className="hidden md:block">Crear Usuario</span>
+                        <span className="hidden md:block">Crear </span>
                         <span className="md:hidden">Crear</span>
                         <UserRoundPlus size={30} className="ml-2 pb-1" />
                     </button>
