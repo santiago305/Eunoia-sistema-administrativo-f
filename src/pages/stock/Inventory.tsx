@@ -1,7 +1,9 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
+import { RoutesPaths } from "@/router/config/routesPaths";
 
 const statusBadges = [
   { label: "Disponible", value: "78%" },
@@ -28,14 +30,13 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Inventory() {
+export default function Inventory() {  const stockMock = getStockMock();  const navigate = useNavigate();
   // PROVISIONAL: inventory snapshot mocked while backend is under construction.
   const inventoryRows = useMemo(() => {
     return stockMock.inventory.map((item) => {
       const variant = stockMock.variants.find((v) => v.variant_id === item.variant_id);
       const product = stockMock.products.find((p) => p.product_id === variant?.product_id);
       const warehouse = stockMock.warehouses.find((w) => w.warehouse_id === item.warehouse_id);
-      const location = stockMock.locations.find((l) => l.location_id === item.location_id);
       const rule = stockMock.reorderRules.find(
         (r) => r.variant_id === item.variant_id && r.warehouse_id === item.warehouse_id
       );
@@ -44,7 +45,6 @@ export default function Inventory() {
         sku: variant?.sku ?? "SKU",
         name: product?.name ?? "Producto",
         warehouse: warehouse?.name ?? "Almacen",
-        location: location?.code ?? "-",
         onHand: item.on_hand,
         reserved: item.reserved,
         available: item.on_hand - item.reserved,
@@ -78,7 +78,6 @@ export default function Inventory() {
   const ref = useEChart(availabilityChart);
   const [searchText, setSearchText] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const filteredRows = useMemo(() => {
@@ -89,7 +88,6 @@ export default function Inventory() {
         row.sku.toLowerCase().includes(search) ||
         row.name.toLowerCase().includes(search);
       const matchesWarehouse = warehouseFilter.length === 0 || row.warehouse === warehouseFilter;
-      const matchesLocation = locationFilter.length === 0 || row.location === locationFilter;
   const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "available" && row.available > 0) ||
@@ -101,9 +99,9 @@ export default function Inventory() {
           row.onHand / row.ideal >= 0.3) ||
         (statusFilter === "low" && row.ideal > 0 && row.onHand / row.ideal < 0.3);
 
-      return matchesSearch && matchesWarehouse && matchesLocation && matchesStatus;
+      return matchesSearch && matchesWarehouse && matchesStatus;
     });
-  }, [inventoryRows, searchText, warehouseFilter, locationFilter, statusFilter]);
+  }, [inventoryRows, searchText, warehouseFilter, statusFilter]);
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
@@ -134,7 +132,7 @@ export default function Inventory() {
           transition={{ duration: 0.45 }}
           className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
         >
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <input
               className="h-10 rounded-lg border border-black/10 px-3 text-sm"
               placeholder="Buscar SKU o producto"
@@ -150,18 +148,6 @@ export default function Inventory() {
               {Array.from(new Set(inventoryRows.map((row) => row.warehouse))).map((warehouse) => (
                 <option key={warehouse} value={warehouse}>
                   {warehouse}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-lg border border-black/10 px-3 text-sm bg-white"
-              value={locationFilter}
-              onChange={(event) => setLocationFilter(event.target.value)}
-            >
-              <option value="">Ubicacion (todas)</option>
-              {Array.from(new Set(inventoryRows.map((row) => row.location))).map((location) => (
-                <option key={location} value={location}>
-                  {location}
                 </option>
               ))}
             </select>
@@ -226,13 +212,12 @@ export default function Inventory() {
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-black/70">
-                    <div>Ubicacion: <span className="font-semibold text-black">{row.location}</span></div>
-                    <div>On hand: <span className="font-semibold text-black">{row.onHand}</span></div>
+                    <div>Stock fisico: <span className="font-semibold text-black">{row.onHand}</span></div>
                     <div>Reservado: <span className="font-semibold text-black">{row.reserved}</span></div>
                     <div>Min/Ideal: <span className="font-semibold text-black">{row.min}/{row.ideal}</span></div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ver kardex</button>
+                    <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockMovements}?sku=${row.sku}`)}>Ver kardex</button>
                     <button className="text-xs px-2 py-1 rounded-md border border-black/10">Transferir</button>
                     <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ajustar</button>
                   </div>
@@ -244,15 +229,30 @@ export default function Inventory() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">SKU</th>
-                    <th className="py-2 text-left">Producto</th>
-                    <th className="py-2 text-left">Almacen</th>
-                    <th className="py-2 text-left">Ubicacion</th>
-                    <th className="py-2 text-right">On hand</th>
-                    <th className="py-2 text-right">Reservado</th>
-                    <th className="py-2 text-right">Disponible</th>
-                    <th className="py-2 text-right">Min/Ideal</th>
-                    <th className="py-2 text-right">Acciones</th>
+                    <th className="py-2 text-left" title="Identificador del producto (SKU)">
+                      SKU
+                    </th>
+                    <th className="py-2 text-left" title="Nombre del producto">
+                      Producto
+                    </th>
+                    <th className="py-2 text-left" title="Almacen donde esta el stock">
+                      Almacen
+                    </th>
+                    <th className="py-2 text-right" title="Stock fisico en almacen">
+                      Stock fisico
+                    </th>
+                    <th className="py-2 text-right" title="Stock reservado no disponible">
+                      Reservado
+                    </th>
+                    <th className="py-2 text-right" title="Disponible = en mano - reservado">
+                      Disponible
+                    </th>
+                    <th className="py-2 text-right" title="Minimo y nivel ideal del SKU">
+                      Min/Ideal
+                    </th>
+                    <th className="py-2 text-right" title="Acciones rapidas sobre el SKU">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -261,7 +261,6 @@ export default function Inventory() {
                       <td className="py-3 font-medium">{row.sku}</td>
                       <td className="py-3">{row.name}</td>
                       <td className="py-3">{row.warehouse}</td>
-                      <td className="py-3">{row.location}</td>
                       <td className="py-3 text-right">{row.onHand}</td>
                       <td className="py-3 text-right">{row.reserved}</td>
                       <td className="py-3 text-right font-semibold">{row.available}</td>
@@ -270,7 +269,7 @@ export default function Inventory() {
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ver kardex</button>
+                          <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockMovements}?sku=${row.sku}`)}>Ver kardex</button>
                           <button className="text-xs px-2 py-1 rounded-md border border-black/10">Transferir</button>
                           <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ajustar</button>
                         </div>
@@ -339,6 +338,14 @@ export default function Inventory() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
 
 
 

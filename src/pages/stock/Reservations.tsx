@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -21,7 +21,7 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Reservations() {
+export default function Reservations() {  const stockMock = getStockMock();
   // PROVISIONAL: reservations mocked from schema while backend is under construction.
   const reservations = useMemo(() => {
     return stockMock.reservations.map((row) => {
@@ -74,11 +74,21 @@ export default function Reservations() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">Reserva</th>
-                    <th className="py-2 text-left">SKU</th>
-                    <th className="py-2 text-right">Qty</th>
-                    <th className="py-2 text-left">Almacen</th>
-                    <th className="py-2 text-left">Expira</th>
+                    <th className="py-2 text-left" title="Identificador de la reserva">
+                      Reserva
+                    </th>
+                    <th className="py-2 text-left" title="Identificador del producto (SKU)">
+                      SKU
+                    </th>
+                    <th className="py-2 text-right" title="Cantidad reservada">
+                      Cantidad
+                    </th>
+                    <th className="py-2 text-left" title="Almacen donde se reserva">
+                      Almacen
+                    </th>
+                    <th className="py-2 text-left" title="Fecha de expiracion de la reserva">
+                      Expira
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -117,5 +127,8 @@ export default function Reservations() {
     </div>
   );
 }
+
+
+
 
 

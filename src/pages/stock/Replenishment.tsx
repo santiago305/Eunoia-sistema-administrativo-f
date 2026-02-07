@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -21,7 +21,7 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Replenishment() {
+export default function Replenishment() {  const stockMock = getStockMock();
   // PROVISIONAL: reorder rules mocked while backend is under construction.
   const reorderRows = useMemo(() => {
     return stockMock.reorderRules.map((rule) => {
@@ -79,11 +79,21 @@ export default function Replenishment() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">SKU</th>
-                    <th className="py-2 text-left">Almacen</th>
-                    <th className="py-2 text-right">Min</th>
-                    <th className="py-2 text-right">On hand</th>
-                    <th className="py-2 text-right">Sugerido</th>
+                    <th className="py-2 text-left" title="Identificador del producto (SKU)">
+                      SKU
+                    </th>
+                    <th className="py-2 text-left" title="Almacen evaluado">
+                      Almacen
+                    </th>
+                    <th className="py-2 text-right" title="Stock minimo definido">
+                      Minimo
+                    </th>
+                    <th className="py-2 text-right" title="Stock actual en mano">
+                      En mano
+                    </th>
+                    <th className="py-2 text-right" title="Cantidad sugerida a reponer">
+                      Sugerido
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -120,5 +130,8 @@ export default function Replenishment() {
     </div>
   );
 }
+
+
+
 
 

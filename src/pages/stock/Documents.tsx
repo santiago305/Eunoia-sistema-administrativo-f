@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -21,7 +21,7 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Documents() {
+export default function Documents() {  const stockMock = getStockMock();
   // PROVISIONAL: documents list derived from ledger while backend is under construction.
   const documents = useMemo(() => {
     const ids = Array.from(new Set(stockMock.ledger.map((l) => l.doc_id)));
@@ -87,10 +87,18 @@ export default function Documents() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">Documento</th>
-                    <th className="py-2 text-left">Tipo</th>
-                    <th className="py-2 text-left">Estado</th>
-                    <th className="py-2 text-left">Almacen</th>
+                    <th className="py-2 text-left" title="Numero del documento">
+                      Documento
+                    </th>
+                    <th className="py-2 text-left" title="Tipo de documento">
+                      Tipo
+                    </th>
+                    <th className="py-2 text-left" title="Estado actual del documento">
+                      Estado
+                    </th>
+                    <th className="py-2 text-left" title="Almacen asociado">
+                      Almacen
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,5 +153,8 @@ export default function Documents() {
     </div>
   );
 }
+
+
+
 
 

@@ -65,12 +65,24 @@ export default function SeriesTypes() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">Code</th>
-                    <th className="py-2 text-left">Doc type</th>
-                    <th className="py-2 text-left">Almacen</th>
-                    <th className="py-2 text-right">Next</th>
-                    <th className="py-2 text-right">Padding</th>
-                    <th className="py-2 text-left">Activo</th>
+                    <th className="py-2 text-left" title="Codigo corto de la serie">
+                      Codigo
+                    </th>
+                    <th className="py-2 text-left" title="Tipo de documento asociado">
+                      Tipo de documento
+                    </th>
+                    <th className="py-2 text-left" title="Almacen asociado">
+                      Almacen
+                    </th>
+                    <th className="py-2 text-right" title="Siguiente numero de la serie">
+                      Siguiente
+                    </th>
+                    <th className="py-2 text-right" title="Cantidad de digitos del correlativo">
+                      Relleno
+                    </th>
+                    <th className="py-2 text-left" title="Estado de la serie">
+                      Activo
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

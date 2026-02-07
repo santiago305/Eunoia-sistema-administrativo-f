@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -21,7 +21,7 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Transfers() {
+export default function Transfers() {  const stockMock = getStockMock();
   // PROVISIONAL: transfers list mocked from ledger while backend is under construction.
   const transfers = useMemo(() => {
     return stockMock.ledger.map((entry, index) => {
@@ -77,11 +77,21 @@ export default function Transfers() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">Documento</th>
-                    <th className="py-2 text-left">Estado</th>
-                    <th className="py-2 text-left">Origen</th>
-                    <th className="py-2 text-left">Destino</th>
-                    <th className="py-2 text-right">Items</th>
+                    <th className="py-2 text-left" title="Numero de la transferencia">
+                      Documento
+                    </th>
+                    <th className="py-2 text-left" title="Estado de la transferencia">
+                      Estado
+                    </th>
+                    <th className="py-2 text-left" title="Almacen de origen">
+                      Origen
+                    </th>
+                    <th className="py-2 text-left" title="Almacen de destino">
+                      Destino
+                    </th>
+                    <th className="py-2 text-right" title="Cantidad de items transferidos">
+                      Items
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -118,5 +128,8 @@ export default function Transfers() {
     </div>
   );
 }
+
+
+
 
 

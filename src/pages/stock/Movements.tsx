@@ -1,6 +1,7 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -22,12 +23,19 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Movements() {
+  const stockMock = getStockMock();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const skuParam = searchParams.get("sku") ?? "";
+  const [skuFilter, setSkuFilter] = useState(skuParam);
+
   // PROVISIONAL: ledger list mocked while backend is under construction.
   const movements = useMemo(() => {
     return stockMock.ledger.map((entry, index) => {
       const date = new Date(entry.created_at);
       const docNumber = `DOC-${String(index + 1).padStart(6, "0")}`;
+      const variant = stockMock.variants.find((v) => v.variant_id === entry.variant_id);
       return {
+        sku: variant?.sku ?? "",
         date: date.toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" }),
         doc: docNumber,
         type: "MOVIMIENTO",
@@ -37,7 +45,20 @@ export default function Movements() {
         ref: entry.doc_id,
       };
     });
-  }, []);
+  }, [stockMock]);
+
+  const filteredMovements = useMemo(() => {
+    const value = skuFilter.trim().toLowerCase();
+    if (!value) return movements;
+    return movements.filter((row) => row.sku.toLowerCase().includes(value));
+  }, [movements, skuFilter]);
+
+  const clearSkuFilter = () => {
+    setSkuFilter("");
+    searchParams.delete("sku");
+    setSearchParams(searchParams, { replace: true });
+  };
+
   const movementsChart = useMemo<echarts.EChartsOption>(
     () => ({
       grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
@@ -74,7 +95,6 @@ export default function Movements() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {[
               "Rango fechas",
-              "SKU / producto",
               "Doc type",
               "Almacen",
               "Usuario",
@@ -85,7 +105,21 @@ export default function Movements() {
                 placeholder={placeholder}
               />
             ))}
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="SKU / producto"
+              value={skuFilter}
+              onChange={(event) => setSkuFilter(event.target.value)}
+            />
           </div>
+          {skuParam && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-black/70">
+              <span className="rounded-full border border-black/10 px-3 py-1">Filtrado por SKU: {skuParam}</span>
+              <button className="text-xs underline" type="button" onClick={clearSkuFilter}>
+                Quitar filtro
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -98,17 +132,31 @@ export default function Movements() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">Fecha</th>
-                    <th className="py-2 text-left">Documento</th>
-                    <th className="py-2 text-left">Tipo</th>
-                    <th className="py-2 text-left">IN/OUT</th>
-                    <th className="py-2 text-right">Qty</th>
-                    <th className="py-2 text-right">Balance</th>
-                    <th className="py-2 text-left">Referencia</th>
+                    <th className="py-2 text-left" title="Fecha y hora del movimiento">
+                      Fecha
+                    </th>
+                    <th className="py-2 text-left" title="Numero del documento">
+                      Documento
+                    </th>
+                    <th className="py-2 text-left" title="Tipo de documento o movimiento">
+                      Tipo
+                    </th>
+                    <th className="py-2 text-left" title="Direccion del movimiento: entrada o salida">
+                      Entrada/Salida
+                    </th>
+                    <th className="py-2 text-right" title="Cantidad movida">
+                      Cantidad
+                    </th>
+                    <th className="py-2 text-right" title="Balance disponible luego del movimiento">
+                      Balance
+                    </th>
+                    <th className="py-2 text-left" title="Referencia externa o nota">
+                      Referencia
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {movements.map((row) => (
+                  {filteredMovements.map((row) => (
                     <tr key={row.doc} className="border-b border-black/5">
                       <td className="py-3">{row.date}</td>
                       <td className="py-3 font-medium">{row.doc}</td>
@@ -149,5 +197,4 @@ export default function Movements() {
     </div>
   );
 }
-
 

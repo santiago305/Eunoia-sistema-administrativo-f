@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -21,7 +21,7 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Adjustments() {
+export default function Adjustments() {  const stockMock = getStockMock();
   // PROVISIONAL: adjustments list mocked from ledger while backend is under construction.
   const adjustments = useMemo(() => {
     return stockMock.ledger.map((entry, index) => ({
@@ -69,10 +69,18 @@ export default function Adjustments() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
-                    <th className="py-2 text-left">Documento</th>
-                    <th className="py-2 text-left">Motivo</th>
-                    <th className="py-2 text-left">Estado</th>
-                    <th className="py-2 text-right">Diferencia</th>
+                    <th className="py-2 text-left" title="Numero del ajuste">
+                      Documento
+                    </th>
+                    <th className="py-2 text-left" title="Motivo del ajuste">
+                      Motivo
+                    </th>
+                    <th className="py-2 text-left" title="Estado del ajuste">
+                      Estado
+                    </th>
+                    <th className="py-2 text-right" title="Diferencia neta del ajuste">
+                      Diferencia
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -110,5 +118,8 @@ export default function Adjustments() {
     </div>
   );
 }
+
+
+
 
 

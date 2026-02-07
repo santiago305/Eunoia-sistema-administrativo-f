@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
-import { stockMock } from "@/data/stockMock";
+import { getStockMock } from "@/data/stockService";
 
 const alerts = [
   { title: "Bajo stock", detail: "12 SKUs debajo del minimo en Almacen Norte" },
@@ -70,7 +70,7 @@ const ChartCard = ({ title, subtitle, options, height = 220 }: ChartCardProps) =
   );
 };
 
-export default function StockSummary() {
+export default function StockSummary() {  const stockMock = getStockMock();
   // PROVISIONAL: KPIs computed from mock data aligned to SQL schema.
   const todayIso = new Date().toISOString().slice(0, 10);
   const totalUnits = stockMock.inventory.reduce((acc, item) => acc + item.on_hand, 0);
@@ -355,6 +355,9 @@ export default function StockSummary() {
     </div>
   );
 }
+
+
+
 
 
 
