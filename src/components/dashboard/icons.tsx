@@ -1,4 +1,4 @@
-import { 
+﻿import { 
   Home, 
   Settings, 
   Users, 
@@ -9,7 +9,8 @@ import {
   Lock,
   Monitor,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  Package
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -22,6 +23,10 @@ export const IconSettings = ({ className }: { className?: string }) => (
 
 export const IconUsers = ({ className }: { className?: string }) => (
   <Users className={className} size={20} />
+);
+
+export const IconStock = ({ className }: { className?: string }) => (
+  <Package className={className} size={20} />
 );
 
 export const IconChevronDown = ({ className }: { className?: string }) => (

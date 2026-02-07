@@ -1,4 +1,4 @@
-import { RouteMetadata } from "../types/RouterTypes";
+﻿import { RouteMetadata } from "../types/RouterTypes";
 import { RoutesPaths } from "./routesPaths"
 
 export const routesConfig: RouteMetadata[] = [
@@ -11,6 +11,16 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.sessions, name: "sessions", isProtected: true },
   { path: RoutesPaths.users, name: "users", isProtected: true },
   { path: RoutesPaths.createUser, name: "createUser", isProtected: true },
+
+  { path: RoutesPaths.stockSummary, name: "stockSummary", isProtected: true },
+  { path: RoutesPaths.stockInventory, name: "stockInventory", isProtected: true },
+  { path: RoutesPaths.stockMovements, name: "stockMovements", isProtected: true },
+  { path: RoutesPaths.stockDocuments, name: "stockDocuments", isProtected: true },
+  { path: RoutesPaths.stockTransfers, name: "stockTransfers", isProtected: true },
+  { path: RoutesPaths.stockAdjustments, name: "stockAdjustments", isProtected: true },
+  { path: RoutesPaths.stockSeriesTypes, name: "stockSeriesTypes", isProtected: true },
+  { path: RoutesPaths.stockReservations, name: "stockReservations", isProtected: true },
+  { path: RoutesPaths.stockReplenishment, name: "stockReplenishment", isProtected: true },
 
   // Ruta de error 404
   { path: "*", name: "Error404", isPublic: true },

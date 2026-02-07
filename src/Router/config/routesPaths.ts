@@ -1,5 +1,4 @@
-﻿
-/**
+﻿/**
  * Central route paths for the app.
  */
 export const RoutesPaths = {
@@ -11,9 +10,18 @@ export const RoutesPaths = {
   profile: "/profile",
   sessions: "/sessions-actives",
 
-  
   createUser: "/users/create",
   users: "/users",
+
+  stockSummary: "/stock",
+  stockInventory: "/stock/inventario",
+  stockMovements: "/stock/movimientos",
+  stockDocuments: "/stock/documentos",
+  stockTransfers: "/stock/transferencias",
+  stockAdjustments: "/stock/ajustes",
+  stockSeriesTypes: "/stock/series-tipos",
+  stockReservations: "/stock/reservas",
+  stockReplenishment: "/stock/reposicion",
 } as const;
 
 /**

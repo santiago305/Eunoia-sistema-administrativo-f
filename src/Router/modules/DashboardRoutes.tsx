@@ -1,9 +1,9 @@
-/**
- * Definición de rutas protegidas bajo el Dashboard.
+﻿/**
+ * Definicion de rutas protegidas bajo el Dashboard.
  * 
- * - Se utiliza `PrivateRoute` para proteger las rutas que requieren autenticación.
- * - Las rutas están anidadas bajo `DashboardLayout`.
- * - Soporta subrutas específicas para roles (admin, monitor, users).
+ * - Se utiliza `PrivateRoute` para proteger las rutas que requieren autenticacion.
+ * - Las rutas estan anidadas bajo `DashboardLayout`.
+ * - Soporta subrutas especificas para roles (admin, monitor, users).
  * 
  * @module DashboardRoutes
  */
@@ -21,6 +21,16 @@ const Users = lazy(() => import("@/pages/users/Users"));
 const CreateUser = lazy(() => import("@/pages/users/CreateU"));
 const Profile = lazy(() => import("@/pages/users/Profile"));
 const Sessions = lazy(() => import("@/pages/users/Sessions"));
+
+const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
+const StockInventory = lazy(() => import("@/pages/stock/Inventory"));
+const StockMovements = lazy(() => import("@/pages/stock/Movements"));
+const StockDocuments = lazy(() => import("@/pages/stock/Documents"));
+const StockTransfers = lazy(() => import("@/pages/stock/Transfers"));
+const StockAdjustments = lazy(() => import("@/pages/stock/Adjustments"));
+const StockSeriesTypes = lazy(() => import("@/pages/stock/SeriesTypes"));
+const StockReservations = lazy(() => import("@/pages/stock/Reservations"));
+const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -50,6 +60,42 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.sessions,
                 element: <Sessions />, 
+            },
+            {
+                path: RoutesPaths.stockSummary,
+                element: <StockSummary />,
+            },
+            {
+                path: RoutesPaths.stockInventory,
+                element: <StockInventory />,
+            },
+            {
+                path: RoutesPaths.stockMovements,
+                element: <StockMovements />,
+            },
+            {
+                path: RoutesPaths.stockDocuments,
+                element: <StockDocuments />,
+            },
+            {
+                path: RoutesPaths.stockTransfers,
+                element: <StockTransfers />,
+            },
+            {
+                path: RoutesPaths.stockAdjustments,
+                element: <StockAdjustments />,
+            },
+            {
+                path: RoutesPaths.stockSeriesTypes,
+                element: <StockSeriesTypes />,
+            },
+            {
+                path: RoutesPaths.stockReservations,
+                element: <StockReservations />,
+            },
+            {
+                path: RoutesPaths.stockReplenishment,
+                element: <StockReplenishment />,
             },
         ],
     },
