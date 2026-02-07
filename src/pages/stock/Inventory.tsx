@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
@@ -37,6 +37,7 @@ export default function Inventory() {
   const currentPage = Math.max(1, Number(page ?? "1") || 1);
   const pageSize = 10;
   const consumptionWindowDays = 14;
+  const [selectedSku, setSelectedSku] = useState<string | null>(null);
 
   // PROVISIONAL: inventory snapshot mocked while backend is under construction.
   const inventoryRows = useMemo(() => {
@@ -80,29 +81,36 @@ export default function Inventory() {
       };
     });
   }, [stockMock, consumptionWindowDays]);
-  const availabilityChart = useMemo<echarts.EChartsOption>(
-    () => ({
+  const availabilityChart = useMemo<echarts.EChartsOption>(() => {
+    const warehouseNames = stockMock.warehouses.map((w) => w.name);
+    const skuToUse = selectedSku ?? inventoryRows[0]?.sku ?? "";
+    const perWarehouse = warehouseNames.map((name) => {
+      const row = inventoryRows.find((item) => item.sku === skuToUse && item.warehouse === name);
+      return row?.available ?? 0;
+    });
+
+    return {
       tooltip: { trigger: "axis" },
       grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
       xAxis: {
         type: "category",
-        data: ["Central", "Norte", "Sur", "Ecommerce"],
+        data: warehouseNames,
         axisLabel: { color: "#111" },
       },
       yAxis: { type: "value", axisLabel: { color: "#111" } },
       series: [
         {
           type: "bar",
-          data: [62, 55, 48, 38],
+          data: perWarehouse,
           itemStyle: { color: "#0f766e" },
           barWidth: 18,
         },
       ],
-    }),
-    []
-  );
+    };
+  }, [inventoryRows, selectedSku, stockMock.warehouses]);
 
-  const ref = useEChart(availabilityChart);
+  const refLarge = useEChart(availabilityChart);
+  const refCompact = useEChart(availabilityChart);
   const [searchText, setSearchText] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -129,6 +137,43 @@ export default function Inventory() {
       return matchesSearch && matchesWarehouse && matchesStatus;
     });
   }, [inventoryRows, searchText, warehouseFilter, statusFilter]);
+
+  const selectedSkuValue = selectedSku ?? filteredRows[0]?.sku ?? inventoryRows[0]?.sku ?? "";
+  const selectedSkuRows = useMemo(
+    () => inventoryRows.filter((row) => row.sku === selectedSkuValue),
+    [inventoryRows, selectedSkuValue]
+  );
+  const selectedSkuName = selectedSkuRows[0]?.name ?? "SKU";
+  const selectedSkuRule = selectedSkuRows[0]
+    ? { min: selectedSkuRows[0].min, ideal: selectedSkuRows[0].ideal }
+    : { min: 0, ideal: 0 };
+
+  const selectedMovements = useMemo(() => {
+    const variant = stockMock.variants.find((v) => v.sku === selectedSkuValue);
+    if (!variant) return [];
+    return stockMock.ledger
+      .filter((entry) => entry.variant_id === variant.variant_id)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 6)
+      .map((entry) => ({
+        date: new Date(entry.created_at).toLocaleDateString("es-PE", { day: "2-digit", month: "short" }),
+        direction: entry.direction,
+        quantity: entry.quantity,
+        warehouse: stockMock.warehouses.find((w) => w.warehouse_id === entry.warehouse_id)?.name ?? "-",
+      }));
+  }, [stockMock, selectedSkuValue]);
+
+  const selectedReservations = useMemo(() => {
+    const variant = stockMock.variants.find((v) => v.sku === selectedSkuValue);
+    if (!variant) return [];
+    return stockMock.reservations
+      .filter((res) => res.variant_id === variant.variant_id)
+      .slice(0, 3)
+      .map((res) => ({
+        qty: res.quantity,
+        warehouse: stockMock.warehouses.find((w) => w.warehouse_id === res.warehouse_id)?.name ?? "-",
+      }));
+  }, [stockMock, selectedSkuValue]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -240,7 +285,7 @@ export default function Inventory() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold">{row.name}</p>
-                      <p className="text-xs text-black/60">{row.sku} Â· {row.warehouse}</p>
+                      <p className="text-xs text-black/60">{row.sku} · {row.warehouse}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{row.available}</p>
@@ -302,7 +347,14 @@ export default function Inventory() {
                 </thead>
                 <tbody>
                   {pagedRows.map((row) => (
-                    <tr key={row.sku} className="border-b border-black/5">
+                    <tr
+                      key={row.sku}
+                      className={[
+                        "border-b border-black/5 cursor-pointer",
+                        selectedSkuValue === row.sku ? "bg-black/[0.03]" : "",
+                      ].join(" ")}
+                      onClick={() => setSelectedSku(row.sku)}
+                    >
                       <td className="py-3 font-medium">{row.sku}</td>
                       <td className="py-3">{row.name}</td>
                       <td className="py-3">{row.warehouse}</td>
@@ -365,26 +417,48 @@ export default function Inventory() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm lg:hidden 2xl:block"
             >
               <p className="text-sm font-semibold">Detalle SKU</p>
-              <p className="text-xs text-black/60">Resumen por almacen</p>
+              <p className="text-xs text-black/60">Resumen por almacen · {selectedSkuName}</p>
               <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>Central</span>
-                  <span className="font-semibold">220</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Norte</span>
-                  <span className="font-semibold">120</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Sur</span>
-                  <span className="font-semibold">80</span>
-                </div>
+                {selectedSkuRows.map((row) => (
+                  <div key={`${row.sku}-${row.warehouse}`} className="flex items-center justify-between">
+                    <span>{row.warehouse}</span>
+                    <span className="font-semibold">{row.onHand}</span>
+                  </div>
+                ))}
               </div>
               <div className="mt-4 rounded-xl border border-black/10 bg-black/[0.02] p-3 text-xs">
-                Reglas activas: min 120, max 520, lead time 6 dias
+                Reglas activas: min {selectedSkuRule.min}, ideal {selectedSkuRule.ideal}
+              </div>
+              <div className="mt-4 space-y-2 text-xs">
+                <p className="font-semibold text-black/80">Ultimos movimientos</p>
+                {selectedMovements.length === 0 ? (
+                  <p className="text-black/60">Sin movimientos recientes.</p>
+                ) : (
+                  selectedMovements.map((mov, idx) => (
+                    <div key={`${mov.date}-${idx}`} className="flex items-center justify-between">
+                      <span className="text-black/60">{mov.date} · {mov.warehouse}</span>
+                      <span className={mov.direction === "IN" ? "text-emerald-600" : "text-red-600"}>
+                        {mov.direction} {mov.quantity}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="mt-4 space-y-2 text-xs">
+                <p className="font-semibold text-black/80">Reservas activas</p>
+                {selectedReservations.length === 0 ? (
+                  <p className="text-black/60">Sin reservas activas.</p>
+                ) : (
+                  selectedReservations.map((res, idx) => (
+                    <div key={`${res.warehouse}-${idx}`} className="flex items-center justify-between">
+                      <span className="text-black/60">{res.warehouse}</span>
+                      <span className="font-semibold">{res.qty}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </motion.div>
 
@@ -392,23 +466,67 @@ export default function Inventory() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm lg:hidden 2xl:block"
             >
               <p className="text-sm font-semibold">Disponibilidad por almacen</p>
-              <div ref={ref} className="mt-4" style={{ height: 180 }} />
+              <div ref={refLarge} className="mt-4" style={{ height: 180 }} />
             </motion.div>
 
-            <motion.div
+                        <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
+              className="hidden lg:block 2xl:hidden"
             >
-              <p className="text-sm font-semibold">Acciones rapidas</p>
-              <div className="mt-3 space-y-2">
-                <button className="w-full text-left text-sm px-3 py-2 rounded-md border border-black/10">Transferir desde aqui</button>
-                <button className="w-full text-left text-sm px-3 py-2 rounded-md border border-black/10">Ajuste rapido</button>
-                <button className="w-full text-left text-sm px-3 py-2 rounded-md border border-black/10">Crear reserva</button>
+              <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 items-start">
+                <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm h-full">
+                  <p className="text-sm font-semibold">Detalle SKU</p>
+                  <p className="text-xs text-black/60">Resumen por almacen · {selectedSkuName}</p>
+                  <div className="mt-4 space-y-2 text-sm">
+                    {selectedSkuRows.map((row) => (
+                      <div key={`${row.sku}-${row.warehouse}`} className="flex items-center justify-between">
+                        <span>{row.warehouse}</span>
+                        <span className="font-semibold">{row.onHand}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 rounded-xl border border-black/10 bg-black/[0.02] p-3 text-xs">
+                    Reglas activas: min {selectedSkuRule.min}, ideal {selectedSkuRule.ideal}
+                  </div>
+                  <div className="mt-4 space-y-2 text-xs">
+                    <p className="font-semibold text-black/80">Ultimos movimientos</p>
+                    {selectedMovements.length === 0 ? (
+                      <p className="text-black/60">Sin movimientos recientes.</p>
+                    ) : (
+                      selectedMovements.map((mov, idx) => (
+                        <div key={`${mov.date}-${idx}`} className="flex items-center justify-between">
+                          <span className="text-black/60">{mov.date} · {mov.warehouse}</span>
+                          <span className={mov.direction === "IN" ? "text-emerald-600" : "text-red-600"}>
+                            {mov.direction} {mov.quantity}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="mt-4 space-y-2 text-xs">
+                    <p className="font-semibold text-black/80">Reservas activas</p>
+                    {selectedReservations.length === 0 ? (
+                      <p className="text-black/60">Sin reservas activas.</p>
+                    ) : (
+                      selectedReservations.map((res, idx) => (
+                        <div key={`${res.warehouse}-${idx}`} className="flex items-center justify-between">
+                          <span className="text-black/60">{res.warehouse}</span>
+                          <span className="font-semibold">{res.qty}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm h-full flex flex-col">
+                  <p className="text-sm font-semibold">Disponibilidad por almacen</p>
+                  <div ref={refCompact} className="mt-4 flex-1" />
+                </div>
               </div>
             </motion.div>
           </div>
@@ -417,5 +535,8 @@ export default function Inventory() {
     </div>
   );
 }
+
+
+
 
 
