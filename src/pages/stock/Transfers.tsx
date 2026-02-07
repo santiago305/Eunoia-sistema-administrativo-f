@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { getStockMock } from "@/data/stockService";
 
@@ -21,9 +22,17 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Transfers() {  const stockMock = getStockMock();
+export default function Transfers() {
+  const stockMock = getStockMock();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const skuParam = searchParams.get("sku") ?? "";
+  const [skuFilter, setSkuFilter] = useState(skuParam);
+  const [fromWarehouse, setFromWarehouse] = useState("");
+  const [toWarehouse, setToWarehouse] = useState("");
+  const [itemsCount, setItemsCount] = useState("");
+
   // PROVISIONAL: transfers list mocked from ledger while backend is under construction.
-  const transfers = useMemo(() => {
+  const baseTransfers = useMemo(() => {
     return stockMock.ledger.map((entry, index) => {
       const from = stockMock.warehouses[index % stockMock.warehouses.length]?.name ?? "Central";
       const to = stockMock.warehouses[(index + 1) % stockMock.warehouses.length]?.name ?? "Norte";
@@ -35,7 +44,43 @@ export default function Transfers() {  const stockMock = getStockMock();
         items: entry.quantity,
       };
     });
-  }, []);
+  }, [stockMock]);
+
+  const [transfers, setTransfers] = useState(baseTransfers);
+
+  useEffect(() => {
+    setTransfers(baseTransfers);
+  }, [baseTransfers]);
+
+  const filteredTransfers = useMemo(() => {
+    const value = skuFilter.trim().toLowerCase();
+    if (!value) return transfers;
+    return transfers.filter((row) => row.id.toLowerCase().includes(value));
+  }, [transfers, skuFilter]);
+
+  const clearSkuFilter = () => {
+    setSkuFilter("");
+    searchParams.delete("sku");
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const createTransfer = () => {
+    if (!fromWarehouse || !toWarehouse) return;
+    const qty = Number(itemsCount) || 1;
+    const nextId = `TRA-${String(transfers.length + 1000).padStart(6, "0")}`;
+    const newRow = {
+      id: nextId,
+      status: "Draft",
+      from: fromWarehouse,
+      to: toWarehouse,
+      items: qty,
+    };
+    setTransfers([newRow, ...transfers]);
+    setFromWarehouse("");
+    setToWarehouse("");
+    setItemsCount("");
+  };
+
   const flowChart = useMemo<echarts.EChartsOption>(
     () => ({
       grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
@@ -67,6 +112,33 @@ export default function Transfers() {  const stockMock = getStockMock();
           <p className="text-sm text-black/60">Operacion principal de movimiento entre almacenes.</p>
         </div>
 
+        <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="SKU (preseleccionado)"
+              value={skuFilter}
+              onChange={(event) => setSkuFilter(event.target.value)}
+            />
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="Almacen origen"
+            />
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="Almacen destino"
+            />
+          </div>
+          {skuParam && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-black/70">
+              <span className="rounded-full border border-black/10 px-3 py-1">SKU seleccionado: {skuParam}</span>
+              <button className="text-xs underline" type="button" onClick={clearSkuFilter}>
+                Quitar SKU
+              </button>
+            </div>
+          )}
+        </section>
+
         <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -95,7 +167,7 @@ export default function Transfers() {  const stockMock = getStockMock();
                   </tr>
                 </thead>
                 <tbody>
-                  {transfers.map((row) => (
+                  {filteredTransfers.map((row) => (
                     <tr key={row.id} className="border-b border-black/5">
                       <td className="py-3 font-medium">{row.id}</td>
                       <td className="py-3">{row.status}</td>
@@ -113,9 +185,31 @@ export default function Transfers() {  const stockMock = getStockMock();
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold">Creador rapido</p>
               <div className="mt-3 space-y-2">
-                <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="From warehouse" />
-                <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="To warehouse" />
-                <button className="w-full text-sm px-3 py-2 rounded-md bg-black text-white">Iniciar transferencia</button>
+                <input
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                  placeholder="From warehouse"
+                  value={fromWarehouse}
+                  onChange={(event) => setFromWarehouse(event.target.value)}
+                />
+                <input
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                  placeholder="To warehouse"
+                  value={toWarehouse}
+                  onChange={(event) => setToWarehouse(event.target.value)}
+                />
+                <input
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                  placeholder="Cantidad"
+                  value={itemsCount}
+                  onChange={(event) => setItemsCount(event.target.value)}
+                />
+                <button
+                  className="w-full text-sm px-3 py-2 rounded-md bg-black text-white"
+                  onClick={createTransfer}
+                  type="button"
+                >
+                  Iniciar transferencia
+                </button>
               </div>
             </div>
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
@@ -128,8 +222,3 @@ export default function Transfers() {  const stockMock = getStockMock();
     </div>
   );
 }
-
-
-
-
-

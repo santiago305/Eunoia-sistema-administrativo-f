@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { getStockMock } from "@/data/stockService";
 
@@ -21,16 +22,61 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Adjustments() {  const stockMock = getStockMock();
+export default function Adjustments() {
+  const stockMock = getStockMock();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const skuParam = searchParams.get("sku") ?? "";
+  const [skuFilter, setSkuFilter] = useState(skuParam);
+  const [adjSku, setAdjSku] = useState(skuParam);
+  const [adjWarehouse, setAdjWarehouse] = useState("");
+  const [adjQty, setAdjQty] = useState("");
+  const [adjReason, setAdjReason] = useState("");
+
   // PROVISIONAL: adjustments list mocked from ledger while backend is under construction.
-  const adjustments = useMemo(() => {
+  const baseAdjustments = useMemo(() => {
     return stockMock.ledger.map((entry, index) => ({
       id: `AJU-${String(index + 89).padStart(6, "0")}`,
       reason: entry.direction === "IN" ? "Conteo" : "Merma",
       status: index % 2 === 0 ? "Posted" : "Draft",
       diff: entry.direction === "IN" ? entry.quantity : -entry.quantity,
     }));
-  }, []);
+  }, [stockMock]);
+
+  const [adjustments, setAdjustments] = useState(baseAdjustments);
+
+  useEffect(() => {
+    setAdjustments(baseAdjustments);
+  }, [baseAdjustments]);
+
+  const filteredAdjustments = useMemo(() => {
+    const value = skuFilter.trim().toLowerCase();
+    if (!value) return adjustments;
+    return adjustments.filter((row) => row.id.toLowerCase().includes(value));
+  }, [adjustments, skuFilter]);
+
+  const clearSkuFilter = () => {
+    setSkuFilter("");
+    searchParams.delete("sku");
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const createAdjustment = () => {
+    if (!adjSku || !adjQty || !adjReason) return;
+    const qty = Number(adjQty) || 0;
+    const nextId = `AJU-${String(adjustments.length + 500).padStart(6, "0")}`;
+    const newRow = {
+      id: nextId,
+      reason: adjReason,
+      status: "Draft",
+      diff: qty,
+    };
+    setAdjustments([newRow, ...adjustments]);
+    setAdjSku("");
+    setAdjWarehouse("");
+    setAdjQty("");
+    setAdjReason("");
+  };
+
   const reasonChart = useMemo<echarts.EChartsOption>(
     () => ({
       series: [
@@ -59,6 +105,33 @@ export default function Adjustments() {  const stockMock = getStockMock();
           <p className="text-sm text-black/60">Controla conteos, mermas y correcciones.</p>
         </div>
 
+        <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="SKU (preseleccionado)"
+              value={skuFilter}
+              onChange={(event) => setSkuFilter(event.target.value)}
+            />
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="Motivo"
+            />
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="Estado"
+            />
+          </div>
+          {skuParam && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-black/70">
+              <span className="rounded-full border border-black/10 px-3 py-1">SKU seleccionado: {skuParam}</span>
+              <button className="text-xs underline" type="button" onClick={clearSkuFilter}>
+                Quitar SKU
+              </button>
+            </div>
+          )}
+        </section>
+
         <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -84,7 +157,7 @@ export default function Adjustments() {  const stockMock = getStockMock();
                   </tr>
                 </thead>
                 <tbody>
-                  {adjustments.map((row) => (
+                  {filteredAdjustments.map((row) => (
                     <tr key={row.id} className="border-b border-black/5">
                       <td className="py-3 font-medium">{row.id}</td>
                       <td className="py-3">{row.reason}</td>
@@ -101,11 +174,37 @@ export default function Adjustments() {  const stockMock = getStockMock();
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold">Ajuste rapido</p>
               <div className="mt-3 space-y-2">
-                <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="SKU" />
-                <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Almacen" />
-                <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Cantidad" />
-                <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Motivo" />
-                <button className="w-full text-sm px-3 py-2 rounded-md bg-black text-white">Postear ajuste</button>
+                <input
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                  placeholder="SKU"
+                  value={adjSku}
+                  onChange={(event) => setAdjSku(event.target.value)}
+                />
+                <input
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                  placeholder="Almacen"
+                  value={adjWarehouse}
+                  onChange={(event) => setAdjWarehouse(event.target.value)}
+                />
+                <input
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                  placeholder="Cantidad"
+                  value={adjQty}
+                  onChange={(event) => setAdjQty(event.target.value)}
+                />
+                <input
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                  placeholder="Motivo"
+                  value={adjReason}
+                  onChange={(event) => setAdjReason(event.target.value)}
+                />
+                <button
+                  className="w-full text-sm px-3 py-2 rounded-md bg-black text-white"
+                  type="button"
+                  onClick={createAdjustment}
+                >
+                  Postear ajuste
+                </button>
               </div>
             </div>
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
@@ -118,8 +217,3 @@ export default function Adjustments() {  const stockMock = getStockMock();
     </div>
   );
 }
-
-
-
-
-

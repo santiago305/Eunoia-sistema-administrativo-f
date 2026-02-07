@@ -14,7 +14,7 @@ export const RoutesPaths = {
   users: "/users",
 
   stockSummary: "/stock",
-  stockInventory: "/stock/inventario",
+  stockInventory: "/stock/inventario/:page?",
   stockMovements: "/stock/movimientos",
   stockDocuments: "/stock/documentos",
   stockTransfers: "/stock/transferencias",
@@ -28,3 +28,4 @@ export const RoutesPaths = {
  * Valid route keys.
  */
 export type RouteName = keyof typeof RoutesPaths;
+

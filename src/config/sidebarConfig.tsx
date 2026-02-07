@@ -20,7 +20,7 @@ export const getSidebarItems = (): SidebarItem[] => [
     children: [
       {
         label: "Inventario",
-        href: RoutesPaths.stockInventory,
+        href: "/stock/inventario/1",
       },
       {
         label: "Movimientos",
@@ -53,3 +53,4 @@ export const getSidebarItems = (): SidebarItem[] => [
     ],
   },
 ];
+

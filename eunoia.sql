@@ -360,6 +360,7 @@ create table inventory_documents (
   doc_id uuid primary key default uuid_generate_v4(),
   doc_type inv_doc_type not null,
   series_id uuid references documents_series(series_id),
+  correlative varchar(30),
   status inv_doc_status not null default 'DRAFT',
 
   from_warehouse_id uuid references warehouses(warehouse_id),

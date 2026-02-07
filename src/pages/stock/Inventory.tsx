@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
 import { getStockMock } from "@/data/stockService";
@@ -30,9 +30,29 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Inventory() {  const stockMock = getStockMock();  const navigate = useNavigate();
+export default function Inventory() {
+  const stockMock = getStockMock();
+  const navigate = useNavigate();
+  const { page } = useParams();
+  const currentPage = Math.max(1, Number(page ?? "1") || 1);
+  const pageSize = 10;
+  const consumptionWindowDays = 14;
+
   // PROVISIONAL: inventory snapshot mocked while backend is under construction.
   const inventoryRows = useMemo(() => {
+    const now = new Date();
+    const since = new Date(now);
+    since.setDate(now.getDate() - consumptionWindowDays);
+
+    const outByVariantWarehouse = new Map<string, number>();
+    for (const entry of stockMock.ledger) {
+      if (entry.direction !== "OUT") continue;
+      const createdAt = new Date(entry.created_at);
+      if (createdAt < since) continue;
+      const key = `${entry.variant_id}::${entry.warehouse_id}`;
+      outByVariantWarehouse.set(key, (outByVariantWarehouse.get(key) ?? 0) + entry.quantity);
+    }
+
     return stockMock.inventory.map((item) => {
       const variant = stockMock.variants.find((v) => v.variant_id === item.variant_id);
       const product = stockMock.products.find((p) => p.product_id === variant?.product_id);
@@ -40,6 +60,11 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
       const rule = stockMock.reorderRules.find(
         (r) => r.variant_id === item.variant_id && r.warehouse_id === item.warehouse_id
       );
+      const key = `${item.variant_id}::${item.warehouse_id}`;
+      const totalOut = outByVariantWarehouse.get(key) ?? 0;
+      const dailyConsumption = totalOut / consumptionWindowDays;
+      const daysRemaining =
+        dailyConsumption > 0 ? Math.max(0, Math.round((item.on_hand / dailyConsumption) * 10) / 10) : null;
 
       return {
         sku: variant?.sku ?? "SKU",
@@ -50,9 +75,11 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
         available: item.on_hand - item.reserved,
         min: rule?.min_qty ?? 0,
         ideal: rule?.max_qty ?? 0,
+        daysRemaining,
+        dailyConsumption,
       };
     });
-  }, []);
+  }, [stockMock, consumptionWindowDays]);
   const availabilityChart = useMemo<echarts.EChartsOption>(
     () => ({
       tooltip: { trigger: "axis" },
@@ -88,7 +115,7 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
         row.sku.toLowerCase().includes(search) ||
         row.name.toLowerCase().includes(search);
       const matchesWarehouse = warehouseFilter.length === 0 || row.warehouse === warehouseFilter;
-  const matchesStatus =
+      const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "available" && row.available > 0) ||
         (statusFilter === "reserved" && row.reserved > 0) ||
@@ -102,6 +129,15 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
       return matchesSearch && matchesWarehouse && matchesStatus;
     });
   }, [inventoryRows, searchText, warehouseFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const pagedRows = filteredRows.slice(startIndex, startIndex + pageSize);
+
+  const goToPage = (nextPage: number) => {
+    navigate(`/stock/inventario/${nextPage}`);
+  };
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
@@ -199,7 +235,7 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
             </div>
 
             <div className="mt-4 md:hidden space-y-3">
-              {filteredRows.map((row) => (
+              {pagedRows.map((row) => (
                 <div key={row.sku} className="rounded-xl border border-black/10 p-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -215,11 +251,17 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
                     <div>Stock fisico: <span className="font-semibold text-black">{row.onHand}</span></div>
                     <div>Reservado: <span className="font-semibold text-black">{row.reserved}</span></div>
                     <div>Min/Ideal: <span className="font-semibold text-black">{row.min}/{row.ideal}</span></div>
+                    <div>
+                      Dias restantes: {" "}
+                      <span className={row.daysRemaining !== null && row.daysRemaining <= 3 ? "font-semibold text-red-600" : "font-semibold text-black"}>
+                        {row.daysRemaining === null ? "N/A" : row.daysRemaining}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockMovements}?sku=${row.sku}`)}>Ver kardex</button>
-                    <button className="text-xs px-2 py-1 rounded-md border border-black/10">Transferir</button>
-                    <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ajustar</button>
+                    <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockTransfers}?sku=${row.sku}`)}>Transferir</button>
+                    <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockAdjustments}?sku=${row.sku}`)}>Ajustar</button>
                   </div>
                 </div>
               ))}
@@ -250,14 +292,17 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
                     <th className="py-2 text-right" title="Minimo y nivel ideal del SKU">
                       Min/Ideal
                     </th>
+                    <th className="py-2 text-right" title="Dias restantes segun consumo reciente">
+                      Dias restantes
+                    </th>
                     <th className="py-2 text-right" title="Acciones rapidas sobre el SKU">
                       Acciones
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-              {filteredRows.map((row) => (
-                <tr key={row.sku} className="border-b border-black/5">
+                  {pagedRows.map((row) => (
+                    <tr key={row.sku} className="border-b border-black/5">
                       <td className="py-3 font-medium">{row.sku}</td>
                       <td className="py-3">{row.name}</td>
                       <td className="py-3">{row.warehouse}</td>
@@ -268,16 +313,50 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
                         {row.min}/{row.ideal}
                       </td>
                       <td className="py-3 text-right">
+                        {row.daysRemaining === null ? (
+                          "N/A"
+                        ) : row.daysRemaining <= 3 ? (
+                          <span className="font-semibold text-red-600">{row.daysRemaining} dias</span>
+                        ) : (
+                          <span className="text-black/80">{row.daysRemaining} dias</span>
+                        )}
+                      </td>
+                      <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockMovements}?sku=${row.sku}`)}>Ver kardex</button>
-                          <button className="text-xs px-2 py-1 rounded-md border border-black/10">Transferir</button>
-                          <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ajustar</button>
+                          <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockTransfers}?sku=${row.sku}`)}>Transferir</button>
+                          <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockAdjustments}?sku=${row.sku}`)}>Ajustar</button>
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-black/60">
+              <div>
+                Mostrando {startIndex + 1}-{Math.min(startIndex + pageSize, filteredRows.length)} de {filteredRows.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-md border border-black/10 px-2 py-1"
+                  disabled={safePage <= 1}
+                  onClick={() => goToPage(safePage - 1)}
+                >
+                  Anterior
+                </button>
+                <span>Pagina {safePage} de {totalPages}</span>
+                <button
+                  type="button"
+                  className="rounded-md border border-black/10 px-2 py-1"
+                  disabled={safePage >= totalPages}
+                  onClick={() => goToPage(safePage + 1)}
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </motion.div>
 
@@ -338,14 +417,5 @@ export default function Inventory() {  const stockMock = getStockMock();  const 
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
 
 
