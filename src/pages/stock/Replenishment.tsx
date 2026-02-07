@@ -1,11 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-
-const reorderRows = [
-  { sku: "SKU-221", warehouse: "Central", min: 120, onHand: 84, suggestion: 60 },
-  { sku: "SKU-114", warehouse: "Norte", min: 100, onHand: 70, suggestion: 45 },
-  { sku: "SKU-445", warehouse: "Sur", min: 80, onHand: 52, suggestion: 38 },
-];
+import { stockMock } from "@/data/stockMock";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -27,6 +22,25 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Replenishment() {
+  // PROVISIONAL: reorder rules mocked while backend is under construction.
+  const reorderRows = useMemo(() => {
+    return stockMock.reorderRules.map((rule) => {
+      const variant = stockMock.variants.find((v) => v.variant_id === rule.variant_id);
+      const warehouse = stockMock.warehouses.find((w) => w.warehouse_id === rule.warehouse_id);
+      const inv = stockMock.inventory.find(
+        (item) => item.variant_id === rule.variant_id && item.warehouse_id === rule.warehouse_id
+      );
+      const onHand = inv?.on_hand ?? 0;
+      const suggestion = Math.max(rule.min_qty - onHand, 0);
+      return {
+        sku: variant?.sku ?? "SKU",
+        warehouse: warehouse?.name ?? "Almacen",
+        min: rule.min_qty,
+        onHand,
+        suggestion,
+      };
+    });
+  }, []);
   const priorityChart = useMemo<echarts.EChartsOption>(
     () => ({
       series: [
@@ -106,3 +120,5 @@ export default function Replenishment() {
     </div>
   );
 }
+
+

@@ -1,13 +1,7 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
-
-const kpis = [
-  { label: "Stock total (unidades)", value: "128,430", delta: "+2.4%", helper: "vs semana anterior" },
-  { label: "Stock valorizado", value: "$ 2,941,220", delta: "+1.1%", helper: "costo promedio" },
-  { label: "Items bajo minimo", value: "42", delta: "-6", helper: "requieren reposicion" },
-  { label: "Movimientos hoy", value: "186", delta: "+18", helper: "entradas + salidas" },
-];
+import { stockMock } from "@/data/stockMock";
 
 const alerts = [
   { title: "Bajo stock", detail: "12 SKUs debajo del minimo en Almacen Norte" },
@@ -77,6 +71,48 @@ const ChartCard = ({ title, subtitle, options, height = 220 }: ChartCardProps) =
 };
 
 export default function StockSummary() {
+  // PROVISIONAL: KPIs computed from mock data aligned to SQL schema.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const totalUnits = stockMock.inventory.reduce((acc, item) => acc + item.on_hand, 0);
+  const totalValue = stockMock.inventory.reduce((acc, item) => {
+    const variant = stockMock.variants.find((v) => v.variant_id === item.variant_id);
+    const cost = variant?.cost ?? 0;
+    return acc + item.on_hand * cost;
+  }, 0);
+  const lowMinCount = stockMock.reorderRules.filter((rule) => {
+    const inv = stockMock.inventory.find(
+      (item) => item.variant_id === rule.variant_id && item.warehouse_id === rule.warehouse_id
+    );
+    return inv ? inv.on_hand < rule.min_qty : false;
+  }).length;
+  const movementsToday = stockMock.ledger.filter((m) => m.created_at.startsWith(todayIso)).length;
+
+  const kpis = [
+    {
+      label: "Stock total (unidades)",
+      value: totalUnits.toLocaleString("es-PE"),
+      delta: "+2.4%",
+      helper: "vs semana anterior",
+    },
+    {
+      label: "Stock valorizado",
+      value: `$ ${totalValue.toLocaleString("es-PE", { maximumFractionDigits: 0 })}`,
+      delta: "+1.1%",
+      helper: "costo promedio",
+    },
+    {
+      label: "Items bajo minimo",
+      value: lowMinCount.toString(),
+      delta: "-6",
+      helper: "requieren reposicion",
+    },
+    {
+      label: "Movimientos hoy",
+      value: movementsToday.toString(),
+      delta: "+18",
+      helper: "entradas + salidas",
+    },
+  ];
   const stockByWarehouse = useMemo<echarts.EChartsOption>(
     () => ({
       tooltip: { trigger: "item" },
@@ -319,3 +355,6 @@ export default function StockSummary() {
     </div>
   );
 }
+
+
+

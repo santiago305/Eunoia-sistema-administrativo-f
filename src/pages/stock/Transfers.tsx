@@ -1,11 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-
-const transfers = [
-  { id: "TRA-000321", status: "Draft", from: "Central", to: "Norte", items: 12 },
-  { id: "TRA-000322", status: "Posted", from: "Sur", to: "Central", items: 8 },
-  { id: "TRA-000323", status: "Revision", from: "Central", to: "Ecommerce", items: 5 },
-];
+import { stockMock } from "@/data/stockMock";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -27,6 +22,20 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Transfers() {
+  // PROVISIONAL: transfers list mocked from ledger while backend is under construction.
+  const transfers = useMemo(() => {
+    return stockMock.ledger.map((entry, index) => {
+      const from = stockMock.warehouses[index % stockMock.warehouses.length]?.name ?? "Central";
+      const to = stockMock.warehouses[(index + 1) % stockMock.warehouses.length]?.name ?? "Norte";
+      return {
+        id: `TRA-${String(index + 321).padStart(6, "0")}`,
+        status: index % 2 === 0 ? "Draft" : "Posted",
+        from,
+        to,
+        items: entry.quantity,
+      };
+    });
+  }, []);
   const flowChart = useMemo<echarts.EChartsOption>(
     () => ({
       grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
@@ -109,3 +118,5 @@ export default function Transfers() {
     </div>
   );
 }
+
+

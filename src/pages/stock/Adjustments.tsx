@@ -1,11 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-
-const adjustments = [
-  { id: "AJU-000089", reason: "Conteo", status: "Posted", diff: -12 },
-  { id: "AJU-000090", reason: "Merma", status: "Draft", diff: -4 },
-  { id: "AJU-000091", reason: "Correccion", status: "Posted", diff: 6 },
-];
+import { stockMock } from "@/data/stockMock";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -27,6 +22,15 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Adjustments() {
+  // PROVISIONAL: adjustments list mocked from ledger while backend is under construction.
+  const adjustments = useMemo(() => {
+    return stockMock.ledger.map((entry, index) => ({
+      id: `AJU-${String(index + 89).padStart(6, "0")}`,
+      reason: entry.direction === "IN" ? "Conteo" : "Merma",
+      status: index % 2 === 0 ? "Posted" : "Draft",
+      diff: entry.direction === "IN" ? entry.quantity : -entry.quantity,
+    }));
+  }, []);
   const reasonChart = useMemo<echarts.EChartsOption>(
     () => ({
       series: [
@@ -106,3 +110,5 @@ export default function Adjustments() {
     </div>
   );
 }
+
+

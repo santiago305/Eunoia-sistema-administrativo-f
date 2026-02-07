@@ -1,11 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-
-const reservations = [
-  { id: "RES-00091", sku: "SKU-221", qty: 12, warehouse: "Central", expires: "09 Feb 2026" },
-  { id: "RES-00092", sku: "SKU-445", qty: 6, warehouse: "Norte", expires: "10 Feb 2026" },
-  { id: "RES-00093", sku: "SKU-114", qty: 4, warehouse: "Sur", expires: "12 Feb 2026" },
-];
+import { stockMock } from "@/data/stockMock";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -27,6 +22,21 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Reservations() {
+  // PROVISIONAL: reservations mocked from schema while backend is under construction.
+  const reservations = useMemo(() => {
+    return stockMock.reservations.map((row) => {
+      const variant = stockMock.variants.find((v) => v.variant_id === row.variant_id);
+      const warehouse = stockMock.warehouses.find((w) => w.warehouse_id === row.warehouse_id);
+      const expires = row.expires_at ? new Date(row.expires_at).toLocaleDateString("es-PE") : "-";
+      return {
+        id: row.reservation_id,
+        sku: variant?.sku ?? "SKU",
+        qty: row.quantity,
+        warehouse: warehouse?.name ?? "Almacen",
+        expires,
+      };
+    });
+  }, []);
   const reservationsChart = useMemo<echarts.EChartsOption>(
     () => ({
       grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
@@ -107,3 +117,5 @@ export default function Reservations() {
     </div>
   );
 }
+
+

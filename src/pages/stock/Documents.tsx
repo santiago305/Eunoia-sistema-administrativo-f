@@ -1,11 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-
-const documents = [
-  { id: "TRA-000321", type: "Transfer", status: "Draft", warehouse: "Central" },
-  { id: "AJU-000089", type: "Ajuste", status: "Posted", warehouse: "Sur" },
-  { id: "REC-000901", type: "Ingreso", status: "Draft", warehouse: "Norte" },
-];
+import { stockMock } from "@/data/stockMock";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -27,6 +22,16 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Documents() {
+  // PROVISIONAL: documents list derived from ledger while backend is under construction.
+  const documents = useMemo(() => {
+    const ids = Array.from(new Set(stockMock.ledger.map((l) => l.doc_id)));
+    return ids.map((id, index) => ({
+      id: `DOC-${String(index + 1).padStart(6, "0")}`,
+      type: "Movimiento",
+      status: index % 2 === 0 ? "Posted" : "Draft",
+      warehouse: stockMock.warehouses[index % stockMock.warehouses.length]?.name ?? "-",
+    }));
+  }, []);
   const statusChart = useMemo<echarts.EChartsOption>(
     () => ({
       series: [
@@ -140,3 +145,5 @@ export default function Documents() {
     </div>
   );
 }
+
+

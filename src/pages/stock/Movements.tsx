@@ -1,35 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
-
-const movements = [
-  {
-    date: "07 Feb 2026 09:12",
-    doc: "TRA-000321",
-    type: "TRANSFER",
-    inOut: "OUT",
-    qty: 38,
-    balance: 402,
-    ref: "Orden 8821",
-  },
-  {
-    date: "07 Feb 2026 08:44",
-    doc: "AJU-000089",
-    type: "ADJUSTMENT",
-    inOut: "IN",
-    qty: 12,
-    balance: 440,
-    ref: "Conteo ciclico",
-  },
-  {
-    date: "06 Feb 2026 17:30",
-    doc: "REC-000901",
-    type: "RECEIPT",
-    inOut: "IN",
-    qty: 120,
-    balance: 428,
-    ref: "Compra 541",
-  },
-];
+import { stockMock } from "@/data/stockMock";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -51,6 +22,22 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Movements() {
+  // PROVISIONAL: ledger list mocked while backend is under construction.
+  const movements = useMemo(() => {
+    return stockMock.ledger.map((entry, index) => {
+      const date = new Date(entry.created_at);
+      const docNumber = `DOC-${String(index + 1).padStart(6, "0")}`;
+      return {
+        date: date.toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" }),
+        doc: docNumber,
+        type: "MOVIMIENTO",
+        inOut: entry.direction,
+        qty: entry.quantity,
+        balance: 0,
+        ref: entry.doc_id,
+      };
+    });
+  }, []);
   const movementsChart = useMemo<echarts.EChartsOption>(
     () => ({
       grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
@@ -162,3 +149,5 @@ export default function Movements() {
     </div>
   );
 }
+
+

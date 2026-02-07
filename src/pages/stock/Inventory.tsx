@@ -1,42 +1,7 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
-
-const inventoryRows = [
-  {
-    sku: "SKU-221",
-    name: "Camisa Oxford",
-    warehouse: "Central",
-    location: "A-02-03",
-    onHand: 420,
-    reserved: 36,
-    available: 384,
-    min: 120,
-    ideal: 520,
-  },
-  {
-    sku: "SKU-114",
-    name: "Pantalon Slim",
-    warehouse: "Norte",
-    location: "B-01-05",
-    onHand: 280,
-    reserved: 20,
-    available: 260,
-    min: 100,
-    ideal: 300,
-  },
-  {
-    sku: "SKU-445",
-    name: "Zapatilla Runner",
-    warehouse: "Sur",
-    location: "C-03-01",
-    onHand: 140,
-    reserved: 18,
-    available: 122,
-    min: 80,
-    ideal: 200,
-  },
-];
+import { stockMock } from "@/data/stockMock";
 
 const statusBadges = [
   { label: "Disponible", value: "78%" },
@@ -64,6 +29,30 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Inventory() {
+  // PROVISIONAL: inventory snapshot mocked while backend is under construction.
+  const inventoryRows = useMemo(() => {
+    return stockMock.inventory.map((item) => {
+      const variant = stockMock.variants.find((v) => v.variant_id === item.variant_id);
+      const product = stockMock.products.find((p) => p.product_id === variant?.product_id);
+      const warehouse = stockMock.warehouses.find((w) => w.warehouse_id === item.warehouse_id);
+      const location = stockMock.locations.find((l) => l.location_id === item.location_id);
+      const rule = stockMock.reorderRules.find(
+        (r) => r.variant_id === item.variant_id && r.warehouse_id === item.warehouse_id
+      );
+
+      return {
+        sku: variant?.sku ?? "SKU",
+        name: product?.name ?? "Producto",
+        warehouse: warehouse?.name ?? "Almacen",
+        location: location?.code ?? "-",
+        onHand: item.on_hand,
+        reserved: item.reserved,
+        available: item.on_hand - item.reserved,
+        min: rule?.min_qty ?? 0,
+        ideal: rule?.max_qty ?? 0,
+      };
+    });
+  }, []);
   const availabilityChart = useMemo<echarts.EChartsOption>(
     () => ({
       tooltip: { trigger: "axis" },
@@ -87,6 +76,34 @@ export default function Inventory() {
   );
 
   const ref = useEChart(availabilityChart);
+  const [searchText, setSearchText] = useState("");
+  const [warehouseFilter, setWarehouseFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredRows = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+    return inventoryRows.filter((row) => {
+      const matchesSearch =
+        search.length === 0 ||
+        row.sku.toLowerCase().includes(search) ||
+        row.name.toLowerCase().includes(search);
+      const matchesWarehouse = warehouseFilter.length === 0 || row.warehouse === warehouseFilter;
+      const matchesLocation = locationFilter.length === 0 || row.location === locationFilter;
+  const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "available" && row.available > 0) ||
+        (statusFilter === "reserved" && row.reserved > 0) ||
+        (statusFilter === "high" && row.ideal > 0 && row.onHand / row.ideal >= 0.6) ||
+        (statusFilter === "mid" &&
+          row.ideal > 0 &&
+          row.onHand / row.ideal < 0.6 &&
+          row.onHand / row.ideal >= 0.3) ||
+        (statusFilter === "low" && row.ideal > 0 && row.onHand / row.ideal < 0.3);
+
+      return matchesSearch && matchesWarehouse && matchesLocation && matchesStatus;
+    });
+  }, [inventoryRows, searchText, warehouseFilter, locationFilter, statusFilter]);
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
@@ -118,44 +135,112 @@ export default function Inventory() {
           className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
         >
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {[
-              "Buscar SKU o producto",
-              "Almacen",
-              "Ubicacion",
-              "Estado disponible",
-            ].map((placeholder) => (
-              <input
-                key={placeholder}
-                className="h-10 rounded-lg border border-black/10 px-3 text-sm"
-                placeholder={placeholder}
-              />
-            ))}
+            <input
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm"
+              placeholder="Buscar SKU o producto"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+            />
+            <select
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm bg-white"
+              value={warehouseFilter}
+              onChange={(event) => setWarehouseFilter(event.target.value)}
+            >
+              <option value="">Almacen (todos)</option>
+              {Array.from(new Set(inventoryRows.map((row) => row.warehouse))).map((warehouse) => (
+                <option key={warehouse} value={warehouse}>
+                  {warehouse}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm bg-white"
+              value={locationFilter}
+              onChange={(event) => setLocationFilter(event.target.value)}
+            >
+              <option value="">Ubicacion (todas)</option>
+              {Array.from(new Set(inventoryRows.map((row) => row.location))).map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-10 rounded-lg border border-black/10 px-3 text-sm bg-white"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="all">Estado (todos)</option>
+              <option value="available">Disponible</option>
+              <option value="reserved">Con reservas</option>
+              <option value="low">Bajo minimo</option>
+            </select>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {[
-              "Solo bajo minimo",
-              "Con reservas",
-              "Stock critico",
-            ].map((label) => (
-              <button key={label} className="text-xs px-3 py-1 rounded-full border border-black/10">
-                {label}
-              </button>
-            ))}
+              { label: "Stock 100%-60%", value: "high" },
+              { label: "Stock 59%-30%", value: "mid" },
+              { label: "Stock 29%-1%", value: "low" },
+            ].map((item) => {
+              const isActive = statusFilter === item.value;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setStatusFilter(isActive ? "all" : item.value)}
+                  className={[
+                    "text-xs px-3 py-1 rounded-full border transition",
+                    isActive ? "border-black bg-black text-white" : "border-black/10",
+                  ].join(" ")}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </motion.section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_360px] 3xl:grid-cols-[minmax(0,1fr)_420px]">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="xl:col-span-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
+            className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Tabla principal</p>
               <p className="text-xs text-black/60">Snapshot + reservas activas</p>
             </div>
-            <div className="mt-4 overflow-x-auto">
+
+            <div className="mt-4 md:hidden space-y-3">
+              {filteredRows.map((row) => (
+                <div key={row.sku} className="rounded-xl border border-black/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{row.name}</p>
+                      <p className="text-xs text-black/60">{row.sku} · {row.warehouse}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{row.available}</p>
+                      <p className="text-[11px] text-black/50">Disponibles</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-black/70">
+                    <div>Ubicacion: <span className="font-semibold text-black">{row.location}</span></div>
+                    <div>On hand: <span className="font-semibold text-black">{row.onHand}</span></div>
+                    <div>Reservado: <span className="font-semibold text-black">{row.reserved}</span></div>
+                    <div>Min/Ideal: <span className="font-semibold text-black">{row.min}/{row.ideal}</span></div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ver kardex</button>
+                    <button className="text-xs px-2 py-1 rounded-md border border-black/10">Transferir</button>
+                    <button className="text-xs px-2 py-1 rounded-md border border-black/10">Ajustar</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 overflow-x-auto hidden md:block">
               <table className="w-full text-sm">
                 <thead className="text-xs text-black/60">
                   <tr className="border-b border-black/10">
@@ -171,8 +256,8 @@ export default function Inventory() {
                   </tr>
                 </thead>
                 <tbody>
-                  {inventoryRows.map((row) => (
-                    <tr key={row.sku} className="border-b border-black/5">
+              {filteredRows.map((row) => (
+                <tr key={row.sku} className="border-b border-black/5">
                       <td className="py-3 font-medium">{row.sku}</td>
                       <td className="py-3">{row.name}</td>
                       <td className="py-3">{row.warehouse}</td>
@@ -197,7 +282,7 @@ export default function Inventory() {
             </div>
           </motion.div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 order-first xl:order-none">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -254,3 +339,6 @@ export default function Inventory() {
     </div>
   );
 }
+
+
+

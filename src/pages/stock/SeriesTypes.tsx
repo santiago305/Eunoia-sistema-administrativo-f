@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 
+// PROVISIONAL: series configuration mocked while backend is under construction.
 const seriesRows = [
   { code: "TRA", docType: "TRANSFER", warehouse: "Central", next: 321, padding: 6, active: true },
   { code: "AJU", docType: "ADJUSTMENT", warehouse: "Sur", next: 89, padding: 6, active: true },
