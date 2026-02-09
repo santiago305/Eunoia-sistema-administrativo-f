@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
+import { PageTitle } from "@/components/PageTitle";
 
 // PROVISIONAL: series configuration mocked while backend is under construction.
 const seriesRows = [
@@ -49,6 +50,7 @@ export default function SeriesTypes() {
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
+      <PageTitle title="Series y Tipos" />
       <div className="px-6 py-6 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Series y Tipos</h1>

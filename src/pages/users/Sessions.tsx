@@ -10,6 +10,7 @@ import type { SessionApiDto } from "@/types/session";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { Modal } from "@/components/settings/modal";
+import { PageTitle } from "@/components/PageTitle";
 
 const securityTips = [
   "Si notas actividad extrana, cierra las sesiones y cambia tu contrasena.",
@@ -135,6 +136,7 @@ export default function SessionsUsers() {
 
   return (
     <div className="w-full h-full min-h-screen bg-white text-black">
+      <PageTitle title="Sesiones de usuario" />
       <SessionsHeader
         title="Sesiones activas"
         subtitle="Revisa donde esta abierta tu cuenta y cierra accesos que no reconozcas."

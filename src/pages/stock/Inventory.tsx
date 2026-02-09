@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
+import { PageTitle } from "@/components/PageTitle";
 import { getStockMock } from "@/data/stockService";
 import { RoutesPaths } from "@/router/config/routesPaths";
 
@@ -70,7 +71,7 @@ export default function Inventory() {
       return {
         sku: variant?.sku ?? "SKU",
         name: product?.name ?? "Producto",
-        warehouse: warehouse?.name ?? "Almacen",
+        warehouse: warehouse?.name ?? "Almacén",
         onHand: item.on_hand,
         reserved: item.reserved,
         available: item.on_hand - item.reserved,
@@ -186,6 +187,7 @@ export default function Inventory() {
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
+      <PageTitle title="Inventario" />
       <div className="px-6 py-6 space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -195,7 +197,7 @@ export default function Inventory() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-2xl font-semibold">Inventario</h1>
-              <p className="text-sm text-black/60">Explora el estado real del stock por SKU y almacen.</p>
+              <p className="text-sm text-black/60">Explora el estado real del stock por SKU y almacén.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {statusBadges.map((badge) => (
@@ -225,7 +227,7 @@ export default function Inventory() {
               value={warehouseFilter}
               onChange={(event) => setWarehouseFilter(event.target.value)}
             >
-              <option value="">Almacen (todos)</option>
+              <option value="">Almacén (todos)</option>
               {Array.from(new Set(inventoryRows.map((row) => row.warehouse))).map((warehouse) => (
                 <option key={warehouse} value={warehouse}>
                   {warehouse}
@@ -240,7 +242,7 @@ export default function Inventory() {
               <option value="all">Estado (todos)</option>
               <option value="available">Disponible</option>
               <option value="reserved">Con reservas</option>
-              <option value="low">Bajo minimo</option>
+              <option value="low">Bajo mínimo</option>
             </select>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -285,7 +287,7 @@ export default function Inventory() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold">{row.name}</p>
-                      <p className="text-xs text-black/60">{row.sku} � {row.warehouse}</p>
+                      <p className="text-xs text-black/60">{row.sku} – {row.warehouse}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{row.available}</p>
@@ -293,11 +295,11 @@ export default function Inventory() {
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-black/70">
-                    <div>Stock fisico: <span className="font-semibold text-black">{row.onHand}</span></div>
+                    <div>Stock físico: <span className="font-semibold text-black">{row.onHand}</span></div>
                     <div>Reservado: <span className="font-semibold text-black">{row.reserved}</span></div>
                     <div>Min/Ideal: <span className="font-semibold text-black">{row.min}/{row.ideal}</span></div>
                     <div>
-                      Dias restantes: {" "}
+                      Días restantes: {" "}
                       <span className={row.daysRemaining !== null && row.daysRemaining <= 3 ? "font-semibold text-red-600" : "font-semibold text-black"}>
                         {row.daysRemaining === null ? "N/A" : row.daysRemaining}
                       </span>
@@ -322,11 +324,11 @@ export default function Inventory() {
                     <th className="py-2 text-left" title="Nombre del producto">
                       Producto
                     </th>
-                    <th className="py-2 text-left" title="Almacen donde esta el stock">
-                      Almacen
+                    <th className="py-2 text-left" title="Almacén donde está el stock">
+                      Almacén
                     </th>
-                    <th className="py-2 text-right" title="Stock fisico en almacen">
-                      Stock fisico
+                    <th className="py-2 text-right" title="Stock físico en almacén">
+                      Stock físico
                     </th>
                     <th className="py-2 text-right" title="Stock reservado no disponible">
                       Reservado
@@ -334,11 +336,11 @@ export default function Inventory() {
                     <th className="py-2 text-right" title="Disponible = en mano - reservado">
                       Disponible
                     </th>
-                    <th className="py-2 text-right" title="Minimo y nivel ideal del SKU">
+                    <th className="py-2 text-right" title="Mínimo y nivel ideal del SKU">
                       Min/Ideal
                     </th>
-                    <th className="py-2 text-right" title="Dias restantes segun consumo reciente">
-                      Dias restantes
+                    <th className="py-2 text-right" title="Días restantes según consumo reciente">
+                      Días restantes
                     </th>
                     <th className="py-2 text-right" title="Acciones rapidas sobre el SKU">
                       Acciones
@@ -368,9 +370,9 @@ export default function Inventory() {
                         {row.daysRemaining === null ? (
                           "N/A"
                         ) : row.daysRemaining <= 3 ? (
-                          <span className="font-semibold text-red-600">{row.daysRemaining} dias</span>
+                          <span className="font-semibold text-red-600">{row.daysRemaining} días</span>
                         ) : (
-                          <span className="text-black/80">{row.daysRemaining} dias</span>
+                          <span className="text-black/80">{row.daysRemaining} días</span>
                         )}
                       </td>
                       <td className="py-3 text-right">
@@ -399,7 +401,7 @@ export default function Inventory() {
                 >
                   Anterior
                 </button>
-                <span>Pagina {safePage} de {totalPages}</span>
+                <span>Página {safePage} de {totalPages}</span>
                 <button
                   type="button"
                   className="rounded-md border border-black/10 px-2 py-1"
@@ -420,7 +422,7 @@ export default function Inventory() {
               className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm lg:hidden 2xl:block"
             >
               <p className="text-sm font-semibold">Detalle SKU</p>
-              <p className="text-xs text-black/60">Resumen por almacen � {selectedSkuName}</p>
+              <p className="text-xs text-black/60">Resumen por almacén – {selectedSkuName}</p>
               <div className="mt-4 space-y-2 text-sm">
                 {selectedSkuRows.map((row) => (
                   <div key={`${row.sku}-${row.warehouse}`} className="flex items-center justify-between">
@@ -439,7 +441,7 @@ export default function Inventory() {
                 ) : (
                   selectedMovements.map((mov, idx) => (
                     <div key={`${mov.date}-${idx}`} className="flex items-center justify-between">
-                      <span className="text-black/60">{mov.date} � {mov.warehouse}</span>
+                      <span className="text-black/60">{mov.date} – {mov.warehouse}</span>
                       <span className={mov.direction === "IN" ? "text-emerald-600" : "text-red-600"}>
                         {mov.direction} {mov.quantity}
                       </span>
@@ -468,7 +470,7 @@ export default function Inventory() {
               transition={{ duration: 0.45 }}
               className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm lg:hidden 2xl:block"
             >
-              <p className="text-sm font-semibold">Disponibilidad por almacen</p>
+              <p className="text-sm font-semibold">Disponibilidad por almacén</p>
               <div ref={refLarge} className="mt-4" style={{ height: 180 }} />
             </motion.div>
 
@@ -481,7 +483,7 @@ export default function Inventory() {
               <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 items-start">
                 <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm h-full">
                   <p className="text-sm font-semibold">Detalle SKU</p>
-                  <p className="text-xs text-black/60">Resumen por almacen � {selectedSkuName}</p>
+                  <p className="text-xs text-black/60">Resumen por almacén – {selectedSkuName}</p>
                   <div className="mt-4 space-y-2 text-sm">
                     {selectedSkuRows.map((row) => (
                       <div key={`${row.sku}-${row.warehouse}`} className="flex items-center justify-between">
@@ -500,7 +502,7 @@ export default function Inventory() {
                     ) : (
                       selectedMovements.map((mov, idx) => (
                         <div key={`${mov.date}-${idx}`} className="flex items-center justify-between">
-                          <span className="text-black/60">{mov.date} � {mov.warehouse}</span>
+                        <span className="text-black/60">{mov.date} – {mov.warehouse}</span>
                           <span className={mov.direction === "IN" ? "text-emerald-600" : "text-red-600"}>
                             {mov.direction} {mov.quantity}
                           </span>
@@ -524,7 +526,7 @@ export default function Inventory() {
                 </div>
 
                 <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm h-full flex flex-col">
-                  <p className="text-sm font-semibold">Disponibilidad por almacen</p>
+                  <p className="text-sm font-semibold">Disponibilidad por almacén</p>
                   <div ref={refCompact} className="mt-4 flex-1" />
                 </div>
               </div>
@@ -535,8 +537,4 @@ export default function Inventory() {
     </div>
   );
 }
-
-
-
-
 

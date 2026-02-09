@@ -26,15 +26,18 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router/Router.tsx";
+import { HelmetProvider } from "react-helmet-async";
 import "./globals.css";
 import "./app.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App>
-      <Suspense fallback={<>Cargando aplicacion...</>}>
-        <RouterProvider router={router} />
-      </Suspense>
-    </App>
+    <HelmetProvider>
+      <App>
+        <Suspense fallback={<>Cargando aplicacion...</>}>
+          <RouterProvider router={router} />
+        </Suspense>
+      </App>
+    </HelmetProvider>
   </StrictMode>
 );

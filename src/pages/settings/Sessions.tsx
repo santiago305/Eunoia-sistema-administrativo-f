@@ -9,6 +9,7 @@ import { verifyPassword } from "@/services/userService";
 import { useForm } from "react-hook-form";
 import { TextField } from "@mui/material";
 import { Trash2 } from "lucide-react";
+import { PageTitle } from "@/components/PageTitle";
 
 const Sessions = () => {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -100,6 +101,7 @@ const Sessions = () => {
 
   return (
     <div className="page-shell flex items-start justify-center">
+      <PageTitle title="Sesiones" />
       <div className="page-card">
         <div className="page-card-header">
           <div className="grid grid-cols-2">

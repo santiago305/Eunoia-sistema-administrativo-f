@@ -1,5 +1,6 @@
 
 ﻿import AvatarPhoto from "@/pages/users/components/profile/avatar";
+import { PageTitle } from "@/components/PageTitle";
 import ProfileForm from "@/pages/users/components/profile/profile-form-settings";
 import ModalVerifyPassword from "@/pages/users/components/profile/modalVerifyPassword";
 import { useCallback, useEffect, useState } from "react";
@@ -67,6 +68,7 @@ export default function Profile() {
 
     return (
         <div className="h-screen w-screen bg-white text-black overflow-hidden">
+            <PageTitle title="Perfil" />
             <div className="relative px-10 py-4 border-b border-black/10">
                 <h1 className="text-3xl font-semibold text-gray-700">Personalizar tu perfil</h1>
             </div>

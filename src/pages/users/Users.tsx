@@ -5,6 +5,7 @@ import { useFilter } from "@/hooks/useFilter";
 import { useUsers } from "@/hooks/useUser";
 import type { UserRow } from "@/hooks/useUser";
 import { Modal } from "@/components/settings/modal";
+import { PageTitle } from "@/components/PageTitle";
 import { UserForm } from "./components/users/formUser";
 import { env } from "@/env";
 import TagUser from "./components/users/tagUser";
@@ -38,6 +39,7 @@ export default function Users() {
 
     return (
         <div className="h-screen bg-white flex flex-col overflow-hidden">
+            <PageTitle title="Usuarios" />
             <div className="relative px-10 py-4 border-b border-black/10 shrink-0">
                 <h1 className="text-3xl font-semibold text-gray-700">Modulo usuarios</h1>
             </div>

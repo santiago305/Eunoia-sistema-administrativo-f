@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
+import { PageTitle } from "@/components/PageTitle";
 import { getStockMock } from "@/data/stockService";
 
 const alerts = [
@@ -217,6 +218,7 @@ export default function StockSummary() {  const stockMock = getStockMock();
 
   return (
     <div className="w-full h-full min-h-screen bg-white text-black">
+      <PageTitle title="Stock (Resumen)" />
       <div className="px-6 py-6 space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}

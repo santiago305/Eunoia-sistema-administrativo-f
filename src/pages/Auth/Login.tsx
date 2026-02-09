@@ -1,8 +1,10 @@
+import { PageTitle } from "@/components/PageTitle";
 import LoginForm from "./components/LoginForm";
 
 export default function Page() {
   return (
     <div className="min-h-svh w-full bg-white">
+      <PageTitle title="Iniciar sesión" />
       {/* Fondo sutil, sin exagerar */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute -top-40 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#7fe3d6]/15 blur-3xl sm:h-96 sm:w-96" />

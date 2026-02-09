@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
+import { PageTitle } from "@/components/PageTitle";
 import { getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
@@ -63,6 +64,7 @@ export default function Replenishment() {  const stockMock = getStockMock();
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
+      <PageTitle title="Reposición" />
       <div className="px-6 py-6 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Reposicion</h1>
