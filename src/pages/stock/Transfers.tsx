@@ -2,7 +2,7 @@
 import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
-import { getStockMock } from "@/data/stockService";
+import { applyTransfer, getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -24,13 +24,28 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Transfers() {
+  const [, setStockVersion] = useState(0);
   const stockMock = getStockMock();
   const [searchParams, setSearchParams] = useSearchParams();
   const skuParam = searchParams.get("sku") ?? "";
   const [skuFilter, setSkuFilter] = useState(skuParam);
+  const [transferSku, setTransferSku] = useState("");
   const [fromWarehouse, setFromWarehouse] = useState("");
   const [toWarehouse, setToWarehouse] = useState("");
   const [itemsCount, setItemsCount] = useState("");
+
+  const statusLabel = (value: string) => {
+    switch (value) {
+      case "Posted":
+        return "Contabilizado";
+      case "Draft":
+        return "Borrador";
+      case "Cancelled":
+        return "Anulado";
+      default:
+        return value;
+    }
+  };
 
   // PROVISIONAL: transfers list mocked from ledger while backend is under construction.
   const baseTransfers = useMemo(() => {
@@ -66,20 +81,31 @@ export default function Transfers() {
   };
 
   const createTransfer = () => {
-    if (!fromWarehouse || !toWarehouse) return;
+    if (!fromWarehouse || !toWarehouse || !transferSku) return;
     const qty = Number(itemsCount) || 1;
+    const ok = applyTransfer({
+      sku: transferSku,
+      fromWarehouse,
+      toWarehouse,
+      quantity: qty,
+    });
+    if (!ok) return;
     const nextId = `TRA-${String(transfers.length + 1000).padStart(6, "0")}`;
+    const fromName = stockMock.warehouses.find((w) => w.warehouse_id === fromWarehouse)?.name ?? fromWarehouse;
+    const toName = stockMock.warehouses.find((w) => w.warehouse_id === toWarehouse)?.name ?? toWarehouse;
     const newRow = {
       id: nextId,
-      status: "Draft",
-      from: fromWarehouse,
-      to: toWarehouse,
+      status: "Posted",
+      from: fromName,
+      to: toName,
       items: qty,
     };
     setTransfers([newRow, ...transfers]);
+    setTransferSku("");
     setFromWarehouse("");
     setToWarehouse("");
     setItemsCount("");
+    setStockVersion((prev) => prev + 1);
   };
 
   const flowChart = useMemo<echarts.EChartsOption>(
@@ -172,7 +198,7 @@ export default function Transfers() {
                   {filteredTransfers.map((row) => (
                     <tr key={row.id} className="border-b border-black/5">
                       <td className="py-3 font-medium">{row.id}</td>
-                      <td className="py-3">{row.status}</td>
+                      <td className="py-3">{statusLabel(row.status)}</td>
                       <td className="py-3">{row.from}</td>
                       <td className="py-3">{row.to}</td>
                       <td className="py-3 text-right">{row.items}</td>
@@ -187,18 +213,42 @@ export default function Transfers() {
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold">Creador rapido</p>
               <div className="mt-3 space-y-2">
-                <input
-                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                  placeholder="From warehouse"
+                <select
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
+                  value={transferSku}
+                  onChange={(event) => setTransferSku(event.target.value)}
+                >
+                  <option value="">Seleccionar SKU</option>
+                  {stockMock.variants.map((variant) => (
+                    <option key={variant.variant_id} value={variant.sku}>
+                      {variant.sku}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
                   value={fromWarehouse}
                   onChange={(event) => setFromWarehouse(event.target.value)}
-                />
-                <input
-                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                  placeholder="To warehouse"
+                >
+                  <option value="">Desde almacén</option>
+                  {stockMock.warehouses.map((wh) => (
+                    <option key={wh.warehouse_id} value={wh.warehouse_id}>
+                      {wh.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
                   value={toWarehouse}
                   onChange={(event) => setToWarehouse(event.target.value)}
-                />
+                >
+                  <option value="">Hacia almacén</option>
+                  {stockMock.warehouses.map((wh) => (
+                    <option key={wh.warehouse_id} value={wh.warehouse_id}>
+                      {wh.name}
+                    </option>
+                  ))}
+                </select>
                 <input
                   className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
                   placeholder="Cantidad"

@@ -22,7 +22,20 @@ const useEChart = (options: echarts.EChartsOption) => {
   return ref;
 };
 
-export default function Documents() {  const stockMock = getStockMock();
+export default function Documents() {
+  const stockMock = getStockMock();
+  const statusLabel = (value: string) => {
+    switch (value) {
+      case "Posted":
+        return "Contabilizado";
+      case "Draft":
+        return "Borrador";
+      case "Cancelled":
+        return "Anulado";
+      default:
+        return value;
+    }
+  };
   // PROVISIONAL: documents list derived from ledger while backend is under construction.
   const documents = useMemo(() => {
     const ids = Array.from(new Set(stockMock.ledger.map((l) => l.doc_id)));
@@ -41,9 +54,9 @@ export default function Documents() {  const stockMock = getStockMock();
           radius: ["45%", "70%"],
           label: { show: false },
           data: [
-            { value: 12, name: "Draft" },
-            { value: 32, name: "Posted" },
-            { value: 3, name: "Cancelled" },
+            { value: 12, name: "Borrador" },
+            { value: 32, name: "Contabilizado" },
+            { value: 3, name: "Anulado" },
           ],
         },
       ],
@@ -67,11 +80,7 @@ export default function Documents() {  const stockMock = getStockMock();
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Listado</p>
               <div className="flex gap-2">
-                {[
-                  "Draft",
-                  "Posted",
-                  "Cancelled",
-                ].map((tab, idx) => (
+                {["Draft", "Posted", "Cancelled"].map((tab, idx) => (
                   <button
                     key={tab}
                     className={[
@@ -79,7 +88,7 @@ export default function Documents() {  const stockMock = getStockMock();
                       idx === 0 ? "border-black text-black" : "border-black/10 text-black/60",
                     ].join(" ")}
                   >
-                    {tab}
+                    {statusLabel(tab)}
                   </button>
                 ))}
               </div>
@@ -108,7 +117,7 @@ export default function Documents() {  const stockMock = getStockMock();
                     <tr key={doc.id} className="border-b border-black/5">
                       <td className="py-3 font-medium">{doc.id}</td>
                       <td className="py-3">{doc.type}</td>
-                      <td className="py-3">{doc.status}</td>
+                      <td className="py-3">{statusLabel(doc.status)}</td>
                       <td className="py-3">{doc.warehouse}</td>
                     </tr>
                   ))}

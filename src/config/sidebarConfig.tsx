@@ -58,10 +58,6 @@ export const getSidebarItems = (): SidebarItem[] => [
     icon: <IconStock className="text-sidebar-foreground" />,
     children: [
       {
-        label: "Resumen",
-        href: RoutesPaths.catalogSummary,
-      },
-      {
         label: "Productos",
         href: RoutesPaths.catalogProducts,
       },

@@ -2,7 +2,7 @@
 import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
-import { getStockMock } from "@/data/stockService";
+import { applyAdjustment, getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -24,6 +24,7 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Adjustments() {
+  const [, setStockVersion] = useState(0);
   const stockMock = getStockMock();
   const [searchParams, setSearchParams] = useSearchParams();
   const skuParam = searchParams.get("sku") ?? "";
@@ -32,6 +33,19 @@ export default function Adjustments() {
   const [adjWarehouse, setAdjWarehouse] = useState("");
   const [adjQty, setAdjQty] = useState("");
   const [adjReason, setAdjReason] = useState("");
+
+  const statusLabel = (value: string) => {
+    switch (value) {
+      case "Posted":
+        return "Contabilizado";
+      case "Draft":
+        return "Borrador";
+      case "Cancelled":
+        return "Anulado";
+      default:
+        return value;
+    }
+  };
 
   // PROVISIONAL: adjustments list mocked from ledger while backend is under construction.
   const baseAdjustments = useMemo(() => {
@@ -62,13 +76,21 @@ export default function Adjustments() {
   };
 
   const createAdjustment = () => {
-    if (!adjSku || !adjQty || !adjReason) return;
+    if (!adjSku || !adjQty || !adjReason || !adjWarehouse) return;
     const qty = Number(adjQty) || 0;
+    const ok = applyAdjustment({
+      sku: adjSku,
+      warehouse: adjWarehouse,
+      quantity: qty,
+      reason: adjReason,
+    });
+    if (!ok) return;
+
     const nextId = `AJU-${String(adjustments.length + 500).padStart(6, "0")}`;
     const newRow = {
       id: nextId,
       reason: adjReason,
-      status: "Draft",
+      status: "Posted",
       diff: qty,
     };
     setAdjustments([newRow, ...adjustments]);
@@ -76,6 +98,7 @@ export default function Adjustments() {
     setAdjWarehouse("");
     setAdjQty("");
     setAdjReason("");
+    setStockVersion((prev) => prev + 1);
   };
 
   const reasonChart = useMemo<echarts.EChartsOption>(
@@ -163,7 +186,7 @@ export default function Adjustments() {
                     <tr key={row.id} className="border-b border-black/5">
                       <td className="py-3 font-medium">{row.id}</td>
                       <td className="py-3">{row.reason}</td>
-                      <td className="py-3">{row.status}</td>
+                      <td className="py-3">{statusLabel(row.status)}</td>
                       <td className="py-3 text-right">{row.diff}</td>
                     </tr>
                   ))}
@@ -176,18 +199,30 @@ export default function Adjustments() {
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold">Ajuste rapido</p>
               <div className="mt-3 space-y-2">
-                <input
-                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                  placeholder="SKU"
+                <select
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
                   value={adjSku}
                   onChange={(event) => setAdjSku(event.target.value)}
-                />
-                <input
-                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                  placeholder="Almacen"
+                >
+                  <option value="">Seleccionar SKU</option>
+                  {stockMock.variants.map((variant) => (
+                    <option key={variant.variant_id} value={variant.sku}>
+                      {variant.sku}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
                   value={adjWarehouse}
                   onChange={(event) => setAdjWarehouse(event.target.value)}
-                />
+                >
+                  <option value="">Seleccionar almacén</option>
+                  {stockMock.warehouses.map((wh) => (
+                    <option key={wh.warehouse_id} value={wh.warehouse_id}>
+                      {wh.name}
+                    </option>
+                  ))}
+                </select>
                 <input
                   className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
                   placeholder="Cantidad"
