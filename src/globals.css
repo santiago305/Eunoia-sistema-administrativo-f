@@ -145,6 +145,28 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  input[type="button"]:disabled,
+  input[type="submit"]:disabled,
+  input[type="reset"]:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+}
+
+textarea {
+  resize: none;
 }
 
 @layer components {

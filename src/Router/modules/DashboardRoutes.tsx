@@ -31,6 +31,9 @@ const StockAdjustments = lazy(() => import("@/pages/stock/Adjustments"));
 const StockSeriesTypes = lazy(() => import("@/pages/stock/SeriesTypes"));
 const StockReservations = lazy(() => import("@/pages/stock/Reservations"));
 const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
+const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
+const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
+const CatalogVariants = lazy(() => import("@/pages/catalog/Variants"));
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -96,6 +99,18 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.stockReplenishment,
                 element: <StockReplenishment />,
+            },
+            {
+                path: RoutesPaths.catalogProducts,
+                element: <CatalogProducts />,
+            },
+            {
+                path: RoutesPaths.catalogSummary,
+                element: <CatalogSummary />,
+            },
+            {
+                path: RoutesPaths.catalogVariants,
+                element: <CatalogVariants />,
             },
         ],
     },

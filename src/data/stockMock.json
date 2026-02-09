@@ -1,4 +1,4 @@
-﻿{
+{
     "warehouses":  [
                        {
                            "distrito":  "Lima",
@@ -56,19 +56,19 @@
                          "description":  "Suplemento natural",
                          "product_id":  "prod-noni",
                          "is_active":  true,
-                         "name":  "Frasco de noni"
+                         "name":  "Ampolla de noni"
                      },
                      {
                          "description":  "Cuidado facial",
                          "product_id":  "prod-jabon",
                          "is_active":  true,
-                         "name":  "Jabon anti acne"
+                         "name":  "Jabon para acne"
                      },
                      {
                          "description":  "Cuidado facial",
                          "product_id":  "prod-mascarilla",
                          "is_active":  true,
-                         "name":  "Mascarillas de arcilla"
+                         "name":  "Mascarilla de arcilla"
                      }
                  ],
     "variants":  [
@@ -81,7 +81,7 @@
                          "variant_id":  "var-noni-01",
                          "product_id":  "prod-noni",
                          "attributes":  {
-                                            "presentacion":  "frasco"
+                                            "presentacion":  "ampolla"
                                         }
                      },
                      {
@@ -129,7 +129,7 @@
                          "variant_id":  "var-masc-rosa",
                          "product_id":  "prod-mascarilla",
                          "attributes":  {
-                                            "color":  "rosa"
+                                            "color":  "rosada"
                                         }
                      }
                  ],

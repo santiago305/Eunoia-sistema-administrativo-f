@@ -22,6 +22,9 @@ export const RoutesPaths = {
   stockSeriesTypes: "/stock/series-tipos",
   stockReservations: "/stock/reservas",
   stockReplenishment: "/stock/reposicion",
+  catalogSummary: "/catalogo",
+  catalogProducts: "/catalogo/productos",
+  catalogVariants: "/catalogo/variantes",
 } as const;
 
 /**
