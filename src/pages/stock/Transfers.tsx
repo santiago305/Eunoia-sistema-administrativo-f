@@ -2,6 +2,7 @@
 import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
+import { usePagination } from "@/hooks/usePagination";
 import { applyTransfer, getStockMock } from "@/data/stockService";
 
 const useEChart = (options: echarts.EChartsOption) => {
@@ -73,6 +74,11 @@ export default function Transfers() {
     if (!value) return transfers;
     return transfers.filter((row) => row.id.toLowerCase().includes(value));
   }, [transfers, skuFilter]);
+
+  const pageSize = 25;
+  const { paginatedData, page, total, totalPages, setPage } = usePagination(filteredTransfers, pageSize);
+  const startIndex = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endIndex = Math.min(page * pageSize, total);
 
   const clearSkuFilter = () => {
     setSkuFilter("");
@@ -195,7 +201,7 @@ export default function Transfers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTransfers.map((row) => (
+                  {paginatedData.map((row) => (
                     <tr key={row.id} className="border-b border-black/5">
                       <td className="py-3 font-medium">{row.id}</td>
                       <td className="py-3">{statusLabel(row.status)}</td>
@@ -206,6 +212,28 @@ export default function Transfers() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-black/60">
+              <span>Mostrando {startIndex}-{endIndex} de {total}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                  type="button"
+                >
+                  Anterior
+                </button>
+                <span>Página {page} de {totalPages}</span>
+                <button
+                  className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
+                  disabled={page === totalPages || totalPages === 0}
+                  onClick={() => setPage(page + 1)}
+                  type="button"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
 
