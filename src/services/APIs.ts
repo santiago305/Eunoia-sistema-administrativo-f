@@ -38,3 +38,13 @@ export const API_SESSIONS_GROUP = {
   revokeSession: (id: string) => `/sessions/${id}`,
   revokeAll: "/sessions",
 };
+
+export const API_PRODUCTS_GROUP = {
+  base: "/catalog/products",
+  create: "/catalog/products",
+  list: "/catalog/products",
+  update: (id: string) => `/catalog/products/${id}`,
+  updateActive: (id: string) => `/catalog/products/${id}/active`,
+  variants: (id: string) => `/catalog/products/${id}/variants`,
+  withVariants: (id: string) => `/catalog/products/${id}/with-variants`,
+};
