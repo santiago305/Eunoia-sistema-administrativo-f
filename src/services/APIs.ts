@@ -50,3 +50,11 @@ export const API_PRODUCTS_GROUP = {
   variants: (id: string) => `/catalog/products/${id}/variants`,
   withVariants: (id: string) => `/catalog/products/${id}/with-variants`,
 };
+
+export const API_VARIANTS_GROUP = {
+  base:"/catalog/variants",
+  create:"/catalog/variants",
+  list:"/catalog/variants",
+  update: (id: string) => `/catalog/variants/${id}`,
+  updateActive: (id: string) => `/catalog/variants/${id}/active`
+}

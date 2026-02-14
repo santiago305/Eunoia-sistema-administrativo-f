@@ -73,7 +73,7 @@ export default function VariantForm() {
                 ))}
               </select>
             </label>
-            <label className="text-sm">
+            {/* <label className="text-sm">
               SKU
               <input
                 className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
@@ -81,7 +81,7 @@ export default function VariantForm() {
                 onChange={(event) => setForm({ ...form, sku: event.target.value })}
                 placeholder="SKU"
               />
-            </label>
+            </label> */}
             <label className="text-sm">
               Código de barras
               <input
@@ -116,8 +116,8 @@ export default function VariantForm() {
                 value={form.attribute}
                 onChange={(event) => setForm({ ...form, attribute: event.target.value })}
               >
-                <option value="presentacion">Presentación</option>
-                <option value="variante">Variante</option>
+                <option value="presentation">Presentación</option>
+                <option value="variant">Variante</option>
                 <option value="color">Color</option>
               </select>
             </label>
