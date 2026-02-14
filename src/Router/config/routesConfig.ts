@@ -21,7 +21,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.stockSeriesTypes, name: "stockSeriesTypes", isProtected: true },
   { path: RoutesPaths.stockReservations, name: "stockReservations", isProtected: true },
   { path: RoutesPaths.stockReplenishment, name: "stockReplenishment", isProtected: true },
-
+  
   // Ruta de error 404
   { path: "*", name: "Error404", isPublic: true },
 ];

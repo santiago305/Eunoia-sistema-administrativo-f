@@ -10,7 +10,8 @@
   Monitor,
   PanelLeftClose,
   PanelLeft,
-  Package
+  Package,
+  Warehouse
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -19,6 +20,10 @@ export const IconHome = ({ className }: { className?: string }) => (
 
 export const IconSettings = ({ className }: { className?: string }) => (
   <Settings className={className} size={20} />
+);
+
+export const IconWarehouse = ({ className }: { className?: string }) => (
+  <Warehouse className={className} size={20} />
 );
 
 export const IconUsers = ({ className }: { className?: string }) => (
