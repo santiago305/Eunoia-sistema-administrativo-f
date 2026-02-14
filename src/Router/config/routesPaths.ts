@@ -25,6 +25,10 @@ export const RoutesPaths = {
   catalogSummary: "/catalogo",
   catalogProducts: "/catalogo/productos",
   catalogVariants: "/catalogo/variantes",
+
+  //almacenes
+  warehouses:'/almacen',
+  location:'/almacen/locaciones',
 } as const;
 
 /**
