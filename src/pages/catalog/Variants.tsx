@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { getCatalogMock } from "@/data/catalogService";
 import { getStockMock } from "@/data/stockService";
 import { Modal } from "@/components/settings/modal";
+import { useSearchParams } from "react-router-dom";
 
 export default function CatalogVariants() {
   const catalog = getCatalogMock();
   const stock = getStockMock();
+  const [searchParams] = useSearchParams();
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("");
@@ -24,6 +26,18 @@ export default function CatalogVariants() {
     attributeValue: "",
     is_active: true,
   });
+
+  useEffect(() => {
+    const productId = searchParams.get("productId") ?? "";
+    const create = searchParams.get("create") === "1";
+    if (productId) {
+      setProductFilter(productId);
+      setForm((prev) => ({ ...prev, product_id: productId }));
+      if (create) {
+        setOpenCreate(true);
+      }
+    }
+  }, [searchParams]);
 
   const productsById = useMemo(() => {
     return new Map(catalog.products.map((product) => [product.product_id, product]));
