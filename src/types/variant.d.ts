@@ -30,3 +30,8 @@ export type ListVariantsResponse = {
   page: number;
   limit: number;
 };
+
+export type CreateVariantResponse = {
+  message: string;
+  type: string;
+};

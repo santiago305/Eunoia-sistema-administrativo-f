@@ -55,6 +55,7 @@ export const API_VARIANTS_GROUP = {
   base:"/catalog/variants",
   create:"/catalog/variants",
   list:"/catalog/variants",
+  byId: (id: string) => `/catalog/variants/${id}`,
   update: (id: string) => `/catalog/variants/${id}`,
   updateActive: (id: string) => `/catalog/variants/${id}/active`
 }

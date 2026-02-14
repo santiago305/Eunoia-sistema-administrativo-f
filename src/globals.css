@@ -163,6 +163,30 @@
   select:disabled {
     cursor: not-allowed;
   }
+
+  form,
+  div,
+  input,
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td,
+  label,
+  input,
+  textarea,
+  select,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  button {
+    user-select: none;
+  }
 }
 
 textarea {
