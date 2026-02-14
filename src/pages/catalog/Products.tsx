@@ -6,6 +6,8 @@ import { getProductVariants, listProducts } from "@/services/productService";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { errorResponse, successResponse } from "@/common/utils/response";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -18,6 +20,7 @@ export default function CatalogProducts() {
     code?: string;
   };
   const shouldReduceMotion = useReducedMotion();
+  const { showFlash, clearFlash } = useFlashMessage();
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -110,29 +113,47 @@ export default function CatalogProducts() {
 
   const saveCreate = async () => {
     if (!form.name.trim()) return;
-    await create({
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      isActive: form.isActive,
-    });
-    setOpenCreate(false);
+    clearFlash();
+    try {
+      await create({
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        isActive: form.isActive,
+      });
+      setOpenCreate(false);
+      showFlash(successResponse("Producto creado"));
+    } catch {
+      showFlash(errorResponse("Error al crear producto"));
+    }
   };
 
   const saveEdit = async () => {
     if (!editingProductId) return;
-    await update(editingProductId, {
-      name: form.name.trim() || undefined,
-      description: form.description.trim() || null,
-    });
-    await setActive(editingProductId, form.isActive);
-    setEditingProductId(null);
+    clearFlash();
+    try {
+      await update(editingProductId, {
+        name: form.name.trim() || undefined,
+        description: form.description.trim() || null,
+      });
+      await setActive(editingProductId, form.isActive);
+      setEditingProductId(null);
+      showFlash(successResponse("Producto actualizado"));
+    } catch {
+      showFlash(errorResponse("Error al actualizar producto"));
+    }
   };
 
   const confirmDelete = async () => {
     if (!deletingProductId) return;
-    const product = products.find((p) => p.id === deletingProductId);
-    if (product) await setActive(deletingProductId, !product.isActive);
-    setDeletingProductId(null);
+    clearFlash();
+    try {
+      const product = products.find((p) => p.id === deletingProductId);
+      if (product) await setActive(deletingProductId, !product.isActive);
+      setDeletingProductId(null);
+      showFlash(successResponse("Estado de producto actualizado"));
+    } catch {
+      showFlash(errorResponse("Error al cambiar estado del producto"));
+    }
   };
 
   const openVariantsModal = async (productId: string) => {
@@ -831,17 +852,22 @@ export default function CatalogProducts() {
                   <thead className="sticky top-0 bg-white text-xs text-black/60">
                     <tr className="border-b border-black/10">
                       <th className="py-3 text-left px-4">SKU</th>
-                      <th className="py-3 text-left px-4">ID</th>
+                      <th className="py-3 text-left px-4">Atributo</th>
                     </tr>
                   </thead>
                   <tbody>
                     {variants.map((variant, idx) => {
                       const sku = String(variant.sku ?? variant.code ?? "-");
                       const id = String(variant.id ?? variant.variant_id ?? idx + 1);
+                      const attrs = (variant as { attributes?: Record<string, string> }).attributes;
+                      const attribute = attrs?.presentation ?? attrs?.variant ?? attrs?.color ?? "-";
                       return (
                         <tr key={`${id}-${idx}`} className="border-b border-black/5">
                           <td className="py-3 px-4">{sku}</td>
-                          <td className="py-3 px-4 text-black/60">{id}</td>
+                          <td className="py-3 px-4">
+                            <div>{attribute}</div>
+                            <div className="text-[11px] text-black/50">ID: {id}</div>
+                          </td>
                         </tr>
                       );
                     })}
