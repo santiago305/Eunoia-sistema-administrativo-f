@@ -1,167 +1,178 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { getCatalogMock } from "@/data/catalogService";
-import { getStockMock } from "@/data/stockService";
 import { Modal } from "@/components/settings/modal";
-import { useSearchParams } from "react-router-dom";
+import {createVariant, listVariants, updateVariant, updateVariantActive} from '@/services/catalogService';
+import {Variant} from '@/types/variant'
+import { errorResponse, successResponse } from "@/common/utils/response";
+import { useFlashMessage } from "@/hooks/useFlashMessage";
 
 export default function CatalogVariants() {
-  const catalog = getCatalogMock();
-  const stock = getStockMock();
-  const [searchParams] = useSearchParams();
+
+  const { showFlash, clearFlash } = useFlashMessage();
+  const [stock, setStock] = useState({ inventory: [] });
   const [searchText, setSearchText] = useState("");
+  const [handleActive, setHandleActive] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("");
-  const [variants, setVariants] = useState(catalog.variants);
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [openCreate, setOpenCreate] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
+  
   const [form, setForm] = useState({
-    product_id: "",
+    productId: "",
     sku: "",
     barcode: "",
     price: "",
     cost: "",
-    attribute: "presentacion",
+    attribute: "presentation",
     attributeValue: "",
-    is_active: true,
+    isActive: true,
   });
 
-  useEffect(() => {
-    const productId = searchParams.get("productId") ?? "";
-    const create = searchParams.get("create") === "1";
-    if (productId) {
-      setProductFilter(productId);
-      setForm((prev) => ({ ...prev, product_id: productId }));
-      if (create) {
-        setOpenCreate(true);
-      }
+  const loadCatalog = async() =>{
+    clearFlash();
+    try {
+      const res = await listVariants({
+        page:1,
+        limit:20,
+        q:searchText || undefined
+      }); 
+      setVariants(res.items);
+    } catch{
+      showFlash(errorResponse("Error al listar variantes"));
     }
-  }, [searchParams]);
+  }
+  
+  const products = variants.reduce<{ productId: string; name: string }[]>((acc, v) => {
+      if (!acc.some((p) => p.productId === v.productId)) {
+          acc.push({ productId: v.productId, name: v.productName || "Sin nombre" });
+      }
+      return acc;
+  }, []);
 
-  const productsById = useMemo(() => {
-    return new Map(catalog.products.map((product) => [product.product_id, product]));
-  }, [catalog.products]);
+  useEffect(()=>{
+    loadCatalog()
+  }, []);
 
   const rows = useMemo(() => {
     const search = searchText.trim().toLowerCase();
     return variants.filter((variant) => {
-      const product = productsById.get(variant.product_id);
       const matchesSearch =
         search.length === 0 ||
         variant.sku.toLowerCase().includes(search) ||
-        variant.variant_id.toLowerCase().includes(search) ||
-        (product?.name ?? "").toLowerCase().includes(search);
+        variant.id.toLowerCase().includes(search) ||
+        (variant.productName ?? "").toLowerCase().includes(search);
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "active" && variant.is_active) ||
-        (statusFilter === "inactive" && !variant.is_active);
-      const matchesProduct = productFilter.length === 0 || variant.product_id === productFilter;
+        (statusFilter === "active" && variant.isActive) ||
+        (statusFilter === "inactive" && !variant.isActive);
+      const matchesProduct = productFilter.length === 0 || variant.productId === productFilter;
       return matchesSearch && matchesStatus && matchesProduct;
     });
-  }, [productFilter, productsById, searchText, statusFilter, variants]);
+  }, [productFilter, searchText, statusFilter, variants]);
 
   const startCreate = () => {
     setForm({
-      product_id: "",
+      productId: "",
       sku: "",
       barcode: "",
       price: "",
       cost: "",
-      attribute: "presentacion",
+      attribute: "presentation",
       attributeValue: "",
-      is_active: true,
+      isActive: true,
     });
     setOpenCreate(true);
   };
 
   const startEdit = (variantId: string) => {
-    const variant = variants.find((v) => v.variant_id === variantId);
+    const variant = variants.find((v) => v.id === variantId);
     if (!variant) return;
     setForm({
-      product_id: variant.product_id,
+      productId: variant.productId,
       sku: variant.sku,
       barcode: variant.barcode ?? "",
       price: String(variant.price ?? ""),
       cost: variant.cost ? String(variant.cost) : "",
-      attribute: variant.attributes?.variante
-        ? "variante"
+      attribute: variant.attributes?.variant
+        ? "variant"
         : variant.attributes?.color
           ? "color"
-          : "presentacion",
+          : "presentation",
       attributeValue:
-        (variant.attributes?.variante as string | undefined) ??
+        (variant.attributes?.variant as string | undefined) ??
         (variant.attributes?.color as string | undefined) ??
-        (variant.attributes?.presentacion as string | undefined) ??
+        (variant.attributes?.presentation as string | undefined) ??
         "",
-      is_active: variant.is_active,
+      isActive: variant.isActive,
     });
     setEditingVariantId(variantId);
   };
 
-  const saveCreate = () => {
-    const nextId = `var-${String(variants.length + 1).padStart(3, "0")}`;
-    const price = Number(form.price) || 0;
-    const cost = form.cost ? Number(form.cost) : undefined;
-    const attributes: Record<string, string> = {};
-    if (form.attributeValue.trim()) {
-      attributes[form.attribute] = form.attributeValue.trim();
-    }
-    setVariants((prev) => [
-      ...prev,
-      {
-        variant_id: nextId,
-        product_id: form.product_id,
-        sku: form.sku.trim() || `SKU-${nextId}`,
-        barcode: form.barcode.trim() || undefined,
-        price,
-        cost,
-        is_active: form.is_active,
-        attributes,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-    setOpenCreate(false);
-  };
+  const saveCreate = async () => {
+      try {
+          const attributes: Record<string, string> = {};
+          if (form.attributeValue.trim()) {
+              attributes[form.attribute] = form.attributeValue.trim();
+          }
 
-  const saveEdit = () => {
-    if (!editingVariantId) return;
-    const price = Number(form.price) || 0;
-    const cost = form.cost ? Number(form.cost) : undefined;
-    const attributes: Record<string, string> = {};
-    if (form.attributeValue.trim()) {
-      attributes[form.attribute] = form.attributeValue.trim();
-    }
-    setVariants((prev) =>
-      prev.map((variant) =>
-        variant.variant_id === editingVariantId
-          ? {
-              ...variant,
-              product_id: form.product_id,
-              sku: form.sku.trim() || variant.sku,
+          await createVariant({
+              productId: form.productId,
               barcode: form.barcode.trim() || undefined,
-              price,
-              cost,
-              is_active: form.is_active,
-              attributes,
-            }
-          : variant
-      )
-    );
-    setEditingVariantId(null);
+              attributes: Object.keys(attributes).length ? attributes : undefined,
+              price: Number(form.price) || 0,
+              cost: Number(form.cost) || 0,
+              isActive: form.isActive,
+          });
+
+          setOpenCreate(false);
+          await loadCatalog();
+          showFlash(successResponse("Variante creada"));
+      } catch {
+          showFlash(errorResponse("Error al crear variante"));
+      }
   };
 
-  const confirmDelete = () => {
-    if (!deletingVariantId) return;
-    setVariants((prev) => prev.filter((variant) => variant.variant_id !== deletingVariantId));
-    setDeletingVariantId(null);
+  const saveEdit = async () => {
+      if (!editingVariantId) return;
+      try {
+          const attributes: Record<string, string> = {};
+          if (form.attributeValue.trim()) {
+              attributes[form.attribute] = form.attributeValue.trim();
+          }
+
+          await updateVariant(editingVariantId, {
+              barcode: form.barcode.trim() || null,
+              attributes: Object.keys(attributes).length ? attributes : undefined,
+              price: Number(form.price) || 0,
+              cost: Number(form.cost) || 0,
+          });
+
+          setEditingVariantId(null);
+          await loadCatalog();
+          showFlash(successResponse("Variante actualizada"));
+      } catch {
+          showFlash(errorResponse("Error al editar variante"));
+      }
   };
 
+  const confirmDelete = async () => {
+      if (!deletingVariantId) return;
+      try {
+          await updateVariantActive(deletingVariantId,  {isActive:handleActive});
+          setDeletingVariantId(null);
+          await loadCatalog();
+          showFlash(successResponse("Variante eliminada"));
+      } catch {
+          showFlash(errorResponse("Error al eliminar variante"));
+      }
+  };
   const stockByVariant = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of stock.inventory) {
       const available = item.on_hand - item.reserved;
-      map.set(item.variant_id, (map.get(item.variant_id) ?? 0) + available);
+      map.set(item.id, (map.get(item.id) ?? 0) + available);
     }
     return map;
   }, [stock.inventory]);
@@ -202,8 +213,8 @@ export default function CatalogVariants() {
               onChange={(event) => setProductFilter(event.target.value)}
             >
               <option value="">Producto (todos)</option>
-              {catalog.products.map((product) => (
-                <option key={product.product_id} value={product.product_id}>
+              {products.map((product) => (
+                <option key={product.productId} value={product.productId}>
                   {product.name}
                 </option>
               ))}
@@ -243,17 +254,16 @@ export default function CatalogVariants() {
               </thead>
               <tbody>
                 {rows.map((variant) => {
-                  const product = productsById.get(variant.product_id);
-                  const available = stockByVariant.get(variant.variant_id) ?? 0;
+                  const available = stockByVariant.get(variant.id) ?? 0;
                   return (
-                    <tr key={variant.variant_id} className="border-b border-black/5">
+                    <tr key={variant.id} className="border-b border-black/5">
                       <td className="py-3 font-medium">{variant.sku}</td>
-                      <td className="py-3 text-black/70">{product?.name ?? "-"}</td>
+                      <td className="py-3 text-black/70">{variant.productName}</td>
                       <td className="py-3 text-black/60">
-                        {(variant.attributes?.presentacion as string) ??
-                          (variant.attributes?.variante as string) ??
-                          (variant.attributes?.color as string) ??
-                          "-"}
+                        {variant.attributes?.presentation ??
+                        variant.attributes?.variant ??
+                        variant.attributes?.color ??
+                        "-"}
                       </td>
                       <td className="py-3 text-right">{variant.price.toFixed(2)}</td>
                       <td className="py-3 text-right">{variant.cost ? variant.cost.toFixed(2) : "-"}</td>
@@ -272,25 +282,29 @@ export default function CatalogVariants() {
                         <span
                           className={[
                             "inline-flex rounded-full px-2 py-1 text-[11px] font-medium",
-                            variant.is_active ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                            variant.isActive? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
                           ].join(" ")}
                         >
-                          {variant.is_active ? "Activo" : "Inactivo"}
+                          {variant.isActive? "Activo" : "Inactivo"}
                         </span>
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             className="text-xs px-2 py-1 rounded-md border border-black/10"
-                            onClick={() => startEdit(variant.variant_id)}
+                            onClick={() => startEdit(variant.id)}
                           >
                             Editar
                           </button>
                           <button
                             className="text-xs px-2 py-1 rounded-md border border-black/10"
-                            onClick={() => setDeletingVariantId(variant.variant_id)}
+                            onClick={() => {
+                                setDeletingVariantId(variant.id); 
+                                variant.isActive ? setHandleActive(false): setHandleActive(true)
+                              }
+                            }
                           >
-                            Eliminar
+                           {variant.isActive ? "Eliminar" : "Restaurar"} 
                           </button>
                         </div>
                       </td>
@@ -313,25 +327,25 @@ export default function CatalogVariants() {
               Producto
               <select
                 className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                value={form.product_id}
-                onChange={(event) => setForm({ ...form, product_id: event.target.value })}
+                value={form.productId}
+                onChange={(event) => setForm({ ...form, productId: event.target.value })}
               >
                 <option value="">Seleccionar producto</option>
-                {catalog.products.map((product) => (
-                  <option key={product.product_id} value={product.product_id}>
+                {products.map((product) => (
+                  <option key={product.productId} value={product.productId}>
                     {product.name}
                   </option>
                 ))}
               </select>
             </label>
-            <label className="text-sm">
+            {/* <label className="text-sm">
               SKU
               <input
                 className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
                 value={form.sku}
                 onChange={(event) => setForm({ ...form, sku: event.target.value })}
               />
-            </label>
+            </label> */}
             <label className="text-sm">
               Código de barras
               <input
@@ -366,8 +380,8 @@ export default function CatalogVariants() {
                   value={form.attribute}
                   onChange={(event) => setForm({ ...form, attribute: event.target.value })}
                 >
-                  <option value="presentacion">Presentación</option>
-                  <option value="variante">Variante</option>
+                  <option value="presentation">Presentación</option>
+                  <option value="variant">Variante</option>
                   <option value="color">Color</option>
                 </select>
               </label>
@@ -384,8 +398,8 @@ export default function CatalogVariants() {
               Estado
               <select
                 className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                value={form.is_active ? "active" : "inactive"}
-                onChange={(event) => setForm({ ...form, is_active: event.target.value === "active" })}
+                value={form.isActive ? "active" : "inactive"}
+                onChange={(event) => setForm({ ...form, isActive: event.target.value === "active" })}
               >
                 <option value="active">Activo</option>
                 <option value="inactive">Inactivo</option>
@@ -399,7 +413,7 @@ export default function CatalogVariants() {
             <button
               className="rounded-md border border-black/10 px-3 py-2 text-sm"
               onClick={saveCreate}
-              disabled={!form.product_id}
+              disabled={!form.productId}
             >
               Guardar
             </button>
@@ -414,25 +428,25 @@ export default function CatalogVariants() {
               Producto
               <select
                 className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                value={form.product_id}
-                onChange={(event) => setForm({ ...form, product_id: event.target.value })}
+                value={form.productId}
+                onChange={(event) => setForm({ ...form, productId: event.target.value })}
               >
                 <option value="">Seleccionar producto</option>
-                {catalog.products.map((product) => (
-                  <option key={product.product_id} value={product.product_id}>
+                {products.map((product) => (
+                  <option key={product.productId} value={product.productId}>
                     {product.name}
                   </option>
                 ))}
               </select>
             </label>
-            <label className="text-sm">
+            {/* <label className="text-sm">
               SKU
               <input
                 className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
                 value={form.sku}
                 onChange={(event) => setForm({ ...form, sku: event.target.value })}
               />
-            </label>
+            </label> */}
             <label className="text-sm">
               Código de barras
               <input
@@ -467,8 +481,8 @@ export default function CatalogVariants() {
                   value={form.attribute}
                   onChange={(event) => setForm({ ...form, attribute: event.target.value })}
                 >
-                  <option value="presentacion">Presentación</option>
-                  <option value="variante">Variante</option>
+                  <option value="presentation">Presentación</option>
+                  <option value="variant">Variante</option>
                   <option value="color">Color</option>
                 </select>
               </label>
@@ -485,8 +499,8 @@ export default function CatalogVariants() {
               Estado
               <select
                 className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                value={form.is_active ? "active" : "inactive"}
-                onChange={(event) => setForm({ ...form, is_active: event.target.value === "active" })}
+                value={form.isActive ? "active" : "inactive"}
+                onChange={(event) => setForm({ ...form, isActive: event.target.value === "active" })}
               >
                 <option value="active">Activo</option>
                 <option value="inactive">Inactivo</option>
@@ -508,8 +522,9 @@ export default function CatalogVariants() {
       )}
 
       {deletingVariantId && (
-        <Modal title="Eliminar variante" onClose={() => setDeletingVariantId(null)} className="max-w-md">
-          <p>¿Estás seguro que quieres eliminar esta variante?</p>
+        <Modal title= {handleActive? "Restaurar variante" :  "Eliminar variante"} 
+          onClose={() => setDeletingVariantId(null)} className="max-w-md">
+          <p>¿Estás seguro que quieres {handleActive? "restaurar" : "eliminar"} esta variante?</p>
           <div className="mt-4 flex justify-end gap-2">
             <button
               className="rounded-md border border-black/10 px-3 py-2 text-sm"
@@ -518,7 +533,7 @@ export default function CatalogVariants() {
               Cancelar
             </button>
             <button className="rounded-md border border-black/10 px-3 py-2 text-sm" onClick={confirmDelete}>
-              Eliminar
+             {handleActive? "Restaurar" : "Eliminar"}
             </button>
           </div>
         </Modal>
