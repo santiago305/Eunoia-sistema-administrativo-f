@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { useProducts } from "@/hooks/useProducts";
+import { listProducts } from "@/services/productService";
 
 export default function CatalogProducts() {
   const [searchText, setSearchText] = useState("");
@@ -11,16 +12,18 @@ export default function CatalogProducts() {
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", description: "", isActive: true });
   const [page, setPage] = useState(1);
+  const [debouncedName, setDebouncedName] = useState("");
   const limit = 10;
+  const [exporting, setExporting] = useState(false);
 
   const queryParams = useMemo(
     () => ({
       page,
       limit,
       isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
-      q: searchText.trim() || undefined,
+      exactName: debouncedName.trim() || undefined,
     }),
-    [page, limit, statusFilter, searchText]
+    [page, limit, statusFilter, debouncedName]
   );
 
   const {
@@ -41,10 +44,24 @@ export default function CatalogProducts() {
     }
   }, [apiPage, page]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedName(searchText.trim());
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchText]);
+
   const effectiveLimit = apiLimit ?? limit;
   const totalPages = Math.max(1, Math.ceil(total / effectiveLimit));
   const startIndex = total === 0 ? 0 : (apiPage - 1) * effectiveLimit + 1;
   const endIndex = Math.min(apiPage * effectiveLimit, total);
+
+  const sortedProducts = useMemo(() => {
+    return [...products].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  }, [products]);
 
   const startCreate = () => {
     setForm({ name: "", description: "", isActive: true });
@@ -87,6 +104,73 @@ export default function CatalogProducts() {
     setDeletingProductId(null);
   };
 
+  const buildCsv = (rows: Array<{ id: string; name: string; description: string | null; isActive: boolean; createdAt: string; updatedAt: string }>) => {
+    const header = ["id", "name", "description", "isActive", "createdAt", "updatedAt"];
+    const escape = (value: string) => {
+      if (value.includes('"') || value.includes(",") || value.includes("\n")) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+    const formatDate = (value: string) => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("es-PE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    };
+    const lines = rows.map((row, index) => {
+      const csvId = String(index + 1).padStart(5, "0");
+      return [
+        csvId,
+        row.name,
+        row.description ?? "",
+        String(row.isActive),
+        formatDate(row.createdAt),
+        formatDate(row.updatedAt),
+      ].map((value) => escape(String(value))).join(",");
+    });
+    return [header.join(","), ...lines].join("\n");
+  };
+
+  const downloadCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const pageSize = 100;
+      const first = await listProducts({ page: 1, limit: pageSize });
+      const allItems = [...(first.items ?? [])];
+      const totalPages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));
+      for (let p = 2; p <= totalPages; p += 1) {
+        const res = await listProducts({ page: p, limit: pageSize });
+        if (res.items?.length) {
+          allItems.push(...res.items);
+        }
+      }
+
+      const sorted = [...allItems].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      const csv = `\uFEFF${buildCsv(sorted)}`;
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "productos.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen bg-white text-black">
       <PageTitle title="Catálogo · Productos" />
@@ -100,8 +184,12 @@ export default function CatalogProducts() {
             <button className="rounded-full border border-black/10 bg-black/[0.02] px-3 py-1 text-xs">
               Total: {total}
             </button>
-            <button className="rounded-full border border-black/10 bg-black/[0.02] px-3 py-1 text-xs">
-              Exportar CSV
+            <button
+              className="rounded-full border border-black/10 bg-black/[0.02] px-3 py-1 text-xs disabled:opacity-50"
+              onClick={downloadCsv}
+              disabled={exporting}
+            >
+              {exporting ? "Exportando..." : "Exportar CSV"}
             </button>
             <button
               className="rounded-full border border-black/10 bg-black text-white px-3 py-1 text-xs"
@@ -148,8 +236,8 @@ export default function CatalogProducts() {
             <table className="w-full text-sm">
               <thead className="text-xs text-black/60">
                 <tr className="border-b border-black/10">
-                  <th className="py-2 text-left">Producto</th>
                   <th className="py-2 text-left">ID</th>
+                  <th className="py-2 text-left">Producto</th>
                   <th className="py-2 text-left">Variantes</th>
                   <th className="py-2 text-right">Disponible</th>
                   <th className="py-2 text-left">Stock</th>
@@ -159,12 +247,13 @@ export default function CatalogProducts() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => {
+                {sortedProducts.map((product, index) => {
                   const totalAvailable = 0;
+                  const displayId = String(startIndex + index).padStart(7, "0");
                   return (
                     <tr key={product.id} className="border-b border-black/5">
+                      <td className="py-3 text-black/60">{displayId}</td>
                       <td className="py-3 font-medium">{product.name}</td>
-                      <td className="py-3 text-black/60">{product.id}</td>
                       <td className="py-3 text-black/70">-</td>
                       <td className="py-3 text-right font-semibold">{totalAvailable}</td>
                       <td className="py-3">

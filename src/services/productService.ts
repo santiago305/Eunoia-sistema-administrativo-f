@@ -43,3 +43,13 @@ export const getProductWithVariants = async (id: string): Promise<ProductWithVar
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.withVariants(id));
   return response.data;
 };
+
+export const getProductById = async (id: string): Promise<Product> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.byId(id));
+  return response.data;
+};
+
+export const getProductByName = async (name: string): Promise<ProductListResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.byName(name));
+  return response.data;
+};
