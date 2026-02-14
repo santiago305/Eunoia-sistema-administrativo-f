@@ -59,3 +59,12 @@ export const API_VARIANTS_GROUP = {
   update: (id: string) => `/catalog/variants/${id}`,
   updateActive: (id: string) => `/catalog/variants/${id}/active`
 }
+
+export const API_WAREHOUSES_GROUP = {
+  base: "/warehouses",
+  create: "/warehouses",
+  list: "/warehouses",
+  getById: (id: string) => `/warehouses/${id}`,
+  update: (id: string) => `/warehouses/${id}`,
+  updateActive: (id: string) => `/warehouses/${id}/active`,
+};

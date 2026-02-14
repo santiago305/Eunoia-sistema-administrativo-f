@@ -34,6 +34,8 @@ const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
 const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
 const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
 const CatalogVariants = lazy(() => import("@/pages/catalog/Variants"));
+const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
+const Locations = lazy(() => import("@/pages/warehouse/Locations"));
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -111,6 +113,14 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.catalogVariants,
                 element: <CatalogVariants />,
+            },
+            {
+                path: RoutesPaths.warehouses,
+                element: <Warehouses/>,
+            },
+            {
+                path: RoutesPaths.location,
+                element: <Locations/>,
             },
         ],
     },
