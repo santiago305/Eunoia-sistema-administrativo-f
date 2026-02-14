@@ -28,6 +28,11 @@ export default function CatalogVariants() {
   const shouldReduceMotion = useReducedMotion();
   const { showFlash, clearFlash } = useFlashMessage();
   const [searchParams] = useSearchParams();
+  const [pendingProductFromQuery, setPendingProductFromQuery] = useState<{
+    productId: string;
+    productName: string;
+    create: boolean;
+  } | null>(null);
 
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -121,12 +126,29 @@ export default function CatalogVariants() {
 
   useEffect(() => {
     const productId = searchParams.get("productId") ?? "";
+    const productName = searchParams.get("productName") ?? "";
     const create = searchParams.get("create") === "1";
     if (!productId) return;
-    setProductFilter(productId);
-    setForm((prev) => ({ ...prev, productId }));
-    if (create) setOpenCreate(true);
+    setPendingProductFromQuery({ productId, productName, create });
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!pendingProductFromQuery) return;
+    const exists = products.some((p) => p.productId === pendingProductFromQuery.productId);
+    if (!exists && pendingProductFromQuery.productName) {
+      setProducts((prev) => {
+        if (prev.some((p) => p.productId === pendingProductFromQuery.productId)) return prev;
+        return [{ productId: pendingProductFromQuery.productId, name: pendingProductFromQuery.productName }, ...prev];
+      });
+    }
+
+    setProductFilter(pendingProductFromQuery.productId);
+    setForm((prev) => ({ ...prev, productId: pendingProductFromQuery.productId }));
+    if (pendingProductFromQuery.create) {
+      setOpenCreate(true);
+    }
+    setPendingProductFromQuery(null);
+  }, [pendingProductFromQuery, products]);
 
   const totalPages = Math.max(1, Math.ceil(total / (apiLimit || limit)));
   const startIndex = total === 0 ? 0 : (apiPage - 1) * (apiLimit || limit) + 1;
@@ -372,12 +394,34 @@ function VariantFormFields({
       </label>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <label className="text-sm">
-          Precio
-          <input className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={form.price} onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))} />
+          Precio (S/)
+          <div className="mt-2 relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
+              value={form.price}
+              onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+            />
+          </div>
         </label>
         <label className="text-sm">
-          Costo
-          <input className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={form.cost} onChange={(e) => setForm((prev) => ({ ...prev, cost: e.target.value }))} />
+          Costo (S/)
+          <div className="mt-2 relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
+              value={form.cost}
+              onChange={(e) => setForm((prev) => ({ ...prev, cost: e.target.value }))}
+            />
+          </div>
         </label>
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
