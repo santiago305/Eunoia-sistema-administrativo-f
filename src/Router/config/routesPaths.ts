@@ -28,7 +28,7 @@ export const RoutesPaths = {
 
   //almacenes
   warehouses:'/almacen',
-  location:'/almacen/locaciones',
+  location:'/almacen/ubicaciones',
 } as const;
 
 /**

@@ -73,7 +73,7 @@ export const getSidebarItems = (): SidebarItem[] => [
         icon: <IconWarehouse className="text-sidebar-foreground" />,
         children: [
             {
-                label: "Locaciones",
+                label: "Ubicaciones",
                 href: RoutesPaths.location,
             }
         ],

@@ -1,7 +1,7 @@
 // src/hooks/useWarehouses.ts
 import { useCallback, useEffect, useState } from "react";
-import type { CreateWarehouseDto, ListWarehousesQuery, UpdateWarehouseActiveDto, UpdateWarehouseDto, Warehouse, WarehouseListResponse } from "@/types/warehouse";
-import { createWarehouse, listWarehouses, updateWarehouse, updateWarehouseActive } from "@/services/warehouseServices";
+import type { CreateWarehouseDto, ListWarehousesQuery, UpdateWarehouseActiveDto, UpdateWarehouseDto, Warehouse, WarehouseListResponse, WarehouseLocationsResponse } from "@/types/warehouse";
+import { createWarehouse, listWarehouses, updateWarehouse, updateWarehouseActive, getLocationsById } from "@/services/warehouseServices";
 
 export function useWarehouses(params: ListWarehousesQuery) {
   const [items, setItems] = useState<Warehouse[]>([]);
@@ -42,6 +42,10 @@ export function useWarehouses(params: ListWarehousesQuery) {
     await updateWarehouse(id, payload);
     await fetchList();
   }, [fetchList]);
+  
+  const getLocations = useCallback(async (id: string): Promise<WarehouseLocationsResponse> => {
+    return getLocationsById(id);
+  }, [fetchList]);
 
   const setActive = useCallback(async (id: string, isActive: boolean) => {
     const payload: UpdateWarehouseActiveDto = { isActive };
@@ -49,5 +53,5 @@ export function useWarehouses(params: ListWarehousesQuery) {
     await fetchList();
   }, [fetchList]);
 
-  return { items, total, page, limit, loading, error, create, update, setActive, refetch: fetchList };
+  return { items, total, page, limit, loading, error, create, update, setActive, refetch: fetchList, getLocations };
 }

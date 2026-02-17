@@ -4,10 +4,11 @@ import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 
 import { useWarehouses } from "@/hooks/useWarehouse";
 import { listWarehouses } from "@/services/warehouseServices";
+import type { WarehouseLocation } from "@/types/warehouse";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -21,6 +22,36 @@ export default function Warehouses() {
     const [openCreate, setOpenCreate] = useState(false);
     const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
     const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
+    const [openLocationsWarehouseId, setOpenLocationsWarehouseId] = useState<string | null>(null);
+    const [warehouse, setWarehouse] = useState<{ warehouseId: string; name: string } | null>(null);;
+    const [locations, setLocations] = useState<WarehouseLocation[]>([]);
+    const [locationsLoading, setLocationsLoading] = useState(false);
+    const [locationsError, setLocationsError] = useState<string | null>(null);
+
+    const openLocationsModal = async (warehouseId: string) => {
+        setOpenLocationsWarehouseId(warehouseId);
+        setLocations([]);
+        setLocationsError(null);
+        setLocationsLoading(true);
+        
+        try {
+            const res = await getLocations(warehouseId);
+            const items = res.locations;
+            setLocations(items);
+            console.log(items,'locations');
+        } catch (err: any) {
+            setLocationsError(err?.message ?? String(err));
+        } finally {
+            setLocationsLoading(false);
+        }
+    };
+
+    const closeLocationsModal = () => {
+        setOpenLocationsWarehouseId(null);
+        setLocations([]);
+        setLocationsError(null);
+        setLocationsLoading(false);
+    };
 
     const [form, setForm] = useState({
         name: "",
@@ -65,7 +96,7 @@ export default function Warehouses() {
         [page, limit, statusFilter, debouncedQ],
     );
 
-    const { items: warehouses, total, page: apiPage, limit: apiLimit, loading, error, create, update, setActive } = useWarehouses(queryParams);
+    const { items: warehouses, total, page: apiPage, limit: apiLimit, loading, error, create, update, setActive, getLocations } = useWarehouses(queryParams);
 
     useEffect(() => {
         if (apiPage && apiPage !== page) setPage(apiPage);
@@ -199,6 +230,15 @@ export default function Warehouses() {
         return [header.join(","), ...lines].join("\n");
     };
 
+    const goToCreateLocation = () => {
+        if(!warehouse) return;
+        const params = new URLSearchParams({
+            warehouseId: warehouse.warehouseId,
+            name: warehouse.name,
+            create: "1",
+        });
+        navigate(`/almacen/ubicaciones?${params.toString()}`);    };
+    
     const downloadCsv = async () => {
         if (exporting) return;
         setExporting(true);
@@ -298,7 +338,7 @@ export default function Warehouses() {
         <div className="w-full min-h-screen bg-white text-black">
             <PageTitle title="Almacenes" />
 
-            <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-4 space-y-6">
                 {/* Header */}
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
@@ -308,7 +348,6 @@ export default function Warehouses() {
                 >
                     <div className="space-y-1">
                         <h1 className="text-2xl font-semibold tracking-tight">Almacenes</h1>
-                        <p className="text-sm text-black/60">Maestro de almacenes.</p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -402,7 +441,6 @@ export default function Warehouses() {
                     <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
                         <div>
                             <p className="text-sm font-semibold">Listado de almacenes</p>
-                            <p className="text-xs text-black/60">Scroll interno + acciones claras.</p>
                         </div>
 
                         <div className="text-xs text-black/60 hidden sm:block">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</div>
@@ -410,11 +448,10 @@ export default function Warehouses() {
 
                     {/* DESKTOP */}
                     <div className="hidden lg:block">
-                        <div className="max-h-[calc(100vh-340px)] overflow-auto">
-                            <table className="w-full text-sm">
+                        <div className="max-h-[calc(100vh-340px)] overflow-auto select-text">
+                            <table className="w-full text-sm select-text">
                                 <thead className="sticky top-0 z-10 bg-white">
                                     <tr className="border-b border-black/10 text-xs text-black/60">
-                                        <th className="py-3 px-5 text-left">ID</th>
                                         <th className="py-3 px-5 text-left">Almacén</th>
                                         <th className="py-3 px-5 text-left">Ubicación</th>
                                         <th className="py-3 px-5 text-left">Dirección</th>
@@ -432,35 +469,42 @@ export default function Warehouses() {
                                         exit={shouldReduceMotion ? undefined : "exit"}
                                     >
                                         {sortedWarehouses.map((w, index) => {
-                                            const displayId = String(startIndex + index).padStart(7, "0");
                                             const location = `${w.department} · ${w.province} · ${w.district}`;
 
                                             return (
                                                 <motion.tr key={w.warehouseId} variants={shouldReduceMotion ? undefined : item} layout className="border-b border-black/5 hover:bg-black/[0.02]">
-                                                    <td className="py-4 px-5 text-black/60 tabular-nums">{displayId}</td>
-
-                                                    <td className="py-4 px-5">
+                                                    <td className="py-4 px-5 select-text">
                                                         <div className="min-w-0">
                                                             <p className="font-medium leading-5 truncate">{w.name}</p>
                                                             <p className="text-xs text-black/50 truncate">UUID: {w.warehouseId}</p>
                                                         </div>
                                                     </td>
 
-                                                    <td className="py-4 px-5 text-black/70">
+                                                    <td className="py-4 px-5 text-black/70 select-text">
                                                         <p className="truncate max-w-[520px]">{location}</p>
                                                         <p className="text-xs text-black/50 mt-1">Creado: {formatDate(w.createdAt)}</p>
                                                     </td>
 
-                                                    <td className="py-4 px-5 text-black/70">
+                                                    <td className="py-4 px-5 text-black/70 select-text">
                                                         <p className="line-clamp-2 max-w-[520px]">{w.address || "-"}</p>
                                                     </td>
 
-                                                    <td className="py-4 px-5">
+                                                    <td className="py-4 px-5 select-text">
                                                         <StatusPill active={w.isActive} />
                                                     </td>
 
-                                                    <td className="py-4 px-5">
+                                                    <td className="py-4 px-5 select-text">
                                                         <div className="flex items-center justify-end gap-2">
+                                                            <IconButton
+                                                                title="Ver ubicaciones"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openLocationsModal(w.warehouseId);
+                                                                    setWarehouse(w);
+                                                                }}
+                                                            >
+                                                                <Boxes className="h-4 w-4" />
+                                                            </IconButton>
                                                             <IconButton
                                                                 title="Editar"
                                                                 onClick={(e) => {
@@ -470,7 +514,6 @@ export default function Warehouses() {
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                             </IconButton>
-
                                                             <IconButton
                                                                 title={w.isActive ? "Desactivar" : "Activar"}
                                                                 onClick={(e) => {
@@ -507,14 +550,12 @@ export default function Warehouses() {
                                 className="max-h-[calc(100vh-360px)] overflow-auto p-4 sm:p-5 space-y-3"
                             >
                                 {sortedWarehouses.map((w, index) => {
-                                    const displayId = String(startIndex + index).padStart(7, "0");
                                     const location = `${w.department} · ${w.province} · ${w.district}`;
 
                                     return (
                                         <motion.div key={w.warehouseId} variants={shouldReduceMotion ? undefined : item} layout className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
-                                                    <p className="text-xs text-black/50 tabular-nums">ID: {displayId}</p>
                                                     <p className="mt-1 font-semibold truncate">{w.name}</p>
                                                     <p className="mt-1 text-sm text-black/70 truncate">{location}</p>
                                                     <p className="mt-1 text-sm text-black/70 line-clamp-2">{w.address || "-"}</p>
@@ -525,6 +566,16 @@ export default function Warehouses() {
 
                                                 <div className="flex flex-col gap-2">
                                                     <IconButton
+                                                        title="Ver ubicaciones"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openLocationsModal(w.warehouseId);
+                                                            setWarehouse(w);
+                                                        }}
+                                                    >
+                                                        <Boxes className="h-4 w-4" />
+                                                    </IconButton>
+                                                    <IconButton
                                                         title="Editar"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -533,7 +584,6 @@ export default function Warehouses() {
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </IconButton>
-
                                                     <IconButton
                                                         title={w.isActive ? "Desactivar" : "Activar"}
                                                         onClick={(e) => {
@@ -560,7 +610,6 @@ export default function Warehouses() {
                         </AnimatePresence>
                     </div>
 
-                    {/* Footer paginación */}
                     <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
                         <span className="hidden sm:inline">
                             Mostrando {startIndex}-{endIndex} de {total}
@@ -827,6 +876,98 @@ export default function Warehouses() {
                                 onClick={confirmDelete}
                             >
                                 Confirmar
+                            </button>
+                        </div>
+                    </motion.div>
+                </Modal>
+            )}
+            {openLocationsWarehouseId && (
+                <Modal title={`Ubicaciones del almacén - ${warehouse?.name}`} onClose={closeLocationsModal} className="max-w-3xl">
+                    <motion.div
+                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
+                        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.16 }}
+                    >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <button
+                                type="button"
+                                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                                onClick={() => openLocationsModal(openLocationsWarehouseId)}
+                                disabled={locationsLoading}
+                            >
+                                {locationsLoading ? "Cargando..." : "Refrescar"}
+                            </button>
+                            <button
+                                className="rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
+                                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                                onMouseEnter={(e) => {
+                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
+                                }}
+                                onMouseLeave={(e) => {
+                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
+                                }}
+                                onClick={goToCreateLocation}
+                            >
+                                Nueva ubicación
+                            </button>
+                        </div>
+
+                        <div className="rounded-3xl border border-black/10 bg-white overflow-hidden">
+                            <div className="max-h-[60vh] overflow-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="sticky top-0 z-10 bg-white">
+                                        <tr className="border-b border-black/10 text-xs text-black/60">
+                                            <th className="py-3 px-4 text-left">Código</th>
+                                            <th className="py-3 px-4 text-left">Nombre</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {locationsLoading && (
+                                            <tr>
+                                                <td className="py-4 px-4 text-black/60" colSpan={4}>
+                                                    Cargando ubicaciones...
+                                                </td>
+                                            </tr>
+                                        )}
+
+                                        {!locationsLoading && locationsError && (
+                                            <tr>
+                                                <td className="py-4 px-4 text-rose-600" colSpan={4}>
+                                                    {locationsError}
+                                                </td>
+                                            </tr>
+                                        )}
+
+                                        {!locationsLoading && !locationsError && locations.length === 0 && (
+                                            <tr>
+                                                <td className="py-4 px-4 text-black/60" colSpan={4}>
+                                                    Este almacén no tiene ubicaciones registradas.
+                                                </td>
+                                            </tr>
+                                        )}
+
+                                        {!locationsLoading &&
+                                            !locationsError &&
+                                            locations.map((loc) => (
+                                                <tr key={loc.locationId} className="border-b border-black/5 hover:bg-black/[0.02]">
+                                                    <td className="py-3 px-4 text-black/70 tabular-nums">{loc.code ?? "-"}</td>
+                                                    <td className="py-3 px-4">
+                                                        <p className="font-medium">{loc.description ?? "-"}</p>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                                onClick={closeLocationsModal}
+                            >
+                                Cerrar
                             </button>
                         </div>
                     </motion.div>
