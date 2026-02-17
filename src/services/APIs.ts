@@ -65,6 +65,16 @@ export const API_WAREHOUSES_GROUP = {
   create: "/warehouses",
   list: "/warehouses",
   getById: (id: string) => `/warehouses/${id}`,
+  getWithLocations: (id: string) => `/warehouses/${id}/locations`,
   update: (id: string) => `/warehouses/${id}`,
   updateActive: (id: string) => `/warehouses/${id}/active`,
+};
+
+export const API_LOCATIONS_GROUP = {
+  base: "/warehouses/locations",
+  create: "/warehouses/locations",
+  list: "/warehouses/locations/all",
+  byId: (id: string) => `/warehouses/locations/${id}`,
+  update: (id: string) => `/warehouses/locations/${id}`,
+  updateActive: (id: string) => `/warehouses/locations/${id}/active`,
 };

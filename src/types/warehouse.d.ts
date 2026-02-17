@@ -30,3 +30,15 @@ export type WarehouseListResponse = {
   page: number;
   limit: number;
 };
+
+export type WarehouseLocation = {
+  locationId: string;
+  code: string;
+  description?: string;
+};
+
+export type WarehouseLocationsResponse = {
+  locations: WarehouseLocation[];
+};
+
+export type WarehouseOption = { warehouseId: string; name: string };
