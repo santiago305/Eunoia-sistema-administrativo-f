@@ -5,6 +5,8 @@ import {
   updateProductActiveSchema,
   listProductsQuerySchema,
 } from "@/schemas/productSchemas";
+import type { ProductType } from "@/types/ProductTypes";
+
 
 export type CreateProductDto = z.infer<typeof createProductSchema>;
 export type UpdateProductDto = z.infer<typeof updateProductSchema>;
@@ -13,12 +15,14 @@ export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 
 export type Product = {
   id: string;
+  type:ProductType;
   name: string;
   description: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
+
 
 export type ProductListResponse = {
   items: Product[];

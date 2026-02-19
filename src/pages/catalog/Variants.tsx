@@ -9,6 +9,15 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import type { ProductType } from "@/types/ProductTypes";
+import { ProductTypes } from "@/types/ProductTypes";
+import { listUnits } from "@/services/unitService";
+import { ListUnitResponse } from "@/types/unit";
+import { FilterableSelect } from "@/components/SelectFilterable";
+import { createProductEquivalence, deleteProductEquivalence, listProductEquivalences } from "@/services/equivalenceService";
+import type { ProductEquivalence } from "@/types/equivalence";
+import { createProductRecipe, deleteProductRecipe, listProductRecipes } from "@/services/productRecipeService";
+import type { ProductRecipe } from "@/types/productRecipe";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -21,7 +30,8 @@ type VariantForm = {
   cost: string;
   attribute: "" | "presentation" | "variant" | "color";
   attributeValue: string;
-  isActive: boolean | null;
+  baseUnitId: string;
+  isActive: boolean;
 };
 
 export default function CatalogVariants() {
@@ -43,16 +53,29 @@ export default function CatalogVariants() {
   const limit = 10;
 
   const [variants, setVariants] = useState<Variant[]>([]);
+  const [units, setUnits] = useState<ListUnitResponse>();
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [total, setTotal] = useState(0);
   const [apiPage, setApiPage] = useState(1);
   const [apiLimit, setApiLimit] = useState(limit);
   const [loading, setLoading] = useState(false);
+  const [typeProduct, setTypeProduct] = useState("");
+  const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
+  const [loadingEquivalences, setLoadingEquivalences] = useState(false);
+  const [recipes, setRecipes] = useState<ProductRecipe[]>([]);
+  const [loadingRecipes, setLoadingRecipes] = useState(false);
+  const [primaVariants, setPrimaVariants] = useState<Variant[]>([]);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [equivalenceVariantId, setEquivalenceVariantId] = useState<string | null>(null);
+  const [recipeVariantId, setRecipeVariantId] = useState<string | null>(null);
+  const [sku, setSku] = useState<string | null>(null);
   const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
   const [nextActiveState, setNextActiveState] = useState<boolean>(false);
+  const [productTypeFilter, setProductTypeFilter] = useState<ProductType>(ProductTypes.PRIMA);
+
+
 
   const [form, setForm] = useState<VariantForm>({
     productId: "",
@@ -61,7 +84,8 @@ export default function CatalogVariants() {
     cost: "",
     attribute: "",
     attributeValue: "",
-    isActive: null,
+    baseUnitId: "",
+    isActive: true,
   });
   const [formProductText, setFormProductText] = useState("");
 
@@ -103,20 +127,47 @@ export default function CatalogVariants() {
   }, [searchText]);
 
   const loadProducts = async () => {
+      try {
+          const batch = 100;
+          const first = await listProducts({ page: 1, limit: batch, type: productTypeFilter || undefined });
+          const all = [...(first.items ?? [])];
+          const pages = Math.max(1, Math.ceil((first.total ?? all.length) / batch));
+          for (let p = 2; p <= pages; p += 1) {
+              const res = await listProducts({ page: p, limit: batch, type: productTypeFilter || undefined });
+              if (res.items?.length) all.push(...res.items);
+          }
+          setProducts(all.map((p) => ({ productId: p.id, name: p.name })));
+          loadVariants();
+      } catch {
+          setProducts([]);
+          showFlash(errorResponse("Error al cargar productos"));
+      }
+  };
+
+  const loadPrimaVariants = async () => {
     try {
       const batch = 100;
-      const first = await listProducts({ page: 1, limit: batch });
+      const first = await listVariants({ page: 1, limit: batch, type: ProductTypes.PRIMA });
       const all = [...(first.items ?? [])];
       const pages = Math.max(1, Math.ceil((first.total ?? all.length) / batch));
       for (let p = 2; p <= pages; p += 1) {
-        const res = await listProducts({ page: p, limit: batch });
+        const res = await listVariants({ page: p, limit: batch, type: ProductTypes.PRIMA });
         if (res.items?.length) all.push(...res.items);
       }
-      setProducts(all.map((p) => ({ productId: p.id, name: p.name })));
+      setPrimaVariants(all);
     } catch {
-      setProducts([]);
-      showFlash(errorResponse("Error al cargar productos"));
+      setPrimaVariants([]);
+      showFlash(errorResponse("Error al cargar variantes PRIMA"));
     }
+  };
+
+  const loadUnits = async () => {
+      try {
+          const res = await listUnits();
+          setUnits(res);
+      } catch {
+          showFlash(errorResponse("Error al cargar unidades"));
+      }
   };
 
   const loadVariants = async () => {
@@ -128,6 +179,7 @@ export default function CatalogVariants() {
         limit,
         q: debouncedSearch || undefined,
         isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
+        type: typeProduct || undefined,
         productId: productFilter || undefined,
       });
       setVariants(res.items ?? []);
@@ -143,9 +195,44 @@ export default function CatalogVariants() {
     }
   };
 
+  const loadEquivalences = async (variantId: string) => {
+    setLoadingEquivalences(true);
+    try {
+      const res = await listProductEquivalences({ variantId });
+      setEquivalences(res ?? []);
+    } catch {
+      setEquivalences([]);
+      showFlash(errorResponse("Error al cargar equivalencias"));
+    } finally {
+      setLoadingEquivalences(false);
+    }
+  };
+
+  const loadRecipes = async (variantId: string) => {
+    setLoadingRecipes(true);
+    try {
+      const res = await listProductRecipes({ variantId });
+      setRecipes(res ?? []);
+    } catch {
+      setRecipes([]);
+      showFlash(errorResponse("Error al cargar recetas"));
+    } finally {
+      setLoadingRecipes(false);
+    }
+  };
+
+  useEffect(()=>{
+    void loadUnits();
+  },[]);
+
   useEffect(() => {
-    void loadProducts();
+      void loadProducts();
+  }, [productTypeFilter]);
+
+  useEffect(() => {
+    void loadPrimaVariants();
   }, []);
+
 
   useEffect(() => {
     void loadVariants();
@@ -207,7 +294,8 @@ export default function CatalogVariants() {
       cost: "",
       attribute: "",
       attributeValue: "",
-      isActive: null,
+      baseUnitId: "",
+      isActive: true,
     });
     setFormProductText(selectedProductName);
     setOpenCreate(true);
@@ -223,6 +311,7 @@ export default function CatalogVariants() {
         cost: String(row.cost ?? ""),
         attribute: row.attributes?.variant ? "variant" : row.attributes?.color ? "color" : row.attributes?.presentation ? "presentation" : "",
         attributeValue: row.attributes?.variant ?? row.attributes?.color ?? row.attributes?.presentation ?? "",
+        baseUnitId: row.baseUnitId ?? undefined,
         isActive: row.isActive,
       });
       setFormProductText(row.productName ?? products.find((p) => p.productId === row.productId)?.name ?? "");
@@ -230,6 +319,19 @@ export default function CatalogVariants() {
     } catch {
       showFlash(errorResponse("No se pudo cargar la variante"));
     }
+  };
+
+  const openEquivalences = (id: string, baseUnitId: string, sku:string) => {
+    setForm((prev) => ({ ...prev, baseUnitId }));
+    setEquivalenceVariantId(id);
+    setSku(sku);
+    void loadEquivalences(id);
+  };
+
+  const openRecipes = (id: string, sku: string) => {
+    setRecipeVariantId(id);
+    setSku(sku);
+    void loadRecipes(id);
   };
 
   const saveCreate = async () => {
@@ -243,6 +345,7 @@ export default function CatalogVariants() {
         attributes: Object.keys(attributes).length ? attributes : undefined,
         price: Number(form.price) || 0,
         cost: Number(form.cost) || 0,
+        baseUnitId: form.baseUnitId,
         isActive: form.isActive,
       });
       setOpenCreate(false);
@@ -263,6 +366,7 @@ export default function CatalogVariants() {
         attributes: Object.keys(attributes).length ? attributes : undefined,
         price: Number(form.price) || 0,
         cost: Number(form.cost) || 0,
+        baseUnitId: form.baseUnitId,
       });
       setEditingVariantId(null);
       await loadVariants();
@@ -410,14 +514,8 @@ export default function CatalogVariants() {
           </div>
         </motion.div>
 
-        {/* Filters */}
-        <motion.section
-          initial={shouldReduceMotion ? false : "hidden"}
-          animate={shouldReduceMotion ? false : "show"}
-          variants={fadeUp}
-          className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px_240px] gap-3">
+        <motion.section initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }} animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }} transition={{ duration: 0.18 }} className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(120px,1fr)_280px_210px_180px] gap-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <input
@@ -431,40 +529,38 @@ export default function CatalogVariants() {
 
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <input
-                list="variants-products-filter-options"
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
-                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                placeholder="Producto (todos)"
-                value={productFilterText}
-                onChange={(e) => {
-                  const text = e.target.value;
-                  setProductFilterText(text);
-                  setPage(1);
-                  const matchedId = resolveProductIdByName(text);
-                  setProductFilter(matchedId);
+              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                value={productTypeFilter}
+                onChange={(e) => { 
+                  setProductTypeFilter(e.target.value as ProductType);
+                  setProductFilter("");
+                  setTypeProduct(e.target.value as ProductType);
                 }}
-              />
-              <datalist id="variants-products-filter-options">
-                {products.map((p) => (
-                  <option key={p.productId} value={p.name} />
-                ))}
-              </datalist>
-            </div>
+              >
+                <option value={ProductTypes.PRIMA}>Materias primas y Materiales</option>
+                <option value={ProductTypes.FINISHED}>Productos terminados</option>
+              </select>
 
-            <select
-              className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
-              style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">Estado (todos)</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-            </select>
+            </div>
+            <div className="relative">
+              <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" 
+                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties} value={productFilter} 
+                onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}>
+                <option value="">Producto (todos)</option>
+                {products.map((p) => <option key={p.productId} value={p.productId}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="relative">
+              <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+               style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+               value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
+                <option value="all">Estado (todos)</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+              </select>
+            </div>
           </div>
         </motion.section>
 
@@ -482,73 +578,61 @@ export default function CatalogVariants() {
             </div>
             <p className="text-xs text-black/60">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</p>
           </div>
-
-          {/* Desktop table */}
-          <div className="hidden lg:block">
-            <div className="max-h-[calc(100vh-330px)] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white z-10">
-                  <tr className="border-b border-black/10 text-xs text-black/60">
-                    <th className="py-3 px-5 text-left">SKU</th>
-                    <th className="py-3 px-5 text-left">Producto</th>
-                    <th className="py-3 px-5 text-left">Atributo</th>
-                    <th className="py-3 px-5 text-right">Precio</th>
-                    <th className="py-3 px-5 text-right">Costo</th>
-                    <th className="py-3 px-5 text-left">Estado</th>
-                    <th className="py-3 px-5 text-right">Acciones</th>
-                  </tr>
-                </thead>
-
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.tbody
-                    key={listKey}
-                    variants={shouldReduceMotion ? undefined : list}
-                    initial={shouldReduceMotion ? false : "hidden"}
-                    animate={shouldReduceMotion ? false : "show"}
-                    exit={shouldReduceMotion ? undefined : "exit"}
-                  >
-                    {variants.map((v) => (
-                      <motion.tr
-                        key={v.id}
-                        variants={shouldReduceMotion ? undefined : item}
-                        layout
-                        className="border-b border-black/5 hover:bg-black/[0.02]"
-                      >
-                        <td className="py-3 px-5 font-medium">{v.sku}</td>
-                        <td className="py-3 px-5 text-black/70">{v.productName ?? "-"}</td>
-                        <td className="py-3 px-5 text-black/60">{attributeLabel(v)}</td>
-                        <td className="py-3 px-5 text-right tabular-nums">{formatMoney(v.price)}</td>
-                        <td className="py-3 px-5 text-right tabular-nums">{v.cost ? formatMoney(v.cost) : "-"}</td>
-                        <td className="py-3 px-5">
-                          <StatusPill active={!!v.isActive} />
-                        </td>
-                        <td className="py-3 px-5">
-                          <div className="flex items-center justify-end gap-2">
-                            <IconButton title="Editar" onClick={() => void openEdit(v.id)}>
-                              <Pencil className="h-4 w-4" />
-                            </IconButton>
-                            <IconButton
-                              title={v.isActive ? "Desactivar" : "Activar"}
-                              onClick={() => {
-                                setDeletingVariantId(v.id);
-                                setNextActiveState(!v.isActive);
-                              }}
-                              tone={v.isActive ? "danger" : "primary"}
-                            >
-                              <Power className="h-4 w-4" />
-                            </IconButton>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </motion.tbody>
-                </AnimatePresence>
-              </table>
-
-              {!loading && variants.length === 0 && (
-                <div className="px-5 py-8 text-sm text-black/60">No hay variantes con los filtros actuales.</div>
-              )}
-            </div>
+          <div className="max-h-[calc(100vh-330px)] overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-white z-10">
+                <tr className="border-b border-black/10 text-xs text-black/60">
+                  <th className="py-3 px-5 text-left">SKU</th>
+                  <th className="py-3 px-5 text-left">Producto</th>
+                  <th className="py-3 px-5 text-left">Unidad base</th>
+                  <th className="py-3 px-5 text-left">Atributo</th>
+                  <th className="py-3 px-5 text-right">Precio</th>
+                  <th className="py-3 px-5 text-right">Costo</th>
+                  <th className="py-3 px-5 text-left">Estado</th>
+                  <th className="py-3 px-5 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.tbody key={`${page}|${statusFilter}|${productFilter}|${debouncedSearch}`} initial={shouldReduceMotion ? false : { opacity: 0 }} animate={shouldReduceMotion ? false : { opacity: 1 }} exit={shouldReduceMotion ? undefined : { opacity: 0 }}>
+                  {variants.map((v) => (
+                    <tr key={v.id} className="border-b border-black/5">
+                      <td className="py-3 px-5 font-medium">{v.sku}</td>
+                      <td className="py-3 px-5 text-black/70">{v.productName ?? "-"}</td>
+                      <td className="py-3 px-5 text-black/70">{v.unitName} ({v.unitCode})</td>
+                      <td className="py-3 px-5 text-black/60">{v.attributes?.presentation ?? v.attributes?.variant ?? v.attributes?.color ?? "-"}</td>
+                      <td className="py-3 px-5 text-right">{Number(v.price).toFixed(2)}</td>
+                      <td className="py-3 px-5 text-right">{v.cost ? Number(v.cost).toFixed(2) : "-"}</td>
+                      <td className="py-3 px-5">
+                        <span className={["inline-flex rounded-full px-2 py-1 text-[11px] font-medium", v.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"].join(" ")}>{v.isActive ? "Activo" : "Inactivo"}</span>
+                      </td>
+                      <td className="py-3 px-5">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => void openEdit(v.id)}><Pencil className="h-4 w-4" /></button>
+                          <button
+                            className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
+                            onClick={() => openEquivalences(v.id, v.baseUnitId, v.sku)}
+                          >
+                            Equivalencias
+                          </button>
+                          {
+                            productTypeFilter != ProductTypes.PRIMA && (
+                              <button
+                                className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
+                                onClick={() => openRecipes(v.id, v.sku)}
+                              >
+                                Recetas
+                              </button>
+                            )
+                          }
+                          <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => { setDeletingVariantId(v.id); setNextActiveState(!v.isActive); }}><Power className="h-4 w-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </motion.tbody>
+              </AnimatePresence>
+            </table>
+            {!loading && variants.length === 0 && <div className="px-5 py-8 text-sm text-black/60">No hay variantes con los filtros actuales.</div>}
           </div>
 
           {/* Mobile/Tablet cards */}
@@ -642,85 +726,51 @@ export default function CatalogVariants() {
       {/* Modals */}
       {openCreate && (
         <Modal title="Nueva variante" onClose={() => setOpenCreate(false)} className="max-w-lg">
-          <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-            animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.16 }}
-          >
-            <VariantFormFields
-              form={form}
-              setForm={setForm}
-              products={products}
-              formProductText={formProductText}
-              setFormProductText={setFormProductText}
-              resolveProductIdByName={resolveProductIdByName}
-              primary={PRIMARY}
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                onClick={() => setOpenCreate(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="rounded-2xl border px-4 py-2 text-sm text-white disabled:opacity-50 focus:outline-none focus:ring-2"
-                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                onClick={() => void saveCreate()}
-                disabled={!form.productId || form.isActive === null}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                }}
-              >
-                Guardar
-              </button>
-            </div>
-          </motion.div>
+          <VariantFormFields form={form} setForm={setForm} products={products} units={units} />
+          <div className="mt-4 flex justify-end gap-2">
+            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>Cancelar</button>
+            <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
+          </div>
         </Modal>
       )}
 
       {editingVariantId && (
         <Modal title="Editar variante" onClose={() => setEditingVariantId(null)} className="max-w-lg">
-          <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-            animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.16 }}
-          >
-            <VariantFormFields
-              form={form}
-              setForm={setForm}
-              products={products}
-              formProductText={formProductText}
-              setFormProductText={setFormProductText}
-              resolveProductIdByName={resolveProductIdByName}
-              disableProduct
-              primary={PRIMARY}
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                onClick={() => setEditingVariantId(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="rounded-2xl border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2"
-                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                onClick={() => void saveEdit()}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                }}
-              >
-                Guardar cambios
-              </button>
-            </div>
-          </motion.div>
+          <VariantFormFields form={form} setForm={setForm} products={products} disableProduct units={units} />
+          <div className="mt-4 flex justify-end gap-2">
+            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>Cancelar</button>
+            <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>Guardar cambios</button>
+          </div>
+        </Modal>
+      )}
+
+      {equivalenceVariantId && (
+        <Modal title={`Equivalencias de variante (${sku})`} onClose={() => setEquivalenceVariantId(null)} className="max-w-2xl">
+          <EquivalenceFormFields
+            variantId={equivalenceVariantId}
+            baseUnitId={form.baseUnitId}
+            units={units}
+            equivalences={equivalences}
+            loading={loadingEquivalences}
+            onCreated={async () => {
+              await loadEquivalences(equivalenceVariantId);
+            }}
+          />
+        </Modal>
+      )}
+
+      {recipeVariantId && (
+        <Modal title={`Recetas de variante (${sku})`} onClose={() => setRecipeVariantId(null)} className="max-w-2xl">
+          <RecipeFormFields
+            finishedVariantId={recipeVariantId}
+            units={units}
+            primaVariants={primaVariants}
+            recipes={recipes}
+            loading={loadingRecipes}
+            onCreated={async () => {
+              await loadRecipes(recipeVariantId);
+            }}
+          />
         </Modal>
       )}
 
@@ -769,11 +819,8 @@ function VariantFormFields({
   form,
   setForm,
   products,
-  formProductText,
-  setFormProductText,
-  resolveProductIdByName,
   disableProduct = false,
-  primary,
+  units
 }: {
   form: VariantForm;
   setForm: Dispatch<SetStateAction<VariantForm>>;
@@ -782,122 +829,397 @@ function VariantFormFields({
   setFormProductText: Dispatch<SetStateAction<string>>;
   resolveProductIdByName: (name: string) => string;
   disableProduct?: boolean;
-  primary: string;
+  units?: ListUnitResponse;
 }) {
-  const ringStyle = { "--tw-ring-color": `${primary}33` } as React.CSSProperties;
+  const unitOptions = (units ?? []).map((u) => ({
+      value: u.id,
+      label: `${u.name} (${u.code})`,
+  }));
+  const productOptions = (products ?? []).map((u) => ({
+      value: u.productId,
+      label: `${u.name}`,
+  }));
+  return (
+      <div className="space-y-3">
+        <div className="mb-3">
+          <label className="text-sm">
+              <div className="mb-2">Producto</div>
+              <FilterableSelect
+                  value={form.productId}
+                  onChange={(v) => setForm((prev) => ({ ...prev, productId: v }))}
+                  options={productOptions}
+                  placement="bottom"
+                  placeholder="Seleccionar producto"
+                  searchPlaceholder="Buscar producto..."
+              />
+          </label>
+        </div>
+        <div className="mb-3">
+          <label className="text-sm mt-3">
+              Codigo de barras
+              <input
+                  className="mt-2 h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/50 cursor-not-allowed"
+                  value={form.barcode}
+                  onChange={(e) => setForm((prev) => ({ ...prev, barcode: e.target.value }))}
+                  disabled
+                  placeholder=""
+              />
+          </label>
+        </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label className="text-sm">
+                  Precio (S/)
+                  <div className="mt-2 relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
+                      <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
+                          value={form.price}
+                          onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+                      />
+                  </div>
+              </label>
+              <label className="text-sm">
+                  Costo (S/)
+                  <div className="mt-2 relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
+                      <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
+                          value={form.cost}
+                          onChange={(e) => setForm((prev) => ({ ...prev, cost: e.target.value }))}
+                      />
+                  </div>
+              </label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label className="text-sm">
+                  Atributo
+                  <select
+                      className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
+                      value={form.attribute}
+                      onChange={(e) => setForm((prev) => ({ ...prev, attribute: e.target.value as VariantForm["attribute"] }))}
+                  >
+                      <option value="presentation">Presentacion</option>
+                      <option value="variant">Variante</option>
+                      <option value="color">Color</option>
+                  </select>
+              </label>
+              <label className="text-sm">
+                  Valor
+                  <input
+                      className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                      value={form.attributeValue}
+                      onChange={(e) => setForm((prev) => ({ ...prev, attributeValue: e.target.value }))}
+                  />
+              </label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label className="text-sm">
+                  Estado
+                  <select
+                      className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
+                      value={form.isActive ? "active" : "inactive"}
+                      onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.value === "active" }))}
+                  >
+                      <option value="active">Activo</option>
+                      <option value="inactive">Inactivo</option>
+                  </select>
+              </label>
+              <label className="text-sm">
+                  <div className="mb-2">Unidad base</div>
+                  <FilterableSelect
+                      value={form.baseUnitId}
+                      onChange={(v) => setForm((prev) => ({ ...prev, baseUnitId: v }))}
+                      options={unitOptions}
+                      placement="top"
+                      placeholder="Seleccionar unidad"
+                      searchPlaceholder="Buscar unidad..."
+                  />
+              </label>
+          </div>
+      </div>
+  );
+}
+
+function EquivalenceFormFields({
+  variantId,
+  baseUnitId,
+  units,
+  equivalences,
+  loading,
+  onCreated,
+}: {
+  variantId: string;
+  baseUnitId: string;
+  units?: ListUnitResponse;
+  equivalences: ProductEquivalence[];
+  loading: boolean;
+  onCreated: () => Promise<void>;
+}) {
+  const [fromUnitId, setFromUnitId] = useState("");
+  const [factor, setFactor] = useState("1");
+
+  const unitOptions = (units ?? []).map((u) => ({
+    value: u.id,
+    label: `${u.name} (${u.code})`,
+  }));
+
+  const baseUnitLabel =
+    (units ?? []).find((u) => u.id === baseUnitId)?.name ??
+    (baseUnitId ? baseUnitId : "Sin unidad base");
+
+  const handleCreate = async () => {
+    if (!variantId || !baseUnitId || !fromUnitId || !factor) return;
+    await createProductEquivalence({
+      primaVariantId: variantId,
+      fromUnitId,
+      toUnitId: baseUnitId,
+      factor: Number(factor),
+    });
+    setFromUnitId("");
+    setFactor("1");
+    await onCreated();
+  };
+
+  const deleteEquivalence = async (id: string) => {
+      try {
+        await deleteProductEquivalence(id);
+        await onCreated();
+      } catch {
+        console.log('algo salio mal');
+      }
+  };
+
+
+  return (
+      <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_45px]">
+              <label className="text-sm">
+                  <div className="mb-2">Unidad destino</div>
+                  <input className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60" value={baseUnitLabel} disabled />
+              </label>
+              <label className="text-sm">
+                  <div className="mb-2">Factor</div>
+                  <input type="number" min="0" step="0.0001" className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={factor} onChange={(e) => setFactor(e.target.value)} />
+              </label>
+              <label className="text-sm">
+                  <div className="mb-2">Unidad origen</div>
+                  <FilterableSelect value={fromUnitId} onChange={setFromUnitId} options={unitOptions} placement="bottom" placeholder="Seleccionar unidad" searchPlaceholder="Buscar unidad..." />
+              </label>
+              <button
+                  type="button"
+                  className="rounded-xl border h-10 text-xl text-white mt-7"
+                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                  onClick={() => void handleCreate()}
+                  disabled={!variantId || !baseUnitId || !fromUnitId || !factor}
+              >
+                  +
+              </button>
+          </div>
+
+          <div className="flex justify-end"></div>
+
+          <div className="rounded-2xl border border-black/10 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
+                  <span>Listado de equivalencias</span>
+                  <span>{loading ? "Cargando..." : `${equivalences.length} registros`}</span>
+              </div>
+              <div className="max-h-56 overflow-auto">
+                  <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-white z-10">
+                          <tr className="border-b border-black/10 text-xs text-black/60">
+                              <th className="py-2 px-5 text-left">Unidad origen</th>
+                              <th className="py-2 px-5 text-center">Factor</th>
+                              <th className="py-2 px-5 text-right">Unidad destino</th>
+                              <th></th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {equivalences.map((eq) => {
+                              const fromLabel = (units ?? []).find((u) => u.id === eq.fromUnitId);
+                              const toLabel = (units ?? []).find((u) => u.id === eq.toUnitId);
+                              return (
+                                  <tr key={eq.id} className="border-b border-black/5">
+                                      <td className="py-2 px-5">{toLabel ? `${toLabel.name} (${toLabel.code})` : eq.toUnitId}</td>
+                                      <td className="py-2 px-5 text-center">{eq.factor}</td>
+                                      <td className="py-2 px-5 text-right">{fromLabel ? `${fromLabel.name} (${fromLabel.code})` : eq.fromUnitId}</td>
+                                      <td>
+                                          <button
+                                              className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
+                                              onClick={() => {
+                                                void deleteEquivalence(eq.id);
+                                              }}
+                                          >
+                                              <Power className="h-4 w-4" />
+                                          </button>
+                                      </td>
+                                  </tr>
+                              );
+                          })}
+                      </tbody>
+                  </table>
+                  {!loading && equivalences.length === 0 && <div className="px-4 py-4 text-sm text-black/60">No hay equivalencias registradas.</div>}
+              </div>
+          </div>
+      </div>
+  );
+}
+
+function RecipeFormFields({
+  finishedVariantId,
+  units,
+  primaVariants,
+  recipes,
+  loading,
+  onCreated,
+}: {
+  finishedVariantId: string;
+  units?: ListUnitResponse;
+  primaVariants: Variant[];
+  recipes: ProductRecipe[];
+  loading: boolean;
+  onCreated: () => Promise<void>;
+}) {
+  const [primaVariantId, setPrimaVariantId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+
+  const primaVariantOptions = (primaVariants ?? []).map((v) => ({
+    value: v.id,
+    label: `${v.productName ?? "Producto"} (${v.sku})`,
+  }));
+
+  const selectedPrimaVariant = (primaVariants ?? []).find((v) => v.id === primaVariantId);
+  const baseUnitLabel =
+    selectedPrimaVariant?.unitName && selectedPrimaVariant?.unitCode
+      ? `${selectedPrimaVariant.unitName} (${selectedPrimaVariant.unitCode})`
+      : (units ?? []).find((u) => u.id === selectedPrimaVariant?.baseUnitId)?.name ??
+        (selectedPrimaVariant?.baseUnitId ? selectedPrimaVariant.baseUnitId : "Sin unidad base");
+
+  const handleCreate = async () => {
+    if (!finishedVariantId || !primaVariantId || !quantity) return;
+    await createProductRecipe({
+      finishedVariantId,
+      primaVariantId,
+      quantity: Number(quantity),
+    });
+    setPrimaVariantId("");
+    setQuantity("1");
+    await onCreated();
+  };
+
+  const deleteRecipe = async (id: string) => {
+    try {
+      await deleteProductRecipe(id);
+      await onCreated();
+    } catch {
+      console.log("algo salio mal");
+    }
+  };
 
   return (
     <div className="space-y-3">
-      <label className="text-sm">
-        Producto
-        <input
-          list="variants-products-form-options"
-          className="mt-2 h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2 disabled:bg-black/[0.02]"
-          style={ringStyle}
-          placeholder="Seleccionar producto"
-          value={formProductText}
-          onChange={(e) => {
-            const text = e.target.value;
-            setFormProductText(text);
-            const matchedId = resolveProductIdByName(text);
-            setForm((prev) => ({ ...prev, productId: matchedId }));
-          }}
-          disabled={disableProduct}
-        />
-        <datalist id="variants-products-form-options">
-          {products.map((p) => (
-            <option key={p.productId} value={p.name} />
-          ))}
-        </datalist>
-      </label>
-
-      <label className="text-sm">
-        Código de barras
-        <input
-          className="mt-2 h-11 w-full rounded-2xl border border-black/10 bg-black/[0.02] px-3 text-sm text-black/50 cursor-not-allowed"
-          value={form.barcode}
-          onChange={(e) => setForm((prev) => ({ ...prev, barcode: e.target.value }))}
-          disabled
-          placeholder=""
-        />
-      </label>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_150px_100px_45px]">
         <label className="text-sm">
-          Precio (S/)
-          <div className="mt-2 relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              className="h-11 w-full rounded-2xl border border-black/10 pl-10 pr-3 text-sm outline-none focus:ring-2"
-              style={ringStyle}
-              value={form.price}
-              onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
-            />
-          </div>
-        </label>
-
-        <label className="text-sm">
-          Costo (S/)
-          <div className="mt-2 relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              className="h-11 w-full rounded-2xl border border-black/10 pl-10 pr-3 text-sm outline-none focus:ring-2"
-              style={ringStyle}
-              value={form.cost}
-              onChange={(e) => setForm((prev) => ({ ...prev, cost: e.target.value }))}
-            />
-          </div>
-        </label>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <label className="text-sm">
-          Atributo
-          <select
-            className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm bg-white outline-none focus:ring-2"
-            style={ringStyle}
-            value={form.attribute}
-            onChange={(e) => setForm((prev) => ({ ...prev, attribute: e.target.value as VariantForm["attribute"] }))}
-          >
-            <option value="">Seleccionar atributo</option>
-            <option value="presentation">Presentación</option>
-            <option value="variant">Variante</option>
-            <option value="color">Color</option>
-          </select>
-        </label>
-
-        <label className="text-sm">
-          Valor
-          <input
-            className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-            style={ringStyle}
-            value={form.attributeValue}
-            onChange={(e) => setForm((prev) => ({ ...prev, attributeValue: e.target.value }))}
+          <div className="mb-2">Materia prima y materiales</div>
+          <FilterableSelect
+            value={primaVariantId}
+            onChange={setPrimaVariantId}
+            options={primaVariantOptions}
+            placement="bottom"
+            placeholder="Seleccionar producto"
+            searchPlaceholder="Buscar producto..."
           />
         </label>
+
+        <label className="text-sm">
+          <div className="mb-2">Unidad base</div>
+          <input
+            className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60"
+            value={baseUnitLabel}
+            disabled
+          />
+        </label>
+        <label className="text-sm">
+          <div className="mb-2">Cantidad</div>
+          <input
+            type="number"
+            min="0"
+            step="0.0001"
+            className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className="rounded-xl border h-10 text-xl text-white mt-7"
+          style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+          onClick={() => void handleCreate()}
+          disabled={!finishedVariantId || !primaVariantId || !quantity}
+        >
+          +
+        </button>
       </div>
 
-      <label className="text-sm">
-        Estado
-        <select
-          className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm bg-white outline-none focus:ring-2"
-          style={ringStyle}
-          value={form.isActive === null ? "" : form.isActive ? "active" : "inactive"}
-          onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.value === "" ? null : e.target.value === "active" }))}
-        >
-          <option value="">Seleccionar estado</option>
-          <option value="active">Activo</option>
-          <option value="inactive">Inactivo</option>
-        </select>
-      </label>
+      <div className="flex justify-end"></div>
+
+      <div className="rounded-2xl border border-black/10 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
+          <span>Listado de recetas</span>
+          <span>{loading ? "Cargando..." : `${recipes.length} registros`}</span>
+        </div>
+        <div className="max-h-56 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-white z-10">
+              <tr className="border-b border-black/10 text-xs text-black/60">
+                <th className="py-2 px-5 text-left">Materia prima</th>
+                <th className="py-2 px-5 text-center">Cantidad</th>
+                <th className="py-2 px-5 text-right">Unidad base</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {recipes.map((r) => {
+                const prima = (primaVariants ?? []).find((v) => v.id === r.primaVariantId);
+                const unitLabel =
+                  prima?.unitName && prima?.unitCode
+                    ? `${prima.unitName} (${prima.unitCode})`
+                    : (units ?? []).find((u) => u.id === prima?.baseUnitId)?.name ??
+                      (prima?.baseUnitId ? prima.baseUnitId : r.primaVariantId);
+                return (
+                  <tr key={r.id} className="border-b border-black/5">
+                    <td className="py-2 px-5">
+                      {prima ? `${prima.productName ?? "Producto"} (${prima.sku})` : r.primaVariantId}
+                    </td>
+                    <td className="py-2 px-5 text-center">{r.quantity}</td>
+                    <td className="py-2 px-5 text-right">{unitLabel}</td>
+                    <td>
+                      <button
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
+                        onClick={() => {
+                          void deleteRecipe(r.id);
+                        }}
+                      >
+                        <Power className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {!loading && recipes.length === 0 && (
+            <div className="px-4 py-4 text-sm text-black/60">No hay recetas registradas.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

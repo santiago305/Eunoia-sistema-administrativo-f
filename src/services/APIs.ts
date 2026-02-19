@@ -78,3 +78,23 @@ export const API_LOCATIONS_GROUP = {
   update: (id: string) => `/warehouses/locations/${id}`,
   updateActive: (id: string) => `/warehouses/locations/${id}/active`,
 };
+
+export const API_UNITS_GROUP = {
+  list: "catalog/units"
+};
+
+export const API_PRODUCT_EQUIVALENCES_GROUP = {
+  base: "/catalog/product-equivalences",
+  create: "/catalog/product-equivalences",
+  list: "/catalog/product-equivalences",
+  byId: (id: string) => `/catalog/product-equivalences/${id}`,
+  delete: (id: string) => `/catalog/product-equivalences/${id}`,
+};
+
+export const API_PRODUCT_RECIPES_GROUP = {
+  base: "/catalog/product-recipes",
+  create: "/catalog/product-recipes",
+  list: "/catalog/product-recipes",
+  byId: (id: string) => `/catalog/product-recipes/${id}`,
+  delete: (id: string) => `/catalog/product-recipes/${id}`,
+};

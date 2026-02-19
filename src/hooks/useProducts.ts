@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AxiosError } from "axios";
 import type { CreateProductDto, ListProductsQuery, Product, UpdateProductDto } from "@/types/product";
 import {
   createProduct,
-  getProductByName,
   listProducts,
   updateProduct,
   updateProductActive,
@@ -16,15 +14,23 @@ type ProductsState = {
   limit: number;
 };
 
-const buildQuery = (params: ListProductsQuery) => {
+const buildQuery = (params: ListProductsQuery & { name?: string }) => {
   const query: ListProductsQuery = { ...params };
+
+  if (params.name && params.name.trim()) {
+    query.name = params.name.trim();
+  }
+
   if (!query.q) delete query.q;
+  if (!query.type) delete query.type;
   if (!query.name) delete query.name;
   if (!query.description) delete query.description;
+
   return query;
 };
 
-export function useProducts(params: ListProductsQuery & { exactName?: string }) {
+
+export function useProducts(params: ListProductsQuery & { name?: string }) {
   const [state, setState] = useState<ProductsState>({
     items: [],
     total: 0,
@@ -40,37 +46,13 @@ export function useProducts(params: ListProductsQuery & { exactName?: string }) 
     setLoading(true);
     setError(null);
     try {
-      if (params.exactName && params.exactName.trim()) {
-        try {
-          const res = await getProductByName(params.exactName.trim());
-          setState({
-            items: res.items ?? [],
-            total: res.total ?? 0,
-            page: res.page ?? 1,
-            limit: res.limit ?? 10,
-          });
-        } catch (err) {
-          const status = (err as AxiosError)?.response?.status;
-          if (status === 404) {
-            setState({
-              items: [],
-              total: 0,
-              page: 1,
-              limit: 10,
-            });
-          } else {
-            throw err;
-          }
-        }
-      } else {
-        const res = await listProducts(query);
-        setState({
-          items: res.items ?? [],
-          total: res.total ?? 0,
-          page: res.page ?? query.page ?? 1,
-          limit: res.limit ?? query.limit ?? 25,
-        });
-      }
+      const res = await listProducts(query);
+      setState({
+        items: res.items ?? [],
+        total: res.total ?? 0,
+        page: res.page ?? query.page ?? 1,
+        limit: res.limit ?? query.limit ?? 25,
+      });
     } catch {
       setError("Error al cargar productos.");
       setState((prev) => ({ ...prev, items: [], total: 0 }));
