@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 export const createProductSchema = z.object({
+  type: z.string().min(1, "El tipo es obligatorio"),
   name: z.string().min(1, "El nombre es obligatorio"),
   description: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
 export const updateProductSchema = z.object({
+  type: z.string().optional(),
   name: z.string().min(1, "El nombre es obligatorio").optional(),
   description: z.string().optional().nullable(),
 });
@@ -21,5 +23,6 @@ export const listProductsQuerySchema = z.object({
   isActive: z.enum(["true", "false"]).optional(),
   name: z.string().optional(),
   description: z.string().optional(),
+  type: z.string().optional(),
   q: z.string().optional(),
 });

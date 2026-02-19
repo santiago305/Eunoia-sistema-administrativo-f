@@ -19,10 +19,13 @@ export type Variant = {
   attributes?: Record<string, string>;
   price: number;
   cost: number;
+  baseUnitId:string;
   isActive: boolean;
   createdAt?: string;
   productName?: string;
   productDescription?: string;
+  unitCode:string;
+  unitName:string;
 };
 export type ListVariantsResponse = {
   items: Variant[];
