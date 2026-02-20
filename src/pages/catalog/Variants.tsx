@@ -42,11 +42,12 @@ export default function CatalogVariants() {
     productId: string;
     productName: string;
     create: boolean;
+    type?: ProductType;
   } | null>(null);
 
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [productFilter, setProductFilter] = useState("");
   const [productFilterText, setProductFilterText] = useState("");
   const [page, setPage] = useState(1);
@@ -59,7 +60,6 @@ export default function CatalogVariants() {
   const [apiPage, setApiPage] = useState(1);
   const [apiLimit, setApiLimit] = useState(limit);
   const [loading, setLoading] = useState(false);
-  const [typeProduct, setTypeProduct] = useState("");
   const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
   const [loadingEquivalences, setLoadingEquivalences] = useState(false);
   const [recipes, setRecipes] = useState<ProductRecipe[]>([]);
@@ -179,7 +179,7 @@ export default function CatalogVariants() {
         limit,
         q: debouncedSearch || undefined,
         isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
-        type: typeProduct || undefined,
+        type: productTypeFilter || undefined,
         productId: productFilter || undefined,
       });
       setVariants(res.items ?? []);
@@ -236,7 +236,7 @@ export default function CatalogVariants() {
 
   useEffect(() => {
     void loadVariants();
-  }, [page, debouncedSearch, statusFilter, productFilter]);
+  }, [page, debouncedSearch, statusFilter, productFilter, productTypeFilter]);
 
   useEffect(() => {
     if (apiPage !== page) setPage(apiPage);
@@ -245,13 +245,19 @@ export default function CatalogVariants() {
   useEffect(() => {
     const productId = searchParams.get("productId") ?? "";
     const productName = searchParams.get("productName") ?? "";
+    const type = (searchParams.get("type") as ProductType) ?? undefined;
     const create = searchParams.get("create") === "1";
     if (!productId) return;
-    setPendingProductFromQuery({ productId, productName, create });
+    setPendingProductFromQuery({ productId, productName, create, type });
   }, [searchParams]);
 
   useEffect(() => {
     if (!pendingProductFromQuery) return;
+    if (pendingProductFromQuery.type) {
+      setProductTypeFilter(pendingProductFromQuery.type);
+      setProductFilter("");
+      setPage(1);
+    }
     const exists = products.some((p) => p.productId === pendingProductFromQuery.productId);
     if (!exists && pendingProductFromQuery.productName) {
       setProducts((prev) => {
@@ -534,7 +540,6 @@ export default function CatalogVariants() {
                 onChange={(e) => { 
                   setProductTypeFilter(e.target.value as ProductType);
                   setProductFilter("");
-                  setTypeProduct(e.target.value as ProductType);
                 }}
               >
                 <option value={ProductTypes.PRIMA}>Materias primas y Materiales</option>
@@ -736,7 +741,7 @@ export default function CatalogVariants() {
 
       {editingVariantId && (
         <Modal title="Editar variante" onClose={() => setEditingVariantId(null)} className="max-w-lg">
-          <VariantFormFields form={form} setForm={setForm} products={products} disableProduct units={units} />
+          <VariantFormFields form={form} setForm={setForm} products={products} units={units} />
           <div className="mt-4 flex justify-end gap-2">
             <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>Cancelar</button>
             <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>Guardar cambios</button>
@@ -819,16 +824,11 @@ function VariantFormFields({
   form,
   setForm,
   products,
-  disableProduct = false,
   units
 }: {
   form: VariantForm;
   setForm: Dispatch<SetStateAction<VariantForm>>;
   products: ProductOption[];
-  formProductText: string;
-  setFormProductText: Dispatch<SetStateAction<string>>;
-  resolveProductIdByName: (name: string) => string;
-  disableProduct?: boolean;
   units?: ListUnitResponse;
 }) {
   const unitOptions = (units ?? []).map((u) => ({
@@ -1002,7 +1002,7 @@ function EquivalenceFormFields({
       <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_45px]">
               <label className="text-sm">
-                  <div className="mb-2">Unidad destino</div>
+                  <div className="mb-2">Unidad origen</div>
                   <input className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60" value={baseUnitLabel} disabled />
               </label>
               <label className="text-sm">
@@ -1010,7 +1010,7 @@ function EquivalenceFormFields({
                   <input type="number" min="0" step="0.0001" className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={factor} onChange={(e) => setFactor(e.target.value)} />
               </label>
               <label className="text-sm">
-                  <div className="mb-2">Unidad origen</div>
+                  <div className="mb-2">Unidad destino</div>
                   <FilterableSelect value={fromUnitId} onChange={setFromUnitId} options={unitOptions} placement="bottom" placeholder="Seleccionar unidad" searchPlaceholder="Buscar unidad..." />
               </label>
               <button
@@ -1089,13 +1089,14 @@ function RecipeFormFields({
 }) {
   const [primaVariantId, setPrimaVariantId] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const activePrimaVariants = (primaVariants ?? []).filter((v) => v.isActive);
 
-  const primaVariantOptions = (primaVariants ?? []).map((v) => ({
-    value: v.id,
-    label: `${v.productName ?? "Producto"} (${v.sku})`,
+  const primaVariantOptions = (activePrimaVariants ?? []).map((v) => ({
+      value: v.id,
+      label: `${v.productName ?? "Producto"} (${v.sku})`,
   }));
 
-  const selectedPrimaVariant = (primaVariants ?? []).find((v) => v.id === primaVariantId);
+  const selectedPrimaVariant = (activePrimaVariants ?? []).find((v) => v.id === primaVariantId);
   const baseUnitLabel =
     selectedPrimaVariant?.unitName && selectedPrimaVariant?.unitCode
       ? `${selectedPrimaVariant.unitName} (${selectedPrimaVariant.unitCode})`
