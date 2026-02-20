@@ -25,7 +25,7 @@ export default function CatalogProducts() {
   const { showFlash, clearFlash } = useFlashMessage();
 
   const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [typesFilter, setTypesFilter] = useState<ProductType>(ProductTypes.FINISHED);
   const [openCreate, setOpenCreate] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -188,9 +188,10 @@ export default function CatalogProducts() {
   const goToCreateVariant = () => {
     if (!variantsProduct) return;
     const params = new URLSearchParams({
-      productId: variantsProduct.id,
-      productName: variantsProduct.name,
-      create: "1",
+        productId: variantsProduct.id,
+        productName: variantsProduct.name,
+        type: typesFilter,
+        create: "1",
     });
     navigate(`/catalogo/variantes?${params.toString()}`);
   };
