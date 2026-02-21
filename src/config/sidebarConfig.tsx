@@ -75,11 +75,7 @@ export const getSidebarItems = (): SidebarItem[] => [
             {
                 label: "Materias Primas",
                 href: RoutesPaths.rowMaterial,
-            },
-            {
-                label: "Variantes",
-                href: RoutesPaths.rowMaterialVariants,
-            },
+            }
         ],
     },
     {

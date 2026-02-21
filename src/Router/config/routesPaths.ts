@@ -33,7 +33,6 @@ export const RoutesPaths = {
   //materia prima
   rowMaterial:'/materia-prima',
   rowMaterialSummary:'/materia-prima/resumen',
-  rowMaterialVariants:'/materia-prima/variantes',
 } as const;
 
 /**
