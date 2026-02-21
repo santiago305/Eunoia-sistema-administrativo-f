@@ -1,4 +1,4 @@
-﻿import { IconHome, IconStock, IconUsers, IconWarehouse } from "@/components/dashboard/icons";
+﻿import { IconHome, IconRowMaterial, IconStock, IconUsers, IconWarehouse } from "@/components/dashboard/icons";
 import type { SidebarItem } from "@/components/dashboard/types";
 import { RoutesPaths } from "@/router/config/routesPaths";
 
@@ -68,6 +68,17 @@ export const getSidebarItems = (): SidebarItem[] => [
         ],
     },
     {
+        label: "Suministros",
+        href: RoutesPaths.rowMaterialSummary,
+        icon: <IconRowMaterial className="text-sidebar-foreground" />,
+        children: [
+            {
+                label: "Materias Primas",
+                href: RoutesPaths.rowMaterial,
+            },
+        ],
+    },
+    {
         label: "Almacenes",
         href: RoutesPaths.warehouses,
         icon: <IconWarehouse className="text-sidebar-foreground" />,
@@ -75,7 +86,7 @@ export const getSidebarItems = (): SidebarItem[] => [
             {
                 label: "Ubicaciones",
                 href: RoutesPaths.location,
-            }
+            },
         ],
     },
 ];

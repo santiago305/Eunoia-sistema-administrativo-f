@@ -36,6 +36,8 @@ const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
 const CatalogVariants = lazy(() => import("@/pages/catalog/Variants"));
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/Locations"));
+const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
+const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -122,6 +124,14 @@ export const dashboardRoutes: RouteObject[] = [
                 path: RoutesPaths.location,
                 element: <Locations/>,
             },
+            {
+                path: RoutesPaths.rowMaterialSummary,
+                element: <RowMaterialSummary/>,
+            },
+            {
+                path: RoutesPaths.rowMaterial,
+                element: <RowMaterial/>,
+            }
         ],
     },
 ];

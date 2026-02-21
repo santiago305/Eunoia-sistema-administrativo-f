@@ -195,10 +195,10 @@ export default function CatalogVariants() {
     }
   };
 
-  const loadEquivalences = async (variantId: string) => {
+  const loadEquivalences = async (productId: string) => {
     setLoadingEquivalences(true);
     try {
-      const res = await listProductEquivalences({ variantId });
+      const res = await listProductEquivalences({ productId });
       setEquivalences(res ?? []);
     } catch {
       setEquivalences([]);
@@ -327,11 +327,11 @@ export default function CatalogVariants() {
     }
   };
 
-  const openEquivalences = (id: string, baseUnitId: string, sku:string) => {
+  const openEquivalences = (productId: string, baseUnitId: string, sku: string) => {
     setForm((prev) => ({ ...prev, baseUnitId }));
-    setEquivalenceVariantId(id);
+    setEquivalenceVariantId(productId);
     setSku(sku);
-    void loadEquivalences(id);
+    void loadEquivalences(productId);
   };
 
   const openRecipes = (id: string, sku: string) => {
@@ -615,7 +615,7 @@ export default function CatalogVariants() {
                           <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => void openEdit(v.id)}><Pencil className="h-4 w-4" /></button>
                           <button
                             className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                            onClick={() => openEquivalences(v.id, v.baseUnitId, v.sku)}
+                            onClick={() => openEquivalences(v.productId, v.baseUnitId, v.sku)}
                           >
                             Equivalencias
                           </button>
@@ -752,7 +752,7 @@ export default function CatalogVariants() {
       {equivalenceVariantId && (
         <Modal title={`Equivalencias de variante (${sku})`} onClose={() => setEquivalenceVariantId(null)} className="max-w-2xl">
           <EquivalenceFormFields
-            variantId={equivalenceVariantId}
+            productId={equivalenceVariantId}
             baseUnitId={form.baseUnitId}
             units={units}
             equivalences={equivalences}
@@ -949,14 +949,14 @@ function VariantFormFields({
 }
 
 function EquivalenceFormFields({
-  variantId,
+  productId,
   baseUnitId,
   units,
   equivalences,
   loading,
   onCreated,
 }: {
-  variantId: string;
+  productId: string;
   baseUnitId: string;
   units?: ListUnitResponse;
   equivalences: ProductEquivalence[];
@@ -976,9 +976,9 @@ function EquivalenceFormFields({
     (baseUnitId ? baseUnitId : "Sin unidad base");
 
   const handleCreate = async () => {
-    if (!variantId || !baseUnitId || !fromUnitId || !factor) return;
+    if (!productId || !baseUnitId || !fromUnitId || !factor) return;
     await createProductEquivalence({
-      primaVariantId: variantId,
+      productId,
       fromUnitId,
       toUnitId: baseUnitId,
       factor: Number(factor),
@@ -1017,11 +1017,11 @@ function EquivalenceFormFields({
                   type="button"
                   className="rounded-xl border h-10 text-xl text-white mt-7"
                   style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                  onClick={() => void handleCreate()}
-                  disabled={!variantId || !baseUnitId || !fromUnitId || !factor}
-              >
-                  +
-              </button>
+          onClick={() => void handleCreate()}
+          disabled={!productId || !baseUnitId || !fromUnitId || !factor}
+        >
+          +
+        </button>
           </div>
 
           <div className="flex justify-end"></div>

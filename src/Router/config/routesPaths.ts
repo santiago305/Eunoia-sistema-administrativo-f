@@ -29,6 +29,10 @@ export const RoutesPaths = {
   //almacenes
   warehouses:'/almacen',
   location:'/almacen/ubicaciones',
+
+  //materia prima
+  rowMaterial:'/materia-prima',
+  rowMaterialSummary:'/materia-prima/resumen',
 } as const;
 
 /**

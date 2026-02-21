@@ -9,7 +9,7 @@ export type CreateProductEquivalenceDto = z.infer<typeof createProductEquivalenc
 
 export type ProductEquivalence = {
   id: string;
-  primaVariantId: string;
+  productId: string;
   fromUnitId: string;
   toUnitId: string;
   factor: number;

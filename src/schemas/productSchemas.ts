@@ -5,12 +5,22 @@ export const createProductSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
   description: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
+  barcode: z.string().optional().nullable(),
+  price: z.number().optional(),
+  cost: z.number().optional(),
+  baseUnitId: z.string().optional(),
+  attributes: z.record(z.string()).optional(),
 });
 
 export const updateProductSchema = z.object({
   type: z.string().optional(),
   name: z.string().min(1, "El nombre es obligatorio").optional(),
   description: z.string().optional().nullable(),
+  barcode: z.string().optional().nullable(),
+  price: z.number().optional(),
+  cost: z.number().optional(),
+  baseUnitId: z.string().optional(),
+  attributes: z.record(z.string()).optional(),
 });
 
 export const updateProductActiveSchema = z.object({
