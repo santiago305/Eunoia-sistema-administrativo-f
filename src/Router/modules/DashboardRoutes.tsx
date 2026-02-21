@@ -38,6 +38,7 @@ const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/Locations"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
+const RowMaterialVariants = lazy(() => import("@/pages/row-material/RowVariant"));
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -127,6 +128,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.rowMaterialSummary,
                 element: <RowMaterialSummary/>,
+            },
+            {
+                path: RoutesPaths.rowMaterialVariants,
+                element: <RowMaterialVariants/>,
             },
             {
                 path: RoutesPaths.rowMaterial,
