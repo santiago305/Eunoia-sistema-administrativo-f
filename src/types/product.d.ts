@@ -26,6 +26,7 @@ export type Product = {
   baseUnitName?: string;
   baseUnitCode?: string;
   baseUnitId?: string;
+  primaDefaultVariantId?: string;
   attributes?: Record<string, string>;
   createdAt: string;
   updatedAt: string;

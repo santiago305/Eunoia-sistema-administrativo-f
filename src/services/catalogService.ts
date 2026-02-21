@@ -14,6 +14,10 @@ export const listVariants = async (params: ListVariantsQuery): Promise<ListVaria
   const res = await axiosInstance.get(API_VARIANTS_GROUP.list, { params });
   return res.data;
 };
+export const listRowMaterials = async (): Promise<any> => {
+  const res = await axiosInstance.get(API_VARIANTS_GROUP.listRowMaterials);
+  return res.data;
+};
 
 export const createVariant = async (payload: CreateVariantDto): Promise<CreateVariantResponse> => {
   const response = await axiosInstance.post(API_VARIANTS_GROUP.create, payload);

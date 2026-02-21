@@ -522,9 +522,9 @@ export default function RowMaterial() {
                           <table className="w-full text-sm">
                               <thead className="sticky top-0 z-10 bg-white">
                                   <tr className="border-b border-black/10 text-xs text-black/60">
+                                      <th className="py-3 px-5 text-left">SKU</th>
                                       <th className="py-3 px-5 text-left">Materia prima</th>
                                       <th className="py-3 px-5 text-left">Descripción</th>
-                                      <th className="py-3 px-5 text-left">SKU</th>
                                       <th className="py-3 px-5 text-left">Unidad</th>
                                       <th className="py-3 px-5 text-left">Atributo</th>
                                       <th className="py-3 px-5 text-left">Precio</th>
@@ -542,30 +542,27 @@ export default function RowMaterial() {
                                       animate={shouldReduceMotion ? false : "show"}
                                       exit={shouldReduceMotion ? undefined : "exit"}
                                   >
-                                      {sortedProducts.map((product, index) => {
+                                      {sortedProducts.map((product) => {
                                           return (
                                               <motion.tr key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="border-b border-black/5 hover:bg-black/[0.02]">
                                                   <td className="py-4 px-5">
+                                                      <p className="font-medium max-w-[680px]">{product.sku || "-"}</p>
+                                                  </td>
+                                                  <td className="py-4 px-5  text-black/70">
                                                       <div className="min-w-0">
                                                           <p className="font-medium leading-5 truncate">{product.name}</p>
                                                       </div>
                                                   </td>
-
                                                   <td className="py-4 px-5 text-black/70">
                                                       <p className="line-clamp-2 max-w-[800px]">{product.description || "-"}</p>
                                                   </td>
                                                   <td className="py-4 px-5 text-black/70">
-                                                      <p className="line-clamp-2 max-w-[680px]">{product.sku || "-"}</p>
-                                                  </td>
-                                                  <td className="py-4 px-5 text-black/70">
-                                                      <p className="line-clamp-2 max-w-[680px]">{product.baseUnitName} ({product.baseUnitCode})</p>
-                                                  </td>
-                                                  <td className="py-4 px-5 text-black/70">
                                                       <p className="line-clamp-2 max-w-[680px]">
-                                                          {product.attributes
-                                                              ? Object.values(product.attributes).filter(Boolean).join(" · ") || "-"
-                                                              : "-"}
+                                                          {product.baseUnitName} ({product.baseUnitCode})
                                                       </p>
+                                                  </td>
+                                                  <td className="py-4 px-5 text-black/70">
+                                                      <p className="line-clamp-2 max-w-[680px]">{product.attributes ? Object.values(product.attributes).filter(Boolean).join(" · ") || "-" : "-"}</p>
                                                   </td>
                                                   <td className="py-4 px-5 text-black/70">
                                                       <p className="line-clamp-2 max-w-[680px]">{product.price || "-"}</p>
@@ -910,7 +907,7 @@ function ProductFormFields({
                       onChange={(event) => setForm((prev) => ({ ...prev, attribute: event.target.value as ProductForm["attribute"] }))}
                   >
                       <option value="">Seleccionar</option>
-                      <option value="presentation">Presentaci?n</option>
+                      <option value="presentation">Presentación</option>
                       <option value="variant">Variante</option>
                       <option value="color">Color</option>
                   </select>
