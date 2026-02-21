@@ -22,7 +22,6 @@ export const createVariantSchema = z.object({
   attributes: productVariantAttributesSchema.optional(),
   price: z.number().min(0),
   cost: z.number().min(0),
-  baseUnitId: z.string().uuid(),
   isActive: z.boolean().optional(),
 });
 

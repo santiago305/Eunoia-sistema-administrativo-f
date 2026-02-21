@@ -9,7 +9,6 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
-import type { ProductType } from "@/types/ProductTypes";
 import { ProductTypes } from "@/types/ProductTypes";
 import { listUnits } from "@/services/unitService";
 import { ListUnitResponse } from "@/types/unit";
@@ -30,7 +29,6 @@ type VariantForm = {
   cost: string;
   attribute: "" | "presentation" | "variant" | "color";
   attributeValue: string;
-  baseUnitId: string;
   isActive: boolean;
 };
 
@@ -42,14 +40,12 @@ export default function CatalogVariants() {
     productId: string;
     productName: string;
     create: boolean;
-    type?: ProductType;
   } | null>(null);
 
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("active");
   const [productFilter, setProductFilter] = useState("");
-  const [productFilterText, setProductFilterText] = useState("");
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -69,13 +65,11 @@ export default function CatalogVariants() {
   const [openCreate, setOpenCreate] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [equivalenceVariantId, setEquivalenceVariantId] = useState<string | null>(null);
+  const [equivalenceBaseUnitId, setEquivalenceBaseUnitId] = useState<string | null>(null);
   const [recipeVariantId, setRecipeVariantId] = useState<string | null>(null);
   const [sku, setSku] = useState<string | null>(null);
   const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
   const [nextActiveState, setNextActiveState] = useState<boolean>(false);
-  const [productTypeFilter, setProductTypeFilter] = useState<ProductType>(ProductTypes.PRIMA);
-
-
 
   const [form, setForm] = useState<VariantForm>({
     productId: "",
@@ -84,10 +78,8 @@ export default function CatalogVariants() {
     cost: "",
     attribute: "",
     attributeValue: "",
-    baseUnitId: "",
     isActive: true,
   });
-  const [formProductText, setFormProductText] = useState("");
 
   // Minimal + clean animations
   const fadeUp = {
@@ -111,13 +103,6 @@ export default function CatalogVariants() {
     exit: { opacity: 0, y: 6, transition: { duration: 0.1 } },
   };
 
-  const resolveProductIdByName = (name: string) => {
-    const normalized = name.trim().toLowerCase();
-    if (!normalized) return "";
-    const found = products.find((p) => p.name.trim().toLowerCase() === normalized);
-    return found?.productId ?? "";
-  };
-
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(searchText.trim());
@@ -129,11 +114,11 @@ export default function CatalogVariants() {
   const loadProducts = async () => {
       try {
           const batch = 100;
-          const first = await listProducts({ page: 1, limit: batch, type: productTypeFilter || undefined });
+          const first = await listProducts({ page: 1, limit: batch, type: ProductTypes.FINISHED });
           const all = [...(first.items ?? [])];
           const pages = Math.max(1, Math.ceil((first.total ?? all.length) / batch));
           for (let p = 2; p <= pages; p += 1) {
-              const res = await listProducts({ page: p, limit: batch, type: productTypeFilter || undefined });
+              const res = await listProducts({ page: p, limit: batch, type: ProductTypes.FINISHED });
               if (res.items?.length) all.push(...res.items);
           }
           setProducts(all.map((p) => ({ productId: p.id, name: p.name })));
@@ -179,7 +164,7 @@ export default function CatalogVariants() {
         limit,
         q: debouncedSearch || undefined,
         isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
-        type: productTypeFilter || undefined,
+        type: ProductTypes.FINISHED,
         productId: productFilter || undefined,
       });
       setVariants(res.items ?? []);
@@ -195,10 +180,10 @@ export default function CatalogVariants() {
     }
   };
 
-  const loadEquivalences = async (variantId: string) => {
+  const loadEquivalences = async (productId: string) => {
     setLoadingEquivalences(true);
     try {
-      const res = await listProductEquivalences({ variantId });
+      const res = await listProductEquivalences({ productId });
       setEquivalences(res ?? []);
     } catch {
       setEquivalences([]);
@@ -227,7 +212,7 @@ export default function CatalogVariants() {
 
   useEffect(() => {
       void loadProducts();
-  }, [productTypeFilter]);
+  }, []);
 
   useEffect(() => {
     void loadPrimaVariants();
@@ -236,7 +221,7 @@ export default function CatalogVariants() {
 
   useEffect(() => {
     void loadVariants();
-  }, [page, debouncedSearch, statusFilter, productFilter, productTypeFilter]);
+  }, [page, debouncedSearch, statusFilter, productFilter]);
 
   useEffect(() => {
     if (apiPage !== page) setPage(apiPage);
@@ -245,19 +230,13 @@ export default function CatalogVariants() {
   useEffect(() => {
     const productId = searchParams.get("productId") ?? "";
     const productName = searchParams.get("productName") ?? "";
-    const type = (searchParams.get("type") as ProductType) ?? undefined;
     const create = searchParams.get("create") === "1";
     if (!productId) return;
-    setPendingProductFromQuery({ productId, productName, create, type });
+    setPendingProductFromQuery({ productId, productName, create });
   }, [searchParams]);
 
   useEffect(() => {
     if (!pendingProductFromQuery) return;
-    if (pendingProductFromQuery.type) {
-      setProductTypeFilter(pendingProductFromQuery.type);
-      setProductFilter("");
-      setPage(1);
-    }
     const exists = products.some((p) => p.productId === pendingProductFromQuery.productId);
     if (!exists && pendingProductFromQuery.productName) {
       setProducts((prev) => {
@@ -267,23 +246,12 @@ export default function CatalogVariants() {
     }
 
     setProductFilter(pendingProductFromQuery.productId);
-    setProductFilterText(pendingProductFromQuery.productName);
     setForm((prev) => ({ ...prev, productId: pendingProductFromQuery.productId }));
-    setFormProductText(pendingProductFromQuery.productName);
     if (pendingProductFromQuery.create) {
       setOpenCreate(true);
     }
     setPendingProductFromQuery(null);
   }, [pendingProductFromQuery, products]);
-
-  useEffect(() => {
-    if (!productFilter) {
-      setProductFilterText("");
-      return;
-    }
-    const p = products.find((x) => x.productId === productFilter);
-    if (p) setProductFilterText(p.name);
-  }, [productFilter, products]);
 
   const totalPages = Math.max(1, Math.ceil(total / (apiLimit || limit)));
   const startIndex = total === 0 ? 0 : (apiPage - 1) * (apiLimit || limit) + 1;
@@ -292,7 +260,6 @@ export default function CatalogVariants() {
   const listKey = useMemo(() => `${page}|${statusFilter}|${productFilter}|${debouncedSearch}`, [page, statusFilter, productFilter, debouncedSearch]);
 
   const openNew = () => {
-    const selectedProductName = products.find((p) => p.productId === productFilter)?.name ?? "";
     setForm({
       productId: productFilter || "",
       barcode: "",
@@ -300,10 +267,8 @@ export default function CatalogVariants() {
       cost: "",
       attribute: "",
       attributeValue: "",
-      baseUnitId: "",
       isActive: true,
     });
-    setFormProductText(selectedProductName);
     setOpenCreate(true);
   };
 
@@ -317,21 +282,19 @@ export default function CatalogVariants() {
         cost: String(row.cost ?? ""),
         attribute: row.attributes?.variant ? "variant" : row.attributes?.color ? "color" : row.attributes?.presentation ? "presentation" : "",
         attributeValue: row.attributes?.variant ?? row.attributes?.color ?? row.attributes?.presentation ?? "",
-        baseUnitId: row.baseUnitId ?? undefined,
         isActive: row.isActive,
       });
-      setFormProductText(row.productName ?? products.find((p) => p.productId === row.productId)?.name ?? "");
       setEditingVariantId(id);
     } catch {
       showFlash(errorResponse("No se pudo cargar la variante"));
     }
   };
 
-  const openEquivalences = (id: string, baseUnitId: string, sku:string) => {
-    setForm((prev) => ({ ...prev, baseUnitId }));
-    setEquivalenceVariantId(id);
+  const openEquivalences = (productId: string, baseUnitId: string, sku: string) => {
+    setEquivalenceVariantId(productId);
+    setEquivalenceBaseUnitId(baseUnitId);
     setSku(sku);
-    void loadEquivalences(id);
+    void loadEquivalences(productId);
   };
 
   const openRecipes = (id: string, sku: string) => {
@@ -351,7 +314,6 @@ export default function CatalogVariants() {
         attributes: Object.keys(attributes).length ? attributes : undefined,
         price: Number(form.price) || 0,
         cost: Number(form.cost) || 0,
-        baseUnitId: form.baseUnitId,
         isActive: form.isActive,
       });
       setOpenCreate(false);
@@ -372,7 +334,6 @@ export default function CatalogVariants() {
         attributes: Object.keys(attributes).length ? attributes : undefined,
         price: Number(form.price) || 0,
         cost: Number(form.cost) || 0,
-        baseUnitId: form.baseUnitId,
       });
       setEditingVariantId(null);
       await loadVariants();
@@ -494,7 +455,6 @@ export default function CatalogVariants() {
         >
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">Variantes (SKU)</h1>
-            <p className="text-sm text-black/60">Gestión de variantes conectada por API.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -521,7 +481,7 @@ export default function CatalogVariants() {
         </motion.div>
 
         <motion.section initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }} animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }} transition={{ duration: 0.18 }} className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm">
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(120px,1fr)_280px_210px_180px] gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(120px,1fr)_230px_180px] gap-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <input
@@ -533,20 +493,6 @@ export default function CatalogVariants() {
               />
             </div>
 
-            <div className="relative">
-              <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                value={productTypeFilter}
-                onChange={(e) => { 
-                  setProductTypeFilter(e.target.value as ProductType);
-                  setProductFilter("");
-                }}
-              >
-                <option value={ProductTypes.PRIMA}>Materias primas y Materiales</option>
-                <option value={ProductTypes.FINISHED}>Productos terminados</option>
-              </select>
-
-            </div>
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" 
@@ -579,7 +525,6 @@ export default function CatalogVariants() {
           <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
             <div>
               <p className="text-sm font-semibold">Listado de variantes</p>
-              <p className="text-xs text-black/60">Scroll interno, header fijo y acciones claras.</p>
             </div>
             <p className="text-xs text-black/60">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</p>
           </div>
@@ -591,44 +536,41 @@ export default function CatalogVariants() {
                   <th className="py-3 px-5 text-left">Producto</th>
                   <th className="py-3 px-5 text-left">Unidad base</th>
                   <th className="py-3 px-5 text-left">Atributo</th>
-                  <th className="py-3 px-5 text-right">Precio</th>
-                  <th className="py-3 px-5 text-right">Costo</th>
+                  <th className="py-3 px-5 text-left">Precio</th>
+                  <th className="py-3 px-5 text-left">Costo</th>
                   <th className="py-3 px-5 text-left">Estado</th>
-                  <th className="py-3 px-5 text-right">Acciones</th>
+                  <th className="py-3 px-5 text-left">Acciones</th>
                 </tr>
               </thead>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.tbody key={`${page}|${statusFilter}|${productFilter}|${debouncedSearch}`} initial={shouldReduceMotion ? false : { opacity: 0 }} animate={shouldReduceMotion ? false : { opacity: 1 }} exit={shouldReduceMotion ? undefined : { opacity: 0 }}>
                   {variants.map((v) => (
+
                     <tr key={v.id} className="border-b border-black/5">
                       <td className="py-3 px-5 font-medium">{v.sku}</td>
                       <td className="py-3 px-5 text-black/70">{v.productName ?? "-"}</td>
                       <td className="py-3 px-5 text-black/70">{v.unitName} ({v.unitCode})</td>
-                      <td className="py-3 px-5 text-black/60">{v.attributes?.presentation ?? v.attributes?.variant ?? v.attributes?.color ?? "-"}</td>
-                      <td className="py-3 px-5 text-right">{Number(v.price).toFixed(2)}</td>
-                      <td className="py-3 px-5 text-right">{v.cost ? Number(v.cost).toFixed(2) : "-"}</td>
+                      <td className="py-3 px-5 text-black/70">{v.attributes?.presentation ?? v.attributes?.variant ?? v.attributes?.color ?? "-"}</td>
+                      <td className="py-3 px-5 text-black/70">{Number(v.price).toFixed(2)}</td>
+                      <td className="py-3 px-5 text-black/70">{v.cost ? Number(v.cost).toFixed(2) : "-"}</td>
                       <td className="py-3 px-5">
                         <span className={["inline-flex rounded-full px-2 py-1 text-[11px] font-medium", v.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"].join(" ")}>{v.isActive ? "Activo" : "Inactivo"}</span>
                       </td>
-                      <td className="py-3 px-5">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-3 px-0">
+                        <div className="flex items-center justify-left gap-2">
                           <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => void openEdit(v.id)}><Pencil className="h-4 w-4" /></button>
                           <button
                             className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                            onClick={() => openEquivalences(v.id, v.baseUnitId, v.sku)}
+                            onClick={() => openEquivalences(v.productId, v.baseUnitId, v.sku)}
                           >
                             Equivalencias
                           </button>
-                          {
-                            productTypeFilter != ProductTypes.PRIMA && (
-                              <button
-                                className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                                onClick={() => openRecipes(v.id, v.sku)}
-                              >
-                                Recetas
-                              </button>
-                            )
-                          }
+                          <button
+                            className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
+                            onClick={() => openRecipes(v.id, v.sku)}
+                          >
+                            Recetas
+                          </button>
                           <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => { setDeletingVariantId(v.id); setNextActiveState(!v.isActive); }}><Power className="h-4 w-4" /></button>
                         </div>
                       </td>
@@ -731,7 +673,7 @@ export default function CatalogVariants() {
       {/* Modals */}
       {openCreate && (
         <Modal title="Nueva variante" onClose={() => setOpenCreate(false)} className="max-w-lg">
-          <VariantFormFields form={form} setForm={setForm} products={products} units={units} />
+          <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
             <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>Cancelar</button>
             <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
@@ -741,7 +683,7 @@ export default function CatalogVariants() {
 
       {editingVariantId && (
         <Modal title="Editar variante" onClose={() => setEditingVariantId(null)} className="max-w-lg">
-          <VariantFormFields form={form} setForm={setForm} products={products} units={units} />
+          <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
             <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>Cancelar</button>
             <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>Guardar cambios</button>
@@ -749,11 +691,11 @@ export default function CatalogVariants() {
         </Modal>
       )}
 
-      {equivalenceVariantId && (
+      {equivalenceVariantId && equivalenceBaseUnitId && (
         <Modal title={`Equivalencias de variante (${sku})`} onClose={() => setEquivalenceVariantId(null)} className="max-w-2xl">
           <EquivalenceFormFields
-            variantId={equivalenceVariantId}
-            baseUnitId={form.baseUnitId}
+            productId={equivalenceVariantId}
+            baseUnitId={equivalenceBaseUnitId}
             units={units}
             equivalences={equivalences}
             loading={loadingEquivalences}
@@ -824,17 +766,11 @@ function VariantFormFields({
   form,
   setForm,
   products,
-  units
 }: {
   form: VariantForm;
   setForm: Dispatch<SetStateAction<VariantForm>>;
   products: ProductOption[];
-  units?: ListUnitResponse;
 }) {
-  const unitOptions = (units ?? []).map((u) => ({
-      value: u.id,
-      label: `${u.name} (${u.code})`,
-  }));
   const productOptions = (products ?? []).map((u) => ({
       value: u.productId,
       label: `${u.name}`,
@@ -932,31 +868,20 @@ function VariantFormFields({
                       <option value="inactive">Inactivo</option>
                   </select>
               </label>
-              <label className="text-sm">
-                  <div className="mb-2">Unidad base</div>
-                  <FilterableSelect
-                      value={form.baseUnitId}
-                      onChange={(v) => setForm((prev) => ({ ...prev, baseUnitId: v }))}
-                      options={unitOptions}
-                      placement="top"
-                      placeholder="Seleccionar unidad"
-                      searchPlaceholder="Buscar unidad..."
-                  />
-              </label>
           </div>
       </div>
   );
 }
 
 function EquivalenceFormFields({
-  variantId,
+  productId,
   baseUnitId,
   units,
   equivalences,
   loading,
   onCreated,
 }: {
-  variantId: string;
+  productId: string;
   baseUnitId: string;
   units?: ListUnitResponse;
   equivalences: ProductEquivalence[];
@@ -976,9 +901,9 @@ function EquivalenceFormFields({
     (baseUnitId ? baseUnitId : "Sin unidad base");
 
   const handleCreate = async () => {
-    if (!variantId || !baseUnitId || !fromUnitId || !factor) return;
+    if (!productId || !baseUnitId || !fromUnitId || !factor) return;
     await createProductEquivalence({
-      primaVariantId: variantId,
+      productId,
       fromUnitId,
       toUnitId: baseUnitId,
       factor: Number(factor),
@@ -1017,11 +942,11 @@ function EquivalenceFormFields({
                   type="button"
                   className="rounded-xl border h-10 text-xl text-white mt-7"
                   style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                  onClick={() => void handleCreate()}
-                  disabled={!variantId || !baseUnitId || !fromUnitId || !factor}
-              >
-                  +
-              </button>
+          onClick={() => void handleCreate()}
+          disabled={!productId || !baseUnitId || !fromUnitId || !factor}
+        >
+          +
+        </button>
           </div>
 
           <div className="flex justify-end"></div>

@@ -19,6 +19,15 @@ export type Product = {
   name: string;
   description: string | null;
   isActive: boolean;
+  barcode?: string | null;
+  sku?: string | null;
+  price?: number;
+  cost?: number;
+  baseUnitName?: string;
+  baseUnitCode?: string;
+  baseUnitId?: string;
+  primaDefaultVariantId?: string;
+  attributes?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 };
