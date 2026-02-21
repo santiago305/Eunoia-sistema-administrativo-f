@@ -840,10 +840,10 @@ export default function CatalogProducts() {
             transition={{ duration: 0.16 }}
           >
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-              <span className="font-semibold">Ojo:</span> est�s por cambiar el estado de un producto. Hazlo solo si est�s seguro.
+              <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto. Hazlo solo si estas seguro.
             </div>
 
-            <p className="mt-3 text-sm text-black/70">�Confirmas esta acci�n? Puede afectar reportes, cat�logo visible y procesos internos.</p>
+            <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catalogo visible y procesos internos.</p>
 
             <div className="mt-4 flex justify-end gap-2">
               <button
