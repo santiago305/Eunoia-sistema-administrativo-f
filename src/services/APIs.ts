@@ -99,3 +99,21 @@ export const API_PRODUCT_RECIPES_GROUP = {
   byId: (id: string) => `/catalog/product-recipes/${id}`,
   delete: (id: string) => `/catalog/product-recipes/${id}`,
 };
+
+export const API_SUPPLIERS_GROUP = {
+  base: "/suppliers",
+  create: "/suppliers",
+  list: "/suppliers",
+  byId: (id: string) => `/suppliers/${id}`,
+  update: (id: string) => `/suppliers/${id}`,
+  updateActive: (id: string) => `/suppliers/${id}/active`,
+  identityLookup: "/identity",
+};
+
+export const API_SUPPLIER_VARIANTS_GROUP = {
+  base: "/suppliers/variants",
+  create: "/suppliers/variants",
+  list: "/suppliers/variants/all",
+  byId: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
+  update: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
+};
