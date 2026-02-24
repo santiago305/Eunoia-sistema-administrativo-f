@@ -176,47 +176,52 @@ export default function Providers() {
   };
 
   const lookupIdentity = async () => {
-    if (!form.documentType.trim() || !form.documentNumber.trim()) return;
-    clearFlash();
-    setLookupLoading(true);
-    try {
-      const result = await lookupSupplierIdentity({
-        documentType: form.documentType,
-        documentNumber: form.documentNumber.trim(),
-      });
+      if (!form.documentType.trim() || !form.documentNumber.trim()) return;
+      clearFlash();
+      setLookupLoading(true);
 
-      const payload = result?.data ?? null;
-      const isDni = (value: SupplierDniLookupData | SupplierRucLookupData | null): value is SupplierDniLookupData =>
-        Boolean(value && ("first_name" in value || "document_number" in value));
-      const isRuc = (value: SupplierDniLookupData | SupplierRucLookupData | null): value is SupplierRucLookupData =>
-        Boolean(value && ("razon_social" in value || "numero_documento" in value));
+      try {
+          const result = await lookupSupplierIdentity({
+              documentType: form.documentType,
+              documentNumber: form.documentNumber.trim(),
+          });
+          const payload = result?.data;
+          if (!payload) {
+              showFlash(errorResponse("No se pudo obtener la identidad"));
+              return;
+          }
+          if (form.documentType === DocumentType.DNI && "name" in payload) {
+              const data = payload as SupplierDniLookupData;
 
-      const lastName = isDni(payload)
-        ? [payload.first_last_name, payload.second_last_name].filter(Boolean).join(" ")
-        : "";
-      const tradeName = isRuc(payload) ? payload.razon_social ?? "" : "";
-      const address = isRuc(payload) ? payload.direccion ?? "" : "";
-      const documentNumber = isDni(payload)
-        ? payload.document_number
-        : isRuc(payload)
-          ? payload.numero_documento
-          : undefined;
-      const firstName = isDni(payload) ? payload.first_name ?? "" : "";
+              setForm((prev) => ({
+                  ...prev,
+                  documentNumber: result.documentNumber ?? prev.documentNumber,
+                  name: data.name || prev.name,
+                  lastName: data.lastName || prev.lastName,
+              }));
 
-      setForm((prev) => ({
-        ...prev,
-        documentNumber: documentNumber ?? prev.documentNumber,
-        name: firstName || prev.name,
-        lastName: lastName || prev.lastName,
-        tradeName: tradeName || prev.tradeName,
-        address: address || prev.address,
-      }));
-      showFlash(successResponse("Datos actualizados"));
-    } catch {
-      showFlash(errorResponse("No se pudo obtener la identidad"));
-    } finally {
-      setLookupLoading(false);
-    }
+              showFlash(successResponse("Datos actualizados"));
+              return;
+          }
+          if (form.documentType === DocumentType.RUC && "tradeName" in payload) {
+              const data = payload as SupplierRucLookupData;
+
+              setForm((prev) => ({
+                  ...prev,
+                  documentNumber: result.documentNumber ?? prev.documentNumber,
+                  tradeName: data.tradeName || prev.tradeName,
+                  address: data.address || prev.address,
+              }));
+
+              showFlash(successResponse("Datos actualizados"));
+              return;
+          }
+          showFlash(errorResponse("Tipo de documento no soportado"));
+      } catch {
+          showFlash(errorResponse("No se pudo obtener la identidad"));
+      } finally {
+          setLookupLoading(false);
+      }
   };
 
   const confirmToggleActive = async () => {
@@ -414,7 +419,7 @@ export default function Providers() {
       </div>
 
       {openCreate && (
-        <Modal title="Nuevo proveedor" onClose={() => setOpenCreate(false)} className="max-w-[720px]">
+        <Modal title="Nuevo proveedor" onClose={() => setOpenCreate(false)} className="max-w-[750px]">
           <SupplierFormFields
             form={form}
             setForm={setForm}
@@ -439,7 +444,7 @@ export default function Providers() {
       )}
 
       {editingSupplierId && (
-        <Modal title="Editar proveedor" onClose={() => setEditingSupplierId(null)} className="max-w-[720px]">
+        <Modal title="Editar proveedor" onClose={() => setEditingSupplierId(null)} className="max-w-[750px]">
           <SupplierFormFields
             form={form}
             setForm={setForm}
