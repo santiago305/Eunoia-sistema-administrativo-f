@@ -57,17 +57,12 @@ export type SupplierIdentityLookupResult = {
 };
 
 export type SupplierDniLookupData = {
-  document_number?: string;
-  first_name?: string;
-  first_last_name?: string;
-  second_last_name?: string;
-  full_name?: string;
+  name?: string;
+  lastName?: string;
 };
 
 export type SupplierRucLookupData = {
-  razon_social?: string;
-  numero_documento?: string;
-  direccion?: string;
-  estado?: string;
-  condicion?: string;
+  tradeName?: string;
+  address?: string;
+  ubigueo?: string;
 };
