@@ -32,6 +32,17 @@ export type Product = {
   updatedAt: string;
 };
 
+export type ProductForm = {
+    name: string;
+    description: string;
+    isActive: boolean;
+    barcode: string;
+    price: string;
+    cost: string;
+    attribute: "" | "presentation" | "variant" | "color";
+    attributeValue: string;
+    baseUnitId: string;
+};
 
 export type ProductListResponse = {
   items: Product[];

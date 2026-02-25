@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState} from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
-import { FilterableSelect } from "@/components/SelectFilterable";
 import { useProducts } from "@/hooks/useProducts";
-import { createProductEquivalence, deleteProductEquivalence, listProductEquivalences } from "@/services/equivalenceService";
+import { listProductEquivalences } from "@/services/equivalenceService";
 import { getProductById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -13,22 +12,13 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/types/ProductTypes";
 import type { ProductEquivalence } from "@/types/equivalence";
 import type { ListUnitResponse } from "@/types/unit";
+import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
+import { ProductFormFields } from "../catalog/components/ProductFormField";
+import { ProductForm } from "@/types/product";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
 const PRODUCT_TYPE = ProductTypes.PRIMA;
-
-type ProductForm = {
-  name: string;
-  description: string;
-  isActive: boolean;
-  barcode: string;
-  price: string;
-  cost: string;
-  attribute: "" | "presentation" | "variant" | "color";
-  attributeValue: string;
-  baseUnitId: string;
-};
 
 export default function RowMaterial() {
   const shouldReduceMotion = useReducedMotion();
@@ -408,659 +398,402 @@ export default function RowMaterial() {
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
-          <PageTitle title="Catálogo · Materias primas" />
-          <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-              {/* Header */}
-              <motion.div
-                  initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
-                  animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
+      <PageTitle title="Catálogo · Materias primas" />
+      <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Header */}
+          <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+              animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
+              transition={{ duration: 0.18 }}
+              className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
+          >
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight">Materias primas</h1>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+                  Total: <span className="font-semibold text-black">{total}</span>
+              </div>
+
+              <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  onClick={downloadCsv}
+                  disabled={exporting}
+                  title="Exportar CSV"
               >
-                  <div className="space-y-1">
-                      <h1 className="text-2xl font-semibold tracking-tight">Materias primas</h1>
-                  </div>
+                  <Download className="h-4 w-4" />
+                  {exporting ? "Exportando..." : "Exportar CSV"}
+              </button>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                      <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
-                          Total: <span className="font-semibold text-black">{total}</span>
-                      </div>
+              <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
+                  onClick={startCreate}
+                  title="Nueva materia prima"
+                  style={{
+                      backgroundColor: PRIMARY,
+                      borderColor: `${PRIMARY}33`,
+                      boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+                  }}
+                  onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
+                  }}
+                  onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
+                  }}
+              >
+                  <Plus className="h-4 w-4" />
+                  Nueva materia prima
+              </button>
+            </div>
+          </motion.div>
 
-                      <button
-                          type="button"
-                          className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
-                          onClick={downloadCsv}
-                          disabled={exporting}
-                          title="Exportar CSV"
+          {/* Filtros */}
+          <motion.section
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate={shouldReduceMotion ? false : "show"}
+              variants={fadeUp}
+              className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+                <input
+                    className="h-11 w-full rounded-2xl border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
+                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                    placeholder="Buscar por nombre (exacto)"
+                    value={searchText}
+                    onChange={(event) => {
+                        setSearchText(event.target.value);
+                        setPage(1);
+                    }}
+                />
+              </div>
+
+              <div className="relative">
+                <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+                <select
+                    className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                    value={statusFilter}
+                    onChange={(event) => {
+                        setStatusFilter(event.target.value);
+                        setPage(1);
+                    }}
+                >
+                  <option value="all">Estado (todos)</option>
+                  <option value="active">Activos</option>
+                  <option value="inactive">Inactivos</option>
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/40">▾</span>
+              </div>
+            </div>
+          </motion.section>
+
+          {/* Listado */}
+          <motion.section
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate={shouldReduceMotion ? false : "show"}
+              variants={fadeUp}
+              className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
+                <div>
+                    <p className="text-sm font-semibold">Listado de materias primas</p>
+                </div>
+                <div className="text-xs text-black/60 hidden sm:block">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</div>
+            </div>
+
+            {/* DESKTOP: tabla */}
+            <div className="hidden lg:block">
+              <div className="max-h-[calc(100vh-340px)] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-white">
+                      <tr className="border-b border-black/10 text-xs text-black/60">
+                          <th className="py-3 px-5 text-left">SKU</th>
+                          <th className="py-3 px-5 text-left">Materia prima</th>
+                          <th className="py-3 px-5 text-left">Descripción</th>
+                          <th className="py-3 px-5 text-left">Unidad</th>
+                          <th className="py-3 px-5 text-left">Atributo</th>
+                          <th className="py-3 px-5 text-left">Precio</th>
+                          <th className="py-3 px-5 text-left">Costo</th>
+                          <th className="py-3 px-5 text-left">Estado</th>
+                          <th className="py-3 px-5 text-left">Acciones</th>
+                      </tr>
+                  </thead>
+
+                  <AnimatePresence mode="wait" initial={false}>
+                      <motion.tbody
+                          key={listKey}
+                          variants={shouldReduceMotion ? undefined : list}
+                          initial={shouldReduceMotion ? false : "hidden"}
+                          animate={shouldReduceMotion ? false : "show"}
+                          exit={shouldReduceMotion ? undefined : "exit"}
                       >
-                          <Download className="h-4 w-4" />
-                          {exporting ? "Exportando..." : "Exportar CSV"}
-                      </button>
+                          {sortedProducts.map((product) => {
+                              return (
+                                  <motion.tr key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="border-b border-black/5 hover:bg-black/[0.02]">
+                                      <td className="py-4 px-5">
+                                          <p className="font-medium max-w-[680px]">{product.sku || "-"}</p>
+                                      </td>
+                                      <td className="py-4 px-5  text-black/70">
+                                          <div className="min-w-0">
+                                              <p className="font-medium leading-5 truncate">{product.name}</p>
+                                          </div>
+                                      </td>
+                                      <td className="py-4 px-5 text-black/70">
+                                          <p className="line-clamp-2 max-w-[800px]">{product.description || "-"}</p>
+                                      </td>
+                                      <td className="py-4 px-5 text-black/70">
+                                          <p className="line-clamp-2 max-w-[680px]">
+                                              {product.baseUnitName} ({product.baseUnitCode})
+                                          </p>
+                                      </td>
+                                      <td className="py-4 px-5 text-black/70">
+                                          <p className="line-clamp-2 max-w-[680px]">{product.attributes ? Object.values(product.attributes).filter(Boolean).join(" · ") || "-" : "-"}</p>
+                                      </td>
+                                      <td className="py-4 px-5 text-black/70">
+                                          <p className="line-clamp-2 max-w-[680px]">{product.price || "-"}</p>
+                                      </td>
+                                      <td className="py-4 px-5 text-black/70">
+                                          <p className="line-clamp-2 max-w-[680px]">{product.cost || "-"}</p>
+                                      </td>
 
-                      <button
-                          type="button"
-                          className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
-                          onClick={startCreate}
-                          title="Nueva materia prima"
-                          style={{
-                              backgroundColor: PRIMARY,
-                              borderColor: `${PRIMARY}33`,
-                              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-                          }}
-                          onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                          }}
-                          onMouseLeave={(e) => {
-                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                          }}
+                                      <td className="py-4 px-5">
+                                          <StatusPill active={product.isActive} />
+                                      </td>
+
+                                      <td className="py-4 px-0">
+                                          <div className="flex items-center justify-left gap-2">
+                                              <button
+                                                  type="button"
+                                                  className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
+                                                  onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      void openEquivalences(product.id);
+                                                  }}
+                                              >
+                                                  Equivalencias
+                                              </button>
+
+                                              <IconButton
+                                                  title="Editar"
+                                                  onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      void openEdit(product.id);
+                                                  }}
+                                              >
+                                                  <Pencil className="h-4 w-4" />
+                                              </IconButton>
+
+                                              <IconButton
+                                                  title={product.isActive ? "Desactivar" : "Activar"}
+                                                  onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setDeletingProductId(product.id);
+                                                  }}
+                                                  tone={product.isActive ? "danger" : "primary"}
+                                              >
+                                                  <Power className="h-4 w-4" />
+                                              </IconButton>
+                                          </div>
+                                      </td>
+                                  </motion.tr>
+                                );
+                              })}
+                          </motion.tbody>
+                      </AnimatePresence>
+                  </table>
+
+                  {products.length === 0 && !loading && <div className="px-5 py-8 text-sm text-black/60">No hay materias primas con los filtros actuales.</div>}
+                  {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
+                </div>
+              </div>
+
+              {/* MOBILE/TABLET: cards */}
+              <div className="lg:hidden">
+                  <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                          key={listKey}
+                          variants={shouldReduceMotion ? undefined : list}
+                          initial={shouldReduceMotion ? false : "hidden"}
+                          animate={shouldReduceMotion ? false : "show"}
+                          exit={shouldReduceMotion ? undefined : "exit"}
+                          className="max-h-[calc(100vh-360px)] overflow-auto p-4 sm:p-5 space-y-3"
                       >
-                          <Plus className="h-4 w-4" />
-                          Nueva materia prima
-                      </button>
-                  </div>
-              </motion.div>
-
-              {/* Filtros */}
-              <motion.section
-                  initial={shouldReduceMotion ? false : "hidden"}
-                  animate={shouldReduceMotion ? false : "show"}
-                  variants={fadeUp}
-                  className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
-              >
-                  <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
-                      <div className="relative">
-                          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-                          <input
-                              className="h-11 w-full rounded-2xl border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
-                              style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                              placeholder="Buscar por nombre (exacto)"
-                              value={searchText}
-                              onChange={(event) => {
-                                  setSearchText(event.target.value);
-                                  setPage(1);
-                              }}
-                          />
-                      </div>
-
-                      <div className="relative">
-                          <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-                          <select
-                              className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
-                              style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                              value={statusFilter}
-                              onChange={(event) => {
-                                  setStatusFilter(event.target.value);
-                                  setPage(1);
-                              }}
-                          >
-                              <option value="all">Estado (todos)</option>
-                              <option value="active">Activos</option>
-                              <option value="inactive">Inactivos</option>
-                          </select>
-                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/40">▾</span>
-                      </div>
-                  </div>
-              </motion.section>
-
-              {/* Listado */}
-              <motion.section
-                  initial={shouldReduceMotion ? false : "hidden"}
-                  animate={shouldReduceMotion ? false : "show"}
-                  variants={fadeUp}
-                  className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden"
-              >
-                  <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
-                      <div>
-                          <p className="text-sm font-semibold">Listado de materias primas</p>
-                      </div>
-                      <div className="text-xs text-black/60 hidden sm:block">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</div>
-                  </div>
-
-                  {/* DESKTOP: tabla */}
-                  <div className="hidden lg:block">
-                      <div className="max-h-[calc(100vh-340px)] overflow-auto">
-                          <table className="w-full text-sm">
-                              <thead className="sticky top-0 z-10 bg-white">
-                                  <tr className="border-b border-black/10 text-xs text-black/60">
-                                      <th className="py-3 px-5 text-left">SKU</th>
-                                      <th className="py-3 px-5 text-left">Materia prima</th>
-                                      <th className="py-3 px-5 text-left">Descripción</th>
-                                      <th className="py-3 px-5 text-left">Unidad</th>
-                                      <th className="py-3 px-5 text-left">Atributo</th>
-                                      <th className="py-3 px-5 text-left">Precio</th>
-                                      <th className="py-3 px-5 text-left">Costo</th>
-                                      <th className="py-3 px-5 text-left">Estado</th>
-                                      <th className="py-3 px-5 text-left">Acciones</th>
-                                  </tr>
-                              </thead>
-
-                              <AnimatePresence mode="wait" initial={false}>
-                                  <motion.tbody
-                                      key={listKey}
-                                      variants={shouldReduceMotion ? undefined : list}
-                                      initial={shouldReduceMotion ? false : "hidden"}
-                                      animate={shouldReduceMotion ? false : "show"}
-                                      exit={shouldReduceMotion ? undefined : "exit"}
-                                  >
-                                      {sortedProducts.map((product) => {
-                                          return (
-                                              <motion.tr key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="border-b border-black/5 hover:bg-black/[0.02]">
-                                                  <td className="py-4 px-5">
-                                                      <p className="font-medium max-w-[680px]">{product.sku || "-"}</p>
-                                                  </td>
-                                                  <td className="py-4 px-5  text-black/70">
-                                                      <div className="min-w-0">
-                                                          <p className="font-medium leading-5 truncate">{product.name}</p>
-                                                      </div>
-                                                  </td>
-                                                  <td className="py-4 px-5 text-black/70">
-                                                      <p className="line-clamp-2 max-w-[800px]">{product.description || "-"}</p>
-                                                  </td>
-                                                  <td className="py-4 px-5 text-black/70">
-                                                      <p className="line-clamp-2 max-w-[680px]">
-                                                          {product.baseUnitName} ({product.baseUnitCode})
-                                                      </p>
-                                                  </td>
-                                                  <td className="py-4 px-5 text-black/70">
-                                                      <p className="line-clamp-2 max-w-[680px]">{product.attributes ? Object.values(product.attributes).filter(Boolean).join(" · ") || "-" : "-"}</p>
-                                                  </td>
-                                                  <td className="py-4 px-5 text-black/70">
-                                                      <p className="line-clamp-2 max-w-[680px]">{product.price || "-"}</p>
-                                                  </td>
-                                                  <td className="py-4 px-5 text-black/70">
-                                                      <p className="line-clamp-2 max-w-[680px]">{product.cost || "-"}</p>
-                                                  </td>
-
-                                                  <td className="py-4 px-5">
-                                                      <StatusPill active={product.isActive} />
-                                                  </td>
-
-                                                  <td className="py-4 px-0">
-                                                      <div className="flex items-center justify-left gap-2">
-                                                          <button
-                                                              type="button"
-                                                              className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                                                              onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  void openEquivalences(product.id);
-                                                              }}
-                                                          >
-                                                              Equivalencias
-                                                          </button>
-
-                                                          <IconButton
-                                                              title="Editar"
-                                                              onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  void openEdit(product.id);
-                                                              }}
-                                                          >
-                                                              <Pencil className="h-4 w-4" />
-                                                          </IconButton>
-
-                                                          <IconButton
-                                                              title={product.isActive ? "Desactivar" : "Activar"}
-                                                              onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  setDeletingProductId(product.id);
-                                                              }}
-                                                              tone={product.isActive ? "danger" : "primary"}
-                                                          >
-                                                              <Power className="h-4 w-4" />
-                                                          </IconButton>
-                                                      </div>
-                                                  </td>
-                                              </motion.tr>
-                                          );
-                                      })}
-                                  </motion.tbody>
-                              </AnimatePresence>
-                          </table>
-
-                          {products.length === 0 && !loading && <div className="px-5 py-8 text-sm text-black/60">No hay materias primas con los filtros actuales.</div>}
-                          {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
-                      </div>
-                  </div>
-
-                  {/* MOBILE/TABLET: cards */}
-                  <div className="lg:hidden">
-                      <AnimatePresence mode="wait" initial={false}>
-                          <motion.div
-                              key={listKey}
-                              variants={shouldReduceMotion ? undefined : list}
-                              initial={shouldReduceMotion ? false : "hidden"}
-                              animate={shouldReduceMotion ? false : "show"}
-                              exit={shouldReduceMotion ? undefined : "exit"}
-                              className="max-h-[calc(100vh-360px)] overflow-auto p-4 sm:p-5 space-y-3"
-                          >
-                              {sortedProducts.map((product) => {
-                                  return (
-                                      <motion.div key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
-                                          <div className="flex items-start justify-between gap-3">
-                                              <div className="min-w-0">
-                                                  <p className="mt-1 font-semibold truncate">{product.name}</p>
-                                                  <p className="mt-1 text-sm text-black/70 line-clamp-2">{product.description || "-"}</p>
-                                                  <div className="mt-3">
-                                                      <StatusPill active={product.isActive} />
-                                                  </div>
-                                              </div>
-
-                                              <div className="flex flex-col gap-2">
-                                                  <button
-                                                      type="button"
-                                                      className="inline-flex h-8 items-center justify-center rounded-xl border border-black/10 bg-white px-2.5 text-xs hover:bg-black/[0.03] disabled:opacity-50"
-                                                      onClick={() => void openEquivalences(product.id)}
-                                                     
-                                                  >
-                                                      Equivalencias
-                                                  </button>
-
-                                                  <IconButton
-                                                      title="Editar"
-                                                      onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          void openEdit(product.id);
-                                                      }}
-                                                  >
-                                                      <Pencil className="h-4 w-4" />
-                                                  </IconButton>
-
-                                                  <IconButton
-                                                      title={product.isActive ? "Desactivar" : "Activar"}
-                                                      onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          setDeletingProductId(product.id);
-                                                      }}
-                                                      tone={product.isActive ? "danger" : "primary"}
-                                                  >
-                                                      <Power className="h-4 w-4" />
-                                                  </IconButton>
+                          {sortedProducts.map((product) => {
+                              return (
+                                  <motion.div key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+                                      <div className="flex items-start justify-between gap-3">
+                                          <div className="min-w-0">
+                                              <p className="mt-1 font-semibold truncate">{product.name}</p>
+                                              <p className="mt-1 text-sm text-black/70 line-clamp-2">{product.description || "-"}</p>
+                                              <div className="mt-3">
+                                                  <StatusPill active={product.isActive} />
                                               </div>
                                           </div>
 
-                                          <div className="mt-3 text-[11px] text-black/50 truncate">UUID: {product.id}</div>
-                                      </motion.div>
-                                  );
-                              })}
+                                          <div className="flex flex-col gap-2">
+                                              <button
+                                                  type="button"
+                                                  className="inline-flex h-8 items-center justify-center rounded-xl border border-black/10 bg-white px-2.5 text-xs hover:bg-black/[0.03] disabled:opacity-50"
+                                                  onClick={() => void openEquivalences(product.id)}
+                                                  
+                                              >
+                                                  Equivalencias
+                                              </button>
 
-                              {products.length === 0 && !loading && (
-                                  <div className="rounded-3xl border border-black/10 bg-white p-4 text-sm text-black/60">No hay materias primas con los filtros actuales.</div>
-                              )}
-                              {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
-                          </motion.div>
-                      </AnimatePresence>
-                  </div>
+                                              <IconButton
+                                                  title="Editar"
+                                                  onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      void openEdit(product.id);
+                                                  }}
+                                              >
+                                                  <Pencil className="h-4 w-4" />
+                                              </IconButton>
 
-                  {/* Footer paginación */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
-                      <span className="hidden sm:inline">
-                          Mostrando {startIndex}-{endIndex} de {total}
+                                              <IconButton
+                                                  title={product.isActive ? "Desactivar" : "Activar"}
+                                                  onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setDeletingProductId(product.id);
+                                                  }}
+                                                  tone={product.isActive ? "danger" : "primary"}
+                                              >
+                                                  <Power className="h-4 w-4" />
+                                              </IconButton>
+                                          </div>
+                                      </div>
+
+                                      <div className="mt-3 text-[11px] text-black/50 truncate">UUID: {product.id}</div>
+                                  </motion.div>
+                              );
+                          })}
+
+                          {products.length === 0 && !loading && (
+                              <div className="rounded-3xl border border-black/10 bg-white p-4 text-sm text-black/60">No hay materias primas con los filtros actuales.</div>
+                          )}
+                          {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
+                      </motion.div>
+                  </AnimatePresence>
+              </div>
+
+              {/* Footer paginación */}
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
+                  <span className="hidden sm:inline">
+                      Mostrando {startIndex}-{endIndex} de {total}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                      <button
+                          className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                          disabled={page === 1}
+                          onClick={() => setPage(page - 1)}
+                          type="button"
+                      >
+                          Anterior
+                      </button>
+
+                      <span className="tabular-nums">
+                          Página {page} de {totalPages}
                       </span>
 
-                      <div className="flex items-center gap-2">
-                          <button
-                              className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
-                              disabled={page === 1}
-                              onClick={() => setPage(page - 1)}
-                              type="button"
-                          >
-                              Anterior
-                          </button>
-
-                          <span className="tabular-nums">
-                              Página {page} de {totalPages}
-                          </span>
-
-                          <button
-                              className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
-                              disabled={page === totalPages || totalPages === 0}
-                              onClick={() => setPage(page + 1)}
-                              type="button"
-                          >
-                              Siguiente
-                          </button>
-                      </div>
+                      <button
+                          className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                          disabled={page === totalPages || totalPages === 0}
+                          onClick={() => setPage(page + 1)}
+                          type="button"
+                      >
+                          Siguiente
+                      </button>
                   </div>
-              </motion.section>
-          </div>
+              </div>
+          </motion.section>
+      </div>
 
-          {/* MODALES */}
-          {openCreate && (
-              <Modal title="Nueva materia prima" onClose={() => setOpenCreate(false)} className="max-w-[700px]">
-                  <ProductFormFields form={form} setForm={setForm} units={units} />
+      {/* MODALES */}
+      {openCreate && (
+          <Modal title="Nueva materia prima" onClose={() => setOpenCreate(false)} className="max-w-[700px]">
+              <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} />
+              <div className="mt-4 flex justify-end gap-2">
+                  <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
+                      Cancelar
+                  </button>
+                  <button
+                      className="rounded-2xl border px-4 py-2 text-sm text-white"
+                      style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                      onClick={saveProduct}
+                      disabled={!form.name.trim()}
+                  >
+                      Guardar
+                  </button>
+              </div>
+          </Modal>
+      )}
+
+      {editingProductId && (
+          <Modal title="Editar materia prima" onClose={() => setEditingProductId(null)} className="max-w-[700px]">
+              <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY}/>
+              <div className="mt-4 flex justify-end gap-2">
+                  <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingProductId(null)}>
+                      Cancelar
+                  </button>
+                  <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={saveProduct}>
+                      Guardar cambios
+                  </button>
+              </div>
+          </Modal>
+      )}
+
+      {deletingProductId && (
+          <Modal title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">
+              <motion.div
+                  initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
+                  animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 0.16 }}
+              >
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                      <span className="font-semibold">Ojo:</span> estás por cambiar el estado de una materia prima. Hazlo solo si estás seguro.
+                  </div>
+
+                  <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catálogo visible y procesos internos.</p>
+
                   <div className="mt-4 flex justify-end gap-2">
-                      <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
+                      <button
+                          className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                          onClick={() => setDeletingProductId(null)}
+                      >
                           Cancelar
                       </button>
                       <button
-                          className="rounded-2xl border px-4 py-2 text-sm text-white"
-                          style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                          onClick={saveProduct}
-                          disabled={!form.name.trim()}
+                          className="rounded-2xl border border-rose-600/20 bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
+                          onClick={confirmDelete}
                       >
-                          Guardar
+                          Confirmar
                       </button>
                   </div>
-              </Modal>
-          )}
+              </motion.div>
+          </Modal>
+      )}
 
-          {editingProductId && (
-              <Modal title="Editar materia prima" onClose={() => setEditingProductId(null)} className="max-w-[700px]">
-                  <ProductFormFields form={form} setForm={setForm} units={units} />
-                  <div className="mt-4 flex justify-end gap-2">
-                      <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingProductId(null)}>
-                          Cancelar
-                      </button>
-                      <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={saveProduct}>
-                          Guardar cambios
-                      </button>
-                  </div>
-              </Modal>
-          )}
-
-          {deletingProductId && (
-              <Modal title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">
-                  <motion.div
-                      initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                      animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                      transition={{ duration: 0.16 }}
-                  >
-                      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                          <span className="font-semibold">Ojo:</span> estás por cambiar el estado de una materia prima. Hazlo solo si estás seguro.
-                      </div>
-
-                      <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catálogo visible y procesos internos.</p>
-
-                      <div className="mt-4 flex justify-end gap-2">
-                          <button
-                              className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                              onClick={() => setDeletingProductId(null)}
-                          >
-                              Cancelar
-                          </button>
-                          <button
-                              className="rounded-2xl border border-rose-600/20 bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
-                              onClick={confirmDelete}
-                          >
-                              Confirmar
-                          </button>
-                      </div>
-                  </motion.div>
-              </Modal>
-          )}
-
-          {equivalenceProductId && (
-              <Modal title={`Equivalencias · ${equivalenceProductName ?? "-"}`} onClose={closeEquivalences} className="max-w-2xl">
-                  <EquivalenceFormFields
-                      productId={equivalenceProductId}
-                      baseUnitId={equivalenceBaseUnitId}
-                      units={units}
-                      equivalences={equivalences}
-                      loading={loadingEquivalences}
-                      onCreated={async () => {
-                          await loadEquivalences(equivalenceProductId);
-                      }}
-                  />
-              </Modal>
-          )}
-      </div>
-  );
-}
-
-function ProductFormFields({
-  form,
-  setForm,
-  units,
-}: {
-  form: ProductForm;
-  setForm: Dispatch<SetStateAction<ProductForm>>;
-  units?: ListUnitResponse;
-}) {
-  const unitOptions = (units ?? []).map((u) => ({
-    value: u.id,
-    label: `${u.name} (${u.code})`,
-  }));
-
-  return (
-    <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="text-sm">
-                  Nombre
-                  <input
-                      className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                      style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                      value={form.name}
-                      onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  />
-              </label>
-              <label className="text-sm">
-                  <div className="mb-2">Unidad base</div>
-                  <FilterableSelect
-                      value={form.baseUnitId}
-                      onChange={(value) => setForm((prev) => ({ ...prev, baseUnitId: value }))}
-                      options={unitOptions}
-                      placement="bottom"
-                      placeholder="Seleccionar unidad"
-                      searchPlaceholder="Buscar unidad..."
-                  />
-              </label>
-          </div>
-          <label className="text-sm">
-              Descripción
-              <textarea
-                  className="mt-2 min-h-[90px] w-full rounded-2xl border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
-                  style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                  value={form.description}
-                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+      {equivalenceProductId && (
+          <Modal title={`Equivalencias · ${equivalenceProductName ?? "-"}`} onClose={closeEquivalences} className="max-w-2xl">
+              <EquivalenceFormFields
+                  productId={equivalenceProductId}
+                  baseUnitId={equivalenceBaseUnitId}
+                  units={units}
+                  equivalences={equivalences}
+                  loading={loadingEquivalences}
+                  onCreated={async () => {
+                      await loadEquivalences(equivalenceProductId);
+                  }}
+                  PRIMARY={PRIMARY}
               />
-          </label>
-          <div className="mt-3">
-              <label className="text-sm ">
-                  Codigo de barras
-                  <input
-                      className="mt-2 h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/50 cursor-not-allowed"
-                      value={form.barcode}
-                      onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))}
-                      disabled
-                      placeholder=""
-                  />
-              </label>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="text-sm">
-                  Precio (S/)
-                  <div className="mt-2 relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-                      <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
-                          value={form.price}
-                          onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
-                      />
-                  </div>
-              </label>
-              <label className="text-sm">
-                  Costo (S/)
-                  <div className="mt-2 relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-                      <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
-                          value={form.cost}
-                          onChange={(event) => setForm((prev) => ({ ...prev, cost: event.target.value }))}
-                      />
-                  </div>
-              </label>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="text-sm">
-                  Atributo
-                  <select
-                      className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                      value={form.attribute}
-                      onChange={(event) => setForm((prev) => ({ ...prev, attribute: event.target.value as ProductForm["attribute"] }))}
-                  >
-                      <option value="">Seleccionar</option>
-                      <option value="presentation">Presentación</option>
-                      <option value="variant">Variante</option>
-                      <option value="color">Color</option>
-                  </select>
-              </label>
-              <label className="text-sm">
-                  Valor
-                  <input
-                      className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                      value={form.attributeValue}
-                      onChange={(event) => setForm((prev) => ({ ...prev, attributeValue: event.target.value }))}
-                  />
-              </label>
-          </div>
-      </div>
-  );
-}
-
-function EquivalenceFormFields({
-  productId,
-  baseUnitId,
-  units,
-  equivalences,
-  loading,
-  onCreated,
-}: {
-  productId: string;
-  baseUnitId: string;
-  units?: ListUnitResponse;
-  equivalences: ProductEquivalence[];
-  loading: boolean;
-  onCreated: () => Promise<void>;
-}) {
-  const [fromUnitId, setFromUnitId] = useState("");
-  const [factor, setFactor] = useState("1");
-
-  const unitOptions = (units ?? []).map((u) => ({
-    value: u.id,
-    label: `${u.name} (${u.code})`,
-  }));
-
-  const baseUnitLabel =
-    (units ?? []).find((u) => u.id === baseUnitId)?.name ?? (baseUnitId ? baseUnitId : "Sin unidad base");
-
-  const handleCreate = async () => {
-    if (!productId || !baseUnitId || !fromUnitId || !factor) return;
-    await createProductEquivalence({
-      productId,
-      fromUnitId,
-      toUnitId: baseUnitId,
-      factor: Number(factor),
-    });
-    setFromUnitId("");
-    setFactor("1");
-    await onCreated();
-  };
-
-  const deleteEquivalence = async (id: string) => {
-    try {
-      await deleteProductEquivalence(id);
-      await onCreated();
-    } catch {
-      console.log("algo salio mal");
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_45px]">
-        <label className="text-sm">
-          <div className="mb-2">Unidad origen</div>
-          <input
-            className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60"
-            value={baseUnitLabel}
-            disabled
-          />
-        </label>
-        <label className="text-sm">
-          <div className="mb-2">Factor</div>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-            value={factor}
-            onChange={(e) => setFactor(e.target.value)}
-          />
-        </label>
-        <label className="text-sm">
-          <div className="mb-2">Unidad destino</div>
-          <FilterableSelect
-            value={fromUnitId}
-            onChange={setFromUnitId}
-            options={unitOptions}
-            placement="bottom"
-            placeholder="Seleccionar unidad"
-            searchPlaceholder="Buscar unidad..."
-          />
-        </label>
-        <button
-          type="button"
-          className="rounded-xl border h-10 text-xl text-white mt-7"
-          style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-          onClick={() => void handleCreate()}
-          disabled={!productId || !baseUnitId || !fromUnitId || !factor}
-        >
-          +
-        </button>
-      </div>
-
-      <div className="flex justify-end"></div>
-
-      <div className="rounded-2xl border border-black/10 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
-          <span>Listado de equivalencias</span>
-          <span>{loading ? "Cargando..." : `${equivalences.length} registros`}</span>
-        </div>
-        <div className="max-h-56 overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-white z-10">
-              <tr className="border-b border-black/10 text-xs text-black/60">
-                <th className="py-2 px-5 text-left">Unidad de medida</th>
-                <th className="py-2 px-5 text-left">Equivalencia</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {equivalences.map((eq) => {
-                const fromLabel = (units ?? []).find((u) => u.id === eq.fromUnitId);
-                const toLabel = (units ?? []).find((u) => u.id === eq.toUnitId);
-                return (
-                  <tr key={eq.id} className="border-b border-black/5">
-                    <td className="py-2 px-5 text-left">{fromLabel ? `${fromLabel.name} x ${eq.factor}` : eq.fromUnitId}</td>
-                    <td className="py-2 px-5 text-left">Equivale a {eq.factor} - {toLabel?.name}</td>
-                    <td>
-                      <button
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
-                        onClick={() => {
-                          void deleteEquivalence(eq.id);
-                        }}
-                      >
-                        <Power className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {!loading && equivalences.length === 0 && (
-            <div className="px-4 py-4 text-sm text-black/60">No hay equivalencias registradas.</div>
-          )}
-        </div>
-      </div>
-    </div>
+          </Modal>
+      )}
+  </div>
   );
 }

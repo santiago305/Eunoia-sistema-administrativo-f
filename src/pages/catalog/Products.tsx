@@ -13,29 +13,19 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/types/ProductTypes";
 import type { ProductEquivalence } from "@/types/equivalence";
 import type { ListUnitResponse } from "@/types/unit";
-import type { ListProductsQuery } from "@/types/product";
+import type { ListProductsQuery, ProductForm } from "@/types/product";
 import { listProductRecipes } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/types/productRecipe";
 import { RecipeFormFields } from "./components/RecipeFormFields";
 import { Variant } from "@/types/variant";
 import { listRowMaterials, listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
+import { EquivalenceFormFields } from "./components/EquivalenceFormField";
+import { ProductFormFields } from "./components/ProductFormField";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
 const PRODUCT_TYPE = ProductTypes.FINISHED;
-
-type ProductForm = {
-    name: string;
-    description: string;
-    isActive: boolean;
-    barcode: string;
-    price: string;
-    cost: string;
-    attribute: "" | "presentation" | "variant" | "color";
-    attributeValue: string;
-    baseUnitId: string;
-};
 
 export default function CatalogProducts() {
     const shouldReduceMotion = useReducedMotion();
@@ -827,7 +817,7 @@ export default function CatalogProducts() {
             {/* MODALES */}
             {openCreate && (
                 <Modal title="Nuevo producto" onClose={() => setOpenCreate(false)} className="max-w-[700px]">
-                    <ProductFormFields form={form} setForm={setForm} units={units} />
+                    <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} />
                     <div className="mt-4 flex justify-end gap-2">
                         <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
                             Cancelar
@@ -846,7 +836,7 @@ export default function CatalogProducts() {
 
             {editingProductId && (
                 <Modal title="Editar producto" onClose={() => setEditingProductId(null)} className="max-w-[700px]">
-                    <ProductFormFields form={form} setForm={setForm} units={units} />
+                    <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} />
                     <div className="mt-4 flex justify-end gap-2">
                         <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingProductId(null)}>
                             Cancelar
@@ -859,7 +849,7 @@ export default function CatalogProducts() {
             )}
 
             {deletingProductId && (
-                <Modal title="Confirmar acci�n" onClose={() => setDeletingProductId(null)} className="max-w-md">
+                <Modal title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">
                     <motion.div
                         initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
                         animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
@@ -956,6 +946,7 @@ export default function CatalogProducts() {
                         onCreated={async () => {
                             await loadEquivalences(equivalenceProductId);
                         }}
+                        PRIMARY={PRIMARY}
                     />
                 </Modal>
             )}
@@ -977,233 +968,6 @@ export default function CatalogProducts() {
     );
 }
 
-function ProductFormFields({ form, setForm, units }: { form: ProductForm; setForm: Dispatch<SetStateAction<ProductForm>>; units?: ListUnitResponse }) {
-    const unitOptions = (units ?? []).map((u) => ({
-        value: u.id,
-        label: `${u.name} (${u.code})`,
-    }));
 
-    return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <label className="text-sm">
-                    Nombre
-                    <input
-                        className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                        style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                        value={form.name}
-                        onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                    />
-                </label>
-                <label className="text-sm">
-                    <div className="mb-2">Unidad base</div>
-                    <FilterableSelect
-                        value={form.baseUnitId}
-                        onChange={(value) => setForm((prev) => ({ ...prev, baseUnitId: value }))}
-                        options={unitOptions}
-                        placement="bottom"
-                        placeholder="Seleccionar unidad"
-                        searchPlaceholder="Buscar unidad..."
-                    />
-                </label>
-            </div>
-            <label className="text-sm">
-                Descripción
-                <textarea
-                    className="mt-2 min-h-[90px] w-full rounded-2xl border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
-                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                    value={form.description}
-                    onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                />
-            </label>
-            <div className="mt-3">
-                <label className="text-sm ">
-                    Código de barras
-                    <input
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/50 cursor-not-allowed"
-                        value={form.barcode}
-                        onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))}
-                        disabled
-                        placeholder=""
-                    />
-                </label>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <label className="text-sm">
-                    Precio (S/)
-                    <div className="mt-2 relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
-                            value={form.price}
-                            onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
-                        />
-                    </div>
-                </label>
-                <label className="text-sm">
-                    Costo (S/)
-                    <div className="mt-2 relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
-                            value={form.cost}
-                            onChange={(event) => setForm((prev) => ({ ...prev, cost: event.target.value }))}
-                        />
-                    </div>
-                </label>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <label className="text-sm">
-                    Atributo
-                    <select
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                        value={form.attribute}
-                        onChange={(event) => setForm((prev) => ({ ...prev, attribute: event.target.value as ProductForm["attribute"] }))}
-                    >
-                        <option value="">Seleccionar</option>
-                        <option value="presentation">Presentación</option>
-                        <option value="variant">Variante</option>
-                        <option value="color">Color</option>
-                    </select>
-                </label>
-                <label className="text-sm">
-                    Valor
-                    <input
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                        value={form.attributeValue}
-                        onChange={(event) => setForm((prev) => ({ ...prev, attributeValue: event.target.value }))}
-                    />
-                </label>
-            </div>
-        </div>
-    );
-}
 
-function EquivalenceFormFields({
-    productId,
-    baseUnitId,
-    units,
-    equivalences,
-    loading,
-    onCreated,
-}: {
-    productId: string;
-    baseUnitId: string;
-    units?: ListUnitResponse;
-    equivalences: ProductEquivalence[];
-    loading: boolean;
-    onCreated: () => Promise<void>;
-}) {
-    const [fromUnitId, setFromUnitId] = useState("");
-    const [factor, setFactor] = useState("1");
 
-    const unitOptions = (units ?? []).map((u) => ({
-        value: u.id,
-        label: `${u.name} (${u.code})`,
-    }));
-
-    const baseUnitLabel = (units ?? []).find((u) => u.id === baseUnitId)?.name ?? (baseUnitId ? baseUnitId : "Sin unidad base");
-
-    const handleCreate = async () => {
-        if (!productId || !baseUnitId || !fromUnitId || !factor) return;
-        await createProductEquivalence({
-            productId,
-            fromUnitId,
-            toUnitId: baseUnitId,
-            factor: Number(factor),
-        });
-        setFromUnitId("");
-        setFactor("1");
-        await onCreated();
-    };
-
-    const deleteEquivalence = async (id: string) => {
-        try {
-            await deleteProductEquivalence(id);
-            await onCreated();
-        } catch {
-            console.log("algo salio mal");
-        }
-    };
-
-    return (
-        <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_45px]">
-                <label className="text-sm">
-                    <div className="mb-2">Unidad origen</div>
-                    <input className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60" value={baseUnitLabel} disabled />
-                </label>
-                <label className="text-sm">
-                    <div className="mb-2">Factor</div>
-                    <input type="number" min="0" step="0.0001" className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={factor} onChange={(e) => setFactor(e.target.value)} />
-                </label>
-                <label className="text-sm">
-                    <div className="mb-2">Unidad destino</div>
-                    <FilterableSelect value={fromUnitId} onChange={setFromUnitId} options={unitOptions} placement="bottom" placeholder="Seleccionar unidad" searchPlaceholder="Buscar unidad..." />
-                </label>
-                <button
-                    type="button"
-                    className="rounded-xl border h-10 text-xl text-white mt-7"
-                    style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                    onClick={() => void handleCreate()}
-                    disabled={!productId || !baseUnitId || !fromUnitId || !factor}
-                >
-                    +
-                </button>
-            </div>
-
-            <div className="flex justify-end"></div>
-
-            <div className="rounded-2xl border border-black/10 overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
-                    <span>Listado de equivalencias</span>
-                    <span>{loading ? "Cargando..." : `${equivalences.length} registros`}</span>
-                </div>
-                <div className="max-h-56 overflow-auto">
-                    <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-white z-10">
-                            <tr className="border-b border-black/10 text-xs text-black/60">
-                                <th className="py-2 px-5 text-left">Unidad origen</th>
-                                <th className="py-2 px-5 text-center">Factor</th>
-                                <th className="py-2 px-5 text-right">Unidad destino</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {equivalences.map((eq) => {
-                                const fromLabel = (units ?? []).find((u) => u.id === eq.fromUnitId);
-                                const toLabel = (units ?? []).find((u) => u.id === eq.toUnitId);
-                                return (
-                                    <tr key={eq.id} className="border-b border-black/5">
-                                        <td className="py-2 px-5">{toLabel ? `${toLabel.name} (${toLabel.code})` : eq.toUnitId}</td>
-                                        <td className="py-2 px-5 text-center">{eq.factor}</td>
-                                        <td className="py-2 px-5 text-right">{fromLabel ? `${fromLabel.name} (${fromLabel.code})` : eq.fromUnitId}</td>
-                                        <td>
-                                            <button
-                                                className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
-                                                onClick={() => {
-                                                    void deleteEquivalence(eq.id);
-                                                }}
-                                            >
-                                                <Power className="h-4 w-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                    {!loading && equivalences.length === 0 && <div className="px-4 py-4 text-sm text-black/60">No hay equivalencias registradas.</div>}
-                </div>
-            </div>
-        </div>
-    );
-}
