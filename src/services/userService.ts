@@ -1,6 +1,7 @@
 import axiosInstance from "@/common/utils/axios"
 import { API_AUTH_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
 import { CreateUserDto, UpdateUserDto } from "@/types/user"
+import type { CurrentUserResponse } from "@/types/userProfile"
 
 // ----------------------------------------
 // USUARIOS (ADMIN)
@@ -92,9 +93,9 @@ export const changePassword = async (
 // ----------------------------------------
 
 export const changeMyPassword = async (
-  payload: { currentPassword: string; newPassword: string }
+  payload: ChangeMyPasswordPayload
 ) => {
-  const response = await axiosInstance.patch(
+  const response = await axiosInstance.patch<ProfileMutationResponse>(
     API_PROFILE_GROUP.changePasswordMe,
     payload
   );
@@ -161,12 +162,27 @@ export const findByEmail = async (email: string) => {
  * @returns {Promise<any>} Datos del usuario autenticado.
  */
 export const findOwnUser = async () => {
-  const response = await axiosInstance.get(API_PROFILE_GROUP.me)
+  const response = await axiosInstance.get<CurrentUserResponse>(API_PROFILE_GROUP.me)
   return response.data
 }
 
-export const updateOwnUser = async (payload: UpdateUserDto) => {
-  const response = await axiosInstance.patch(API_PROFILE_GROUP.updateMe, payload)
+export type UpdateOwnProfilePayload = {
+  name?: string;
+  telefono?: string | null;
+};
+
+export type ChangeMyPasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export type ProfileMutationResponse = {
+  type: "success" | "error" | string;
+  message: string;
+};
+
+export const updateOwnUser = async (payload: UpdateOwnProfilePayload) => {
+  const response = await axiosInstance.patch<ProfileMutationResponse>(API_PROFILE_GROUP.updateMe, payload)
   return response.data
 }
 

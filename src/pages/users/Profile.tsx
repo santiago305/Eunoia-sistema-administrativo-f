@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { AxiosError } from "axios";
 
 import { PageTitle } from "@/components/PageTitle";
 import { useAuth } from "@/hooks/useAuth";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { errorResponse, successResponse } from "@/common/utils/response";
+import { errorResponse, infoResponse, successResponse } from "@/common/utils/response";
 
 import {
   findOwnUser,
@@ -17,7 +18,7 @@ import {
   changeMyPassword,
 } from "@/services/userService";
 
-import type { UpdateUserDto } from "@/types/user";
+import type { CurrentUser, CurrentUserResponse } from "@/types/userProfile";
 
 /** UI helpers */
 const PRIMARY = "#21b8a6";
@@ -31,26 +32,22 @@ function getInitial(name?: string) {
   return safe ? safe[0]!.toUpperCase() : "?";
 }
 
-function normalizeUser(res: any): UpdateUserDto {
-  // Asumiendo tu servicio devuelve { data: user }
-  // Si tu backend devuelve directo user, cambia esto.
-  return (res?.data ?? res) as UpdateUserDto;
+function normalizeUser(res: CurrentUserResponse | CurrentUser): CurrentUser {
+  return "data" in res ? res.data : res;
 }
 
 /** Zod schemas */
 const profileSchema = z.object({
   name: z.string().min(2, "Nombre muy corto").max(80, "Nombre muy largo"),
-  email: z.string().email("Email inválido"),
-  phone: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
+  telefono: z.string().optional().or(z.literal("")),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const passwordSchema = z
   .object({
-    currentPassword: z.string().min(6, "Mínimo 6 caracteres"),
-    newPassword: z.string().min(8, "Mínimo 8 caracteres"),
+    currentPassword: z.string().min(1, "La contrasena actual es obligatoria"),
+    newPassword: z.string().min(8, "Mí­nimo 8 caracteres"),
     confirmNewPassword: z.string().min(8, "Mínimo 8 caracteres"),
   })
   .refine((v) => v.newPassword === v.confirmNewPassword, {
@@ -59,6 +56,47 @@ const passwordSchema = z
   });
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
+
+type BackendErrorPayload = {
+  message?: string;
+  errors?: string[];
+};
+
+function parseChangePasswordError(error: unknown) {
+  const err = error as AxiosError<BackendErrorPayload>;
+  const status = err?.response?.status;
+  const message = err?.response?.data?.message ?? "";
+  const errors = err?.response?.data?.errors ?? [];
+  const combined = [message, ...errors].filter(Boolean).join(" | ");
+  const normalized = combined
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const fieldErrors: { currentPassword?: string; newPassword?: string } = {};
+
+  if (normalized.includes("contrasena actual incorrecta")) {
+    fieldErrors.currentPassword = "Contrasena actual incorrecta.";
+  }
+  if (normalized.includes("nueva contrasena es obligatoria")) {
+    fieldErrors.newPassword = "La nueva contrasena es obligatoria.";
+  }
+  if (normalized.includes("debe tener al menos 8 caracteres")) {
+    fieldErrors.newPassword = "La nueva contrasena debe tener al menos 8 caracteres.";
+  }
+
+  return {
+    message:
+      message ||
+      (errors.length ? errors.join(" | ") : "") ||
+      (status === 401
+        ? "No autorizado para cambiar la contrasena."
+        : status === 400
+          ? "Datos invalidos para cambio de contrasena."
+          : "No se pudo cambiar la contrasena"),
+    fieldErrors,
+  };
+}
 
 export default function ProfilePage() {
   const { userId } = useAuth();
@@ -69,15 +107,13 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
 
-  const [user, setUser] = useState<UpdateUserDto | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: "",
-      email: "",
-      phone: "",
-      address: "",
+      telefono: "",
     },
     mode: "onTouched",
   });
@@ -92,16 +128,9 @@ export default function ProfilePage() {
     mode: "onTouched",
   });
 
-  const avatarUrl = useMemo(() => {
-    // Ajusta el campo real que uses: avatar, avatarUrl, photo, etc.
-    const anyUser = user as any;
-    return anyUser?.avatarUrl ?? anyUser?.avatar ?? anyUser?.photoUrl ?? "";
-  }, [user]);
+  const avatarUrl = useMemo(() => user?.avatarUrl ?? "", [user]);
 
-  const displayName = useMemo(() => {
-    const anyUser = user as any;
-    return anyUser?.name ?? anyUser?.fullName ?? anyUser?.username ?? "Usuario";
-  }, [user]);
+  const displayName = useMemo(() => user?.name ?? "Usuario", [user]);
 
   const getUser = useCallback(async () => {
     setLoading(true);
@@ -112,10 +141,8 @@ export default function ProfilePage() {
 
       // Precargar al form (sin romper si faltan campos)
       profileForm.reset({
-        name: (u as any)?.name ?? (u as any)?.fullName ?? "",
-        email: (u as any)?.email ?? "",
-        phone: (u as any)?.phone ?? "",
-        address: (u as any)?.address ?? "",
+        name: u.name ?? "",
+        telefono: u.telefono ?? "",
       });
     } catch {
       showFlash(errorResponse("Error al cargar el perfil"));
@@ -132,8 +159,25 @@ export default function ProfilePage() {
     clearFlash();
     setSavingProfile(true);
     try {
-      await updateOwnUser(values as any);
-      showFlash(successResponse("Perfil actualizado"));
+      const payload: { name?: string; telefono?: string } = {};
+      const nextName = values.name.trim();
+      const nextTelefono = (values.telefono ?? "").trim();
+
+      if (nextName !== (user?.name ?? "")) {
+        payload.name = nextName;
+      }
+
+      if (nextTelefono !== (user?.telefono ?? "")) {
+        payload.telefono = nextTelefono;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        showFlash(infoResponse("No hay cambios para guardar"));
+        return;
+      }
+
+      await updateOwnUser(payload);
+      showFlash(successResponse("Foto actualizada"));
       await getUser();
     } catch {
       showFlash(errorResponse("No se pudo actualizar el perfil"));
@@ -144,20 +188,34 @@ export default function ProfilePage() {
 
   const onSubmitPassword = passwordForm.handleSubmit(async (values) => {
     clearFlash();
+    passwordForm.clearErrors(["currentPassword", "newPassword"]);
     setSavingPassword(true);
     try {
-      await changeMyPassword({
+      const res = await changeMyPassword({
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });
-      showFlash(successResponse("Contraseña actualizada"));
+      showFlash(successResponse(res.message || "Contrasena actualizada correctamente"));
       passwordForm.reset({
         currentPassword: "",
         newPassword: "",
         confirmNewPassword: "",
       });
-    } catch {
-      showFlash(errorResponse("No se pudo cambiar la contraseña"));
+    } catch (error) {
+      const parsed = parseChangePasswordError(error);
+      if (parsed.fieldErrors.currentPassword) {
+        passwordForm.setError("currentPassword", {
+          type: "server",
+          message: parsed.fieldErrors.currentPassword,
+        });
+      }
+      if (parsed.fieldErrors.newPassword) {
+        passwordForm.setError("newPassword", {
+          type: "server",
+          message: parsed.fieldErrors.newPassword,
+        });
+      }
+      showFlash(errorResponse(parsed.message));
     } finally {
       setSavingPassword(false);
     }
@@ -195,7 +253,7 @@ export default function ProfilePage() {
     <div className="min-h-screen w-full bg-white text-black">
       <PageTitle title="Perfil" />
 
-      {/* Contenedor escalable: se ve “normal” en PC y no queda perdido en 4K */}
+      {/* Contenedor escalable: se ve â€œnormalâ€ en PC y no queda perdido en 4K */}
       <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 lg:max-w-[1280px] lg:px-8 2xl:max-w-[1600px] 2xl:px-10">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -241,10 +299,10 @@ export default function ProfilePage() {
                   </p>
                   <div className="mt-3 space-y-2">
                     <InfoRow label="Nombre" value={displayName} />
-                    <InfoRow label="Email" value={(user as any)?.email ?? "—"} />
+                    <InfoRow label="Email" value={user?.email ?? "â€”"} />
                     <InfoRow
                       label="Rol"
-                      value={(user as any)?.role ?? "—"}
+                      value={user?.role ?? "â€”"}
                     />
                   </div>
                 </div>
@@ -273,22 +331,10 @@ export default function ProfilePage() {
                       error={profileForm.formState.errors.name?.message}
                     />
                     <Field
-                      label="Email"
-                      placeholder="correo@dominio.com"
-                      {...profileForm.register("email")}
-                      error={profileForm.formState.errors.email?.message}
-                    />
-                    <Field
                       label="Teléfono"
                       placeholder="Opcional"
-                      {...profileForm.register("phone")}
-                      error={profileForm.formState.errors.phone?.message}
-                    />
-                    <Field
-                      label="Dirección"
-                      placeholder="Opcional"
-                      {...profileForm.register("address")}
-                      error={profileForm.formState.errors.address?.message}
+                      {...profileForm.register("telefono")}
+                      error={profileForm.formState.errors.telefono?.message}
                     />
                   </div>
 
@@ -327,18 +373,21 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <PasswordField
                       label="Contraseña actual"
+                      type="password"
                       placeholder="••••••••"
                       {...passwordForm.register("currentPassword")}
                       error={passwordForm.formState.errors.currentPassword?.message}
                     />
                     <PasswordField
                       label="Nueva contraseña"
+                      type="password"
                       placeholder="Mínimo 8 caracteres"
                       {...passwordForm.register("newPassword")}
                       error={passwordForm.formState.errors.newPassword?.message}
                     />
                     <PasswordField
                       label="Confirmar"
+                      type="password"
                       placeholder="Repite la nueva"
                       {...passwordForm.register("confirmNewPassword")}
                       error={passwordForm.formState.errors.confirmNewPassword?.message}
@@ -392,7 +441,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-start justify-between gap-3">
       <span className="text-xs text-black/50">{label}</span>
       <span className="text-xs font-semibold text-black/80 text-right">
-        {value || "—"}
+        {value || "â€”"}
       </span>
     </div>
   );
@@ -438,7 +487,12 @@ function AvatarBlock({
   onRemoveAvatar: () => void;
   disabled?: boolean;
 }) {
-  const hasAvatar = Boolean(avatarUrl);
+  const [imageFailed, setImageFailed] = useState(false);
+  const hasAvatar = Boolean(avatarUrl) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [avatarUrl]);
 
   return (
     <div className="flex items-center gap-4">
@@ -449,6 +503,7 @@ function AvatarBlock({
             src={avatarUrl}
             alt="Avatar"
             className="h-full w-full object-cover object-center"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div
@@ -508,3 +563,7 @@ function AvatarBlock({
     </div>
   );
 }
+
+
+
+
