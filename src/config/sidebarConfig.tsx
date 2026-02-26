@@ -1,6 +1,6 @@
 ﻿import { IconHome, IconRowMaterial, IconStock, IconUsers, IconWarehouse } from "@/components/dashboard/icons";
 import type { SidebarItem } from "@/components/dashboard/types";
-import { RoutesPaths } from "@/router/config/routesPaths";
+import { RoutesPaths } from "@/Router/config/routesPaths";
 
 export const getSidebarItems = (): SidebarItem[] => [
     {

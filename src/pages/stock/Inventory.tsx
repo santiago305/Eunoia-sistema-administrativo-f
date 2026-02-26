@@ -4,7 +4,7 @@ import * as echarts from "echarts";
 import { motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
 import { getStockMock } from "@/data/stockService";
-import { RoutesPaths } from "@/router/config/routesPaths";
+import { RoutesPaths } from "@/Router/config/routesPaths";
 
 const statusBadges = [
   { label: "Disponible", value: "78%" },

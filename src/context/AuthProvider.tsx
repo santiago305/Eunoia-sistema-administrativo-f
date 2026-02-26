@@ -8,7 +8,7 @@ import {
 import { LoginCredentials } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
 import { AuthResponse } from "@/types/AuthResponse";
-import { PropsUrl } from "@/router/guards/typeGuards";
+import { PropsUrl } from "@/Router/guards/typeGuards";
 import { getApiErrorMessage } from "@/common/utils/apiError";
 import type { AxiosError } from "axios";
 

@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { PropsUrl } from "@/router/guards/typeGuards";
+import { PropsUrl } from "@/Router/guards/typeGuards";
 import { RoutesPaths } from "../config/routesPaths";
 
 /**
