@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { AxiosError } from "axios";
 
 import { PageTitle } from "@/components/PageTitle";
+import { env } from "@/env";
 import { useAuth } from "@/hooks/useAuth";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, infoResponse, successResponse } from "@/common/utils/response";
@@ -128,7 +129,17 @@ export default function ProfilePage() {
     mode: "onTouched",
   });
 
-  const avatarUrl = useMemo(() => user?.avatarUrl ?? "", [user]);
+  const avatarUrl = useMemo(() => {
+    const raw = user?.avatarUrl?.trim();
+    if (!raw) return "";
+    if (/^https?:\/\//i.test(raw)) return raw;
+
+    try {
+      return new URL(raw, env.apiBaseUrl).toString();
+    } catch {
+      return raw;
+    }
+  }, [user?.avatarUrl]);
 
   const displayName = useMemo(() => user?.name ?? "Usuario", [user]);
 
@@ -136,6 +147,7 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       const res = await findOwnUser();
+      console.log("[Profile] GET /users/me response:", res);
       const u = normalizeUser(res);
       setUser(u);
 
@@ -144,7 +156,8 @@ export default function ProfilePage() {
         name: u.name ?? "",
         telefono: u.telefono ?? "",
       });
-    } catch {
+    } catch (error) {
+      console.log("[Profile] GET /users/me error:", error);
       showFlash(errorResponse("Error al cargar el perfil"));
     } finally {
       setLoading(false);
@@ -176,10 +189,13 @@ export default function ProfilePage() {
         return;
       }
 
-      await updateOwnUser(payload);
-      showFlash(successResponse("Foto actualizada"));
+      const res = await updateOwnUser(payload);
+      console.log("[Profile] PATCH /users/me/update payload:", payload);
+      console.log("[Profile] PATCH /users/me/update response:", res);
+      showFlash(successResponse(res.message || "Perfil actualizado"));
       await getUser();
-    } catch {
+    } catch (error) {
+      console.log("[Profile] PATCH /users/me/update error:", error);
       showFlash(errorResponse("No se pudo actualizar el perfil"));
     } finally {
       setSavingProfile(false);
@@ -195,6 +211,7 @@ export default function ProfilePage() {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });
+      console.log("[Profile] PATCH /users/me/change-password response:", res);
       showFlash(successResponse(res.message || "Contrasena actualizada correctamente"));
       passwordForm.reset({
         currentPassword: "",
@@ -202,6 +219,7 @@ export default function ProfilePage() {
         confirmNewPassword: "",
       });
     } catch (error) {
+      console.log("[Profile] PATCH /users/me/change-password error:", error);
       const parsed = parseChangePasswordError(error);
       if (parsed.fieldErrors.currentPassword) {
         passwordForm.setError("currentPassword", {
@@ -225,10 +243,17 @@ export default function ProfilePage() {
     clearFlash();
     setSavingAvatar(true);
     try {
-      await updateMyAvatar(file);
+      const res = await updateMyAvatar(file);
+      console.log("[Profile] POST /users/me/avatar file:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+      console.log("[Profile] POST /users/me/avatar response:", res);
       showFlash(successResponse("Foto actualizada"));
       await getUser();
-    } catch {
+    } catch (error) {
+      console.log("[Profile] POST /users/me/avatar error:", error);
       showFlash(errorResponse("No se pudo actualizar la foto"));
     } finally {
       setSavingAvatar(false);
@@ -239,10 +264,12 @@ export default function ProfilePage() {
     clearFlash();
     setSavingAvatar(true);
     try {
-      await removeMyAvatar();
+      const res = await removeMyAvatar();
+      console.log("[Profile] DELETE /users/me/avatar response:", res);
       showFlash(successResponse("Foto eliminada"));
       await getUser();
-    } catch {
+    } catch (error) {
+      console.log("[Profile] DELETE /users/me/avatar error:", error);
       showFlash(errorResponse("No se pudo eliminar la foto"));
     } finally {
       setSavingAvatar(false);
