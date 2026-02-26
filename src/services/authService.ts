@@ -3,11 +3,8 @@ import { getApiErrorMessage } from "@/common/utils/apiError";
 import { API_AUTH_GROUP } from "./APIs";
 import { LoginCredentials } from "@/types/auth";
 
-interface AuthService {
-  access_token: string;
-  refresh_token?: string;
-  role: string;
-  [key: string]: unknown;
+export interface LoginApiSuccessResponse {
+  message: string;
 }
 
 export interface UserInfoAuthResponse {
@@ -30,7 +27,9 @@ const getDeviceNameHeader = () => {
   return platform || "Unknown device";
 };
 
-export const loginUser = async (payload: LoginCredentials): Promise<AuthService> => {
+export const loginUser = async (
+  payload: LoginCredentials
+): Promise<LoginApiSuccessResponse> => {
   const response = await axiosInstance.post(API_AUTH_GROUP.authentication, payload, {
     headers: {
       "x-device-name": getDeviceNameHeader(),

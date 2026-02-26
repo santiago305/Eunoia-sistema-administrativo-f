@@ -22,6 +22,8 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const {
     register,
     handleSubmit,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<LoginCredentials>({
     resolver: zodResolver(LoginSchema),
@@ -74,6 +76,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
     }
 
     clearFlash();
+    clearErrors(["email", "password"]);
     setSubmitting(true);
     try {
       const response = await login(data);
@@ -93,6 +96,12 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
           showFlash(errorResponse("Cuenta bloqueada. Intenta nuevamente en 1 minuto"));
           setLockSeconds(60);
         } else {
+          if (response.data?.fieldErrors?.email) {
+            setError("email", { type: "server", message: response.data.fieldErrors.email });
+          }
+          if (response.data?.fieldErrors?.password) {
+            setError("password", { type: "server", message: response.data.fieldErrors.password });
+          }
           showFlash(errorResponse(response.message));
         }
       }
