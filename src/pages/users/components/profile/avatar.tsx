@@ -3,7 +3,7 @@ import type { UpdateUserDto } from "@/types/user";
 import { getInitials } from "@/utils/getInitials";
 import { useMemo, useState, type ChangeEvent } from "react";
 import { env } from "@/env";
-import { removeAvatar, updateAvatar } from "@/services/userService";
+import { removeMyAvatar, updateMyAvatar } from "@/services/userService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 
@@ -29,12 +29,11 @@ const AvatarPhoto = ({ getUser, user }: Props) => {
     const onAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
         clearFlash();
         const file = event.target.files?.[0];
-        const userId = (user as { id?: string })?.id;
-        if (!file || !userId) return;
+        if (!file) return;
 
         try {
             setUploading(true);
-            await updateAvatar(userId, file);
+            await updateMyAvatar(file);
             await getUser?.();
             showFlash(successResponse("Foto de perfil actualizada"));
         } catch {
@@ -47,7 +46,7 @@ const AvatarPhoto = ({ getUser, user }: Props) => {
 
     const onRemoveAvatar = async()=> {
         try {
-            const res = await removeAvatar();
+            const res = await removeMyAvatar();
             if(res?.type === 'success'){
                 showFlash(successResponse("Foto removida con exito"));
                 getUser?.();

@@ -19,7 +19,7 @@ const ErrorPage = lazy(() => import("@/pages/Error404"));
 const Dashboard = lazy(() => import("@/pages/dashboard/Index"));
 const Users = lazy(() => import("@/pages/users/Users"));
 const CreateUser = lazy(() => import("@/pages/users/CreateU"));
-const Profile = lazy(() => import("@/pages/users/Profile"));
+const ProfilePage = lazy(() => import("@/pages/users/Profile"));
 const Sessions = lazy(() => import("@/pages/users/Sessions"));
 
 const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
@@ -63,7 +63,7 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.profile,
-                element: <Profile />, 
+                element: <ProfilePage />, 
             },
             {
                 path: RoutesPaths.sessions,

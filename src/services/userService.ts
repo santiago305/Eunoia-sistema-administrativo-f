@@ -1,6 +1,10 @@
 import axiosInstance from "@/common/utils/axios"
-import { API_AUTH_GROUP, API_SESSIONS_GROUP, API_USERS_GROUP } from "./APIs"
+import { API_AUTH_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
 import { CreateUserDto, UpdateUserDto } from "@/types/user"
+
+// ----------------------------------------
+// USUARIOS (ADMIN)
+// ----------------------------------------
 
 /**
  * Crea un nuevo usuario.
@@ -38,6 +42,10 @@ export const findDesactive = async (params: {
   return response.data;
 };
 
+// ----------------------------------------
+// USUARIOS (ADMIN) - AVATAR / PASSWORD POR ID
+// ----------------------------------------
+
 export const updateAvatar = async (id: string, file: File) => {
   const formData = new FormData();
   formData.append("avatar", file); 
@@ -45,16 +53,26 @@ export const updateAvatar = async (id: string, file: File) => {
   const response = await axiosInstance.post(
     API_USERS_GROUP.updateAvatar(id),
     formData,
-    { headers: { "Content-Type": "multipart/form-data" } }
   );
 
   return response.data;
 };
 
-export const removeAvatar = async () => {
-  const response = await axiosInstance.get(
-    API_USERS_GROUP.removeAvatar
+
+export const updateMyAvatar = async (file: File) => {
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const response = await axiosInstance.post(
+    API_PROFILE_GROUP.avatarMe,
+    formData,
   );
+
+  return response.data;
+};
+
+export const removeMyAvatar = async () => {
+  const response = await axiosInstance.delete(API_PROFILE_GROUP.avatarMe);
   return response.data;
 };
 
@@ -69,6 +87,24 @@ export const changePassword = async (
   return response.data;
 };
 
+// ----------------------------------------
+// PERFIL (ME)
+// ----------------------------------------
+
+export const changeMyPassword = async (
+  payload: { currentPassword: string; newPassword: string }
+) => {
+  const response = await axiosInstance.patch(
+    API_PROFILE_GROUP.changePasswordMe,
+    payload
+  );
+  return response.data;
+};
+
+// ----------------------------------------
+// AUTH (VERIFICACION)
+// ----------------------------------------
+
 export const verifyPassword = async (
   payload: { currentPassword: string; }
 ) => {
@@ -78,6 +114,10 @@ export const verifyPassword = async (
   );
   return response.data;
 };
+
+// ----------------------------------------
+// USUARIOS (ADMIN)
+// ----------------------------------------
 
 
 /**
@@ -121,7 +161,12 @@ export const findByEmail = async (email: string) => {
  * @returns {Promise<any>} Datos del usuario autenticado.
  */
 export const findOwnUser = async () => {
-  const response = await axiosInstance.get(API_USERS_GROUP.findOwnUser)
+  const response = await axiosInstance.get(API_PROFILE_GROUP.me)
+  return response.data
+}
+
+export const updateOwnUser = async (payload: UpdateUserDto) => {
+  const response = await axiosInstance.patch(API_PROFILE_GROUP.updateMe, payload)
   return response.data
 }
 

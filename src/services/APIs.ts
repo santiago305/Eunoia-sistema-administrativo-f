@@ -29,6 +29,13 @@ export const API_USERS_GROUP = {
   removeAvatar: (id: string) => `/users/remove-avatar/${id}`,
   changePassword: (id: string) => `/users/change-password/${id}`,
 };
+
+export const API_PROFILE_GROUP = {
+  me: "/users/me",
+  updateMe: "/users/me/update",
+  changePasswordMe: "/users/me/change-password",
+  avatarMe: "/users/me/avatar",
+};
 export const API_ROLES_GROUP = {
   findAll: "/roles",
 };

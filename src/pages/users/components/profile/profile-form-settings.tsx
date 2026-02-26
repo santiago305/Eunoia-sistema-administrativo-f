@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { updateUser } from "@/services/userService";
+import { updateOwnUser } from "@/services/userService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { UpdateUserDto } from "@/types/user";
@@ -45,7 +45,7 @@ const ProfileForm = ({ onRequestVerify, getUser, user }: Props) => {
             return;
         }
         try {
-            const res = await updateUser(userId, data);
+            const res = await updateOwnUser(data);
             if(res?.type === "success"){
                 showFlash(successResponse("Campo actualizado correctamente"));
             }else{
