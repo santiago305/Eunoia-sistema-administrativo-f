@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
-import { FilterableSelect } from "@/components/SelectFilterable";
 import { useProducts } from "@/hooks/useProducts";
-import { createProductEquivalence, deleteProductEquivalence, listProductEquivalences } from "@/services/equivalenceService";
+import { listProductEquivalences } from "@/services/equivalenceService";
 import { getProductById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -17,7 +16,7 @@ import type { ListProductsQuery, ProductForm } from "@/types/product";
 import { listProductRecipes } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/types/productRecipe";
 import { RecipeFormFields } from "./components/RecipeFormFields";
-import { Variant } from "@/types/variant";
+import type { PrimaVariant } from "@/types/variant";
 import { listRowMaterials, listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
@@ -48,7 +47,7 @@ export default function CatalogProducts() {
     const [sku, setSku] = useState<string | null>(null);
     const [recipes, setRecipes] = useState<ProductRecipe[]>([]);
     const [loadingRecipes, setLoadingRecipes] = useState(false);
-    const [primaVariants, setPrimaVariants] = useState<Variant[]>([]);
+    const [primaVariants, setPrimaVariants] = useState<PrimaVariant[]>([]);
     const [variantsProduct, setVariantsProduct] = useState<{ id: string; name: string } | null>(null);
     const [variants, setVariants] = useState<any[]>([]);
     const [variantsLoading, setVariantsLoading] = useState(false);
@@ -92,17 +91,23 @@ export default function CatalogProducts() {
         }
         setRecipeVariantId(id);
         setSku(sku);
-        if (primaVariants.length === 0) {
-            void loadPrimaVariants();
-        }
+
+        void loadPrimaVariants();
         void loadRecipes(id);
     };
 
     const loadPrimaVariants = async () => {
         try {
             const result = await listRowMaterials();
-            const items = Array.isArray(result) ? result : Array.isArray(result?.items) ? result.items : [];
-            setPrimaVariants(items as Variant[]);
+            const normalized = (result ?? [])
+                .map((row) => ({
+                    ...row,
+                    id: row.id ?? row.primaId ?? "",
+                    isActive: row.isActive ?? true,
+                }))
+                .filter((row) => row.id);
+            setPrimaVariants(normalized);
+            console.log("Prima variants loaded:", result);
         } catch {
             setPrimaVariants([]);
             showFlash(errorResponse("Error al cargar variantes PRIMA"));
@@ -560,7 +565,6 @@ export default function CatalogProducts() {
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/40">?</span>
                         </div>
                     </div>
                 </motion.section>
@@ -656,9 +660,8 @@ export default function CatalogProducts() {
                                                                 className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03] disabled:opacity-50"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    openRecipes(product.primaDefaultVariantId ?? "", product.sku ?? "-");
+                                                                    openRecipes( product.id, product.sku ?? "-");
                                                                 }}
-                                                                disabled={!product.primaDefaultVariantId}
                                                             >
                                                                 Recetas
                                                             </button>
@@ -739,8 +742,7 @@ export default function CatalogProducts() {
                                                     </button>
                                                     <button
                                                         className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03] disabled:opacity-50"
-                                                        onClick={() => openRecipes(product.primaDefaultVariantId ?? "", product.sku ?? "-")}
-                                                        disabled={!product.primaDefaultVariantId}
+                                                        onClick={() => openRecipes( product.id , product.sku ?? "-")}
                                                     >
                                                         Recetas
                                                     </button>
