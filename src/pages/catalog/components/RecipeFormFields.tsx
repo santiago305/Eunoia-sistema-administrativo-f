@@ -2,7 +2,7 @@ import { FilterableSelect } from "@/components/SelectFilterable";
 import { createProductRecipe, deleteProductRecipe } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/types/productRecipe";
 import { ListUnitResponse } from "@/types/unit";
-import type { Variant } from "@/types/variant";
+import type { PrimaVariant } from "@/types/variant";
 import { Power } from "lucide-react";
 import { useState } from "react";
 
@@ -16,7 +16,7 @@ export function RecipeFormFields({
 }: {
     finishedVariantId: string;
     units?: ListUnitResponse;
-    primaVariants: Variant[];
+    primaVariants: PrimaVariant[];
     recipes: ProductRecipe[];
     loading: boolean;
     onCreated: () => Promise<void>;
@@ -25,10 +25,10 @@ export function RecipeFormFields({
     const PRIMARY = "#21b8a6";
     const [primaVariantId, setPrimaVariantId] = useState("");
     const [quantity, setQuantity] = useState("1");
-    const activePrimaVariants = (primaVariants ?? []).filter((v) => v.isActive);
+    const activePrimaVariants = (primaVariants ?? []).filter((v) => v.isActive !== false);
 
     const primaVariantOptions = (activePrimaVariants ?? []).map((v) => ({
-        value: v.id,
+        value: v.id ?? "",
         label: `${v.productName ?? "Producto"} (${v.sku})`,
     }));
 
@@ -80,7 +80,7 @@ export function RecipeFormFields({
                 </label>
                 <label className="text-sm">
                     <div className="mb-2">Cantidad</div>
-                    <input type="number" min="0" step="0.0001" className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+                    <input type="number" min="0" step="1" className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
                 </label>
                 <button
                     type="button"
@@ -105,9 +105,8 @@ export function RecipeFormFields({
                         <thead className="sticky top-0 bg-white z-10">
                             <tr className="border-b border-black/10 text-xs text-black/60">
                                 <th className="py-2 px-5 text-left">Materia prima</th>
-                                <th className="py-2 px-5 text-center">Cantidad</th>
-                                <th className="py-2 px-5 text-right">Unidad base</th>
-                                <th></th>
+                                <th className="py-2 px-5 text-left">Consumo</th>
+                                <th className="py-2 px-5 text-left"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -119,9 +118,10 @@ export function RecipeFormFields({
                                         : ((units ?? []).find((u) => u.id === prima?.baseUnitId)?.name ?? (prima?.baseUnitId ? prima.baseUnitId : r.primaVariantId));
                                 return (
                                     <tr key={r.id} className="border-b border-black/5">
-                                        <td className="py-2 px-5">{prima ? `${prima.productName ?? "Producto"} (${prima.sku})` : r.primaVariantId}</td>
-                                        <td className="py-2 px-5 text-center">{r.quantity}</td>
-                                        <td className="py-2 px-5 text-right">{unitLabel}</td>
+                                        <td className="py-2 px-5 text-left">{prima ? `${prima.productName ?? "Producto"} (${prima.sku})` : r.primaVariantId}</td>
+                                        <td className="py-2 px-5 text-left">
+                                            {r.quantity} - {unitLabel}
+                                        </td>
                                         <td>
                                             <button
                                                 className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"

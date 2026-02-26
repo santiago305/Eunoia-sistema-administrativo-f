@@ -8,13 +8,14 @@ import {
   UpdateVariantActiveDto,
   UpdateVariantDto,
   Variant,
+  PrimaVariant,
 } from "@/types/variant";
 
 export const listVariants = async (params: ListVariantsQuery): Promise<ListVariantsResponse> => {
   const res = await axiosInstance.get(API_VARIANTS_GROUP.list, { params });
   return res.data;
 };
-export const listRowMaterials = async (): Promise<any> => {
+export const listRowMaterials = async (): Promise<PrimaVariant[]> => {
   const res = await axiosInstance.get(API_VARIANTS_GROUP.listRowMaterials);
   return res.data;
 };

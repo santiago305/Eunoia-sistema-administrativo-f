@@ -34,6 +34,30 @@ export type ListVariantsResponse = {
   limit: number;
 };
 
+export type PrimaVariant = {
+  id?: string;
+  primaId?: string;
+  sku?: string;
+  productName?: string;
+  productDescription?: string;
+  unitCode?: string;
+  unitName?: string;
+  baseUnitId?: string;
+  isActive?: boolean;
+};
+
+export type ProductOption = { productId: string; name: string };
+export type VariantForm = {
+  productId: string;
+  barcode: string;
+  price: string;
+  cost: string;
+  attribute: "" | "presentation" | "variant" | "color";
+  attributeValue: string;
+  isActive: boolean;
+};
+
+
 export type CreateVariantResponse = {
   message: string;
   type: string;
