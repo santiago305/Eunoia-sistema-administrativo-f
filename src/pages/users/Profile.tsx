@@ -147,7 +147,6 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       const res = await findOwnUser();
-      console.log("[Profile] GET /users/me response:", res);
       const u = normalizeUser(res);
       setUser(u);
 
@@ -156,8 +155,7 @@ export default function ProfilePage() {
         name: u.name ?? "",
         telefono: u.telefono ?? "",
       });
-    } catch (error) {
-      console.log("[Profile] GET /users/me error:", error);
+    } catch {
       showFlash(errorResponse("Error al cargar el perfil"));
     } finally {
       setLoading(false);
@@ -190,12 +188,9 @@ export default function ProfilePage() {
       }
 
       const res = await updateOwnUser(payload);
-      console.log("[Profile] PATCH /users/me/update payload:", payload);
-      console.log("[Profile] PATCH /users/me/update response:", res);
       showFlash(successResponse(res.message || "Perfil actualizado"));
       await getUser();
-    } catch (error) {
-      console.log("[Profile] PATCH /users/me/update error:", error);
+    } catch {
       showFlash(errorResponse("No se pudo actualizar el perfil"));
     } finally {
       setSavingProfile(false);
@@ -211,7 +206,6 @@ export default function ProfilePage() {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });
-      console.log("[Profile] PATCH /users/me/change-password response:", res);
       showFlash(successResponse(res.message || "Contrasena actualizada correctamente"));
       passwordForm.reset({
         currentPassword: "",
@@ -219,7 +213,6 @@ export default function ProfilePage() {
         confirmNewPassword: "",
       });
     } catch (error) {
-      console.log("[Profile] PATCH /users/me/change-password error:", error);
       const parsed = parseChangePasswordError(error);
       if (parsed.fieldErrors.currentPassword) {
         passwordForm.setError("currentPassword", {
@@ -244,16 +237,9 @@ export default function ProfilePage() {
     setSavingAvatar(true);
     try {
       const res = await updateMyAvatar(file);
-      console.log("[Profile] POST /users/me/avatar file:", {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      });
-      console.log("[Profile] POST /users/me/avatar response:", res);
       showFlash(successResponse("Foto actualizada"));
       await getUser();
-    } catch (error) {
-      console.log("[Profile] POST /users/me/avatar error:", error);
+    } catch {
       showFlash(errorResponse("No se pudo actualizar la foto"));
     } finally {
       setSavingAvatar(false);
@@ -265,11 +251,9 @@ export default function ProfilePage() {
     setSavingAvatar(true);
     try {
       const res = await removeMyAvatar();
-      console.log("[Profile] DELETE /users/me/avatar response:", res);
       showFlash(successResponse("Foto eliminada"));
       await getUser();
-    } catch (error) {
-      console.log("[Profile] DELETE /users/me/avatar error:", error);
+    } catch {
       showFlash(errorResponse("No se pudo eliminar la foto"));
     } finally {
       setSavingAvatar(false);
