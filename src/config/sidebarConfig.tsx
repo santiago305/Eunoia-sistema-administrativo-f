@@ -91,7 +91,6 @@ export const getSidebarItems = (): SidebarItem[] => [
     },
     {
         label: "Contactos",
-        href: RoutesPaths.contacts,
         icon: <IconUsers className="text-sidebar-foreground" />,
         children: [
             {

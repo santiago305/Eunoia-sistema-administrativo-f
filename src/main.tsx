@@ -25,7 +25,7 @@ import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { RouterProvider } from "react-router-dom";
-import { router } from "./router/Router.tsx";
+import { router } from "./Router/Router.tsx";
 import { HelmetProvider } from "react-helmet-async";
 import "./globals.css";
 import "./app.css";

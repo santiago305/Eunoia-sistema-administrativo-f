@@ -8,7 +8,7 @@
  * @module DashboardRoutes
  */
 
-import { lazy } from "react";
+import { lazy, ReactElement } from "react";
 import { RouteObject } from "react-router-dom";
 import PrivateRoute from "../guards/PrivateRoute";
 import { getRouteMetaByPath } from "../config/routesConfig";
@@ -38,7 +38,12 @@ const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/Locations"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
-const Providers = lazy(() => import("@/pages/providers/providers"));
+const Providers = lazy(() => import("@/pages/providers/Providers"));
+
+const withRouteGuard = (path: string, element: ReactElement) => {
+    const routeMeta = getRouteMetaByPath(path);
+    return <PrivateRoute rolesAllowed={routeMeta?.rolesAllowed}>{element}</PrivateRoute>;
+};
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -55,87 +60,87 @@ export const dashboardRoutes: RouteObject[] = [
             { index: true, element: <Dashboard/> }, 
             {
                 path: RoutesPaths.users,
-                element: <Users />, 
+                element: withRouteGuard(RoutesPaths.users, <Users />), 
             },
             {
                 path: RoutesPaths.createUser,
-                element: <CreateUser />, 
+                element: withRouteGuard(RoutesPaths.createUser, <CreateUser />), 
             },
             {
                 path: RoutesPaths.profile,
-                element: <ProfilePage />, 
+                element: withRouteGuard(RoutesPaths.profile, <ProfilePage />), 
             },
             {
                 path: RoutesPaths.sessions,
-                element: <Sessions />, 
+                element: withRouteGuard(RoutesPaths.sessions, <Sessions />), 
             },
             {
                 path: RoutesPaths.stockSummary,
-                element: <StockSummary />,
+                element: withRouteGuard(RoutesPaths.stockSummary, <StockSummary />),
             },
             {
                 path: RoutesPaths.stockInventory,
-                element: <StockInventory />,
+                element: withRouteGuard(RoutesPaths.stockInventory, <StockInventory />),
             },
             {
                 path: RoutesPaths.stockMovements,
-                element: <StockMovements />,
+                element: withRouteGuard(RoutesPaths.stockMovements, <StockMovements />),
             },
             {
                 path: RoutesPaths.stockDocuments,
-                element: <StockDocuments />,
+                element: withRouteGuard(RoutesPaths.stockDocuments, <StockDocuments />),
             },
             {
                 path: RoutesPaths.stockTransfers,
-                element: <StockTransfers />,
+                element: withRouteGuard(RoutesPaths.stockTransfers, <StockTransfers />),
             },
             {
                 path: RoutesPaths.stockAdjustments,
-                element: <StockAdjustments />,
+                element: withRouteGuard(RoutesPaths.stockAdjustments, <StockAdjustments />),
             },
             {
                 path: RoutesPaths.stockSeriesTypes,
-                element: <StockSeriesTypes />,
+                element: withRouteGuard(RoutesPaths.stockSeriesTypes, <StockSeriesTypes />),
             },
             {
                 path: RoutesPaths.stockReservations,
-                element: <StockReservations />,
+                element: withRouteGuard(RoutesPaths.stockReservations, <StockReservations />),
             },
             {
                 path: RoutesPaths.stockReplenishment,
-                element: <StockReplenishment />,
+                element: withRouteGuard(RoutesPaths.stockReplenishment, <StockReplenishment />),
             },
             {
                 path: RoutesPaths.catalogProducts,
-                element: <CatalogProducts />,
+                element: withRouteGuard(RoutesPaths.catalogProducts, <CatalogProducts />),
             },
             {
                 path: RoutesPaths.catalogSummary,
-                element: <CatalogSummary />,
+                element: withRouteGuard(RoutesPaths.catalogSummary, <CatalogSummary />),
             },
             {
                 path: RoutesPaths.catalogVariants,
-                element: <CatalogVariants />,
+                element: withRouteGuard(RoutesPaths.catalogVariants, <CatalogVariants />),
             },
             {
                 path: RoutesPaths.warehouses,
-                element: <Warehouses/>,
+                element: withRouteGuard(RoutesPaths.warehouses, <Warehouses/>),
             },
             {
                 path: RoutesPaths.location,
-                element: <Locations/>,
+                element: withRouteGuard(RoutesPaths.location, <Locations/>),
             },
             {
                 path: RoutesPaths.rowMaterialSummary,
-                element: <RowMaterialSummary/>,
+                element: withRouteGuard(RoutesPaths.rowMaterialSummary, <RowMaterialSummary/>),
             },
             {
                 path: RoutesPaths.rowMaterial,
-                element: <RowMaterial/>,
+                element: withRouteGuard(RoutesPaths.rowMaterial, <RowMaterial/>),
             },
             {
                 path: RoutesPaths.providers,
-                element: <Providers/>,
+                element: withRouteGuard(RoutesPaths.providers, <Providers/>),
             }
         ],
     },

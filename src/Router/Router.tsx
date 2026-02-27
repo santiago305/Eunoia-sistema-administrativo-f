@@ -21,9 +21,14 @@
 import { createBrowserRouter } from "react-router-dom";
 import { authRoutes } from "./modules/AuthRoutes";
 import { dashboardRoutes } from "./modules/DashboardRoutes";
+import ErrorPage from "@/pages/Error404";
 
 
 export const router = createBrowserRouter([
   ...authRoutes,
   ...dashboardRoutes,
+  {
+    path: "*",
+    element: <ErrorPage />,
+  },
 ]);
