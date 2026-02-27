@@ -38,8 +38,11 @@ export type ProductForm = {
     barcode: string;
     price: string;
     cost: string;
-    attribute: "" | "presentation" | "variant" | "color";
-    attributeValue: string;
+    attribute: {
+      presentation?: string,
+      color?:string,
+      variant?:string
+    }
     baseUnitId: string;
 };
 

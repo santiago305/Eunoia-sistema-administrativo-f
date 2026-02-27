@@ -14,7 +14,7 @@ import type { ProductEquivalence } from "@/types/equivalence";
 import type { ListUnitResponse } from "@/types/unit";
 import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
 import { ProductFormFields } from "../catalog/components/ProductFormField";
-import { ProductForm } from "@/types/product";
+import { ListProductsQuery, ProductForm } from "@/types/product";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -44,8 +44,7 @@ export default function RowMaterial() {
     barcode: "",
     price: "",
     cost: "",
-    attribute: "",
-    attributeValue: "",
+    attribute: {},
     baseUnitId: "",
   });
   const [page, setPage] = useState(1);
@@ -133,8 +132,7 @@ export default function RowMaterial() {
       barcode: "",
       price: "",
       cost: "",
-      attribute: "",
-      attributeValue: "",
+      attribute: {},
       baseUnitId: "",
     });
     setEditingProductId(null);
@@ -146,21 +144,18 @@ export default function RowMaterial() {
     try {
       const product = await getProductById(productId);
       setForm({
-        name: product.name,
-        description: product.description ?? "",
-        isActive: product.isActive,
-        barcode: product.barcode ?? "",
-        price: product.price ? String(product.price) : "",
-        cost: product.cost ? String(product.cost) : "",
-        attribute: product.attributes?.variant
-          ? "variant"
-          : product.attributes?.color
-          ? "color"
-          : product.attributes?.presentation
-          ? "presentation"
-          : "",
-        attributeValue: product.attributes?.variant ?? product.attributes?.color ?? product.attributes?.presentation ?? "",
-        baseUnitId: product.baseUnitId ?? "",
+          name: product.name,
+          description: product.description ?? "",
+          isActive: product.isActive,
+          barcode: product.barcode ?? "",
+          price: product.price ? String(product.price) : "",
+          cost: product.cost ? String(product.cost) : "",
+          attribute: {
+              presentation: product.attributes?.variant,
+              color: product.attributes?.color,
+              variant: product.attributes?.presentation
+          },
+          baseUnitId: product.baseUnitId ?? "",
       });
       setOpenCreate(false);
       setEditingProductId(productId);
@@ -173,8 +168,6 @@ export default function RowMaterial() {
     if (!form.name.trim()) return;
     clearFlash();
     try {
-      const attributes: Record<string, string> = {};
-      if (form.attribute && form.attributeValue.trim()) attributes[form.attribute] = form.attributeValue.trim();
       if (editingProductId) {
         await update(editingProductId, {
           name: form.name.trim() || undefined,
@@ -183,7 +176,7 @@ export default function RowMaterial() {
           price: Number(form.price) || 0,
           cost: Number(form.cost) || 0,
           baseUnitId: form.baseUnitId,
-          attributes: Object.keys(attributes).length ? attributes : undefined,
+          attributes: form.attribute,
         });
         await setActive(editingProductId, form.isActive);
         setEditingProductId(null);
@@ -198,7 +191,7 @@ export default function RowMaterial() {
           price: Number(form.price) || 0,
           cost: Number(form.cost) || 0,
           baseUnitId: form.baseUnitId,
-          attributes: Object.keys(attributes).length ? attributes : undefined,
+          attributes: form.attribute,
         });
         setOpenCreate(false);
         showFlash(successResponse("Materia prima creada"));
@@ -717,7 +710,7 @@ export default function RowMaterial() {
       {/* MODALES */}
       {openCreate && (
           <Modal title="Nueva materia prima" onClose={() => setOpenCreate(false)} className="max-w-[700px]">
-              <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} />
+              <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} primaBoolean={true} />
               <div className="mt-4 flex justify-end gap-2">
                   <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
                       Cancelar

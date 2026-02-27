@@ -4,8 +4,9 @@ import { ListUnitResponse } from "@/types/unit";
 import { Dispatch, SetStateAction } from "react";
 
 
- export function ProductFormFields({ form, setForm, units, PRIMARY }: { form: ProductForm; setForm: Dispatch<SetStateAction<ProductForm>>; units?: ListUnitResponse
-    ,PRIMARY : string
+ export function ProductFormFields({ form, setForm, units, PRIMARY, primaBoolean = false }:
+     { form: ProductForm; setForm: Dispatch<SetStateAction<ProductForm>>; units?: ListUnitResponse
+    ,PRIMARY : string , primaBoolean?: boolean
   }) {
     const unitOptions = (units ?? []).map((u) => ({
         value: u.id,
@@ -57,58 +58,87 @@ import { Dispatch, SetStateAction } from "react";
                     />
                 </label>
             </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {!primaBoolean && (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="text-sm">
+                        Precio (S/)
+                        <div className="mt-2 relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
+                            <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                inputMode="decimal"
+                                className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
+                                value={form.price}
+                                onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
+                            />
+                        </div>
+                    </label>
+                    <label className="text-sm">
+                        Costo (S/)
+                        <div className="mt-2 relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
+                            <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                inputMode="decimal"
+                                className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
+                                value={form.cost}
+                                onChange={(event) => setForm((prev) => ({ ...prev, cost: event.target.value }))}
+                            />
+                        </div>
+                    </label>
+                </div>
+            )}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <label className="text-sm">
-                    Precio (S/)
-                    <div className="mt-2 relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
-                            value={form.price}
-                            onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
-                        />
-                    </div>
-                </label>
-                <label className="text-sm">
-                    Costo (S/)
-                    <div className="mt-2 relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-black/50">S/</span>
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            className="h-10 w-full rounded-lg border border-black/10 pl-10 pr-3 text-sm"
-                            value={form.cost}
-                            onChange={(event) => setForm((prev) => ({ ...prev, cost: event.target.value }))}
-                        />
-                    </div>
-                </label>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <label className="text-sm">
-                    Atributo
-                    <select
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                        value={form.attribute}
-                        onChange={(event) => setForm((prev) => ({ ...prev, attribute: event.target.value as ProductForm["attribute"] }))}
-                    >
-                        <option value="">Seleccionar</option>
-                        <option value="presentation">Presentación</option>
-                        <option value="variant">Variante</option>
-                        <option value="color">Color</option>
-                    </select>
-                </label>
-                <label className="text-sm">
-                    Valor
+                    Presentación
                     <input
                         className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                        value={form.attributeValue}
-                        onChange={(event) => setForm((prev) => ({ ...prev, attributeValue: event.target.value }))}
+                        value={form.attribute?.presentation ?? ""}
+                        onChange={(event) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                attribute: {
+                                    ...prev.attribute,
+                                    presentation: event.target.value,
+                                },
+                            }))
+                        }
+                    />
+                </label>
+                <label className="text-sm">
+                    Variante
+                    <input
+                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        value={form.attribute?.variant ?? ""}
+                        onChange={(event) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                attribute: {
+                                    ...prev.attribute,
+                                    variant: event.target.value,
+                                },
+                            }))
+                        }
+                    />
+                </label>
+                <label className="text-sm">
+                    Color
+                    <input
+                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        value={form.attribute?.color ?? ""}
+                        onChange={(event) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                attribute: {
+                                    ...prev.attribute,
+                                    color: event.target.value,
+                                },
+                            }))
+                        }
                     />
                 </label>
             </div>

@@ -60,8 +60,7 @@ export default function CatalogProducts() {
         barcode: "",
         price: "",
         cost: "",
-        attribute: "",
-        attributeValue: "",
+        attribute: {},
         baseUnitId: "",
     });
 
@@ -196,8 +195,7 @@ export default function CatalogProducts() {
             barcode: "",
             price: "",
             cost: "",
-            attribute: "",
-            attributeValue: "",
+            attribute: {},
             baseUnitId: "",
         });
         setEditingProductId(null);
@@ -215,8 +213,11 @@ export default function CatalogProducts() {
                 barcode: product.barcode ?? "",
                 price: product.price ? String(product.price) : "",
                 cost: product.cost ? String(product.cost) : "",
-                attribute: product.attributes?.variant ? "variant" : product.attributes?.color ? "color" : product.attributes?.presentation ? "presentation" : "",
-                attributeValue: product.attributes?.variant ?? product.attributes?.color ?? product.attributes?.presentation ?? "",
+                attribute: {
+                    presentation: product.attributes?.variant,
+                    color: product.attributes?.color,
+                    variant: product.attributes?.presentation,
+                },
                 baseUnitId: product.baseUnitId ?? "",
             });
             setOpenCreate(false);
@@ -230,8 +231,6 @@ export default function CatalogProducts() {
         if (!form.name.trim()) return;
         clearFlash();
         try {
-            const attributes: Record<string, string> = {};
-            if (form.attribute && form.attributeValue.trim()) attributes[form.attribute] = form.attributeValue.trim();
             if (editingProductId) {
                 await update(editingProductId, {
                     name: form.name.trim() || undefined,
@@ -240,7 +239,7 @@ export default function CatalogProducts() {
                     price: Number(form.price) || 0,
                     cost: Number(form.cost) || 0,
                     baseUnitId: form.baseUnitId,
-                    attributes: Object.keys(attributes).length ? attributes : undefined,
+                    attributes: form.attribute,
                 });
                 await setActive(editingProductId, form.isActive);
                 setEditingProductId(null);
@@ -255,7 +254,7 @@ export default function CatalogProducts() {
                     price: Number(form.price) || 0,
                     cost: Number(form.cost) || 0,
                     baseUnitId: form.baseUnitId,
-                    attributes: Object.keys(attributes).length ? attributes : undefined,
+                    attributes: form.attribute,
                 });
                 setOpenCreate(false);
                 showFlash(successResponse("Producto creado"));
