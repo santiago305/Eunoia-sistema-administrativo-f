@@ -16,7 +16,11 @@ export type Variant = {
   productId: string;
   sku: string;
   barcode?: string | null;
-  attributes?: Record<string, string>;
+  attributes?: {
+    presentation?:string,
+    variant?:string,
+    color?:string
+  };
   price: number;
   cost: number;
   baseUnitId:string;
@@ -27,6 +31,16 @@ export type Variant = {
   unitCode:string;
   unitName:string;
 };
+
+export type VariantListItem = {
+    sku?: string | number | null;
+    code?: string | number | null;
+    id?: string | number | null;
+    variant_id?: string | number | null;
+};
+
+
+
 export type ListVariantsResponse = {
   items: Variant[];
   total: number;
@@ -52,8 +66,11 @@ export type VariantForm = {
   barcode: string;
   price: string;
   cost: string;
-  attribute: "" | "presentation" | "variant" | "color";
-  attributeValue: string;
+  attributes?: {
+    presentation?: string,
+    variant?:string,
+    color?:string
+  };
   isActive: boolean;
 };
 

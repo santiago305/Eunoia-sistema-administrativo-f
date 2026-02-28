@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { useProducts } from "@/hooks/useProducts";
@@ -6,7 +6,7 @@ import { listProductEquivalences } from "@/services/equivalenceService";
 import { getProductById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/types/ProductTypes";
@@ -15,6 +15,10 @@ import type { ListUnitResponse } from "@/types/unit";
 import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
 import { ProductFormFields } from "../catalog/components/ProductFormField";
 import { ListProductsQuery, ProductForm } from "@/types/product";
+import { listVariants } from "@/services/catalogService";
+import { useNavigate } from "react-router-dom";
+import { VariantList } from "../catalog/components/VariantList";
+import { VariantListItem } from "@/types/variant";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -23,6 +27,7 @@ const PRODUCT_TYPE = ProductTypes.PRIMA;
 export default function RowMaterial() {
   const shouldReduceMotion = useReducedMotion();
   const { showFlash, clearFlash } = useFlashMessage();
+  const navigate = useNavigate();
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("active");
@@ -36,6 +41,11 @@ export default function RowMaterial() {
   const [equivalenceProductId, setEquivalenceProductId] = useState<string | null>(null);
   const [equivalenceProductName, setEquivalenceProductName] = useState<string | null>(null);
   const [equivalenceBaseUnitId, setEquivalenceBaseUnitId] = useState("");
+
+   const [variantsProduct, setVariantsProduct] = useState<{ id: string; name: string } | null>(null);
+   const [variants, setVariants] = useState<VariantListItem[]>([]);
+   const [variantsLoading, setVariantsLoading] = useState(false);
+   const [variantsError, setVariantsError] = useState<string | null>(null);
 
   const [form, setForm] = useState<ProductForm>({
     name: "",
@@ -139,6 +149,40 @@ export default function RowMaterial() {
     setOpenCreate(true);
   };
 
+  const openVariantsModal = async (productId: string) => {
+        const product = products.find((p) => p.id === productId);
+        if (!product) return;
+        setVariantsProduct({ id: product.id, name: product.name });
+        setVariantsLoading(true);
+        setVariantsError(null);
+        try {
+            const res = await listVariants({ page: 1, limit: 100, productId: product.id, type: PRODUCT_TYPE });
+            setVariants(res.items ?? []);
+        } catch {
+            setVariants([]);
+            setVariantsError("Error al cargar variantes");
+        } finally {
+            setVariantsLoading(false);
+        }
+    };
+
+  const closeVariantsModal = () => {
+    setVariantsProduct(null);
+    setVariants([]);
+    setVariantsLoading(false);
+    setVariantsError(null);
+  };
+
+  const goToCreateVariant = () => {
+    if (!variantsProduct) return;
+    const params = new URLSearchParams({
+      productId: variantsProduct.id,
+      productName: variantsProduct.name,
+      create: "1",
+    });
+    navigate(`/materia-prima/variantes?${params.toString()}`);
+  };
+
   const openEdit = async (productId: string) => {
     clearFlash();
     try {
@@ -151,9 +195,9 @@ export default function RowMaterial() {
           price: product.price ? String(product.price) : "",
           cost: product.cost ? String(product.cost) : "",
           attribute: {
-              presentation: product.attributes?.variant,
+              presentation: product.attributes?.presentation,
               color: product.attributes?.color,
-              variant: product.attributes?.presentation
+              variant: product.attributes?.variant
           },
           baseUnitId: product.baseUnitId ?? "",
       });
@@ -509,7 +553,9 @@ export default function RowMaterial() {
                           <th className="py-3 px-5 text-left">Materia prima</th>
                           <th className="py-3 px-5 text-left">Descripción</th>
                           <th className="py-3 px-5 text-left">Unidad</th>
-                          <th className="py-3 px-5 text-left">Atributo</th>
+                          <th className="py-3 px-5 text-left">Presentación</th>
+                          <th className="py-3 px-5 text-left">Variante</th>
+                          <th className="py-3 px-5 text-left">Color</th>
                           <th className="py-3 px-5 text-left">Precio</th>
                           <th className="py-3 px-5 text-left">Costo</th>
                           <th className="py-3 px-5 text-left">Estado</th>
@@ -545,7 +591,13 @@ export default function RowMaterial() {
                                           </p>
                                       </td>
                                       <td className="py-4 px-5 text-black/70">
-                                          <p className="line-clamp-2 max-w-[680px]">{product.attributes ? Object.values(product.attributes).filter(Boolean).join(" · ") || "-" : "-"}</p>
+                                          <p className="line-clamp-2 max-w-[680px]">{product.attributes?.presentation}</p>
+                                      </td>
+                                      <td className="py-4 px-5 text-black/70">
+                                          <p className="line-clamp-2 max-w-[680px]">{product.attributes?.variant}</p>
+                                      </td>
+                                      <td className="py-4 px-5 text-black/70">
+                                          <p className="line-clamp-2 max-w-[680px]">{product.attributes?.color}</p>
                                       </td>
                                       <td className="py-4 px-5 text-black/70">
                                           <p className="line-clamp-2 max-w-[680px]">{product.price || "-"}</p>
@@ -570,6 +622,15 @@ export default function RowMaterial() {
                                               >
                                                   Equivalencias
                                               </button>
+                                              <IconButton
+                                                  title="Ver variantes"
+                                                  onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      openVariantsModal(product.id);
+                                                  }}
+                                              >
+                                                  <Boxes className="h-4 w-4" />
+                                              </IconButton>
 
                                               <IconButton
                                                   title="Editar"
@@ -594,7 +655,7 @@ export default function RowMaterial() {
                                           </div>
                                       </td>
                                   </motion.tr>
-                                );
+                              );
                               })}
                           </motion.tbody>
                       </AnimatePresence>
@@ -627,13 +688,21 @@ export default function RowMaterial() {
                                                   <StatusPill active={product.isActive} />
                                               </div>
                                           </div>
+                                          <IconButton
+                                              title="Ver variantes"
+                                              onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openVariantsModal(product.id);
+                                              }}
+                                          >
+                                              <Boxes className="h-4 w-4" />
+                                          </IconButton>
 
                                           <div className="flex flex-col gap-2">
                                               <button
                                                   type="button"
                                                   className="inline-flex h-8 items-center justify-center rounded-xl border border-black/10 bg-white px-2.5 text-xs hover:bg-black/[0.03] disabled:opacity-50"
                                                   onClick={() => void openEquivalences(product.id)}
-                                                  
                                               >
                                                   Equivalencias
                                               </button>
@@ -768,6 +837,26 @@ export default function RowMaterial() {
                           Confirmar
                       </button>
                   </div>
+              </motion.div>
+          </Modal>
+      )}
+
+      {variantsProduct && (
+          <Modal title={`Variantes - ${variantsProduct.name}`} onClose={closeVariantsModal} className="max-w-xl">
+              <motion.div
+                  initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
+                  animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 0.16 }}
+                  className="space-y-3"
+              >
+                  <VariantList
+                      variantsLoading={variantsLoading}
+                      variantsError={variantsError}
+                      variants={variants}
+                      primary={PRIMARY}
+                      primaryHover={PRIMARY_HOVER}
+                      onCreateVariant={goToCreateVariant}
+                  />
               </motion.div>
           </Modal>
       )}

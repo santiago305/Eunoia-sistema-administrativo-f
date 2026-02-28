@@ -56,6 +56,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.location, name: "location", isProtected: true },
 
   { path: RoutesPaths.rowMaterialSummary, name: "rowMaterialSummary", isProtected: true },
+  { path: RoutesPaths.rowVariant, name: "rowVariant", isProtected: true },
   { path: RoutesPaths.rowMaterial, name: "rowMaterial", isProtected: true },
 
   { path: RoutesPaths.providers, name: "providers", isProtected: true },

@@ -96,14 +96,14 @@ import { Dispatch, SetStateAction } from "react";
                 <label className="text-sm">
                     Presentación
                     <input
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        className="uppercase mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
                         value={form.attribute?.presentation ?? ""}
                         onChange={(event) =>
                             setForm((prev) => ({
                                 ...prev,
                                 attribute: {
                                     ...prev.attribute,
-                                    presentation: event.target.value,
+                                    presentation: event.target.value.toUpperCase(),
                                 },
                             }))
                         }
@@ -112,14 +112,14 @@ import { Dispatch, SetStateAction } from "react";
                 <label className="text-sm">
                     Variante
                     <input
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        className="uppercase mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
                         value={form.attribute?.variant ?? ""}
                         onChange={(event) =>
                             setForm((prev) => ({
                                 ...prev,
                                 attribute: {
                                     ...prev.attribute,
-                                    variant: event.target.value,
+                                    variant: event.target.value.toUpperCase(),
                                 },
                             }))
                         }
@@ -128,14 +128,14 @@ import { Dispatch, SetStateAction } from "react";
                 <label className="text-sm">
                     Color
                     <input
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        className="uppercase mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
                         value={form.attribute?.color ?? ""}
                         onChange={(event) =>
                             setForm((prev) => ({
                                 ...prev,
                                 attribute: {
                                     ...prev.attribute,
-                                    color: event.target.value,
+                                    color: event.target.value.toUpperCase(),
                                 },
                             }))
                         }
