@@ -37,6 +37,7 @@ const CatalogVariants = lazy(() => import("@/pages/catalog/Variants"));
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/Locations"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
+const RowVariant = lazy(() => import("@/pages/row-material/RowVariant"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
 const Providers = lazy(() => import("@/pages/providers/Providers"));
 
@@ -139,9 +140,13 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.rowMaterial, <RowMaterial/>),
             },
             {
+                path: RoutesPaths.rowVariant,
+                element: withRouteGuard(RoutesPaths.rowVariant, <RowVariant/>),
+            },
+            {
                 path: RoutesPaths.providers,
                 element: withRouteGuard(RoutesPaths.providers, <Providers/>),
-            }
+            },
         ],
     },
 ];

@@ -16,11 +16,12 @@ import type { ListProductsQuery, ProductForm } from "@/types/product";
 import { listProductRecipes } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/types/productRecipe";
 import { RecipeFormFields } from "./components/RecipeFormFields";
-import type { PrimaVariant } from "@/types/variant";
+import type { PrimaVariant, VariantListItem } from "@/types/variant";
 import { listRowMaterials, listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
 import { ProductFormFields } from "./components/ProductFormField";
+import { VariantList } from "./components/VariantList";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -49,7 +50,7 @@ export default function CatalogProducts() {
     const [loadingRecipes, setLoadingRecipes] = useState(false);
     const [primaVariants, setPrimaVariants] = useState<PrimaVariant[]>([]);
     const [variantsProduct, setVariantsProduct] = useState<{ id: string; name: string } | null>(null);
-    const [variants, setVariants] = useState<any[]>([]);
+    const [variants, setVariants] = useState<VariantListItem[]>([]);
     const [variantsLoading, setVariantsLoading] = useState(false);
     const [variantsError, setVariantsError] = useState<string | null>(null);
 
@@ -214,9 +215,9 @@ export default function CatalogProducts() {
                 price: product.price ? String(product.price) : "",
                 cost: product.cost ? String(product.cost) : "",
                 attribute: {
-                    presentation: product.attributes?.variant,
+                    presentation: product.attributes?.presentation,
                     color: product.attributes?.color,
-                    variant: product.attributes?.presentation,
+                    variant: product.attributes?.variant,
                 },
                 baseUnitId: product.baseUnitId ?? "",
             });
@@ -592,7 +593,9 @@ export default function CatalogProducts() {
                                         <th className="py-3 px-5 text-left">Producto</th>
                                         <th className="py-3 px-5 text-left">Descripción</th>
                                         <th className="py-3 px-5 text-left">Unidad</th>
-                                        <th className="py-3 px-5 text-left">Atributo</th>
+                                        <th className="py-3 px-5 text-left">Presentación</th>
+                                        <th className="py-3 px-5 text-left">Variante</th>
+                                        <th className="py-3 px-5 text-left">Color</th>
                                         <th className="py-3 px-5 text-left">Precio</th>
                                         <th className="py-3 px-5 text-left">Costo</th>
                                         <th className="py-3 px-5 text-left">Estado</th>
@@ -628,7 +631,13 @@ export default function CatalogProducts() {
                                                         </p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">{product.attributes ? Object.values(product.attributes).filter(Boolean).join(" � ") || "-" : "-"}</p>
+                                                        <p className="line-clamp-2 max-w-[680px]">{product.attributes?.presentation}</p>
+                                                    </td>
+                                                    <td className="py-4 px-5 text-black/70">
+                                                        <p className="line-clamp-2 max-w-[680px]">{product.attributes?.variant}</p>
+                                                    </td>
+                                                    <td className="py-4 px-5 text-black/70">
+                                                        <p className="line-clamp-2 max-w-[680px]">{product.attributes?.color}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
                                                         <p className="line-clamp-2 max-w-[680px]">{product.price || "-"}</p>
@@ -887,51 +896,14 @@ export default function CatalogProducts() {
                         transition={{ duration: 0.16 }}
                         className="space-y-3"
                     >
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm text-black/70">{variantsLoading ? "Cargando variantes..." : `Total: ${variants.length}`}</p>
-                            <button
-                                className="rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
-                                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                onMouseEnter={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                                }}
-                                onMouseLeave={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                                }}
-                                onClick={goToCreateVariant}
-                            >
-                                Nueva variante
-                            </button>
-                        </div>
-
-                        {variantsError && <p className="text-sm text-rose-600">{variantsError}</p>}
-
-                        {!variantsLoading && variants.length === 0 && !variantsError && <p className="text-sm text-black/60">No hay variantes para este producto.</p>}
-
-                        {!variantsLoading && variants.length > 0 && (
-                            <div className="max-h-72 overflow-auto rounded-2xl border border-black/10">
-                                <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-white text-xs text-black/60">
-                                        <tr className="border-b border-black/10">
-                                            <th className="py-3 text-left px-4">SKU</th>
-                                            <th className="py-3 text-left px-4">ID</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {variants.map((variant, idx) => {
-                                            const sku = String(variant.sku ?? variant.code ?? "-");
-                                            const id = String(variant.id ?? variant.variant_id ?? idx + 1);
-                                            return (
-                                                <tr key={`${id}-${idx}`} className="border-b border-black/5">
-                                                    <td className="py-3 px-4">{sku}</td>
-                                                    <td className="py-3 px-4 text-black/60">{id}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                        <VariantList
+                            variantsLoading={variantsLoading}
+                            variantsError={variantsError}
+                            variants={variants}
+                            primary={PRIMARY}
+                            primaryHover={PRIMARY_HOVER}
+                            onCreateVariant={goToCreateVariant}
+                        />
                     </motion.div>
                 </Modal>
             )}

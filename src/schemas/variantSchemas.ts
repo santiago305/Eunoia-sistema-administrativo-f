@@ -14,12 +14,10 @@ export const listVariantsQuerySchema = z.object({
   type: z.string().optional()
 });
 
-const productVariantAttributesSchema = z.record(z.string());
-
 export const createVariantSchema = z.object({
   productId: z.string().uuid(),
   barcode: z.string().optional(),
-  attributes: productVariantAttributesSchema.optional(),
+  attributes: z.record(z.string()).optional(),
   price: z.number().min(0),
   cost: z.number().min(0),
   isActive: z.boolean().optional(),
@@ -27,7 +25,7 @@ export const createVariantSchema = z.object({
 
 export const updateVariantSchema = z.object({
   barcode: z.string().nullable().optional(),
-  attributes: productVariantAttributesSchema.optional(),
+  attributes: z.record(z.string()).optional(),
   price: z.number().min(0).optional(),
   cost: z.number().min(0).optional(),
   baseUnitId: z.string().uuid().optional(),

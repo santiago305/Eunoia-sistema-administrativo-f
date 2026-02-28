@@ -46,15 +46,19 @@ export function SupplierFormFields({
               onChange={(e) => setForm((prev) => ({ ...prev, documentNumber: e.target.value }))}
               placeholder=""
             />
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03] disabled:opacity-40"
-              onClick={onLookupIdentity}
-              disabled={lookupDisabled}
-              title="Buscar identidad"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+            {
+              form.documentType != DocumentType.CE &&(
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03] disabled:opacity-40"
+                  onClick={onLookupIdentity}
+                  disabled={lookupDisabled}
+                  title="Buscar identidad"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              )
+            }
           </div>
         </label>
       </div>

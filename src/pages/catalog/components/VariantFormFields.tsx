@@ -66,26 +66,53 @@ export function VariantFormFields({ form, setForm, products }: { form: VariantFo
                     </div>
                 </label>
             </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <label className="text-sm">
-                    Atributo
-                    <select
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                        value={form.attribute}
-                        onChange={(e) => setForm((prev) => ({ ...prev, attribute: e.target.value as VariantForm["attribute"] }))}
-                    >
-                        <option value="">Seleccionar atributo</option>
-                        <option value="presentation">Presentacion</option>
-                        <option value="variant">Variante</option>
-                        <option value="color">Color</option>
-                    </select>
+                    Presentación
+                    <input
+                        className="uppercase mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        value={form.attributes?.presentation ?? ""}
+                        onChange={(event) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                attributes: {
+                                    ...prev.attributes,
+                                    presentation: event.target.value.toUpperCase(),
+                                },
+                            }))
+                        }
+                    />
                 </label>
                 <label className="text-sm">
-                    Valor
+                    Variante
                     <input
-                        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                        value={form.attributeValue}
-                        onChange={(e) => setForm((prev) => ({ ...prev, attributeValue: e.target.value }))}
+                        className="uppercase mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        value={form.attributes?.variant ?? ""}
+                        onChange={(event) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                attributes: {
+                                    ...prev.attributes,
+                                    variant: event.target.value.toUpperCase(),
+                                },
+                            }))
+                        }
+                    />
+                </label>
+                <label className="text-sm">
+                    Color
+                    <input
+                        className="uppercase mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                        value={form.attributes?.color ?? ""}
+                        onChange={(event) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                attributes: {
+                                    ...prev.attributes,
+                                    color: event.target.value.toUpperCase(),
+                                },
+                            }))
+                        }
                     />
                 </label>
             </div>

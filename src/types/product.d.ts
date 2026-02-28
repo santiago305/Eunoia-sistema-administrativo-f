@@ -26,7 +26,11 @@ export type Product = {
   baseUnitName?: string;
   baseUnitCode?: string;
   baseUnitId?: string;
-  attributes?: Record<string, string>;
+  attributes?: {
+    presentation: string,
+    variant:string,
+    color:string
+  };
   createdAt: string;
   updatedAt: string;
 };

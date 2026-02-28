@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
-import { createVariant, getVariantById, listRowMaterials, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
+import { createVariant, getVariantById, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
 import { listProducts } from "@/services/productService";
 import type { ProductOption, Variant, VariantForm } from "@/types/variant";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -14,19 +14,13 @@ import { listUnits } from "@/services/unitService";
 import { ListUnitResponse } from "@/types/unit";
 import { listProductEquivalences } from "@/services/equivalenceService";
 import type { ProductEquivalence } from "@/types/equivalence";
-import { listProductRecipes } from "@/services/productRecipeService";
-import type { ProductRecipe } from "@/types/productRecipe";
-import { RecipeFormFields } from "./components/RecipeFormFields";
-import { EquivalenceFormFields } from "./components/EquivalenceFormField";
-import { VariantFormFields } from "./components/VariantFormFields";
-import type { PrimaVariant } from "@/types/variant";
+import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
+import { VariantFormFields } from "../catalog/components/VariantFormFields";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
 
-
-
-export default function CatalogVariants() {
+export default function RowVariant() {
   const shouldReduceMotion = useReducedMotion();
   const { showFlash, clearFlash } = useFlashMessage();
   const [searchParams] = useSearchParams();
@@ -52,15 +46,11 @@ export default function CatalogVariants() {
   const [loading, setLoading] = useState(false);
   const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
   const [loadingEquivalences, setLoadingEquivalences] = useState(false);
-  const [recipes, setRecipes] = useState<ProductRecipe[]>([]);
-  const [loadingRecipes, setLoadingRecipes] = useState(false);
-  const [primaVariants, setPrimaVariants] = useState<PrimaVariant[]>([]);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [equivalenceVariantId, setEquivalenceVariantId] = useState<string | null>(null);
   const [equivalenceBaseUnitId, setEquivalenceBaseUnitId] = useState<string | null>(null);
-  const [recipeVariantId, setRecipeVariantId] = useState<string | null>(null);
   const [sku, setSku] = useState<string | null>(null);
   const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
   const [nextActiveState, setNextActiveState] = useState<boolean>(false);
@@ -74,7 +64,6 @@ export default function CatalogVariants() {
     isActive: true,
   });
 
-  // Minimal + clean animations
   const fadeUp = {
     hidden: { opacity: 0, y: 10 },
     show: { opacity: 1, y: 0, transition: { duration: 0.18 } },
@@ -105,48 +94,30 @@ export default function CatalogVariants() {
   }, [searchText]);
 
   const loadProducts = async () => {
-      try {
-          const batch = 100;
-          const first = await listProducts({ page: 1, limit: batch, type: ProductTypes.FINISHED });
-          const all = [...(first.items ?? [])];
-          const pages = Math.max(1, Math.ceil((first.total ?? all.length) / batch));
-          for (let p = 2; p <= pages; p += 1) {
-              const res = await listProducts({ page: p, limit: batch, type: ProductTypes.FINISHED });
-              if (res.items?.length) all.push(...res.items);
-          }
-          setProducts(all.map((p) => ({ productId: p.id, name: p.name })));
-          loadVariants();
-      } catch {
-          setProducts([]);
-          showFlash(errorResponse("Error al cargar productos"));
+    try {
+      const batch = 100;
+      const first = await listProducts({ page: 1, limit: batch, type: ProductTypes.PRIMA });
+      const all = [...(first.items ?? [])];
+      const pages = Math.max(1, Math.ceil((first.total ?? all.length) / batch));
+      for (let p = 2; p <= pages; p += 1) {
+        const res = await listProducts({ page: p, limit: batch, type: ProductTypes.PRIMA });
+        if (res.items?.length) all.push(...res.items);
       }
-  };
-
-    const loadPrimaVariants = async () => {
-      try {
-          const result = await listRowMaterials();
-          const normalized = (result ?? [])
-              .map((row) => ({
-                  ...row,
-                  id: row.id ?? row.primaId ?? "",
-                  isActive: row.isActive ?? true,
-              }))
-              .filter((row) => row.id);
-          setPrimaVariants(normalized);
-          console.log("Prima variants loaded:", result);
-      } catch {
-          setPrimaVariants([]);
-          showFlash(errorResponse("Error al cargar variantes PRIMA"));
-      }
+      setProducts(all.map((p) => ({ productId: p.id, name: p.name })));
+      loadVariants();
+    } catch {
+      setProducts([]);
+      showFlash(errorResponse("Error al cargar productos"));
+    }
   };
 
   const loadUnits = async () => {
-      try {
-          const res = await listUnits();
-          setUnits(res);
-      } catch {
-          showFlash(errorResponse("Error al cargar unidades"));
-      }
+    try {
+      const res = await listUnits();
+      setUnits(res);
+    } catch {
+      showFlash(errorResponse("Error al cargar unidades"));
+    }
   };
 
   const loadVariants = async () => {
@@ -158,7 +129,7 @@ export default function CatalogVariants() {
         limit,
         q: debouncedSearch || undefined,
         isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
-        type: ProductTypes.FINISHED,
+        type: ProductTypes.PRIMA,
         productId: productFilter || undefined,
       });
       setVariants(res.items ?? []);
@@ -187,31 +158,13 @@ export default function CatalogVariants() {
     }
   };
 
-  const loadRecipes = async (variantId: string) => {
-    setLoadingRecipes(true);
-    try {
-      const res = await listProductRecipes({ variantId });
-      setRecipes(res ?? []);
-    } catch {
-      setRecipes([]);
-      showFlash(errorResponse("Error al cargar recetas"));
-    } finally {
-      setLoadingRecipes(false);
-    }
-  };
-
-  useEffect(()=>{
+  useEffect(() => {
     void loadUnits();
-  },[]);
-
-  useEffect(() => {
-      void loadProducts();
   }, []);
 
   useEffect(() => {
-    void loadPrimaVariants();
+    void loadProducts();
   }, []);
-
 
   useEffect(() => {
     void loadVariants();
@@ -251,7 +204,10 @@ export default function CatalogVariants() {
   const startIndex = total === 0 ? 0 : (apiPage - 1) * (apiLimit || limit) + 1;
   const endIndex = Math.min(apiPage * (apiLimit || limit), total);
 
-  const listKey = useMemo(() => `${page}|${statusFilter}|${productFilter}|${debouncedSearch}`, [page, statusFilter, productFilter, debouncedSearch]);
+  const listKey = useMemo(
+    () => `${page}|${statusFilter}|${productFilter}|${debouncedSearch}`,
+    [page, statusFilter, productFilter, debouncedSearch],
+  );
 
   const openNew = () => {
     setForm({
@@ -259,7 +215,7 @@ export default function CatalogVariants() {
       barcode: "",
       price: "",
       cost: "",
-      attributes:{},
+      attributes: {},
       isActive: true,
     });
     setOpenCreate(true);
@@ -273,10 +229,10 @@ export default function CatalogVariants() {
         barcode: row.barcode ?? "",
         price: String(row.price ?? ""),
         cost: String(row.cost ?? ""),
-        attributes: {
-          presentation: row.attributes?.presentation,
-          variant: row.attributes?.variant,
-          color: row.attributes?.color
+        attributes:{
+            presentation: row.attributes?.presentation,
+            variant: row.attributes?.variant,
+            color: row.attributes?.color
         },
         isActive: row.isActive,
       });
@@ -286,17 +242,11 @@ export default function CatalogVariants() {
     }
   };
 
-  const openEquivalences = (productId: string, baseUnitId: string, sku: string) => {
+  const openEquivalences = (productId: string, baseUnitId: string, skuValue: string) => {
     setEquivalenceVariantId(productId);
     setEquivalenceBaseUnitId(baseUnitId);
-    setSku(sku);
+    setSku(skuValue);
     void loadEquivalences(productId);
-  };
-
-  const openRecipes = (id: string, sku: string) => {
-    setRecipeVariantId(id);
-    setSku(sku);
-    void loadRecipes(id);
   };
 
   const saveCreate = async () => {
@@ -305,7 +255,7 @@ export default function CatalogVariants() {
       await createVariant({
         productId: form.productId,
         barcode: form.barcode.trim() || undefined,
-        attributes:form.attributes,
+        attributes: form.attributes,
         price: Number(form.price) || 0,
         cost: Number(form.cost) || 0,
         isActive: form.isActive,
@@ -360,70 +310,69 @@ export default function CatalogVariants() {
   );
 
   const IconButton = ({
-  onClick,
-  title,
-  children,
-  tone = "neutral",
-}: {
-  onClick: (e: React.MouseEvent) => void;
-  title: string;
-  children: React.ReactNode;
-  tone?: "neutral" | "primary" | "danger";
-}) => {
-  const base =
-    "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition focus:outline-none focus:ring-2";
+    onClick,
+    title,
+    children,
+    tone = "neutral",
+  }: {
+    onClick: (e: React.MouseEvent) => void;
+    title: string;
+    children: React.ReactNode;
+    tone?: "neutral" | "primary" | "danger";
+  }) => {
+    const base =
+      "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition focus:outline-none focus:ring-2";
 
-  if (tone === "primary") {
+    if (tone === "primary") {
+      return (
+        <button
+          type="button"
+          title={title}
+          aria-label={title}
+          onClick={onClick}
+          className={[base, "text-white focus:ring-[rgba(33,184,166,0.25)]"].join(" ")}
+          style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
+          }}
+        >
+          {children}
+        </button>
+      );
+    }
+
+    if (tone === "danger") {
+      return (
+        <button
+          type="button"
+          title={title}
+          aria-label={title}
+          onClick={onClick}
+          className={[
+            base,
+            "border-rose-600/20 bg-rose-50 text-rose-700 hover:bg-rose-100 focus:ring-rose-600/20",
+          ].join(" ")}
+        >
+          {children}
+        </button>
+      );
+    }
+
     return (
       <button
         type="button"
         title={title}
         aria-label={title}
         onClick={onClick}
-        className={[base, "text-white focus:ring-[rgba(33,184,166,0.25)]"].join(" ")}
-        style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-        }}
+        className={[base, "border-black/10 bg-white hover:bg-black/[0.03] focus:ring-black/10"].join(" ")}
       >
         {children}
       </button>
     );
-  }
-
-  if (tone === "danger") {
-    return (
-      <button
-        type="button"
-        title={title}
-        aria-label={title}
-        onClick={onClick}
-        className={[
-          base,
-          "border-rose-600/20 bg-rose-50 text-rose-700 hover:bg-rose-100 focus:ring-rose-600/20",
-        ].join(" ")}
-      >
-        {children}
-      </button>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      onClick={onClick}
-      className={[base, "border-black/10 bg-white hover:bg-black/[0.03] focus:ring-black/10"].join(" ")}
-    >
-      {children}
-    </button>
-  );
-};
-
+  };
 
   const formatMoney = (value: any) => {
     const num = Number(value);
@@ -435,10 +384,9 @@ export default function CatalogVariants() {
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
-      <PageTitle title="Catalogo · Variantes" />
+      <PageTitle title="Catalogo · Variantes MP" />
 
       <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Header */}
         <motion.div
           initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
           animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
@@ -446,7 +394,7 @@ export default function CatalogVariants() {
           className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
         >
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Variantes (SKU)</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Variantes de materia prima (SKU)</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -472,7 +420,12 @@ export default function CatalogVariants() {
           </div>
         </motion.div>
 
-        <motion.section initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }} animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }} transition={{ duration: 0.18 }} className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm">
+        <motion.section
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.18 }}
+          className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
+        >
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(120px,1fr)_230px_180px] gap-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
@@ -487,18 +440,34 @@ export default function CatalogVariants() {
 
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" 
-                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties} value={productFilter} 
-                onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}>
+              <select
+                className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                value={productFilter}
+                onChange={(e) => {
+                  setProductFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
                 <option value="">Producto (todos)</option>
-                {products.map((p) => <option key={p.productId} value={p.productId}>{p.name}</option>)}
+                {products.map((p) => (
+                  <option key={p.productId} value={p.productId}>
+                    {p.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
-               style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-               value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
+              <select
+                className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
                 <option value="all">Estado (todos)</option>
                 <option value="active">Activos</option>
                 <option value="inactive">Inactivos</option>
@@ -507,7 +476,6 @@ export default function CatalogVariants() {
           </div>
         </motion.section>
 
-        {/* List */}
         <motion.section
           initial={shouldReduceMotion ? false : "hidden"}
           animate={shouldReduceMotion ? false : "show"}
@@ -524,43 +492,61 @@ export default function CatalogVariants() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-3 px-5 text-left">SKU</th>
-                  <th className="py-3 px-5 text-left">Producto</th>
-                  <th className="py-3 px-5 text-left">Unidad base</th>
-                  <th className="py-3 px-5 text-left">Presentación</th>
-                  <th className="py-3 px-5 text-left">Variante</th>
-                  <th className="py-3 px-5 text-left">Color</th>
-                  <th className="py-3 px-5 text-left">Precio</th>
-                  <th className="py-3 px-5 text-left">Costo</th>
-                  <th className="py-3 px-5 text-left">Estado</th>
-                  <th className="py-3 px-5 text-left">Acciones</th>
+                    <th className="py-3 px-5 text-left">SKU</th>
+                    <th className="py-3 px-5 text-left">Producto</th>
+                    <th className="py-3 px-5 text-left">Unidad base</th>
+                    <th className="py-3 px-5 text-left">Presentación</th>
+                    <th className="py-3 px-5 text-left">Variante</th>
+                    <th className="py-3 px-5 text-left">Color</th>
+                    <th className="py-3 px-5 text-left">Precio</th>
+                    <th className="py-3 px-5 text-left">Costo</th>
+                    <th className="py-3 px-5 text-left">Estado</th>
+                    <th className="py-3 px-5 text-left">Acciones</th>
                 </tr>
               </thead>
               <AnimatePresence mode="wait" initial={false}>
-                <motion.tbody key={`${page}|${statusFilter}|${productFilter}|${debouncedSearch}`} initial={shouldReduceMotion ? false : { opacity: 0 }} animate={shouldReduceMotion ? false : { opacity: 1 }} exit={shouldReduceMotion ? undefined : { opacity: 0 }}>
+                <motion.tbody
+                  key={`${page}|${statusFilter}|${productFilter}|${debouncedSearch}`}
+                  initial={shouldReduceMotion ? false : { opacity: 0 }}
+                  animate={shouldReduceMotion ? false : { opacity: 1 }}
+                  exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+                >
                   {variants.map((v) => (
-
                     <tr key={v.id} className="border-b border-black/5">
                       <td className="py-3 px-5 font-medium">{v.sku}</td>
                       <td className="py-3 px-5 text-black/70">{v.productName ?? "-"}</td>
-                      <td className="py-3 px-5 text-black/70">{v.unitName} ({v.unitCode})</td>
-                      <td className="py-4 px-5 text-black/70">
-                          <p className="line-clamp-2 max-w-[680px]">{v.attributes?.presentation}</p>
+                      <td className="py-3 px-5 text-black/70">
+                        {v.unitName} ({v.unitCode})
                       </td>
                       <td className="py-4 px-5 text-black/70">
-                          <p className="line-clamp-2 max-w-[680px]">{v.attributes?.variant}</p>
+                        <p className="line-clamp-2 max-w-[680px]">{v.attributes?.presentation}</p>
                       </td>
                       <td className="py-4 px-5 text-black/70">
-                          <p className="line-clamp-2 max-w-[680px]">{v.attributes?.color}</p>
-                      </td>                      
+                        <p className="line-clamp-2 max-w-[680px]">{v.attributes?.variant}</p>
+                      </td>
+                      <td className="py-4 px-5 text-black/70">
+                        <p className="line-clamp-2 max-w-[680px]">{v.attributes?.color}</p>
+                      </td>     
                       <td className="py-3 px-5 text-black/70">{Number(v.price).toFixed(2)}</td>
                       <td className="py-3 px-5 text-black/70">{v.cost ? Number(v.cost).toFixed(2) : "-"}</td>
                       <td className="py-3 px-5">
-                        <span className={["inline-flex rounded-full px-2 py-1 text-[11px] font-medium", v.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"].join(" ")}>{v.isActive ? "Activo" : "Inactivo"}</span>
+                        <span
+                          className={[
+                            "inline-flex rounded-full px-2 py-1 text-[11px] font-medium",
+                            v.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                          ].join(" ")}
+                        >
+                          {v.isActive ? "Activo" : "Inactivo"}
+                        </span>
                       </td>
                       <td className="py-3 px-0">
                         <div className="flex items-center justify-left gap-2">
-                          <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => void openEdit(v.id)}><Pencil className="h-4 w-4" /></button>
+                          <button
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]"
+                            onClick={() => void openEdit(v.id)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
                           <button
                             className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
                             onClick={() => openEquivalences(v.productId, v.baseUnitId, v.sku)}
@@ -568,12 +554,14 @@ export default function CatalogVariants() {
                             Equivalencias
                           </button>
                           <button
-                            className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                            onClick={() => openRecipes(v.id, v.sku)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]"
+                            onClick={() => {
+                              setDeletingVariantId(v.id);
+                              setNextActiveState(!v.isActive);
+                            }}
                           >
-                            Recetas
+                            <Power className="h-4 w-4" />
                           </button>
-                          <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => { setDeletingVariantId(v.id); setNextActiveState(!v.isActive); }}><Power className="h-4 w-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -584,7 +572,6 @@ export default function CatalogVariants() {
             {!loading && variants.length === 0 && <div className="px-5 py-8 text-sm text-black/60">No hay variantes con los filtros actuales.</div>}
           </div>
 
-          {/* Mobile/Tablet cards */}
           <div className="lg:hidden">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -648,7 +635,6 @@ export default function CatalogVariants() {
             </AnimatePresence>
           </div>
 
-          {/* Pagination */}
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
             <span className="hidden sm:inline">Mostrando {startIndex}-{endIndex} de {total}</span>
             <div className="flex items-center gap-2">
@@ -659,7 +645,7 @@ export default function CatalogVariants() {
               >
                 Anterior
               </button>
-              <span className="tabular-nums">Página {page} de {totalPages}</span>
+              <span className="tabular-nums">Pagina {page} de {totalPages}</span>
               <button
                 className="rounded-2xl border border-black/10 bg-white px-3 py-2 hover:bg-black/[0.03] disabled:opacity-40"
                 disabled={page >= totalPages}
@@ -672,13 +658,21 @@ export default function CatalogVariants() {
         </motion.section>
       </div>
 
-      {/* Modals */}
       {openCreate && (
         <Modal title="Nueva variante" onClose={() => setOpenCreate(false)} className="max-w-lg">
           <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>Cancelar</button>
-            <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
+            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
+              Cancelar
+            </button>
+            <button
+              className="rounded-2xl border px-4 py-2 text-sm text-white"
+              style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+              onClick={() => void saveCreate()}
+              disabled={!form.productId}
+            >
+              Guardar
+            </button>
           </div>
         </Modal>
       )}
@@ -687,8 +681,16 @@ export default function CatalogVariants() {
         <Modal title="Editar variante" onClose={() => setEditingVariantId(null)} className="max-w-lg">
           <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>Cancelar</button>
-            <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>Guardar cambios</button>
+            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>
+              Cancelar
+            </button>
+            <button
+              className="rounded-2xl border px-4 py-2 text-sm text-white"
+              style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+              onClick={() => void saveEdit()}
+            >
+              Guardar cambios
+            </button>
           </div>
         </Modal>
       )}
@@ -709,21 +711,6 @@ export default function CatalogVariants() {
         </Modal>
       )}
 
-      {recipeVariantId && (
-        <Modal title={`Recetas de variante (${sku})`} onClose={() => setRecipeVariantId(null)} className="max-w-2xl">
-          <RecipeFormFields
-            finishedVariantId={recipeVariantId}
-            units={units}
-            primaVariants={primaVariants}
-            recipes={recipes}
-            loading={loadingRecipes}
-            onCreated={async () => {
-              await loadRecipes(recipeVariantId);
-            }}
-          />
-        </Modal>
-      )}
-
       {deletingVariantId && (
         <Modal title={nextActiveState ? "Restaurar variante" : "Desactivar variante"} onClose={() => setDeletingVariantId(null)} className="max-w-md">
           <motion.div
@@ -734,8 +721,8 @@ export default function CatalogVariants() {
             <div className={"rounded-2xl border px-3 py-2 " + (nextActiveState ? "border-teal-200 bg-teal-50" : "border-rose-200 bg-rose-50")}>
               <p className={"text-sm " + (nextActiveState ? "text-teal-800" : "text-rose-800")}>
                 {nextActiveState
-                  ? "Se activará la variante nuevamente."
-                  : "Se desactivará la variante seleccionada. Esto puede afectar ventas/stock."}
+                  ? "Se activara la variante nuevamente."
+                  : "Se desactivara la variante seleccionada. Esto puede afectar ventas/stock."}
               </p>
             </div>
 
@@ -764,5 +751,3 @@ export default function CatalogVariants() {
     </div>
   );
 }
-
-

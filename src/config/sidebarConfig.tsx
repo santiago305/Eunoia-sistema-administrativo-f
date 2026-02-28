@@ -69,13 +69,17 @@ export const getSidebarItems = (): SidebarItem[] => [
     },
     {
         label: "Suministros",
-        href: RoutesPaths.rowMaterialSummary,
+        // href: RoutesPaths.rowMaterialSummary,
         icon: <IconRowMaterial className="text-sidebar-foreground" />,
         children: [
             {
                 label: "Materias Primas",
                 href: RoutesPaths.rowMaterial,
-            }
+            },
+            {
+                label: "Variantes",
+                href: RoutesPaths.rowVariant,
+            },
         ],
     },
     {
