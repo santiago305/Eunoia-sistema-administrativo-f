@@ -182,45 +182,54 @@ export default function Users() {
         "w-full bg-gradient-to-b from-white via-white to-zinc-50",
         // ✅ Sin scroll global: usa todo el alto del área del dashboard
         "h-[calc(100vh-var(--dashTop,0px))] overflow-hidden",
-        // ✅ ocupa todo el ancho (sin max-w)
-        "px-4 py-4 sm:px-6 sm:py-6",
-        // 2K/4K: más aire, no fuentes gigantes
-        "2xl:px-10 2xl:py-8",
-        "3xl:px-14 3xl:py-10",
-        "4xl:px-16 4xl:py-12"
+        "flex flex-col",
+        "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12"
       )}
       style={{ ["--primary" as any]: PRIMARY } as React.CSSProperties}
     >
-      {/* Top bar compacta */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full" style={{ background: PRIMARY }} />
-            <h1 className="truncate text-[15px] font-semibold text-zinc-900 2xl:text-[16px] 3xl:text-[17px]">
-              Usuarios
-            </h1>
-            <span className="text-[12px] text-zinc-500 2xl:text-[13px]">({filtered.length})</span>
+      <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
+        {/* Top bar con referencias y resumen */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 2xl:text-[12px]">
+              <span>Administracion</span>
+              <span>/</span>
+              <span className="font-medium text-zinc-700">Usuarios</span>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: PRIMARY }} />
+              <h1 className="truncate text-[19px] font-semibold tracking-tight text-zinc-900 2xl:text-[22px] 3xl:text-[24px]">
+                Gestion de usuarios
+              </h1>
+              <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] text-zinc-600 2xl:text-[12px]">
+                {filtered.length} registros
+              </span>
+            </div>
+
+            <p className="mt-1 text-[12px] text-zinc-600 2xl:text-[13px]">
+              Vista general de cuentas, estado por rol y seleccion de usuario activa.
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatPill label="Admin" value={counts.admin} />
+              <StatPill label="Manager" value={counts.manager} />
+              <StatPill label="Support" value={counts.support} />
+              <StatPill label="User" value={counts.user} />
+            </div>
           </div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 2xl:text-[12px]">
-            <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5">Admin: {counts.admin}</span>
-            <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5">Manager: {counts.manager}</span>
-            <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5">Support: {counts.support}</span>
-            <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5">User: {counts.user}</span>
-          </div>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="rounded-xl px-3 py-2 text-[12px] font-medium text-white shadow-[0_10px_26px_rgba(33,184,166,.18)] transition active:scale-[.99] sm:px-4 sm:py-2.5 sm:text-[13px]"
+            style={{ background: PRIMARY }}
+          >
+            + Nuevo
+          </button>
         </div>
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="rounded-xl px-3 py-2 text-[12px] font-medium text-white shadow-[0_10px_26px_rgba(33,184,166,.18)] transition active:scale-[.99]"
-          style={{ background: PRIMARY }}
-        >
-          + Nuevo
-        </button>
-      </div>
-
-      {/* Main: ocupa TODO el resto */}
-      <div className={cn("mt-4 grid h-[calc(100%-56px)] gap-3", "lg:grid-cols-[420px_1fr]", "2xl:gap-4 3xl:gap-5")}>
+        {/* Main: ocupa TODO el resto */}
+        <div className={cn("mt-4 grid min-h-0 flex-1 gap-3", "lg:grid-cols-[420px_1fr]", "2xl:gap-4 3xl:gap-5")}>
         {/* Left panel */}
         <section className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_34px_rgba(0,0,0,.04)]">
           {/* Search + pager */}
@@ -447,6 +456,7 @@ export default function Users() {
             </div>
           </div>
         </section>
+        </div>
       </div>
 
       {/* ✅ Modal centrado: crear usuario */}
@@ -570,6 +580,15 @@ function Field({
         )}
       />
       {error && <div className="mt-1 text-[11px] text-red-600">{error}</div>}
+    </div>
+  );
+}
+
+function StatPill({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className="mt-0.5 text-[15px] font-semibold leading-none text-zinc-900 2xl:text-[16px]">{value}</div>
     </div>
   );
 }
