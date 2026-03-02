@@ -349,7 +349,7 @@ export default function Users() {
         </section>
 
         {/* Right panel */}
-        <section className="h-full rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_34px_rgba(0,0,0,.04)]">
+        <section className="h-auto rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_34px_rgba(0,0,0,.04)]">
           <div className="flex h-full flex-col">
             <div className="border-b border-zinc-100 p-4">
               <div className="flex items-center justify-between">
