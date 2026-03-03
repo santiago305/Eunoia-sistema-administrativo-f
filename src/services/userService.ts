@@ -1,7 +1,28 @@
 import axiosInstance from "@/common/utils/axios"
 import { API_AUTH_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
-import { CreateUserDto, UpdateUserDto } from "@/types/user"
+import { UpdateUserDto } from "@/types/user"
 import type { CurrentUserResponse } from "@/types/userProfile"
+
+export type UserRoleCount = "admin" | "moderator" | "adviser";
+export type CreateUserPayload = {
+  name: string;
+  email: string;
+  password: string;
+  roleId?: string;
+  avatarUrl?: string;
+  telefono?: string;
+};
+
+export type CountUsersByRoleParams = {
+  role?: UserRoleCount;
+  q?: string;
+  status?: "all" | "active" | "inactive";
+};
+
+export type CountUsersByRoleResponse = {
+  total: number;
+  byRole: Partial<Record<UserRoleCount, number>>;
+};
 
 // ----------------------------------------
 // USUARIOS (ADMIN)
@@ -9,10 +30,10 @@ import type { CurrentUserResponse } from "@/types/userProfile"
 
 /**
  * Crea un nuevo usuario.
- * @param {CreateUserDto} payload - Datos del usuario.
+ * @param {CreateUserPayload} payload - Datos del usuario.
  * @returns {Promise<any>} Respuesta del servidor.
  */
-export const createUser = async (payload: CreateUserDto) => {
+export const createUser = async (payload: CreateUserPayload) => {
   const response = await axiosInstance.post(API_USERS_GROUP.createUser, payload)
   return response.data
 }
@@ -40,6 +61,16 @@ export const findDesactive = async (params: {
   order?: "ASC" | "DESC";
 }) => {
   const response = await axiosInstance.get(API_USERS_GROUP.findDesactive, { params });
+  return response.data;
+};
+
+/**
+ * Obtiene conteo de usuarios agrupado por rol.
+ * @param {CountUsersByRoleParams} params - Filtros opcionales.
+ * @returns {Promise<CountUsersByRoleResponse>} Total y agrupacion por rol.
+ */
+export const countUsersByRole = async (params?: CountUsersByRoleParams) => {
+  const response = await axiosInstance.get<CountUsersByRoleResponse>(API_USERS_GROUP.countByRole, { params });
   return response.data;
 };
 

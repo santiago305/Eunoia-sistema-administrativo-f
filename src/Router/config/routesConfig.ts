@@ -14,13 +14,7 @@ export const routesConfig: RouteMetadata[] = [
     path: RoutesPaths.users,
     name: "users",
     isProtected: true,
-    rolesAllowed: ["admin"],
-  },
-  {
-    path: RoutesPaths.createUser,
-    name: "createUser",
-    isProtected: true,
-    rolesAllowed: ["admin"],
+    rolesAllowed: ["admin", "moderator"],
   },
 
   { path: RoutesPaths.stockSummary, name: "stockSummary", isProtected: true },

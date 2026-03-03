@@ -1,17 +1,26 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { PageTitle } from "@/components/PageTitle";
+import { countUsersByRole, createUser, type CountUsersByRoleResponse } from "@/services/userService";
+import { findAllRoles } from "@/services/roleService";
 
-type Role = "admin" | "manager" | "support" | "user";
+type Role = "admin" | "moderator" | "adviser";
 type User = { id: string; name: string; email: string; phone: string; role: Role; createdAt: string };
+type RoleOption = { id: string; description: Role };
 
 const PRIMARY = "#21b8a6";
-const ROLES: Role[] = ["admin", "manager", "support", "user"];
+const ROLES: Role[] = ["admin", "moderator", "adviser"];
+const ROLE_LABELS: Record<Role, string> = {
+  admin: "Admin",
+  moderator: "Moderator",
+  adviser: "Adviser",
+};
 const PAGE_SIZE = 20;
 
-// ---------- Mock API (cámbialo por backend) ----------
+// ---------- Mock API (cÃ¡mbialo por backend) ----------
 function makeMockUsers(count = 220): User[] {
-  const names = ["Santiago", "Valeria", "Mateo", "Lucía", "Diego", "Camila", "Sofía", "Juan", "Ana", "Carlos"];
-  const last = ["Gómez", "Pérez", "Flores", "Ramos", "Torres", "Díaz", "Vega", "Castro", "Ortega", "Mendoza"];
+  const names = ["Santiago", "Valeria", "Mateo", "LucÃ­a", "Diego", "Camila", "SofÃ­a", "Juan", "Ana", "Carlos"];
+  const last = ["GÃ³mez", "PÃ©rez", "Flores", "Ramos", "Torres", "DÃ­az", "Vega", "Castro", "Ortega", "Mendoza"];
   return Array.from({ length: count }).map((_, i) => {
     const first = names[i % names.length];
     const ln = last[(i * 3) % last.length];
@@ -57,22 +66,21 @@ const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean)
 const contains = (a: string, b: string) => (a || "").toLowerCase().includes((b || "").toLowerCase());
 const fmtDate = (iso: string) => new Date(iso).toLocaleString();
 
-function validateCreate(v: { name: string; email: string; password: string; phone: string; role: Role }) {
+function validateCreate(v: { name: string; email: string; password: string; telefono: string; roleId: string }) {
   const e: Record<string, string> = {};
   if (!v.name.trim()) e.name = "Nombre requerido";
-  if (!v.email.trim() || !/^\S+@\S+\.\S+$/.test(v.email)) e.email = "Email inválido";
-  if (!v.password || v.password.length < 6) e.password = "Mínimo 6 caracteres";
-  if (!v.phone.trim()) e.phone = "Teléfono requerido";
-  if (!v.role) e.role = "Rol requerido";
+  if (!v.email.trim() || !/^\S+@\S+\.\S+$/.test(v.email)) e.email = "Email invÃ¡lido";
+  if (!v.password.trim()) e.password = "ContraseÃ±a requerida";
+  if (!v.telefono.trim()) e.telefono = "TelÃ©fono requerido";
+  if (!v.roleId.trim()) e.roleId = "Rol requerido";
   return e;
 }
 
 function RoleChip({ role }: { role: Role }) {
   const map: Record<Role, string> = {
     admin: "border-zinc-300 bg-zinc-900 text-white",
-    manager: "border-[rgba(33,184,166,.25)] bg-[rgba(33,184,166,.08)] text-[rgba(12,98,88,1)]",
-    support: "border-indigo-200 bg-indigo-50 text-indigo-700",
-    user: "border-zinc-200 bg-zinc-50 text-zinc-700",
+    moderator: "border-[rgba(33,184,166,.25)] bg-[rgba(33,184,166,.08)] text-[rgba(12,98,88,1)]",
+    adviser: "border-indigo-200 bg-indigo-50 text-indigo-700",
   };
   return <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", map[role])}>{role}</span>;
 }
@@ -86,13 +94,17 @@ export default function Users() {
 
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [countsByRole, setCountsByRole] = useState<CountUsersByRoleResponse | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [create, setCreate] = useState({ name: "", email: "", password: "", phone: "", role: "user" as Role });
+  const [create, setCreate] = useState({ name: "", email: "", password: "", telefono: "", avatarUrl: "", roleId: "" });
   const [createErr, setCreateErr] = useState<Record<string, string>>({});
+  const [createGeneralErr, setCreateGeneralErr] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
-  const [roleDraft, setRoleDraft] = useState<Role>("user");
+  const [roleDraft, setRoleDraft] = useState<Role>("adviser");
   const [savingRole, setSavingRole] = useState(false);
 
   useEffect(() => {
@@ -103,6 +115,35 @@ export default function Users() {
       setSelectedId(data[0]?.id ?? null);
       setLoading(false);
     })();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadRoles = async () => {
+      setLoadingRoles(true);
+      try {
+        const response = await findAllRoles();
+        const list = Array.isArray(response) ? response : response?.data;
+        const normalized = (Array.isArray(list) ? list : [])
+          .map((r: any) => ({
+            id: String(r?.id ?? ""),
+            description: String(r?.description ?? "").toLowerCase() as Role,
+          }))
+          .filter((r: RoleOption) => !!r.id && ROLES.includes(r.description));
+
+        if (!cancelled) {
+          setRoles(normalized);
+          const adviser = normalized.find((r: RoleOption) => r.description === "adviser");
+          setCreate((prev) => ({ ...prev, roleId: prev.roleId || adviser?.id || "" }));
+        }
+      } finally {
+        if (!cancelled) setLoadingRoles(false);
+      }
+    };
+    void loadRoles();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const selected = useMemo(() => users.find((u) => u.id === selectedId) ?? null, [users, selectedId]);
@@ -129,6 +170,28 @@ export default function Users() {
   }, [filtered]);
 
   useEffect(() => {
+    let cancelled = false;
+    const loadCountsByRole = async () => {
+      try {
+        const q = query.trim();
+        const data = await countUsersByRole({ q: q || undefined, status: "all" });
+        if (!cancelled) setCountsByRole(data);
+      } catch {
+        if (!cancelled) setCountsByRole(null);
+      }
+    };
+    void loadCountsByRole();
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
+
+  const visibleRoles = useMemo(() => {
+    const apiRoles = Object.keys(countsByRole?.byRole ?? {}) as Role[];
+    return apiRoles.length ? apiRoles : ROLES;
+  }, [countsByRole]);
+
+  useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") setModalOpen(false);
       if (ev.key === "/" && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
@@ -147,18 +210,67 @@ export default function Users() {
     e.preventDefault();
     const errs = validateCreate(create);
     setCreateErr(errs);
+    setCreateGeneralErr([]);
     if (Object.keys(errs).length) return;
 
     setCreating(true);
     try {
-      const u = await api.createUser(create);
+      await createUser({
+        name: create.name.trim(),
+        email: create.email.trim().toLowerCase(),
+        password: create.password,
+        roleId: create.roleId,
+        telefono: create.telefono.trim(),
+        avatarUrl: create.avatarUrl.trim() || undefined,
+      });
+
+      const selectedRole = roles.find((r) => r.id === create.roleId)?.description ?? "adviser";
+      const u: User = {
+        id: `${Date.now()}`,
+        name: create.name.trim(),
+        email: create.email.trim().toLowerCase(),
+        phone: create.telefono.trim(),
+        role: selectedRole,
+        createdAt: new Date().toISOString(),
+      };
       setUsers((p) => [u, ...p]);
       setSelectedId(u.id);
-      setCreate({ name: "", email: "", password: "", phone: "", role: "user" });
+      const adviser = roles.find((r) => r.description === "adviser");
+      setCreate({ name: "", email: "", password: "", telefono: "", avatarUrl: "", roleId: adviser?.id ?? "" });
       setCreateErr({});
+      setCreateGeneralErr([]);
       setModalOpen(false);
       setQuery("");
       setPage(1);
+    } catch (error: any) {
+      const status = Number(error?.response?.status ?? 0);
+      const raw = error?.response?.data?.message;
+      const rawMessage = Array.isArray(raw) ? raw.join(" | ") : String(raw ?? "No se pudo crear el usuario");
+      const chunks = rawMessage
+        .split("|")
+        .map((m: string) => m.trim())
+        .filter(Boolean);
+
+      const nextFieldErrors: Record<string, string> = {};
+      const general: string[] = [];
+      for (const msg of chunks) {
+        const lower = msg.toLowerCase();
+        if (lower.includes("name")) nextFieldErrors.name = msg;
+        else if (lower.includes("email")) nextFieldErrors.email = msg;
+        else if (lower.includes("password")) nextFieldErrors.password = msg;
+        else if (lower.includes("roleid") || lower.includes("rol")) nextFieldErrors.roleId = msg;
+        else if (lower.includes("telefono")) nextFieldErrors.telefono = msg;
+        else general.push(msg);
+      }
+
+      if (status === 400) {
+        setCreateErr((prev) => ({ ...prev, ...nextFieldErrors }));
+        setCreateGeneralErr(general);
+      } else if (status === 401 || status === 403) {
+        setCreateGeneralErr(chunks.length ? chunks : ["No tienes permisos para crear usuarios"]);
+      } else {
+        setCreateGeneralErr(chunks.length ? chunks : ["Se produjo un error al crear al usuario"]);
+      }
     } finally {
       setCreating(false);
     }
@@ -180,42 +292,32 @@ export default function Users() {
     <div
       className={cn(
         "w-full bg-gradient-to-b from-white via-white to-zinc-50",
-        // ✅ Sin scroll global: usa todo el alto del área del dashboard
+        // âœ… Sin scroll global: usa todo el alto del Ã¡rea del dashboard
         "h-[calc(100vh-var(--dashTop,0px))] overflow-hidden",
         "flex flex-col",
         "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12"
       )}
       style={{ ["--primary" as any]: PRIMARY } as React.CSSProperties}
     >
+      <PageTitle title="GestiÃ³n de usuarios" />
       <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
         {/* Top bar con referencias y resumen */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 2xl:text-[12px]">
-              <span>Administracion</span>
-              <span>/</span>
-              <span className="font-medium text-zinc-700">Usuarios</span>
-            </div>
-
             <div className="mt-2 flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: PRIMARY }} />
-              <h1 className="truncate text-[19px] font-semibold tracking-tight text-zinc-900 2xl:text-[22px] 3xl:text-[24px]">
-                Gestion de usuarios
+              <h1 className="truncate text-2xl font-semibold tracking-tight text-zinc-900">
+                GestiÃ³n de usuarios
               </h1>
-              <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] text-zinc-600 2xl:text-[12px]">
-                {filtered.length} registros
-              </span>
             </div>
 
             <p className="mt-1 text-[12px] text-zinc-600 2xl:text-[13px]">
-              Vista general de cuentas, estado por rol y seleccion de usuario activa.
+              Administra las cuentas de usuario y sus permisos.
             </p>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <StatPill label="Admin" value={counts.admin} />
-              <StatPill label="Manager" value={counts.manager} />
-              <StatPill label="Support" value={counts.support} />
-              <StatPill label="User" value={counts.user} />
+            <div className={cn("mt-3 grid grid-cols-2 gap-2", visibleRoles.length === 1 ? "sm:grid-cols-1" : "sm:grid-cols-3")}>
+              {visibleRoles.map((role) => (
+                <StatPill key={role} label={ROLE_LABELS[role]} value={countsByRole?.byRole?.[role] ?? counts[role] ?? 0} />
+              ))}
             </div>
           </div>
 
@@ -235,12 +337,12 @@ export default function Users() {
           {/* Search + pager */}
           <div className="border-b border-zinc-100 p-3">
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">⌕</span>
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">âŒ•</span>
               <input
                 id="users-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar… ( / )"
+                placeholder="Buscarâ€¦ ( / )"
                 className={cn(
                   "w-full rounded-xl border border-zinc-200 bg-zinc-50 px-9 py-2.5 text-[13px] text-zinc-800",
                   "outline-none focus:border-[rgba(33,184,166,.45)] focus:bg-white focus:ring-4 focus:ring-[rgba(33,184,166,.10)]",
@@ -251,7 +353,7 @@ export default function Users() {
 
             <div className="mt-2 flex items-center justify-between">
               <span className="text-[11px] text-zinc-500 2xl:text-[12px]">
-                Página <span className="font-medium text-zinc-800">{safePage}</span> / {totalPages}
+                PÃ¡gina <span className="font-medium text-zinc-800">{safePage}</span> / {totalPages}
               </span>
 
               <div className="flex items-center gap-2">
@@ -263,7 +365,7 @@ export default function Users() {
                     safePage === 1 ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
                   )}
                 >
-                  ←
+                  â†
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -273,15 +375,15 @@ export default function Users() {
                     safePage === totalPages ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
                   )}
                 >
-                  →
+                  â†’
                 </button>
               </div>
             </div>
           </div>
 
-          {/* ✅ Alto más reducido del área scroll: dejamos un “cinturón” fijo abajo */}
+          {/* âœ… Alto mÃ¡s reducido del Ã¡rea scroll: dejamos un â€œcinturÃ³nâ€ fijo abajo */}
           <div className="min-h-0 flex-1">
-            {/* Scroll solo aquí */}
+            {/* Scroll solo aquÃ­ */}
             <div className="h-full overflow-auto p-2.5">
               <div className="grid gap-2">
                 <AnimatePresence initial={false}>
@@ -326,7 +428,7 @@ export default function Users() {
                       {!paged.length && (
                         <motion.div {...fadeUp} className="rounded-xl border border-zinc-200 bg-white p-6 text-center">
                           <div className="text-[13px] font-medium text-zinc-900">Sin resultados</div>
-                          <div className="mt-1 text-[12px] text-zinc-600">No encontramos “{query}”.</div>
+                          <div className="mt-1 text-[12px] text-zinc-600">No encontramos â€œ{query}â€.</div>
                           <button
                             onClick={() => setQuery("")}
                             className="mt-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-700 hover:bg-zinc-50"
@@ -344,7 +446,7 @@ export default function Users() {
 
           {/* Footer fijo */}
           <div className="border-t border-zinc-100 px-3 py-2 text-[11px] text-zinc-500 2xl:text-[12px]">
-            20 por página · {filtered.length} resultados
+            20 por pÃ¡gina Â· {filtered.length} resultados
           </div>
         </section>
 
@@ -358,7 +460,7 @@ export default function Users() {
                   <p className="mt-1 text-[12px] text-zinc-600 2xl:text-[13px]">Solo rol editable</p>
                 </div>
                 <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[11px] text-zinc-600 2xl:text-[12px]">
-                  {selected ? `ID #${selected.id}` : "—"}
+                  {selected ? `ID #${selected.id}` : "â€”"}
                 </span>
               </div>
             </div>
@@ -394,7 +496,7 @@ export default function Users() {
                         <div className="truncate text-[12px] text-zinc-800 2xl:text-[13px]">{selected.email}</div>
                       </div>
                       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                        <div className="text-[11px] text-zinc-500">Teléfono</div>
+                        <div className="text-[11px] text-zinc-500">TelÃ©fono</div>
                         <div className="truncate text-[12px] text-zinc-800 2xl:text-[13px]">{selected.phone}</div>
                       </div>
                     </div>
@@ -441,7 +543,7 @@ export default function Users() {
                         )}
                         style={{ background: PRIMARY, boxShadow: "0 10px 26px rgba(33,184,166,.16)" }}
                       >
-                        {savingRole ? "Guardando…" : "Guardar"}
+                        {savingRole ? "Guardandoâ€¦" : "Guardar"}
                       </button>
                     </div>
                   </div>
@@ -459,7 +561,7 @@ export default function Users() {
         </div>
       </div>
 
-      {/* ✅ Modal centrado: crear usuario */}
+      {/* âœ… Modal centrado: crear usuario */}
       <AnimatePresence>
         {modalOpen && (
           <motion.div
@@ -485,33 +587,42 @@ export default function Users() {
                   onClick={() => setModalOpen(false)}
                   className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-700 hover:bg-zinc-50"
                 >
-                  ✕
+                  âœ•
                 </button>
               </div>
 
               <form onSubmit={submitCreate} className="p-4">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Nombre" value={create.name} onChange={(v) => setCreate((p) => ({ ...p, name: v }))} placeholder="Ej: Santiago Pérez" error={createErr.name} span2 />
+                  <Field label="Nombre" value={create.name} onChange={(v) => setCreate((p) => ({ ...p, name: v }))} placeholder="Ej: Santiago PÃ©rez" error={createErr.name} span2 />
                   <Field label="Email" value={create.email} onChange={(v) => setCreate((p) => ({ ...p, email: v }))} placeholder="usuario@mail.com" error={createErr.email} />
-                  <Field label="Teléfono" value={create.phone} onChange={(v) => setCreate((p) => ({ ...p, phone: v }))} placeholder="+51 9xxxxxxxx" error={createErr.phone} />
-                  <Field label="Contraseña" type="password" value={create.password} onChange={(v) => setCreate((p) => ({ ...p, password: v }))} placeholder="••••••••" error={createErr.password} />
-
+                  <Field label="TelÃ©fono" value={create.telefono} onChange={(v) => setCreate((p) => ({ ...p, telefono: v }))} placeholder="+51 9xxxxxxxx" error={createErr.telefono} />
+                  <Field label="ContraseÃ±a" type="password" value={create.password} onChange={(v) => setCreate((p) => ({ ...p, password: v }))} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" error={createErr.password} />
+                  <Field
+                    label="Avatar URL (opcional)"
+                    value={create.avatarUrl}
+                    onChange={(v) => setCreate((p) => ({ ...p, avatarUrl: v }))}
+                    placeholder="https://..."
+                    span2
+                  />
                   <div>
                     <label className="text-[11px] text-zinc-600">Rol</label>
                     <select
-                      value={create.role}
-                      onChange={(e) => setCreate((p) => ({ ...p, role: e.target.value as Role }))}
+                      value={create.roleId}
+                      onChange={(e) => setCreate((p) => ({ ...p, roleId: e.target.value }))}
+                      disabled={loadingRoles}
                       className={cn(
                         "mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-[13px] text-zinc-800 outline-none",
                         "focus:border-[rgba(33,184,166,.45)] focus:bg-white focus:ring-4 focus:ring-[rgba(33,184,166,.10)]"
                       )}
                     >
-                      {ROLES.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
+                      <option value="">{loadingRoles ? "Cargando roles..." : "Selecciona un rol"}</option>
+                      {roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {ROLE_LABELS[r.description]}
                         </option>
                       ))}
                     </select>
+                    {createErr.roleId && <div className="mt-1 text-[11px] text-red-600">{createErr.roleId}</div>}
                   </div>
 
                   <div className="flex items-end gap-2">
@@ -531,13 +642,19 @@ export default function Users() {
                       )}
                       style={{ background: PRIMARY, boxShadow: "0 10px 26px rgba(33,184,166,.16)" }}
                     >
-                      {creating ? "Creando…" : "Crear"}
+                      {creating ? "Creandoâ€¦" : "Crear"}
                     </button>
                   </div>
                 </div>
 
+                {!!createGeneralErr.length && (
+                  <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                    {createGeneralErr.join(" · ")}
+                  </div>
+                )}
+
                 <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-600">
-                  Recomendación: email único y contraseña hasheada en servidor.
+                  RecomendaciÃ³n: email Ãºnico y contraseÃ±a hasheada en servidor.
                 </div>
               </form>
             </motion.div>
@@ -592,3 +709,6 @@ function StatPill({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
+
+

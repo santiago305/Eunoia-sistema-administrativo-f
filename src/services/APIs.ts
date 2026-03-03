@@ -17,6 +17,7 @@ export const API_AUTH_GROUP = {
 export const API_USERS_GROUP = {
   createUser: '/users/create',
   findAll: '/users/findAll',
+  countByRole: '/users/count-by-role',
   findActives: '/users/actives',
   findDesactive: '/users/desactive',
   findOwnUser: '/users/me',
