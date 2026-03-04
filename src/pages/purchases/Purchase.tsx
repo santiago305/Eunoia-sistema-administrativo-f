@@ -27,7 +27,7 @@ import { listProductEquivalences } from "@/services/equivalenceService";
 import { listUnits } from "@/services/unitService";
 import type { ListUnitResponse } from "@/types/unit";
 import { createPurchaseOrder } from "@/services/purchaseService";
-import { Warehouse, WarehouseOption } from "@/types/warehouse";
+import { WarehouseOption } from "@/types/warehouse";
 import { SupplierOption } from "@/types/supplier";
 import { listActive } from "@/services/warehouseServices";
 
@@ -514,10 +514,16 @@ export default function PurchaseCreateLocal() {
     console.log("Purchase payload:", payload);
     clearFlash();
     try {
-      await createPurchaseOrder(payload);
-      showFlash(successResponse("Compra registrada."));
-      setOpenPaymentModal(false);
-      resetForm();
+      const res = await createPurchaseOrder(payload);
+
+      if(res.type === 'success'){
+        showFlash(successResponse("Compra registrada."));
+        setOpenPaymentModal(false);
+        resetForm();
+      }
+      if(res.type === 'error'){
+        showFlash(errorResponse("Registro fallido."));
+      }
     } catch {
       showFlash(errorResponse("Error al registrar la compra."));
     }

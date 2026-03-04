@@ -12,7 +12,7 @@ import type {
 
 export const createPurchaseOrder = async (
   payload: CreatePurchaseOrderDto
-): Promise<PurchaseOrder> => {
+): Promise<{type:string, message:string, order?:PurchaseOrder}> => {
   const response = await axiosInstance.post(API_PURCHASE_GROUP.create, payload);
   return response.data;
 };
