@@ -52,6 +52,7 @@ export const API_PRODUCTS_GROUP = {
   base: "/catalog/products",
   create: "/catalog/products",
   list: "/catalog/products",
+  productFinisheds: "/catalog/products/variants/finished",
   byId: (id: string) => `/catalog/products/${id}`,
   byName: (name: string) => `/catalog/products/by-name/${encodeURIComponent(name)}`,
   update: (id: string) => `/catalog/products/${id}`,
@@ -74,6 +75,7 @@ export const API_WAREHOUSES_GROUP = {
   base: "/warehouses",
   create: "/warehouses",
   list: "/warehouses",
+  listActive: "/warehouses/active",
   getById: (id: string) => `/warehouses/${id}`,
   getWithLocations: (id: string) => `/warehouses/${id}/locations`,
   update: (id: string) => `/warehouses/${id}`,
@@ -113,6 +115,7 @@ export const API_SUPPLIERS_GROUP = {
   base: "/suppliers",
   create: "/suppliers",
   list: "/suppliers",
+  listAll: "/suppliers/active",
   byId: (id: string) => `/suppliers/${id}`,
   update: (id: string) => `/suppliers/${id}`,
   updateActive: (id: string) => `/suppliers/${id}/active`,
@@ -125,4 +128,13 @@ export const API_SUPPLIER_VARIANTS_GROUP = {
   list: "/suppliers/variants/all",
   byId: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
   update: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
+};
+export const API_PURCHASE_GROUP = {
+  base: "/purchases/orders",
+  create: "/purchases/orders",
+  list: "/purchases/orders",
+  update: (id: string) => `/purchases/orders/${id}`,
+  setActive: (id: string) => `/purchases/orders/${id}/active`,
+  listItems: (id: string) => `/purchases/orders/${id}/items`,
+  removeItem: (id: string, itemId: string) => `/purchases/orders/${id}/items/${itemId}`,
 };

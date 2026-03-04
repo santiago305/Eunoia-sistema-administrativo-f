@@ -9,6 +9,7 @@ import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from 
 import { useWarehouses } from "@/hooks/useWarehouse";
 import { listWarehouses } from "@/services/warehouseServices";
 import type { WarehouseLocation } from "@/types/warehouse";
+import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -53,15 +54,6 @@ export default function Warehouses() {
         setLocationsLoading(false);
     };
 
-    const [form, setForm] = useState({
-        name: "",
-        department: "",
-        province: "",
-        district: "",
-        address: "",
-        isActive: true,
-    });
-
     const [page, setPage] = useState(1);
     const [debouncedQ, setDebouncedQ] = useState("");
     const limit = 10;
@@ -96,7 +88,7 @@ export default function Warehouses() {
         [page, limit, statusFilter, debouncedQ],
     );
 
-    const { items: warehouses, total, page: apiPage, limit: apiLimit, loading, error, create, update, setActive, getLocations } = useWarehouses(queryParams);
+    const { items: warehouses, total, page: apiPage, limit: apiLimit, loading, error, setActive, getLocations, refetch } = useWarehouses(queryParams);
 
     useEffect(() => {
         if (apiPage && apiPage !== page) setPage(apiPage);
@@ -122,14 +114,7 @@ export default function Warehouses() {
     const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedQ}`, [page, statusFilter, debouncedQ]);
 
     const startCreate = () => {
-        setForm({
-            name: "",
-            department: "",
-            province: "",
-            district: "",
-            address: "",
-            isActive: true,
-        });
+        setEditingWarehouseId(null);
         setOpenCreate(true);
     };
 
@@ -137,47 +122,12 @@ export default function Warehouses() {
         const w = warehouses.find((x) => x.warehouseId === warehouseId);
         if (!w) return;
 
-        setForm({
-            name: w.name,
-            department: w.department,
-            province: w.province,
-            district: w.district,
-            address: w.address ?? "",
-            isActive: w.isActive,
-        });
+        setOpenCreate(false);
         setEditingWarehouseId(warehouseId);
     };
 
-    const saveCreate = async () => {
-        if (!form.name.trim()) return;
-        if (!form.department.trim()) return;
-        if (!form.province.trim()) return;
-        if (!form.district.trim()) return;
-
-        await create({
-            name: form.name.trim(),
-            department: form.department.trim(),
-            province: form.province.trim(),
-            district: form.district.trim(),
-            address: form.address.trim() || null,
-            isActive: form.isActive,
-        });
-
+    const closeFormModal = () => {
         setOpenCreate(false);
-    };
-
-    const saveEdit = async () => {
-        if (!editingWarehouseId) return;
-
-        await update(editingWarehouseId, {
-            name: form.name.trim() || undefined,
-            department: form.department.trim() || undefined,
-            province: form.province.trim() || undefined,
-            district: form.district.trim() || undefined,
-            address: form.address.trim() || null,
-        });
-
-        await setActive(editingWarehouseId, form.isActive);
         setEditingWarehouseId(null);
     };
 
@@ -643,213 +593,17 @@ export default function Warehouses() {
             </div>
 
             {/* MODALES */}
-            {openCreate && (
-                <Modal title="Nuevo almacén" onClose={() => setOpenCreate(false)} className="max-w-lg">
-                    <motion.div
-                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.16 }}
-                    >
-                        <div className="space-y-3">
-                            <label className="text-sm">
-                                Nombre
-                                <input
-                                    className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                />
-                            </label>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <label className="text-sm">
-                                    Departamento
-                                    <input
-                                        className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                        style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                        value={form.department}
-                                        onChange={(e) => setForm({ ...form, department: e.target.value })}
-                                    />
-                                </label>
-                                <label className="text-sm">
-                                    Provincia
-                                    <input
-                                        className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                        style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                        value={form.province}
-                                        onChange={(e) => setForm({ ...form, province: e.target.value })}
-                                    />
-                                </label>
-                            </div>
-
-                            <label className="text-sm">
-                                Distrito
-                                <input
-                                    className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.district}
-                                    onChange={(e) => setForm({ ...form, district: e.target.value })}
-                                />
-                            </label>
-
-                            <label className="text-sm">
-                                Dirección (opcional)
-                                <textarea
-                                    className="mt-2 min-h-[90px] w-full rounded-2xl border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.address}
-                                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                                />
-                            </label>
-
-                            {/* <label className="text-sm">
-                                Estado
-                                <select
-                                    className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm bg-white outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.isActive ? "active" : "inactive"}
-                                    onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })}
-                                >
-                                    <option value="active">Activo</option>
-                                    <option value="inactive">Inactivo</option>
-                                </select>
-                            </label> */}
-                        </div>
-
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button
-                                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                                onClick={() => setOpenCreate(false)}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                className="rounded-2xl border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2"
-                                style={
-                                    {
-                                        backgroundColor: PRIMARY,
-                                        borderColor: `${PRIMARY}33`,
-                                        "--tw-ring-color": `${PRIMARY}33`,
-                                    } as React.CSSProperties
-                                }
-                                onMouseEnter={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                                }}
-                                onMouseLeave={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                                }}
-                                onClick={saveCreate}
-                            >
-                                Guardar
-                            </button>
-                        </div>
-                    </motion.div>
-                </Modal>
-            )}
-
-            {editingWarehouseId && (
-                <Modal title="Editar almacén" onClose={() => setEditingWarehouseId(null)} className="max-w-lg">
-                    <motion.div
-                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.16 }}
-                    >
-                        <div className="space-y-3">
-                            <label className="text-sm">
-                                Nombre
-                                <input
-                                    className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                />
-                            </label>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <label className="text-sm">
-                                    Departamento
-                                    <input
-                                        className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                        style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                        value={form.department}
-                                        onChange={(e) => setForm({ ...form, department: e.target.value })}
-                                    />
-                                </label>
-                                <label className="text-sm">
-                                    Provincia
-                                    <input
-                                        className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                        style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                        value={form.province}
-                                        onChange={(e) => setForm({ ...form, province: e.target.value })}
-                                    />
-                                </label>
-                            </div>
-
-                            <label className="text-sm">
-                                Distrito
-                                <input
-                                    className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.district}
-                                    onChange={(e) => setForm({ ...form, district: e.target.value })}
-                                />
-                            </label>
-
-                            <label className="text-sm">
-                                Dirección (opcional)
-                                <textarea
-                                    className="mt-2 min-h-[90px] w-full rounded-2xl border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.address}
-                                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                                />
-                            </label>
-
-                            {/* <label className="text-sm">
-                                Estado
-                                <select
-                                    className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm bg-white outline-none focus:ring-2"
-                                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                    value={form.isActive ? "active" : "inactive"}
-                                    onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })}
-                                >
-                                    <option value="active">Activo</option>
-                                    <option value="inactive">Inactivo</option>
-                                </select>
-                            </label> */}
-                        </div>
-
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button
-                                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                                onClick={() => setEditingWarehouseId(null)}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                className="rounded-2xl border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2"
-                                style={
-                                    {
-                                        backgroundColor: PRIMARY,
-                                        borderColor: `${PRIMARY}33`,
-                                        "--tw-ring-color": `${PRIMARY}33`,
-                                    } as React.CSSProperties
-                                }
-                                onMouseEnter={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                                }}
-                                onMouseLeave={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                                }}
-                                onClick={saveEdit}
-                            >
-                                Guardar cambios
-                            </button>
-                        </div>
-                    </motion.div>
-                </Modal>
-            )}
+            <WarehouseFormModal
+                open={openCreate || Boolean(editingWarehouseId)}
+                mode={editingWarehouseId ? "edit" : "create"}
+                warehouseId={editingWarehouseId}
+                onClose={closeFormModal}
+                onSaved={() => {
+                    void refetch();
+                }}
+                primaryColor={PRIMARY}
+                entityLabel="almacén"
+            />
 
             {deletingWarehouseId && (
                 <Modal title="Confirmar acción" onClose={() => setDeletingWarehouseId(null)} className="max-w-md">

@@ -103,7 +103,7 @@ export default function RowVariant() {
         const res = await listProducts({ page: p, limit: batch, type: ProductTypes.PRIMA });
         if (res.items?.length) all.push(...res.items);
       }
-      setProducts(all.map((p) => ({ productId: p.id, name: p.name })));
+      setProducts(all.map((p) => ({ productId: p.id, name: p.name, sku: p.sku ?? null })));
       loadVariants();
     } catch {
       setProducts([]);
@@ -188,7 +188,7 @@ export default function RowVariant() {
     if (!exists && pendingProductFromQuery.productName) {
       setProducts((prev) => {
         if (prev.some((p) => p.productId === pendingProductFromQuery.productId)) return prev;
-        return [{ productId: pendingProductFromQuery.productId, name: pendingProductFromQuery.productName }, ...prev];
+        return [{ productId: pendingProductFromQuery.productId, name: pendingProductFromQuery.productName, sku: null }, ...prev];
       });
     }
 

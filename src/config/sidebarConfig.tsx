@@ -1,4 +1,4 @@
-﻿import { IconHome, IconRowMaterial, IconStock, IconUsers, IconWarehouse } from "@/components/dashboard/icons";
+﻿import { IconHome, IconPurchase, IconRowMaterial, IconStock, IconUsers, IconWarehouse } from "@/components/dashboard/icons";
 import type { SidebarItem } from "@/components/dashboard/types";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 
@@ -12,6 +12,17 @@ export const getSidebarItems = (): SidebarItem[] => [
         label: "Usuarios",
         href: RoutesPaths.users,
         icon: <IconUsers className="text-sidebar-foreground" />,
+    },
+    {
+        label: "Compras",
+        // href: RoutesPaths.dashboard,
+        icon: <IconPurchase className="text-sidebar-foreground" />,
+        children: [
+            {
+                label:"Compra",
+                href: RoutesPaths.purchase
+            }
+        ]
     },
     {
         label: "Stock",

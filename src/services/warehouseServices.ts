@@ -33,6 +33,11 @@ export const listWarehouses = async (params: ListWarehousesQuery): Promise<Wareh
   return response.data;
 };
 
+export const listActive = async (): Promise<Warehouse[]> => {
+  const response = await axiosInstance.get(API_WAREHOUSES_GROUP.listActive);
+  return response.data;
+};
+
 export const getWarehouseById = async (id: string): Promise<Warehouse> => {
   const response = await axiosInstance.get(API_WAREHOUSES_GROUP.getById(id));
   return response.data;

@@ -38,6 +38,9 @@ export const RoutesPaths = {
   //provedores
   providers:'/contactos/proveedores',
   contacts:'/contactos',
+
+  //purchase
+  purchase: '/compra'
 } as const;
 
 /**

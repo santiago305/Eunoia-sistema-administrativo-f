@@ -1,5 +1,5 @@
 import axiosInstance from "@/common/utils/axios";
-import { API_VARIANTS_GROUP } from "./APIs";
+import { API_PRODUCTS_GROUP, API_VARIANTS_GROUP } from "./APIs";
 import {
   CreateVariantResponse,
   CreateVariantDto,
@@ -17,6 +17,10 @@ export const listVariants = async (params: ListVariantsQuery): Promise<ListVaria
 };
 export const listRowMaterials = async (): Promise<PrimaVariant[]> => {
   const res = await axiosInstance.get(API_VARIANTS_GROUP.listRowMaterials);
+  return res.data;
+};
+export const listFinishedProducts= async (): Promise<PrimaVariant[]> => {
+  const res = await axiosInstance.get(API_PRODUCTS_GROUP.productFinisheds);
   return res.data;
 };
 

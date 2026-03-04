@@ -12,7 +12,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/types/ProductTypes";
 import type { ProductEquivalence } from "@/types/equivalence";
 import type { ListUnitResponse } from "@/types/unit";
-import type { ListProductsQuery, ProductForm } from "@/types/product";
+import type { ListProductsQuery } from "@/types/product";
 import { listProductRecipes } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/types/productRecipe";
 import { RecipeFormFields } from "./components/RecipeFormFields";
@@ -20,7 +20,7 @@ import type { PrimaVariant, VariantListItem } from "@/types/variant";
 import { listRowMaterials, listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
-import { ProductFormFields } from "./components/ProductFormField";
+import { ProductFormModal } from "./components/ProductFormModal";
 import { VariantList } from "./components/VariantList";
 
 const PRIMARY = "#21b8a6";
@@ -53,17 +53,6 @@ export default function CatalogProducts() {
     const [variants, setVariants] = useState<VariantListItem[]>([]);
     const [variantsLoading, setVariantsLoading] = useState(false);
     const [variantsError, setVariantsError] = useState<string | null>(null);
-
-    const [form, setForm] = useState<ProductForm>({
-        name: "",
-        description: "",
-        isActive: true,
-        barcode: "",
-        price: "",
-        cost: "",
-        attribute: {},
-        baseUnitId: "",
-    });
 
     const [page, setPage] = useState(1);
     const [debouncedName, setDebouncedName] = useState("");
@@ -147,7 +136,7 @@ export default function CatalogProducts() {
         [page, limit, statusFilter, debouncedName],
     );
 
-    const { items: products, total, page: apiPage, limit: apiLimit, loading, error, create, update, setActive } = useProducts(queryParams);
+    const { items: products, total, page: apiPage, limit: apiLimit, loading, error, refresh, setActive } = useProducts(queryParams);
 
     useEffect(() => {
         if (apiPage && apiPage !== page) setPage(apiPage);
@@ -189,80 +178,13 @@ export default function CatalogProducts() {
     const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedName}`, [page, statusFilter, debouncedName]);
 
     const startCreate = () => {
-        setForm({
-            name: "",
-            description: "",
-            isActive: true,
-            barcode: "",
-            price: "",
-            cost: "",
-            attribute: {},
-            baseUnitId: "",
-        });
         setEditingProductId(null);
         setOpenCreate(true);
     };
 
-    const openEdit = async (productId: string) => {
-        clearFlash();
-        try {
-            const product = await getProductById(productId);
-            setForm({
-                name: product.name,
-                description: product.description ?? "",
-                isActive: product.isActive,
-                barcode: product.barcode ?? "",
-                price: product.price ? String(product.price) : "",
-                cost: product.cost ? String(product.cost) : "",
-                attribute: {
-                    presentation: product.attributes?.presentation,
-                    color: product.attributes?.color,
-                    variant: product.attributes?.variant,
-                },
-                baseUnitId: product.baseUnitId ?? "",
-            });
-            setOpenCreate(false);
-            setEditingProductId(productId);
-        } catch {
-            showFlash(errorResponse("No se pudo cargar el producto"));
-        }
-    };
-
-    const saveProduct = async () => {
-        if (!form.name.trim()) return;
-        clearFlash();
-        try {
-            if (editingProductId) {
-                await update(editingProductId, {
-                    name: form.name.trim() || undefined,
-                    description: form.description.trim() || null,
-                    barcode: form.barcode.trim() || null,
-                    price: Number(form.price) || 0,
-                    cost: Number(form.cost) || 0,
-                    baseUnitId: form.baseUnitId,
-                    attributes: form.attribute,
-                });
-                await setActive(editingProductId, form.isActive);
-                setEditingProductId(null);
-                showFlash(successResponse("Producto actualizado"));
-            } else {
-                await create({
-                    type: PRODUCT_TYPE,
-                    name: form.name.trim(),
-                    description: form.description.trim() || null,
-                    isActive: form.isActive,
-                    barcode: form.barcode.trim() || null,
-                    price: Number(form.price) || 0,
-                    cost: Number(form.cost) || 0,
-                    baseUnitId: form.baseUnitId,
-                    attributes: form.attribute,
-                });
-                setOpenCreate(false);
-                showFlash(successResponse("Producto creado"));
-            }
-        } catch {
-            showFlash(errorResponse(editingProductId ? "Error al actualizar producto" : "Error al crear producto"));
-        }
+    const openEdit = (productId: string) => {
+        setOpenCreate(false);
+        setEditingProductId(productId);
     };
 
     const confirmDelete = async () => {
@@ -825,38 +747,32 @@ export default function CatalogProducts() {
             </div>
 
             {/* MODALES */}
-            {openCreate && (
-                <Modal title="Nuevo producto" onClose={() => setOpenCreate(false)} className="max-w-[700px]">
-                    <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} />
-                    <div className="mt-4 flex justify-end gap-2">
-                        <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
-                            Cancelar
-                        </button>
-                        <button
-                            className="rounded-2xl border px-4 py-2 text-sm text-white"
-                            style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                            onClick={saveProduct}
-                            disabled={!form.name.trim()}
-                        >
-                            Guardar
-                        </button>
-                    </div>
-                </Modal>
-            )}
+            <ProductFormModal
+                open={openCreate}
+                mode="create"
+                productType={PRODUCT_TYPE}
+                units={units}
+                primaryColor={PRIMARY}
+                entityLabel="producto"
+                onClose={() => setOpenCreate(false)}
+                onSaved={() => {
+                    void refresh();
+                }}
+            />
 
-            {editingProductId && (
-                <Modal title="Editar producto" onClose={() => setEditingProductId(null)} className="max-w-[700px]">
-                    <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} />
-                    <div className="mt-4 flex justify-end gap-2">
-                        <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingProductId(null)}>
-                            Cancelar
-                        </button>
-                        <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={saveProduct}>
-                            Guardar cambios
-                        </button>
-                    </div>
-                </Modal>
-            )}
+            <ProductFormModal
+                open={Boolean(editingProductId)}
+                mode="edit"
+                productId={editingProductId}
+                productType={PRODUCT_TYPE}
+                units={units}
+                primaryColor={PRIMARY}
+                entityLabel="producto"
+                onClose={() => setEditingProductId(null)}
+                onSaved={() => {
+                    void refresh();
+                }}
+            />
 
             {deletingProductId && (
                 <Modal title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">

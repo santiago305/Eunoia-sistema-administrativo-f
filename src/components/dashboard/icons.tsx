@@ -12,7 +12,8 @@
   PanelLeft,
   Package,
   Warehouse,
-  Pickaxe
+  Pickaxe,
+  Store
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -25,6 +26,9 @@ export const IconSettings = ({ className }: { className?: string }) => (
 
 export const IconWarehouse = ({ className }: { className?: string }) => (
   <Warehouse className={className} size={20} />
+);
+export const IconPurchase = ({ className }: { className?: string }) => (
+  <Store className={className} size={20} />
 );
 export const IconRowMaterial = ({ className }: { className?: string }) => (
   <Pickaxe className={className} size={20} />

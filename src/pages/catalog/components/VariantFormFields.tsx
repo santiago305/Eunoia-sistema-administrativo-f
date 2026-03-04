@@ -5,7 +5,7 @@ import { Dispatch, SetStateAction } from "react";
 export function VariantFormFields({ form, setForm, products }: { form: VariantForm; setForm: Dispatch<SetStateAction<VariantForm>>; products: ProductOption[] }) {
     const productOptions = (products ?? []).map((u) => ({
         value: u.productId,
-        label: `${u.name}`,
+        label: u.sku ? `${u.name} - (${u.sku})` : u.name,
     }));
     return (
         <div className="space-y-3">

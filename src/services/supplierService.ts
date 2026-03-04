@@ -33,6 +33,10 @@ export const listSuppliers = async (params: ListSuppliersQuery): Promise<Supplie
   const response = await axiosInstance.get(API_SUPPLIERS_GROUP.list, { params });
   return response.data;
 };
+export const listAll = async (): Promise<Supplier[]> => {
+  const response = await axiosInstance.get(API_SUPPLIERS_GROUP.listAll);
+  return response.data;
+};
 
 export const getSupplierById = async (id: string): Promise<Supplier> => {
   const response = await axiosInstance.get(API_SUPPLIERS_GROUP.byId(id));
