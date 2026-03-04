@@ -4,6 +4,29 @@ import { UpdateUserDto } from "@/types/user"
 import type { CurrentUserResponse } from "@/types/userProfile"
 
 export type UserRoleCount = "admin" | "moderator" | "adviser";
+export type UserStatusFilter = "all" | "active" | "inactive";
+export type UserSortBy = "name" | "email" | "createdAt" | "role" | "deleted";
+export type UserOrder = "ASC" | "DESC";
+
+export type UserApiListItem = {
+  id: string;
+  name: string;
+  email: string;
+  telefono?: string | null;
+  rol: UserRoleCount;
+  roleId?: string;
+  deleted: boolean;
+  createdAt: string;
+};
+
+export type ListUsersParams = {
+  status?: UserStatusFilter;
+  page?: number;
+  role?: string;
+  q?: string;
+  sortBy?: UserSortBy;
+  order?: UserOrder;
+};
 export type CreateUserPayload = {
   name: string;
   email: string;
@@ -16,7 +39,7 @@ export type CreateUserPayload = {
 export type CountUsersByRoleParams = {
   role?: UserRoleCount;
   q?: string;
-  status?: "all" | "active" | "inactive";
+  status?: UserStatusFilter;
 };
 
 export type CountUsersByRoleResponse = {
@@ -49,7 +72,7 @@ export const findAll = async (params: {
   sortBy?: string;
   order?: 'ASC' | 'DESC';
 }) => {
-  const response = await axiosInstance.get(API_USERS_GROUP.findAll,{ params })
+  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list,{ params: { ...params, status: "all" } })
   return response.data
   
 }
@@ -60,7 +83,14 @@ export const findDesactive = async (params: {
   sortBy?: string;
   order?: "ASC" | "DESC";
 }) => {
-  const response = await axiosInstance.get(API_USERS_GROUP.findDesactive, { params });
+  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list, { params: { ...params, status: "inactive" } });
+  return response.data;
+};
+
+export const listUsers = async (params?: ListUsersParams) => {
+  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list, {
+    params: { status: "all", ...params },
+  });
   return response.data;
 };
 
@@ -163,7 +193,7 @@ export const findActives = async (params: {
   sortBy?: string;
   order?: 'ASC' | 'DESC';
 }) => {
-  const response = await axiosInstance.get(API_USERS_GROUP.findActives,{ params })
+  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list,{ params: { ...params, status: "active" } })
   return response.data
 }
 

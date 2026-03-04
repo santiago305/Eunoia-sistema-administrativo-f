@@ -1,7 +1,14 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
-import { countUsersByRole, createUser, type CountUsersByRoleResponse } from "@/services/userService";
+import {
+  countUsersByRole,
+  createUser,
+  listUsers,
+  updateUser,
+  type CountUsersByRoleResponse,
+  type UserApiListItem,
+} from "@/services/userService";
 import { findAllRoles } from "@/services/roleService";
 
 type Role = "admin" | "moderator" | "adviser";
@@ -17,54 +24,27 @@ const ROLE_LABELS: Record<Role, string> = {
 };
 const PAGE_SIZE = 20;
 
-// ---------- Mock API (cÃ¡mbialo por backend) ----------
-function makeMockUsers(count = 220): User[] {
-  const names = ["Santiago", "Valeria", "Mateo", "LucÃ­a", "Diego", "Camila", "SofÃ­a", "Juan", "Ana", "Carlos"];
-  const last = ["GÃ³mez", "PÃ©rez", "Flores", "Ramos", "Torres", "DÃ­az", "Vega", "Castro", "Ortega", "Mendoza"];
-  return Array.from({ length: count }).map((_, i) => {
-    const first = names[i % names.length];
-    const ln = last[(i * 3) % last.length];
-    const id = String(i + 1);
-    return {
-      id,
-      name: `${first} ${ln}`,
-      email: `${first.toLowerCase()}.${ln.toLowerCase()}${i + 1}@mail.com`,
-      phone: `+51 9${String(10000000 + i).slice(0, 8)}`,
-      role: ROLES[i % ROLES.length],
-      createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-    };
-  });
-}
-
-let DB: User[] = makeMockUsers(260);
-
-const api = {
-  async listUsers() {
-    return structuredClone(DB);
-  },
-  async createUser(payload: { name: string; email: string; password: string; phone: string; role: Role }) {
-    const id = String(DB.length + 1);
-    const u: User = {
-      id,
-      name: payload.name.trim(),
-      email: payload.email.trim().toLowerCase(),
-      phone: payload.phone.trim(),
-      role: payload.role,
-      createdAt: new Date().toISOString(),
-    };
-    DB = [u, ...DB];
-    return structuredClone(u);
-  },
-  async updateUserRole(id: string, role: Role) {
-    DB = DB.map((u) => (u.id === id ? { ...u, role } : u));
-    return structuredClone(DB.find((u) => u.id === id)!);
-  },
-};
-
 // ---------- Utils ----------
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
-const contains = (a: string, b: string) => (a || "").toLowerCase().includes((b || "").toLowerCase());
 const fmtDate = (iso: string) => new Date(iso).toLocaleString();
+const pageStyle: React.CSSProperties & { "--primary": string } = { "--primary": PRIMARY };
+const normalizeUser = (u: UserApiListItem): User => ({
+  id: u.id,
+  name: u.name,
+  email: u.email,
+  phone: String(u.telefono ?? ""),
+  role: u.rol,
+  createdAt: u.createdAt,
+});
+const readError = (error: unknown) => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = (error as { response?: { status?: number; data?: { message?: string | string[] } } }).response;
+    const message = response?.data?.message;
+    const normalizedMessage = Array.isArray(message) ? message.join(" | ") : String(message ?? "");
+    return { status: response?.status ?? 0, message: normalizedMessage };
+  }
+  return { status: 0, message: "" };
+};
 
 function validateCreate(v: { name: string; email: string; password: string; telefono: string; roleId: string }) {
   const e: Record<string, string> = {};
@@ -91,9 +71,12 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [usersError, setUsersError] = useState("");
+  const [status] = useState<"all" | "active" | "inactive">("all");
 
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
   const [countsByRole, setCountsByRole] = useState<CountUsersByRoleResponse | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -108,14 +91,46 @@ export default function Users() {
   const [savingRole, setSavingRole] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       setLoading(true);
-      const data = await api.listUsers();
-      setUsers(data);
-      setSelectedId(data[0]?.id ?? null);
-      setLoading(false);
+      setUsersError("");
+      try {
+        const data = await listUsers({
+          status,
+          page,
+          q: query.trim() || undefined,
+          order: "DESC",
+        });
+        const normalized = Array.isArray(data) ? data.map(normalizeUser) : [];
+        if (!cancelled) {
+          setUsers(normalized);
+          setHasNextPage(normalized.length === PAGE_SIZE);
+          setSelectedId((prev) => (prev && normalized.some((u) => u.id === prev) ? prev : (normalized[0]?.id ?? null)));
+        }
+      } catch (error: unknown) {
+        const parsed = readError(error);
+        const message =
+          parsed.message.trim() ||
+          (parsed.status === 401
+            ? "Sesion no valida."
+            : parsed.status === 403
+              ? "Acceso denegado: rol insuficiente."
+              : "No se pudo cargar la lista de usuarios.");
+        if (!cancelled) {
+          setUsers([]);
+          setHasNextPage(false);
+          setSelectedId(null);
+          setUsersError(message);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [page, query, status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,9 +140,9 @@ export default function Users() {
         const response = await findAllRoles();
         const list = Array.isArray(response) ? response : response?.data;
         const normalized = (Array.isArray(list) ? list : [])
-          .map((r: any) => ({
-            id: String(r?.id ?? ""),
-            description: String(r?.description ?? "").toLowerCase() as Role,
+          .map((r: { id?: unknown; description?: unknown }) => ({
+            id: String(r.id ?? ""),
+            description: String(r.description ?? "").toLowerCase() as Role,
           }))
           .filter((r: RoleOption) => !!r.id && ROLES.includes(r.description));
 
@@ -151,30 +166,22 @@ export default function Users() {
     if (selected) setRoleDraft(selected.role);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtered = useMemo(() => {
-    const q = query.trim();
-    if (!q) return users;
-    return users.filter((u) => contains(u.name, q) || contains(u.email, q) || contains(u.phone, q));
-  }, [users, query]);
-
   useEffect(() => setPage(1), [query]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const paged = useMemo(() => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE), [filtered, safePage]);
+  const safePage = Math.max(1, page);
 
   const counts = useMemo(() => {
     const byRole = ROLES.reduce((acc, r) => ({ ...acc, [r]: 0 }), {} as Record<Role, number>);
-    for (const u of filtered) byRole[u.role] += 1;
+    for (const u of users) byRole[u.role] += 1;
     return byRole;
-  }, [filtered]);
+  }, [users]);
 
   useEffect(() => {
     let cancelled = false;
     const loadCountsByRole = async () => {
       try {
         const q = query.trim();
-        const data = await countUsersByRole({ q: q || undefined, status: "all" });
+        const data = await countUsersByRole({ q: q || undefined, status });
         if (!cancelled) setCountsByRole(data);
       } catch {
         if (!cancelled) setCountsByRole(null);
@@ -184,7 +191,7 @@ export default function Users() {
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [query, status]);
 
   const visibleRoles = useMemo(() => {
     const apiRoles = Object.keys(countsByRole?.byRole ?? {}) as Role[];
@@ -224,17 +231,6 @@ export default function Users() {
         avatarUrl: create.avatarUrl.trim() || undefined,
       });
 
-      const selectedRole = roles.find((r) => r.id === create.roleId)?.description ?? "adviser";
-      const u: User = {
-        id: `${Date.now()}`,
-        name: create.name.trim(),
-        email: create.email.trim().toLowerCase(),
-        phone: create.telefono.trim(),
-        role: selectedRole,
-        createdAt: new Date().toISOString(),
-      };
-      setUsers((p) => [u, ...p]);
-      setSelectedId(u.id);
       const adviser = roles.find((r) => r.description === "adviser");
       setCreate({ name: "", email: "", password: "", telefono: "", avatarUrl: "", roleId: adviser?.id ?? "" });
       setCreateErr({});
@@ -242,10 +238,15 @@ export default function Users() {
       setModalOpen(false);
       setQuery("");
       setPage(1);
-    } catch (error: any) {
-      const status = Number(error?.response?.status ?? 0);
-      const raw = error?.response?.data?.message;
-      const rawMessage = Array.isArray(raw) ? raw.join(" | ") : String(raw ?? "No se pudo crear el usuario");
+      const data = await listUsers({ status, page: 1, order: "DESC" });
+      const normalized = Array.isArray(data) ? data.map(normalizeUser) : [];
+      setUsers(normalized);
+      setHasNextPage(normalized.length === PAGE_SIZE);
+      setSelectedId(normalized[0]?.id ?? null);
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      const status = Number(parsed.status ?? 0);
+      const rawMessage = parsed.message || "No se pudo crear el usuario";
       const chunks = rawMessage
         .split("|")
         .map((m: string) => m.trim())
@@ -281,8 +282,9 @@ export default function Users() {
     if (roleDraft === selected.role) return;
     setSavingRole(true);
     try {
-      const updated = await api.updateUserRole(selected.id, roleDraft);
-      setUsers((p) => p.map((u) => (u.id === updated.id ? updated : u)));
+      const roleId = roles.find((r) => r.description === roleDraft)?.id;
+      await updateUser(selected.id, (roleId ? { roleId } : { rol: roleDraft }) as never);
+      setUsers((p) => p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft } : u)));
     } finally {
       setSavingRole(false);
     }
@@ -297,7 +299,7 @@ export default function Users() {
         "flex flex-col",
         "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12"
       )}
-      style={{ ["--primary" as any]: PRIMARY } as React.CSSProperties}
+      style={pageStyle}
     >
       <PageTitle title="GestiÃ³n de usuarios" />
       <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
@@ -353,7 +355,7 @@ export default function Users() {
 
             <div className="mt-2 flex items-center justify-between">
               <span className="text-[11px] text-zinc-500 2xl:text-[12px]">
-                PÃ¡gina <span className="font-medium text-zinc-800">{safePage}</span> / {totalPages}
+                PÃ¡gina <span className="font-medium text-zinc-800">{safePage}</span>
               </span>
 
               <div className="flex items-center gap-2">
@@ -368,11 +370,11 @@ export default function Users() {
                   â†
                 </button>
                 <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={!hasNextPage}
                   className={cn(
                     "rounded-lg border px-2.5 py-1.5 text-[12px] transition",
-                    safePage === totalPages ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                    !hasNextPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
                   )}
                 >
                   â†’
@@ -396,7 +398,7 @@ export default function Users() {
                     ))
                   ) : (
                     <>
-                      {paged.map((u) => {
+                      {users.map((u) => {
                         const active = u.id === selectedId;
                         return (
                           <motion.button
@@ -425,10 +427,12 @@ export default function Users() {
                         );
                       })}
 
-                      {!paged.length && (
+                      {!users.length && (
                         <motion.div {...fadeUp} className="rounded-xl border border-zinc-200 bg-white p-6 text-center">
                           <div className="text-[13px] font-medium text-zinc-900">Sin resultados</div>
-                          <div className="mt-1 text-[12px] text-zinc-600">No encontramos â€œ{query}â€.</div>
+                          <div className="mt-1 text-[12px] text-zinc-600">
+                            {usersError || `No encontramos â€œ${query}â€.`}
+                          </div>
                           <button
                             onClick={() => setQuery("")}
                             className="mt-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-700 hover:bg-zinc-50"
@@ -446,7 +450,7 @@ export default function Users() {
 
           {/* Footer fijo */}
           <div className="border-t border-zinc-100 px-3 py-2 text-[11px] text-zinc-500 2xl:text-[12px]">
-            20 por pÃ¡gina Â· {filtered.length} resultados
+            20 por pÃ¡gina Â· {users.length} resultados en esta pÃ¡gina
           </div>
         </section>
 

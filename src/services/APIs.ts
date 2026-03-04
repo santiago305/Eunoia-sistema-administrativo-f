@@ -15,6 +15,7 @@ export const API_AUTH_GROUP = {
  * Grupo de rutas para la gestión de usuarios.
  */
 export const API_USERS_GROUP = {
+  list: "/users",
   createUser: '/users/create',
   findAll: '/users/findAll',
   countByRole: '/users/count-by-role',

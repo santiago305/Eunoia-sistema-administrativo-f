@@ -6,6 +6,7 @@ import {
   findDesactive,
   deleteUser,
   restoreUser,
+  type UserApiListItem,
 } from "@/services/userService";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -25,8 +26,20 @@ type ApiListResponse<T> = T[] | { data?: T[] } | undefined | null;
 
 function normalizeList<T>(res: ApiListResponse<T>): T[] {
   if (Array.isArray(res)) return res;
-  if (res && Array.isArray((res as any).data)) return (res as any).data;
+  if (res && typeof res === "object" && "data" in res && Array.isArray(res.data)) return res.data;
   return [];
+}
+
+function toLegacyUserRow(user: UserApiListItem): UserRow {
+  return {
+    user_id: user.id,
+    user_name: user.name,
+    user_email: user.email,
+    user_deleted: Boolean(user.deleted),
+    user_created_at: user.createdAt,
+    rol: user.rol,
+    roleId: user.roleId ?? "",
+  };
 }
 
 export function useUsers() {
@@ -43,7 +56,7 @@ export function useUsers() {
     setError(null);
     try {
       const res = active ? await findActives({}) : await findDesactive({});
-      setUsers(normalizeList<UserRow>(res));
+      setUsers(normalizeList<UserApiListItem>(res).map(toLegacyUserRow));
     } catch {
       setError("Error al cargar usuarios.");
       setUsers([]);
@@ -55,8 +68,8 @@ export function useUsers() {
   const refreshTotals = useCallback(async () => {
     try {
       const [actRes, desRes] = await Promise.all([findActives({}), findDesactive({})]);
-      const active = normalizeList<UserRow>(actRes).length;
-      const inactive = normalizeList<UserRow>(desRes).length;
+      const active = normalizeList<UserApiListItem>(actRes).length;
+      const inactive = normalizeList<UserApiListItem>(desRes).length;
       setTotals({ active, inactive, total: active + inactive });
     } catch {
       setTotals({ active: 0, inactive: 0, total: 0 });
@@ -69,7 +82,7 @@ export function useUsers() {
     setError(null);
     try {
       const res = await findAll({});
-      setUsers(normalizeList<UserRow>(res));
+      setUsers(normalizeList<UserApiListItem>(res).map(toLegacyUserRow));
     } catch {
       setError("Error al cargar usuarios.");
       setUsers([]);
