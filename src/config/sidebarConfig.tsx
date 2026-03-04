@@ -15,7 +15,7 @@ export const getSidebarItems = (): SidebarItem[] => [
     },
     {
         label: "Compras",
-        // href: RoutesPaths.dashboard,
+        href: RoutesPaths.purchases,
         icon: <IconPurchase className="text-sidebar-foreground" />,
         children: [
             {
