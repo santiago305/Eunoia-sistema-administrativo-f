@@ -41,6 +41,7 @@ const RowVariant = lazy(() => import("@/pages/row-material/RowVariant"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
 const Providers = lazy(() => import("@/pages/providers/Providers"));
 const Purchase = lazy(() => import("@/pages/purchases/Purchase"));
+const Purchases = lazy(() => import("@/pages/purchases/Purchases"));
 
 const withRouteGuard = (path: string, element: ReactElement) => {
     const routeMeta = getRouteMetaByPath(path);
@@ -151,6 +152,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.purchase,
                 element: withRouteGuard(RoutesPaths.purchase, <Purchase/>),
+            },
+            {
+                path: RoutesPaths.purchases,
+                element: withRouteGuard(RoutesPaths.purchases, <Purchases/>),
             },
         ],
     },

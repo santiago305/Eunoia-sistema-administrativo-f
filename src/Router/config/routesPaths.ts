@@ -40,7 +40,8 @@ export const RoutesPaths = {
   contacts:'/contactos',
 
   //purchase
-  purchase: '/compra'
+  purchase: '/compra',
+  purchases: '/compras'
 } as const;
 
 /**
