@@ -24,6 +24,8 @@ export type Warehouse = {
   updatedAt: string;
 };
 
+export type WarehouseOption = { value: string; label: string; };
+
 export type WarehouseListResponse = {
   items: Warehouse[];
   total: number;

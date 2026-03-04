@@ -114,7 +114,7 @@ export default function CatalogVariants() {
               const res = await listProducts({ page: p, limit: batch, type: ProductTypes.FINISHED });
               if (res.items?.length) all.push(...res.items);
           }
-          setProducts(all.map((p) => ({ productId: p.id, name: p.name })));
+          setProducts(all.map((p) => ({ productId: p.id, name: p.name, sku: p.sku ?? null })));
           loadVariants();
       } catch {
           setProducts([]);

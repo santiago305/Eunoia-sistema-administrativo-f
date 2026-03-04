@@ -13,8 +13,8 @@ import { ProductTypes } from "@/types/ProductTypes";
 import type { ProductEquivalence } from "@/types/equivalence";
 import type { ListUnitResponse } from "@/types/unit";
 import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
-import { ProductFormFields } from "../catalog/components/ProductFormField";
-import { ListProductsQuery, ProductForm } from "@/types/product";
+import { ProductFormModal } from "../catalog/components/ProductFormModal";
+import { ListProductsQuery } from "@/types/product";
 import { listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { VariantList } from "../catalog/components/VariantList";
@@ -47,16 +47,6 @@ export default function RowMaterial() {
    const [variantsLoading, setVariantsLoading] = useState(false);
    const [variantsError, setVariantsError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<ProductForm>({
-    name: "",
-    description: "",
-    isActive: true,
-    barcode: "",
-    price: "",
-    cost: "",
-    attribute: {},
-    baseUnitId: "",
-  });
   const [page, setPage] = useState(1);
   const [debouncedName, setDebouncedName] = useState("");
   const limit = 10;
@@ -96,7 +86,7 @@ export default function RowMaterial() {
       [page, limit, statusFilter, debouncedName],
   );
 
-  const { items: products, total, page: apiPage, limit: apiLimit, loading, error, create, update, setActive } =
+  const { items: products, total, page: apiPage, limit: apiLimit, loading, error, refresh, setActive } =
     useProducts(queryParams);
 
   useEffect(() => {
@@ -135,16 +125,6 @@ export default function RowMaterial() {
   const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedName}`, [page, statusFilter, debouncedName]);
 
   const startCreate = () => {
-    setForm({
-      name: "",
-      description: "",
-      isActive: true,
-      barcode: "",
-      price: "",
-      cost: "",
-      attribute: {},
-      baseUnitId: "",
-    });
     setEditingProductId(null);
     setOpenCreate(true);
   };
@@ -183,68 +163,9 @@ export default function RowMaterial() {
     navigate(`/materia-prima/variantes?${params.toString()}`);
   };
 
-  const openEdit = async (productId: string) => {
-    clearFlash();
-    try {
-      const product = await getProductById(productId);
-      setForm({
-          name: product.name,
-          description: product.description ?? "",
-          isActive: product.isActive,
-          barcode: product.barcode ?? "",
-          price: product.price ? String(product.price) : "",
-          cost: product.cost ? String(product.cost) : "",
-          attribute: {
-              presentation: product.attributes?.presentation,
-              color: product.attributes?.color,
-              variant: product.attributes?.variant
-          },
-          baseUnitId: product.baseUnitId ?? "",
-      });
-      setOpenCreate(false);
-      setEditingProductId(productId);
-    } catch {
-      showFlash(errorResponse("No se pudo cargar la materia prima"));
-    }
-  };
-
-  const saveProduct = async () => {
-    if (!form.name.trim()) return;
-    clearFlash();
-    try {
-      if (editingProductId) {
-        await update(editingProductId, {
-          name: form.name.trim() || undefined,
-          description: form.description.trim() || null,
-          barcode: form.barcode.trim() || null,
-          price: Number(form.price) || 0,
-          cost: Number(form.cost) || 0,
-          baseUnitId: form.baseUnitId,
-          attributes: form.attribute,
-        });
-        await setActive(editingProductId, form.isActive);
-        setEditingProductId(null);
-        showFlash(successResponse("Materia prima actualizada"));
-      } else {
-        await create({
-          type: PRODUCT_TYPE,
-          name: form.name.trim(),
-          description: form.description.trim() || null,
-          isActive: form.isActive,
-          barcode: form.barcode.trim() || null,
-          price: Number(form.price) || 0,
-          cost: Number(form.cost) || 0,
-          baseUnitId: form.baseUnitId,
-          attributes: form.attribute,
-        });
-        setOpenCreate(false);
-        showFlash(successResponse("Materia prima creada"));
-      }
-    } catch {
-      showFlash(
-        errorResponse(editingProductId ? "Error al actualizar materia prima" : "Error al crear materia prima")
-      );
-    }
+  const openEdit = (productId: string) => {
+    setOpenCreate(false);
+    setEditingProductId(productId);
   };
 
   const confirmDelete = async () => {
@@ -777,38 +698,32 @@ export default function RowMaterial() {
       </div>
 
       {/* MODALES */}
-      {openCreate && (
-          <Modal title="Nueva materia prima" onClose={() => setOpenCreate(false)} className="max-w-[700px]">
-              <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY} primaBoolean={true} />
-              <div className="mt-4 flex justify-end gap-2">
-                  <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
-                      Cancelar
-                  </button>
-                  <button
-                      className="rounded-2xl border px-4 py-2 text-sm text-white"
-                      style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                      onClick={saveProduct}
-                      disabled={!form.name.trim()}
-                  >
-                      Guardar
-                  </button>
-              </div>
-          </Modal>
-      )}
+      <ProductFormModal
+          open={openCreate}
+          mode="create"
+          productType={PRODUCT_TYPE}
+          units={units}
+          primaryColor={PRIMARY}
+          entityLabel="materia prima"
+          onClose={() => setOpenCreate(false)}
+          onSaved={() => {
+              void refresh();
+          }}
+      />
 
-      {editingProductId && (
-          <Modal title="Editar materia prima" onClose={() => setEditingProductId(null)} className="max-w-[700px]">
-              <ProductFormFields form={form} setForm={setForm} units={units} PRIMARY={PRIMARY}/>
-              <div className="mt-4 flex justify-end gap-2">
-                  <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingProductId(null)}>
-                      Cancelar
-                  </button>
-                  <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={saveProduct}>
-                      Guardar cambios
-                  </button>
-              </div>
-          </Modal>
-      )}
+      <ProductFormModal
+          open={Boolean(editingProductId)}
+          mode="edit"
+          productId={editingProductId}
+          productType={PRODUCT_TYPE}
+          units={units}
+          primaryColor={PRIMARY}
+          entityLabel="materia prima"
+          onClose={() => setEditingProductId(null)}
+          onSaved={() => {
+              void refresh();
+          }}
+      />
 
       {deletingProductId && (
           <Modal title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">

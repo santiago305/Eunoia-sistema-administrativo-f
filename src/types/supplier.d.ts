@@ -29,6 +29,9 @@ export type Supplier = {
   updatedAt?: string;
 };
 
+export type SupplierOption = { value: string; label: string; days?: number | null };
+
+
 export type SupplierForm = {
   documentType: DocumentType;
   documentNumber: string;

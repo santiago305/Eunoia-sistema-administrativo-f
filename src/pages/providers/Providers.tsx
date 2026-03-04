@@ -1,20 +1,12 @@
-import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+﻿import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import {
-  createSupplier,
-  getSupplierById,
-  listSuppliers,
-  lookupSupplierIdentity,
-  updateSupplier,
-  updateSupplierActive,
-} from "@/services/supplierService";
-import type { Supplier, SupplierDniLookupData, SupplierForm, SupplierRucLookupData } from "@/types/supplier";
+import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
+import type { Supplier } from "@/types/supplier";
 import { Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
-import { DocumentType } from "@/types/DocumentType";
-import { SupplierFormFields } from "./components/FormProviders";
+import { SupplierFormModal } from "./components/SupplierFormModal";
 
 const PRIMARY = "#21b8a6";
 
@@ -38,21 +30,6 @@ export default function Providers() {
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [toggleSupplierId, setToggleSupplierId] = useState<string | null>(null);
   const [nextActiveState, setNextActiveState] = useState(false);
-  const [lookupLoading, setLookupLoading] = useState(false);
-
-  const [form, setForm] = useState<SupplierForm>({
-    documentType: DocumentType.DNI,
-    documentNumber: "",
-    name: "",
-    lastName: "",
-    tradeName: "",
-    address: "",
-    phone: "",
-    email: "",
-    note: "",
-    leadTimeDays: "",
-    isActive: true,
-  });
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -101,127 +78,13 @@ export default function Providers() {
   const endIndex = Math.min(apiPage * (apiLimit || limit), total);
 
   const startCreate = () => {
-    setForm({
-      documentType: DocumentType.DNI,
-      documentNumber: "",
-      name: "",
-      lastName: "",
-      tradeName: "",
-      address: "",
-      phone: "",
-      email: "",
-      note: "",
-      leadTimeDays: "",
-      isActive: true,
-    });
     setEditingSupplierId(null);
     setOpenCreate(true);
   };
 
-  const openEdit = async (supplierId: string) => {
-    clearFlash();
-    try {
-      const supplier = await getSupplierById(supplierId);
-      setForm({
-        documentType: supplier.documentType ?? "",
-        documentNumber: supplier.documentNumber ?? "",
-        name: supplier.name ?? "",
-        lastName: supplier.lastName ?? "",
-        tradeName: supplier.tradeName ?? "",
-        address: supplier.address ?? "",
-        phone: supplier.phone ?? "",
-        email: supplier.email ?? "",
-        note: supplier.note ?? "",
-        leadTimeDays: supplier.leadTimeDays ? String(supplier.leadTimeDays) : "",
-        isActive: supplier.isActive,
-      });
-      setOpenCreate(false);
-      setEditingSupplierId(supplierId);
-    } catch {
-      showFlash(errorResponse("No se pudo cargar el proveedor"));
-    }
-  };
-
-  const buildPayload = () => ({
-    documentType: form.documentType.trim(),
-    documentNumber: form.documentNumber.trim(),
-    name: form.name.trim() || undefined,
-    lastName: form.lastName.trim() || undefined,
-    tradeName: form.tradeName.trim() || undefined,
-    address: form.address.trim() || undefined,
-    phone: form.phone.trim() || undefined,
-    email: form.email.trim() || undefined,
-    note: form.note.trim() || undefined,
-    leadTimeDays: form.leadTimeDays ? Number(form.leadTimeDays) : undefined,
-    isActive: form.isActive,
-  });
-
-  const saveSupplier = async () => {
-    if (!form.documentType.trim() || !form.documentNumber.trim()) return;
-    clearFlash();
-    try {
-      if (editingSupplierId) {
-        await updateSupplier(editingSupplierId, buildPayload());
-        showFlash(successResponse("Proveedor actualizado"));
-        setEditingSupplierId(null);
-      } else {
-        await createSupplier(buildPayload());
-        setOpenCreate(false);
-        showFlash(successResponse("Proveedor creado"));
-      }
-      await loadSuppliers();
-    } catch {
-      showFlash(errorResponse(editingSupplierId ? "Error al actualizar proveedor" : "Error al crear proveedor"));
-    }
-  };
-
-  const lookupIdentity = async () => {
-      if (!form.documentType.trim() || !form.documentNumber.trim()) return;
-      clearFlash();
-      setLookupLoading(true);
-
-      try {
-          const result = await lookupSupplierIdentity({
-              documentType: form.documentType,
-              documentNumber: form.documentNumber.trim(),
-          });
-          const payload = result?.data;
-          if (!payload) {
-              showFlash(errorResponse("No se pudo obtener la identidad"));
-              return;
-          }
-          if (form.documentType === DocumentType.DNI && "name" in payload) {
-              const data = payload as SupplierDniLookupData;
-
-              setForm((prev) => ({
-                  ...prev,
-                  documentNumber: result.documentNumber ?? prev.documentNumber,
-                  name: data.name || prev.name,
-                  lastName: data.lastName || prev.lastName,
-              }));
-
-              showFlash(successResponse("Datos actualizados"));
-              return;
-          }
-          if (form.documentType === DocumentType.RUC && "tradeName" in payload) {
-              const data = payload as SupplierRucLookupData;
-
-              setForm((prev) => ({
-                  ...prev,
-                  documentNumber: result.documentNumber ?? prev.documentNumber,
-                  tradeName: data.tradeName || prev.tradeName,
-                  address: data.address || prev.address,
-              }));
-
-              showFlash(successResponse("Datos actualizados"));
-              return;
-          }
-          showFlash(errorResponse("Tipo de documento no soportado"));
-      } catch {
-          showFlash(errorResponse("No se pudo obtener la identidad"));
-      } finally {
-          setLookupLoading(false);
-      }
+  const openEdit = (supplierId: string) => {
+    setOpenCreate(false);
+    setEditingSupplierId(supplierId);
   };
 
   const confirmToggleActive = async () => {
@@ -237,6 +100,10 @@ export default function Providers() {
   };
 
   const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedSearch}`, [page, statusFilter, debouncedSearch]);
+  const getSupplierDisplayName = (supplier: Supplier) => {
+    const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
+    return fullName || supplier.tradeName || "-";
+  };
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
@@ -312,7 +179,7 @@ export default function Providers() {
                   <th className="py-3 px-5 text-left">Proveedor</th>
                   <th className="py-3 px-5 text-left">Email</th>
                   <th className="py-3 px-5 text-left">Telefono</th>
-                  <th className="py-3 px-5 text-left">Dirección</th>
+                  <th className="py-3 px-5 text-left">Direccion</th>
                   <th className="py-3 px-5 text-center">Tiempo de espera</th>
                   <th className="py-3 px-5 text-left">Nota</th>
                   <th className="py-3 px-5 text-left">Estado</th>
@@ -327,7 +194,7 @@ export default function Providers() {
                       <div className="text-black/60 text-xs">{supplier.documentNumber}</div>
                     </td>
                     <td className="py-3 px-5">
-                      <div className="text-black/70">{ supplier.name + " " + supplier.lastName || supplier.tradeName}</div>
+                      <div className="text-black/70">{getSupplierDisplayName(supplier)}</div>
                     </td>
                     <td className="py-3 px-5">
                       <div className="text-black/70">{supplier.email || "-"}</div>
@@ -357,7 +224,7 @@ export default function Providers() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]"
-                          onClick={() => void openEdit(supplier.supplierId)}
+                          onClick={() => openEdit(supplier.supplierId)}
                           title="Editar"
                         >
                           <Pencil className="h-4 w-4" />
@@ -366,7 +233,6 @@ export default function Providers() {
                         <button
                           className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]
                              ${supplier.isActive ? "text-rose-500" : "text-emerald-500"}`}
-                          
                           onClick={() => {
                             setToggleSupplierId(supplier.supplierId);
                             setNextActiveState(!supplier.isActive);
@@ -418,54 +284,27 @@ export default function Providers() {
         </section>
       </div>
 
-      {openCreate && (
-        <Modal title="Nuevo proveedor" onClose={() => setOpenCreate(false)} className="max-w-[750px]">
-          <SupplierFormFields
-            form={form}
-            setForm={setForm}
-            PRIMARY={PRIMARY}
-            onLookupIdentity={lookupIdentity}
-            lookupDisabled={lookupLoading || !form.documentType.trim() || !form.documentNumber.trim()}
-          />
-          <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
-              Cancelar
-            </button>
-            <button
-              className="rounded-2xl border px-4 py-2 text-sm text-white"
-              style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-              onClick={saveSupplier}
-              disabled={!form.documentType.trim() || !form.documentNumber.trim()}
-            >
-              Guardar
-            </button>
-          </div>
-        </Modal>
-      )}
+      <SupplierFormModal
+        open={openCreate}
+        mode="create"
+        onClose={() => setOpenCreate(false)}
+        onSaved={() => {
+          setPage(1);
+          void loadSuppliers();
+        }}
+        primaryColor={PRIMARY}
+      />
 
-      {editingSupplierId && (
-        <Modal title="Editar proveedor" onClose={() => setEditingSupplierId(null)} className="max-w-[750px]">
-          <SupplierFormFields
-            form={form}
-            setForm={setForm}
-            PRIMARY={PRIMARY}
-            onLookupIdentity={lookupIdentity}
-            lookupDisabled={lookupLoading || !form.documentType.trim() || !form.documentNumber.trim()}
-          />
-          <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingSupplierId(null)}>
-              Cancelar
-            </button>
-            <button
-              className="rounded-2xl border px-4 py-2 text-sm text-white"
-              style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-              onClick={saveSupplier}
-            >
-              Guardar cambios
-            </button>
-          </div>
-        </Modal>
-      )}
+      <SupplierFormModal
+        open={Boolean(editingSupplierId)}
+        mode="edit"
+        supplierId={editingSupplierId}
+        onClose={() => setEditingSupplierId(null)}
+        onSaved={() => {
+          void loadSuppliers();
+        }}
+        primaryColor={PRIMARY}
+      />
 
       {toggleSupplierId && (
         <Modal title={nextActiveState ? "Activar proveedor" : "Desactivar proveedor"} onClose={() => setToggleSupplierId(null)} className="max-w-md">

@@ -51,6 +51,18 @@ export type ListVariantsResponse = {
 export type PrimaVariant = {
   id?: string;
   primaId?: string;
+  stockItemId?: string;
+  sku?: string;
+  productName?: string;
+  productDescription?: string;
+  unitCode?: string;
+  unitName?: string;
+  baseUnitId?: string;
+  isActive?: boolean;
+};
+export type FinishedProducts = {
+  id?: string;
+  stockItemId?: string;
   sku?: string;
   productName?: string;
   productDescription?: string;
@@ -60,7 +72,7 @@ export type PrimaVariant = {
   isActive?: boolean;
 };
 
-export type ProductOption = { productId: string; name: string };
+export type ProductOption = { productId: string; name: string; sku?: string | null };
 export type VariantForm = {
   productId: string;
   barcode: string;
