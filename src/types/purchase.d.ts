@@ -56,6 +56,8 @@ export type PurchaseOrder = {
   totalIgv: number;
   purchaseValue: number;
   total: number;
+  totalPaid: number;
+  totalToPay: number;
   note?: string | null;
   status: PurchaseOrderStatus;
   expectedAt?: string | null;
@@ -70,12 +72,12 @@ export type PurchaseOrder = {
 };
 
 export type Payment = {
-  paymentId?: string;
+  payDocId?: string;
   method: PaymentType;
   date: string;
   operationNumber?: string | null;
   currency: CurrencyType;
-  amount: number;
+  amount: number | null;
   note?: string | null;
   quotaId?: string | null;
   poId?: string | null;

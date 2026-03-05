@@ -2,7 +2,9 @@ import axiosInstance from "@/common/utils/axios";
 import { API_PURCHASE_GROUP } from "@/services/APIs";
 import type {
   CreatePurchaseOrderDto,
+  CreditQuota,
   ListPurchaseOrdersQuery,
+  Payment,
   PurchaseOrder,
   PurchaseOrderItemsResponse,
   PurchaseOrderListResponse,
@@ -24,6 +26,15 @@ export const listPurchaseOrders = async (
   return response.data;
 };
 
+export const listPayments = async (id:string): Promise<Payment[]> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.listPayments(id));
+  return response.data;
+};
+export const listQuotas = async (id:string): Promise<CreditQuota[]> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.listQuotas(id));
+  return response.data;
+};
+
 export const updatePurchaseOrder = async (
   id: string,
   payload: UpdatePurchaseOrderDto
@@ -35,7 +46,7 @@ export const updatePurchaseOrder = async (
 export const setPurchaseOrderActive = async (
   id: string,
   payload: UpdatePurchaseOrderActiveDto
-): Promise<{ ok: boolean }> => {
+): Promise<{ type:string, message:string }> => {
   const response = await axiosInstance.patch(API_PURCHASE_GROUP.setActive(id), payload);
   return response.data;
 };
@@ -48,7 +59,7 @@ export const listPurchaseOrderItems = async (id: string): Promise<PurchaseOrderI
 export const removePurchaseOrderItem = async (
   id: string,
   itemId: string
-): Promise<{ ok: boolean }> => {
+): Promise<{ type:string, message:string }> => {
   const response = await axiosInstance.delete(API_PURCHASE_GROUP.removeItem(id, itemId));
   return response.data;
 };
