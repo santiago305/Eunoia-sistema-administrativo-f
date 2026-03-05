@@ -3,6 +3,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
+import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { listAll } from "@/services/supplierService";
 import { listActive } from "@/services/warehouseServices";
 import { listPurchaseOrders } from "@/services/purchaseService";
@@ -10,7 +11,10 @@ import { money, toDateInputValue, tryShowPicker, todayIso } from "@/utils/functi
 import type { PurchaseOrder } from "@/types/purchase";
 import type { SupplierOption } from "@/types/supplier";
 import type { Warehouse } from "@/types/warehouse";
-import { VoucherDocTypes, type VoucherDocType, PurchaseOrderStatuses, type PurchaseOrderStatus } from "@/types/purchaseEnums";
+import { VoucherDocTypes, type VoucherDocType, PurchaseOrderStatuses, type PurchaseOrderStatus, PaymentFormTypes } from "@/types/purchaseEnums";
+import { PaymentModal } from "./components/PaymentModal";
+import { PaymentListModal } from "./components/PaymentListModal";
+import { QuotaListModal } from "./components/QuotaListModal";
 
 const PRIMARY = "#21b8a6";
 
@@ -56,6 +60,7 @@ const parseNumero = (raw: string) => {
 
 export default function Purchases() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { setCollapsed } = useSidebarContext();
 
   const [numeroInput, setNumeroInput] = useState("");
   const [debouncedNumero, setDebouncedNumero] = useState("");
@@ -75,8 +80,18 @@ export default function Purchases() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [supplierOptions, setSupplierOptions] = useState<SupplierOption[]>([]);
-  const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<(SupplierOption & { doc?: string })[]>([]);
+  const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string; address?: string }[]>([]);
+  const [modalPayment, setModalPayment] = useState(false);
+  const [modalPaymentList, setModalPaymentList] = useState(false);
+  const [modalQuotaList, setModalQuotaList] = useState(false);
+
+  const [totalPaid, setTotalPaid] = useState(0);
+  const [totalToPay, setTotalToPay] = useState(0);
+  const [totalPo, setTotalPo] = useState(0);
+  const [poId, setPoId] = useState("");
+  const [paymentForm, setPaymentForm] = useState("");
+  
 
   const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
 
@@ -98,7 +113,8 @@ export default function Purchases() {
           const doc = s.documentNumber ? ` (${s.documentNumber})` : "";
           return {
             value: s.supplierId,
-            label: `${display}${doc}`.trim() || s.supplierId,
+            label: display || s.supplierId,
+            doc: s.documentNumber ?? "",
           };
         }) ?? [];
       setSupplierOptions([{ value: "", label: "Todos" }, ...options]);
@@ -112,10 +128,14 @@ export default function Purchases() {
     try {
       const res = await listActive();
       const options =
-        res?.map((s: Warehouse) => ({
-          value: s.warehouseId,
-          label: `${s.name} (${s.department}-${s.province}-${s.district})`,
-        })) ?? [];
+        res?.map((s: Warehouse) => {
+          const address = `${s.department}-${s.province}-${s.district}`;
+          return {
+            value: s.warehouseId,
+            label: s.name,
+            address,
+          };
+        }) ?? [];
       setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
     } catch {
       setWarehouseOptions([{ value: "", label: "Todos" }]);
@@ -161,6 +181,10 @@ export default function Purchases() {
   }, []);
 
   useEffect(() => {
+    setCollapsed(true);
+  }, [setCollapsed]);
+
+  useEffect(() => {
     void loadPurchases();
   }, [page, debouncedNumero, supplierId, warehouseId, documentType, statusFilter, fromDate, toDate]);
 
@@ -172,18 +196,18 @@ export default function Purchases() {
   const startIndex = total === 0 ? 0 : (apiPage - 1) * (apiLimit || limit) + 1;
   const endIndex = Math.min(apiPage * (apiLimit || limit), total);
 
-  const supplierLabelById = useMemo(() => {
-    const map = new Map<string, string>();
+  const supplierMetaById = useMemo(() => {
+    const map = new Map<string, { label: string; doc?: string }>();
     supplierOptions.forEach((opt) => {
-      if (opt.value) map.set(opt.value, opt.label);
+      if (opt.value) map.set(opt.value, { label: opt.label, doc: opt.doc });
     });
     return map;
   }, [supplierOptions]);
 
-  const warehouseLabelById = useMemo(() => {
-    const map = new Map<string, string>();
+  const warehouseMetaById = useMemo(() => {
+    const map = new Map<string, { label: string; address?: string }>();
     warehouseOptions.forEach((opt) => {
-      if (opt.value) map.set(opt.value, opt.label);
+      if (opt.value) map.set(opt.value, { label: opt.label, address: opt.address });
     });
     return map;
   }, [warehouseOptions]);
@@ -321,39 +345,113 @@ export default function Purchases() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-3 px-5 text-left">Fecha emision</th>
-                  <th className="py-3 px-5 text-left">Numero</th>
-                  <th className="py-3 px-5 text-left">Proveedor</th>
-                  <th className="py-3 px-5 text-left">Almacen</th>
-                  <th className="py-3 px-5 text-left">Documento</th>
-                  <th className="py-3 px-5 text-left">Total</th>
-                  <th className="py-3 px-5 text-left">Estado</th>
+                  <th className="py-3 px-3 text-left">Fecha emision</th>
+                  <th className="py-3 px-3 text-left">Documento</th>
+                  <th className="py-3 px-3 text-left">Numero</th>
+                  <th className="py-3 px-3 text-left">Proveedor</th>
+                  <th className="py-3 px-3 text-left">Almacen</th>
+                  <th className="py-3 px-3 text-left">Forma de pago</th>
+                  <th className="py-3 px-3 text-left">Total</th>
+                  <th className="py-3 px-3 text-left">Pagado</th>
+                  <th className="py-3 px-3 text-left">Pendiente</th>
+                  <th className="py-3 px-3 text-left">Estado</th>
+                  <th className="py-3 px-3 text-left">Opciones</th>
                 </tr>
               </thead>
-
               <tbody key={listKey}>
                 {purchases.map((purchase) => {
                   const numero = [purchase.serie, purchase.correlative]
                     .filter((v) => v !== null && v !== undefined && String(v).length > 0)
                     .join("-");
-                  const supplierLabel = purchase.supplierId ? supplierLabelById.get(purchase.supplierId) : undefined;
-                  const warehouseLabel = purchase.warehouseId ? warehouseLabelById.get(purchase.warehouseId) : undefined;
+                  const supplierMeta = purchase.supplierId ? supplierMetaById.get(purchase.supplierId) : undefined;
+                  const warehouseMeta = purchase.warehouseId ? warehouseMetaById.get(purchase.warehouseId) : undefined;
                   const statusLabel = purchase.status ? statusLabels[purchase.status] ?? purchase.status : "-";
                   const docLabel = purchase.documentType ? docTypeLabels[purchase.documentType] ?? purchase.documentType : "-";
+                  const date = purchase.dateIssue?.slice(0,10);
+                  const time = purchase.dateIssue
+                      ? new Date(purchase.dateIssue).toLocaleTimeString("es-PE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                        })
+                      : undefined;         
                   return (
                     <tr key={purchase.poId ?? `${purchase.supplierId}-${purchase.createdAt ?? numero}`} className="border-b border-black/5">
-                      <td className="py-3 px-5 text-black/70">{purchase.dateIssue?.slice(0, 10) ?? "-"}</td>
-                      <td className="py-3 px-5 text-black/70">{numero || "-"}</td>
-                      <td className="py-3 px-5 text-black/70">{supplierLabel ?? purchase.supplierId ?? "-"}</td>
-                      <td className="py-3 px-5 text-black/70">{warehouseLabel ?? purchase.warehouseId ?? "-"}</td>
-                      <td className="py-3 px-5 text-black/70">{docLabel}</td>
-                      <td className="py-3 px-5 text-left text-black/70 tabular-nums">
+                      <td className="py-3 px-3 text-black/70">
+                        {date} <br />
+                        {time}
+                      </td>
+                      <td className="py-3 px-3 text-black/70">{docLabel}</td>
+                      <td className="py-3 px-3 text-black/70">{numero}</td>
+                      <td className="py-3 px-3 text-black/70">
+                        <div>{supplierMeta?.label ?? "-"}</div>
+                        <div className="text-xs text-black/50">{supplierMeta?.doc ?? ""}</div>
+                      </td>
+                      <td className="py-3 px-3 text-black/70">
+                        <div>{warehouseMeta?.label ?? "-"}</div>
+                        <div className="text-xs text-black/50">{warehouseMeta?.address ?? ""}</div>
+                      </td>
+                      <td className="py-3 px-3 text-black/70">
+                        {purchase.paymentForm}
+                      </td>
+                      <td className="py-3 px-3 text-left text-black/70 tabular-nums">
                         {money(purchase.total ?? 0, purchase.currency)}
                       </td>
-                      <td className="py-3 px-5">
+                      <td className="py-3 px-3 text-left text-black/70 tabular-nums">
+                        {money(purchase.totalPaid ?? 0, purchase.currency)}
+                      </td>
+                      <td className="py-3 px-3 text-left text-black/70 tabular-nums">
+                        {money(purchase.totalToPay ?? 0, purchase.currency)}
+                      </td>
+                      <td className="py-3 px-3">
                         <span className="inline-flex rounded-full px-2 py-1 text-[11px] font-medium bg-slate-50 text-slate-700">
                           {statusLabel}
                         </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        {
+                          purchase.paymentForm !== PaymentFormTypes.CREDITO &&
+                          purchase.totalPaid != purchase.total && (
+                            <button
+                              className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                              onClick={() => {
+                                setModalPayment(true);
+                                setTotalPaid(purchase.totalPaid);
+                                setTotalToPay(purchase.totalToPay);
+                                setPoId(purchase.poId ?? "");
+                              }}
+                              type="button"
+                            >
+                              Pago
+                            </button>
+                          )
+                        }
+                        <button
+                          className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                          onClick={() => {
+                            setModalPaymentList(true);
+                            setPoId(purchase.poId ?? "");
+                            setTotalPo(purchase.total);
+                            setPaymentForm(purchase.paymentForm);
+                          }}
+                          type="button"
+                        >
+                          Listar pagos
+                        </button>
+                        {
+                          purchase.paymentForm === PaymentFormTypes.CREDITO && (
+                            <button
+                              className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                              onClick={() => {
+                                setModalQuotaList(true);
+                                setPoId(purchase.poId ?? "");
+                              }}
+                              type="button"
+                            >
+                              Ver cuotas
+                            </button>
+                          )
+                        }
                       </td>
                     </tr>
                   );
@@ -396,6 +494,50 @@ export default function Purchases() {
           </div>
         </section>
       </div>
+      {
+        modalPayment && (
+          <PaymentModal
+            title="Formulario de Pago"
+            close={() =>{
+              setModalPayment(false);
+            }}
+            className="max-w-[800px]"
+            totalPaid={totalPaid}
+            totalToPay={totalToPay}
+            poId={poId}
+            loadPurchases={loadPurchases}
+          />
+        )
+      }
+      {
+        modalPaymentList && (
+        <PaymentListModal
+          title="Pagos"
+          close={() =>{
+            setModalPaymentList(false);
+          }}
+          poId= {poId}
+          total={totalPo}
+          className="max-w-[800px]"
+          loadPurchases={loadPurchases}
+          credit= {
+            paymentForm === PaymentFormTypes.CONTADO ? false : true
+          }
+        />
+        )
+      }
+      {
+        modalQuotaList && (
+        <QuotaListModal
+          title="Cuotas"
+          close={() =>{
+            setModalQuotaList(false);
+          }}
+          poId= {poId}
+          className="max-w-[800px]"
+        />
+        )
+      }
     </div>
   );
 }

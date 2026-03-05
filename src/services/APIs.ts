@@ -136,5 +136,12 @@ export const API_PURCHASE_GROUP = {
   update: (id: string) => `/purchases/orders/${id}`,
   setActive: (id: string) => `/purchases/orders/${id}/active`,
   listItems: (id: string) => `/purchases/orders/${id}/items`,
+  listPayments: (id: string) => `/payments/get-by-po/${id}`,
+  listQuotas: (id: string) => `/payments/credit-quotas/get-by-po/${id}`,
   removeItem: (id: string, itemId: string) => `/purchases/orders/${id}/items/${itemId}`,
 };
+
+export const API_PAYMENT_GROUP = {
+  create: "/payments",
+  remove: (id: string) => `/payments/${id}`,
+}

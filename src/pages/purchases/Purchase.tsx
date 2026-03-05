@@ -398,7 +398,7 @@ export default function PurchaseCreateLocal() {
                               </div>
                               <button
                                   type="button"
-                                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border p-4 text-sm text-white focus:outline-none focus:ring-2"
+                                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border p-4 text-sm text-white focus:outline-none focus:ring-2"
                                   style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
                                   onClick={() => setOpenCreatePrima(true)}
                               >
@@ -442,7 +442,7 @@ export default function PurchaseCreateLocal() {
                                                   <input
                                                       type="number"
                                                       min={1}
-                                                      className="h-10 w-24 rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
+                                                      className="h-10 w-24 rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
                                                       style={ringStyle}
                                                       value={item.quantity}
                                                       onChange={(e) => updateItem(item.stockItemId, { quantity: Number(e.target.value) })}
@@ -453,7 +453,7 @@ export default function PurchaseCreateLocal() {
                                                   <input
                                                       type="number"
                                                       min={0}
-                                                      className="h-10 w-24 rounded-xl border border-black/10 bg-white px-3 text-sm text-right outline-none focus:ring-2"
+                                                      className="h-10 w-24 rounded-lg border border-black/10 bg-white px-3 text-sm text-right outline-none focus:ring-2"
                                                       style={ringStyle}
                                                       value={item.unitPrice}
                                                       onChange={(e) => updateItem(item.stockItemId, { unitPrice: Number(e.target.value) })}
@@ -465,7 +465,7 @@ export default function PurchaseCreateLocal() {
                                                   <div className="flex items-center justify-end">
                                                       <button
                                                           type="button"
-                                                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03] text-rose-600"
+                                                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-black/10 bg-white hover:bg-black/[0.03] text-rose-600"
                                                           title="Eliminar"
                                                           onClick={() => removeItem(item.stockItemId)}
                                                       >
@@ -486,10 +486,10 @@ export default function PurchaseCreateLocal() {
                           <div className="flex flex-wrap items-center justify-between gap-3">
                               <div className="text-xs text-black/60">Nota: "Precio" incluye IGV. "Valor" es base sin IGV (IGV {Math.round(IGV * 100)}%).</div>
                               <div className="flex items-center gap-2">
-                                  <div className="rounded-xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+                                  <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
                                       Total valor: <span className="font-semibold text-black">{money(totals.totalValue, currency)}</span>
                                   </div>
-                                  <div className="rounded-xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+                                  <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
                                       Total precio: <span className="font-semibold text-black">{money(totals.totalPrice, currency)}</span>
                                   </div>
                               </div>
@@ -506,7 +506,7 @@ export default function PurchaseCreateLocal() {
                               <div className="space-y-1">
                                   <label className="text-xs text-black/60">Tipo de comprobante</label>
                                   <select
-                                      className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
+                                      className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
                                       style={ringStyle}
                                       value={form.documentType}
                                       onChange={(e) => setForm((prev) => ({ ...prev, documentType: e.target.value as PurchaseOrder["documentType"] }))}
@@ -519,9 +519,10 @@ export default function PurchaseCreateLocal() {
                               <div className="space-y-1">
                                   <label className="text-xs text-black/60">Moneda</label>
                                   <select
-                                      className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
+                                      className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
                                       style={ringStyle}
                                       value={form.currency}
+                                      disabled={true}
                                       onChange={(e) =>
                                           setForm((prev) => ({
                                               ...prev,
@@ -539,7 +540,7 @@ export default function PurchaseCreateLocal() {
                               <div className="space-y-1">
                                   <label className="text-xs text-black/60">Serie</label>
                                   <input
-                                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
+                                      className="h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
                                       style={ringStyle}
                                       value={form.serie}
                                       onChange={(e) => setForm((prev) => ({ ...prev, serie: e.target.value }))}
@@ -549,7 +550,7 @@ export default function PurchaseCreateLocal() {
                               <div className="space-y-1">
                                   <label className="text-xs text-black/60">Numero</label>
                                   <input
-                                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
+                                      className="h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
                                       style={ringStyle}
                                       value={form.correlative ? String(form.correlative) : ""}
                                       onChange={(e) => setForm((prev) => ({ ...prev, correlative: Number(e.target.value || 0) }))}
@@ -577,7 +578,7 @@ export default function PurchaseCreateLocal() {
 
                                   <button
                                       type="button"
-                                      className="inline-flex h-10 w-11 items-center justify-center rounded-xl border text-white focus:outline-none focus:ring-2"
+                                      className="inline-flex h-10 w-11 items-center justify-center rounded-lg border text-white focus:outline-none focus:ring-2"
                                       style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, ...ringStyle }}
                                       title="Agregar almacen"
                                       onClick={() => setOpenCreateWarehouse(true)}
@@ -608,7 +609,7 @@ export default function PurchaseCreateLocal() {
 
                                   <button
                                       type="button"
-                                      className="inline-flex h-10 w-11 items-center justify-center rounded-xl border text-white focus:outline-none focus:ring-2"
+                                      className="inline-flex h-10 w-11 items-center justify-center rounded-lg border text-white focus:outline-none focus:ring-2"
                                       style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, ...ringStyle }}
                                       title="Agregar proveedor"
                                       onClick={() => setOpenAddSupplier(true)}
@@ -623,7 +624,7 @@ export default function PurchaseCreateLocal() {
                                   <label className="text-xs text-black/60">Fecha de emision</label>
                                   <input
                                       type="date"
-                                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
+                                      className="h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
                                       style={ringStyle}
                                       value={toDateInputValue(form.dateIssue)}
                                       onClick={(e) => tryShowPicker(e.currentTarget)}
@@ -648,7 +649,7 @@ export default function PurchaseCreateLocal() {
                                   <label className="text-xs text-black/60">Fecha de ingreso a almacen</label>
                                   <input
                                       type="date"
-                                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
+                                      className="h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
                                       style={ringStyle}
                                       value={toDateInputValue(form.expectedAt)}
                                       onClick={(e) => tryShowPicker(e.currentTarget)}
@@ -678,12 +679,12 @@ export default function PurchaseCreateLocal() {
 
                       <div className="border-t border-black/10 px-4 sm:px-5 py-4">
                           <div className="flex gap-2">
-                              <button type="button" className="flex-1 rounded-xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03]" onClick={resetForm}>
+                              <button type="button" className="flex-1 rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03]" onClick={resetForm}>
                                   Limpiar
                               </button>
                               <button
                                   type="button"
-                                  className="flex-1 rounded-xl border px-4 py-2 text-sm text-white disabled:opacity-40"
+                                  className="flex-1 rounded-lg border px-4 py-2 text-sm text-white disabled:opacity-40"
                                   style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
                                   disabled={
                                     !form.items?.length || !form.serie.trim() || !form.supplierId
@@ -768,7 +769,10 @@ export default function PurchaseCreateLocal() {
                           Tipo de afectación
                           <select
                               className="mt-2 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm"
-                              value={pendingItemAfectType}
+                              value={
+                                form.documentType === VoucherDocTypes.NOTA_VENTA ? 
+                                AfectType.EXEMPT : pendingItemAfectType
+                            }
                               onChange={(e) => setPendingItemAfectType(e.target.value as AfectTypeType)}
                           >
                               <option value={AfectType.TAXED}>GRAVADA - OPERACION ONEROSA</option>
@@ -799,7 +803,7 @@ export default function PurchaseCreateLocal() {
                           </label>
                       </div>
                   </div>
-                  <div className="rounded-xl border border-black/10 overflow-hidden">
+                  <div className="rounded-lg border border-black/10 overflow-hidden">
                       <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
                           <span>Listado de equivalencias</span>
                           <span>{loading ? "Cargando..." : `${equivalences.length} registros`}</span>
@@ -847,7 +851,7 @@ export default function PurchaseCreateLocal() {
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
                       <button
-                          className="rounded-xl border border-black/10 px-4 py-2 text-sm"
+                          className="rounded-lg border border-black/10 px-4 py-2 text-sm"
                           onClick={() => {
                               clearEquivalence();
                           }}
@@ -855,7 +859,7 @@ export default function PurchaseCreateLocal() {
                           Cancelar
                       </button>
                       <button
-                          className="rounded-xl border px-4 py-2 text-sm text-white"
+                          className="rounded-lg border px-4 py-2 text-sm text-white"
                           style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
                           onClick={() => {
                               clearFlash();
@@ -869,7 +873,10 @@ export default function PurchaseCreateLocal() {
                               addSelectedProduct(equivalenceProductId, {
                                   quantity: pendingItemQuantity,
                                   unitPrice: pendingItemUnitPrice,
-                                  afectType: pendingItemAfectType,
+                                  afectType: 
+                                  form.documentType === VoucherDocTypes.NOTA_VENTA
+                                    ? AfectType.EXEMPT : pendingItemAfectType
+                                  ,
                                   equivalence: pendingEquivalence,
                                   factor: pendingFactor,
                                   unitBase: pendingUnitBase,

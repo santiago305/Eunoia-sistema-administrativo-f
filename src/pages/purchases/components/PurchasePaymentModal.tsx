@@ -3,68 +3,9 @@ import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes } from "@/types/purchaseEnums";
 import type { CreditQuota, Payment, PurchaseOrder } from "@/types/purchase";
+import { todayIso, toDateInputValue, clampQuotas, buildQuotas, tryShowPicker } from "@/utils/functionPurchases";
 
 const DEFAULT_PRIMARY = "#21b8a6";
-
-const toDateInputValue = (value?: string | null) => {
-  if (!value) return "";
-  const match = value.match(/^\d{4}-\d{2}-\d{2}/);
-  return match ? match[0] : "";
-};
-
-const todayIso = () => new Date().toISOString().slice(0, 10);
-
-const tryShowPicker = (input: HTMLInputElement) => {
-  try {
-    input.showPicker?.();
-  } catch {
-    // Ignore when the browser blocks programmatic picker opening.
-  }
-};
-
-const clampQuotas = (creditDays: number, numQuotas: number) => {
-  if (creditDays <= 0) return 0;
-  const safeNum = Math.max(1, numQuotas);
-  return Math.min(safeNum, creditDays);
-};
-
-const splitAmount = (total: number, parts: number) => {
-  if (parts <= 0) return [];
-  const totalCents = Math.round(total * 100);
-  const base = Math.floor(totalCents / parts);
-  const amounts = Array.from({ length: parts }, () => base);
-  const remainder = totalCents - base * parts;
-  if (remainder > 0) {
-    amounts[parts - 1] += remainder;
-  }
-  return amounts.map((c) => Number((c / 100).toFixed(2)));
-};
-
-const addDaysToIsoDateFrom = (baseIso: string, days?: number | null) => {
-  if (!baseIso) return "";
-  if (days === null || days === undefined) return baseIso;
-  const date = new Date(`${baseIso}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return "";
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-};
-
-const buildQuotas = (baseDateIso: string, creditDays: number, numQuotas: number, total: number): CreditQuota[] => {
-  const safeNum = clampQuotas(creditDays, numQuotas);
-  if (safeNum <= 0 || creditDays <= 0) return [];
-  const amounts = splitAmount(total, safeNum);
-  const quotas: CreditQuota[] = [];
-  for (let i = 1; i <= safeNum; i += 1) {
-    const dayOffset = i === safeNum ? creditDays : Math.floor((creditDays * i) / safeNum);
-    quotas.push({
-      number: i,
-      expirationDate: addDaysToIsoDateFrom(baseDateIso, dayOffset),
-      totalToPay: amounts[i - 1] ?? 0,
-      totalPaid: 0,
-    });
-  }
-  return quotas;
-};
 
 export type PurchasePaymentModalProps = {
   open: boolean;
@@ -301,7 +242,7 @@ export function PurchasePaymentModal({
                       max={maxForPayment}
                       className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
                       style={computedRingStyle}
-                      value={payment.amount}
+                      value={payment.amount ?? ""}
                       onChange={(e) => {
                         const next = Number(e.target.value || 0);
                         updatePayment(index, { amount: Math.min(Math.max(0, next), maxForPayment) });
@@ -322,8 +263,8 @@ export function PurchasePaymentModal({
                     <input
                       className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
                       style={computedRingStyle}
-                      value={payment.note ?? ""}
-                      onChange={(e) => updatePayment(index, { note: e.target.value })}
+                      value={payment.operationNumber ?? ""}
+                      onChange={(e) => updatePayment(index, { operationNumber: e.target.value })}
                       placeholder="Número de operación"
                     />
                     <input
