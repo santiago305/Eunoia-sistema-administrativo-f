@@ -69,7 +69,10 @@ export type User = {
   email: string;
   phone: string;
   role: Role;
+  deleted: boolean;
+  deletedAt?: string | null;
   createdAt: string;
+  updatedAt?: string | null;
 };
 
 export type RoleOption = {

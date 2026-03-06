@@ -22,7 +22,9 @@ export type UserApiListItem = {
   rol: UserRoleCount;
   roleId?: string;
   deleted: boolean;
+  deletedAt?: string | null;
   createdAt: string;
+  updatedAt?: string | null;
 };
 
 export type ListUsersParams = {

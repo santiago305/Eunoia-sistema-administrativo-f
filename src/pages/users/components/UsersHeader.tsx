@@ -1,11 +1,7 @@
 import type { CountUsersByRoleResponse } from "@/services/userService";
+import { ROLE_LABELS } from "../types/roles.types";
 
 const PRIMARY = "#21b8a6";
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
-  moderator: "Moderator",
-  adviser: "Adviser",
-};
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
 
@@ -68,7 +64,7 @@ export function UsersHeader({
         {visibleRoles.map((role) => (
           <StatPill
             key={role}
-            label={ROLE_LABELS[role] ?? role}
+            label={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
             value={(countsByRole?.byRole as Record<string, number> | undefined)?.[role] ?? counts[role] ?? 0}
           />
         ))}

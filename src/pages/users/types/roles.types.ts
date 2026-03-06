@@ -5,3 +5,9 @@ export enum RoleType {
   MODERATOR = "moderator",
   ADVISER = "adviser",
 }
+
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: "Administrador",
+  moderator: "Moderador",
+  adviser: "Asesor",
+};

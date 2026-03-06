@@ -1,15 +1,11 @@
 import { motion } from "framer-motion";
 import type { Role, User } from "../types/users.types";
-import { RoleType } from "../types/roles.types";
+import { ROLE_LABELS, RoleType } from "../types/roles.types";
+import { formatDateTimeLabel } from "../utils/dateFormat";
 
 const ROLES = Object.values(RoleType) as Role[];
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
-
-const fmtDate = (iso?: string | null) => {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString();
-};
 
 function RoleChip({ role }: { role: Role }) {
   const styles: Record<Role, string> = {
@@ -19,27 +15,18 @@ function RoleChip({ role }: { role: Role }) {
   };
 
   return (
-    <span
-      className={cn(
-        "inline-flex h-6 items-center rounded-full border px-2 text-[10px] font-medium",
-        styles[role]
-      )}
-    >
-      {role}
+    <span className={cn("inline-flex h-6 items-center rounded-full border px-2 text-[10px] font-medium", styles[role])}>
+      {ROLE_LABELS[role]}
     </span>
   );
 }
 
-function StatusChip({ deletedAt }: { deletedAt?: string | null }) {
-  const inactive = !!deletedAt;
-
+function StatusChip({ inactive }: { inactive: boolean }) {
   return (
     <span
       className={cn(
         "inline-flex h-6 items-center rounded-full border px-2 text-[10px] font-medium",
-        inactive
-          ? "border-rose-200 bg-rose-50 text-rose-600"
-          : "border-emerald-200 bg-emerald-50 text-emerald-600"
+        inactive ? "border-rose-200 bg-rose-50 text-rose-600" : "border-emerald-200 bg-emerald-50 text-emerald-600"
       )}
     >
       <span className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", inactive ? "bg-rose-500" : "bg-emerald-500")} />
@@ -48,17 +35,11 @@ function StatusChip({ deletedAt }: { deletedAt?: string | null }) {
   );
 }
 
-function Field({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | null;
-}) {
+function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="space-y-1">
       <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">{label}</p>
-      <p className="truncate text-[12px] text-zinc-800">{value || "—"}</p>
+      <p className="truncate text-[12px] text-zinc-800">{value || "-"}</p>
     </div>
   );
 }
@@ -84,7 +65,7 @@ export function UsersRightPanel({
   deactivateUser,
   restoreUser,
 }: UsersRightPanelProps) {
-  const isDeleted = !!selected?.deletedAt;
+  const isDeleted = Boolean(selected?.deleted || selected?.deletedAt);
 
   return (
     <section className="h-full rounded-2xl border border-zinc-200 bg-white">
@@ -96,7 +77,7 @@ export function UsersRightPanel({
           </div>
 
           <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[10px] text-zinc-500">
-            {selected ? `#${selected.id}` : "Sin selección"}
+            {selected ? `#${selected.id}` : "Sin seleccion"}
           </span>
         </div>
 
@@ -105,7 +86,7 @@ export function UsersRightPanel({
             <div className="flex h-full min-h-[260px] items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/70">
               <div className="text-center">
                 <p className="text-[12px] font-medium text-zinc-700">Selecciona un usuario</p>
-                <p className="mt-1 text-[11px] text-zinc-500">Aquí verás su información.</p>
+                <p className="mt-1 text-[11px] text-zinc-500">Aqui veras su informacion.</p>
               </div>
             </div>
           ) : (
@@ -124,7 +105,7 @@ export function UsersRightPanel({
                   </div>
 
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    <StatusChip deletedAt={selected.deletedAt} />
+                    <StatusChip inactive={isDeleted} />
                     <RoleChip role={selected.role} />
 
                     {!isDeleted ? (
@@ -155,10 +136,9 @@ export function UsersRightPanel({
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Teléfono" value={selected.phone} />
-                  <Field label="Creado" value={fmtDate(selected.createdAt)} />
-                  <Field label="Estado" value={isDeleted ? "Desactivado" : "Activo"} />
-                  <Field label="Desactivado el" value={fmtDate(selected.deletedAt)} />
+                  <Field label="Telefono" value={selected.phone} />
+                  <Field label="Creado" value={formatDateTimeLabel(selected.createdAt)} />
+                  <Field label="Ult. actualizado" value={formatDateTimeLabel(selected.updatedAt)} />
                 </div>
               </div>
 
@@ -187,7 +167,7 @@ export function UsersRightPanel({
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>
-                        {r}
+                        {ROLE_LABELS[r]}
                       </option>
                     ))}
                   </select>
@@ -197,13 +177,9 @@ export function UsersRightPanel({
                     disabled={savingRole || roleDraft === selected.role}
                     className={cn(
                       "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
-                      savingRole || roleDraft === selected.role
-                        ? "cursor-not-allowed opacity-60"
-                        : "active:scale-[.99]"
+                      savingRole || roleDraft === selected.role ? "cursor-not-allowed opacity-60" : "active:scale-[.99]"
                     )}
-                    style={{
-                      background: "hsl(var(--primary))",
-                    }}
+                    style={{ background: "hsl(var(--primary))" }}
                   >
                     {savingRole ? "Guardando..." : "Guardar"}
                   </button>

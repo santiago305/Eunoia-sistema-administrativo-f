@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { Dispatch, SetStateAction } from "react";
 import type { User, UserListStatus } from "../types/users.types";
+import { ROLE_LABELS } from "../types/roles.types";
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
 const fadeUp = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 8 } };
@@ -11,7 +12,7 @@ function RoleChip({ role }: { role: User["role"] }) {
     moderator: "border-[rgba(33,184,166,.25)] bg-[rgba(33,184,166,.08)] text-[rgba(12,98,88,1)]",
     adviser: "border-indigo-200 bg-indigo-50 text-indigo-700",
   };
-  return <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", map[role])}>{role}</span>;
+  return <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", map[role])}>{ROLE_LABELS[role]}</span>;
 }
 
 interface UsersLeftPanelProps {

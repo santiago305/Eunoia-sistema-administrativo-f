@@ -5,7 +5,9 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import {
   countUsersByRole,
+  deleteUser as deleteUserById,
   listUsers,
+  restoreUser as restoreUserById,
   updateUserRole,
   type CountUsersByRoleResponse,
   type ListUsersResponse,
@@ -23,14 +25,25 @@ const ROLES = Object.values(RoleType) as Role[];
 
 // ---------- Utils ----------
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
-const normalizeUser = (u: UserApiListItem): User => ({
-  id: u.id,
-  name: u.name,
-  email: u.email,
-  phone: String(u.telefono ?? ""),
-  role: u.rol,
-  createdAt: u.createdAt,
-});
+const normalizeUser = (u: UserApiListItem): User => {
+  const raw = u as UserApiListItem & {
+    created_at?: string | null;
+    updated_at?: string | null;
+    updateAt?: string | null;
+  };
+
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    phone: String(u.telefono ?? ""),
+    role: u.rol,
+    deleted: Boolean(u.deleted),
+    deletedAt: u.deletedAt ?? null,
+    createdAt: raw.createdAt ?? raw.created_at ?? "",
+    updatedAt: raw.updatedAt ?? raw.updated_at ?? raw.updateAt ?? null,
+  };
+};
 const readError = (error: unknown) => {
   if (typeof error === "object" && error !== null && "response" in error) {
     const response = (error as { response?: { status?: number; data?: { message?: string | string[] } } }).response;
@@ -67,6 +80,7 @@ export default function Users() {
 
   const [roleDraft, setRoleDraft] = useState<Role>("adviser");
   const [savingRole, setSavingRole] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,13 +219,50 @@ export default function Users() {
         return;
       }
       const res = await updateUserRole(selected.id, { roleId });
-      setUsers((p) => p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft } : u)));
+      const nowIso = new Date().toISOString();
+      setUsers((p) => p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft, updatedAt: nowIso } : u)));
       showFlash(successResponse((res as { message?: string })?.message || "Rol actualizado"));
     } catch (error: unknown) {
       const parsed = readError(error);
       showFlash(errorResponse(parsed.message.trim() || "No se pudo actualizar el rol."));
     } finally {
       setSavingRole(false);
+    }
+  }
+
+  async function deactivateUser() {
+    if (!selected) return;
+    clearFlash();
+    setTogglingStatus(true);
+    try {
+      const res = await deleteUserById(selected.id);
+      const nowIso = new Date().toISOString();
+      setUsers((prev) =>
+        prev.map((u) => (u.id === selected.id ? { ...u, deleted: true, deletedAt: u.deletedAt ?? nowIso, updatedAt: nowIso } : u))
+      );
+      showFlash(successResponse((res as { message?: string })?.message || "Usuario desactivado"));
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFlash(errorResponse(parsed.message.trim() || "No se pudo desactivar el usuario."));
+    } finally {
+      setTogglingStatus(false);
+    }
+  }
+
+  async function restoreUser() {
+    if (!selected) return;
+    clearFlash();
+    setTogglingStatus(true);
+    try {
+      const res = await restoreUserById(selected.id);
+      const nowIso = new Date().toISOString();
+      setUsers((prev) => prev.map((u) => (u.id === selected.id ? { ...u, deleted: false, deletedAt: null, updatedAt: nowIso } : u)));
+      showFlash(successResponse((res as { message?: string })?.message || "Usuario restablecido"));
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFlash(errorResponse(parsed.message.trim() || "No se pudo restablecer el usuario."));
+    } finally {
+      setTogglingStatus(false);
     }
   }
 
@@ -258,6 +309,9 @@ export default function Users() {
             setRoleDraft={setRoleDraft}
             savingRole={savingRole}
             saveRole={saveRole}
+            togglingStatus={togglingStatus}
+            deactivateUser={deactivateUser}
+            restoreUser={restoreUser}
           />
         </div>
       </div>
