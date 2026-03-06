@@ -122,12 +122,6 @@ export function UsersRightPanel({ selected, roleDraft, setRoleDraft, savingRole,
                   </button>
                 </div>
               </div>
-
-              <div className="rounded-2xl border border-zinc-200 bg-gradient-to-br from-white to-zinc-50 p-4">
-                <div className="text-[12px] text-zinc-600 2xl:text-[13px]">
-                  Espacio para futuras acciones (permisos, logs, reset password) sin romper el alto.
-                </div>
-              </div>
             </motion.div>
           )}
         </div>

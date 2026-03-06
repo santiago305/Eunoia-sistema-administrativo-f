@@ -1,10 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
+import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { errorResponse, successResponse } from "@/common/utils/response";
 import {
   countUsersByRole,
   listUsers,
-  updateUser,
+  updateUserRole,
   type CountUsersByRoleResponse,
   type ListUsersResponse,
   type UserApiListItem,
@@ -40,6 +42,8 @@ const readError = (error: unknown) => {
 };
 
 export default function Users() {
+  const { showFlash, clearFlash } = useFlashMessage();
+
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -192,11 +196,20 @@ export default function Users() {
   async function saveRole() {
     if (!selected) return;
     if (roleDraft === selected.role) return;
+    clearFlash();
     setSavingRole(true);
     try {
       const roleId = roles.find((r) => r.description === roleDraft)?.id;
-      await updateUser(selected.id, (roleId ? { roleId } : { rol: roleDraft }) as never);
+      if (!roleId) {
+        showFlash(errorResponse("No se pudo resolver el rol seleccionado."));
+        return;
+      }
+      const res = await updateUserRole(selected.id, { roleId });
       setUsers((p) => p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft } : u)));
+      showFlash(successResponse((res as { message?: string })?.message || "Rol actualizado"));
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFlash(errorResponse(parsed.message.trim() || "No se pudo actualizar el rol."));
     } finally {
       setSavingRole(false);
     }

@@ -5,7 +5,6 @@ import type {
   CreateUserRequest,
   CreateUserResponse,
   RoleType,
-  UpdateUserDto,
   UserListStatus,
 } from "@/pages/users/types/users.types";
 import type { CurrentUserResponse } from "@/pages/profile/types/userProfile"
@@ -251,22 +250,19 @@ export type ProfileMutationResponse = {
   message: string;
 };
 
+export type UpdateUserRolePayload = {
+  roleId: string;
+};
+
 export const updateOwnUser = async (payload: UpdateOwnProfilePayload) => {
   const response = await axiosInstance.patch<ProfileMutationResponse>(API_PROFILE_GROUP.updateMe, payload)
   return response.data
 }
 
-/**
- * Actualiza los datos de un usuario.
- * @param {string} id - ID del usuario.
- * @param {UpdateUserDto} payload - Datos a actualizar.
- * @returns {Promise<any>} Respuesta del servidor.
- */
-
-export const updateUser = async (id: string, payload: UpdateUserDto) => {
-  const response = await axiosInstance.patch(API_USERS_GROUP.updateUser(id), payload)
-  return response.data
-}
+export const updateUserRole = async (id: string, payload: UpdateUserRolePayload) => {
+  const response = await axiosInstance.patch(API_USERS_GROUP.updateUserRole(id), payload);
+  return response.data;
+};
 
 /**
  * Elimina un usuario.

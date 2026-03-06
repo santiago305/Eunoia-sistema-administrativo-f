@@ -24,7 +24,7 @@ export const API_USERS_GROUP = {
   findOwnUser: '/users/me',
   findById: (id: string) => `/users/search/${id}`,
   findByEmail: (email: string) => `/users/email/${email}`,
-  updateUser: (id: string) => `/users/update/${id}`,
+  updateUserRole: (id: string) => `/users/${id}/role`,
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
   updateAvatar: (id: string) => `/users/${id}/avatar`,
