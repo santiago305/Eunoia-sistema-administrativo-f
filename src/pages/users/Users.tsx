@@ -10,18 +10,11 @@ import {
   type UserApiListItem,
 } from "@/services/userService";
 import { findAllRoles } from "@/services/roleService";
-
-type Role = "admin" | "moderator" | "adviser";
-type User = { id: string; name: string; email: string; phone: string; role: Role; createdAt: string };
-type RoleOption = { id: string; description: Role };
+import { UsersHeader } from "./components/UsersHeader";
+import type { Role, RoleOption, User } from "./types/users.types";
 
 const PRIMARY = "#21b8a6";
 const ROLES: Role[] = ["admin", "moderator", "adviser"];
-const ROLE_LABELS: Record<Role, string> = {
-  admin: "Admin",
-  moderator: "Moderator",
-  adviser: "Adviser",
-};
 const PAGE_SIZE = 20;
 
 // ---------- Utils ----------
@@ -294,43 +287,21 @@ export default function Users() {
     <div
       className={cn(
         "w-full bg-gradient-to-b from-white via-white to-zinc-50",
-        // âœ… Sin scroll global: usa todo el alto del Ã¡rea del dashboard
         "h-[calc(100vh-var(--dashTop,0px))] overflow-hidden",
         "flex flex-col",
         "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12"
       )}
       style={pageStyle}
     >
-      <PageTitle title="GestiÃ³n de usuarios" />
+      <PageTitle title="Gestión de usuarios" />
       <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
         {/* Top bar con referencias y resumen */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="mt-2 flex items-center gap-2">
-              <h1 className="truncate text-2xl font-semibold tracking-tight text-zinc-900">
-                GestiÃ³n de usuarios
-              </h1>
-            </div>
-
-            <p className="mt-1 text-[12px] text-zinc-600 2xl:text-[13px]">
-              Administra las cuentas de usuario y sus permisos.
-            </p>
-
-            <div className={cn("mt-3 grid grid-cols-2 gap-2", visibleRoles.length === 1 ? "sm:grid-cols-1" : "sm:grid-cols-3")}>
-              {visibleRoles.map((role) => (
-                <StatPill key={role} label={ROLE_LABELS[role]} value={countsByRole?.byRole?.[role] ?? counts[role] ?? 0} />
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={() => setModalOpen(true)}
-            className="rounded-xl px-3 py-2 text-[12px] font-medium text-white shadow-[0_10px_26px_rgba(33,184,166,.18)] transition active:scale-[.99] sm:px-4 sm:py-2.5 sm:text-[13px]"
-            style={{ background: PRIMARY }}
-          >
-            + Nuevo
-          </button>
-        </div>
+        <UsersHeader
+          onCreateClick={() => setModalOpen(true)}
+          visibleRoles={visibleRoles}
+          countsByRole={countsByRole}
+          counts={counts}
+        />
 
         {/* Main: ocupa TODO el resto */}
         <div className={cn("mt-4 grid min-h-0 flex-1 gap-3", "lg:grid-cols-[420px_1fr]", "2xl:gap-4 3xl:gap-5")}>
@@ -704,15 +675,5 @@ function Field({
     </div>
   );
 }
-
-function StatPill({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</div>
-      <div className="mt-0.5 text-[15px] font-semibold leading-none text-zinc-900 2xl:text-[16px]">{value}</div>
-    </div>
-  );
-}
-
 
 

@@ -10,10 +10,8 @@ import { FormInput } from "@/components/formInput"; // ajusta el path
 import { RolePicker } from "@/components/users/roleButton";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema } from "@/schemas/userSchemas";
+import type { UserFormProps } from "../types/components.types";
 
-interface UserFormProps {
-    closeModal?: () => void;
-}
 export const UserForm = ({ closeModal }: UserFormProps) => {
     const { showFlash, clearFlash } = useFlashMessage();
     const [roles, setRoles] = useState<any[]>([]);

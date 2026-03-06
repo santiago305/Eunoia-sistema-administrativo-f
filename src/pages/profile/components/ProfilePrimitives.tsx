@@ -1,4 +1,5 @@
 import { PROFILE_PRIMARY, cn } from "./profile.utils";
+import type { FieldProps } from "../types/components.types";
 
 export function Card({ children }: { children: React.ReactNode }) {
   return <div className="rounded-2xl border border-black/10 bg-white shadow-sm">{children}</div>;
@@ -21,11 +22,6 @@ export function InfoRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-  error?: string;
-};
 
 export function Field({ label, error, className, ...props }: FieldProps) {
   return (

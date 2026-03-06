@@ -1,14 +1,7 @@
 import { UserRound, UserRoundCheck, UserRoundX } from 'lucide-react';
+import type { TagUserProps } from "../types/components.types";
 
-
-interface Props {
-    totals: {
-        inactive: number,
-        active: number,
-        total:number
-    }
-}
-const tagUser = ({totals}: Props ) => {
+const tagUser = ({totals}: TagUserProps ) => {
   return (
           <div className="w-full flex justify-center">
             <div className="

@@ -26,7 +26,7 @@ import {
   passwordSchema,
   profileSchema,
   resolveProfileAvatarUrl,
-} from "@/pages/users/components/profile";
+} from "@/pages/profile/components";
 
 export default function ProfilePage() {
   const { userId } = useAuth();

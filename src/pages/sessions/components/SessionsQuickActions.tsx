@@ -1,8 +1,4 @@
-interface SessionsQuickActionsProps {
-  totalCount: number;
-  revokingAll: boolean;
-  onRevokeAll: () => void;
-}
+import type { SessionsQuickActionsProps } from "../types/components.types";
 
 const SessionsQuickActions = ({ totalCount, revokingAll, onRevokeAll }: SessionsQuickActionsProps) => {
   return (

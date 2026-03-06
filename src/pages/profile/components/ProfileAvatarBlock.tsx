@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
 import { PROFILE_PRIMARY, cn, getInitial } from "./profile.utils";
-
-type Props = {
-  loading: boolean;
-  name: string;
-  avatarUrl?: string;
-  onPickAvatar: (file: File) => void;
-  onRemoveAvatar: () => void;
-  disabled?: boolean;
-};
+import type { ProfileAvatarBlockProps } from "../types/components.types";
 
 export function ProfileAvatarBlock({
   loading,
@@ -17,7 +9,7 @@ export function ProfileAvatarBlock({
   onPickAvatar,
   onRemoveAvatar,
   disabled,
-}: Props) {
+}: ProfileAvatarBlockProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const hasAvatar = Boolean(avatarUrl) && !imageFailed;
 

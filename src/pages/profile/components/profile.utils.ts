@@ -1,6 +1,7 @@
 import type { AxiosError } from "axios";
 import { env } from "@/env";
 import type { CurrentUser, CurrentUserResponse } from "@/types/userProfile";
+import type { BackendErrorPayload } from "../types/profile.types";
 
 export const PROFILE_PRIMARY = "#21b8a6";
 
@@ -28,11 +29,6 @@ export function resolveProfileAvatarUrl(rawAvatarUrl?: string | null) {
     return raw;
   }
 }
-
-type BackendErrorPayload = {
-  message?: string;
-  errors?: string[];
-};
 
 export function parseChangePasswordError(error: unknown) {
   const err = error as AxiosError<BackendErrorPayload>;

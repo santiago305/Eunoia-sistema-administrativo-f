@@ -1,7 +1,4 @@
-interface SessionsHeaderProps {
-  title: string;
-  subtitle: string;
-}
+import type { SessionsHeaderProps } from "../types/components.types";
 
 const SessionsHeader = ({ title, subtitle }: SessionsHeaderProps) => {
   return (

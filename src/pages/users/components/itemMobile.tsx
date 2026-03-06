@@ -2,24 +2,9 @@
 import { Eraser, RotateCcwSquare } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/utils/getInitials";
+import type { ItemMobileProps } from "../types/components.types";
 
-type Props = {
-    user: {
-        user_id: string;
-        user_name: string;
-        user_email: string;
-        rol?: string | null;
-        avatarUrl?: string | null;
-    };
-
-    avatarSrc?: string; 
-    showUsersActive: boolean;
-
-    onRemove: (userId: string) => void | Promise<void>;
-    onRestore: (userId: string) => void | Promise<void>;
-};
-
-export default function ItemMobile({ user, avatarSrc, showUsersActive, onRemove, onRestore }: Props) {
+export default function ItemMobile({ user, avatarSrc, showUsersActive, onRemove, onRestore }: ItemMobileProps) {
     return (
         <div
             className="bg-gray-100 p-4 rounded-lg shadow-[inset_0_2px_6px_hsla(0,0%,0%,.12)]

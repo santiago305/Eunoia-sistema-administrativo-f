@@ -18,9 +18,8 @@ const DashboardLayout = lazy(() => import("@/layouts/DashboardLayout"));
 const ErrorPage = lazy(() => import("@/pages/Error404"));
 const Dashboard = lazy(() => import("@/pages/dashboard/Index"));
 const Users = lazy(() => import("@/pages/users/Users"));
-const CreateUser = lazy(() => import("@/pages/users/CreateU"));
-const ProfilePage = lazy(() => import("@/pages/users/Profile"));
-const Sessions = lazy(() => import("@/pages/users/Sessions"));
+const ProfilePage = lazy(() => import("@/pages/profile/Profile"));
+const Sessions = lazy(() => import("@/pages/sessions/Sessions"));
 
 const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
 const StockInventory = lazy(() => import("@/pages/stock/Inventory"));
@@ -64,10 +63,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.users,
                 element: withRouteGuard(RoutesPaths.users, <Users />), 
-            },
-            {
-                path: RoutesPaths.createUser,
-                element: withRouteGuard(RoutesPaths.createUser, <CreateUser />), 
             },
             {
                 path: RoutesPaths.profile,

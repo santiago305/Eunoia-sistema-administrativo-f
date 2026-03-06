@@ -1,6 +1,4 @@
-interface SessionsSecurityTipProps {
-  tip: string;
-}
+import type { SessionsSecurityTipProps } from "../types/components.types";
 
 const SessionsSecurityTip = ({ tip }: SessionsSecurityTipProps) => {
   return (

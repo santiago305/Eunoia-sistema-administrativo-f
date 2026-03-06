@@ -1,15 +1,6 @@
-import type { UseFormReturn } from "react-hook-form";
-import type { PasswordFormValues } from "./profile.schemas";
 import { Card, CardHeader, PasswordField, PrimaryButton } from "./ProfilePrimitives";
-
-type Props = {
-  form: UseFormReturn<PasswordFormValues>;
-  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
-  saving: boolean;
-  loading: boolean;
-};
-
-export function ProfilePasswordFormCard({ form, onSubmit, saving, loading }: Props) {
+import type { ProfilePasswordFormCardProps } from "../types/components.types";
+export function ProfilePasswordFormCard({ form, onSubmit, saving, loading }: ProfilePasswordFormCardProps) {
   return (
     <Card>
       <CardHeader title="Seguridad" subtitle="Cambia tu contrasena" />

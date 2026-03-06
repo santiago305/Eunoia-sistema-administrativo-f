@@ -1,16 +1,6 @@
-import type { UseFormReturn } from "react-hook-form";
-import type { ProfileFormValues } from "./profile.schemas";
 import { Card, CardHeader, Field, PrimaryButton } from "./ProfilePrimitives";
-
-type Props = {
-  form: UseFormReturn<ProfileFormValues>;
-  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
-  saving: boolean;
-  loading: boolean;
-  hasSession: boolean;
-};
-
-export function ProfileInfoFormCard({ form, onSubmit, saving, loading, hasSession }: Props) {
+import type { ProfileInfoFormCardProps } from "../types/components.types";
+export function ProfileInfoFormCard({ form, onSubmit, saving, loading, hasSession }: ProfileInfoFormCardProps) {
   return (
     <Card>
       <CardHeader title="Informacion personal" subtitle="Puedes modificar tus datos" />

@@ -1,23 +1,9 @@
 // src/modules/users/components/users/navbar-users.tsx
 import { RoleSelect } from "@/components/users/selectRoles";
 import { UserRoundPlus, UserRoundCheck, UserRoundX } from "lucide-react";
+import type { NavbarProps } from "../types/components.types";
 
-type Props = {
-    query: string;
-    setQuery: (v: string) => void;
-    role: string;
-    setRole: (v: string) => void;
-    page: number;
-    setPage: (n: number) => void;
-    check: boolean;
-    setCheck: (v: boolean) => void;
-    toggleActive: (showActive: boolean) => void | Promise<void>;
-    setOpenModal: (v: boolean) => void;
-    loading?: boolean;
-    error?: string | null;
-};
-
-export default function Navbar({ query, setQuery, role, setRole, page, setPage, check, setCheck, toggleActive, setOpenModal, loading, error }: Props) {
+export default function Navbar({ query, setQuery, role, setRole, page, setPage, check, setCheck, toggleActive, setOpenModal, loading, error }: NavbarProps) {
     return (
         <div>
             <div className="md:flex block gap-2 mt-1 shrink-0 mb-1">

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import SessionsDeviceCard from "./components/sessions/SessionsDeviceCard";
-import SessionsHeader from "./components/sessions/SessionsHeader";
-import SessionsQuickActions from "./components/sessions/SessionsQuickActions";
-import SessionsSecurityTip from "./components/sessions/SessionsSecurityTip";
-import SessionsSummaryCard from "./components/sessions/SessionsSummaryCard";
-import type { Session } from "./components/sessions/types";
+import SessionsDeviceCard from "./components/SessionsDeviceCard";
+import SessionsHeader from "./components/SessionsHeader";
+import SessionsQuickActions from "./components/SessionsQuickActions";
+import SessionsSecurityTip from "./components/SessionsSecurityTip";
+import SessionsSummaryCard from "./components/SessionsSummaryCard";
+import type { Session } from "./types/session.types";
 import { findSessions, revokeAllSessions, revokeSession } from "@/services/sessionService";
 import type { SessionApiDto } from "@/types/session";
 import { useFlashMessage } from "@/hooks/useFlashMessage";

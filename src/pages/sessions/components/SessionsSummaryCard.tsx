@@ -1,7 +1,4 @@
-interface SessionsSummaryCardProps {
-  activeCount: number;
-  otherCount: number;
-}
+import type { SessionsSummaryCardProps } from "../types/components.types";
 
 const SessionsSummaryCard = ({ activeCount, otherCount }: SessionsSummaryCardProps) => {
   return (

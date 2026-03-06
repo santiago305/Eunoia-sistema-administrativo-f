@@ -1,16 +1,6 @@
-import type { CurrentUser } from "@/types/userProfile";
 import { ProfileAvatarBlock } from "./ProfileAvatarBlock";
 import { Card, CardHeader, InfoRow } from "./ProfilePrimitives";
-
-type Props = {
-  loading: boolean;
-  displayName: string;
-  avatarUrl: string;
-  user: CurrentUser | null;
-  savingAvatar: boolean;
-  onPickAvatar: (file: File) => void;
-  onRemoveAvatar: () => void;
-};
+import type { ProfileSidebarCardProps } from "../types/components.types";
 
 export function ProfileSidebarCard({
   loading,
@@ -20,7 +10,7 @@ export function ProfileSidebarCard({
   savingAvatar,
   onPickAvatar,
   onRemoveAvatar,
-}: Props) {
+}: ProfileSidebarCardProps) {
   return (
     <Card>
       <CardHeader title="Foto de perfil" subtitle="Se mostrara en tu cuenta" />

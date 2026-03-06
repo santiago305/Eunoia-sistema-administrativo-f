@@ -1,11 +1,4 @@
-import type { Session } from "./types";
-
-interface SessionsDeviceCardProps {
-  session: Session;
-  revokingId: string | null;
-  onRevoke: (id: string) => void;
-  onOpenDetails: (session: Session) => void;
-}
+import type { SessionsDeviceCardProps } from "../types/components.types";
 
 const SessionsDeviceCard = ({ session, revokingId, onRevoke, onOpenDetails }: SessionsDeviceCardProps) => {
   return (
