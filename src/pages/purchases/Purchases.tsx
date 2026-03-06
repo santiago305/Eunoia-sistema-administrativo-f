@@ -11,10 +11,14 @@ import { money, toDateInputValue, tryShowPicker, todayIso } from "@/utils/functi
 import type { PurchaseOrder } from "@/types/purchase";
 import type { SupplierOption } from "@/types/supplier";
 import type { Warehouse } from "@/types/warehouse";
-import { VoucherDocTypes, type VoucherDocType, PurchaseOrderStatuses, type PurchaseOrderStatus, PaymentFormTypes } from "@/types/purchaseEnums";
+import { VoucherDocTypes, type VoucherDocType, PurchaseOrderStatuses
+, type PurchaseOrderStatus, PaymentFormTypes } from "@/types/purchaseEnums";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
+import { useNavigate } from "react-router-dom";
+
+
 
 const PRIMARY = "#21b8a6";
 
@@ -61,6 +65,7 @@ const parseNumero = (raw: string) => {
 export default function Purchases() {
   const { showFlash, clearFlash } = useFlashMessage();
   const { setCollapsed } = useSidebarContext();
+  const navigate = useNavigate();
 
   const [numeroInput, setNumeroInput] = useState("");
   const [debouncedNumero, setDebouncedNumero] = useState("");
@@ -110,7 +115,6 @@ export default function Purchases() {
         res?.map((s) => {
           const fullName = [s.name, s.lastName].filter(Boolean).join(" ").trim();
           const display = (fullName || s.tradeName || "").trim();
-          const doc = s.documentNumber ? ` (${s.documentNumber})` : "";
           return {
             value: s.supplierId,
             label: display || s.supplierId,
@@ -409,6 +413,27 @@ export default function Purchases() {
                         </span>
                       </td>
                       <td className="py-3 px-3">
+                        <button
+                          className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                          onClick={() => {
+                            navigate(`/compra/${purchase.poId}`);
+                          }}
+                          type="button"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                          onClick={() => {
+                            setModalPaymentList(true);
+                            setPoId(purchase.poId ?? "");
+                            setTotalPo(purchase.total);
+                            setPaymentForm(purchase.paymentForm);
+                          }}
+                          type="button"
+                        >
+                          Listar pagos
+                        </button>
                         {
                           purchase.paymentForm !== PaymentFormTypes.CREDITO &&
                           purchase.totalPaid != purchase.total && (
@@ -426,18 +451,6 @@ export default function Purchases() {
                             </button>
                           )
                         }
-                        <button
-                          className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
-                          onClick={() => {
-                            setModalPaymentList(true);
-                            setPoId(purchase.poId ?? "");
-                            setTotalPo(purchase.total);
-                            setPaymentForm(purchase.paymentForm);
-                          }}
-                          type="button"
-                        >
-                          Listar pagos
-                        </button>
                         {
                           purchase.paymentForm === PaymentFormTypes.CREDITO && (
                             <button

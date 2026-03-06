@@ -60,22 +60,22 @@ export const dashboardRoutes: RouteObject[] = [
         handle: getRouteMetaByPath(RoutesPaths.dashboard),
 
         children: [
-            { index: true, element: <Dashboard/> }, 
+            { index: true, element: <Dashboard /> },
             {
                 path: RoutesPaths.users,
-                element: withRouteGuard(RoutesPaths.users, <Users />), 
+                element: withRouteGuard(RoutesPaths.users, <Users />),
             },
             {
                 path: RoutesPaths.createUser,
-                element: withRouteGuard(RoutesPaths.createUser, <CreateUser />), 
+                element: withRouteGuard(RoutesPaths.createUser, <CreateUser />),
             },
             {
                 path: RoutesPaths.profile,
-                element: withRouteGuard(RoutesPaths.profile, <ProfilePage />), 
+                element: withRouteGuard(RoutesPaths.profile, <ProfilePage />),
             },
             {
                 path: RoutesPaths.sessions,
-                element: withRouteGuard(RoutesPaths.sessions, <Sessions />), 
+                element: withRouteGuard(RoutesPaths.sessions, <Sessions />),
             },
             {
                 path: RoutesPaths.stockSummary,
@@ -127,35 +127,39 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.warehouses,
-                element: withRouteGuard(RoutesPaths.warehouses, <Warehouses/>),
+                element: withRouteGuard(RoutesPaths.warehouses, <Warehouses />),
             },
             {
                 path: RoutesPaths.location,
-                element: withRouteGuard(RoutesPaths.location, <Locations/>),
+                element: withRouteGuard(RoutesPaths.location, <Locations />),
             },
             {
                 path: RoutesPaths.rowMaterialSummary,
-                element: withRouteGuard(RoutesPaths.rowMaterialSummary, <RowMaterialSummary/>),
+                element: withRouteGuard(RoutesPaths.rowMaterialSummary, <RowMaterialSummary />),
             },
             {
                 path: RoutesPaths.rowMaterial,
-                element: withRouteGuard(RoutesPaths.rowMaterial, <RowMaterial/>),
+                element: withRouteGuard(RoutesPaths.rowMaterial, <RowMaterial />),
             },
             {
                 path: RoutesPaths.rowVariant,
-                element: withRouteGuard(RoutesPaths.rowVariant, <RowVariant/>),
+                element: withRouteGuard(RoutesPaths.rowVariant, <RowVariant />),
             },
             {
                 path: RoutesPaths.providers,
-                element: withRouteGuard(RoutesPaths.providers, <Providers/>),
+                element: withRouteGuard(RoutesPaths.providers, <Providers />),
             },
             {
                 path: RoutesPaths.purchase,
-                element: withRouteGuard(RoutesPaths.purchase, <Purchase/>),
+                element: withRouteGuard(RoutesPaths.purchase, <Purchase />),
             },
             {
                 path: RoutesPaths.purchases,
-                element: withRouteGuard(RoutesPaths.purchases, <Purchases/>),
+                element: withRouteGuard(RoutesPaths.purchases, <Purchases />),
+            },
+            {
+                path: RoutesPaths.purchaseEdit,
+                element: withRouteGuard(RoutesPaths.purchaseEdit, <Purchase />),
             },
         ],
     },

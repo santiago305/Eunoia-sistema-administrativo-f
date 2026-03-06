@@ -25,15 +25,18 @@ import { ProductEquivalence } from "@/types/equivalence";
 import { listProductEquivalences } from "@/services/equivalenceService";
 import { listUnits } from "@/services/unitService";
 import type { ListUnitResponse } from "@/types/unit";
-import { createPurchaseOrder } from "@/services/purchaseService";
+import { createPurchaseOrder, updatePurchaseOrder } from "@/services/purchaseService";
 import { WarehouseOption } from "@/types/warehouse";
 import { SupplierOption } from "@/types/supplier";
 import { listActive } from "@/services/warehouseServices";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
+import { ModalNavegate } from "./components/ModalNavegate";
 import { 
   buildEmptyForm, recalcItem, money, addDaysToIsoDate, toDateInputValue, tryShowPicker,
   clampQuotas, addDaysToIsoDateFrom, buildQuotas, todayIso 
 } from "@/utils/functionPurchases";
+import { useNavigate, useParams } from "react-router-dom";
+import { getById } from "@/services/purchaseService";
 
 const PRIMARY = "#21b8a6";
 const IGV = 0.18;
@@ -41,6 +44,8 @@ const IGV = 0.18;
 export default function PurchaseCreateLocal() {
   const { showFlash, clearFlash } = useFlashMessage();
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  
 
   const [products, setProducts] = useState<FinishedProducts[]>([]);
   const [stockItemId, setStockItemId] = useState("");
@@ -61,8 +66,11 @@ export default function PurchaseCreateLocal() {
   const [openCreatePrima, setOpenCreatePrima] = useState(false);
   const [openEquivalences, setOpenEquivalence] = useState(false);
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
+  const [openNavigateModal, setOpenNavigateModal] = useState(false);
 
   const [form, setForm] = useState<PurchaseOrder>(() => buildEmptyForm());
+  const { poId } = useParams<{ poId: string }>();
+  const isEdit = Boolean(poId);
 
   const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
 
@@ -328,7 +336,7 @@ export default function PurchaseCreateLocal() {
           currency: p.currency,
           date: p.date,
           method: p.method,
-          amount: p.amount,
+          amount: p.amount ?? 0,
           quotaId: p.quotaId ?? undefined,
           poId: p.poId ?? undefined,
           note: p.note ?? undefined,
@@ -343,15 +351,14 @@ export default function PurchaseCreateLocal() {
           poId: q.poId ?? undefined,
       })),
     };
-    console.log("Purchase payload:", payload);
     clearFlash();
-    try {
-      const res = await createPurchaseOrder(payload);
-
+    try {    
+      const res = poId ? 
+      await updatePurchaseOrder(poId, payload) : await createPurchaseOrder(payload);
       if(res.type === 'success'){
         showFlash(successResponse("Compra registrada."));
         setOpenPaymentModal(false);
-        resetForm();
+        setOpenNavigateModal(true);
       }
       if(res.type === 'error'){
         showFlash(errorResponse("Registro fallido."));
@@ -360,6 +367,28 @@ export default function PurchaseCreateLocal() {
       showFlash(errorResponse("Error al registrar la compra."));
     }
   };
+  useEffect(() => {
+      if (!poId) return;
+
+      const loadPurchase = async () => {
+          try {
+              const data = await getById(poId);
+              setForm((prev) => ({
+                  ...prev,
+                  ...data,
+                  items: data.items ?? [],
+                  payments: data.payments ?? [],
+                  quotas: data.quotas ?? [],
+              }));
+          } catch {
+              showFlash(errorResponse("Error al cargar la compra."));
+          }
+      };
+
+      void loadPurchase();
+  }, [poId, showFlash]);
+
+
 
   const clearEquivalence = () =>{
      setOpenEquivalence(false);
@@ -375,7 +404,7 @@ export default function PurchaseCreateLocal() {
   const currency = form.currency;
 
   return (
-      <div className="w-full min-h-screen bg-white text-black">
+      <div className="w-full min-h-screen bg-white text-black ">
           <div className="h-screen w-full px-4 sm:px-6 lg:px-8 py-6">
               <div className="mt-6 grid h-[calc(100vh-80px)] grid-cols-1 gap-4 lg:grid-cols-[4fr_2fr]">
                   <section className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
@@ -691,29 +720,32 @@ export default function PurchaseCreateLocal() {
                                     || !form.correlative || !form.warehouseId || form.total === 0 
                                   }
                                   onClick={() => {
-                                      setForm((prev) => ({
-                                          ...prev,
-                                          paymentForm: PaymentFormTypes.CONTADO,
-                                          creditDays: 0,
-                                          numQuotas: 0,
-                                          quotas: [],
-                                          payments:
-                                              (prev.payments ?? []).length > 0
-                                                  ? prev.payments
-                                                  : [
-                                                        {
-                                                            method: PaymentTypes.EFECTIVO,
-                                                            date: todayIso(),
-                                                            operationNumber: "",
-                                                            currency: prev.currency,
-                                                            amount: totals.totalPrice,
-                                                            note: "",
-                                                        },
-                                                    ],
-                                      }));
-                                      setOpenPaymentModal(true);
+                                    setForm((prev) => {
+                                      const shouldInit = !isEdit; // o !prev.poId
+                                      return {
+                                        ...prev,
+                                        paymentForm: shouldInit ? PaymentFormTypes.CONTADO : prev.paymentForm,
+                                        creditDays: shouldInit ? 0 : prev.creditDays,
+                                        numQuotas: shouldInit ? 0 : prev.numQuotas,
+                                        quotas: shouldInit ? [] : prev.quotas,
+                                        payments:
+                                          (prev.payments ?? []).length > 0
+                                            ? prev.payments
+                                            : [
+                                                {
+                                                  method: PaymentTypes.EFECTIVO,
+                                                  date: todayIso(),
+                                                  operationNumber: "",
+                                                  currency: prev.currency,
+                                                  amount: totals.totalPrice,
+                                                  note: "",
+                                                },
+                                              ],
+                                      };
+                                    });
+                                    setOpenPaymentModal(true);
                                   }}
-                              >
+                                >
                                   Agregar Pago
                               </button>
                           </div>
@@ -901,6 +933,22 @@ export default function PurchaseCreateLocal() {
               formatMoney={money}
               onSave={savePurchase}
               saveDisabled={!form.items?.length || !form.serie.trim() || !form.supplierId}
+          />
+          <ModalNavegate
+              open={openNavigateModal}
+              onClose={() => setOpenNavigateModal(false)}
+              onNewPurchase={() => {
+                setOpenNavigateModal(false);
+                resetForm();
+                if (isEdit) {
+                  navigate("/compra");
+                }
+              }}
+              onGoToList={() => {
+                setOpenNavigateModal(false);
+                navigate("/compras");
+              }}
+              primaryColor={PRIMARY}
           />
       </div>
   );

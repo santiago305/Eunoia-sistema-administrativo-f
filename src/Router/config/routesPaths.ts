@@ -41,7 +41,9 @@ export const RoutesPaths = {
 
   //purchase
   purchase: '/compra',
-  purchases: '/compras'
+  purchases: '/compras',
+  purchaseEdit: "/compra/:poId",
+
 } as const;
 
 /**
