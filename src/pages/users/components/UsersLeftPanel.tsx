@@ -121,7 +121,7 @@ export function UsersLeftPanel({
           <div className="grid gap-2">
             <AnimatePresence initial={false}>
               {loading ? (
-                Array.from({ length: 8 }).map((_, i) => (
+                Array.from({ length: 0 }).map((_, i) => (
                   <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-zinc-200 bg-white p-3">
                     <div className="h-3 w-40 animate-pulse rounded bg-zinc-100" />
                     <div className="mt-2 h-3 w-56 animate-pulse rounded bg-zinc-100" />
@@ -161,13 +161,7 @@ export function UsersLeftPanel({
                   {!users.length && (
                     <motion.div {...fadeUp} className="rounded-xl border border-zinc-200 bg-white p-6 text-center">
                       <div className="text-[13px] font-medium text-zinc-900">Sin resultados</div>
-                      <div className="mt-1 text-[12px] text-zinc-600">{usersError || `No encontramos "${query}".`}</div>
-                      <button
-                        onClick={() => setQuery("")}
-                        className="mt-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-700 hover:bg-zinc-50"
-                      >
-                        Limpiar
-                      </button>
+                      <div className="mt-1 text-[12px] text-zinc-600">{usersError || `No encontramos usuarios.`}</div>
                     </motion.div>
                   )}
                 </>
