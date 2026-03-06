@@ -6,6 +6,7 @@ import {
   listUsers,
   updateUser,
   type CountUsersByRoleResponse,
+  type ListUsersResponse,
   type UserApiListItem,
 } from "@/services/userService";
 import { findAllRoles } from "@/services/roleService";
@@ -47,7 +48,14 @@ export default function Users() {
 
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [hasNextPage, setHasNextPage] = useState(false);
+  const [pagination, setPagination] = useState<Pick<ListUsersResponse, "total" | "page" | "pageSize" | "totalPages" | "hasPrev" | "hasNext">>({
+    total: 0,
+    page: 1,
+    pageSize: 0,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false,
+  });
   const [countsByRole, setCountsByRole] = useState<CountUsersByRoleResponse | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -67,15 +75,17 @@ export default function Users() {
           page,
           q: query.trim() || undefined,
         });
-        const normalized = Array.isArray(data) ? data.map(normalizeUser) : [];
+        const normalized = Array.isArray(data?.items) ? data.items.map(normalizeUser) : [];
         if (!cancelled) {
-          if (page > 1 && normalized.length === 0) {
-            setHasNextPage(false);
-            setPage((prev) => Math.max(1, prev - 1));
-            return;
-          }
           setUsers(normalized);
-          setHasNextPage(normalized.length > 0);
+          setPagination({
+            total: data?.total ?? 0,
+            page: data?.page ?? page,
+            pageSize: data?.pageSize ?? 0,
+            totalPages: data?.totalPages ?? 1,
+            hasPrev: Boolean(data?.hasPrev),
+            hasNext: Boolean(data?.hasNext),
+          });
           setSelectedId((prev) => (prev && normalized.some((u) => u.id === prev) ? prev : (normalized[0]?.id ?? null)));
         }
       } catch (error: unknown) {
@@ -89,7 +99,7 @@ export default function Users() {
               : "No se pudo cargar la lista de usuarios.");
         if (!cancelled) {
           setUsers([]);
-          setHasNextPage(false);
+          setPagination((prev) => ({ ...prev, hasPrev: false, hasNext: false }));
           setSelectedId(null);
           setUsersError(message);
         }
@@ -135,7 +145,7 @@ export default function Users() {
 
   useEffect(() => setPage(1), [query, status]);
 
-  const safePage = Math.max(1, page);
+  const safePage = Math.max(1, pagination.page || page);
 
   const counts = useMemo(() => {
     const byRole = {} as Record<Role, number>;
@@ -217,7 +227,10 @@ export default function Users() {
             setQuery={setQuery}
             safePage={safePage}
             setPage={setPage}
-            hasNextPage={hasNextPage}
+            hasPrevPage={pagination.hasPrev}
+            hasNextPage={pagination.hasNext}
+            totalPages={Math.max(1, pagination.totalPages)}
+            total={pagination.total}
             loading={loading}
             users={users}
             selectedId={selectedId}

@@ -3,7 +3,6 @@ import type { Dispatch, SetStateAction } from "react";
 import type { User, UserListStatus } from "../types/users.types";
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
-
 const fadeUp = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 8 } };
 
 function RoleChip({ role }: { role: User["role"] }) {
@@ -20,7 +19,10 @@ interface UsersLeftPanelProps {
   setQuery: (value: string) => void;
   safePage: number;
   setPage: Dispatch<SetStateAction<number>>;
+  hasPrevPage: boolean;
   hasNextPage: boolean;
+  totalPages: number;
+  total: number;
   loading: boolean;
   users: User[];
   selectedId: string | null;
@@ -35,7 +37,9 @@ export function UsersLeftPanel({
   setQuery,
   safePage,
   setPage,
+  hasPrevPage,
   hasNextPage,
+  totalPages,
   loading,
   users,
   selectedId,
@@ -45,7 +49,7 @@ export function UsersLeftPanel({
   setStatus,
 }: UsersLeftPanelProps) {
   return (
-    <section className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_34px_rgba(0,0,0,.04)]">
+    <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_34px_rgba(0,0,0,.04)]">
       <div className="border-b border-zinc-100 p-3">
         <div className="mb-2 grid grid-cols-3 gap-1 rounded-xl bg-zinc-100 p-1">
           {([
@@ -83,16 +87,17 @@ export function UsersLeftPanel({
 
         <div className="mt-2 flex items-center justify-between">
           <span className="text-[11px] text-zinc-500 2xl:text-[12px]">
-            Pagina <span className="font-medium text-zinc-800">{safePage}</span>
+            Pagina <span className="font-medium text-zinc-800">{safePage}</span> de{" "}
+            <span className="font-medium text-zinc-800">{Math.max(1, totalPages)}</span>
           </span>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={safePage === 1}
+              disabled={!hasPrevPage}
               className={cn(
                 "rounded-lg border px-2.5 py-1.5 text-[12px] transition",
-                safePage === 1 ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                !hasPrevPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
               )}
             >
               ←

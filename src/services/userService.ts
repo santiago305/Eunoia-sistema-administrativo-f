@@ -35,6 +35,15 @@ export type ListUsersParams = {
   order?: UserOrder;
 };
 export type CreateUserPayload = CreateUserRequest;
+export type ListUsersResponse = {
+  items: UserApiListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+};
 
 export type CountUsersByRoleParams = {
   role?: UserRoleCount;
@@ -88,7 +97,7 @@ export const findDesactive = async (params: {
 };
 
 export const listUsers = async (params?: ListUsersParams) => {
-  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list, {
+  const response = await axiosInstance.get<ListUsersResponse>(API_USERS_GROUP.list, {
     params: { status: "all", ...params },
   });
   return response.data;
