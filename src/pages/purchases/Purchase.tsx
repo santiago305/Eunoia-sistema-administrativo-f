@@ -933,6 +933,7 @@ export default function PurchaseCreateLocal() {
               formatMoney={money}
               onSave={savePurchase}
               saveDisabled={!form.items?.length || !form.serie.trim() || !form.supplierId}
+              isEdit={isEdit}
           />
           <ModalNavegate
               open={openNavigateModal}
@@ -949,6 +950,7 @@ export default function PurchaseCreateLocal() {
                 navigate("/compras");
               }}
               primaryColor={PRIMARY}
+              isEdit={isEdit}
           />
       </div>
   );

@@ -6,27 +6,28 @@ type ModalNavegateProps = {
   onNewPurchase: () => void;
   onGoToList: () => void;
   primaryColor?: string;
+  isEdit?:boolean
 };
 
 const DEFAULT_PRIMARY = "#21b8a6";
 
 export function ModalNavegate({
   open,
-  onClose,
   onNewPurchase,
   onGoToList,
   primaryColor,
+  isEdit
 }: ModalNavegateProps) {
   if (!open) return null;
 
   const accent = primaryColor ?? DEFAULT_PRIMARY;
 
   return (
-    <Modal title="Compra procesada" onClose={onClose} className="max-w-lg">
+    <Modal title="Compra procesada" className="max-w-lg" closeOnBackdrop={false}>
       <div className="space-y-6">
         <div className="text-center">
           <p className="text-2xl sm:text-3xl font-semibold text-black">
-            ¡Su compra ha sido procesada con exito!
+            {isEdit ? '¡Su compra ha sido actualizada con exito!' : '¡Su compra ha sido procesada con exito!'}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
