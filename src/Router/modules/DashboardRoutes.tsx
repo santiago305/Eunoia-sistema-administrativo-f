@@ -65,10 +65,6 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.users, <Users />),
             },
             {
-                path: RoutesPaths.createUser,
-                element: withRouteGuard(RoutesPaths.createUser, <CreateUser />),
-            },
-            {
                 path: RoutesPaths.profile,
                 element: withRouteGuard(RoutesPaths.profile, <ProfilePage />),
             },
