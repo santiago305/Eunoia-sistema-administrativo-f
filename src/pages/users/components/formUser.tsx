@@ -7,7 +7,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { Eye, EyeOff, X, UserPlus } from "lucide-react";
 import { FormInput } from "@/components/formInput";
-import { RolePicker } from "@/components/users/roleButton";
+import { RolePicker } from "./roleButton";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema } from "@/schemas/userSchemas";
 import type { UserFormProps } from "../types/components.types";
@@ -75,7 +75,6 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             const res = await createUser(data);
 
             showFlash(successResponse(res.message || "Usuario creado satisfactoriamente"));
-
             closeModal?.();
 
             reset({
@@ -91,19 +90,19 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
     };
 
     return (
-        <div className="w-full max-w-3xl overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)]">
-            <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-5 sm:px-7">
+        <div className="w-full max-w-[700px] overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-[0_18px_40px_rgba(0,0,0,0.10)]">
+            <div className="flex items-start justify-between gap-3 border-b border-zinc-100 px-5 py-4">
                 <div className="min-w-0">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#21b8a6]/10 text-[#21b8a6]">
-                            <UserPlus size={20} />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#21b8a6]/10 text-[#21b8a6]">
+                            <UserPlus size={16} />
                         </div>
 
                         <div>
-                            <h2 className="text-[20px] font-semibold tracking-tight text-zinc-900">
+                            <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900">
                                 Crear usuario
                             </h2>
-                            <p className="mt-0.5 text-sm text-zinc-500">
+                            <p className="mt-0.5 text-[12px] text-zinc-500">
                                 Completa los datos para registrar una nueva cuenta.
                             </p>
                         </div>
@@ -113,17 +112,17 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
                 <button
                     type="button"
                     onClick={closeModal}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-700"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-700"
                     aria-label="Cerrar modal"
                 >
-                    <X size={18} />
+                    <X size={16} />
                 </button>
             </div>
 
-            <form onSubmit={handleSubmit(submit)} className="px-6 py-6 sm:px-7">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <form onSubmit={handleSubmit(submit)} className="px-5 py-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
                             Nombre
                         </label>
                         <FormInput
@@ -134,7 +133,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
                             Correo electrónico
                         </label>
                         <FormInput
@@ -146,7 +145,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
                             Teléfono
                         </label>
                         <FormInput
@@ -158,7 +157,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
                             Contraseña
                         </label>
 
@@ -177,17 +176,17 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
 
                             <button
                                 type="button"
-                                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                                className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
                                 onClick={() => setEyeBool((prev) => !prev)}
                                 aria-label={eyeBool ? "Mostrar contraseña" : "Ocultar contraseña"}
                             >
-                                {eyeBool ? <Eye size={19} /> : <EyeOff size={19} />}
+                                {eyeBool ? <Eye size={15} /> : <EyeOff size={15} />}
                             </button>
                         </div>
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
                             Rol
                         </label>
 
@@ -210,10 +209,10 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
                     </div>
                 </div>
 
-                <div className="mt-7 flex flex-col-reverse gap-3 border-t border-zinc-100 pt-5 sm:flex-row sm:justify-end">
+                <div className="mt-4 flex items-center justify-end gap-2 border-t border-zinc-100 pt-4">
                     <button
                         type="button"
-                        className="inline-flex h-[50px] items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                        className="inline-flex h-[40px] items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-[13px] font-medium text-zinc-700 transition hover:bg-zinc-50 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
                         onClick={closeModal}
                     >
                         Cancelar
@@ -221,7 +220,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
 
                     <button
                         type="submit"
-                        className="inline-flex h-[50px] items-center justify-center rounded-2xl bg-[#21b8a6] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(33,184,166,0.25)] transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                        className="inline-flex h-[40px] items-center justify-center rounded-xl bg-[#21b8a6] px-4 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(33,184,166,0.18)] transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
                     >
                         Crear usuario
                     </button>

@@ -1,4 +1,5 @@
 import { MonitorCog, ShieldCheck, User } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type Role = { id: string; description: string };
 
@@ -10,7 +11,7 @@ const LABELS: Record<RoleDesc, string> = {
     adviser: "Asesor",
 };
 
-const ICONS: Record<RoleDesc, any> = {
+const ICONS: Record<RoleDesc, LucideIcon> = {
     admin: MonitorCog,
     moderator: ShieldCheck,
     adviser: User,
@@ -19,7 +20,7 @@ const ICONS: Record<RoleDesc, any> = {
 export const RolePicker = ({ roles, value, onChange, error }: { roles: Role[]; value: string; onChange: (id: string) => void; error?: string }) => {
     const getRoleIdByDesc = (desc: RoleDesc) => roles.find((r) => String(r?.description).toLowerCase() === desc)?.id ?? "";
 
-    const RoleButton = ({ desc, className}: { desc: RoleDesc , className?:string}) => {
+    const RoleButton = ({ desc }: { desc: RoleDesc }) => {
         const id = getRoleIdByDesc(desc);
         const active = id && value === id;
         const Icon = ICONS[desc];
@@ -29,20 +30,20 @@ export const RolePicker = ({ roles, value, onChange, error }: { roles: Role[]; v
                 <button
                     type="button"
                     onClick={() => onChange(id)}
-                    className={`h-14 w-13 rounded-xl bg-gray-200 hover:bg-gray-300 cursor-pointer
-                    grid place-items-center transition ${className}
+                    className={`h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 cursor-pointer
+                    grid place-items-center transition
                     ${
                         active
-                            ? "ring-4 ring-[#21b8a6]/35 text-gray-700 outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
-                            : "text-gray-500 hover:text-gray-700 outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                            ? "border-[#21b8a6]/40 bg-[#21b8a6]/10 text-zinc-700 ring-4 ring-[#21b8a6]/20 outline-none"
+                            : "text-zinc-500 hover:text-zinc-700 outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
                     }`}
                     aria-pressed={!!active}
                     title={LABELS[desc]}
                     disabled={!id}
                 >
-                    <Icon size={22} />
+                    <Icon size={18} />
                 </button>
-                <p className={`text-gray-500 text-md ${className}`}>
+                <p className="text-[11px] text-zinc-600">
                     <span>{LABELS[desc]}</span>
                 </p>
             </div>
@@ -51,13 +52,13 @@ export const RolePicker = ({ roles, value, onChange, error }: { roles: Role[]; v
 
     return (
         <div className="w-full">
-            <div className="flex justify-center gap-8">
-                <RoleButton desc="admin" className="md:ml-5" />
+            <div className="grid grid-cols-3 gap-2">
+                <RoleButton desc="admin" />
                 <RoleButton desc="moderator" />
-                <RoleButton desc="adviser" className="md:ml-5" />
+                <RoleButton desc="adviser" />
             </div>
 
-            <p className={`text-sm text-start ml-5 mt-1 text-red-400 ${error ? "visible" : "invisible"}`}>{error ?? "placeholder"}</p>
+            <p className={`mt-1 text-[11px] text-red-500 ${error ? "visible" : "invisible"}`}>{error ?? "placeholder"}</p>
         </div>
     );
 };

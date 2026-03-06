@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
 import {
   countUsersByRole,
-  createUser,
   listUsers,
   updateUser,
   type CountUsersByRoleResponse,
@@ -11,15 +10,11 @@ import {
 } from "@/services/userService";
 import { findAllRoles } from "@/services/roleService";
 import { UsersHeader } from "./components/UsersHeader";
+import { UserForm } from "./components/formUser";
 import type { Role, RoleOption, User } from "./types/users.types";
 
 const PRIMARY = "#21b8a6";
 const ROLES: Role[] = ["admin", "moderator", "adviser"];
-const ROLE_LABELS: Record<Role, string> = {
-  admin: "Admin",
-  moderator: "Moderator",
-  adviser: "Adviser",
-};
 const PAGE_SIZE = 20;
 
 // ---------- Utils ----------
@@ -43,16 +38,6 @@ const readError = (error: unknown) => {
   }
   return { status: 0, message: "" };
 };
-
-function validateCreate(v: { name: string; email: string; password: string; telefono: string; roleId: string }) {
-  const e: Record<string, string> = {};
-  if (!v.name.trim()) e.name = "Nombre requerido";
-  if (!v.email.trim() || !/^\S+@\S+\.\S+$/.test(v.email)) e.email = "Email inválido";
-  if (!v.password.trim()) e.password = "Contraseña requerida";
-  if (!v.telefono.trim()) e.telefono = "Teléfono requerido";
-  if (!v.roleId.trim()) e.roleId = "Rol requerido";
-  return e;
-}
 
 function RoleChip({ role }: { role: Role }) {
   const map: Record<Role, string> = {
@@ -78,12 +63,7 @@ export default function Users() {
   const [countsByRole, setCountsByRole] = useState<CountUsersByRoleResponse | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [create, setCreate] = useState({ name: "", email: "", password: "", telefono: "", roleId: "" });
-  const [createErr, setCreateErr] = useState<Record<string, string>>({});
-  const [createGeneralErr, setCreateGeneralErr] = useState<string[]>([]);
-  const [creating, setCreating] = useState(false);
   const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [loadingRoles, setLoadingRoles] = useState(false);
 
   const [roleDraft, setRoleDraft] = useState<Role>("adviser");
   const [savingRole, setSavingRole] = useState(false);
@@ -133,7 +113,6 @@ export default function Users() {
   useEffect(() => {
     let cancelled = false;
     const loadRoles = async () => {
-      setLoadingRoles(true);
       try {
         const response = await findAllRoles();
         const list = Array.isArray(response) ? response : response?.data;
@@ -146,10 +125,9 @@ export default function Users() {
 
         if (!cancelled) {
           setRoles(normalized);
-          setCreate((prev) => ({ ...prev, roleId: prev.roleId || "" }));
         }
       } finally {
-        if (!cancelled) setLoadingRoles(false);
+        if (!cancelled) void 0;
       }
     };
     void loadRoles();
@@ -209,68 +187,6 @@ export default function Users() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  async function submitCreate(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validateCreate(create);
-    setCreateErr(errs);
-    setCreateGeneralErr([]);
-    if (Object.keys(errs).length) return;
-
-    setCreating(true);
-    try {
-      await createUser({
-        name: create.name.trim(),
-        email: create.email.trim().toLowerCase(),
-        password: create.password,
-        roleId: create.roleId,
-        telefono: create.telefono.trim(),
-      });
-
-      setCreate({ name: "", email: "", password: "", telefono: "", roleId: "" });
-      setCreateErr({});
-      setCreateGeneralErr([]);
-      setModalOpen(false);
-      setQuery("");
-      setPage(1);
-      const data = await listUsers({ status, page: 1, order: "DESC" });
-      const normalized = Array.isArray(data) ? data.map(normalizeUser) : [];
-      setUsers(normalized);
-      setHasNextPage(normalized.length === PAGE_SIZE);
-      setSelectedId(normalized[0]?.id ?? null);
-    } catch (error: unknown) {
-      const parsed = readError(error);
-      const status = Number(parsed.status ?? 0);
-      const rawMessage = parsed.message || "No se pudo crear el usuario";
-      const chunks = rawMessage
-        .split("|")
-        .map((m: string) => m.trim())
-        .filter(Boolean);
-
-      const nextFieldErrors: Record<string, string> = {};
-      const general: string[] = [];
-      for (const msg of chunks) {
-        const lower = msg.toLowerCase();
-        if (lower.includes("name")) nextFieldErrors.name = msg;
-        else if (lower.includes("email")) nextFieldErrors.email = msg;
-        else if (lower.includes("password")) nextFieldErrors.password = msg;
-        else if (lower.includes("roleid") || lower.includes("rol")) nextFieldErrors.roleId = msg;
-        else if (lower.includes("telefono")) nextFieldErrors.telefono = msg;
-        else general.push(msg);
-      }
-
-      if (status === 400) {
-        setCreateErr((prev) => ({ ...prev, ...nextFieldErrors }));
-        setCreateGeneralErr(general);
-      } else if (status === 401 || status === 403) {
-        setCreateGeneralErr(chunks.length ? chunks : ["No tienes permisos para crear usuarios"]);
-      } else {
-        setCreateGeneralErr(chunks.length ? chunks : ["Se produjo un error al crear al usuario"]);
-      }
-    } finally {
-      setCreating(false);
-    }
-  }
 
   async function saveRole() {
     if (!selected) return;
@@ -553,118 +469,12 @@ export default function Users() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 14, scale: 0.99 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="w-full max-w-[560px] rounded-2xl border border-zinc-200 bg-white shadow-[0_30px_90px_rgba(0,0,0,.22)]"
             >
-              <div className="flex items-center justify-between border-b border-zinc-100 p-4">
-                <div>
-                  <div className="text-[13px] font-medium text-zinc-900">Crear usuario</div>
-                  <div className="mt-1 text-[12px] text-zinc-600">Completa los datos</div>
-                </div>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-700 hover:bg-zinc-50"
-                >
-                  X
-                </button>
-              </div>
-
-              <form onSubmit={submitCreate} className="p-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Nombre" value={create.name} onChange={(v) => setCreate((p) => ({ ...p, name: v }))} placeholder="Ej: Santiago Yacila" error={createErr.name} span2 />
-                  <Field label="Email" value={create.email} onChange={(v) => setCreate((p) => ({ ...p, email: v }))} placeholder="usuario@mail.com" error={createErr.email} />
-                  <Field label="Teléfono" value={create.telefono} onChange={(v) => setCreate((p) => ({ ...p, telefono: v }))} placeholder="+51 9xxxxxxxx" error={createErr.telefono} />
-                  <Field label="Contraseña" type="password" value={create.password} onChange={(v) => setCreate((p) => ({ ...p, password: v }))} placeholder="••••••••" error={createErr.password} />
-                  <div>
-                    <label className="text-[11px] text-zinc-600">Rol</label>
-                    <select
-                      value={create.roleId}
-                      onChange={(e) => setCreate((p) => ({ ...p, roleId: e.target.value }))}
-                      disabled={loadingRoles}
-                      className={cn(
-                        "mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-[13px] text-zinc-800 outline-none",
-                        "focus:border-[rgba(33,184,166,.45)] focus:bg-white focus:ring-4 focus:ring-[rgba(33,184,166,.10)]"
-                      )}
-                    >
-                      <option value="" disabled>
-                        {loadingRoles ? "Cargando roles..." : "Selecciona un rol"}
-                      </option>
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {ROLE_LABELS[r.description]}
-                        </option>
-                      ))}
-                    </select>
-                    {createErr.roleId && <div className="mt-1 text-[11px] text-red-600">{createErr.roleId}</div>}
-                  </div>
-
-                  <div className="flex items-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalOpen(false)}
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-[13px] text-zinc-700 hover:bg-zinc-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={creating}
-                      className={cn(
-                        "w-full rounded-xl px-4 py-2.5 text-[13px] font-medium text-white transition",
-                        creating ? "cursor-not-allowed opacity-70" : "active:scale-[.99]"
-                      )}
-                      style={{ background: PRIMARY, boxShadow: "0 10px 26px rgba(33,184,166,.16)" }}
-                    >
-                      {creating ? "Creandoâ€¦" : "Crear"}
-                    </button>
-                  </div>
-                </div>
-
-                {!!createGeneralErr.length && (
-                  <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                    {createGeneralErr.join(" · ")}
-                  </div>
-                )}
-              </form>
+              <UserForm closeModal={() => setModalOpen(false)} />
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  error,
-  span2,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-  error?: string;
-  span2?: boolean;
-}) {
-  return (
-    <div className={span2 ? "sm:col-span-2" : ""}>
-      <label className="text-[11px] text-zinc-600">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={cn(
-          "mt-1 w-full rounded-xl border px-3 py-2.5 text-[13px] text-zinc-800 outline-none",
-          error ? "border-red-300 bg-red-50" : "border-zinc-200 bg-zinc-50",
-          "focus:border-[rgba(33,184,166,.45)] focus:bg-white focus:ring-4 focus:ring-[rgba(33,184,166,.10)]"
-        )}
-      />
-      {error && <div className="mt-1 text-[11px] text-red-600">{error}</div>}
     </div>
   );
 }

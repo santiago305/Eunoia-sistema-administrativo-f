@@ -1,5 +1,5 @@
-// src/modules/users/components/users/navbar-users.tsx
-import { RoleSelect } from "@/components/users/selectRoles";
+﻿// src/modules/users/components/users/navbar-users.tsx
+import { RoleSelect } from "./selectRoles";
 import { UserRoundPlus, UserRoundCheck, UserRoundX } from "lucide-react";
 import type { NavbarProps } from "../types/components.types";
 
@@ -79,5 +79,6 @@ export default function Navbar({ query, setQuery, role, setRole, page, setPage, 
         </div>
     );
 }
+
 
 
