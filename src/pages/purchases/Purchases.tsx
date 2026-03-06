@@ -8,16 +8,14 @@ import { listAll } from "@/services/supplierService";
 import { listActive } from "@/services/warehouseServices";
 import { listPurchaseOrders } from "@/services/purchaseService";
 import { money, toDateInputValue, tryShowPicker, todayIso } from "@/utils/functionPurchases";
-import type { PurchaseOrder } from "@/types/purchase";
-import type { SupplierOption } from "@/types/supplier";
-import type { Warehouse } from "@/types/warehouse";
-import { VoucherDocTypes, type VoucherDocType, PurchaseOrderStatuses
-, type PurchaseOrderStatus, PaymentFormTypes } from "@/types/purchaseEnums";
-
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
 import { useNavigate } from "react-router-dom";
+import { SupplierOption } from "../providers/types/supplier";
+import { Warehouse } from "../warehouse/types/warehouse";
+import { PurchaseOrder } from "./types/purchase";
+import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 
 
 

@@ -24,11 +24,7 @@ import { Modal } from "@/components/settings/modal";
 import { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import { listProductEquivalences } from "@/services/equivalenceService";
 import { listUnits } from "@/services/unitService";
-import type { ListUnitResponse } from "@/types/unit";
 import { createPurchaseOrder, updatePurchaseOrder } from "@/services/purchaseService";
-import { WarehouseOption } from "@/types/warehouse";
-import { SupplierOption } from "@/types/supplier";
-
 import { listActive } from "@/services/warehouseServices";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
 import { ModalNavegate } from "./components/ModalNavegate";
@@ -38,6 +34,9 @@ import {
 } from "@/utils/functionPurchases";
 import { useNavigate, useParams } from "react-router-dom";
 import { getById } from "@/services/purchaseService";
+import { ListUnitResponse } from "../catalog/types/unit";
+import { SupplierOption } from "../providers/types/supplier";
+import { WarehouseSelectOption } from "../warehouse/types/warehouse";
 
 const PRIMARY = "#21b8a6";
 const IGV = 0.18;
