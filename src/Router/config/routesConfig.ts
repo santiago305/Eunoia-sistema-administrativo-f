@@ -57,6 +57,7 @@ export const routesConfig: RouteMetadata[] = [
 
   { path: RoutesPaths.purchase, name: "purchase", isProtected: true },
   { path: RoutesPaths.purchases, name: "purchases", isProtected: true },
+  { path: RoutesPaths.purchaseEdit, name: "purchases", isProtected: true },
 
   // Ruta de error 404
   { path: "*", name: "Error404", isPublic: true },

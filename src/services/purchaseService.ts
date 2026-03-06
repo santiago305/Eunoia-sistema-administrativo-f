@@ -36,10 +36,10 @@ export const listQuotas = async (id:string): Promise<CreditQuota[]> => {
 };
 
 export const updatePurchaseOrder = async (
-  id: string,
+  poId: string,
   payload: UpdatePurchaseOrderDto
-): Promise<PurchaseOrder> => {
-  const response = await axiosInstance.patch(API_PURCHASE_GROUP.update(id), payload);
+): Promise<{type:string, message:string, order?:PurchaseOrder}> => {
+  const response = await axiosInstance.patch(API_PURCHASE_GROUP.update(poId), payload);
   return response.data;
 };
 
@@ -53,6 +53,11 @@ export const setPurchaseOrderActive = async (
 
 export const listPurchaseOrderItems = async (id: string): Promise<PurchaseOrderItemsResponse> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.listItems(id));
+  return response.data;
+};
+
+export const getById = async (id: string): Promise<PurchaseOrder> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.getById(id));
   return response.data;
 };
 

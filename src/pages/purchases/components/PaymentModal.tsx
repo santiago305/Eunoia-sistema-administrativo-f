@@ -42,7 +42,7 @@ export function PaymentModal ({
     date: new Date().toISOString(),
     operationNumber: "",
     currency: CurrencyTypes.PEN,
-    amount: "",
+    amount: totalToPay.toString(),
     note: "",
     quotaId: null,
     poId:"",

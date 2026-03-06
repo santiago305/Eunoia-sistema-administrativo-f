@@ -21,6 +21,7 @@ export type PurchasePaymentModalProps = {
   saveDisabled: boolean;
   title?: string;
   className?: string;
+  isEdit?: boolean
 };
 
 export function PurchasePaymentModal({
@@ -36,7 +37,8 @@ export function PurchasePaymentModal({
   onSave,
   saveDisabled,
   title = "Agregar Pago",
-  className = "max-w-[800px]",
+  className = "max-w-[800px] ",
+  isEdit
 }: PurchasePaymentModalProps) {
   if (!open) return null;
 
@@ -284,7 +286,7 @@ export function PurchasePaymentModal({
         {showCredit && (
           <div className="rounded-3xl border border-black/10 bg-white p-4 space-y-3">
             {(form.quotas ?? []).length === 0 && <div className="text-xs text-black/60">Aun no agregas cuotas.</div>}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 max-h-[300px] overflow-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-white">
                   <tr className="border-b border-black/10 text-xs text-black/60">
@@ -356,9 +358,9 @@ export function PurchasePaymentModal({
             className="rounded-xl border px-4 py-2 text-sm text-white disabled:opacity-40"
             style={{ backgroundColor: accent, borderColor: `${accent}33` }}
             disabled={saveDisabled}
-            onClick={onSave}
+            onClick={ onSave}
           >
-            Generar Comprobante
+            {isEdit ? "Actualizar Comprobante" : "Generar Comprobante"}
           </button>
         </div>
       </div>
