@@ -30,3 +30,5 @@ const Sidebar = ({ user, onLogout }: SidebarProps) => {
 };
 
 export default Sidebar;
+
+

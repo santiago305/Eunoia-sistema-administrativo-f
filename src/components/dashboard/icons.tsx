@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   Home, 
   Settings, 
   Users, 
@@ -73,3 +73,5 @@ export const IconCollapse = ({ className }: { className?: string }) => (
 export const IconExpand = ({ className }: { className?: string }) => (
   <PanelLeft className={className} size={18} />
 );
+
+

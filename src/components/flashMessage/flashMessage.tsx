@@ -54,3 +54,5 @@ export const FlashMessage = ({ data, onClear }: FlashMessageProps) => {
     </AnimatePresence>
   );
 };
+
+

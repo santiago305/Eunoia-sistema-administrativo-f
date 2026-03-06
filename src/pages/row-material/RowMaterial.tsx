@@ -9,16 +9,16 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { ProductTypes } from "@/types/ProductTypes";
-import type { ProductEquivalence } from "@/types/equivalence";
-import type { ListUnitResponse } from "@/types/unit";
+import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
+import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
+import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
 import { ProductFormModal } from "../catalog/components/ProductFormModal";
-import { ListProductsQuery } from "@/types/product";
+import { ListProductsQuery } from "@/pages/catalog/types/product";
 import { listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { VariantList } from "../catalog/components/VariantList";
-import { VariantListItem } from "@/types/variant";
+import { VariantListItem } from "@/pages/catalog/types/variant";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -794,3 +794,5 @@ export default function RowMaterial() {
   </div>
   );
 }
+
+

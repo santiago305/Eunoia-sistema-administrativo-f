@@ -24,3 +24,5 @@ export interface InvalidResponse {
   type: statusMessage.INVALID;
   message: string;
 }
+
+

@@ -34,3 +34,5 @@ export const updateVariantSchema = z.object({
 export const setVariantActiveSchema = z.object({
   isActive: z.boolean(),
 });
+
+

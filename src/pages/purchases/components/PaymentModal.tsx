@@ -1,6 +1,6 @@
 import { Modal } from "@/components/settings/modal";
-import { Payment } from "@/types/purchase";
-import { CurrencyType, CurrencyTypes, PaymentType, PaymentTypes } from "@/types/purchaseEnums";
+import { Payment } from "@/pages/purchases/types/purchase";
+import { CurrencyType, CurrencyTypes, PaymentType, PaymentTypes } from "@/pages/purchases/types/purchaseEnums";
 import { money, toDateInputValue, tryShowPicker } from "@/utils/functionPurchases";
 import { createPayment } from "@/services/paymentService";
 import { Banknote } from "lucide-react";
@@ -202,3 +202,5 @@ export function PaymentModal ({
     </Modal>
   )
 } 
+
+

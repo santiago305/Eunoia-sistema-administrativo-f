@@ -1,8 +1,8 @@
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { createProductRecipe, deleteProductRecipe } from "@/services/productRecipeService";
-import { ProductRecipe } from "@/types/productRecipe";
-import { ListUnitResponse } from "@/types/unit";
-import type { PrimaVariant } from "@/types/variant";
+import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
+import { ListUnitResponse } from "@/pages/catalog/types/unit";
+import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import { Power } from "lucide-react";
 import { useState } from "react";
 
@@ -143,3 +143,5 @@ export function RecipeFormFields({
         </div>
     );
 }
+
+

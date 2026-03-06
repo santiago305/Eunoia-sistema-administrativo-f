@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Central route paths for the app.
  */
 export const RoutesPaths = {
@@ -50,4 +50,6 @@ export const RoutesPaths = {
  * Valid route keys.
  */
 export type RouteName = keyof typeof RoutesPaths;
+
+
 

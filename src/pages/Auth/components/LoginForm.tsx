@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LoginCredentials } from "@/types/auth";
+import { LoginCredentials } from "@/pages/Auth/types/auth";
 import { LoginSchema } from "@/schemas/authSchemas";
 import { useAuth } from "@/hooks/useAuth";
 import FormField from "@/components/ui/formField";
@@ -174,3 +174,5 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 export default LoginForm;
+
+

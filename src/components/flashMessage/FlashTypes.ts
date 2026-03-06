@@ -15,3 +15,4 @@ export interface MessageProps {
     icon?: React.ReactNode;
     color: string; 
 }
+

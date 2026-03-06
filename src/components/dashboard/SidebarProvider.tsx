@@ -18,3 +18,5 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
         </SidebarContext.Provider>
     );
 };
+
+

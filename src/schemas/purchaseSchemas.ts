@@ -6,7 +6,7 @@ import {
   VoucherDocTypes,
   PaymentTypes,
   AfectType,
-} from "@/types/purchaseEnums";
+} from "@/pages/purchases/types/purchaseEnums";
 
 const uuidSchema = z.string().uuid();
 
@@ -92,3 +92,5 @@ export const listPurchaseOrdersQuerySchema = z.object({
   page: z.number().int().min(1).optional(),
   limit: z.number().int().min(1).max(100).optional(),
 });
+
+

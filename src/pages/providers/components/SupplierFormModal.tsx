@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -8,8 +8,8 @@ import {
   lookupSupplierIdentity,
   updateSupplier,
 } from "@/services/supplierService";
-import type { SupplierDniLookupData, SupplierForm, SupplierRucLookupData } from "@/types/supplier";
-import { DocumentType } from "@/types/DocumentType";
+import type { SupplierDniLookupData, SupplierForm, SupplierRucLookupData } from "@/pages/providers/types/supplier";
+import { DocumentType } from "@/pages/providers/types/DocumentType";
 import { SupplierFormFields } from "./FormProviders";
 
 type SupplierFormModalProps = {
@@ -216,3 +216,5 @@ export function SupplierFormModal({
     </Modal>
   );
 }
+
+

@@ -1,7 +1,7 @@
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { createProductEquivalence, deleteProductEquivalence } from "@/services/equivalenceService";
-import { ProductEquivalence } from "@/types/equivalence";
-import { ListUnitResponse } from "@/types/unit";
+import { ProductEquivalence } from "@/pages/catalog/types/equivalence";
+import { ListUnitResponse } from "@/pages/catalog/types/unit";
 import { Power } from "lucide-react";
 import { useState } from "react";
 
@@ -146,3 +146,4 @@ export function EquivalenceFormFields({
     </div>
   );
 }
+

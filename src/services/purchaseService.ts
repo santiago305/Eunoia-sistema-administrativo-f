@@ -10,7 +10,7 @@ import type {
   PurchaseOrderListResponse,
   UpdatePurchaseOrderActiveDto,
   UpdatePurchaseOrderDto,
-} from "@/types/purchase";
+} from "@/pages/purchases/types/purchase";
 
 export const createPurchaseOrder = async (
   payload: CreatePurchaseOrderDto
@@ -68,3 +68,5 @@ export const removePurchaseOrderItem = async (
   const response = await axiosInstance.delete(API_PURCHASE_GROUP.removeItem(id, itemId));
   return response.data;
 };
+
+

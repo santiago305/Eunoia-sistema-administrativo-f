@@ -2,7 +2,7 @@ import axiosInstance from "@/common/utils/axios";
 import { API_PAYMENT_GROUP } from "@/services/APIs";
 import type {
   Payment,
-} from "@/types/purchase";
+} from "@/pages/purchases/types/purchase";
 
 export const createPayment = async (
   payload: Payment
@@ -15,5 +15,7 @@ export const removePayment = async (id:string): Promise<{type:String, message:st
   const response = await axiosInstance.delete(API_PAYMENT_GROUP.remove(id));
   return response.data;
 }
+
+
 
 

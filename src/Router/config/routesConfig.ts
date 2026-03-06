@@ -70,3 +70,5 @@ export const getRouteMetaByUrl = (url: string) =>
   routesConfig.find(
     (route) => route.path !== "*" && !!matchPath({ path: route.path, end: true }, url)
   );
+
+

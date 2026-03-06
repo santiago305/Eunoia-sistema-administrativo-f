@@ -9,14 +9,14 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { ProductTypes } from "@/types/ProductTypes";
-import type { ProductEquivalence } from "@/types/equivalence";
-import type { ListUnitResponse } from "@/types/unit";
-import type { ListProductsQuery } from "@/types/product";
+import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
+import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
+import type { ListUnitResponse } from "@/pages/catalog/types/unit";
+import type { ListProductsQuery } from "@/pages/catalog/types/product";
 import { listProductRecipes } from "@/services/productRecipeService";
-import { ProductRecipe } from "@/types/productRecipe";
+import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
 import { RecipeFormFields } from "./components/RecipeFormFields";
-import type { PrimaVariant, VariantListItem } from "@/types/variant";
+import type { PrimaVariant, VariantListItem } from "@/pages/catalog/types/variant";
 import { listRowMaterials, listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
@@ -856,6 +856,8 @@ export default function CatalogProducts() {
         </div>
     );
 }
+
+
 
 
 

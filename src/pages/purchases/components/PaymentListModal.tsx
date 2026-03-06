@@ -1,7 +1,7 @@
 import { Modal } from "@/components/settings/modal";
 import { removePayment } from "@/services/paymentService";
 import { listPayments } from "@/services/purchaseService";
-import { Payment } from "@/types/purchase";
+import { Payment } from "@/pages/purchases/types/purchase";
 import { money } from "@/utils/functionPurchases";
 import { Plus, Power } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -176,3 +176,5 @@ export function PaymentListModal({
     </Modal>
   );
 }
+
+

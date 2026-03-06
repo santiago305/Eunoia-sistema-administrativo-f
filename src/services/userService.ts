@@ -1,10 +1,17 @@
-import axiosInstance from "@/common/utils/axios"
+﻿import axiosInstance from "@/common/utils/axios"
 import { API_AUTH_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
-import { UpdateUserDto } from "@/types/user"
-import type { CurrentUserResponse } from "@/types/userProfile"
+import type {
+  CountUsersByRoleData,
+  CreateUserRequest,
+  CreateUserResponse,
+  RoleType,
+  UpdateUserDto,
+  UserListStatus,
+} from "@/pages/users/types/users.types";
+import type { CurrentUserResponse } from "@/pages/profile/types/userProfile"
 
-export type UserRoleCount = "admin" | "moderator" | "adviser";
-export type UserStatusFilter = "all" | "active" | "inactive";
+export type UserRoleCount = RoleType;
+export type UserStatusFilter = UserListStatus;
 export type UserSortBy = "name" | "email" | "createdAt" | "role" | "deleted";
 export type UserOrder = "ASC" | "DESC";
 
@@ -27,13 +34,15 @@ export type ListUsersParams = {
   sortBy?: UserSortBy;
   order?: UserOrder;
 };
-export type CreateUserPayload = {
-  name: string;
-  email: string;
-  password: string;
-  roleId?: string;
-  avatarUrl?: string;
-  telefono?: string;
+export type CreateUserPayload = CreateUserRequest;
+export type ListUsersResponse = {
+  items: UserApiListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
 };
 
 export type CountUsersByRoleParams = {
@@ -43,8 +52,8 @@ export type CountUsersByRoleParams = {
 };
 
 export type CountUsersByRoleResponse = {
-  total: number;
-  byRole: Partial<Record<UserRoleCount, number>>;
+  total: CountUsersByRoleData["total"];
+  byRole: CountUsersByRoleData["byRole"];
 };
 
 // ----------------------------------------
@@ -57,13 +66,13 @@ export type CountUsersByRoleResponse = {
  * @returns {Promise<any>} Respuesta del servidor.
  */
 export const createUser = async (payload: CreateUserPayload) => {
-  const response = await axiosInstance.post(API_USERS_GROUP.createUser, payload)
+  const response = await axiosInstance.post<CreateUserResponse>(API_USERS_GROUP.createUser, payload)
   return response.data
 }
 
 /**
- * Obtiene todos los usuarios según filtros.
- * @param {Object} params - Parámetros de búsqueda.
+ * Obtiene todos los usuarios segÃºn filtros.
+ * @param {Object} params - ParÃ¡metros de bÃºsqueda.
  * @returns {Promise<any>} Lista de usuarios.
  */
 export const findAll = async (params: {
@@ -88,7 +97,7 @@ export const findDesactive = async (params: {
 };
 
 export const listUsers = async (params?: ListUsersParams) => {
-  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list, {
+  const response = await axiosInstance.get<ListUsersResponse>(API_USERS_GROUP.list, {
     params: { status: "all", ...params },
   });
   return response.data;
@@ -184,7 +193,7 @@ export const verifyPassword = async (
 
 /**
  * Obtiene usuarios activos.
- * @param {Object} params - Parámetros de búsqueda.
+ * @param {Object} params - ParÃ¡metros de bÃºsqueda.
  * @returns {Promise<any>} Lista de usuarios activos.
  */
 export const findActives = async (params: {
@@ -219,7 +228,7 @@ export const findByEmail = async (email: string) => {
 };
 
 /**
- * Obtiene la información del usuario autenticado.
+ * Obtiene la informaciÃ³n del usuario autenticado.
  * @returns {Promise<any>} Datos del usuario autenticado.
  */
 export const findOwnUser = async () => {
@@ -278,3 +287,6 @@ export const restoreUser = async (id: string) => {
   const response = await axiosInstance.patch(API_USERS_GROUP.restoreUser(id))
   return response.data
 }
+
+
+

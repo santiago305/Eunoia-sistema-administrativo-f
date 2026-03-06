@@ -1,5 +1,5 @@
-import { PurchaseOrderItem, CreditQuota, PurchaseOrder } from "@/types/purchase";
-import { CurrencyType, AfectTypeType, AfectType, VoucherDocTypes, CurrencyTypes, PaymentFormTypes, PurchaseOrderStatuses } from "@/types/purchaseEnums";
+import { PurchaseOrderItem, CreditQuota, PurchaseOrder } from "@/pages/purchases/types/purchase";
+import { CurrencyType, AfectTypeType, AfectType, VoucherDocTypes, CurrencyTypes, PaymentFormTypes, PurchaseOrderStatuses } from "@/pages/purchases/types/purchaseEnums";
 
 const IGV = 0.18;
 
@@ -133,3 +133,4 @@ export const buildEmptyForm = (): PurchaseOrder => ({
   payments: [],
   quotas: [],
 });
+

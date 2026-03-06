@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
@@ -210,7 +210,7 @@ export default function Adjustments() {
                 >
                   Anterior
                 </button>
-                <span>PÃ¡gina {page} de {totalPages}</span>
+                <span>Página {page} de {totalPages}</span>
                 <button
                   className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
                   disabled={page === totalPages || totalPages === 0}
@@ -244,7 +244,7 @@ export default function Adjustments() {
                   value={adjWarehouse}
                   onChange={(event) => setAdjWarehouse(event.target.value)}
                 >
-                  <option value="">Seleccionar almacÃ©n</option>
+                  <option value="">Seleccionar almacén</option>
                   {stockMock.warehouses.map((wh) => (
                     <option key={wh.warehouse_id} value={wh.warehouse_id}>
                       {wh.name}
@@ -282,3 +282,5 @@ export default function Adjustments() {
     </div>
   );
 }
+
+

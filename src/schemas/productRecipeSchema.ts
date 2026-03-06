@@ -10,3 +10,5 @@ export const createProductRecipeSchema = z.object({
   quantity: z.number().min(0),
   waste: z.number().min(0).optional(),
 });
+
+

@@ -7,27 +7,28 @@ import {
   PaymentFormTypes,
   PaymentTypes,
   VoucherDocTypes,
-} from "@/types/purchaseEnums";
-import type { AfectTypeType } from "@/types/purchaseEnums";
-import { FinishedProducts } from "@/types/variant";
+} from "@/pages/purchases/types/purchaseEnums";
+import type { AfectTypeType } from "@/pages/purchases/types/purchaseEnums";
+import { FinishedProducts } from "@/pages/catalog/types/variant";
 import { listRowMaterials } from "@/services/catalogService";
 import { listAll } from "@/services/supplierService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { FilterableSelect } from "@/components/SelectFilterable";
-import type { CreatePurchaseOrderDto, PurchaseOrder, PurchaseOrderItem } from "@/types/purchase";
+import type { CreatePurchaseOrderDto, PurchaseOrder, PurchaseOrderItem } from "@/pages/purchases/types/purchase";
 import { SupplierFormModal } from "../providers/components/SupplierFormModal";
 import { ProductFormModal } from "../catalog/components/ProductFormModal";
 import { WarehouseFormModal } from "../warehouse/components/WarehouseFormModal";
-import { ProductTypes } from "@/types/ProductTypes";
+import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { Modal } from "@/components/settings/modal";
-import { ProductEquivalence } from "@/types/equivalence";
+import { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import { listProductEquivalences } from "@/services/equivalenceService";
 import { listUnits } from "@/services/unitService";
 import type { ListUnitResponse } from "@/types/unit";
 import { createPurchaseOrder, updatePurchaseOrder } from "@/services/purchaseService";
 import { WarehouseOption } from "@/types/warehouse";
 import { SupplierOption } from "@/types/supplier";
+
 import { listActive } from "@/services/warehouseServices";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
 import { ModalNavegate } from "./components/ModalNavegate";
@@ -59,7 +60,7 @@ export default function PurchaseCreateLocal() {
   const [pendingFactor, setPendingFactor] = useState<number>(0);
   const [pendingEquivalence, setPendingEquivalence] = useState<string | null>(null);
   const [pendingUnitBase, setPendingUnitBase] = useState<string | null>(null);
-  const [warehouseOptions, setWarehouseOptions] = useState<WarehouseOption[]>([]);
+  const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   
   const [openAddSupplier, setOpenAddSupplier] = useState(false);
   const [openCreateWarehouse, setOpenCreateWarehouse] = useState(false);
@@ -953,3 +954,5 @@ export default function PurchaseCreateLocal() {
       </div>
   );
 }
+
+

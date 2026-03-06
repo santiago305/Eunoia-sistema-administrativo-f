@@ -1,5 +1,5 @@
 import { FilterableSelect } from "@/components/SelectFilterable";
-import { VariantForm, ProductOption } from "@/types/variant";
+import { VariantForm, ProductOption } from "@/pages/catalog/types/variant";
 import { Dispatch, SetStateAction } from "react";
 
 export function VariantFormFields({ form, setForm, products }: { form: VariantForm; setForm: Dispatch<SetStateAction<VariantForm>>; products: ProductOption[] }) {
@@ -132,3 +132,5 @@ export function VariantFormFields({ form, setForm, products }: { form: VariantFo
         </div>
     );
 }
+
+

@@ -5,9 +5,9 @@ import {
   userInfoAuth,
   type UserInfoAuthResponse,
 } from "@/services/authService";
-import { LoginCredentials } from "@/types/auth";
+import { LoginCredentials } from "@/pages/Auth/types/auth";
 import { AuthContext } from "./AuthContext";
-import { AuthResponse } from "@/types/AuthResponse";
+import { AuthResponse } from "@/pages/Auth/types/AuthResponse";
 import { PropsUrl } from "@/Router/guards/typeGuards";
 import { getApiErrorMessage } from "@/common/utils/apiError";
 import type { AxiosError } from "axios";
@@ -152,3 +152,5 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     </AuthContext.Provider>
   );
 };
+
+

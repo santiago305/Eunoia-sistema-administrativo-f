@@ -36,3 +36,5 @@ const PrivateRoute = ({ children, rolesAllowed }: PrivateRouteProps) => {
 };
 
 export default PrivateRoute;
+
+

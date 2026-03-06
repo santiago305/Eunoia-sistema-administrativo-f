@@ -15,3 +15,5 @@ const SidebarFooter = ({ user, onLogout }: SidebarFooterProps) => {
 };
 
 export default SidebarFooter;
+
+

@@ -10,3 +10,5 @@ export const fetchCatalogMock = async (): Promise<CatalogMockData> => {
 
 // PROVISIONAL: acceso sincrono para vistas que no requieren carga.
 export const getCatalogMock = (): CatalogMockData => catalogMockData;
+
+

@@ -1,6 +1,6 @@
 // src/hooks/useWarehouses.ts
 import { useCallback, useEffect, useState } from "react";
-import type { CreateWarehouseDto, ListWarehousesQuery, UpdateWarehouseActiveDto, UpdateWarehouseDto, Warehouse, WarehouseListResponse, WarehouseLocationsResponse } from "@/types/warehouse";
+import type { CreateWarehouseDto, ListWarehousesQuery, UpdateWarehouseActiveDto, UpdateWarehouseDto, Warehouse, WarehouseListResponse, WarehouseLocationsResponse } from "@/pages/warehouse/types/warehouse";
 import { createWarehouse, listWarehouses, updateWarehouse, updateWarehouseActive, getLocationsById } from "@/services/warehouseServices";
 
 export function useWarehouses(params: ListWarehousesQuery) {
@@ -55,3 +55,5 @@ export function useWarehouses(params: ListWarehousesQuery) {
 
   return { items, total, page, limit, loading, error, create, update, setActive, refetch: fetchList, getLocations };
 }
+
+

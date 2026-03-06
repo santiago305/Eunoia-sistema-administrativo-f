@@ -1,7 +1,7 @@
-import { SupplierForm } from "@/types/supplier";
+import { SupplierForm } from "@/pages/providers/types/supplier";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Dispatch, SetStateAction, CSSProperties } from "react";
-import { DocumentType } from "@/types/DocumentType";
+import { DocumentType } from "@/pages/providers/types/DocumentType";
 
 export function SupplierFormFields({
   form,
@@ -165,3 +165,5 @@ export function SupplierFormFields({
     </div>
   );
 }
+
+

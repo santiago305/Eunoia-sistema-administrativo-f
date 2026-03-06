@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CreateProductDto, ListProductsQuery, Product, UpdateProductDto } from "@/types/product";
+import type { CreateProductDto, ListProductsQuery, Product, UpdateProductDto } from "@/pages/catalog/types/product";
 import {
   createProduct,
   listProducts,
@@ -102,3 +102,5 @@ export function useProducts(params: ListProductsQuery & { name?: string }) {
     setActive,
   };
 }
+
+

@@ -1,6 +1,6 @@
 import axiosInstance from "@/common/utils/axios";
 import { API_SESSIONS_GROUP } from "./APIs";
-import type { SessionApiDto, SessionMessageResponse } from "@/types/session";
+import type { SessionApiDto, SessionMessageResponse } from "@/pages/sessions/types/session.api";
 import { mapSessionApiToSessionDto } from "@/common/utils/sessionDetect";
 
 export const findSessions = async () => {
@@ -24,4 +24,6 @@ export const revokeSession = async (id: string) => {
   const response = await axiosInstance.delete<SessionMessageResponse>(API_SESSIONS_GROUP.revokeSession(id));
   return response.data;
 };
+
+
 

@@ -1,6 +1,6 @@
 import { FilterableSelect } from "@/components/SelectFilterable";
-import { ProductForm } from "@/types/product";
-import { ListUnitResponse } from "@/types/unit";
+import { ProductForm } from "@/pages/catalog/types/product";
+import { ListUnitResponse } from "@/pages/catalog/types/unit";
 import { Dispatch, SetStateAction } from "react";
 
 
@@ -145,3 +145,5 @@ import { Dispatch, SetStateAction } from "react";
         </div>
     );
 }
+
+

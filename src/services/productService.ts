@@ -9,7 +9,7 @@ import type {
   Product,
   ProductVariant,
   ProductWithVariantsResponse,
-} from "@/types/product";
+} from "@/pages/catalog/types/product";
 
 export const createProduct = async (payload: CreateProductDto): Promise<Product> => {
   const response = await axiosInstance.post(API_PRODUCTS_GROUP.create, payload);
@@ -53,3 +53,5 @@ export const getProductByName = async (name: string): Promise<ProductListRespons
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.byName(name));
   return response.data;
 };
+
+

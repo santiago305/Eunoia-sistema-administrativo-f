@@ -1,8 +1,8 @@
 import { Modal } from "@/components/settings/modal";
 import { listQuotas } from "@/services/purchaseService";
-import type { CreditQuota } from "@/types/purchase";
-import type { CurrencyType } from "@/types/purchaseEnums";
-import { CurrencyTypes } from "@/types/purchaseEnums";
+import type { CreditQuota } from "@/pages/purchases/types/purchase";
+import type { CurrencyType } from "@/pages/purchases/types/purchaseEnums";
+import { CurrencyTypes } from "@/pages/purchases/types/purchaseEnums";
 import { money } from "@/utils/functionPurchases";
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -172,3 +172,5 @@ export function QuotaListModal({
     </Modal>
   );
 }
+
+

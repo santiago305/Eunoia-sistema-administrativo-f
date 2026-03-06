@@ -8,8 +8,8 @@ import type {
   SupplierListResponse,
   Supplier,
   SupplierIdentityLookupResult,
-} from "@/types/supplier";
-import { DocumentType } from "@/types/DocumentType";
+} from "@/pages/providers/types/supplier";
+import { DocumentType } from "@/pages/providers/types/DocumentType";
 
 export const createSupplier = async (payload: CreateSupplierDto): Promise<Supplier> => {
   const response = await axiosInstance.post(API_SUPPLIERS_GROUP.create, payload);
@@ -50,3 +50,5 @@ export const lookupSupplierIdentity = async (params: {
   const response = await axiosInstance.get(API_SUPPLIERS_GROUP.identityLookup, { params });
   return response.data;
 };
+
+

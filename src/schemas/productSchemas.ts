@@ -36,3 +36,5 @@ export const listProductsQuerySchema = z.object({
   type: z.string().optional(),
   q: z.string().optional(),
 });
+
+
