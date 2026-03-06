@@ -27,3 +27,5 @@ const SessionsQuickActions = ({ totalCount, revokingAll, onRevokeAll }: Sessions
 };
 
 export default SessionsQuickActions;
+
+

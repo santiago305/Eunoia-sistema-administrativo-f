@@ -79,3 +79,5 @@ export default function Navbar({ query, setQuery, role, setRole, page, setPage, 
         </div>
     );
 }
+
+

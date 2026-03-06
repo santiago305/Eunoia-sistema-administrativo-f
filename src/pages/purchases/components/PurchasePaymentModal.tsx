@@ -1,8 +1,8 @@
 import type { CSSProperties, Dispatch, SetStateAction } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
-import { CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes } from "@/types/purchaseEnums";
-import type { CreditQuota, Payment, PurchaseOrder } from "@/types/purchase";
+import { CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes } from "@/pages/purchases/types/purchaseEnums";
+import type { CreditQuota, Payment, PurchaseOrder } from "@/pages/purchases/types/purchase";
 import { todayIso, toDateInputValue, clampQuotas, buildQuotas, tryShowPicker } from "@/utils/functionPurchases";
 
 const DEFAULT_PRIMARY = "#21b8a6";
@@ -365,3 +365,5 @@ export function PurchasePaymentModal({
     </Modal>
   );
 }
+
+

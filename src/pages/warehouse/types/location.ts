@@ -34,3 +34,4 @@ export type LocationForm = {
     description: string;
     isActive: boolean;
 };
+

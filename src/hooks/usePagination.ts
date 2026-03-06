@@ -29,3 +29,5 @@ export function usePagination<T>(data: T[], initialPageSize = 8) {
     setPageSize,
   };
 }
+
+

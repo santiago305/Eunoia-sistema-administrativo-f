@@ -9,3 +9,5 @@ export interface RouteMetadata {
   isProtected?: boolean;            // Ruta protegida (requiere autenticación)
   rolesAllowed?: string[];          // Roles permitidos para acceder (futuro control de roles)
 }
+
+

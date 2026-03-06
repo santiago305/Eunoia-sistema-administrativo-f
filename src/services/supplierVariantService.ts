@@ -6,7 +6,7 @@ import type {
   ListSupplierVariantsQuery,
   SupplierVariantListResponse,
   SupplierVariant,
-} from "@/types/supplierVariant";
+} from "@/pages/providers/types/supplierVariant";
 
 export const createSupplierVariant = async (payload: CreateSupplierVariantDto): Promise<SupplierVariant> => {
   const response = await axiosInstance.post(API_SUPPLIER_VARIANTS_GROUP.create, payload);
@@ -36,3 +36,5 @@ export const getSupplierVariantById = async (
   const response = await axiosInstance.get(API_SUPPLIER_VARIANTS_GROUP.byId(supplierId, variantId));
   return response.data;
 };
+
+

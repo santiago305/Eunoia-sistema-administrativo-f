@@ -1,7 +1,7 @@
-import axiosInstance from "@/common/utils/axios"
+﻿import axiosInstance from "@/common/utils/axios"
 import { API_AUTH_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
-import { UpdateUserDto } from "@/types/user"
-import type { CurrentUserResponse } from "@/types/userProfile"
+import { UpdateUserDto } from "@/pages/users/types/users.types"
+import type { CurrentUserResponse } from "@/pages/profile/types/userProfile"
 
 export type UserRoleCount = "admin" | "moderator" | "adviser";
 export type UserStatusFilter = "all" | "active" | "inactive";
@@ -62,8 +62,8 @@ export const createUser = async (payload: CreateUserPayload) => {
 }
 
 /**
- * Obtiene todos los usuarios según filtros.
- * @param {Object} params - Parámetros de búsqueda.
+ * Obtiene todos los usuarios segÃºn filtros.
+ * @param {Object} params - ParÃ¡metros de bÃºsqueda.
  * @returns {Promise<any>} Lista de usuarios.
  */
 export const findAll = async (params: {
@@ -184,7 +184,7 @@ export const verifyPassword = async (
 
 /**
  * Obtiene usuarios activos.
- * @param {Object} params - Parámetros de búsqueda.
+ * @param {Object} params - ParÃ¡metros de bÃºsqueda.
  * @returns {Promise<any>} Lista de usuarios activos.
  */
 export const findActives = async (params: {
@@ -219,7 +219,7 @@ export const findByEmail = async (email: string) => {
 };
 
 /**
- * Obtiene la información del usuario autenticado.
+ * Obtiene la informaciÃ³n del usuario autenticado.
  * @returns {Promise<any>} Datos del usuario autenticado.
  */
 export const findOwnUser = async () => {
@@ -278,3 +278,6 @@ export const restoreUser = async (id: string) => {
   const response = await axiosInstance.patch(API_USERS_GROUP.restoreUser(id))
   return response.data
 }
+
+
+

@@ -4,10 +4,10 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { createProduct, getProductById, updateProduct, updateProductActive } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
-import { ProductTypes } from "@/types/ProductTypes";
-import type { ProductType } from "@/types/ProductTypes";
-import type { ListUnitResponse } from "@/types/unit";
-import type { ProductForm } from "@/types/product";
+import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
+import type { ProductType } from "@/pages/catalog/types/ProductTypes";
+import type { ListUnitResponse } from "@/pages/catalog/types/unit";
+import type { ProductForm } from "@/pages/catalog/types/product";
 import { ProductFormFields } from "./ProductFormField";
 
 type ProductFormModalProps = {
@@ -187,3 +187,5 @@ export function ProductFormModal({
     </Modal>
   );
 }
+
+

@@ -5,7 +5,7 @@ import {
   updateProductActiveSchema,
   listProductsQuerySchema,
 } from "@/schemas/productSchemas";
-import type { ProductType } from "@/types/ProductTypes";
+import type { ProductType } from "@/pages/catalog/types/ProductTypes";
 
 
 export type CreateProductDto = z.infer<typeof createProductSchema>;
@@ -63,3 +63,5 @@ export type ProductWithVariantsResponse = {
   product: Product;
   variants: ProductVariant[];
 } | null;
+
+

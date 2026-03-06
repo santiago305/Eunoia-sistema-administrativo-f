@@ -3,3 +3,4 @@ export enum DocumentType {
   DNI = "01",
   CE = "04",
 }
+

@@ -1,4 +1,4 @@
-import type { SessionApiDto } from "@/types/session";
+import type { SessionApiDto } from "@/pages/sessions/types/session.api";
 
 export type SessionDto = {
   id: string;
@@ -92,4 +92,6 @@ export function detectSessionMeta(session: SessionDto) {
 
   return { browser, deviceType, label };
 }
+
+
 

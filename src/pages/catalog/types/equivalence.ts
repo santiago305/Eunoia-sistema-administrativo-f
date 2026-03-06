@@ -16,3 +16,5 @@ export type ProductEquivalence = {
 };
 
 export type ListProductEquivalencesResponse = ProductEquivalence[];
+
+

@@ -1,6 +1,6 @@
 import { createContext } from "react";
-import { LoginCredentials } from "@/types/auth";
-import { AuthResponse } from "@/types/AuthResponse";
+import { LoginCredentials } from "@/pages/Auth/types/auth";
+import { AuthResponse } from "@/pages/Auth/types/AuthResponse";
 
 /**
  * Tipo de contexto de autenticación.
@@ -26,3 +26,5 @@ interface AuthContextType {
  * entre los componentes.
  */
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+

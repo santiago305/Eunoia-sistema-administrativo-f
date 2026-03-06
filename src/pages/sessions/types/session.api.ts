@@ -14,3 +14,5 @@ export type SessionApiDto = {
 export type SessionMessageResponse = {
   message: string;
 };
+
+

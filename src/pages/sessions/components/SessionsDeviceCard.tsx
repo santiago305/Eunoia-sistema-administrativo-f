@@ -82,3 +82,5 @@ const SessionsDeviceCard = ({ session, revokingId, onRevoke, onOpenDetails }: Se
 };
 
 export default SessionsDeviceCard;
+
+

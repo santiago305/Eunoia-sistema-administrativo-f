@@ -9,7 +9,7 @@ import {
   UpdateVariantDto,
   Variant,
   PrimaVariant,
-} from "@/types/variant";
+} from "@/pages/catalog/types/variant";
 
 export const listVariants = async (params: ListVariantsQuery): Promise<ListVariantsResponse> => {
   const res = await axiosInstance.get(API_VARIANTS_GROUP.list, { params });
@@ -46,4 +46,6 @@ export const updateVariantActive = async (
   const response = await axiosInstance.patch(API_VARIANTS_GROUP.updateActive(id), payload);
   return response.data;
 };
+
+
 

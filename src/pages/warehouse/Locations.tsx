@@ -6,14 +6,14 @@ import { createLocation, getLocationById, listLocations, updateLocation, updateL
 
 import { listWarehouses } from "@/services/warehouseServices";
 
-import type { Location } from "@/types/location";
+import type { Location } from "@/pages/warehouse/types/location";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
-import { LocationForm } from '@/types/location'
-import { WarehouseOption } from "@/types/warehouse";
+import { LocationForm } from '@/pages/warehouse/types/location'
+import { WarehouseOption } from "@/pages/warehouse/types/warehouse";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -533,3 +533,5 @@ function LocationFormFields({ form, setForm, warehouses }: { form: LocationForm;
         </div>
     );
 }
+
+

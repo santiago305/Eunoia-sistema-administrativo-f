@@ -5,7 +5,7 @@ import type {
   ListProductRecipesQuery,
   ListProductRecipesResponse,
   ProductRecipe,
-} from "@/types/productRecipe";
+} from "@/pages/catalog/types/productRecipe";
 
 export const listProductRecipes = async (
   params: ListProductRecipesQuery
@@ -24,3 +24,5 @@ export const createProductRecipe = async (
 export const deleteProductRecipe = async (id: string): Promise<void> => {
   await axiosInstance.delete(API_PRODUCT_RECIPES_GROUP.delete(id));
 };
+
+

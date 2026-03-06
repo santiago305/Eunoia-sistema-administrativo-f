@@ -1,7 +1,7 @@
 import axiosInstance from "@/common/utils/axios";
 import { getApiErrorMessage } from "@/common/utils/apiError";
 import { API_AUTH_GROUP } from "./APIs";
-import { LoginCredentials } from "@/types/auth";
+import { LoginCredentials } from "@/pages/Auth/types/auth";
 
 export interface LoginApiSuccessResponse {
   message: string;
@@ -82,3 +82,5 @@ export const logoutUser = async () => {
     return false;
   }
 };
+
+

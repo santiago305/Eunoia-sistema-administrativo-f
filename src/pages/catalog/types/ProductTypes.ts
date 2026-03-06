@@ -4,3 +4,5 @@ export const ProductTypes = {
 } as const;
 
 export type ProductType = typeof ProductTypes[keyof typeof ProductTypes];
+
+

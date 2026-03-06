@@ -6,3 +6,4 @@ export const getInitials = (name: string) => {
       .toUpperCase()
       .slice(0, 2);
   };
+

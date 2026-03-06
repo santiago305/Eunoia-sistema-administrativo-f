@@ -25,3 +25,4 @@ export const listLocationsQuerySchema = z.object({
   code: z.string().optional(),
   description: z.string().optional(),
 });
+

@@ -69,3 +69,5 @@ export type SupplierRucLookupData = {
   address?: string;
   ubigueo?: string;
 };
+
+

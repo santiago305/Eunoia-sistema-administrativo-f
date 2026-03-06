@@ -14,7 +14,7 @@ import {
   updateMyAvatar,
   updateOwnUser,
 } from "@/services/userService";
-import type { CurrentUser } from "@/types/userProfile";
+import type { CurrentUser } from "@/pages/profile/types/userProfile";
 import {
   PasswordFormValues,
   ProfileFormValues,
@@ -238,3 +238,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+

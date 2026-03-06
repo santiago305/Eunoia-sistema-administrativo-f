@@ -5,7 +5,7 @@ import type {
   ListProductEquivalencesQuery,
   ListProductEquivalencesResponse,
   ProductEquivalence,
-} from "@/types/equivalence";
+} from "@/pages/catalog/types/equivalence";
 
 export const listProductEquivalences = async (
   params: ListProductEquivalencesQuery
@@ -24,3 +24,5 @@ export const createProductEquivalence = async (
 export const deleteProductEquivalence = async (id: string): Promise<void> => {
   await axiosInstance.delete(API_PRODUCT_EQUIVALENCES_GROUP.delete(id));
 };
+
+

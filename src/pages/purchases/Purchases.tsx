@@ -8,10 +8,10 @@ import { listAll } from "@/services/supplierService";
 import { listActive } from "@/services/warehouseServices";
 import { listPurchaseOrders } from "@/services/purchaseService";
 import { money, toDateInputValue, tryShowPicker, todayIso } from "@/utils/functionPurchases";
-import type { PurchaseOrder } from "@/types/purchase";
-import type { SupplierOption } from "@/types/supplier";
-import type { Warehouse } from "@/types/warehouse";
-import { VoucherDocTypes, type VoucherDocType, PurchaseOrderStatuses, type PurchaseOrderStatus, PaymentFormTypes } from "@/types/purchaseEnums";
+import type { PurchaseOrder } from "@/pages/purchases/types/purchase";
+import type { SupplierOption } from "@/pages/providers/types/supplier";
+import type { Warehouse } from "@/pages/warehouse/types/warehouse";
+import { VoucherDocTypes, type VoucherDocType, PurchaseOrderStatuses, type PurchaseOrderStatus, PaymentFormTypes } from "@/pages/purchases/types/purchaseEnums";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -541,3 +541,5 @@ export default function Purchases() {
     </div>
   );
 }
+
+

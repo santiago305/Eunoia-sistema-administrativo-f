@@ -24,7 +24,7 @@ export type Warehouse = {
   updatedAt: string;
 };
 
-export type WarehouseOption = { value: string; label: string; };
+export type WarehouseSelectOption = { value: string; label: string };
 
 export type WarehouseListResponse = {
   items: Warehouse[];
@@ -44,3 +44,5 @@ export type WarehouseLocationsResponse = {
 };
 
 export type WarehouseOption = { warehouseId: string; name: string };
+
+

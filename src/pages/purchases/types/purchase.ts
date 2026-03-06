@@ -15,7 +15,7 @@ import type {
   PaymentType,
   PurchaseOrderStatus,
   VoucherDocType,
-} from "@/types/purchaseEnums";
+} from "@/pages/purchases/types/purchaseEnums";
 
 export type AddPurchaseOrderItemDto = z.infer<typeof addPurchaseOrderItemSchema>;
 export type CreateCreditQuotaDto = z.infer<typeof createCreditQuotaSchema>;
@@ -101,3 +101,5 @@ export type PurchaseOrderListResponse = {
 };
 
 export type PurchaseOrderItemsResponse = PurchaseOrderItem[];
+
+

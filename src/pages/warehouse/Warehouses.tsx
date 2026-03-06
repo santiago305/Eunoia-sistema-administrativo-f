@@ -8,7 +8,7 @@ import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from 
 
 import { useWarehouses } from "@/hooks/useWarehouse";
 import { listWarehouses } from "@/services/warehouseServices";
-import type { WarehouseLocation } from "@/types/warehouse";
+import type { WarehouseLocation } from "@/pages/warehouse/types/warehouse";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 
 const PRIMARY = "#21b8a6";
@@ -730,3 +730,5 @@ export default function Warehouses() {
         </div>
     );
 }
+
+

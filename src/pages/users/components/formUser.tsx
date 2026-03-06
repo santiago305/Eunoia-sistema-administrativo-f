@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { findAllRoles } from "@/services/roleService";
-import type { CreateUserDto } from "@/types/user";
+import type { CreateUserDto } from "@/pages/users/types/users.types";
 import { createUser } from "@/services/userService";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -67,7 +67,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             if (res.data?.type?.error) {
                 showFlash(errorResponse(res.data?.type?.error));
             } else {
-                showFlash(successResponse("¡Usuario creado con satisfactoriamente!"));
+                showFlash(successResponse("Â¡Usuario creado con satisfactoriamente!"));
                 closeModal?.();
             }
             reset({
@@ -98,11 +98,11 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
                             <div className="w-full">
                                 <FormInput
                                     type={eyeBool ? "password" : "text"}
-                                    placeholder="Ingrese contraseña"
+                                    placeholder="Ingrese contraseÃ±a"
                                     error={errors.password?.message}
                                     {...register("password", {
-                                        required: "La contraseña es obligatoria",
-                                        minLength: { value: 8, message: "Mínimo 8 caracteres" },
+                                        required: "La contraseÃ±a es obligatoria",
+                                        minLength: { value: 8, message: "MÃ­nimo 8 caracteres" },
                                     })}
                                 />
                             </div>
@@ -149,3 +149,6 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
         </div>
     );
 };
+
+
+

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
 import { usePagination } from "@/hooks/usePagination";
@@ -122,7 +122,7 @@ export default function Reservations() {  const stockMock = getStockMock();
                 >
                   Anterior
                 </button>
-                <span>Página {page} de {totalPages}</span>
+                <span>P�gina {page} de {totalPages}</span>
                 <button
                   className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
                   disabled={page === totalPages || totalPages === 0}
@@ -156,6 +156,8 @@ export default function Reservations() {  const stockMock = getStockMock();
     </div>
   );
 }
+
+
 
 
 

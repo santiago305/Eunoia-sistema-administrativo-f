@@ -4,3 +4,5 @@ import { ChangePasswordSchema } from "@/schemas/authSchemas";
 
 export type LoginCredentials = z.infer<typeof LoginSchema>;
 export type ChangePasswordType = z.infer<typeof ChangePasswordSchema>;
+
+

@@ -1,4 +1,4 @@
-import { VariantListItem } from "@/types/variant";
+import { VariantListItem } from "@/pages/catalog/types/variant";
 import type { CSSProperties } from "react";
 
 export function VariantList({
@@ -68,3 +68,5 @@ export function VariantList({
         </div>
     );
 }
+
+

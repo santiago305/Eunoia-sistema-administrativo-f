@@ -145,3 +145,5 @@ export const API_PAYMENT_GROUP = {
   create: "/payments",
   remove: (id: string) => `/payments/${id}`,
 }
+
+

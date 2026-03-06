@@ -3,17 +3,17 @@ import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { createVariant, getVariantById, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
 import { listProducts } from "@/services/productService";
-import type { ProductOption, Variant, VariantForm } from "@/types/variant";
+import type { ProductOption, Variant, VariantForm } from "@/pages/catalog/types/variant";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
-import { ProductTypes } from "@/types/ProductTypes";
+import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { listUnits } from "@/services/unitService";
-import { ListUnitResponse } from "@/types/unit";
+import { ListUnitResponse } from "@/pages/catalog/types/unit";
 import { listProductEquivalences } from "@/services/equivalenceService";
-import type { ProductEquivalence } from "@/types/equivalence";
+import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
 import { VariantFormFields } from "../catalog/components/VariantFormFields";
 
@@ -751,3 +751,5 @@ export default function RowVariant() {
     </div>
   );
 }
+
+

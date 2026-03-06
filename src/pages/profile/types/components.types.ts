@@ -1,5 +1,5 @@
 import type { UseFormReturn } from "react-hook-form";
-import type { CurrentUser } from "@/types/userProfile";
+import type { CurrentUser } from "@/pages/profile/types/userProfile";
 import type { PasswordFormValues, ProfileFormValues } from "../components/profile.schemas";
 
 export type ProfileAvatarBlockProps = {
@@ -40,3 +40,5 @@ export type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   error?: string;
 };
+
+

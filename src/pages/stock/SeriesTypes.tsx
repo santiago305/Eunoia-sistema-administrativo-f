@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
 
@@ -121,3 +121,5 @@ export default function SeriesTypes() {
     </div>
   );
 }
+
+

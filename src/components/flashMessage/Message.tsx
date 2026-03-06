@@ -28,3 +28,5 @@ export default function Message({ type, text, icon, color }: MessageProps) {
     </div>
   );
 }
+
+

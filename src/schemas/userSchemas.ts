@@ -17,3 +17,5 @@ export const createUserSchema = z.object({
 export const updateUserSchema = createUserSchema.partial({
   password: true, // Solo se vuelve opcional el campo que quieras
 });
+
+

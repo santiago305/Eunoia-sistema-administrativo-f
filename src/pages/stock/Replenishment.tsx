@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
 import { usePagination } from "@/hooks/usePagination";
@@ -69,7 +69,7 @@ export default function Replenishment() {  const stockMock = getStockMock();
 
   return (
     <div className="w-full min-h-screen bg-white text-black">
-      <PageTitle title="ReposiciÃ³n" />
+      <PageTitle title="Reposición" />
       <div className="px-6 py-6 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Reposicion</h1>
@@ -127,7 +127,7 @@ export default function Replenishment() {  const stockMock = getStockMock();
                 >
                   Anterior
                 </button>
-                <span>PÃ¡gina {page} de {totalPages}</span>
+                <span>Página {page} de {totalPages}</span>
                 <button
                   className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
                   disabled={page === totalPages || totalPages === 0}
@@ -159,6 +159,8 @@ export default function Replenishment() {  const stockMock = getStockMock();
     </div>
   );
 }
+
+
 
 
 

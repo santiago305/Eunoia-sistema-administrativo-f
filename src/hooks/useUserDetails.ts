@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import axiosInstance from "@/common/utils/axios";
 import { API_USERS_GROUP } from "@/services/APIs";
-import type { CurrentUserResponse } from "@/types/userProfile";
+import type { CurrentUserResponse } from "@/pages/profile/types/userProfile";
 
 export const useUserDetails = () => {
   const [userDetails, setUserDetails] = useState<CurrentUserResponse | null>(null);
@@ -33,3 +33,5 @@ export const useUserDetails = () => {
     refetchUserDetails: fetchUserDetails,
   };
 };
+
+

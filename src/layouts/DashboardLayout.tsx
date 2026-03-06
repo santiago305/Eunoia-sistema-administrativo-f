@@ -1,4 +1,4 @@
-锘縤mport { Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/dashboard/SidebarProvider";
 import Sidebar from "@/components/dashboard/Sidebar";
 // import type { User } from "@/components/dashboard/types";
@@ -17,13 +17,13 @@ const DashboardLayout = () => {
       try {
           await logout();
           toast({
-              title: "Sesi贸n cerrada",
-              description: "Has cerrado sesi贸n correctamente.",
+              title: "Sesi髇 cerrada",
+              description: "Has cerrado sesi髇 correctamente.",
           });
       } catch {
           toast({
-              title: "No se pudo cerrar sesi贸n",
-              description: "No se ha cerrado sesi贸n correctamente.",
+              title: "No se pudo cerrar sesi髇",
+              description: "No se ha cerrado sesi髇 correctamente.",
           });
       }
   };
@@ -48,3 +48,5 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
+
+

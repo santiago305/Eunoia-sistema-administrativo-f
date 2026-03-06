@@ -6,7 +6,7 @@ import SessionsSecurityTip from "./components/SessionsSecurityTip";
 import SessionsSummaryCard from "./components/SessionsSummaryCard";
 import type { Session } from "./types/session.types";
 import { findSessions, revokeAllSessions, revokeSession } from "@/services/sessionService";
-import type { SessionApiDto } from "@/types/session";
+import type { SessionApiDto } from "@/pages/sessions/types/session.api";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { Modal } from "@/components/settings/modal";
@@ -216,3 +216,5 @@ export default function SessionsUsers() {
     </div>
   );
 }
+
+

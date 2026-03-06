@@ -24,3 +24,5 @@ const SessionsSummaryCard = ({ activeCount, otherCount }: SessionsSummaryCardPro
 };
 
 export default SessionsSummaryCard;
+
+

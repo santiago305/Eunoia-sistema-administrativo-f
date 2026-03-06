@@ -7,7 +7,7 @@ import type {
   ListLocationsQuery,
   LocationsListResponse,
   Location,
-} from "@/types/location";
+} from "@/pages/warehouse/types/location";
 
 export const createLocation = async (payload: CreateLocationDto): Promise<Location> => {
   const response = await axiosInstance.post(API_LOCATIONS_GROUP.create, payload);
@@ -36,3 +36,4 @@ export const getLocationById = async (id: string): Promise<Location> => {
   const response = await axiosInstance.get(API_LOCATIONS_GROUP.byId(id));
   return response.data;
 };
+

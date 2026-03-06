@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
@@ -357,6 +357,8 @@ export default function StockSummary() {  const stockMock = getStockMock();
     </div>
   );
 }
+
+
 
 
 

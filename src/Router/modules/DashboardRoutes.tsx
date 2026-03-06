@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Definicion de rutas protegidas bajo el Dashboard.
  * 
  * - Se utiliza `PrivateRoute` para proteger las rutas que requieren autenticacion.
@@ -155,3 +155,5 @@ export const dashboardRoutes: RouteObject[] = [
         ],
     },
 ];
+
+

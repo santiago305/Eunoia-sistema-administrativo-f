@@ -1,6 +1,6 @@
 import type { AxiosError } from "axios";
 import { env } from "@/env";
-import type { CurrentUser, CurrentUserResponse } from "@/types/userProfile";
+import type { CurrentUser, CurrentUserResponse } from "@/pages/profile/types/userProfile";
 import type { BackendErrorPayload } from "../types/profile.types";
 
 export const PROFILE_PRIMARY = "#21b8a6";
@@ -65,3 +65,5 @@ export function parseChangePasswordError(error: unknown) {
     fieldErrors,
   };
 }
+
+

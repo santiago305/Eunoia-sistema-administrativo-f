@@ -1,10 +1,10 @@
-﻿import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
-import type { Supplier } from "@/types/supplier";
+import type { Supplier } from "@/pages/providers/types/supplier";
 import { Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 
@@ -328,3 +328,5 @@ export default function Providers() {
     </div>
   );
 }
+
+

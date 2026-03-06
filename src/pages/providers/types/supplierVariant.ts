@@ -23,3 +23,5 @@ export type SupplierVariantListResponse = {
   page: number;
   limit: number;
 };
+
+
