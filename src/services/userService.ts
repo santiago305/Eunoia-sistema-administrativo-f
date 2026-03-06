@@ -1,10 +1,17 @@
 ﻿import axiosInstance from "@/common/utils/axios"
 import { API_AUTH_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
-import { UpdateUserDto } from "@/pages/users/types/users.types"
+import type {
+  CountUsersByRoleData,
+  CreateUserRequest,
+  CreateUserResponse,
+  RoleType,
+  UpdateUserDto,
+  UserListStatus,
+} from "@/pages/users/types/users.types";
 import type { CurrentUserResponse } from "@/pages/profile/types/userProfile"
 
-export type UserRoleCount = "admin" | "moderator" | "adviser";
-export type UserStatusFilter = "all" | "active" | "inactive";
+export type UserRoleCount = RoleType;
+export type UserStatusFilter = UserListStatus;
 export type UserSortBy = "name" | "email" | "createdAt" | "role" | "deleted";
 export type UserOrder = "ASC" | "DESC";
 
@@ -27,14 +34,7 @@ export type ListUsersParams = {
   sortBy?: UserSortBy;
   order?: UserOrder;
 };
-export type CreateUserPayload = {
-  name: string;
-  email: string;
-  password: string;
-  roleId?: string;
-  avatarUrl?: string;
-  telefono?: string;
-};
+export type CreateUserPayload = CreateUserRequest;
 
 export type CountUsersByRoleParams = {
   role?: UserRoleCount;
@@ -43,8 +43,8 @@ export type CountUsersByRoleParams = {
 };
 
 export type CountUsersByRoleResponse = {
-  total: number;
-  byRole: Partial<Record<UserRoleCount, number>>;
+  total: CountUsersByRoleData["total"];
+  byRole: CountUsersByRoleData["byRole"];
 };
 
 // ----------------------------------------
@@ -57,7 +57,7 @@ export type CountUsersByRoleResponse = {
  * @returns {Promise<any>} Respuesta del servidor.
  */
 export const createUser = async (payload: CreateUserPayload) => {
-  const response = await axiosInstance.post(API_USERS_GROUP.createUser, payload)
+  const response = await axiosInstance.post<CreateUserResponse>(API_USERS_GROUP.createUser, payload)
   return response.data
 }
 

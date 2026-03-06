@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { findAllRoles } from "@/services/roleService";
-import type { CreateUserDto } from "@/pages/users/types/users.types";
+import type { CreateUserRequest, UserRoleOptionApi } from "@/pages/users/types/users.types";
 import { createUser } from "@/services/userService";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -14,7 +14,7 @@ import type { UserFormProps } from "../types/components.types";
 
 export const UserForm = ({ closeModal }: UserFormProps) => {
     const { showFlash, clearFlash } = useFlashMessage();
-    const [roles, setRoles] = useState<any[]>([]);
+    const [roles, setRoles] = useState<UserRoleOptionApi[]>([]);
     const [eyeBool, setEyeBool] = useState(true);
 
     const {
@@ -24,7 +24,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
         setValue,
         watch,
         formState: { errors },
-    } = useForm<CreateUserDto>({
+    } = useForm<CreateUserRequest>({
         resolver: zodResolver(createUserSchema),
         defaultValues: {
             name: "",
@@ -32,15 +32,22 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             roleId: "",
             avatarUrl: "",
             password: "",
-        } as any,
+            telefono: "",
+        },
     });
 
-    const roleId = watch("roleId");
+    const roleId = watch("roleId") ?? "";
 
     const getRoles = async () => {
         try {
-            const response = await findAllRoles();
-            setRoles(response);
+            const response = await findAllRoles({ status: "all" });
+            const normalized: UserRoleOptionApi[] = (Array.isArray(response) ? response : [])
+                .map((r) => ({
+                    id: String(r.id ?? ""),
+                    description: String(r.description ?? "").toLowerCase(),
+                }))
+                .filter((r) => !!r.id);
+            setRoles(normalized);
         } catch (error) {
             console.error("Error fetching roles:", error);
         }
@@ -55,25 +62,25 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             name: "",
             email: "",
             roleId: "",
+            avatarUrl: "",
+            telefono: "",
             password: "",
-        } as any);
+        });
     }, [reset]);
 
-    const submit = async (data: CreateUserDto) => {
+    const submit = async (data: CreateUserRequest) => {
         clearFlash();
         try {
             const res = await createUser(data);
 
-            if (res.data?.type?.error) {
-                showFlash(errorResponse(res.data?.type?.error));
-            } else {
-                showFlash(successResponse("Â¡Usuario creado con satisfactoriamente!"));
-                closeModal?.();
-            }
+            showFlash(successResponse(res.message || "Usuario creado satisfactoriamente"));
+            closeModal?.();
             reset({
                 name: "",
                 email: "",
                 roleId: "",
+                avatarUrl: "",
+                telefono: "",
                 password: "",
             });
         } catch {
