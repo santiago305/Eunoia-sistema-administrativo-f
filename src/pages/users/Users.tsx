@@ -15,6 +15,11 @@ import type { Role, RoleOption, User } from "./types/users.types";
 
 const PRIMARY = "#21b8a6";
 const ROLES: Role[] = ["admin", "moderator", "adviser"];
+const ROLE_LABELS: Record<Role, string> = {
+  admin: "Admin",
+  moderator: "Moderator",
+  adviser: "Adviser",
+};
 const PAGE_SIZE = 20;
 
 // ---------- Utils ----------
@@ -42,9 +47,9 @@ const readError = (error: unknown) => {
 function validateCreate(v: { name: string; email: string; password: string; telefono: string; roleId: string }) {
   const e: Record<string, string> = {};
   if (!v.name.trim()) e.name = "Nombre requerido";
-  if (!v.email.trim() || !/^\S+@\S+\.\S+$/.test(v.email)) e.email = "Email invÃ¡lido";
-  if (!v.password.trim()) e.password = "ContraseÃ±a requerida";
-  if (!v.telefono.trim()) e.telefono = "TelÃ©fono requerido";
+  if (!v.email.trim() || !/^\S+@\S+\.\S+$/.test(v.email)) e.email = "Email inválido";
+  if (!v.password.trim()) e.password = "Contraseña requerida";
+  if (!v.telefono.trim()) e.telefono = "Teléfono requerido";
   if (!v.roleId.trim()) e.roleId = "Rol requerido";
   return e;
 }
@@ -73,7 +78,7 @@ export default function Users() {
   const [countsByRole, setCountsByRole] = useState<CountUsersByRoleResponse | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [create, setCreate] = useState({ name: "", email: "", password: "", telefono: "", avatarUrl: "", roleId: "" });
+  const [create, setCreate] = useState({ name: "", email: "", password: "", telefono: "", roleId: "" });
   const [createErr, setCreateErr] = useState<Record<string, string>>({});
   const [createGeneralErr, setCreateGeneralErr] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
@@ -141,8 +146,7 @@ export default function Users() {
 
         if (!cancelled) {
           setRoles(normalized);
-          const adviser = normalized.find((r: RoleOption) => r.description === "adviser");
-          setCreate((prev) => ({ ...prev, roleId: prev.roleId || adviser?.id || "" }));
+          setCreate((prev) => ({ ...prev, roleId: prev.roleId || "" }));
         }
       } finally {
         if (!cancelled) setLoadingRoles(false);
@@ -221,11 +225,9 @@ export default function Users() {
         password: create.password,
         roleId: create.roleId,
         telefono: create.telefono.trim(),
-        avatarUrl: create.avatarUrl.trim() || undefined,
       });
 
-      const adviser = roles.find((r) => r.description === "adviser");
-      setCreate({ name: "", email: "", password: "", telefono: "", avatarUrl: "", roleId: adviser?.id ?? "" });
+      setCreate({ name: "", email: "", password: "", telefono: "", roleId: "" });
       setCreateErr({});
       setCreateGeneralErr([]);
       setModalOpen(false);
@@ -471,7 +473,7 @@ export default function Users() {
                         <div className="truncate text-[12px] text-zinc-800 2xl:text-[13px]">{selected.email}</div>
                       </div>
                       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                        <div className="text-[11px] text-zinc-500">TelÃ©fono</div>
+                        <div className="text-[11px] text-zinc-500">Teléfono</div>
                         <div className="truncate text-[12px] text-zinc-800 2xl:text-[13px]">{selected.phone}</div>
                       </div>
                     </div>
@@ -562,23 +564,16 @@ export default function Users() {
                   onClick={() => setModalOpen(false)}
                   className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-700 hover:bg-zinc-50"
                 >
-                  âœ•
+                  X
                 </button>
               </div>
 
               <form onSubmit={submitCreate} className="p-4">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Nombre" value={create.name} onChange={(v) => setCreate((p) => ({ ...p, name: v }))} placeholder="Ej: Santiago PÃ©rez" error={createErr.name} span2 />
+                  <Field label="Nombre" value={create.name} onChange={(v) => setCreate((p) => ({ ...p, name: v }))} placeholder="Ej: Santiago Yacila" error={createErr.name} span2 />
                   <Field label="Email" value={create.email} onChange={(v) => setCreate((p) => ({ ...p, email: v }))} placeholder="usuario@mail.com" error={createErr.email} />
-                  <Field label="TelÃ©fono" value={create.telefono} onChange={(v) => setCreate((p) => ({ ...p, telefono: v }))} placeholder="+51 9xxxxxxxx" error={createErr.telefono} />
-                  <Field label="ContraseÃ±a" type="password" value={create.password} onChange={(v) => setCreate((p) => ({ ...p, password: v }))} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" error={createErr.password} />
-                  <Field
-                    label="Avatar URL (opcional)"
-                    value={create.avatarUrl}
-                    onChange={(v) => setCreate((p) => ({ ...p, avatarUrl: v }))}
-                    placeholder="https://..."
-                    span2
-                  />
+                  <Field label="Teléfono" value={create.telefono} onChange={(v) => setCreate((p) => ({ ...p, telefono: v }))} placeholder="+51 9xxxxxxxx" error={createErr.telefono} />
+                  <Field label="Contraseña" type="password" value={create.password} onChange={(v) => setCreate((p) => ({ ...p, password: v }))} placeholder="••••••••" error={createErr.password} />
                   <div>
                     <label className="text-[11px] text-zinc-600">Rol</label>
                     <select
@@ -590,7 +585,9 @@ export default function Users() {
                         "focus:border-[rgba(33,184,166,.45)] focus:bg-white focus:ring-4 focus:ring-[rgba(33,184,166,.10)]"
                       )}
                     >
-                      <option value="">{loadingRoles ? "Cargando roles..." : "Selecciona un rol"}</option>
+                      <option value="" disabled>
+                        {loadingRoles ? "Cargando roles..." : "Selecciona un rol"}
+                      </option>
                       {roles.map((r) => (
                         <option key={r.id} value={r.id}>
                           {ROLE_LABELS[r.description]}
@@ -627,10 +624,6 @@ export default function Users() {
                     {createGeneralErr.join(" · ")}
                   </div>
                 )}
-
-                <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-600">
-                  RecomendaciÃ³n: email Ãºnico y contraseÃ±a hasheada en servidor.
-                </div>
               </form>
             </motion.div>
           </motion.div>

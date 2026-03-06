@@ -5,8 +5,8 @@ import type { CreateUserRequest, UserRoleOptionApi } from "@/pages/users/types/u
 import { createUser } from "@/services/userService";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { Eye, EyeOff } from "lucide-react";
-import { FormInput } from "@/components/formInput"; // ajusta el path
+import { Eye, EyeOff, X, UserPlus } from "lucide-react";
+import { FormInput } from "@/components/formInput";
 import { RolePicker } from "@/components/users/roleButton";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema } from "@/schemas/userSchemas";
@@ -30,7 +30,6 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             name: "",
             email: "",
             roleId: "",
-            avatarUrl: "",
             password: "",
             telefono: "",
         },
@@ -41,12 +40,14 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
     const getRoles = async () => {
         try {
             const response = await findAllRoles({ status: "all" });
+
             const normalized: UserRoleOptionApi[] = (Array.isArray(response) ? response : [])
                 .map((r) => ({
                     id: String(r.id ?? ""),
                     description: String(r.description ?? "").toLowerCase(),
                 }))
                 .filter((r) => !!r.id);
+
             setRoles(normalized);
         } catch (error) {
             console.error("Error fetching roles:", error);
@@ -62,7 +63,6 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             name: "",
             email: "",
             roleId: "",
-            avatarUrl: "",
             telefono: "",
             password: "",
         });
@@ -70,16 +70,18 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
 
     const submit = async (data: CreateUserRequest) => {
         clearFlash();
+
         try {
             const res = await createUser(data);
 
             showFlash(successResponse(res.message || "Usuario creado satisfactoriamente"));
+
             closeModal?.();
+
             reset({
                 name: "",
                 email: "",
                 roleId: "",
-                avatarUrl: "",
                 telefono: "",
                 password: "",
             });
@@ -89,73 +91,142 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
     };
 
     return (
-        <div>
-            <form onSubmit={handleSubmit(submit)}>
-                <div className="px-1 grid grid-rows-3 gap-2 mt-8">
-                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl">
-                        <FormInput placeholder="Ingrese nombre" error={errors.name?.message} {...register("name")} />
+        <div className="w-full max-w-3xl overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)]">
+            <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-5 sm:px-7">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#21b8a6]/10 text-[#21b8a6]">
+                            <UserPlus size={20} />
+                        </div>
+
+                        <div>
+                            <h2 className="text-[20px] font-semibold tracking-tight text-zinc-900">
+                                Crear usuario
+                            </h2>
+                            <p className="mt-0.5 text-sm text-zinc-500">
+                                Completa los datos para registrar una nueva cuenta.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={closeModal}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-700"
+                    aria-label="Cerrar modal"
+                >
+                    <X size={18} />
+                </button>
+            </div>
+
+            <form onSubmit={handleSubmit(submit)} className="px-6 py-6 sm:px-7">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                            Nombre
+                        </label>
+                        <FormInput
+                            placeholder="Ej: Santiago Yacila"
+                            error={errors.name?.message}
+                            {...register("name")}
+                        />
                     </div>
 
-                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl">
-                        <FormInput type="email" placeholder="Ingrese email" error={errors.email?.message} {...register("email")} />
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                            Correo electrónico
+                        </label>
+                        <FormInput
+                            type="email"
+                            placeholder="usuario@mail.com"
+                            error={errors.email?.message}
+                            {...register("email")}
+                        />
                     </div>
 
-                    <div className="grid max-w-12/12 md:max-w-md lg:max-w-lg xl:max-w-xl">
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                            Teléfono
+                        </label>
+                        <FormInput
+                            type="text"
+                            placeholder="+51 9XXXXXXXX"
+                            error={errors.telefono?.message}
+                            {...register("telefono")}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                            Contraseña
+                        </label>
+
                         <div className="flex gap-2">
                             <div className="w-full">
                                 <FormInput
                                     type={eyeBool ? "password" : "text"}
-                                    placeholder="Ingrese contraseÃ±a"
+                                    placeholder="Ingrese contraseña"
                                     error={errors.password?.message}
                                     {...register("password", {
-                                        required: "La contraseÃ±a es obligatoria",
-                                        minLength: { value: 8, message: "MÃ­nimo 8 caracteres" },
+                                        required: "La contraseña es obligatoria",
+                                        minLength: { value: 8, message: "Mínimo 8 caracteres" },
                                     })}
                                 />
                             </div>
 
                             <button
                                 type="button"
-                                className="outline-none focus:ring-4 focus:ring-[#21b8a6]/20 h-14 w-13 text-gray-500 rounded-xl
-                                 bg-gray-200 hover:bg-gray-300 cursor-pointer hover:text-gray-700"
+                                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
                                 onClick={() => setEyeBool((prev) => !prev)}
+                                aria-label={eyeBool ? "Mostrar contraseña" : "Ocultar contraseña"}
                             >
-                                {eyeBool ? <Eye className="ml-3" /> : <EyeOff className="ml-3" />}
+                                {eyeBool ? <Eye size={19} /> : <EyeOff size={19} />}
                             </button>
                         </div>
                     </div>
-                    <div className="grid max-w-12/12 mb-0 mr-7">
-                        <input type="hidden" {...register("roleId", { required: "Selecciona un rol" })} />
-                        <RolePicker roles={roles} value={roleId} onChange={(id) => setValue("roleId", id, { shouldValidate: true, shouldDirty: true })} error={errors.roleId?.message} />
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                            Rol
+                        </label>
+
+                        <input
+                            type="hidden"
+                            {...register("roleId", { required: "Selecciona un rol" })}
+                        />
+
+                        <RolePicker
+                            roles={roles}
+                            value={roleId}
+                            onChange={(id) =>
+                                setValue("roleId", id, {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                })
+                            }
+                            error={errors.roleId?.message}
+                        />
                     </div>
                 </div>
-                <div className="flex gap-4 p-5 w-full h-full">
-                    <div className="w-1/2 mb-3">
-                        <button
-                            type="button"
-                            className="w-full h-[50px] rounded-xl bg-gray-100 hover:bg-gray-200
-                        px-4 text-lg outline-none focus:ring-4 focus:ring-[#21b8a6]/20 cursor-pointer
-                        "
-                            onClick={closeModal}
-                        >
-                            <p className="text-center text-gray-700 text-md font-medium">Cancelar</p>
-                        </button>
-                    </div>
-                    <div className="w-1/2 mb-2">
-                        <button
-                            type="submit"
-                            className="w-full h-[50px] rounded-xl bg-blue-500 hover:bg-blue-400
-                        px-4 text-lg outline-none focus:ring-4 focus:ring-[#21b8a6]/20 cursor-pointer
-                        "
-                        >
-                            <p className="text-center text-white text-md font-medium">Guardar</p>
-                        </button>
-                    </div>
+
+                <div className="mt-7 flex flex-col-reverse gap-3 border-t border-zinc-100 pt-5 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        className="inline-flex h-[50px] items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                        onClick={closeModal}
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        className="inline-flex h-[50px] items-center justify-center rounded-2xl bg-[#21b8a6] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(33,184,166,0.25)] transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                    >
+                        Crear usuario
+                    </button>
                 </div>
             </form>
         </div>
     );
 };
-
-
-
