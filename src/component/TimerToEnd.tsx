@@ -4,6 +4,7 @@ type TimerToEndProps = {
     from: string;
     to: string;
     className?: string;
+    loadPurchases: () => void
 };
 
 const pad2 = (value: number) => String(value).padStart(2, "0");
@@ -26,13 +27,38 @@ const formatTime12 = (d: Date) => {
     return `${hh}:${mm}:${ss} ${ampm}`;
 };
 
-export default function TimerToEnd({ from, to, className }: TimerToEndProps) {
+export default function TimerToEnd({ from, to, className, loadPurchases }: TimerToEndProps) {
     const [now, setNow] = useState(() => Date.now());
+    const [didReload, setDidReload] = useState(false);
+    const [waitUntil, setWaitUntil] = useState<number | null>(null);
 
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
+
+    useEffect(() => {
+        setDidReload(false);
+        setWaitUntil(null);
+    }, [to]);
+
+    useEffect(() => {
+        const endMs = Date.parse(to);
+        if (Number.isNaN(endMs)) return;
+
+        if (now >= endMs && !didReload) {
+            if (waitUntil === null) {
+                setWaitUntil(now + 3000);
+                return;
+            }
+
+            if (now >= waitUntil) {
+                setDidReload(true);
+                setWaitUntil(null);
+                loadPurchases();
+            }
+        }
+    }, [to, now, didReload, loadPurchases, waitUntil]);
 
     const { dateText, timeText, isValid } = useMemo(() => {
         const startMs = Date.parse(from);
@@ -52,10 +78,24 @@ export default function TimerToEnd({ from, to, className }: TimerToEndProps) {
         };
     }, [from, to, now]);
 
+    const waitRemainingMs = waitUntil ? Math.max(0, waitUntil - now) : 0;
+    const waitRemainingSec = Math.ceil(waitRemainingMs / 1000);
+    const isWaiting = waitUntil !== null && !didReload;
+
     return (
         <div className={`${className} p-2`}>
-            <div className="tabular-nums">{isValid ? dateText : "--/--/--"}</div>
-            <div className="tabular-nums">{isValid ? timeText : "--:--:-- --"}</div>
+            {!isWaiting && (
+                <>
+                    <div className="tabular-nums">{isValid ? dateText : "--/--/--"}</div>
+                    <div className="tabular-nums">{isValid ? timeText : "--:--:-- --"}</div>
+                </>
+            )}
+            {isWaiting && (
+                <div className="mt-1 flex items-center gap-2 text-xs text-black/60">
+                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-black/30 border-t-black/70" />
+                    <span>Ingreso a almacen en {waitRemainingSec}s...</span>
+                </div>
+            )}
         </div>
     );
 }

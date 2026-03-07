@@ -18,7 +18,7 @@ import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { Dropdown } from "./components/PurchaseDropdown";
-import { Menu, Timer } from "lucide-react";
+import { Megaphone, Menu, MessageSquareMore, OctagonAlert, Timer } from "lucide-react";
 
 
 
@@ -382,13 +382,13 @@ export default function Purchases() {
         </section>
 
         <section className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
-          <div className="max-h-[calc(100vh-320px)] overflow-auto">
-            <table className="w-full text-sm">
+          <div className="max-h-[calc(100vh-320px)] min-h-100 overflow-auto">
+            <table className="w-full text-sm table-fixed">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-black/10 text-xs text-black/60">
                   <th className="py-3 px-3 text-left w-[120px]">Fecha emision</th>
-                  <th className="py-3 px-3 text-left W-[120px]">Documento</th>
-                  <th className="py-3 px-3 text-left w-[120px]">Numero</th>
+                  <th className="py-3 px-3 text-left w-[100px]">Documento</th>
+                  <th className="py-3 px-3 text-left w-[100px]">Numero</th>
                   <th className="py-3 px-3 text-left w-[180px]">Proveedor</th>
                   <th className="py-3 px-3 text-left w-[160px]">Almacen</th>
                   <th className="py-3 px-3 text-left w-[100px]">Forma</th>
@@ -398,7 +398,7 @@ export default function Purchases() {
                   <th className="py-3 px-3 text-left w-[100px]">Estado</th>
                   <th className="py-3 px-3 text-left w-[105px]">T. Espera</th>
                   <th className="py-3 px-3 text-left w-[110px]">Ing. Almacen</th>
-                  <th className="py-3 px-3 text-left w-[50px]"></th>
+                  <th className="py-3 px-0 text-left w-[50px]"></th>
                 </tr>
               </thead>
               <tbody key={listKey}>
@@ -463,11 +463,20 @@ export default function Purchases() {
                         {
                           purchase.status === PurchaseOrderStatuses.SENT && (
                           <span className="inline-flex rounded-lg  px-0 py-1 text-[11px] font-medium bg-slate-50 text-slate-700">
-                           <TimerToEnd
+                          <TimerToEnd
                               from={now}
                               to={purchase.expectedAt ?? ""}
+                              loadPurchases={loadPurchases}
                             />
                           </span>
+                          )
+                        }
+                        {
+                          purchase.status === PurchaseOrderStatuses.PARTIAL && (
+                            <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[11px] font-medium bg-slate-50 text-slate-700">
+                              <OctagonAlert className="h-4 w-4" />
+                              <span className="mt-1">Por Ing.</span>
+                            </span>
                           )
                         }
                         {
@@ -483,22 +492,22 @@ export default function Purchases() {
                         {dateEnter} <br />
                         {timeEnter}
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-0">
                         <Dropdown
                           trigger={<Menu />}
                         >
                           {
-                            purchase.status === PurchaseOrderStatuses.SENT ||
-                            purchase.status === PurchaseOrderStatuses.PARTIAL && (
-                            <button
-                              className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
-                              onClick={() => {
-                                EnterToWarehouse(purchase.poId ?? "");
-                              }}
-                              type="button"
-                            >
-                              Ingresar Almacen
-                            </button>
+                            (purchase.status === PurchaseOrderStatuses.SENT ||
+                              purchase.status === PurchaseOrderStatuses.PARTIAL) && (
+                              <button
+                                className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                                onClick={() => {
+                                  EnterToWarehouse(purchase.poId ?? "");
+                                }}
+                                type="button"
+                              >
+                                Ingresar Almacen
+                              </button>
                             )
                           }
                           {
@@ -514,17 +523,19 @@ export default function Purchases() {
                             </button>
                             )
                           }
-
-                          <button
-                            className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
-                            onClick={() => {
-                              navigate(`/compra/${purchase.poId}`);
-                            }}
-                            type="button"
-                          >
-                            Editar
-                          </button>
-
+                          {
+                            purchase.status === PurchaseOrderStatuses.DRAFT && (
+                            <button
+                              className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                              onClick={() => {
+                                navigate(`/compra/${purchase.poId}`);
+                              }}
+                              type="button"
+                            >
+                              Editar
+                            </button>
+                            )
+                          }
                           <button
                             className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
                             onClick={() => {
