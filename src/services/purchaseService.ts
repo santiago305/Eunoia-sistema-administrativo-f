@@ -26,10 +26,21 @@ export const listPurchaseOrders = async (
   return response.data;
 };
 
+export const setSentPurchase = async (id:string): Promise<{type:string, message:string}> => {
+  const response = await axiosInstance.patch(API_PURCHASE_GROUP.setSent(id));
+  return response.data;
+};
+
+export const enterPurchaseOrder = async (id:string): Promise<{type:string, message:string}> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.enterPurchase(id));
+  return response.data;
+};
+
 export const listPayments = async (id:string): Promise<Payment[]> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.listPayments(id));
   return response.data;
 };
+
 export const listQuotas = async (id:string): Promise<CreditQuota[]> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.listQuotas(id));
   return response.data;

@@ -91,7 +91,7 @@ export default function CatalogProducts() {
             const normalized = (result ?? [])
                 .map((row) => ({
                     ...row,
-                    id: row.id ?? row.primaId ?? "",
+                    id: row.id ?? row.primaId ?? row.stockItemId,
                     isActive: row.isActive ?? true,
                 }))
                 .filter((row) => row.id);
