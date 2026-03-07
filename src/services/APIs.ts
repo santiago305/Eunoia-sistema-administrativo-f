@@ -134,6 +134,8 @@ export const API_PURCHASE_GROUP = {
   create: "/purchases/orders",
   list: "/purchases/orders",
   update: (id: string) => `/purchases/orders/${id}`,
+  setSent: (id: string) => `/purchases/orders/${id}/sent`,
+  enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
   setActive: (id: string) => `/purchases/orders/${id}/active`,
   listItems: (id: string) => `/purchases/orders/${id}/items`,

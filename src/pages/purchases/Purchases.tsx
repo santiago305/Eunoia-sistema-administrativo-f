@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { errorResponse } from "@/common/utils/response";
+import { errorResponse, successResponse } from "@/common/utils/response";
 import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { listAll } from "@/services/supplierService";
 import { listActive } from "@/services/warehouseServices";
-import { listPurchaseOrders } from "@/services/purchaseService";
+import { enterPurchaseOrder, listPurchaseOrders, setSentPurchase } from "@/services/purchaseService";
 import { money, toDateInputValue, tryShowPicker, todayIso } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
@@ -16,6 +16,9 @@ import { SupplierOption } from "../providers/types/supplier";
 import { Warehouse } from "../warehouse/types/warehouse";
 import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
+import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
+import { Dropdown } from "./components/PurchaseDropdown";
+import { Menu, Timer } from "lucide-react";
 
 
 
@@ -23,7 +26,7 @@ const PRIMARY = "#21b8a6";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
   [PurchaseOrderStatuses.DRAFT]: "Borrador",
-  [PurchaseOrderStatuses.SENT]: "Enviado",
+  [PurchaseOrderStatuses.SENT]: "Esperando",
   [PurchaseOrderStatuses.PARTIAL]: "Parcial",
   [PurchaseOrderStatuses.RECEIVED]: "Recibido",
   [PurchaseOrderStatuses.CANCELLED]: "Cancelado",
@@ -126,7 +129,7 @@ export default function Purchases() {
       showFlash(errorResponse("Error al cargar proveedores"));
     }
   };
-
+  
   const loadWarehouses = async () => {
     try {
       const res = await listActive();
@@ -145,7 +148,7 @@ export default function Purchases() {
       showFlash(errorResponse("Error al cargar almacenes"));
     }
   };
-
+  
   const loadPurchases = async () => {
     clearFlash();
     setLoading(true);
@@ -177,12 +180,45 @@ export default function Purchases() {
       setLoading(false);
     }
   };
+  
+  const setSent = async (id:string) => {
+    clearFlash();
+    try {
+      const res = await setSentPurchase(id);
+      if(res.type === 'error'){
+        showFlash(errorResponse(res.message));
+      }
+      if(res.type === 'success'){
+        showFlash(successResponse(res.message));
+        loadPurchases();
+      }
+    } catch {
+      showFlash(errorResponse("Error al iniciar espera de mercaderia"));
+    }
+  };
+  const EnterToWarehouse = async (id:string) => {
+    clearFlash();
+    try {
+      const res = await enterPurchaseOrder(id);
+      if(res.type === 'error'){
+        showFlash(errorResponse(res.message));
+        loadPurchases();
+      }
+      if(res.type === 'success'){
+        showFlash(successResponse(res.message));
+        loadPurchases();
+      }
+    } catch {
+      showFlash(errorResponse("Error al ingresar a almacen"));
+      loadPurchases();
+    }
+  };
 
   useEffect(() => {
     void loadSuppliers();
     void loadWarehouses();
   }, []);
-
+  
   useEffect(() => {
     setCollapsed(true);
   }, [setCollapsed]);
@@ -194,6 +230,8 @@ export default function Purchases() {
   useEffect(() => {
     if (apiPage !== page) setPage(apiPage);
   }, [apiPage, page]);
+
+  const now = new Date().toISOString();
 
   const totalPages = Math.max(1, Math.ceil(total / (apiLimit || limit)));
   const startIndex = total === 0 ? 0 : (apiPage - 1) * (apiLimit || limit) + 1;
@@ -348,17 +386,19 @@ export default function Purchases() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-3 px-3 text-left">Fecha emision</th>
-                  <th className="py-3 px-3 text-left">Documento</th>
-                  <th className="py-3 px-3 text-left">Numero</th>
-                  <th className="py-3 px-3 text-left">Proveedor</th>
-                  <th className="py-3 px-3 text-left">Almacen</th>
-                  <th className="py-3 px-3 text-left">Forma de pago</th>
-                  <th className="py-3 px-3 text-left">Total</th>
-                  <th className="py-3 px-3 text-left">Pagado</th>
-                  <th className="py-3 px-3 text-left">Pendiente</th>
-                  <th className="py-3 px-3 text-left">Estado</th>
-                  <th className="py-3 px-3 text-left">Opciones</th>
+                  <th className="py-3 px-3 text-left w-[120px]">Fecha emision</th>
+                  <th className="py-3 px-3 text-left W-[120px]">Documento</th>
+                  <th className="py-3 px-3 text-left w-[120px]">Numero</th>
+                  <th className="py-3 px-3 text-left w-[180px]">Proveedor</th>
+                  <th className="py-3 px-3 text-left w-[160px]">Almacen</th>
+                  <th className="py-3 px-3 text-left w-[100px]">Forma</th>
+                  <th className="py-3 px-3 text-left w-[100px]">Total</th>
+                  <th className="py-3 px-3 text-left w-[100px]">Pagado</th>
+                  <th className="py-3 px-3 text-left w-[100px]">Pendiente</th>
+                  <th className="py-3 px-3 text-left w-[100px]">Estado</th>
+                  <th className="py-3 px-3 text-left w-[105px]">T. Espera</th>
+                  <th className="py-3 px-3 text-left w-[110px]">Ing. Almacen</th>
+                  <th className="py-3 px-3 text-left w-[50px]"></th>
                 </tr>
               </thead>
               <tbody key={listKey}>
@@ -370,9 +410,17 @@ export default function Purchases() {
                   const warehouseMeta = purchase.warehouseId ? warehouseMetaById.get(purchase.warehouseId) : undefined;
                   const statusLabel = purchase.status ? statusLabels[purchase.status] ?? purchase.status : "-";
                   const docLabel = purchase.documentType ? docTypeLabels[purchase.documentType] ?? purchase.documentType : "-";
-                  const date = purchase.dateIssue?.slice(0,10);
+                  const date = formatDate(new Date(purchase.dateIssue ?? ""));
                   const time = purchase.dateIssue
                       ? new Date(purchase.dateIssue).toLocaleTimeString("es-PE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                        })
+                      : undefined;         
+                  const dateEnter = formatDate(new Date(purchase.expectedAt ?? ""));
+                  const timeEnter = purchase.expectedAt
+                      ? new Date(purchase.expectedAt).toLocaleTimeString("es-PE", {
                             hour: "2-digit",
                             minute: "2-digit",
                             second: "2-digit",
@@ -407,51 +455,106 @@ export default function Purchases() {
                         {money(purchase.totalToPay ?? 0, purchase.currency)}
                       </td>
                       <td className="py-3 px-3">
-                        <span className="inline-flex rounded-full px-2 py-1 text-[11px] font-medium bg-slate-50 text-slate-700">
-                          {statusLabel}
+                        <span className="inline-flex rounded-lg px-2 py-1 text-[11px] font-medium bg-slate-50 text-slate-700">
+                          {statusLabel} 
                         </span>
                       </td>
                       <td className="py-3 px-3">
-                        <button
-                          className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
-                          onClick={() => {
-                            navigate(`/compra/${purchase.poId}`);
-                          }}
-                          type="button"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
-                          onClick={() => {
-                            setModalPaymentList(true);
-                            setPoId(purchase.poId ?? "");
-                            setTotalPo(purchase.total);
-                            setPaymentForm(purchase.paymentForm);
-                          }}
-                          type="button"
-                        >
-                          Listar pagos
-                        </button>
                         {
-                          purchase.paymentForm !== PaymentFormTypes.CREDITO &&
-                          purchase.totalPaid != purchase.total && (
-                            <button
-                              className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
-                              onClick={() => {
-                                setModalPayment(true);
-                                setTotalPaid(purchase.totalPaid);
-                                setTotalToPay(purchase.totalToPay);
-                                setPoId(purchase.poId ?? "");
-                              }}
-                              type="button"
-                            >
-                              Pago
-                            </button>
+                          purchase.status === PurchaseOrderStatuses.SENT && (
+                          <span className="inline-flex rounded-lg  px-0 py-1 text-[11px] font-medium bg-slate-50 text-slate-700">
+                           <TimerToEnd
+                              from={now}
+                              to={purchase.expectedAt ?? ""}
+                            />
+                          </span>
                           )
                         }
                         {
-                          purchase.paymentForm === PaymentFormTypes.CREDITO && (
+                          purchase.status === PurchaseOrderStatuses.RECEIVED && (
+                            <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[11px] font-medium bg-slate-50 text-slate-700">
+                              <Timer className="h-4 w-4" />
+                              <span className="mt-1">Completado</span>
+                            </span>
+                          )
+                        }
+                      </td>
+                      <td className="py-3 px-3 text-black/70">
+                        {dateEnter} <br />
+                        {timeEnter}
+                      </td>
+                      <td className="py-3 px-3">
+                        <Dropdown
+                          trigger={<Menu />}
+                        >
+                          {
+                            purchase.status === PurchaseOrderStatuses.SENT ||
+                            purchase.status === PurchaseOrderStatuses.PARTIAL && (
+                            <button
+                              className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                              onClick={() => {
+                                EnterToWarehouse(purchase.poId ?? "");
+                              }}
+                              type="button"
+                            >
+                              Ingresar Almacen
+                            </button>
+                            )
+                          }
+                          {
+                            purchase.status === PurchaseOrderStatuses.DRAFT && (
+                            <button
+                              className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                              onClick={() => {
+                                setSent(purchase.poId ?? "");
+                              }}
+                              type="button"
+                            >
+                              Procesar
+                            </button>
+                            )
+                          }
+
+                          <button
+                            className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                            onClick={() => {
+                              navigate(`/compra/${purchase.poId}`);
+                            }}
+                            type="button"
+                          >
+                            Editar
+                          </button>
+
+                          <button
+                            className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                            onClick={() => {
+                              setModalPaymentList(true);
+                              setPoId(purchase.poId ?? "");
+                              setTotalPo(purchase.total);
+                              setPaymentForm(purchase.paymentForm);
+                            }}
+                            type="button"
+                          >
+                            Listar pagos
+                          </button>
+
+                          {purchase.paymentForm !== PaymentFormTypes.CREDITO &&
+                            purchase.totalPaid != purchase.total && (
+                              <button
+                                className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
+                                onClick={() => {
+                                  setModalPayment(true);
+                                  setTotalPaid(purchase.totalPaid);
+                                  setTotalToPay(purchase.totalToPay);
+                                  setPoId(purchase.poId ?? "");
+                                }}
+                                type="button"
+                              >
+                                Pago
+                              </button>
+                            )}
+
+                          {purchase.paymentForm === PaymentFormTypes.CREDITO && (
                             <button
                               className="w-full rounded-lg px-3 py-2 text-left text-xs text-black/70 hover:bg-black/[0.04]"
                               onClick={() => {
@@ -462,8 +565,8 @@ export default function Purchases() {
                             >
                               Ver cuotas
                             </button>
-                          )
-                        }
+                          )}
+                        </Dropdown>
                       </td>
                     </tr>
                   );
