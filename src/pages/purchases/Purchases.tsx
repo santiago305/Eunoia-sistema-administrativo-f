@@ -18,7 +18,7 @@ import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { Dropdown } from "./components/PurchaseDropdown";
-import { Megaphone, Menu, MessageSquareMore, OctagonAlert, Timer } from "lucide-react";
+import { Menu, OctagonAlert, Timer } from "lucide-react";
 
 
 
@@ -45,24 +45,7 @@ const buildMonthStartIso = () => {
   return date.toISOString().slice(0, 10);
 };
 
-const parseNumero = (raw: string) => {
-  const clean = raw.trim();
-  if (!clean) return { serie: undefined, correlative: undefined };
-  const normalized = clean.replace(/\s+/g, "");
-  if (normalized.includes("-")) {
-    const [seriePart, correlativePart] = normalized.split("-");
-    const correlative = Number.parseInt(correlativePart ?? "", 10);
-    return {
-      serie: seriePart || undefined,
-      correlative: Number.isFinite(correlative) ? correlative : undefined,
-    };
-  }
-  const asNumber = Number.parseInt(normalized, 10);
-  if (Number.isFinite(asNumber) && normalized.match(/^\d+$/)) {
-    return { serie: undefined, correlative: asNumber };
-  }
-  return { serie: normalized || undefined, correlative: undefined };
-};
+const normalizeNumber = (raw: string) => raw.trim().replace(/\s+/g, "");
 
 export default function Purchases() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -150,10 +133,11 @@ export default function Purchases() {
   };
   
   const loadPurchases = async () => {
+    if (loading) return;
     clearFlash();
     setLoading(true);
     setError(null);
-    const { serie, correlative } = parseNumero(debouncedNumero);
+    const number = normalizeNumber(debouncedNumero);
     try {
       const res = await listPurchaseOrders({
         page,
@@ -162,8 +146,7 @@ export default function Purchases() {
         warehouseId: warehouseId || undefined,
         documentType: documentType || undefined,
         status: statusFilter || undefined,
-        serie,
-        correlative,
+        number: number || undefined,
         from: fromDate || undefined,
         to: toDate || undefined,
       });
@@ -599,7 +582,7 @@ export default function Purchases() {
             <div className="flex items-center gap-2">
               <button
                 className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={page === 1}
+                disabled={page === 1 || loading}
                 onClick={() => setPage(page - 1)}
                 type="button"
               >
@@ -610,7 +593,7 @@ export default function Purchases() {
 
               <button
                 className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={page >= totalPages}
+                disabled={page >= totalPages || loading}
                 onClick={() => setPage(page + 1)}
                 type="button"
               >

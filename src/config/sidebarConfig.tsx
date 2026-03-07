@@ -15,14 +15,17 @@ export const getSidebarItems = (): SidebarItem[] => [
     },
     {
         label: "Compras",
-        href: RoutesPaths.purchases,
         icon: <IconPurchase className="text-sidebar-foreground" />,
         children: [
             {
-                label:"Compra",
-                href: RoutesPaths.purchase
-            }
-        ]
+                label: "Nueva Compra",
+                href: RoutesPaths.purchase,
+            },
+            {
+                label: "Comprobantes",
+                href: RoutesPaths.purchases,
+            },
+        ],
     },
     {
         label: "Stock",
