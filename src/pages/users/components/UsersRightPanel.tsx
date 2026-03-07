@@ -136,7 +136,7 @@ export function UsersRightPanel({
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Telefono" value={selected.phone} />
+                  <Field label="Telefono" value={selected.phone} /> 
                   <Field label="Creado" value={formatDateTimeLabel(selected.createdAt)} />
                   <Field label="Ult. actualizado" value={formatDateTimeLabel(selected.updatedAt)} />
                 </div>
