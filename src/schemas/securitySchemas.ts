@@ -11,7 +11,7 @@ export const securityHistoryQuerySchema = z.object({
 
 export const securitySeriesQuerySchema = z.object({
   hours: z.number().int().min(1).max(720).optional().default(24),
-  groupBy: z.enum(["hour", "day"]).optional().default("hour"),
+  groupBy: z.enum(["5min", "15min", "30min", "hour", "day"]).optional(),
 });
 
 export const securityHoursQuerySchema = z.object({

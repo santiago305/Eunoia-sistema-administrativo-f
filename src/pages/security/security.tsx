@@ -54,11 +54,10 @@ export default function SecurityPage() {
       setError(null);
       setLoading(true);
 
-      const seriesGroupBy = hours > 48 ? "day" : "hour";
       const [ips, bans, activity, reasons, methods, routes, risk] = await Promise.all([
         getSecurityTopIps({ hours, limit: topLimit }),
         getSecurityActiveBans(),
-        getSecurityActivitySeries({ hours, groupBy: seriesGroupBy }),
+        getSecurityActivitySeries({ hours }),
         getSecurityReasonDistribution({ hours }),
         getSecurityMethodDistribution({ hours }),
         getSecurityTopRoutes({ hours, limit: 5 }),

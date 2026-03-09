@@ -52,17 +52,22 @@ export type SecurityWindowResponse = {
   generatedAt: string;
 };
 
-export type SecuritySeriesGroupBy = "hour" | "day";
+export type SecuritySeriesGroupBy = "5min" | "15min" | "30min" | "hour" | "day";
 
 export type SecurityActivitySeriesItem = {
   label: string;
   violations: number;
   bans: number;
   uniqueIps: number;
+  bucketStart?: string;
+  bucketStartLocal?: string;
+  bucketLabel?: string;
 };
 
 export type SecurityActivitySeriesResponse = SecurityWindowResponse & {
   groupBy: SecuritySeriesGroupBy;
+  timeZone?: string;
+  bucketSize?: string;
   data: SecurityActivitySeriesItem[];
 };
 
