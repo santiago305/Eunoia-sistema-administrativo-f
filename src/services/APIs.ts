@@ -48,6 +48,14 @@ export const API_SESSIONS_GROUP = {
   revokeAll: "/sessions",
 };
 
+export const API_SECURITY_GROUP = {
+  topIps: "/security/top-ips",
+  activeBans: "/security/active-bans",
+  historyByIp: (ip: string) => `/security/history/${encodeURIComponent(ip)}`,
+  blacklist: "/security/blacklist",
+  removeBlacklist: (ip: string) => `/security/blacklist/remove/${encodeURIComponent(ip)}`,
+};
+
 export const API_PRODUCTS_GROUP = {
   base: "/catalog/products",
   create: "/catalog/products",

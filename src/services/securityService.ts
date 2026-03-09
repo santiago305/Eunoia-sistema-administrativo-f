@@ -1,0 +1,61 @@
+import axiosInstance from "@/common/utils/axios";
+import { API_SECURITY_GROUP } from "@/services/APIs";
+import {
+  securityBlacklistSchema,
+  securityHistoryQuerySchema,
+  securityTopIpsQuerySchema,
+} from "@/schemas/securitySchemas";
+import type {
+  SecurityActiveBanItem,
+  SecurityBlacklistPayload,
+  SecurityHistoryByIpResponse,
+  SecurityMutationResponse,
+  SecurityTopIpItem,
+} from "@/pages/security/types/security.api";
+
+export type SecurityTopIpsParams = {
+  hours?: number;
+  limit?: number;
+};
+
+export type SecurityHistoryParams = {
+  limit?: number;
+};
+
+export const getSecurityTopIps = async (params?: SecurityTopIpsParams) => {
+  const query = securityTopIpsQuerySchema.parse(params ?? {});
+  const response = await axiosInstance.get<SecurityTopIpItem[]>(API_SECURITY_GROUP.topIps, {
+    params: query,
+  });
+  return response.data;
+};
+
+export const getSecurityActiveBans = async () => {
+  const response = await axiosInstance.get<SecurityActiveBanItem[]>(API_SECURITY_GROUP.activeBans);
+  return response.data;
+};
+
+export const getSecurityHistoryByIp = async (ip: string, params?: SecurityHistoryParams) => {
+  const query = securityHistoryQuerySchema.parse(params ?? {});
+  const response = await axiosInstance.get<SecurityHistoryByIpResponse>(
+    API_SECURITY_GROUP.historyByIp(ip),
+    { params: query }
+  );
+  return response.data;
+};
+
+export const blacklistSecurityIp = async (payload: SecurityBlacklistPayload) => {
+  const body = securityBlacklistSchema.parse(payload);
+  const response = await axiosInstance.patch<SecurityMutationResponse>(
+    API_SECURITY_GROUP.blacklist,
+    body
+  );
+  return response.data;
+};
+
+export const removeSecurityBlacklistIp = async (ip: string) => {
+  const response = await axiosInstance.patch<SecurityMutationResponse>(
+    API_SECURITY_GROUP.removeBlacklist(ip)
+  );
+  return response.data;
+};
