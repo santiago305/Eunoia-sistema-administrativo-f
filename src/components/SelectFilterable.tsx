@@ -2,6 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type Option = { value: string; label: string };
 
+type Props = {
+    value: string;
+    onChange: (value: string) => void;
+    options: Option[];
+    placeholder?: string;
+    searchPlaceholder?: string;
+    placement?: "bottom" | "top";
+    className?: string;
+    textSize?:string
+};
+
 export function FilterableSelect({
     value,
     onChange,
@@ -9,14 +20,9 @@ export function FilterableSelect({
     placeholder = "Seleccionar",
     searchPlaceholder = "Buscar...",
     placement = "bottom",
-}: {
-    value: string;
-    onChange: (value: string) => void;
-    options: Option[];
-    placeholder?: string;
-    searchPlaceholder?: string;
-    placement?: "bottom" | "top";
-}) {
+    className = "h-10",
+    textSize = "textSize"
+}: Props) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
 
@@ -47,7 +53,8 @@ export function FilterableSelect({
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <button type="button" className="h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm text-left" onClick={() => setOpen((v) => !v)}>
+            <button type="button" className={`${className} w-full rounded-lg border border-black/10 bg-white px-3 
+                ${textSize} text-left`} onClick={() => setOpen((v) => !v)}>
                 {selected ? selected.label : <span className="text-black/50">{placeholder}</span>}
             </button>
 
@@ -60,7 +67,7 @@ export function FilterableSelect({
                 >
                     <div className="p-2 border-b border-black/5">
                         <input
-                            className="h-9 w-full rounded-md border border-black/10 px-2 text-sm"
+                            className={`h-9 w-full rounded-md border border-black/10 px-2 ${textSize}`}
                             placeholder={searchPlaceholder}
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
@@ -68,12 +75,12 @@ export function FilterableSelect({
                         />
                     </div>
                     <div className="max-h-56 overflow-auto">
-                        {filtered.length === 0 && <div className="px-3 py-2 text-sm text-black/50">Sin resultados</div>}
+                        {filtered.length === 0 && <div className={`px-3 py-2 ${textSize} text-black/50`}>Sin resultados</div>}
                         {filtered.map((opt) => (
                             <button
                                 type="button"
                                 key={opt.value}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-black/[0.03]"
+                                className={`w-full px-3 py-2 text-left ${textSize} hover:bg-black/[0.03]`}
                                 onMouseDown={(e) => {
                                     e.preventDefault();
                                     onChange(opt.value);
