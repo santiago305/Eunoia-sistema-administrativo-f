@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RoutesPaths } from "@/router/config/routesPaths";
+
 
 import {
   getSecurityHistoryByIp,
@@ -12,6 +12,7 @@ import type {
   SecurityHistoryByIpResponse,
   SecurityViolationItem,
 } from "./types/security.api";
+import { RoutesPaths } from "@/Router/config/routesPaths";
 
 const BRAND = "#21b8a6";
 

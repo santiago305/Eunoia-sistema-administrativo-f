@@ -45,3 +45,70 @@ export type SecurityBlacklistPayload = {
 export type SecurityMutationResponse = {
   message: string;
 };
+
+export type SecurityWindowResponse = {
+  from: string;
+  to: string;
+  generatedAt: string;
+};
+
+export type SecuritySeriesGroupBy = "hour" | "day";
+
+export type SecurityActivitySeriesItem = {
+  label: string;
+  violations: number;
+  bans: number;
+  uniqueIps: number;
+};
+
+export type SecurityActivitySeriesResponse = SecurityWindowResponse & {
+  groupBy: SecuritySeriesGroupBy;
+  data: SecurityActivitySeriesItem[];
+};
+
+export type SecurityReasonDistributionItem = {
+  key: string;
+  name: string;
+  label: string;
+  value: number;
+};
+
+export type SecurityReasonDistributionResponse = SecurityWindowResponse & {
+  data: SecurityReasonDistributionItem[];
+};
+
+export type SecurityMethodDistributionItem = {
+  method: string;
+  count: number;
+};
+
+export type SecurityMethodDistributionResponse = SecurityWindowResponse & {
+  data: SecurityMethodDistributionItem[];
+};
+
+export type SecurityTopRouteItem = {
+  path: string;
+  count: number;
+};
+
+export type SecurityTopRoutesResponse = SecurityWindowResponse & {
+  data: SecurityTopRouteItem[];
+};
+
+export type SecurityRiskLevel = "LOW" | "MEDIUM" | "HIGH";
+
+export type SecurityRiskScoreResponse = SecurityWindowResponse & {
+  data: {
+    score: number;
+    level: SecurityRiskLevel;
+    label: string;
+  };
+  extra: {
+    metrics: {
+      violations: number;
+      uniqueIps: number;
+      activeBans: number;
+      manualPermanentBans: number;
+    };
+  };
+};

@@ -54,6 +54,11 @@ export const API_SECURITY_GROUP = {
   historyByIp: (ip: string) => `/security/history/${encodeURIComponent(ip)}`,
   blacklist: "/security/blacklist",
   removeBlacklist: (ip: string) => `/security/blacklist/remove/${encodeURIComponent(ip)}`,
+  activitySeries: "/security/activity-series",
+  reasonDistribution: "/security/reason-distribution",
+  methodDistribution: "/security/method-distribution",
+  topRoutes: "/security/top-routes",
+  riskScore: "/security/risk-score",
 };
 
 export const API_PRODUCTS_GROUP = {
