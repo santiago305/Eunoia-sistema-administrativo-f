@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Ban, Clock3, ShieldAlert, TrendingUp } from "lucide-react";
 
@@ -49,7 +49,7 @@ export default function SecurityPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
@@ -79,11 +79,11 @@ export default function SecurityPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hours, topLimit]);
 
   useEffect(() => {
     void fetchAll();
-  }, [hours, topLimit]);
+  }, [fetchAll]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -91,7 +91,7 @@ export default function SecurityPage() {
     }, 8000);
 
     return () => window.clearInterval(interval);
-  }, [hours, topLimit]);
+  }, [fetchAll]);
 
   const stats = useMemo(() => {
     const temporary = activeBans.filter(

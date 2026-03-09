@@ -82,25 +82,23 @@ export function AnalyticsSection({
             subtitle="Indicador consolidado de severidad del periodo."
             right={
               <div
-                className="rounded-full border border-[rgba(33,184,166,.16)] bg-[rgba(33,184,166,.06)] px-3 py-1.5 text-xs font-medium text-[var(--brand)]"
+                className="inline-flex items-center gap-2 rounded-full border border-[rgba(33,184,166,.14)] bg-[rgba(33,184,166,.07)] px-3 py-1.5 text-xs font-medium text-[var(--brand)] shadow-sm"
                 style={{ ["--brand" as string]: BRAND }}
               >
+                <span className="h-2 w-2 rounded-full bg-[var(--brand)]" />
                 Score operativo
               </div>
             }
           >
-            <div className="flex flex-col items-center justify-center">
-              <RiskScoreChart value={riskValue} />
-
-              <div className="-mt-28 text-center">
-                <p className="text-4xl font-semibold tracking-[-0.04em] text-zinc-950">{riskValue}</p>
-                <p className="mt-1 text-sm font-medium text-zinc-500">{riskLabel}</p>
-              </div>
+            <div className="flex items-center justify-center py-1">
+              <RiskScoreChart value={riskValue} label={riskLabel} />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
-              Este score puede calcularse usando bans activos, reincidencias, IPs unicas,
-              crecimiento de violaciones y cantidad de rutas criticas afectadas.
+            <div className="mt-2 rounded-2xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-white p-4">
+              <p className="text-sm leading-6 text-zinc-600">
+                Este score se construye a partir de señales como bans activos, reincidencias,
+                IPs únicas, crecimiento de violaciones y rutas críticas afectadas.
+              </p>
             </div>
           </SectionCard>
 

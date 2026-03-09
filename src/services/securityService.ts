@@ -50,7 +50,10 @@ export const getSecurityTopIps = async (params?: SecurityTopIpsParams) => {
   const response = await axiosInstance.get<SecurityTopIpItem[]>(API_SECURITY_GROUP.topIps, {
     params: query,
   });
-  return response.data;
+  return response.data.map((item) => ({
+    ...item,
+    violations: Number(item.violations) || 0,
+  }));
 };
 
 export const getSecurityActiveBans = async () => {
