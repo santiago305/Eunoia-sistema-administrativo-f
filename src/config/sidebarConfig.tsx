@@ -9,11 +9,6 @@ export const getSidebarItems = (): SidebarItem[] => [
         icon: <IconHome className="text-sidebar-foreground" />,
     },
     {
-        label: "Usuarios",
-        href: RoutesPaths.users,
-        icon: <IconUsers className="text-sidebar-foreground" />,
-    },
-    {
         label: "Compras",
         icon: <IconPurchase className="text-sidebar-foreground" />,
         children: [
@@ -117,6 +112,16 @@ export const getSidebarItems = (): SidebarItem[] => [
             },
         ],
     },
+    {
+        label: "Usuarios",
+        href: RoutesPaths.users,
+        icon: <IconUsers className="text-sidebar-foreground" />,
+    },
+    {
+        label: "Seguridad",
+        href: RoutesPaths.security,
+        icon: <IconUsers className="text-sidebar-foreground" />,
+    }
 ];
 
 

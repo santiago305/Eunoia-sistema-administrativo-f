@@ -20,7 +20,7 @@ const Dashboard = lazy(() => import("@/pages/dashboard/Index"));
 const Users = lazy(() => import("@/pages/users/Users"));
 const ProfilePage = lazy(() => import("@/pages/profile/Profile"));
 const Sessions = lazy(() => import("@/pages/sessions/Sessions"));
-
+const Securitypage = lazy(() => import("@/pages/security/security"));
 const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
 const StockInventory = lazy(() => import("@/pages/stock/Inventory"));
 const StockMovements = lazy(() => import("@/pages/stock/Movements"));
@@ -156,6 +156,10 @@ export const dashboardRoutes: RouteObject[] = [
                 path: RoutesPaths.purchaseEdit,
                 element: withRouteGuard(RoutesPaths.purchaseEdit, <Purchase />),
             },
+            {
+                path: RoutesPaths.security,
+                element: withRouteGuard(RoutesPaths.security, <Securitypage />),
+            }
         ],
     },
 ];
