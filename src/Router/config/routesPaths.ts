@@ -46,6 +46,7 @@ export const RoutesPaths = {
   
   // seguridad
   security: "/seguridad",
+  ipsdetails: "/seguridad/ips/:ip",
 } as const;
 
 /**
