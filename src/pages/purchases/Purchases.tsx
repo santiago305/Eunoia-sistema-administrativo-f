@@ -394,15 +394,15 @@ export default function Purchases() {
                           <thead className="sticky top-0 z-10 bg-gray-50">
                               <tr className="border-b border-black/10 text-black/60 text-[10px]">
                                   <th className="py-3 px-3 text-left w-[60px]">Fecha emision</th>
-                                  <th className="py-3 px-3 text-left w-[58px]">Documento</th>
+                                  <th className="py-3 px-3 text-left w-[40px]">Documento</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Numero</th>
                                   <th className="py-3 px-3 text-left w-[130px]">Proveedor</th>
                                   <th className="py-3 px-3 text-left w-[92px]">Almacen</th>
-                                  <th className="py-3 px-3 text-left w-[37px]">Forma</th>
+                                  <th className="py-3 px-3 text-left w-[45px]">Forma</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Total</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Pagado</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Pendiente</th>
-                                  <th className="py-3 px-3 text-left w-[40px]">Estado</th>
+                                  <th className="py-3 px-3 text-left w-[50px]">Estado</th>
                                   <th className="py-3 px-3 text-center w-[83px]">T. Espera</th>
                                   <th className="py-3 px-3 text-left w-[60px]">Ing. Almacen</th>
                                   <th className="py-3 px-0 text-left w-[20px]"></th>
@@ -454,24 +454,26 @@ export default function Purchases() {
                                           <td className="py-1 px-3">
                                               <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">{statusLabel}</span>
                                           </td>
-                                          <td className="py-1 px-3 flex justify-center align-middle ">
-                                              {purchase.status === PurchaseOrderStatuses.SENT && (
-                                                  <span className="inline-flex rounded-lg  px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                                      <TimerToEnd from={now} to={purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />
-                                                  </span>
-                                              )}
-                                              {purchase.status === PurchaseOrderStatuses.PARTIAL && (
-                                                  <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                                      <OctagonAlert className="h-4 w-4" />
-                                                      <span className="mt-1">Por Ing.</span>
-                                                  </span>
-                                              )}
-                                              {purchase.status === PurchaseOrderStatuses.RECEIVED && (
-                                                  <span className="flex flex-col items-center rounded-lg p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                                      <Timer className="h-4 w-4" />
-                                                      <span className="mt-1">Completado</span>
-                                                  </span>
-                                              )}
+                                          <td className="py-1 px-3 align-middle">
+                                              <div className="flex h-full items-center justify-center">
+                                                  {purchase.status === PurchaseOrderStatuses.SENT && (
+                                                      <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                                                          <TimerToEnd from={now} to={purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />
+                                                      </span>
+                                                  )}
+                                                  {purchase.status === PurchaseOrderStatuses.PARTIAL && (
+                                                      <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                                                          <OctagonAlert className="h-4 w-4" />
+                                                          <span className="mt-1">Por Ing.</span>
+                                                      </span>
+                                                  )}
+                                                  {purchase.status === PurchaseOrderStatuses.RECEIVED && (
+                                                      <span className="flex flex-col items-center rounded-lg p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                                                          <Timer className="h-4 w-4" />
+                                                          <span className="mt-1">Completado</span>
+                                                      </span>
+                                                  )}
+                                              </div>
                                           </td>
                                           <td className="py-1 px-3 text-black/70">
                                               {dateEnter} <br />
