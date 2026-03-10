@@ -21,6 +21,7 @@ export type PaymentProps = {
   poId:string,
   loadPurchases?: ()=>void;
   loadQuotas?: ()=>void;
+  onSaved?: () => void | Promise<void>;
 
 }
 
@@ -35,7 +36,8 @@ export function PaymentModal ({
   quotaId,
   poId,
   loadPurchases,
-  loadQuotas
+  loadQuotas,
+  onSaved
 }: PaymentProps){
   const [form, setForm] = useState<PaymentForm>({
     method: PaymentTypes.EFECTIVO,
@@ -71,6 +73,7 @@ export function PaymentModal ({
         if (loadQuotas) {
             loadQuotas();
         }
+        await onSaved?.();
       }else{
         showFlash(errorResponse("Error al guardar pago"))
       }

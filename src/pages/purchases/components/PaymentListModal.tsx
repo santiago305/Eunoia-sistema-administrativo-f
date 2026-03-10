@@ -37,6 +37,23 @@ export function PaymentListModal({
   const [modalPayment, setModalPayment] = useState(false);
   const { showFlash, clearFlash } = useFlashMessage();
 
+  const reloadPayments = async (options?: { silent?: boolean }) => {
+    if (!poId) return;
+    if (!options?.silent) clearFlash();
+    setLoading(true);
+    try {
+      const data = await listPayments(poId);
+      setRows(data ?? []);
+    } catch {
+      setRows([]);
+      if (!options?.silent) {
+        showFlash(errorResponse("No se pudieron cargar los pagos."));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let alive = true;
     const load = async () => {
@@ -76,8 +93,7 @@ export function PaymentListModal({
       const res = await removePayment(paymentId);
       if (res.type === "success") {
         showFlash(successResponse("Pago eliminado con exito"));
-        const data = await listPayments(poId);
-        setRows(data ?? []);
+        await reloadPayments({ silent: true });
         if(loadPurchases){
           loadPurchases();
         }
@@ -170,6 +186,7 @@ export function PaymentListModal({
             totalPaid={totalPaid}
             totalToPay={totalToPay}
             poId={poId}
+            onSaved={() => reloadPayments({ silent: true })}
           />
         )
       }

@@ -1,10 +1,10 @@
 /**
  * Definicion de rutas protegidas bajo el Dashboard.
- * 
+ *
  * - Se utiliza `PrivateRoute` para proteger las rutas que requieren autenticacion.
  * - Las rutas estan anidadas bajo `DashboardLayout`.
  * - Soporta subrutas especificas para roles (admin, monitor, users).
- * 
+ *
  * @module DashboardRoutes
  */
 
@@ -35,7 +35,7 @@ const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
 const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
 const CatalogVariants = lazy(() => import("@/pages/catalog/Variants"));
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
-const Locations = lazy(() => import("@/pages/warehouse/Locations"));
+const Locations = lazy(() => import("@/pages/warehouse/components/LocationModal"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
 const RowVariant = lazy(() => import("@/pages/row-material/RowVariant"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
@@ -164,9 +164,7 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.ipsdetails,
                 element: withRouteGuard(RoutesPaths.ipsdetails, <IpsDetails />),
-            }
+            },
         ],
     },
 ];
-
-

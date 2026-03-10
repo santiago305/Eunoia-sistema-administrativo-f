@@ -1,11 +1,7 @@
 // src/types/warehouse.d.ts
+import { createWarehouseSchema, updateWarehouseSchema, updateWarehouseActiveSchema, listWarehousesQuerySchema } from "@/schemas/warehouseSchema";
 import { z } from "zod";
-import {
-  createWarehouseSchema,
-  updateWarehouseSchema,
-  updateWarehouseActiveSchema,
-  listWarehousesQuerySchema,
-} from "@/schemas/warehouseSchemas";
+
 
 export type CreateWarehouseDto = z.infer<typeof createWarehouseSchema>;
 export type UpdateWarehouseDto = z.infer<typeof updateWarehouseSchema>;

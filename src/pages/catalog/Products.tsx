@@ -22,6 +22,10 @@ import { useNavigate } from "react-router-dom";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
 import { ProductFormModal } from "./components/ProductFormModal";
 import { VariantList } from "./components/VariantList";
+import { fadeUp, item, list } from "@/utils/animations";
+import { StatusPill } from "@/components/StatusTag";
+import { money } from "@/utils/functionPurchases";
+import { IconButton } from "@/components/IconBoton";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -103,28 +107,6 @@ export default function CatalogProducts() {
         }
     };
 
-    // --- Animation (minimal + smooth) ---
-    const fadeUp = {
-        hidden: { opacity: 0, y: 10 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.18 } },
-        exit: { opacity: 0, y: 6, transition: { duration: 0.12 } },
-    };
-
-    const list = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: { staggerChildren: 0.03, delayChildren: 0.02 },
-        },
-        exit: { opacity: 0, transition: { duration: 0.12 } },
-    };
-
-    const item = {
-        hidden: { opacity: 0, y: 6 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.14 } },
-        exit: { opacity: 0, y: 6, transition: { duration: 0.1 } },
-    };
-
     const queryParams = useMemo(
         () => ({
             page,
@@ -137,10 +119,6 @@ export default function CatalogProducts() {
     );
 
     const { items: products, total, page: apiPage, limit: apiLimit, loading, error, refresh, setActive } = useProducts(queryParams);
-
-    useEffect(() => {
-        if (apiPage && apiPage !== page) setPage(apiPage);
-    }, [apiPage, page]);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -167,9 +145,12 @@ export default function CatalogProducts() {
     }, [showFlash]);
 
     const effectiveLimit = apiLimit ?? limit;
+    const safePage = Math.max(1, apiPage || page);
     const totalPages = Math.max(1, Math.ceil(total / effectiveLimit));
-    const startIndex = total === 0 ? 0 : (apiPage - 1) * effectiveLimit + 1;
-    const endIndex = Math.min(apiPage * effectiveLimit, total);
+    const startIndex = total === 0 ? 0 : (safePage - 1) * effectiveLimit + 1;
+    const endIndex = Math.min(safePage * effectiveLimit, total);
+    const hasPrev = safePage > 1;
+    const hasNext = safePage < totalPages;
 
     const sortedProducts = useMemo(() => {
         return [...products].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -333,67 +314,6 @@ export default function CatalogProducts() {
         } finally {
             setExporting(false);
         }
-    };
-
-    const StatusPill = ({ active }: { active: boolean }) => (
-        <span
-            className={[
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
-                active ? "bg-[color:var(--p-50)] text-[color:var(--p-700)] ring-[color:var(--p-200)]" : "bg-rose-50 text-rose-700 ring-rose-200",
-            ].join(" ")}
-            style={
-                active
-                    ? ({
-                          "--p-50": `${PRIMARY}14`,
-                          "--p-200": `${PRIMARY}33`,
-                          "--p-700": PRIMARY,
-                      } as React.CSSProperties)
-                    : undefined
-            }
-        >
-            <span className={["h-1.5 w-1.5 rounded-full", active ? "bg-[color:var(--p-dot)]" : "bg-rose-500"].join(" ")} style={active ? ({ "--p-dot": PRIMARY } as React.CSSProperties) : undefined} />
-            {active ? "Activo" : "Inactivo"}
-        </span>
-    );
-
-    const IconButton = ({
-        onClick,
-        title,
-        children,
-        tone = "neutral",
-    }: {
-        onClick: (e: React.MouseEvent) => void;
-        title: string;
-        children: React.ReactNode;
-        tone?: "neutral" | "primary" | "danger";
-    }) => {
-        const styles =
-            tone === "primary"
-                ? "border-[color:var(--p-200)] bg-[color:var(--p)] text-white hover:bg-[color:var(--p-hover)] focus:ring-[color:var(--p-200)]"
-                : tone === "danger"
-                  ? "border-rose-600/20 bg-rose-50 text-rose-700 hover:bg-rose-100 focus:ring-rose-600/25"
-                  : "border-black/10 bg-white hover:bg-black/[0.03] focus:ring-black/10";
-
-        return (
-            <button
-                type="button"
-                title={title}
-                aria-label={title}
-                onClick={onClick}
-                className={["inline-flex h-9 w-9 items-center justify-center rounded-xl border transition", styles, "focus:outline-none focus:ring-2"].join(" ")}
-                style={
-                    tone === "primary"
-                        ? ({
-                              "--p": PRIMARY,
-                              "--p-hover": PRIMARY_HOVER,
-                              "--p-200": `${PRIMARY}33`,
-                          } as React.CSSProperties)
-                        : undefined
-                }
-            >
-                {children}
-            </button>
-        );
     };
 
     return (
@@ -562,14 +482,14 @@ export default function CatalogProducts() {
                                                         <p className="line-clamp-2 max-w-[680px]">{product.attributes?.color}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">{product.price || "-"}</p>
+                                                        <p className="line-clamp-2 max-w-[680px]">{ money(Number(product.price), 'PEN')}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">{product.cost || "-"}</p>
+                                                        <p className="line-clamp-2 max-w-[680px]"> { money(Number(product.cost), 'PEN')}</p>
                                                     </td>
 
                                                     <td className="py-4 px-5">
-                                                        <StatusPill active={product.isActive} />
+                                                        <StatusPill active={product.isActive} PRIMARY={PRIMARY} />
                                                     </td>
 
                                                     <td className="py-4 px-0">
@@ -601,6 +521,8 @@ export default function CatalogProducts() {
                                                                     e.stopPropagation();
                                                                     openVariantsModal(product.id);
                                                                 }}
+                                                                PRIMARY={PRIMARY}
+                                                                PRIMARY_HOVER={PRIMARY_HOVER}
                                                             >
                                                                 <Boxes className="h-4 w-4" />
                                                             </IconButton>
@@ -611,6 +533,8 @@ export default function CatalogProducts() {
                                                                     e.stopPropagation();
                                                                     void openEdit(product.id);
                                                                 }}
+                                                                PRIMARY={PRIMARY}
+                                                                PRIMARY_HOVER={PRIMARY_HOVER}
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                             </IconButton>
@@ -622,6 +546,8 @@ export default function CatalogProducts() {
                                                                     setDeletingProductId(product.id);
                                                                 }}
                                                                 tone={product.isActive ? "danger" : "primary"}
+                                                                PRIMARY={PRIMARY}
+                                                                PRIMARY_HOVER={PRIMARY_HOVER}
                                                             >
                                                                 <Power className="h-4 w-4" />
                                                             </IconButton>
@@ -658,7 +584,7 @@ export default function CatalogProducts() {
                                                     <p className="mt-1 font-semibold truncate">{product.name}</p>
                                                     <p className="mt-1 text-sm text-black/70 line-clamp-2">{product.description || "-"}</p>
                                                     <div className="mt-3">
-                                                        <StatusPill active={product.isActive} />
+                                                        <StatusPill active={product.isActive} PRIMARY={PRIMARY} />
                                                     </div>
                                                 </div>
 
@@ -672,7 +598,7 @@ export default function CatalogProducts() {
                                                     </button>
                                                     <button
                                                         className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03] disabled:opacity-50"
-                                                        onClick={() => openRecipes( product.id , product.sku ?? "-")}
+                                                        onClick={() => openRecipes(product.id, product.sku ?? "-")}
                                                     >
                                                         Recetas
                                                     </button>
@@ -683,6 +609,8 @@ export default function CatalogProducts() {
                                                             e.stopPropagation();
                                                             void openEdit(product.id);
                                                         }}
+                                                        PRIMARY={PRIMARY}
+                                                        PRIMARY_HOVER={PRIMARY_HOVER}
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </IconButton>
@@ -694,6 +622,8 @@ export default function CatalogProducts() {
                                                             setDeletingProductId(product.id);
                                                         }}
                                                         tone={product.isActive ? "danger" : "primary"}
+                                                        PRIMARY={PRIMARY}
+                                                        PRIMARY_HOVER={PRIMARY_HOVER}
                                                     >
                                                         <Power className="h-4 w-4" />
                                                     </IconButton>
@@ -722,21 +652,21 @@ export default function CatalogProducts() {
                         <div className="flex items-center gap-2">
                             <button
                                 className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
-                                disabled={page === 1}
-                                onClick={() => setPage(page - 1)}
+                                disabled={!hasPrev || loading}
+                                onClick={() => setPage(Math.max(1, safePage - 1))}
                                 type="button"
                             >
                                 Anterior
                             </button>
 
                             <span className="tabular-nums">
-                                Pagina {page} de {totalPages}
+                                Pagina {safePage} de {totalPages}
                             </span>
 
                             <button
                                 className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
-                                disabled={page === totalPages || totalPages === 0}
-                                onClick={() => setPage(page + 1)}
+                                disabled={!hasNext || loading}
+                                onClick={() => setPage(safePage + 1)}
                                 type="button"
                             >
                                 Siguiente

@@ -1,10 +1,6 @@
+import { createLocationSchema, updateLocationSchema, updateLocationActiveSchema, listLocationsQuerySchema } from "@/schemas/locationSchema";
 import { z } from "zod";
-import {
-  createLocationSchema,
-  updateLocationSchema,
-  updateLocationActiveSchema,
-  listLocationsQuerySchema,
-} from "@/schemas/locationSchemas";
+
 
 export type CreateLocationDto = z.infer<typeof createLocationSchema>;
 export type UpdateLocationDto = z.infer<typeof updateLocationSchema>;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState} from "react";
+import { useEffect, useMemo, useRef, useState} from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { createVariant, getVariantById, listRowMaterials, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
@@ -20,6 +20,10 @@ import { RecipeFormFields } from "./components/RecipeFormFields";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
 import { VariantFormFields } from "./components/VariantFormFields";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
+import { money } from "@/utils/functionPurchases";
+import { StatusPill } from "@/components/StatusTag";
+import { IconButton } from "@/components/IconBoton";
+import { fadeUp, item, list } from "@/utils/animations";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -46,15 +50,22 @@ export default function CatalogVariants() {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [units, setUnits] = useState<ListUnitResponse>();
   const [products, setProducts] = useState<ProductOption[]>([]);
-  const [total, setTotal] = useState(0);
-  const [apiPage, setApiPage] = useState(1);
-  const [apiLimit, setApiLimit] = useState(limit);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false,
+  });
   const [loading, setLoading] = useState(false);
   const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
   const [loadingEquivalences, setLoadingEquivalences] = useState(false);
   const [recipes, setRecipes] = useState<ProductRecipe[]>([]);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [primaVariants, setPrimaVariants] = useState<PrimaVariant[]>([]);
+  const lastRequestKey = useRef<string | null>(null);
+  const inFlightKey = useRef<string | null>(null);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
@@ -73,28 +84,6 @@ export default function CatalogVariants() {
     attributes: {},
     isActive: true,
   });
-
-  // Minimal + clean animations
-  const fadeUp = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.18 } },
-    exit: { opacity: 0, y: 6, transition: { duration: 0.12 } },
-  };
-
-  const list = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.03, delayChildren: 0.02 },
-    },
-    exit: { opacity: 0, transition: { duration: 0.12 } },
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 6 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.14 } },
-    exit: { opacity: 0, y: 6, transition: { duration: 0.1 } },
-  };
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -115,7 +104,6 @@ export default function CatalogVariants() {
               if (res.items?.length) all.push(...res.items);
           }
           setProducts(all.map((p) => ({ productId: p.id, name: p.name, sku: p.sku ?? null })));
-          loadVariants();
       } catch {
           setProducts([]);
           showFlash(errorResponse("Error al cargar productos"));
@@ -150,8 +138,11 @@ export default function CatalogVariants() {
   };
 
   const loadVariants = async () => {
+    const requestKey = `${page}|${debouncedSearch}|${statusFilter}|${productFilter}`;
+    if (inFlightKey.current === requestKey || lastRequestKey.current === requestKey) return;
     clearFlash();
     setLoading(true);
+    inFlightKey.current = requestKey;
     try {
       const res = await listVariants({
         page,
@@ -162,15 +153,34 @@ export default function CatalogVariants() {
         productId: productFilter || undefined,
       });
       setVariants(res.items ?? []);
-      setTotal(res.total ?? 0);
-      setApiPage(res.page ?? page);
-      setApiLimit(res.limit ?? limit);
+      const nextTotal = res.total ?? 0;
+      const nextPage = res.page ?? page;
+      const nextLimit = res.limit ?? limit;
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || limit)));
+      setPagination({
+        total: nextTotal,
+        page: nextPage,
+        limit: nextLimit,
+        totalPages: nextTotalPages,
+        hasPrev: nextPage > 1,
+        hasNext: nextPage < nextTotalPages,
+      });
+      lastRequestKey.current = requestKey;
     } catch {
       setVariants([]);
-      setTotal(0);
+      setPagination((prev) => ({
+        ...prev,
+        total: 0,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      }));
       showFlash(errorResponse("Error al listar variantes"));
     } finally {
       setLoading(false);
+      if (inFlightKey.current === requestKey) {
+        inFlightKey.current = null;
+      }
     }
   };
 
@@ -218,10 +228,6 @@ export default function CatalogVariants() {
   }, [page, debouncedSearch, statusFilter, productFilter]);
 
   useEffect(() => {
-    if (apiPage !== page) setPage(apiPage);
-  }, [apiPage, page]);
-
-  useEffect(() => {
     const productId = searchParams.get("productId") ?? "";
     const productName = searchParams.get("productName") ?? "";
     const create = searchParams.get("create") === "1";
@@ -247,9 +253,10 @@ export default function CatalogVariants() {
     setPendingProductFromQuery(null);
   }, [pendingProductFromQuery, products]);
 
-  const totalPages = Math.max(1, Math.ceil(total / (apiLimit || limit)));
-  const startIndex = total === 0 ? 0 : (apiPage - 1) * (apiLimit || limit) + 1;
-  const endIndex = Math.min(apiPage * (apiLimit || limit), total);
+  const safePage = Math.max(1, pagination.page || page);
+  const totalPages = Math.max(1, pagination.totalPages);
+  const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
+  const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
 
   const listKey = useMemo(() => `${page}|${statusFilter}|${productFilter}|${debouncedSearch}`, [page, statusFilter, productFilter, debouncedSearch]);
 
@@ -347,90 +354,6 @@ export default function CatalogVariants() {
     }
   };
 
-  const StatusPill = ({ active }: { active: boolean }) => (
-    <span
-      className={[
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
-        active ? "bg-teal-50 text-teal-700 ring-teal-200" : "bg-rose-50 text-rose-700 ring-rose-200",
-      ].join(" ")}
-    >
-      <span className={["h-1.5 w-1.5 rounded-full", active ? "bg-teal-500" : "bg-rose-500"].join(" ")} />
-      {active ? "Activo" : "Inactivo"}
-    </span>
-  );
-
-  const IconButton = ({
-  onClick,
-  title,
-  children,
-  tone = "neutral",
-}: {
-  onClick: (e: React.MouseEvent) => void;
-  title: string;
-  children: React.ReactNode;
-  tone?: "neutral" | "primary" | "danger";
-}) => {
-  const base =
-    "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition focus:outline-none focus:ring-2";
-
-  if (tone === "primary") {
-    return (
-      <button
-        type="button"
-        title={title}
-        aria-label={title}
-        onClick={onClick}
-        className={[base, "text-white focus:ring-[rgba(33,184,166,0.25)]"].join(" ")}
-        style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-        }}
-      >
-        {children}
-      </button>
-    );
-  }
-
-  if (tone === "danger") {
-    return (
-      <button
-        type="button"
-        title={title}
-        aria-label={title}
-        onClick={onClick}
-        className={[
-          base,
-          "border-rose-600/20 bg-rose-50 text-rose-700 hover:bg-rose-100 focus:ring-rose-600/20",
-        ].join(" ")}
-      >
-        {children}
-      </button>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      onClick={onClick}
-      className={[base, "border-black/10 bg-white hover:bg-black/[0.03] focus:ring-black/10"].join(" ")}
-    >
-      {children}
-    </button>
-  );
-};
-
-
-  const formatMoney = (value: any) => {
-    const num = Number(value);
-    if (Number.isNaN(num)) return "-";
-    return num.toFixed(2);
-  };
-
   const attributeLabel = (v: Variant) => v.attributes?.presentation ?? v.attributes?.variant ?? v.attributes?.color ?? "-";
 
   return (
@@ -451,7 +374,7 @@ export default function CatalogVariants() {
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
-              Total: <span className="font-semibold text-black">{total}</span>
+              Total: <span className="font-semibold text-black">{pagination.total}</span>
             </div>
 
             <button
@@ -518,9 +441,9 @@ export default function CatalogVariants() {
             <div>
               <p className="text-sm font-semibold">Listado de variantes</p>
             </div>
-            <p className="text-xs text-black/60">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</p>
+            <p className="text-xs text-black/60">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${pagination.total}`}</p>
           </div>
-          <div className="max-h-[calc(100vh-330px)] overflow-auto">
+          <div className="hidden max-h-[calc(100vh-330px)] overflow-auto lg:block">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="border-b border-black/10 text-xs text-black/60">
@@ -553,14 +476,17 @@ export default function CatalogVariants() {
                       <td className="py-4 px-5 text-black/70">
                           <p className="line-clamp-2 max-w-[680px]">{v.attributes?.color}</p>
                       </td>                      
-                      <td className="py-3 px-5 text-black/70">{Number(v.price).toFixed(2)}</td>
-                      <td className="py-3 px-5 text-black/70">{v.cost ? Number(v.cost).toFixed(2) : "-"}</td>
+                      <td className="py-3 px-5 text-black/70">
+                          {money(v.price,'PEN')}
+                      </td>
+                      <td className="py-3 px-5 text-black/70">
+                          {money(v.cost, 'PEN')}
+                      </td>
                       <td className="py-3 px-5">
-                        <span className={["inline-flex rounded-full px-2 py-1 text-[11px] font-medium", v.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"].join(" ")}>{v.isActive ? "Activo" : "Inactivo"}</span>
+                        <StatusPill active={!!v.isActive} PRIMARY={PRIMARY} />
                       </td>
                       <td className="py-3 px-0">
                         <div className="flex items-center justify-left gap-2">
-                          <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => void openEdit(v.id)}><Pencil className="h-4 w-4" /></button>
                           <button
                             className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
                             onClick={() => openEquivalences(v.productId, v.baseUnitId, v.sku)}
@@ -573,7 +499,24 @@ export default function CatalogVariants() {
                           >
                             Recetas
                           </button>
-                          <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]" onClick={() => { setDeletingVariantId(v.id); setNextActiveState(!v.isActive); }}><Power className="h-4 w-4" /></button>
+                          <IconButton title="Editar" onClick={() => void openEdit(v.id)}
+                            PRIMARY={PRIMARY}
+                            PRIMARY_HOVER={PRIMARY_HOVER}
+                            >
+                            <Pencil className="h-4 w-4" />
+                          </IconButton>
+                          <IconButton
+                            title={v.isActive ? "Desactivar" : "Activar"}
+                            onClick={() => {
+                              setDeletingVariantId(v.id);
+                              setNextActiveState(!v.isActive);
+                            }}
+                            tone={v.isActive ? "danger" : "primary"}
+                            PRIMARY={PRIMARY}
+                            PRIMARY_HOVER={PRIMARY_HOVER}
+                          >
+                            <Power className="h-4 w-4" />
+                          </IconButton>
                         </div>
                       </td>
                     </tr>
@@ -610,18 +553,21 @@ export default function CatalogVariants() {
                         <p className="mt-1 text-sm text-black/60 line-clamp-2">{attributeLabel(v)}</p>
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <StatusPill active={!!v.isActive} />
+                          <StatusPill active={!!v.isActive} PRIMARY={PRIMARY} />
                           <span className="rounded-full bg-black/[0.03] px-2.5 py-1 text-[11px] text-black/70 tabular-nums">
-                            Precio: S/ {formatMoney(v.price)}
+                            Precio:{money(v.price, 'PEN')}
                           </span>
                           <span className="rounded-full bg-black/[0.03] px-2.5 py-1 text-[11px] text-black/70 tabular-nums">
-                            Costo: S/ {v.cost ? formatMoney(v.cost) : "-"}
+                            Costo:{v.cost ? money(v.cost, 'PEN') : "-"}
                           </span>
                         </div>
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <IconButton title="Editar" onClick={() => void openEdit(v.id)}>
+                        <IconButton title="Editar" onClick={() => void openEdit(v.id)}
+                          PRIMARY={PRIMARY}
+                          PRIMARY_HOVER={PRIMARY_HOVER}
+                          >
                           <Pencil className="h-4 w-4" />
                         </IconButton>
                         <IconButton
@@ -631,6 +577,8 @@ export default function CatalogVariants() {
                             setNextActiveState(!v.isActive);
                           }}
                           tone={v.isActive ? "danger" : "primary"}
+                          PRIMARY={PRIMARY}
+                          PRIMARY_HOVER={PRIMARY_HOVER}
                         >
                           <Power className="h-4 w-4" />
                         </IconButton>
@@ -650,20 +598,20 @@ export default function CatalogVariants() {
 
           {/* Pagination */}
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
-            <span className="hidden sm:inline">Mostrando {startIndex}-{endIndex} de {total}</span>
+            <span className="hidden sm:inline">Mostrando {startIndex}-{endIndex} de {pagination.total}</span>
             <div className="flex items-center gap-2">
               <button
                 className="rounded-2xl border border-black/10 bg-white px-3 py-2 hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
+                disabled={!pagination.hasPrev || loading}
+                onClick={() => setPage(Math.max(1, safePage - 1))}
               >
                 Anterior
               </button>
-              <span className="tabular-nums">Página {page} de {totalPages}</span>
+              <span className="tabular-nums">Página {safePage} de {totalPages}</span>
               <button
                 className="rounded-2xl border border-black/10 bg-white px-3 py-2 hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
+                disabled={!pagination.hasNext || loading}
+                onClick={() => setPage(safePage + 1)}
               >
                 Siguiente
               </button>

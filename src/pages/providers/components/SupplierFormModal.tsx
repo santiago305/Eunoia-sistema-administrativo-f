@@ -187,7 +187,7 @@ export function SupplierFormModal({
     <Modal
       title={mode === "edit" ? "Editar proveedor" : "Nuevo proveedor"}
       onClose={onClose}
-      className="max-w-[750px]"
+      className="max-w-[700px] max-h-[600px]"
     >
       {loading ? (
         <div className="px-1 py-6 text-sm text-black/60">Cargando proveedor...</div>
