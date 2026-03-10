@@ -8,7 +8,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Layers, LayoutGrid, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { listUnits } from "@/services/unitService";
 import { ListUnitResponse } from "@/pages/catalog/types/unit";
@@ -24,6 +24,7 @@ import { money } from "@/utils/functionPurchases";
 import { StatusPill } from "@/components/StatusTag";
 import { IconButton } from "@/components/IconBoton";
 import { fadeUp, item, list } from "@/utils/animations";
+import { Dropdown } from "../purchases/components/PurchaseDropdown";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -361,7 +362,6 @@ export default function CatalogVariants() {
       <PageTitle title="Catalogo · Variantes" />
 
       <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Header */}
         <motion.div
           initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
           animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
@@ -369,18 +369,18 @@ export default function CatalogVariants() {
           className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
         >
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Variantes (SKU)</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Variantes (SKU)</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
               Total: <span className="font-semibold text-black">{pagination.total}</span>
             </div>
 
             <button
               type="button"
               onClick={openNew}
-              className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs text-white transition focus:outline-none focus:ring-2"
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-white transition focus:outline-none focus:ring-2"
               style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, boxShadow: "0 1px 0 rgba(0,0,0,0.02)" }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
@@ -395,12 +395,14 @@ export default function CatalogVariants() {
           </div>
         </motion.div>
 
-        <motion.section initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }} animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }} transition={{ duration: 0.18 }} className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm">
+        <motion.section initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }} 
+        animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }} transition={{ duration: 0.18 }} 
+        className=" bg-gray-50 p-4 sm:p-5 shadow-sm">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(120px,1fr)_230px_180px] gap-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <input
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
+                className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
                 style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
                 placeholder="Buscar por SKU, producto o ID"
                 value={searchText}
@@ -410,7 +412,7 @@ export default function CatalogVariants() {
 
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" 
+              <select className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" 
                 style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties} value={productFilter} 
                 onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}>
                 <option value="">Producto (todos)</option>
@@ -419,7 +421,7 @@ export default function CatalogVariants() {
             </div>
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <select className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+              <select className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
                value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
                 <option value="all">Estado (todos)</option>
@@ -430,51 +432,44 @@ export default function CatalogVariants() {
           </div>
         </motion.section>
 
-        {/* List */}
         <motion.section
           initial={shouldReduceMotion ? false : "hidden"}
           animate={shouldReduceMotion ? false : "show"}
           variants={fadeUp}
-          className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden"
+          className="bg-white shadow-sm overflow-hidden"
         >
-          <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
-            <div>
-              <p className="text-sm font-semibold">Listado de variantes</p>
-            </div>
-            <p className="text-xs text-black/60">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${pagination.total}`}</p>
-          </div>
-          <div className="hidden max-h-[calc(100vh-330px)] overflow-auto lg:block">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white z-10">
+          <div className="hidden max-h-[calc(100vh-280px)] min-h-[calc(100vh-280px)] overflow-auto lg:block">
+            <table className="w-full text-sm table-fixed">
+              <thead className="sticky top-0 bg-gray-50 z-10">
                 <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-3 px-5 text-left">SKU</th>
-                  <th className="py-3 px-5 text-left">Producto</th>
-                  <th className="py-3 px-5 text-left">Unidad base</th>
-                  <th className="py-3 px-5 text-left">Presentación</th>
-                  <th className="py-3 px-5 text-left">Variante</th>
-                  <th className="py-3 px-5 text-left">Color</th>
-                  <th className="py-3 px-5 text-left">Precio</th>
-                  <th className="py-3 px-5 text-left">Costo</th>
-                  <th className="py-3 px-5 text-left">Estado</th>
-                  <th className="py-3 px-5 text-left">Acciones</th>
+                  <th className="py-3 px-5 text-left w-30">SKU</th>
+                  <th className="py-3 px-5 text-left w-25">Producto</th>
+                  <th className="py-3 px-5 text-left w-25">Unidad base</th>
+                  <th className="py-3 px-5 text-left w-20">Presentación</th>
+                  <th className="py-3 px-5 text-left w-20">Variante</th>
+                  <th className="py-3 px-5 text-left w-20">Color</th>
+                  <th className="py-3 px-5 text-left w-20">Precio</th>
+                  <th className="py-3 px-5 text-left w-20">Costo</th>
+                  <th className="py-3 px-5 text-left w-20">Estado</th>
+                  <th className="py-3 px-5 text-left w-15"></th>
                 </tr>
               </thead>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.tbody key={`${page}|${statusFilter}|${productFilter}|${debouncedSearch}`} initial={shouldReduceMotion ? false : { opacity: 0 }} animate={shouldReduceMotion ? false : { opacity: 1 }} exit={shouldReduceMotion ? undefined : { opacity: 0 }}>
                   {variants.map((v) => (
 
-                    <tr key={v.id} className="border-b border-black/5">
+                    <tr key={v.id} className="border-b border-black/5 text-[11px]">
                       <td className="py-3 px-5 font-medium">{v.sku}</td>
                       <td className="py-3 px-5 text-black/70">{v.productName ?? "-"}</td>
                       <td className="py-3 px-5 text-black/70">{v.unitName} ({v.unitCode})</td>
                       <td className="py-4 px-5 text-black/70">
-                          <p className="line-clamp-2 max-w-[680px]">{v.attributes?.presentation}</p>
+                          <p className="line-clamp-2">{v.attributes?.presentation}</p>
                       </td>
                       <td className="py-4 px-5 text-black/70">
-                          <p className="line-clamp-2 max-w-[680px]">{v.attributes?.variant}</p>
+                          <p className="line-clamp-2">{v.attributes?.variant}</p>
                       </td>
                       <td className="py-4 px-5 text-black/70">
-                          <p className="line-clamp-2 max-w-[680px]">{v.attributes?.color}</p>
+                          <p className="line-clamp-2">{v.attributes?.color}</p>
                       </td>                      
                       <td className="py-3 px-5 text-black/70">
                           {money(v.price,'PEN')}
@@ -486,38 +481,57 @@ export default function CatalogVariants() {
                         <StatusPill active={!!v.isActive} PRIMARY={PRIMARY} />
                       </td>
                       <td className="py-3 px-0">
-                        <div className="flex items-center justify-left gap-2">
-                          <button
-                            className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                            onClick={() => openEquivalences(v.productId, v.baseUnitId, v.sku)}
-                          >
-                            Equivalencias
-                          </button>
-                          <button
-                            className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                            onClick={() => openRecipes(v.id, v.sku)}
-                          >
-                            Recetas
-                          </button>
-                          <IconButton title="Editar" onClick={() => void openEdit(v.id)}
-                            PRIMARY={PRIMARY}
-                            PRIMARY_HOVER={PRIMARY_HOVER}
+                        <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
+                          <div className="flex flex-col gap-1">
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEquivalences(v.productId, v.baseUnitId, v.sku);
+                              }}
                             >
-                            <Pencil className="h-4 w-4" />
-                          </IconButton>
-                          <IconButton
-                            title={v.isActive ? "Desactivar" : "Activar"}
-                            onClick={() => {
-                              setDeletingVariantId(v.id);
-                              setNextActiveState(!v.isActive);
-                            }}
-                            tone={v.isActive ? "danger" : "primary"}
-                            PRIMARY={PRIMARY}
-                            PRIMARY_HOVER={PRIMARY_HOVER}
-                          >
-                            <Power className="h-4 w-4" />
-                          </IconButton>
-                        </div>
+                              <Layers className="h-4 w-4 text-black/60" />
+                              Equivalencias
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openRecipes(v.id, v.sku);
+                              }}
+                            >
+                              <LayoutGrid className="h-4 w-4 text-black/60" />
+                              Recetas
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void openEdit(v.id);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-black/60" />
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                v.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingVariantId(v.id);
+                                setNextActiveState(!v.isActive);
+                              }}
+                            >
+                              <Power className="h-4 w-4" />
+                              {v.isActive ? "Desactivar" : "Activar"}
+                            </button>
+                          </div>
+                        </Dropdown>
                       </td>
                     </tr>
                   ))}
@@ -601,7 +615,7 @@ export default function CatalogVariants() {
             <span className="hidden sm:inline">Mostrando {startIndex}-{endIndex} de {pagination.total}</span>
             <div className="flex items-center gap-2">
               <button
-                className="rounded-2xl border border-black/10 bg-white px-3 py-2 hover:bg-black/[0.03] disabled:opacity-40"
+                className="rounded-lg border border-black/10 bg-white px-3 py-2 hover:bg-black/[0.03] disabled:opacity-40"
                 disabled={!pagination.hasPrev || loading}
                 onClick={() => setPage(Math.max(1, safePage - 1))}
               >
@@ -609,7 +623,7 @@ export default function CatalogVariants() {
               </button>
               <span className="tabular-nums">Página {safePage} de {totalPages}</span>
               <button
-                className="rounded-2xl border border-black/10 bg-white px-3 py-2 hover:bg-black/[0.03] disabled:opacity-40"
+                className="rounded-lg border border-black/10 bg-white px-3 py-2 hover:bg-black/[0.03] disabled:opacity-40"
                 disabled={!pagination.hasNext || loading}
                 onClick={() => setPage(safePage + 1)}
               >
@@ -625,8 +639,8 @@ export default function CatalogVariants() {
         <Modal title="Nueva variante" onClose={() => setOpenCreate(false)} className="max-w-lg">
           <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>Cancelar</button>
-            <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
+            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>Cancelar</button>
+            <button className="rounded-lg border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
           </div>
         </Modal>
       )}
@@ -635,8 +649,8 @@ export default function CatalogVariants() {
         <Modal title="Editar variante" onClose={() => setEditingVariantId(null)} className="max-w-lg">
           <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>Cancelar</button>
-            <button className="rounded-2xl border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>Guardar cambios</button>
+            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>Cancelar</button>
+            <button className="rounded-lg border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>Guardar cambios</button>
           </div>
         </Modal>
       )}
@@ -679,7 +693,7 @@ export default function CatalogVariants() {
             animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.16 }}
           >
-            <div className={"rounded-2xl border px-3 py-2 " + (nextActiveState ? "border-teal-200 bg-teal-50" : "border-rose-200 bg-rose-50")}>
+            <div className={"rounded-lg border px-3 py-2 " + (nextActiveState ? "border-teal-200 bg-teal-50" : "border-rose-200 bg-rose-50")}>
               <p className={"text-sm " + (nextActiveState ? "text-teal-800" : "text-rose-800")}>
                 {nextActiveState
                   ? "Se activará la variante nuevamente."
@@ -689,13 +703,13 @@ export default function CatalogVariants() {
 
             <div className="mt-4 flex justify-end gap-2">
               <button
-                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
                 onClick={() => setDeletingVariantId(null)}
               >
                 Cancelar
               </button>
               <button
-                className="rounded-2xl border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 disabled:opacity-50"
+                className="rounded-lg border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 disabled:opacity-50"
                 style={
                   nextActiveState
                     ? ({ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties)

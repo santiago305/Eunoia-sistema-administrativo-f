@@ -6,7 +6,7 @@ import { listProductEquivalences } from "@/services/equivalenceService";
 import { getProductById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, Download, Layers, LayoutGrid, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
@@ -26,6 +26,7 @@ import { fadeUp, item, list } from "@/utils/animations";
 import { StatusPill } from "@/components/StatusTag";
 import { money } from "@/utils/functionPurchases";
 import { IconButton } from "@/components/IconBoton";
+import { Dropdown } from "../purchases/components/PurchaseDropdown";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -328,17 +329,17 @@ export default function CatalogProducts() {
                     className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
                 >
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
+                        <h1 className="text-xl font-semibold tracking-tight">Productos</h1>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+                        <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-[11px]">
                             Total: <span className="font-semibold text-black">{total}</span>
                         </div>
 
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
+                            className="inline-flex items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-[11px] hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
                             onClick={downloadCsv}
                             disabled={exporting}
                             title="Exportar CSV"
@@ -349,7 +350,7 @@ export default function CatalogProducts() {
 
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
+                            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[11px] text-white focus:outline-none focus:ring-2"
                             onClick={startCreate}
                             title="Nuevo producto"
                             style={{
@@ -370,18 +371,17 @@ export default function CatalogProducts() {
                     </div>
                 </motion.div>
 
-                {/* Filtros */}
                 <motion.section
                     initial={shouldReduceMotion ? false : "hidden"}
                     animate={shouldReduceMotion ? false : "show"}
                     variants={fadeUp}
-                    className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
+                    className=" bg-gray-50 p-4 sm:p-5 shadow-sm"
                 >
                     <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
                         <div className="relative">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
                             <input
-                                className="h-11 w-full rounded-2xl border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
+                                className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
                                 style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
                                 placeholder="Buscar por nombre (exacto)"
                                 value={searchText}
@@ -395,7 +395,7 @@ export default function CatalogProducts() {
                         <div className="relative">
                             <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
                             <select
-                                className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+                                className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
                                 style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
                                 value={statusFilter}
                                 onChange={(event) => {
@@ -410,38 +410,28 @@ export default function CatalogProducts() {
                         </div>
                     </div>
                 </motion.section>
-
-                {/* Listado */}
                 <motion.section
                     initial={shouldReduceMotion ? false : "hidden"}
                     animate={shouldReduceMotion ? false : "show"}
                     variants={fadeUp}
-                    className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden"
+                    className="bg-white shadow-sm overflow-hidden"
                 >
-                    <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
-                        <div>
-                            <p className="text-sm font-semibold">Listado de productos</p>
-                        </div>
-                        <div className="text-xs text-black/60 hidden sm:block">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</div>
-                    </div>
-
-                    {/* DESKTOP: tabla */}
                     <div className="hidden lg:block">
-                        <div className="max-h-[calc(100vh-340px)] overflow-auto">
-                            <table className="w-full text-sm">
-                                <thead className="sticky top-0 z-10 bg-white">
-                                    <tr className="border-b border-black/10 text-xs text-black/60">
-                                        <th className="py-3 px-5 text-left">SKU</th>
-                                        <th className="py-3 px-5 text-left">Producto</th>
-                                        <th className="py-3 px-5 text-left">Descripción</th>
-                                        <th className="py-3 px-5 text-left">Unidad</th>
-                                        <th className="py-3 px-5 text-left">Presentación</th>
-                                        <th className="py-3 px-5 text-left">Variante</th>
-                                        <th className="py-3 px-5 text-left">Color</th>
-                                        <th className="py-3 px-5 text-left">Precio</th>
-                                        <th className="py-3 px-5 text-left">Costo</th>
-                                        <th className="py-3 px-5 text-left">Estado</th>
-                                        <th className="py-3 px-5 text-left">Acciones</th>
+                        <div className="max-h-[calc(100vh-280px)] min-h-[calc(100vh-280px)] overflow-auto">
+                            <table className="w-full text-sm table-fixed">
+                                <thead className="sticky top-0 z-10 bg-gray-50 ">
+                                    <tr className="border-b border-black/10 text-[11px] text-black/60">
+                                        <th className="py-3 px-5 text-left w-30">SKU</th>
+                                        <th className="py-3 px-5 text-left w-30">Producto</th>
+                                        <th className="py-3 px-5 text-left w-20">Descripción</th>
+                                        <th className="py-3 px-5 text-left w-20">Unidad</th>
+                                        <th className="py-3 px-5 text-left w-20">Presentación</th>
+                                        <th className="py-3 px-5 text-left w-20">Variante</th>
+                                        <th className="py-3 px-5 text-left w-20">Color</th>
+                                        <th className="py-3 px-5 text-left w-20">Precio</th>
+                                        <th className="py-3 px-5 text-left w-20">Costo</th>
+                                        <th className="py-3 px-5 text-left w-20">Estado</th>
+                                        <th className="py-3 px-5 text-left w-15"></th>
                                     </tr>
                                 </thead>
 
@@ -455,9 +445,14 @@ export default function CatalogProducts() {
                                     >
                                         {sortedProducts.map((product) => {
                                             return (
-                                                <motion.tr key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="border-b border-black/5 hover:bg-black/[0.02]">
+                                                <motion.tr key={product.id} 
+                                                variants={shouldReduceMotion ? undefined : item} 
+                                                layout 
+                                                className="border-b border-black/5 hover:bg-black/[0.02]
+                                                text-[11px]
+                                                ">
                                                     <td className="py-4 px-5">
-                                                        <p className="font-medium max-w-[680px]">{product.sku || "-"}</p>
+                                                        <p className="font-medium">{product.sku || "-"}</p>
                                                     </td>
                                                     <td className="py-4 px-5  text-black/70">
                                                         <div className="min-w-0">
@@ -465,27 +460,27 @@ export default function CatalogProducts() {
                                                         </div>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[800px]">{product.description || "-"}</p>
+                                                        <p className="line-clamp-2">{product.description || "-"}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">
+                                                        <p className="line-clamp-2">
                                                             {product.baseUnitName} ({product.baseUnitCode})
                                                         </p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">{product.attributes?.presentation}</p>
+                                                        <p className="line-clamp-2">{product.attributes?.presentation}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">{product.attributes?.variant}</p>
+                                                        <p className="line-clamp-2">{product.attributes?.variant}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">{product.attributes?.color}</p>
+                                                        <p className="line-clamp-2">{product.attributes?.color}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]">{ money(Number(product.price), 'PEN')}</p>
+                                                        <p className="line-clamp-2">{ money(Number(product.price), 'PEN')}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2 max-w-[680px]"> { money(Number(product.cost), 'PEN')}</p>
+                                                        <p className="line-clamp-2"> { money(Number(product.cost), 'PEN')}</p>
                                                     </td>
 
                                                     <td className="py-4 px-5">
@@ -493,65 +488,67 @@ export default function CatalogProducts() {
                                                     </td>
 
                                                     <td className="py-4 px-0">
-                                                        <div className="flex items-center justify-left gap-2">
-                                                            <button
-                                                                type="button"
-                                                                className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03]"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    void openEquivalences(product.id);
-                                                                }}
-                                                            >
-                                                                Equivalencias
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03] disabled:opacity-50"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openRecipes( product.id, product.sku ?? "-");
-                                                                }}
-                                                            >
-                                                                Recetas
-                                                            </button>
-                                                            <IconButton
-                                                                title="Ver variantes"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openVariantsModal(product.id);
-                                                                }}
-                                                                PRIMARY={PRIMARY}
-                                                                PRIMARY_HOVER={PRIMARY_HOVER}
-                                                            >
-                                                                <Boxes className="h-4 w-4" />
-                                                            </IconButton>
-
-                                                            <IconButton
-                                                                title="Editar"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    void openEdit(product.id);
-                                                                }}
-                                                                PRIMARY={PRIMARY}
-                                                                PRIMARY_HOVER={PRIMARY_HOVER}
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </IconButton>
-
-                                                            <IconButton
-                                                                title={product.isActive ? "Desactivar" : "Activar"}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setDeletingProductId(product.id);
-                                                                }}
-                                                                tone={product.isActive ? "danger" : "primary"}
-                                                                PRIMARY={PRIMARY}
-                                                                PRIMARY_HOVER={PRIMARY_HOVER}
-                                                            >
-                                                                <Power className="h-4 w-4" />
-                                                            </IconButton>
-                                                        </div>
+                                                        <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
+                                                            <div className="flex flex-col gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        void openEquivalences(product.id);
+                                                                    }}
+                                                                >
+                                                                    <Layers className="h-4 w-4 text-black/60" />
+                                                                    Equivalencias
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] disabled:opacity-50"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openRecipes(product.id, product.sku ?? "-");
+                                                                    }}
+                                                                >
+                                                                    <LayoutGrid className="h-4 w-4 text-black/60" />
+                                                                    Recetas
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openVariantsModal(product.id);
+                                                                    }}
+                                                                >
+                                                                    <Boxes className="h-4 w-4 text-black/60" />
+                                                                    Ver variantes
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        void openEdit(product.id);
+                                                                    }}
+                                                                >
+                                                                    <Pencil className="h-4 w-4 text-black/60" />
+                                                                    Editar
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                                                        product.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                                                                    }`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setDeletingProductId(product.id);
+                                                                    }}
+                                                                >
+                                                                    <Power className="h-4 w-4" />
+                                                                    {product.isActive ? "Desactivar" : "Activar"}
+                                                                </button>
+                                                            </div>
+                                                        </Dropdown>
                                                     </td>
                                                 </motion.tr>
                                             );
@@ -578,7 +575,7 @@ export default function CatalogProducts() {
                             >
                                 {sortedProducts.map((product) => {
                                     return (
-                                        <motion.div key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+                                        <motion.div key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="rounded-lg border border-black/10 bg-white p-4 shadow-sm">
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <p className="mt-1 font-semibold truncate">{product.name}</p>
@@ -591,13 +588,13 @@ export default function CatalogProducts() {
                                                 <div className="flex flex-col gap-2">
                                                     <button
                                                         type="button"
-                                                        className="inline-flex h-8 items-center justify-center rounded-xl border border-black/10 bg-white px-2.5 text-xs hover:bg-black/[0.03] disabled:opacity-50"
+                                                        className="inline-flex h-8 items-center justify-center rounded-xl border border-black/10 bg-white px-2.5 text-[11px] hover:bg-black/[0.03] disabled:opacity-50"
                                                         onClick={() => void openEquivalences(product.id)}
                                                     >
                                                         Equivalencias
                                                     </button>
                                                     <button
-                                                        className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-xs hover:bg-black/[0.03] disabled:opacity-50"
+                                                        className="inline-flex h-9 items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-[11px] hover:bg-black/[0.03] disabled:opacity-50"
                                                         onClick={() => openRecipes(product.id, product.sku ?? "-")}
                                                     >
                                                         Recetas
@@ -636,22 +633,22 @@ export default function CatalogProducts() {
                                 })}
 
                                 {products.length === 0 && !loading && (
-                                    <div className="rounded-3xl border border-black/10 bg-white p-4 text-sm text-black/60">No hay productos con los filtros actuales.</div>
+                                    <div className="rounded-lg border border-black/10 bg-white p-4 text-sm text-black/60">No hay productos con los filtros actuales.</div>
                                 )}
-                                {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
+                                {error && <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
                             </motion.div>
                         </AnimatePresence>
                     </div>
 
                     {/* Footer paginaci�n */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-[11px] text-black/60">
                         <span className="hidden sm:inline">
                             Mostrando {startIndex}-{endIndex} de {total}
                         </span>
 
                         <div className="flex items-center gap-2">
                             <button
-                                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[11px] hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
                                 disabled={!hasPrev || loading}
                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                 type="button"
@@ -664,7 +661,7 @@ export default function CatalogProducts() {
                             </span>
 
                             <button
-                                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[11px] hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
                                 disabled={!hasNext || loading}
                                 onClick={() => setPage(safePage + 1)}
                                 type="button"
@@ -711,7 +708,7 @@ export default function CatalogProducts() {
                         animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
                         transition={{ duration: 0.16 }}
                     >
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
                             <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto. Hazlo solo si estas seguro.
                         </div>
 
@@ -719,13 +716,13 @@ export default function CatalogProducts() {
 
                         <div className="mt-4 flex justify-end gap-2">
                             <button
-                                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
                                 onClick={() => setDeletingProductId(null)}
                             >
                                 Cancelar
                             </button>
                             <button
-                                className="rounded-2xl border border-rose-600/20 bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
+                                className="rounded-lg border border-rose-600/20 bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
                                 onClick={confirmDelete}
                             >
                                 Confirmar
