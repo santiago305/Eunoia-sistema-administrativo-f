@@ -94,13 +94,7 @@ export const getSidebarItems = (): SidebarItem[] => [
     {
         label: "Almacenes",
         href: RoutesPaths.warehouses,
-        icon: <IconWarehouse className="text-sidebar-foreground" />,
-        children: [
-            {
-                label: "Ubicaciones",
-                href: RoutesPaths.location,
-            },
-        ],
+        icon: <IconWarehouse className="text-sidebar-foreground" />
     },
     {
         label: "Proveedores",

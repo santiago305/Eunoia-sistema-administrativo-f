@@ -1,58 +1,27 @@
-// src/pages/warehouses/Warehouses.tsx
 import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
-import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 
 import { useWarehouses } from "@/hooks/useWarehouse";
 import { listWarehouses } from "@/services/warehouseServices";
-import type { WarehouseLocation } from "@/pages/warehouse/types/warehouse";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
+import { WarehouseLocationsModal } from "./components/LocationModal";
+import { IconButton } from "@/components/IconBoton";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
 
 export default function Warehouses() {
     const shouldReduceMotion = useReducedMotion();
-    const navigate = useNavigate();
-
     const [searchText, setSearchText] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [openCreate, setOpenCreate] = useState(false);
     const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
     const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
     const [openLocationsWarehouseId, setOpenLocationsWarehouseId] = useState<string | null>(null);
-    const [warehouse, setWarehouse] = useState<{ warehouseId: string; name: string } | null>(null);;
-    const [locations, setLocations] = useState<WarehouseLocation[]>([]);
-    const [locationsLoading, setLocationsLoading] = useState(false);
-    const [locationsError, setLocationsError] = useState<string | null>(null);
-
-    const openLocationsModal = async (warehouseId: string) => {
-        setOpenLocationsWarehouseId(warehouseId);
-        setLocations([]);
-        setLocationsError(null);
-        setLocationsLoading(true);
-        
-        try {
-            const res = await getLocations(warehouseId);
-            const items = res.locations;
-            setLocations(items);
-            console.log(items,'locations');
-        } catch (err: any) {
-            setLocationsError(err?.message ?? String(err));
-        } finally {
-            setLocationsLoading(false);
-        }
-    };
-
-    const closeLocationsModal = () => {
-        setOpenLocationsWarehouseId(null);
-        setLocations([]);
-        setLocationsError(null);
-        setLocationsLoading(false);
-    };
+    const [warehouse, setWarehouse] = useState<{ warehouseId: string; name: string } | null>(null);
 
     const [page, setPage] = useState(1);
     const [debouncedQ, setDebouncedQ] = useState("");
@@ -82,13 +51,18 @@ export default function Warehouses() {
         () => ({
             page,
             limit,
-            isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
+            isActive:
+                statusFilter === "all"
+                    ? undefined
+                    : statusFilter === "active"
+                      ? ("true" as const)
+                      : ("false" as const),
             q: debouncedQ.trim() || undefined,
         }),
         [page, limit, statusFilter, debouncedQ],
     );
 
-    const { items: warehouses, total, page: apiPage, limit: apiLimit, loading, error, setActive, getLocations, refetch } = useWarehouses(queryParams);
+    const { items: warehouses, total, page: apiPage, limit: apiLimit, loading, error, setActive, refetch } = useWarehouses(queryParams);
 
     useEffect(() => {
         if (apiPage && apiPage !== page) setPage(apiPage);
@@ -116,6 +90,16 @@ export default function Warehouses() {
     const startCreate = () => {
         setEditingWarehouseId(null);
         setOpenCreate(true);
+    };
+
+    const openLocationsModal = (currentWarehouse: { warehouseId: string; name: string }) => {
+        setWarehouse(currentWarehouse);
+        setOpenLocationsWarehouseId(currentWarehouse.warehouseId);
+    };
+
+    const closeLocationsModal = () => {
+        setOpenLocationsWarehouseId(null);
+        setWarehouse(null);
     };
 
     const startEdit = (warehouseId: string) => {
@@ -180,15 +164,6 @@ export default function Warehouses() {
         return [header.join(","), ...lines].join("\n");
     };
 
-    const goToCreateLocation = () => {
-        if(!warehouse) return;
-        const params = new URLSearchParams({
-            warehouseId: warehouse.warehouseId,
-            name: warehouse.name,
-            create: "1",
-        });
-        navigate(`/almacen/ubicaciones?${params.toString()}`);    };
-    
     const downloadCsv = async () => {
         if (exporting) return;
         setExporting(true);
@@ -243,46 +218,6 @@ export default function Warehouses() {
             {active ? "Activo" : "Inactivo"}
         </span>
     );
-
-    const IconButton = ({
-        onClick,
-        title,
-        children,
-        tone = "neutral",
-    }: {
-        onClick: (e: React.MouseEvent) => void;
-        title: string;
-        children: React.ReactNode;
-        tone?: "neutral" | "primary" | "danger";
-    }) => {
-        const styles =
-            tone === "primary"
-                ? "border-[color:var(--p-200)] bg-[color:var(--p)] text-white hover:bg-[color:var(--p-hover)] focus:ring-[color:var(--p-200)]"
-                : tone === "danger"
-                  ? "border-rose-600/20 bg-rose-50 text-rose-700 hover:bg-rose-100 focus:ring-rose-600/25"
-                  : "border-black/10 bg-white hover:bg-black/[0.03] focus:ring-black/10";
-
-        return (
-            <button
-                type="button"
-                title={title}
-                aria-label={title}
-                onClick={onClick}
-                className={["inline-flex h-9 w-9 items-center justify-center rounded-xl border transition", styles, "focus:outline-none focus:ring-2"].join(" ")}
-                style={
-                    tone === "primary"
-                        ? ({
-                              "--p": PRIMARY,
-                              "--p-hover": PRIMARY_HOVER,
-                              "--p-200": `${PRIMARY}33`,
-                          } as React.CSSProperties)
-                        : undefined
-                }
-            >
-                {children}
-            </button>
-        );
-    };
 
     return (
         <div className="w-full min-h-screen bg-white text-black">
@@ -418,7 +353,7 @@ export default function Warehouses() {
                                         animate={shouldReduceMotion ? false : "show"}
                                         exit={shouldReduceMotion ? undefined : "exit"}
                                     >
-                                        {sortedWarehouses.map((w, index) => {
+                                        {sortedWarehouses.map((w) => {
                                             const location = `${w.department} · ${w.province} · ${w.district}`;
 
                                             return (
@@ -449,9 +384,10 @@ export default function Warehouses() {
                                                                 title="Ver ubicaciones"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    openLocationsModal(w.warehouseId);
-                                                                    setWarehouse(w);
+                                                                    openLocationsModal({ warehouseId: w.warehouseId, name: w.name });
                                                                 }}
+                                                                PRIMARY={PRIMARY}
+                                                                PRIMARY_HOVER={PRIMARY_HOVER}
                                                             >
                                                                 <Boxes className="h-4 w-4" />
                                                             </IconButton>
@@ -461,6 +397,8 @@ export default function Warehouses() {
                                                                     e.stopPropagation();
                                                                     startEdit(w.warehouseId);
                                                                 }}
+                                                                PRIMARY={PRIMARY}
+                                                                PRIMARY_HOVER={PRIMARY_HOVER}
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                             </IconButton>
@@ -471,6 +409,8 @@ export default function Warehouses() {
                                                                     setDeletingWarehouseId(w.warehouseId);
                                                                 }}
                                                                 tone={w.isActive ? "danger" : "primary"}
+                                                                PRIMARY={PRIMARY}
+                                                                PRIMARY_HOVER={PRIMARY_HOVER}
                                                             >
                                                                 <Power className="h-4 w-4" />
                                                             </IconButton>
@@ -499,7 +439,7 @@ export default function Warehouses() {
                                 exit={shouldReduceMotion ? undefined : "exit"}
                                 className="max-h-[calc(100vh-360px)] overflow-auto p-4 sm:p-5 space-y-3"
                             >
-                                {sortedWarehouses.map((w, index) => {
+                                {sortedWarehouses.map((w) => {
                                     const location = `${w.department} · ${w.province} · ${w.district}`;
 
                                     return (
@@ -519,9 +459,10 @@ export default function Warehouses() {
                                                         title="Ver ubicaciones"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            openLocationsModal(w.warehouseId);
-                                                            setWarehouse(w);
+                                                            openLocationsModal({ warehouseId: w.warehouseId, name: w.name });
                                                         }}
+                                                        PRIMARY={PRIMARY}
+                                                        PRIMARY_HOVER={PRIMARY_HOVER}
                                                     >
                                                         <Boxes className="h-4 w-4" />
                                                     </IconButton>
@@ -531,6 +472,8 @@ export default function Warehouses() {
                                                             e.stopPropagation();
                                                             startEdit(w.warehouseId);
                                                         }}
+                                                        PRIMARY={PRIMARY}
+                                                        PRIMARY_HOVER={PRIMARY_HOVER}
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </IconButton>
@@ -541,6 +484,8 @@ export default function Warehouses() {
                                                             setDeletingWarehouseId(w.warehouseId);
                                                         }}
                                                         tone={w.isActive ? "danger" : "primary"}
+                                                        PRIMARY={PRIMARY}
+                                                        PRIMARY_HOVER={PRIMARY_HOVER}
                                                     >
                                                         <Power className="h-4 w-4" />
                                                     </IconButton>
@@ -635,100 +580,11 @@ export default function Warehouses() {
                     </motion.div>
                 </Modal>
             )}
-            {openLocationsWarehouseId && (
-                <Modal title={`Ubicaciones del almacén - ${warehouse?.name}`} onClose={closeLocationsModal} className="max-w-3xl">
-                    <motion.div
-                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.16 }}
-                    >
-                        <div className="mb-3 flex items-start justify-between gap-3">
-                            <button
-                                type="button"
-                                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                                onClick={() => openLocationsModal(openLocationsWarehouseId)}
-                                disabled={locationsLoading}
-                            >
-                                {locationsLoading ? "Cargando..." : "Refrescar"}
-                            </button>
-                            <button
-                                className="rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
-                                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
-                                onMouseEnter={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                                }}
-                                onMouseLeave={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                                }}
-                                onClick={goToCreateLocation}
-                            >
-                                Nueva ubicación
-                            </button>
-                        </div>
-
-                        <div className="rounded-3xl border border-black/10 bg-white overflow-hidden">
-                            <div className="max-h-[60vh] overflow-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="sticky top-0 z-10 bg-white">
-                                        <tr className="border-b border-black/10 text-xs text-black/60">
-                                            <th className="py-3 px-4 text-left">Código</th>
-                                            <th className="py-3 px-4 text-left">Nombre</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        {locationsLoading && (
-                                            <tr>
-                                                <td className="py-4 px-4 text-black/60" colSpan={4}>
-                                                    Cargando ubicaciones...
-                                                </td>
-                                            </tr>
-                                        )}
-
-                                        {!locationsLoading && locationsError && (
-                                            <tr>
-                                                <td className="py-4 px-4 text-rose-600" colSpan={4}>
-                                                    {locationsError}
-                                                </td>
-                                            </tr>
-                                        )}
-
-                                        {!locationsLoading && !locationsError && locations.length === 0 && (
-                                            <tr>
-                                                <td className="py-4 px-4 text-black/60" colSpan={4}>
-                                                    Este almacén no tiene ubicaciones registradas.
-                                                </td>
-                                            </tr>
-                                        )}
-
-                                        {!locationsLoading &&
-                                            !locationsError &&
-                                            locations.map((loc) => (
-                                                <tr key={loc.locationId} className="border-b border-black/5 hover:bg-black/[0.02]">
-                                                    <td className="py-3 px-4 text-black/70 tabular-nums">{loc.code ?? "-"}</td>
-                                                    <td className="py-3 px-4">
-                                                        <p className="font-medium">{loc.description ?? "-"}</p>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 flex justify-end">
-                            <button
-                                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                                onClick={closeLocationsModal}
-                            >
-                                Cerrar
-                            </button>
-                        </div>
-                    </motion.div>
-                </Modal>
-            )}
+            <WarehouseLocationsModal 
+            open={Boolean(openLocationsWarehouseId && warehouse)} 
+            warehouse={warehouse} onClose={closeLocationsModal} 
+            primaryColor={PRIMARY} 
+            primaryHover={PRIMARY_HOVER} />
         </div>
     );
 }
-
-

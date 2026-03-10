@@ -7,8 +7,12 @@ import { listSuppliers, updateSupplierActive } from "@/services/supplierService"
 import type { Supplier } from "@/pages/providers/types/supplier";
 import { Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
+import { useSidebarContext } from "@/components/dashboard/SidebarContext";
+import { IconButton } from "@/components/IconBoton";
 
 const PRIMARY = "#21b8a6";
+const PRIMARY_HOVER = "#1aa392";
+
 
 export default function Providers() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -35,6 +39,8 @@ export default function Providers() {
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [toggleSupplierId, setToggleSupplierId] = useState<string | null>(null);
   const [nextActiveState, setNextActiveState] = useState(false);
+  const { setCollapsed } = useSidebarContext();
+
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -43,6 +49,10 @@ export default function Providers() {
     }, 400);
     return () => clearTimeout(t);
   }, [searchText]);
+  
+  useEffect(() => {
+      setCollapsed(true);
+  }, []);
 
   const loadSuppliers = async () => {
     clearFlash();
@@ -232,25 +242,26 @@ export default function Providers() {
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]"
-                          onClick={() => openEdit(supplier.supplierId)}
+                        <IconButton
                           title="Editar"
+                          onClick={() => openEdit(supplier.supplierId)}
+                          PRIMARY={PRIMARY}
+                          PRIMARY_HOVER={PRIMARY_HOVER}
                         >
                           <Pencil className="h-4 w-4" />
-                        </button>
-
-                        <button
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]
-                             ${supplier.isActive ? "text-rose-500" : "text-emerald-500"}`}
-                          onClick={() => {
-                            setToggleSupplierId(supplier.supplierId);
-                            setNextActiveState(!supplier.isActive);
-                          }}
+                        </IconButton>
+                        <IconButton
                           title={supplier.isActive ? "Desactivar" : "Activar"}
-                        >
+                          onClick={() => {
+                             setToggleSupplierId(supplier.supplierId);
+                             setNextActiveState(!supplier.isActive);
+                          }}
+                          tone={supplier.isActive ? "danger" : "primary"}
+                          PRIMARY={PRIMARY}
+                          PRIMARY_HOVER={PRIMARY_HOVER}
+                      >
                           <Power className="h-4 w-4" />
-                        </button>
+                      </IconButton> 
                       </div>
                     </td>
                   </tr>
