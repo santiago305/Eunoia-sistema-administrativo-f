@@ -27,6 +27,21 @@ const formatTime12 = (d: Date) => {
     return `${hh}:${mm}:${ss} ${ampm}`;
 };
 
+const formatDuration = (ms: number) => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const days = Math.floor(totalSeconds / (24 * 60 * 60));
+    const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+    const seconds = totalSeconds % 60;
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0 || days > 0) parts.push(`${hours}h`);
+    parts.push(`${minutes}m`);
+    parts.push(`${seconds}s`);
+    return parts.join(", ");
+};
+
 export default function TimerToEnd({ from, to, className, loadPurchases }: TimerToEndProps) {
     const [now, setNow] = useState(() => Date.now());
     const [didReload, setDidReload] = useState(false);
@@ -60,20 +75,18 @@ export default function TimerToEnd({ from, to, className, loadPurchases }: Timer
         }
     }, [to, now, didReload, loadPurchases, waitUntil]);
 
-    const { dateText, timeText, isValid } = useMemo(() => {
+    const { durationText, isValid } = useMemo(() => {
         const startMs = Date.parse(from);
         const endMs = Date.parse(to);
 
         if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
-            return { dateText: "--/--/--", timeText: "--:--:-- --", isValid: false };
+            return { durationText: "--", isValid: false };
         }
 
-        const currentMs = Math.min(Math.max(now, startMs), endMs);
-        const currentDate = new Date(currentMs);
+        const remainingMs = now < startMs ? endMs - startMs : endMs - now;
 
         return {
-            dateText: formatDate(currentDate),
-            timeText: formatTime12(currentDate),
+            durationText: formatDuration(remainingMs),
             isValid: true,
         };
     }, [from, to, now]);
@@ -83,16 +96,15 @@ export default function TimerToEnd({ from, to, className, loadPurchases }: Timer
     const isWaiting = waitUntil !== null && !didReload;
 
     return (
-        <div className={`${className} p-2`}>
+        <div className={`${className} p-0`}>
             {!isWaiting && (
                 <>
-                    <div className="tabular-nums">{isValid ? dateText : "--/--/--"}</div>
-                    <div className="tabular-nums">{isValid ? timeText : "--:--:-- --"}</div>
+                    <div className="tabular-nums">{isValid ? durationText : "--"}</div>
                 </>
             )}
             {isWaiting && (
-                <div className="mt-1 flex items-center gap-2 text-xs text-black/60">
-                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-black/30 border-t-black/70" />
+                <div className="mt-1 flex items-center gap-2 text-[10px] text-black/60">
+                    <span className="inline-block h-2 w-2 animate-spin rounded-full border-2 border-black/30 border-t-black/70" />
                     <span>Ingreso a almacen en {waitRemainingSec}s...</span>
                 </div>
             )}

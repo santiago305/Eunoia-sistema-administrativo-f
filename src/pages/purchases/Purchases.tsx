@@ -395,15 +395,15 @@ export default function Purchases() {
                                   <th className="py-3 px-3 text-left w-[58px]">Documento</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Numero</th>
                                   <th className="py-3 px-3 text-left w-[130px]">Proveedor</th>
-                                  <th className="py-3 px-3 text-left w-[95px]">Almacen</th>
-                                  <th className="py-3 px-3 text-left w-[50px]">Forma</th>
+                                  <th className="py-3 px-3 text-left w-[92px]">Almacen</th>
+                                  <th className="py-3 px-3 text-left w-[37px]">Forma</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Total</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Pagado</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Pendiente</th>
                                   <th className="py-3 px-3 text-left w-[40px]">Estado</th>
-                                  <th className="py-3 px-3 text-left w-[65px]">T. Espera</th>
-                                  <th className="py-3 px-3 text-left w-[70px]">Ing. Almacen</th>
-                                  <th className="py-3 px-0 text-left w-[25px]"></th>
+                                  <th className="py-3 px-3 text-left w-[83px]">T. Espera</th>
+                                  <th className="py-3 px-3 text-left w-[60px]">Ing. Almacen</th>
+                                  <th className="py-3 px-0 text-left w-[20px]"></th>
                               </tr>
                           </thead>
                           <tbody key={listKey}>
@@ -452,9 +452,9 @@ export default function Purchases() {
                                           <td className="py-1 px-3">
                                               <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">{statusLabel}</span>
                                           </td>
-                                          <td className="py-1 px-3">
+                                          <td className="py-1 px-3 m-auto">
                                               {purchase.status === PurchaseOrderStatuses.SENT && (
-                                                  <span className="inline-flex rounded-lg  px-0 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                                                  <span className="inline-flex rounded-lg  px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
                                                       <TimerToEnd from={now} to={purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />
                                                   </span>
                                               )}
