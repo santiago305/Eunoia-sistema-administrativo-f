@@ -47,6 +47,13 @@ export const toDateInputValue = (value?: string | null) => {
   return match ? match[0] : "";
 };
 
+export const toDateTimeInputValue = (value?: string | null) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return toLocalIso(date).slice(0, 16);
+};
+
 export const todayIso = () => toLocalIso(new Date());
 
 export const addDaysToIsoDate = (days?: number | null) => {

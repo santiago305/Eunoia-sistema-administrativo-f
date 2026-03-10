@@ -392,7 +392,7 @@ export default function Purchases() {
                           <thead className="sticky top-0 z-10 bg-gray-50">
                               <tr className="border-b border-black/10 text-black/60 text-[10px]">
                                   <th className="py-3 px-3 text-left w-[60px]">Fecha emision</th>
-                                  <th className="py-3 px-3 text-left w-[55px]">Documento</th>
+                                  <th className="py-3 px-3 text-left w-[58px]">Documento</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Numero</th>
                                   <th className="py-3 px-3 text-left w-[130px]">Proveedor</th>
                                   <th className="py-3 px-3 text-left w-[95px]">Almacen</th>
@@ -528,8 +528,8 @@ export default function Purchases() {
                                                           className="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
                                                           onClick={() => {
                                                               setModalPayment(true);
-                                                              setTotalPaid(purchase.totalPaid);
-                                                              setTotalToPay(purchase.totalToPay);
+                                                              setTotalPaid(purchase.totalPaid ?? 0);
+                                                              setTotalToPay(purchase.totalToPay ?? 0);
                                                               setPoId(purchase.poId ?? "");
                                                           }}
                                                           type="button"
