@@ -637,10 +637,10 @@ export default function PurchaseCreateLocal() {
                                 <div className="space-y-1">
                                     <label className="text-[11px] text-black/60">Fecha de emision</label>
                                     <input
-                                        type="date"
+                                        type="datetime-local"
                                         className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
                                         style={ringStyle}
-                                        value={toDateInputValue(form.dateIssue)}
+                                        value={toDateTimeInputValue(form.dateIssue)}
                                         onClick={(e) => tryShowPicker(e.currentTarget)}
                                         onChange={(e) => {
                                             const nextDate = e.target.value;

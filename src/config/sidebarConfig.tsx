@@ -103,14 +103,9 @@ export const getSidebarItems = (): SidebarItem[] => [
         ],
     },
     {
-        label: "Contactos",
+        label: "Proveedores",
         icon: <IconUsers className="text-sidebar-foreground" />,
-        children: [
-            {
-                label: "Proveedores",
-                href: RoutesPaths.providers,
-            },
-        ],
+        href: RoutesPaths.providers
     },
     {
         label: "Usuarios",
@@ -121,7 +116,7 @@ export const getSidebarItems = (): SidebarItem[] => [
         label: "Seguridad",
         href: RoutesPaths.security,
         icon: <IconUsers className="text-sidebar-foreground" />,
-    }
+    },
 ];
 
 

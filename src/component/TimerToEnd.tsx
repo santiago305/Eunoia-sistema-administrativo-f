@@ -37,7 +37,8 @@ const formatDuration = (ms: number) => {
     const parts: string[] = [];
     if (days > 0) parts.push(`${days}d`);
     if (hours > 0 || days > 0) parts.push(`${hours}h`);
-    parts.push(`${minutes}m`);
+    if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}m`);
+
     parts.push(`${seconds}s`);
     return parts.join(", ");
 };

@@ -276,32 +276,34 @@ export default function Purchases() {
 
               <section className=" bg-gray-50 shadow-sm  p-4 space-y-3">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.2fr_0.2fr_0.5fr_1fr_1fr_0.5fr_0.6fr]">
-                          <label className="text-[10px] text-black/60 font-bold">Fecha inicio
-                            <input
-                                type="date"
-                                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                                style={ringStyle}
-                                value={toDateInputValue(fromDate)}
-                                onClick={(e) => tryShowPicker(e.currentTarget)}
-                                onChange={(e) => {
-                                    setFromDate(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                          </label>
-                          <label className="text-[10px] text-black/60 font-bold">Fecha fin
-                            <input
-                                type="date"
-                                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                                style={ringStyle}
-                                value={toDateInputValue(toDate)}
-                                onClick={(e) => tryShowPicker(e.currentTarget)}
-                                onChange={(e) => {
-                                    setToDate(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                          </label>
+                      <label className="text-[10px] text-black/60 font-bold">
+                          Fecha inicio
+                          <input
+                              type="date"
+                              className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
+                              style={ringStyle}
+                              value={toDateInputValue(fromDate)}
+                              onClick={(e) => tryShowPicker(e.currentTarget)}
+                              onChange={(e) => {
+                                  setFromDate(e.target.value);
+                                  setPage(1);
+                              }}
+                          />
+                      </label>
+                      <label className="text-[10px] text-black/60 font-bold">
+                          Fecha fin
+                          <input
+                              type="date"
+                              className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
+                              style={ringStyle}
+                              value={toDateInputValue(toDate)}
+                              onClick={(e) => tryShowPicker(e.currentTarget)}
+                              onChange={(e) => {
+                                  setToDate(e.target.value);
+                                  setPage(1);
+                              }}
+                          />
+                      </label>
                       <label className="text-[10px] text-black/60 font-bold">
                           Número de documento
                           <input
@@ -387,8 +389,8 @@ export default function Purchases() {
               </section>
 
               <section className=" border-black/10 bg-white shadow-sm overflow-hidden">
-                  <div className="max-h-full min-h-100 overflow-auto">
-                      <table className="w-full text-[10px] table-fixed">
+                  <div className="max-h-[calc(100vh-220px)] min-h-[calc(100vh-220px)] overflow-auto">
+                      <table className="w-full h-full table-fixed">
                           <thead className="sticky top-0 z-10 bg-gray-50">
                               <tr className="border-b border-black/10 text-black/60 text-[10px]">
                                   <th className="py-3 px-3 text-left w-[60px]">Fecha emision</th>
@@ -401,7 +403,7 @@ export default function Purchases() {
                                   <th className="py-3 px-3 text-left w-[50px]">Pagado</th>
                                   <th className="py-3 px-3 text-left w-[50px]">Pendiente</th>
                                   <th className="py-3 px-3 text-left w-[40px]">Estado</th>
-                                  <th className="py-3 px-3 text-left w-[83px]">T. Espera</th>
+                                  <th className="py-3 px-3 text-center w-[83px]">T. Espera</th>
                                   <th className="py-3 px-3 text-left w-[60px]">Ing. Almacen</th>
                                   <th className="py-3 px-0 text-left w-[20px]"></th>
                               </tr>
@@ -452,7 +454,7 @@ export default function Purchases() {
                                           <td className="py-1 px-3">
                                               <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">{statusLabel}</span>
                                           </td>
-                                          <td className="py-1 px-3 m-auto">
+                                          <td className="py-1 px-3 flex justify-center align-middle ">
                                               {purchase.status === PurchaseOrderStatuses.SENT && (
                                                   <span className="inline-flex rounded-lg  px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
                                                       <TimerToEnd from={now} to={purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />

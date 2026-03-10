@@ -20,9 +20,14 @@ export default function Providers() {
   const limit = 10;
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [total, setTotal] = useState(0);
-  const [apiPage, setApiPage] = useState(1);
-  const [apiLimit, setApiLimit] = useState(limit);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,12 +57,27 @@ export default function Providers() {
       });
 
       setSuppliers(res.items ?? []);
-      setTotal(res.total ?? 0);
-      setApiPage(res.page ?? page);
-      setApiLimit(res.limit ?? limit);
+      const nextTotal = res.total ?? 0;
+      const nextPage = res.page ?? page;
+      const nextLimit = res.limit ?? limit;
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || limit)));
+      setPagination({
+        total: nextTotal,
+        page: nextPage,
+        limit: nextLimit,
+        totalPages: nextTotalPages,
+        hasPrev: nextPage > 1,
+        hasNext: nextPage < nextTotalPages,
+      });
     } catch {
       setSuppliers([]);
-      setTotal(0);
+      setPagination((prev) => ({
+        ...prev,
+        total: 0,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      }));
       setError("Error al listar proveedores");
       showFlash(errorResponse("Error al listar proveedores"));
     } finally {
@@ -69,13 +89,10 @@ export default function Providers() {
     void loadSuppliers();
   }, [page, debouncedSearch, statusFilter]);
 
-  useEffect(() => {
-    if (apiPage !== page) setPage(apiPage);
-  }, [apiPage, page]);
-
-  const totalPages = Math.max(1, Math.ceil(total / (apiLimit || limit)));
-  const startIndex = total === 0 ? 0 : (apiPage - 1) * (apiLimit || limit) + 1;
-  const endIndex = Math.min(apiPage * (apiLimit || limit), total);
+  const safePage = Math.max(1, pagination.page || page);
+  const totalPages = Math.max(1, pagination.totalPages);
+  const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
+  const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
 
   const startCreate = () => {
     setEditingSupplierId(null);
@@ -108,20 +125,20 @@ export default function Providers() {
   return (
     <div className="w-full min-h-screen bg-white text-black">
       <PageTitle title="Proveedores" />
-      <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-3 space-y-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Proveedores</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Proveedores</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
-              Total: <span className="font-semibold text-black">{total}</span>
+            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+              Total: <span className="font-semibold text-black">{pagination.total}</span>
             </div>
 
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
               onClick={startCreate}
               style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
             >
@@ -131,12 +148,12 @@ export default function Providers() {
           </div>
         </div>
 
-        <section className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm">
+        <section className="bg-gray-50 shadow-sm  p-4 space-y-3">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <input
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
+                className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
                 style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
                 placeholder="Buscar por nombre, documento, correo o telefono"
                 value={searchText}
@@ -147,7 +164,7 @@ export default function Providers() {
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <select
-                className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+                className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
                 style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
                 value={statusFilter}
                 onChange={(e) => {
@@ -163,33 +180,26 @@ export default function Providers() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
-            <p className="text-sm font-semibold">Listado de proveedores</p>
-            <div className="text-xs text-black/60 hidden sm:block">
-              {loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}
-            </div>
-          </div>
-
-          <div className="max-h-[calc(100vh-320px)] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-white">
-                <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-3 px-5 text-left">Documento</th>
-                  <th className="py-3 px-5 text-left">Proveedor</th>
-                  <th className="py-3 px-5 text-left">Email</th>
-                  <th className="py-3 px-5 text-left">Telefono</th>
-                  <th className="py-3 px-5 text-left">Direccion</th>
-                  <th className="py-3 px-5 text-center">Tiempo de espera</th>
-                  <th className="py-3 px-5 text-left">Nota</th>
-                  <th className="py-3 px-5 text-left">Estado</th>
-                  <th className="py-3 px-5 text-right">Acciones</th>
+        <section className=" border-black/10 bg-white shadow-sm overflow-hidden"> 
+          <div className="max-h-[calc(100vh-238px)] min-h-[calc(100vh-238px)] overflow-auto">
+            <table className="w-full h-full table-fixed">
+              <thead className="sticky top-0 z-10 bg-gray-50">
+                <tr className="border-b border-black/10 text-xs text-black/60 text-[11px]">
+                  <th className="py-3 px-5 text-left w-30">Documento</th>
+                  <th className="py-3 px-5 text-left w-60">Proveedor</th>
+                  <th className="py-3 px-5 text-left w-40">Email</th>
+                  <th className="py-3 px-5 text-left w-25">Telefono</th>
+                  <th className="py-3 px-5 text-left w-40">Direccion</th>
+                  <th className="py-3 px-5 text-center w-25">T. Espera</th>
+                  <th className="py-3 px-5 text-left w-30">Nota</th>
+                  <th className="py-3 px-5 text-left w-20">Estado</th>
+                  <th className="py-3 px-5 text-right w-30"></th>
                 </tr>
               </thead>
 
               <tbody key={listKey}>
                 {suppliers.map((supplier) => (
-                  <tr key={supplier.supplierId} className="border-b border-black/5">
+                  <tr key={supplier.supplierId} className="border-b border-black/5 text-[11px]">
                     <td className="py-3 px-5">
                       <div className="text-black/60 text-xs">{supplier.documentNumber}</div>
                     </td>
@@ -223,7 +233,7 @@ export default function Providers() {
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]"
                           onClick={() => openEdit(supplier.supplierId)}
                           title="Editar"
                         >
@@ -231,7 +241,7 @@ export default function Providers() {
                         </button>
 
                         <button
-                          className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white hover:bg-black/[0.03]
                              ${supplier.isActive ? "text-rose-500" : "text-emerald-500"}`}
                           onClick={() => {
                             setToggleSupplierId(supplier.supplierId);
@@ -256,25 +266,25 @@ export default function Providers() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
             <span className="hidden sm:inline">
-              Mostrando {startIndex}-{endIndex} de {total}
+              Mostrando {startIndex}-{endIndex} de {pagination.total}
             </span>
 
             <div className="flex items-center gap-2">
               <button
-                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
+                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
+                disabled={!pagination.hasPrev || loading}
+                onClick={() => setPage(Math.max(1, safePage - 1))}
                 type="button"
               >
                 Anterior
               </button>
 
-              <span className="tabular-nums">Pagina {page} de {totalPages}</span>
+              <span className="tabular-nums">Pagina {safePage} de {totalPages}</span>
 
               <button
-                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
+                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
+                disabled={!pagination.hasNext || loading}
+                onClick={() => setPage(safePage + 1)}
                 type="button"
               >
                 Siguiente
@@ -312,11 +322,11 @@ export default function Providers() {
             {nextActiveState ? "Se activara el proveedor nuevamente." : "Se desactivara el proveedor seleccionado."}
           </p>
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setToggleSupplierId(null)}>
+            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => setToggleSupplierId(null)}>
               Cancelar
             </button>
             <button
-              className="rounded-2xl border px-4 py-2 text-sm text-white"
+              className="rounded-lg border px-4 py-2 text-sm text-white"
               style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
               onClick={confirmToggleActive}
             >
