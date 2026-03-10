@@ -151,7 +151,7 @@ export function WarehouseFormModal({
                     <label className="text-sm">
                         Nombre
                         <input
-                            className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
+                            className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
                             style={primaryRing}
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -163,7 +163,7 @@ export function WarehouseFormModal({
                         <label className="text-sm">
                             Departamento
                             <input
-                                className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
+                                className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
                                 style={primaryRing}
                                 value={form.department}
                                 onChange={(e) => setForm({ ...form, department: e.target.value })}
@@ -173,7 +173,7 @@ export function WarehouseFormModal({
                         <label className="text-sm">
                             Provincia
                             <input
-                                className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
+                                className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
                                 style={primaryRing}
                                 value={form.province}
                                 onChange={(e) => setForm({ ...form, province: e.target.value })}
@@ -185,7 +185,7 @@ export function WarehouseFormModal({
                     <label className="text-sm">
                         Distrito
                         <input
-                            className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-3 text-sm outline-none focus:ring-2"
+                            className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
                             style={primaryRing}
                             value={form.district}
                             onChange={(e) => setForm({ ...form, district: e.target.value })}
@@ -196,7 +196,7 @@ export function WarehouseFormModal({
                     <label className="text-sm">
                         Dirección (opcional)
                         <textarea
-                            className="mt-2 min-h-[90px] w-full rounded-2xl border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
+                            className="mt-2 min-h-[90px] w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
                             style={primaryRing}
                             value={form.address}
                             onChange={(e) => setForm({ ...form, address: e.target.value })}
@@ -205,18 +205,18 @@ export function WarehouseFormModal({
                     </label>
                 </div>
 
-                {error && <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+                {error && <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
                 <div className="mt-4 flex justify-end gap-2">
                     <button
-                        className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                        className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
                         onClick={onClose}
                         disabled={saving}
                     >
                         Cancelar
                     </button>
                     <button
-                        className="rounded-2xl border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2"
+                        className="rounded-lg border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2"
                         style={
                             {
                                 backgroundColor: primaryColor,

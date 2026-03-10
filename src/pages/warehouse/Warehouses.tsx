@@ -9,6 +9,8 @@ import { listWarehouses } from "@/services/warehouseServices";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
 import { IconButton } from "@/components/IconBoton";
+import { StatusPill } from "@/components/StatusTag";
+import { fadeUp, item, list } from "@/utils/animations";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -28,24 +30,6 @@ export default function Warehouses() {
     const limit = 10;
 
     const [exporting, setExporting] = useState(false);
-
-    const fadeUp = {
-        hidden: { opacity: 0, y: 10 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.18 } },
-        exit: { opacity: 0, y: 6, transition: { duration: 0.12 } },
-    };
-
-    const list = {
-        hidden: { opacity: 0 },
-        show: { opacity: 1, transition: { staggerChildren: 0.03, delayChildren: 0.02 } },
-        exit: { opacity: 0, transition: { duration: 0.12 } },
-    };
-
-    const item = {
-        hidden: { opacity: 0, y: 6 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.14 } },
-        exit: { opacity: 0, y: 6, transition: { duration: 0.1 } },
-    };
 
     const queryParams = useMemo(
         () => ({
@@ -197,27 +181,6 @@ export default function Warehouses() {
             setExporting(false);
         }
     };
-
-    const StatusPill = ({ active }: { active: boolean }) => (
-        <span
-            className={[
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
-                active ? "bg-[color:var(--p-50)] text-[color:var(--p-700)] ring-[color:var(--p-200)]" : "bg-rose-50 text-rose-700 ring-rose-200",
-            ].join(" ")}
-            style={
-                active
-                    ? ({
-                          "--p-50": `${PRIMARY}14`,
-                          "--p-200": `${PRIMARY}33`,
-                          "--p-700": PRIMARY,
-                      } as React.CSSProperties)
-                    : undefined
-            }
-        >
-            <span className={["h-1.5 w-1.5 rounded-full", active ? "bg-[color:var(--p-dot)]" : "bg-rose-500"].join(" ")} style={active ? ({ "--p-dot": PRIMARY } as React.CSSProperties) : undefined} />
-            {active ? "Activo" : "Inactivo"}
-        </span>
-    );
 
     return (
         <div className="w-full min-h-screen bg-white text-black">
@@ -375,7 +338,7 @@ export default function Warehouses() {
                                                     </td>
 
                                                     <td className="py-4 px-5 select-text">
-                                                        <StatusPill active={w.isActive} />
+                                                        <StatusPill active={w.isActive} PRIMARY={PRIMARY} />
                                                     </td>
 
                                                     <td className="py-4 px-5 select-text">
@@ -450,7 +413,7 @@ export default function Warehouses() {
                                                     <p className="mt-1 text-sm text-black/70 truncate">{location}</p>
                                                     <p className="mt-1 text-sm text-black/70 line-clamp-2">{w.address || "-"}</p>
                                                     <div className="mt-3">
-                                                        <StatusPill active={w.isActive} />
+                                                        <StatusPill active={w.isActive} PRIMARY={PRIMARY} />
                                                     </div>
                                                 </div>
 

@@ -9,6 +9,7 @@ import { Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-re
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { IconButton } from "@/components/IconBoton";
+import { StatusPill } from "@/components/StatusTag";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -231,14 +232,7 @@ export default function Providers() {
                     </td>
                     <td className="py-3 px-5 text-black/70">{supplier.note ?? "-"}</td>
                     <td className="py-3 px-5">
-                      <span
-                        className={[
-                          "inline-flex rounded-full px-2 py-1 text-[11px] font-medium",
-                          supplier.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
-                        ].join(" ")}
-                      >
-                        {supplier.isActive ? "Activo" : "Inactivo"}
-                      </span>
+                      <StatusPill active={supplier.isActive} PRIMARY={PRIMARY} />
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-end gap-2">
