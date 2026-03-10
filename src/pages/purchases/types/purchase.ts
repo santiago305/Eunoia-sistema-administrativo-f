@@ -56,8 +56,8 @@ export type PurchaseOrder = {
   totalIgv: number;
   purchaseValue: number;
   total: number;
-  totalPaid: number;
-  totalToPay: number;
+  totalPaid?: number;
+  totalToPay?: number;
   note?: string | null;
   status: PurchaseOrderStatus;
   expectedAt?: string | null;
