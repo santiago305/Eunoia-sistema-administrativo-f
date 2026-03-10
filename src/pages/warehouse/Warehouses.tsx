@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, Download, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 
 import { useWarehouses } from "@/hooks/useWarehouse";
 import { listWarehouses } from "@/services/warehouseServices";
@@ -11,6 +11,7 @@ import { WarehouseLocationsModal } from "./components/LocationModal";
 import { IconButton } from "@/components/IconBoton";
 import { StatusPill } from "@/components/StatusTag";
 import { fadeUp, item, list } from "@/utils/animations";
+import { Dropdown } from "../purchases/components/PurchaseDropdown";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -195,17 +196,17 @@ export default function Warehouses() {
                     className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
                 >
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold tracking-tight">Almacenes</h1>
+                        <h1 className="text-xl font-semibold tracking-tight">Almacenes</h1>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+                        <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
                             Total: <span className="font-semibold text-black">{total}</span>
                         </div>
 
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
+                            className="inline-flex items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
                             onClick={downloadCsv}
                             disabled={exporting}
                             title="Exportar CSV"
@@ -216,7 +217,7 @@ export default function Warehouses() {
 
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
+                            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
                             onClick={startCreate}
                             title="Nuevo almacén"
                             style={{
@@ -242,13 +243,13 @@ export default function Warehouses() {
                     initial={shouldReduceMotion ? false : "hidden"}
                     animate={shouldReduceMotion ? false : "show"}
                     variants={fadeUp}
-                    className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
+                    className=" bg-gray-50 p-4 sm:p-5 shadow-sm"
                 >
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-3">
                         <div className="relative">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
                             <input
-                                className="h-11 w-full rounded-2xl border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
+                                className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
                                 style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
                                 placeholder="Buscar ( nombre / depto / provincia / distrito)"
                                 value={searchText}
@@ -262,7 +263,7 @@ export default function Warehouses() {
                         <div className="relative">
                             <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
                             <select
-                                className="h-11 w-full appearance-none rounded-2xl border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
+                                className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
                                 style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
                                 value={statusFilter}
                                 onChange={(event) => {
@@ -278,27 +279,17 @@ export default function Warehouses() {
                         </div>
                     </div>
                 </motion.section>
-
-                {/* Listado */}
                 <motion.section
                     initial={shouldReduceMotion ? false : "hidden"}
                     animate={shouldReduceMotion ? false : "show"}
                     variants={fadeUp}
-                    className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden"
+                    className="bg-white shadow-sm overflow-hidden"
                 >
-                    <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-black/10">
-                        <div>
-                            <p className="text-sm font-semibold">Listado de almacenes</p>
-                        </div>
-
-                        <div className="text-xs text-black/60 hidden sm:block">{loading ? "Cargando..." : `Mostrando ${startIndex}-${endIndex} de ${total}`}</div>
-                    </div>
-
-                    {/* DESKTOP */}
                     <div className="hidden lg:block">
-                        <div className="max-h-[calc(100vh-340px)] overflow-auto select-text">
-                            <table className="w-full text-sm select-text">
-                                <thead className="sticky top-0 z-10 bg-white">
+                        <div className="max-h-[calc(100vh-270px)] min-h-[calc(100vh-270px)] 
+                        overflow-auto select-text">
+                            <table className="w-full text-[11px] select-text">
+                                <thead className="sticky top-0 z-10 bg-gray-50">
                                     <tr className="border-b border-black/10 text-xs text-black/60">
                                         <th className="py-3 px-5 text-left">Almacén</th>
                                         <th className="py-3 px-5 text-left">Ubicación</th>
@@ -342,41 +333,46 @@ export default function Warehouses() {
                                                     </td>
 
                                                     <td className="py-4 px-5 select-text">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <IconButton
-                                                                title="Ver ubicaciones"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openLocationsModal({ warehouseId: w.warehouseId, name: w.name });
-                                                                }}
-                                                                PRIMARY={PRIMARY}
-                                                                PRIMARY_HOVER={PRIMARY_HOVER}
-                                                            >
-                                                                <Boxes className="h-4 w-4" />
-                                                            </IconButton>
-                                                            <IconButton
-                                                                title="Editar"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    startEdit(w.warehouseId);
-                                                                }}
-                                                                PRIMARY={PRIMARY}
-                                                                PRIMARY_HOVER={PRIMARY_HOVER}
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </IconButton>
-                                                            <IconButton
-                                                                title={w.isActive ? "Desactivar" : "Activar"}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setDeletingWarehouseId(w.warehouseId);
-                                                                }}
-                                                                tone={w.isActive ? "danger" : "primary"}
-                                                                PRIMARY={PRIMARY}
-                                                                PRIMARY_HOVER={PRIMARY_HOVER}
-                                                            >
-                                                                <Power className="h-4 w-4" />
-                                                            </IconButton>
+                                                        <div className="flex items-center justify-end">
+                                                            <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openLocationsModal({ warehouseId: w.warehouseId, name: w.name });
+                                                                        }}
+                                                                    >
+                                                                        <Boxes className="h-4 w-4 text-black/60" />
+                                                                        Ver ubicaciones
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            startEdit(w.warehouseId);
+                                                                        }}
+                                                                    >
+                                                                        <Pencil className="h-4 w-4 text-black/60" />
+                                                                        Editar
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                                                            w.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                                                                        }`}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setDeletingWarehouseId(w.warehouseId);
+                                                                        }}
+                                                                    >
+                                                                        <Power className="h-4 w-4" />
+                                                                        {w.isActive ? "Desactivar" : "Activar"}
+                                                                    </button>
+                                                                </div>
+                                                            </Dropdown>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -386,8 +382,8 @@ export default function Warehouses() {
                                 </AnimatePresence>
                             </table>
 
-                            {warehouses.length === 0 && !loading && <div className="px-5 py-8 text-sm text-black/60">No hay almacenes con los filtros actuales.</div>}
-                            {error && <div className="px-5 py-4 text-sm text-rose-600">{String(error)}</div>}
+                            {warehouses.length === 0 && !loading && <div className="px-5 py-8 text-[11px] text-black/60">No hay almacenes con los filtros actuales.</div>}
+                            {error && <div className="px-5 py-4 text-[11px] text-rose-600">{String(error)}</div>}
                         </div>
                     </div>
 
@@ -406,12 +402,12 @@ export default function Warehouses() {
                                     const location = `${w.department} · ${w.province} · ${w.district}`;
 
                                     return (
-                                        <motion.div key={w.warehouseId} variants={shouldReduceMotion ? undefined : item} layout className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+                                        <motion.div key={w.warehouseId} variants={shouldReduceMotion ? undefined : item} layout className="rounded-lg border border-black/10 bg-white p-4 shadow-sm">
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <p className="mt-1 font-semibold truncate">{w.name}</p>
-                                                    <p className="mt-1 text-sm text-black/70 truncate">{location}</p>
-                                                    <p className="mt-1 text-sm text-black/70 line-clamp-2">{w.address || "-"}</p>
+                                                    <p className="mt-1 text-[11px] text-black/70 truncate">{location}</p>
+                                                    <p className="mt-1 text-[11px] text-black/70 line-clamp-2">{w.address || "-"}</p>
                                                     <div className="mt-3">
                                                         <StatusPill active={w.isActive} PRIMARY={PRIMARY} />
                                                     </div>
@@ -461,9 +457,9 @@ export default function Warehouses() {
                                 })}
 
                                 {warehouses.length === 0 && !loading && (
-                                    <div className="rounded-3xl border border-black/10 bg-white p-4 text-sm text-black/60">No hay almacenes con los filtros actuales.</div>
+                                    <div className="rounded-lg border border-black/10 bg-white p-4 text-[11px] text-black/60">No hay almacenes con los filtros actuales.</div>
                                 )}
-                                {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{String(error)}</div>}
+                                {error && <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-[11px] text-rose-700">{String(error)}</div>}
                             </motion.div>
                         </AnimatePresence>
                     </div>
@@ -475,7 +471,7 @@ export default function Warehouses() {
 
                         <div className="flex items-center gap-2">
                             <button
-                                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
                                 disabled={page === 1}
                                 onClick={() => setPage(page - 1)}
                                 type="button"
@@ -488,7 +484,7 @@ export default function Warehouses() {
                             </span>
 
                             <button
-                                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
                                 disabled={page === totalPages || totalPages === 0}
                                 onClick={() => setPage(page + 1)}
                                 type="button"
@@ -520,21 +516,21 @@ export default function Warehouses() {
                         animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
                         transition={{ duration: 0.16 }}
                     >
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
                             <span className="font-semibold">Ojo:</span> estás por cambiar el estado de un almacén. Hazlo solo si estás seguro.
                         </div>
 
-                        <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar disponibilidad, reportes y procesos internos.</p>
+                        <p className="mt-3 text-[11px] text-black/70">¿Confirmas esta acción? Puede afectar disponibilidad, reportes y procesos internos.</p>
 
                         <div className="mt-4 flex justify-end gap-2">
                             <button
-                                className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-[11px] hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
                                 onClick={() => setDeletingWarehouseId(null)}
                             >
                                 Cancelar
                             </button>
                             <button
-                                className="rounded-2xl border border-rose-600/20 bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
+                                className="rounded-lg border border-rose-600/20 bg-rose-600 px-4 py-2 text-[11px] text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
                                 onClick={confirmDelete}
                             >
                                 Confirmar
