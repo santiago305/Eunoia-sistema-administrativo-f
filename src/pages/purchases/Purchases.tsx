@@ -631,6 +631,7 @@ export default function Purchases() {
                   }}
                   poId={poId}
                   className="max-w-[800px]"
+                  loadPurchases={loadPurchases}
               />
           )}
       </div>

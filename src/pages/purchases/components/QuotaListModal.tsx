@@ -4,7 +4,7 @@ import type { CreditQuota } from "@/pages/purchases/types/purchase";
 import type { CurrencyType } from "@/pages/purchases/types/purchaseEnums";
 import { CurrencyTypes } from "@/pages/purchases/types/purchaseEnums";
 import { money } from "@/utils/functionPurchases";
-import { Plus } from "lucide-react";
+import { Banknote, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PaymentModal } from "./PaymentModal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -19,6 +19,7 @@ export type QuotaListModalProps = {
   poId: string;
   quotas?: CreditQuota[];
   currency?: CurrencyType;
+  loadPurchases: () => void;
 };
 
 type SelectedTotals = {
@@ -33,6 +34,7 @@ export function QuotaListModal({
   poId,
   quotas,
   currency = CurrencyTypes.PEN,
+  loadPurchases,
 }: QuotaListModalProps) {
   const [rows, setRows] = useState<CreditQuota[]>(quotas ?? []);
   const [loading, setLoading] = useState(false);
@@ -95,16 +97,16 @@ export function QuotaListModal({
             <span>{loading ? "Cargando..." : `${rows.length} registros`}</span>
           </div>
           <div className="max-h-200 overflow-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-2 px-5 text-left">Cuota</th>
-                  <th className="py-2 px-5 text-left">Vence</th>
-                  <th className="py-2 px-5 text-left">Pago</th>
-                  <th className="py-2 px-5 text-left">Total</th>
-                  <th className="py-2 px-5 text-left">Pagado</th>
-                  <th className="py-2 px-5 text-left">Pendiente</th>
-                  <th className="py-2 px-5 text-right">Acciones</th>
+                  <th className="py-2 px-5 text-left w-5">Cuota</th>
+                  <th className="py-2 px-5 text-left w-15">Vence</th>
+                  <th className="py-2 px-5 text-left w-15">Pago</th>
+                  <th className="py-2 px-5 text-left w-20">Total</th>
+                  <th className="py-2 px-5 text-left w-20">Pagado</th>
+                  <th className="py-2 px-5 text-left w-20">Pendiente</th>
+                  <th className="py-2 px-5 text-right w-25">Acciones</th>
                 </tr>
               </thead>
               <tbody key={listKey}>
@@ -124,7 +126,7 @@ export function QuotaListModal({
                       <td className="py-2 px-5 text-left">{money(q.totalToPay ?? 0, currency)}</td>
                       <td className="py-2 px-5 text-left">{money(paid, currency)}</td>
                       <td className="py-2 px-5 text-left">{money(pending, currency)}</td>
-                      <td className="py-2 px-5 text-right">
+                      <td className="py-2 px-5 text-left">
                         {
                           !isFullyPaid && (
                             <button
@@ -137,8 +139,7 @@ export function QuotaListModal({
                               }}
                               title="Agregar pago"
                             >
-                              <Plus className="h-4 w-4" />
-                              Agregar pago
+                              Agregar <Banknote className="h-6 w-6" />
                             </button>
                           )
                         }
@@ -167,6 +168,7 @@ export function QuotaListModal({
           poId={poId}
           quotaId={qtaId}
           loadQuotas={loadQuotas}
+          loadPurchases={loadPurchases}
         />
       )}
     </Modal>
