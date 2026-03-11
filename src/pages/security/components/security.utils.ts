@@ -3,12 +3,12 @@ import { RoutesPaths } from "@/Router/config/routesPaths";
 export const BRAND = "#21b8a6";
 
 export const CHART_COLORS = [
+  "#f59e0b",
   "#21b8a6",
   "#0f172a",
-  "#f59e0b",
-  "#ef4444",
-  "#6366f1",
   "#14b8a6",
+  "#6366f1",
+  "#ef4444",
 ];
 
 export const cn = (...classes: Array<string | false | null | undefined>) =>
