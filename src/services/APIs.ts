@@ -170,4 +170,28 @@ export const API_PAYMENT_GROUP = {
   remove: (id: string) => `/payments/${id}`,
 }
 
+export const API_PAYMENT_METHODS_GROUP = {
+  base: "/payment-methods",
+  create: "/payment-methods",
+  list: "/payment-methods",
+  listAll: "/payment-methods/records",
+  byId: (id: string) => `/payment-methods/${id}`,
+  byCompany: (companyId: string) => `/payment-methods/by-company/${companyId}`,
+  bySupplier: (supplierId: string) => `/payment-methods/by-supplier/${supplierId}`,
+  update: (id: string) => `/payment-methods/${id}`,
+  setActive: (id: string) => `/payment-methods/${id}/active`,
+};
+
+export const API_COMPANY_METHODS_GROUP = {
+  create: "/company-methods",
+  byId: (companyId: string, methodId: string) => `/company-methods/${companyId}/${methodId}`,
+  remove: (companyId: string, methodId: string) => `/company-methods/${companyId}/${methodId}`,
+};
+
+export const API_SUPPLIER_METHODS_GROUP = {
+  create: "/supplier-methods",
+  byId: (supplierId: string, methodId: string) => `/supplier-methods/${supplierId}/${methodId}`,
+  remove: (supplierId: string, methodId: string) => `/supplier-methods/${supplierId}/${methodId}`,
+};
+
 
