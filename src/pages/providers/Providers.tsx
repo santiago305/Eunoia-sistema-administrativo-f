@@ -5,17 +5,15 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
-import { BikeIcon, Menu, Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
+import { Menu, Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import { useSidebarContext } from "@/components/dashboard/SidebarContext";
-import { IconButton } from "@/components/IconBoton";
 import { StatusPill } from "@/components/StatusTag";
 import { Dropdown } from "@/pages/purchases/components/PurchaseDropdown";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
 import { IconPaymentMethod } from "@/components/dashboard/icons";
 
 const PRIMARY = "#21b8a6";
-const PRIMARY_HOVER = "#1aa392";
 
 
 export default function Providers() {
