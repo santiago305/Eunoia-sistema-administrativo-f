@@ -45,10 +45,14 @@ export function AnalyticsSection({
 
   const riskValue = riskScore?.data?.score ?? 0;
   const riskLabel = riskScore?.data?.label ?? "Sin datos";
+  const hasReasonDistribution = reasonDistribution.length > 0;
+  const hasMethodDistribution = methodDistribution.length > 0;
+  const hasTopRoutes = topRoutes.length > 0;
+  const hasSecondaryCharts = hasReasonDistribution || hasMethodDistribution || hasTopRoutes;
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-6 2xl:grid-cols-[1.45fr_.95fr]">
+      <div className="grid gap-6 2xl:grid-cols-2">
         <SectionCard
           title="Actividad sospechosa"
           subtitle="Tendencia de eventos, bans e IPs unicas dentro del rango seleccionado."
@@ -76,68 +80,74 @@ export function AnalyticsSection({
           </div>
         </SectionCard>
 
-        <div className="grid gap-6">
-          <SectionCard
-            title="Riesgo general"
-            subtitle="Indicador consolidado de severidad del periodo."
-            right={
-              <div
-                className="inline-flex items-center gap-2 rounded-full border border-[rgba(33,184,166,.14)] bg-[rgba(33,184,166,.07)] px-3 py-1.5 text-xs font-medium text-[var(--brand)] shadow-sm"
-                style={{ ["--brand" as string]: BRAND }}
-              >
-                <span className="h-2 w-2 rounded-full bg-[var(--brand)]" />
-                Score operativo
-              </div>
-            }
-          >
-            <div className="flex items-center justify-center py-1">
-              <RiskScoreChart value={riskValue} label={riskLabel} />
+        <SectionCard
+          title="Riesgo general"
+          subtitle="Indicador consolidado de severidad del periodo."
+          right={
+            <div
+              className="inline-flex items-center gap-2 rounded-full border border-[rgba(33,184,166,.14)] bg-[rgba(33,184,166,.07)] px-3 py-1.5 text-xs font-medium text-[var(--brand)] shadow-sm"
+              style={{ ["--brand" as string]: BRAND }}
+            >
+              <span className="h-2 w-2 rounded-full bg-[var(--brand)]" />
+              Score operativo
             </div>
+          }
+        >
+          <div className="flex items-center justify-center py-1">
+            <RiskScoreChart value={riskValue} label={riskLabel} />
+          </div>
 
-            <div className="mt-2 rounded-2xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-white p-4">
-              <p className="text-sm leading-6 text-zinc-600">
-                Este score se construye a partir de señales como bans activos, reincidencias,
-                IPs únicas, crecimiento de violaciones y rutas críticas afectadas.
-              </p>
-            </div>
-          </SectionCard>
+          <div className="mt-2 rounded-2xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-white p-4">
+            <p className="text-sm leading-6 text-zinc-600">
+              Este score se construye a partir de señales como bans activos, reincidencias, IPs
+              únicas, crecimiento de violaciones y rutas críticas afectadas.
+            </p>
+          </div>
+        </SectionCard>
+      </div>
 
-          <SectionCard
-            title="Violaciones por motivo"
-            subtitle="Distribucion de las causas mas frecuentes."
-          >
-            <ReasonDistributionChart data={reasonDistribution} />
-          </SectionCard>
+      {hasSecondaryCharts && (
+        <div className="grid gap-6 2xl:grid-cols-3">
+          {hasReasonDistribution && (
+            <SectionCard
+              title="Causas principales"
+              subtitle="Distribucion de alertas por tipo."
+            >
+              <ReasonDistributionChart data={reasonDistribution} />
+            </SectionCard>
+          )}
+
+          {hasMethodDistribution && (
+            <SectionCard
+              title="Metodos HTTP"
+              subtitle="Distribucion de actividad sospechosa por metodo."
+              right={
+                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-600">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Metodos
+                </div>
+              }
+            >
+              <MethodDistributionChart data={methodDistribution} />
+            </SectionCard>
+          )}
+
+          {hasTopRoutes && (
+            <SectionCard
+              title="Top rutas atacadas"
+              subtitle="Endpoints mas afectados por eventos sospechosos."
+              right={
+                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-600">
+                  <Route className="h-3.5 w-3.5" />
+                  Rutas criticas
+                </div>
+              }
+            >
+              <TopRoutesChart data={topRoutes} />
+            </SectionCard>
+          )}
         </div>
-      </div>
-
-      <div className="grid gap-6 2xl:grid-cols-[1fr_1fr]">
-        <SectionCard
-          title="Metodos HTTP"
-          subtitle="Distribucion de actividad sospechosa por metodo."
-          right={
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-600">
-              <BarChart3 className="h-3.5 w-3.5" />
-              Metodos
-            </div>
-          }
-        >
-          <MethodDistributionChart data={methodDistribution} />
-        </SectionCard>
-
-        <SectionCard
-          title="Top rutas atacadas"
-          subtitle="Endpoints mas afectados por eventos sospechosos."
-          right={
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-600">
-              <Route className="h-3.5 w-3.5" />
-              Rutas criticas
-            </div>
-          }
-        >
-          <TopRoutesChart data={topRoutes} />
-        </SectionCard>
-      </div>
+      )}
     </div>
   );
 }

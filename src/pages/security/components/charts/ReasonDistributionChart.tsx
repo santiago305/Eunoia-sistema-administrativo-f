@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Sector } from "recharts";
+import {
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Sector,
+  Tooltip,
+} from "recharts";
 
 import type { SecurityReasonDistributionItem } from "../../types/security.api";
 
@@ -30,28 +37,55 @@ export function ReasonDistributionChart({ data }: Props) {
     [chartData]
   );
 
-  const activeItem = activeIndex !== null ? chartData[activeIndex] : null;
-
   if (!chartData.length) {
     return (
       <div className="bg-white p-3">
         <div className="flex h-[280px] items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-500">
-          No hay datos de distribucion por motivo.
+          No hay datos de distribución por motivo.
         </div>
       </div>
     );
   }
 
-  const handleSelect = (index: number) => {
-    setActiveIndex((prev) => (prev === index ? null : index));
-  };
-
   return (
     <div className="bg-white p-2 sm:p-3">
-      <div className="grid gap-5 xl:grid-cols-[minmax(280px,1fr)_360px]">
+      <div className="grid gap-5">
         <div className="relative h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
+              <Tooltip
+                cursor={false}
+                wrapperStyle={{ zIndex: 9999 }}
+                content={({ active, payload }) => {
+                  if (!active || !payload || !payload.length) {
+                    return null;
+                  }
+
+                  const item = payload[0].payload as SecurityReasonDistributionItem;
+                  const percent = total > 0 ? (item.value / total) * 100 : 0;
+
+                  return (
+                    <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-xl">
+                      <p className="text-sm font-semibold text-zinc-900">
+                        {item.label}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Cantidad:{" "}
+                        <span className="font-medium text-zinc-800">
+                          {item.value}
+                        </span>
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Porcentaje:{" "}
+                        <span className="font-medium text-zinc-800">
+                          {percent.toFixed(1)}%
+                        </span>
+                      </p>
+                    </div>
+                  );
+                }}
+              />
+
               <Pie
                 data={chartData}
                 dataKey="value"
@@ -63,7 +97,8 @@ export function ReasonDistributionChart({ data }: Props) {
                 strokeWidth={4}
                 activeIndex={activeIndex ?? undefined}
                 activeShape={renderActiveShape}
-                onClick={(_, index) => handleSelect(index)}
+                onMouseEnter={(_, index) => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
               >
                 {chartData.map((_, index) => (
                   <Cell
@@ -76,87 +111,16 @@ export function ReasonDistributionChart({ data }: Props) {
             </PieChart>
           </ResponsiveContainer>
 
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
             <div className="text-center">
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
                 Total
               </p>
-              <p className="text-3xl font-bold tracking-tight text-zinc-950">{total}</p>
-
-              {activeItem ? (
-                <div className="mt-2">
-                  <p className="max-w-[140px] text-xs font-medium text-zinc-600">
-                    {activeItem.label}
-                  </p>
-                  <p className="text-[11px] text-zinc-400">
-                    {((activeItem.value / total) * 100).toFixed(1)}% del total
-                  </p>
-                </div>
-              ) : null}
+              <p className="text-3xl font-bold tracking-tight text-zinc-950">
+                {total}
+              </p>
             </div>
           </div>
-        </div>
-
-        <div className="space-y-3 h-full flex flex-col justify-center">
-          {chartData.map((item, index) => {
-            const percent = total > 0 ? (item.value / total) * 100 : 0;
-            const isActive = index === activeIndex;
-
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => handleSelect(index)}
-                className={[
-                  "w-full rounded-2xl border px-4 py-3 text-left transition-all",
-                  isActive
-                    ? "border-zinc-900 bg-zinc-900 text-white shadow-sm"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-800",
-                ].join(" ")}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="mt-1 h-3 w-3 shrink-0 rounded-full"
-                      style={{
-                        backgroundColor:
-                          REASON_CHART_COLORS[index % REASON_CHART_COLORS.length],
-                      }}
-                    />
-                    <div className="min-w-0">
-                      <p
-                        className={[
-                          "truncate text-sm font-semibold",
-                          isActive ? "text-white" : "text-zinc-800",
-                        ].join(" ")}
-                      >
-                        {item.label}
-                      </p>
-                      <p
-                        className={[
-                          "text-xs",
-                          isActive ? "text-zinc-300" : "text-zinc-500",
-                        ].join(" ")}
-                      >
-                        {percent.toFixed(1)}% del total
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p
-                      className={[
-                        "text-sm font-bold",
-                        isActive ? "text-white" : "text-zinc-950",
-                      ].join(" ")}
-                    >
-                      {item.value}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
         </div>
       </div>
     </div>
@@ -179,6 +143,7 @@ function isActiveShapeProps(value: unknown): value is ActiveShapeProps {
   }
 
   const candidate = value as Record<string, unknown>;
+
   return (
     typeof candidate.cx === "number" &&
     typeof candidate.cy === "number" &&
@@ -203,7 +168,7 @@ function renderActiveShape(props: unknown) {
         cx={cx}
         cy={cy}
         innerRadius={innerRadius}
-        outerRadius={outerRadius + 2}
+        outerRadius={outerRadius + 4}
         startAngle={startAngle}
         endAngle={endAngle}
         fill={fill}
