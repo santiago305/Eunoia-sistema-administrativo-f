@@ -43,6 +43,9 @@ export const RoutesPaths = {
   purchase: '/compra',
   purchases: '/compras',
   purchaseEdit: "/compra/:poId",
+
+  //company
+  company:'/empresa',
   
   // seguridad
   security: "/seguridad",

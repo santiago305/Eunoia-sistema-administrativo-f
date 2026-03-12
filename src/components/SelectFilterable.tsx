@@ -21,7 +21,7 @@ export function FilterableSelect({
     searchPlaceholder = "Buscar...",
     placement = "bottom",
     className = "h-10",
-    textSize = "textSize"
+    textSize = "text-xs"
 }: Props) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");

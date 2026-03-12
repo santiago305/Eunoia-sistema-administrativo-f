@@ -2,7 +2,9 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Modal } from "@/components/settings/modal";
+import { UbigeoSelectSection, type UbigeoSelection } from "@/components/UbigeoSelectSection";
 import { createWarehouse, getWarehouseById, updateWarehouse, updateWarehouseActive } from "@/services/warehouseServices";
+
 
 export type WarehouseFormState = {
     name: string;
@@ -140,6 +142,15 @@ export function WarehouseFormModal({
         }
     };
 
+    const handleUbigeoChange = (next: UbigeoSelection) => {
+        setForm((prev) => ({
+            ...prev,
+            department: next.department,
+            province: next.province,
+            district: next.district,
+        }));
+    };
+
     return (
         <Modal title={title} onClose={onClose} className="max-w-lg">
             <motion.div
@@ -148,61 +159,43 @@ export function WarehouseFormModal({
                 transition={{ duration: 0.16 }}
             >
                 <div className="space-y-3">
-                    <label className="text-sm">
-                        Nombre
-                        <input
-                            className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                            style={primaryRing}
-                            value={form.name}
-                            onChange={(e) => setForm({ ...form, name: e.target.value })}
-                            disabled={loading}
-                        />
-                    </label>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1">
                         <label className="text-sm">
-                            Departamento
+                            Nombre
                             <input
                                 className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
                                 style={primaryRing}
-                                value={form.department}
-                                onChange={(e) => setForm({ ...form, department: e.target.value })}
-                                disabled={loading}
-                            />
-                        </label>
-                        <label className="text-sm">
-                            Provincia
-                            <input
-                                className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                style={primaryRing}
-                                value={form.province}
-                                onChange={(e) => setForm({ ...form, province: e.target.value })}
+                                value={form.name}
+                                onChange={(e) => setForm({ ...form, name: e.target.value })}
                                 disabled={loading}
                             />
                         </label>
                     </div>
-
-                    <label className="text-sm">
-                        Distrito
-                        <input
-                            className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                            style={primaryRing}
-                            value={form.district}
-                            onChange={(e) => setForm({ ...form, district: e.target.value })}
+                        <UbigeoSelectSection
+                            value={{
+                                ubigeo: "",
+                                department: form.department,
+                                province: form.province,
+                                district: form.district,
+                            }}
+                            onChange={handleUbigeoChange}
                             disabled={loading}
+                            showUbigeoInput={false}
+                            className="h-11"
+                            textSize="text-sm mt-2"
                         />
-                    </label>
-
-                    <label className="text-sm">
-                        Dirección (opcional)
-                        <textarea
-                            className="mt-2 min-h-[90px] w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
-                            style={primaryRing}
-                            value={form.address}
-                            onChange={(e) => setForm({ ...form, address: e.target.value })}
-                            disabled={loading}
-                        />
-                    </label>
+                    <div className="grid grid-cols-1">
+                        <label className="text-sm">
+                            Dirección (opcional)
+                            <textarea
+                                className="mt-2 min-h-[90px] w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
+                                style={primaryRing}
+                                value={form.address}
+                                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                                disabled={loading}
+                            />
+                        </label>
+                    </div>
                 </div>
 
                 {error && <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
