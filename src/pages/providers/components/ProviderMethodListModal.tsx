@@ -5,29 +5,29 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { Plus, Power } from "lucide-react";
 import {
-  createCompanyMethod,
-  deleteCompanyMethod,
+  createSupplierMethod,
+  deleteSupplierMethod,
   getAllPaymentMethods,
-  getPaymentMethodsByCompany,
+  getPaymentMethodsBySupplier,
 } from "@/services/paymentMethodService";
 import type { PaymentMethod } from "@/pages/payment-methods/types/paymentMethod";
 import { PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
 
-type PaymentMethodListModalProps = {
+type ProviderMethodListModalProps = {
   title: string;
   close: () => void;
   className?: string;
-  companyId: string;
+  supplierId: string;
 };
 
 type SelectOption = { value: string; label: string };
 
-export function PaymentMethodListModal({
+export function ProviderMethodListModal({
   title,
   close,
   className,
-  companyId,
-}: PaymentMethodListModalProps) {
+  supplierId,
+}: ProviderMethodListModalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
   const [rows, setRows] = useState<PaymentMethod[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
@@ -35,12 +35,12 @@ export function PaymentMethodListModal({
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState("");
 
-  const loadCompanyMethods = async (options?: { silent?: boolean }) => {
-    if (!companyId) return;
+  const loadSupplierMethods = async (options?: { silent?: boolean }) => {
+    if (!supplierId) return;
     if (!options?.silent) clearFlash();
     setLoading(true);
     try {
-      const data = await getPaymentMethodsByCompany(companyId);
+      const data = await getPaymentMethodsBySupplier(supplierId);
       setRows(data ?? []);
     } catch {
       setRows([]);
@@ -66,15 +66,15 @@ export function PaymentMethodListModal({
   };
 
   useEffect(() => {
-    void loadCompanyMethods();
+    void loadSupplierMethods();
     void loadAllMethods({ silent: true });
-  }, [companyId]);
+  }, [supplierId]);
 
   const availableOptions = useMemo<SelectOption[]>(() => {
     const selectedSet = new Set(rows.map((r) => r.methodId));
     return allMethods
       .filter((m) => !selectedSet.has(m.methodId))
-      .map((m) => ({ value: m.methodId, label: `${m.name} ${m.number ? `- ${m.number}` : ''}` }));
+      .map((m) => ({ value: m.methodId, label: `${m.name} ${m.number ? `- ${m.number}` : ""}` }));
   }, [allMethods, rows]);
 
   useEffect(() => {
@@ -84,14 +84,14 @@ export function PaymentMethodListModal({
   }, [availableOptions, selectedId]);
 
   const addMethod = async () => {
-    if (!companyId || !selectedId || adding) return;
+    if (!supplierId || !selectedId || adding) return;
     clearFlash();
     setAdding(true);
     try {
-      await createCompanyMethod({ companyId, methodId: selectedId });
+      await createSupplierMethod({ supplierId, methodId: selectedId });
       showFlash(successResponse("Metodo agregado"));
       setSelectedId("");
-      await loadCompanyMethods({ silent: true });
+      await loadSupplierMethods({ silent: true });
     } catch {
       showFlash(errorResponse("No se pudo agregar el metodo"));
     } finally {
@@ -100,12 +100,12 @@ export function PaymentMethodListModal({
   };
 
   const removeMethod = async (methodId?: string | null) => {
-    if (!companyId || !methodId) return;
+    if (!supplierId || !methodId) return;
     clearFlash();
     try {
-      await deleteCompanyMethod(companyId, methodId);
+      await deleteSupplierMethod(supplierId, methodId);
       showFlash(successResponse("Metodo eliminado"));
-      await loadCompanyMethods({ silent: true });
+      await loadSupplierMethods({ silent: true });
     } catch {
       showFlash(errorResponse("No se pudo eliminar el metodo"));
     }
@@ -132,21 +132,19 @@ export function PaymentMethodListModal({
                   textSize="text-xs"
                 />
               </div>
-              <PrimaryButton type="submit" disabled={!selectedId || adding}
-              onClick={addMethod}
-              >
+              <PrimaryButton type="submit" disabled={!selectedId || adding} onClick={addMethod}>
                 <Plus className="h-4 w-4" />
-                {adding ? "Añadiendo..." : "Añadir"}
+                {adding ? "Anadiendo..." : "Anadir"}
               </PrimaryButton>
             </div>
           </div>
 
           <div className="max-h-100 overflow-auto min-h-70">
-            <table className="w-full text-sm ">
+            <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="border-b border-black/10 text-xs text-black/60">
                   <th className="py-2 px-5 text-left">Metodo</th>
-                  <th className="py-2 px-5 text-left">Número</th>
+                  <th className="py-2 px-5 text-left">Numero</th>
                   <th className="py-2 px-5 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -157,8 +155,7 @@ export function PaymentMethodListModal({
                     <td className="py-2 px-5 text-left">{m.number ?? "-"}</td>
                     <td className="py-2 px-5 text-right">
                       <button
-                        className="inline-flex h-6 w-6 items-center justify-center
-                         rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
                         onClick={() => removeMethod(m.methodId)}
                         title="Eliminar metodo"
                       >

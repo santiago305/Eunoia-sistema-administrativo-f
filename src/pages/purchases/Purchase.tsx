@@ -21,7 +21,7 @@ import { createPurchaseOrder, updatePurchaseOrder } from "@/services/purchaseSer
 import { listActive } from "@/services/warehouseServices";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
 import { ModalNavegate } from "./components/ModalNavegate";
-import { buildEmptyForm, recalcItem, money, addDaysToIsoDate, toDateInputValue, toDateTimeInputValue, tryShowPicker, clampQuotas, addDaysToIsoDateFrom, buildQuotas, todayIso } from "@/utils/functionPurchases";
+import { buildEmptyForm, recalcItem, money, addDaysToIsoDate, toDateTimeInputValue, tryShowPicker, clampQuotas, addDaysToIsoDateFrom, buildQuotas, todayIso } from "@/utils/functionPurchases";
 import { useNavigate, useParams } from "react-router-dom";
 import { getById } from "@/services/purchaseService";
 import { ListUnitResponse } from "../catalog/types/unit";
@@ -392,7 +392,9 @@ export default function PurchaseCreateLocal() {
                         <div className="border-b border-black/10 p-3 sm:p-4">
                             <p className="text-xs font-semibold">Productos</p>
 
-                            <div className="mt-2 grid grid-cols-2 gap-2 xl:grid-cols-[85%_1fr] px-0">
+                            <div className="mt-2 grid gap-2 xl:grid-cols-[85%_1fr] px-0
+                            grid-cols-[85%_1fr]
+                            ">
                                 <div className="relative">
                                     <FilterableSelect
                                         value={stockItemId}
@@ -897,20 +899,23 @@ export default function PurchaseCreateLocal() {
                     </div>
                 </Modal>
             )}
-            <PurchasePaymentModal
-                open={openPaymentModal}
-                onClose={() => setOpenPaymentModal(false)}
-                form={form}
-                setForm={setForm}
-                totalPrice={totals.totalPrice}
-                ringStyle={ringStyle}
-                primaryColor={PRIMARY}
-                currency={currency}
-                formatMoney={money}
-                onSave={savePurchase}
-                saveDisabled={!form.items?.length || !form.serie.trim() || !form.supplierId}
-                isEdit={isEdit}
-            />
+            { openPaymentModal && (
+                <PurchasePaymentModal
+                    open={openPaymentModal}
+                    onClose={() => setOpenPaymentModal(false)}
+                    form={form}
+                    setForm={setForm}
+                    totalPrice={totals.totalPrice}
+                    ringStyle={ringStyle}
+                    primaryColor={PRIMARY}
+                    currency={currency}
+                    formatMoney={money}
+                    onSave={savePurchase}
+                    saveDisabled={!form.items?.length || !form.serie.trim() || !form.supplierId}
+                    isEdit={isEdit}
+                />
+
+            )}
             <ModalNavegate
                 open={openNavigateModal}
                 onClose={() => setOpenNavigateModal(false)}

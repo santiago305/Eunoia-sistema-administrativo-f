@@ -1,9 +1,13 @@
-import type { CSSProperties, Dispatch, SetStateAction } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes } from "@/pages/purchases/types/purchaseEnums";
 import type { CreditQuota, Payment, PurchaseOrder } from "@/pages/purchases/types/purchase";
 import { todayIso, toDateInputValue, clampQuotas, buildQuotas, tryShowPicker } from "@/utils/functionPurchases";
+import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { errorResponse, successResponse } from "@/common/utils/response";
+import { getPaymentMethodsBySupplier } from "@/services/paymentMethodService";
+import { PaymentMethod } from "@/pages/payment-methods/types/paymentMethod";
 
 const DEFAULT_PRIMARY = "#21b8a6";
 
@@ -40,7 +44,6 @@ export function PurchasePaymentModal({
   className = "max-w-[800px] ",
   isEdit
 }: PurchasePaymentModalProps) {
-  if (!open) return null;
 
   const accent = primaryColor ?? DEFAULT_PRIMARY;
   const computedRingStyle = (ringStyle ?? ({ "--tw-ring-color": `${accent}33` } as CSSProperties)) as CSSProperties;
@@ -48,6 +51,10 @@ export function PurchasePaymentModal({
   const showCredit = form.paymentForm === PaymentFormTypes.CREDITO;
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
   const pendingAmount = Math.max(0, totalPrice - totalPaid);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);;
+  const [loading, setLoading] = useState(false);
+  const { showFlash, clearFlash } = useFlashMessage();
+
 
   const addPayment = (amount?: number) => {
     setForm((prev) => ({
@@ -65,6 +72,36 @@ export function PurchasePaymentModal({
       ],
     }));
   };
+
+  const loadSupplierMethods = async (id:string) => {
+    clearFlash()
+    setLoading(true);
+    try {
+      const data = await getPaymentMethodsBySupplier(id);
+      const normalized = (data ?? []).map((m) => ({
+        ...m,
+        name: (m.name ?? "").trim().toUpperCase(),
+      }));
+
+      normalized.sort((a, b) => {
+        const aIsCash = a.name === "EFECTIVO";
+        const bIsCash = b.name === "EFECTIVO";
+        if (aIsCash && !bIsCash) return -1;
+        if (!aIsCash && bIsCash) return 1;
+        return a.name.localeCompare(b.name, "es");
+      });
+
+      setPaymentMethods(normalized ?? []);
+      setLoading(false);
+    } catch {
+      showFlash(errorResponse("No se pudieron cargar los metodos de pago."));
+      setLoading(false);
+    }
+  };
+
+  useEffect(()=> {
+    void loadSupplierMethods(form.supplierId);
+  }, [])
 
   const updatePayment = (index: number, patch: Partial<Payment>) => {
     setForm((prev) => ({
@@ -93,7 +130,13 @@ export function PurchasePaymentModal({
       return { ...prev, quotas, numQuotas: quotas.length };
     });
   };
-
+  const methodOptions = useMemo( () =>
+    (paymentMethods ?? []).map((m) => ({
+      value: m.methodId,
+      label: `${m.name}${m.number ? ` - ${m.number}` : ""}`,
+    })),
+  [paymentMethods],
+);
   return (
     <Modal onClose={onClose} title={title} className={className}>
       <div className="space-y-4">
@@ -214,9 +257,9 @@ export function PurchasePaymentModal({
                       value={payment.method}
                       onChange={(e) => updatePayment(index, { method: e.target.value as Payment["method"] })}
                     >
-                      {Object.values(PaymentTypes).map((method) => (
-                        <option key={method} value={method}>
-                          {method}
+                      {methodOptions.map((opt) => (
+                        <option key={opt.value} value={opt.label}>
+                          {opt.label}
                         </option>
                       ))}
                     </select>
@@ -368,4 +411,8 @@ export function PurchasePaymentModal({
   );
 }
 
+
+function UseState(arg0: never[]): [any, any] {
+  throw new Error("Function not implemented.");
+}
 

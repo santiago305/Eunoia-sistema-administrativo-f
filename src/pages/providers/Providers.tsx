@@ -5,14 +5,15 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
-import { Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
+import { Menu, Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import { useSidebarContext } from "@/components/dashboard/SidebarContext";
-import { IconButton } from "@/components/IconBoton";
 import { StatusPill } from "@/components/StatusTag";
+import { Dropdown } from "@/pages/purchases/components/PurchaseDropdown";
+import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
+import { IconPaymentMethod } from "@/components/dashboard/icons";
 
 const PRIMARY = "#21b8a6";
-const PRIMARY_HOVER = "#1aa392";
 
 
 export default function Providers() {
@@ -40,6 +41,7 @@ export default function Providers() {
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [toggleSupplierId, setToggleSupplierId] = useState<string | null>(null);
   const [nextActiveState, setNextActiveState] = useState(false);
+  const [methodSupplierId, setMethodSupplierId] = useState<string | null>(null);
   const { setCollapsed } = useSidebarContext();
 
 
@@ -236,26 +238,48 @@ export default function Providers() {
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-end gap-2">
-                        <IconButton
-                          title="Editar"
-                          onClick={() => openEdit(supplier.supplierId)}
-                          PRIMARY={PRIMARY}
-                          PRIMARY_HOVER={PRIMARY_HOVER}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </IconButton>
-                        <IconButton
-                          title={supplier.isActive ? "Desactivar" : "Activar"}
-                          onClick={() => {
-                             setToggleSupplierId(supplier.supplierId);
-                             setNextActiveState(!supplier.isActive);
-                          }}
-                          tone={supplier.isActive ? "danger" : "primary"}
-                          PRIMARY={PRIMARY}
-                          PRIMARY_HOVER={PRIMARY_HOVER}
-                      >
-                          <Power className="h-4 w-4" />
-                      </IconButton> 
+                        <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
+                          <div className="flex flex-col gap-1">
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openEdit(supplier.supplierId);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-black/60" />
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setMethodSupplierId(supplier.supplierId);
+                              }}
+                            >
+                              <IconPaymentMethod/>
+                              Metodos de pago
+                            </button>
+                            <button
+                              type="button"
+                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                supplier.isActive
+                                  ? "text-rose-700 hover:bg-rose-50"
+                                  : "text-cyan-700 hover:bg-cyan-50"
+                              }`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setToggleSupplierId(supplier.supplierId);
+                                setNextActiveState(!supplier.isActive);
+                              }}
+                            >
+                              <Power className="h-4 w-4" />
+                              {supplier.isActive ? "Desactivar" : "Activar"}
+                            </button>
+                          </div>
+                        </Dropdown>
                       </div>
                     </td>
                   </tr>
@@ -339,6 +363,15 @@ export default function Providers() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {methodSupplierId && (
+        <ProviderMethodListModal
+          title="Metodos de pago del proveedor"
+          supplierId={methodSupplierId}
+          close={() => setMethodSupplierId(null)}
+          className="max-w-3xl"
+        />
       )}
     </div>
   );
