@@ -46,6 +46,9 @@ export const RoutesPaths = {
 
   //company
   company:'/empresa',
+
+  //payment-method
+  paymentMethods:'/metodos-pago',
   
   // seguridad
   security: "/seguridad",

@@ -8,9 +8,10 @@ import { createCompany, getCompany, updateCompany, uploadCompanyCert, uploadComp
 import { env } from "@/env";
 import { createCompanySchema } from "@/schemas/companySchemas";
 import type { Company } from "@/pages/company/types/company";
-import { Card, CardHeader } from "@/pages/profile/components/ProfilePrimitives";
+import { Card, CardHeader, PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
 import { CompanyLogoBlock } from "./components/CompanyLogoBlock";
 import { CompanyFormSection } from "./components/CompanyFormSection";
+import { PaymentMethodListModal } from "./components/PaymentMethodListModal";
 import type { CompanyFormErrors, CompanyFormValues } from "./types/companyFormTypes";
 
 const COMPANY_PRIMARY = "#21b8a6";
@@ -73,7 +74,8 @@ export default function CompanyPage() {
     const [savingCert, setSavingCert] = useState(false);
     const [savingCompany, setSavingCompany] = useState(false);
     const [company, setCompany] = useState<Company | null>(null);
-    const hasCompany = Boolean(company && (company.id || company.ruc || company.name));
+    const hasCompany = Boolean(company && (company.companyId || company.ruc || company.name));
+    const [openPaymentMethods, setOpenPaymentMethods] = useState(false);
 
     const [formValues, setFormValues] = useState<CompanyFormValues>(emptyCompanyForm);
     const [formErrors, setFormErrors] = useState<CompanyFormErrors>({});
@@ -164,27 +166,23 @@ export default function CompanyPage() {
         setLoading(true);
         try {
             const res = await getCompany();
-            const normalizedCompany = {
-                ...res,
-                id: res.id ?? (res as { companyId?: string }).companyId ?? "",
-            };
-            setCompany(normalizedCompany);
+            setCompany(res);
             setFormValues({
-                name: normalizedCompany.name ?? "",
-                ruc: normalizedCompany.ruc ?? "",
-                department: normalizedCompany.department ?? "",
-                province: normalizedCompany.province ?? "",
-                district: normalizedCompany.district ?? "",
-                ubigeo: normalizedCompany.ubigeo ?? "",
-                urbanization: normalizedCompany.urbanization ?? "",
-                address: normalizedCompany.address ?? "",
-                phone: normalizedCompany.phone ?? "",
-                email: normalizedCompany.email ?? "",
-                codLocal: normalizedCompany.codLocal ?? "",
-                solUser: normalizedCompany.solUser ?? "",
-                solPass: normalizedCompany.solPass ?? "",
-                production: Boolean(normalizedCompany.production),
-                isActive: Boolean(normalizedCompany.isActive),
+                name: res.name ?? "",
+                ruc: res.ruc ?? "",
+                department: res.department ?? "",
+                province: res.province ?? "",
+                district: res.district ?? "",
+                ubigeo: res.ubigeo ?? "",
+                urbanization: res.urbanization ?? "",
+                address: res.address ?? "",
+                phone: res.phone ?? "",
+                email: res.email ?? "",
+                codLocal: res.codLocal ?? "",
+                solUser: res.solUser ?? "",
+                solPass: res.solPass ?? "",
+                production: Boolean(res.production),
+                isActive: Boolean(res.isActive),
             });
             setFormErrors({});
         } catch (err) {
@@ -288,6 +286,16 @@ export default function CompanyPage() {
                         />
                     </div>
                   </Card>
+                <div className="mt-2">
+                    <PrimaryButton type="submit" disabled={loading}
+                    className="w-full"
+                    onClick={(e) => {
+                        e.preventDefault(),
+                        setOpenPaymentMethods(true)}}
+                    >
+                        Ver metodos de pago
+                    </PrimaryButton>
+                </div>
                 </motion.section>
             )}
             <div className="space-y-6 lg:col-span-8">
@@ -309,6 +317,21 @@ export default function CompanyPage() {
             </div>
           </div>
         </div>
+        {openPaymentMethods && company?.companyId && (
+          <PaymentMethodListModal
+            title="Metodos de pago"
+            close={() => setOpenPaymentMethods(false)}
+            className="max-w-[700px]"
+            companyId={company.companyId}
+          />
+        )}
       </div>
     );
 }
+
+
+
+
+
+
+

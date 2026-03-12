@@ -5,7 +5,7 @@ export type CreateCompanyDto = z.infer<typeof createCompanySchema>;
 export type UpdateCompanyDto = z.infer<typeof updateCompanySchema>;
 
 export type Company = {
-  id: string;
+  companyId: string;
   name: string;
   ruc: string;
   ubigeo?: string | null;

@@ -1,4 +1,11 @@
-import { IconHome, IconPurchase, IconRowMaterial, IconStock, IconUsers, IconWarehouse } from "@/components/dashboard/icons";
+import { 
+    IconHome,
+    IconPaymentMethod,
+    IconPurchase, 
+    IconRowMaterial, 
+    IconStock, IconUsers, 
+    IconWarehouse 
+} from "@/components/dashboard/icons";
 import type { SidebarItem } from "@/components/dashboard/types";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 
@@ -110,6 +117,11 @@ export const getSidebarItems = (): SidebarItem[] => [
         label: "Seguridad",
         href: RoutesPaths.security,
         icon: <IconUsers className="text-sidebar-foreground" />,
+    },
+    {
+        label: "Metodos",
+        href: RoutesPaths.paymentMethods,
+        icon: <IconPaymentMethod className="text-sidebar-foreground" />,
     },
 ];
 

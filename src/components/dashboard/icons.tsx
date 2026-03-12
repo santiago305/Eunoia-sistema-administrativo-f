@@ -14,7 +14,8 @@ import {
   Warehouse,
   Pickaxe,
   Store,
-  Factory
+  Factory,
+  Banknote
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -27,6 +28,9 @@ export const IconSettings = ({ className }: { className?: string }) => (
 
 export const IconWarehouse = ({ className }: { className?: string }) => (
   <Warehouse className={className} size={20} />
+);
+export const IconPaymentMethod = ({ className }: { className?: string }) => (
+  <Banknote className={className} size={20} />
 );
 export const IconCompany = ({ className }: { className?: string }) => (
   <Factory className={className} size={20} />
