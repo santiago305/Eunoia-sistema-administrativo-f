@@ -27,6 +27,26 @@ function resolveCompanyLogoUrl(rawLogoUrl?: string | null) {
     }
 }
 
+function resolveCompanyCertUrl(rawCertUrl?: string | null) {
+    const raw = rawCertUrl?.trim();
+    if (!raw) return "";
+    if (/^https?:\/\//i.test(raw)) return raw;
+
+    try {
+        return new URL(raw, env.apiBaseUrl).toString();
+    } catch {
+        return raw;
+    }
+}
+
+function getCertLabel(rawCertUrl?: string | null) {
+    const raw = rawCertUrl?.trim();
+    if (!raw) return "";
+    const withoutQuery = raw.split("?")[0] ?? raw;
+    const fileName = withoutQuery.split("/").pop() ?? "";
+    return fileName || raw;
+}
+
 const emptyCompanyForm: CompanyFormValues = {
     name: "",
     ruc: "",
@@ -59,6 +79,8 @@ export default function CompanyPage() {
     const [formErrors, setFormErrors] = useState<CompanyFormErrors>({});
 
     const logoUrl = useMemo(() => resolveCompanyLogoUrl(company?.logoPath), [company?.logoPath]);
+    const certUrl = useMemo(() => resolveCompanyCertUrl(company?.certPath), [company?.certPath]);
+    const certLabel = useMemo(() => getCertLabel(company?.certPath), [company?.certPath]);
 
     const displayName = useMemo(() => company?.name ?? "Empresa", [company?.name]);
 
@@ -255,11 +277,14 @@ export default function CompanyPage() {
                             loading={loading}
                             name={displayName}
                             logoUrl={logoUrl}
+                            certUrl={certUrl || undefined}
+                            certLabel={certLabel || undefined}
                             onPickLogo={onPickLogo}
                             onPickCert={onPickCert}
                             disabled={savingLogo || !hasCompany}
                             certDisabled={savingCert || !hasCompany}
                             COMPANY_PRIMARY={COMPANY_PRIMARY}
+                            certLabelMaxChars={20}
                         />
                     </div>
                   </Card>
