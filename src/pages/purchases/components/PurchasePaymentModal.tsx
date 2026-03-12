@@ -7,7 +7,7 @@ import { todayIso, toDateInputValue, clampQuotas, buildQuotas, tryShowPicker } f
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { getPaymentMethodsBySupplier } from "@/services/paymentMethodService";
-import { PaymentMethod } from "@/pages/payment-methods/types/paymentMethod";
+import { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
 
 const DEFAULT_PRIMARY = "#21b8a6";
 
@@ -29,7 +29,6 @@ export type PurchasePaymentModalProps = {
 };
 
 export function PurchasePaymentModal({
-  open,
   onClose,
   form,
   setForm,
@@ -51,7 +50,7 @@ export function PurchasePaymentModal({
   const showCredit = form.paymentForm === PaymentFormTypes.CREDITO;
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
   const pendingAmount = Math.max(0, totalPrice - totalPaid);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);;
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodPivot[]>([]);;
   const [loading, setLoading] = useState(false);
   const { showFlash, clearFlash } = useFlashMessage();
 
@@ -133,7 +132,7 @@ export function PurchasePaymentModal({
   const methodOptions = useMemo( () =>
     (paymentMethods ?? []).map((m) => ({
       value: m.methodId,
-      label: `${m.name}${m.number ? ` - ${m.number}` : ""}`,
+      label: `${m.name} ${m.number ? `- ${m.number}` : '' }`,
     })),
   [paymentMethods],
 );
@@ -250,7 +249,7 @@ export function PurchasePaymentModal({
               const maxForPayment = Math.max(0, totalPrice - otherPaid);
               return (
                 <div key={`payment-${index}`} className="rounded-xl border border-black/10 p-3 space-y-2">
-                  <div className="grid grid-cols-[1fr_1fr_1fr_1fr_50px] gap-2">
+                  <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_50px] gap-2">
                     <select
                       className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
                       style={computedRingStyle}
@@ -277,6 +276,7 @@ export function PurchasePaymentModal({
                       style={computedRingStyle}
                       value={payment.currency}
                       onChange={(e) => updatePayment(index, { currency: e.target.value as CurrencyType })}
+                      disabled={true}
                     >
                       <option value={CurrencyTypes.PEN}>PEN (S/)</option>
                       <option value={CurrencyTypes.USD}>USD ($)</option>
@@ -411,8 +411,4 @@ export function PurchasePaymentModal({
   );
 }
 
-
-function UseState(arg0: never[]): [any, any] {
-  throw new Error("Function not implemented.");
-}
 

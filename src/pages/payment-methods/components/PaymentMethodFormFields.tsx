@@ -2,7 +2,6 @@ import type { CSSProperties, Dispatch, SetStateAction } from "react";
 
 export type PaymentMethodFormState = {
   name: string;
-  number: string;
   isActive: boolean;
 };
 
@@ -30,17 +29,6 @@ export function PaymentMethodFormFields({
           style={ringStyle}
           value={form.name}
           onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          disabled={disabled}
-        />
-      </label>
-
-      <label className="text-xs">
-        Número (opcional)
-        <input
-          className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-xs outline-none focus:ring-2"
-          style={ringStyle}
-          value={form.number}
-          onChange={(e) => setForm((prev) => ({ ...prev, number: e.target.value }))}
           disabled={disabled}
         />
       </label>

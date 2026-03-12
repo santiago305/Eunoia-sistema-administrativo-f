@@ -13,6 +13,7 @@ import type {
   PaymentMethod,
   PaymentMethodGetByIdResponse,
   PaymentMethodListResponse,
+  PaymentMethodPivot,
   SetPaymentMethodActiveDto,
   SupplierMethod,
   UpdatePaymentMethodDto,
@@ -63,9 +64,9 @@ Promise<PaymentMethod[]> => {
 };
 
 export const getPaymentMethodsBySupplier = async (supplierId: string): 
-Promise<PaymentMethod[]> => {
+Promise<PaymentMethodPivot[]> => {
   const response = await axiosInstance.get(API_PAYMENT_METHODS_GROUP.bySupplier(supplierId));
-  return response.data.data as PaymentMethod[];
+  return response.data.data as PaymentMethodPivot[];
 };
 
 export const createCompanyMethod = async (
