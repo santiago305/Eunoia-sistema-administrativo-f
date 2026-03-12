@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { IconLogout, IconUser, IconMonitor } from "./icons";
+import { IconLogout, IconUser, IconMonitor, IconCompany } from "./icons";
 import { useSidebarContext } from "./SidebarContext";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import type { User } from "./types";
@@ -59,6 +59,12 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
           <p className="text-xs text-muted-foreground">{user.email}</p>
         </div>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to={RoutesPaths.company} className="cursor-pointer select-none">
+            <IconCompany className="mr-2" />
+            <span>Empresa</span>
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to={RoutesPaths.profile} className="cursor-pointer select-none">
             <IconUser className="mr-2" />

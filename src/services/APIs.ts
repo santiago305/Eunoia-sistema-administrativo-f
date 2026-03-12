@@ -38,6 +38,14 @@ export const API_PROFILE_GROUP = {
   changePasswordMe: "/users/me/change-password",
   avatarMe: "/users/me/avatar",
 };
+
+export const API_COMPANY_GROUP = {
+  create: "/company",
+  update: "/company",
+  get: "/company",
+  uploadLogo: "/company/logo",
+  uploadCert: "/company/cert",
+};
 export const API_ROLES_GROUP = {
   findAll: "/roles",
 };
