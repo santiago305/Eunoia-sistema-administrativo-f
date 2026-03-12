@@ -9,12 +9,9 @@ import {
   deleteCompanyMethod,
   getAllPaymentMethods,
   getPaymentMethodsByCompany,
-  listPaymentMethods,
 } from "@/services/paymentMethodService";
 import type { PaymentMethod } from "@/pages/payment-methods/types/paymentMethod";
 import { PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
-
-const PRIMARY = "#21b8a6";
 
 type PaymentMethodListModalProps = {
   title: string;
@@ -121,7 +118,7 @@ export function PaymentMethodListModal({
           <div className="text-xs text-black/60">{loading ? "Cargando..." : `${rows.length} metodos`}</div>
         </div>
 
-        <div className="rounded-2xl border border-black/10 overflow-hidden">
+        <div className="rounded-2xl border border-black/10 overflow-auto">
           <div className="flex flex-col gap-3 px-5 py-4 border-b border-black/10 text-xs text-black/60">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="flex-1">
@@ -144,8 +141,8 @@ export function PaymentMethodListModal({
             </div>
           </div>
 
-          <div className="max-h-64 overflow-auto">
-            <table className="w-full text-sm">
+          <div className="max-h-100 overflow-auto min-h-70">
+            <table className="w-full text-sm ">
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="border-b border-black/10 text-xs text-black/60">
                   <th className="py-2 px-5 text-left">Metodo</th>
