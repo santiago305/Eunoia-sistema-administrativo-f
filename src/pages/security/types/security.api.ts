@@ -82,6 +82,17 @@ export type SecurityReasonDistributionResponse = SecurityWindowResponse & {
   data: SecurityReasonDistributionItem[];
 };
 
+export type SecurityReasonCatalogItem = {
+  key: string;
+  label: string;
+  count: number;
+  active: boolean;
+};
+
+export type SecurityReasonCatalogResponse = {
+  data: SecurityReasonCatalogItem[];
+};
+
 export type SecurityMethodDistributionItem = {
   method: string;
   count: number;
@@ -114,6 +125,32 @@ export type SecurityRiskScoreResponse = SecurityWindowResponse & {
       uniqueIps: number;
       activeBans: number;
       manualPermanentBans: number;
+    };
+  };
+};
+
+export type SecurityRiskScoreByIpResponse = {
+  ip: string;
+  score: number;
+  level: SecurityRiskLevel;
+  label: string;
+  windowHours?: number;
+  generatedAt?: string;
+  details?: {
+    from?: string;
+    to?: string;
+    timeZone?: string;
+    metrics?: {
+      violations?: number;
+      distinctReasons?: number;
+      hasActiveBan?: boolean;
+      isManualPermanentBan?: boolean;
+    };
+    components?: {
+      fromViolations?: number;
+      fromReasons?: number;
+      fromActiveBan?: number;
+      fromManualBan?: number;
     };
   };
 };

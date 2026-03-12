@@ -2,8 +2,10 @@ import axiosInstance from "@/common/utils/axios";
 import { API_SECURITY_GROUP } from "@/services/APIs";
 import {
   securityBlacklistSchema,
+  securityHoursAndReasonQuerySchema,
   securityHoursQuerySchema,
   securityHistoryQuerySchema,
+  securityReasonsQuerySchema,
   securitySeriesQuerySchema,
   securityTopIpsQuerySchema,
   securityTopRoutesQuerySchema,
@@ -11,11 +13,13 @@ import {
 import type {
   SecurityActivitySeriesResponse,
   SecurityActiveBanItem,
+  SecurityRiskScoreByIpResponse,
   SecurityBlacklistPayload,
   SecurityHistoryByIpResponse,
   SecurityMethodDistributionResponse,
   SecurityMutationResponse,
   SecurityReasonDistributionResponse,
+  SecurityReasonCatalogResponse,
   SecurityRiskScoreResponse,
   SecuritySeriesGroupBy,
   SecurityTopIpItem,
@@ -25,6 +29,7 @@ import type {
 export type SecurityTopIpsParams = {
   hours?: number;
   limit?: number;
+  reason?: string;
 };
 
 export type SecurityHistoryParams = {
@@ -34,6 +39,7 @@ export type SecurityHistoryParams = {
 export type SecuritySeriesParams = {
   hours?: number;
   groupBy?: SecuritySeriesGroupBy;
+  reason?: string;
 };
 
 export type SecurityHoursParams = {
@@ -43,6 +49,22 @@ export type SecurityHoursParams = {
 export type SecurityTopRoutesParams = {
   hours?: number;
   limit?: number;
+  reason?: string;
+};
+
+export type SecurityHoursAndReasonParams = {
+  hours?: number;
+  reason?: string;
+};
+
+export type SecurityAuditExportParams = {
+  hours?: number;
+  reason?: string;
+};
+
+export type SecurityReasonsParams = {
+  hours?: number;
+  activeOnly?: boolean;
 };
 
 export const getSecurityTopIps = async (params?: SecurityTopIpsParams) => {
@@ -79,8 +101,8 @@ export const getSecurityReasonDistribution = async (params?: SecurityHoursParams
   return response.data;
 };
 
-export const getSecurityMethodDistribution = async (params?: SecurityHoursParams) => {
-  const query = securityHoursQuerySchema.parse(params ?? {});
+export const getSecurityMethodDistribution = async (params?: SecurityHoursAndReasonParams) => {
+  const query = securityHoursAndReasonQuerySchema.parse(params ?? {});
   const response = await axiosInstance.get<SecurityMethodDistributionResponse>(
     API_SECURITY_GROUP.methodDistribution,
     { params: query }
@@ -127,6 +149,38 @@ export const blacklistSecurityIp = async (payload: SecurityBlacklistPayload) => 
 export const removeSecurityBlacklistIp = async (ip: string) => {
   const response = await axiosInstance.patch<SecurityMutationResponse>(
     API_SECURITY_GROUP.removeBlacklist(ip)
+  );
+  return response.data;
+};
+
+export const getSecurityReasons = async (params?: SecurityReasonsParams) => {
+  const query = securityReasonsQuerySchema.parse(params ?? {});
+  const response = await axiosInstance.get<SecurityReasonCatalogResponse>(
+    API_SECURITY_GROUP.reasons,
+    { params: query }
+  );
+  return response.data.data;
+};
+
+export const exportSecurityAudit = async (params?: SecurityAuditExportParams) => {
+  const query = securityHoursAndReasonQuerySchema.parse(params ?? {});
+  const response = await axiosInstance.get<Blob>(API_SECURITY_GROUP.auditExport, {
+    params: query,
+    responseType: "blob",
+  });
+  return response.data;
+};
+
+export const getSecurityRiskScoreByIp = async (ip: string, params?: SecurityHoursParams) => {
+  const query = securityHoursQuerySchema.parse(params ?? {});
+  const response = await axiosInstance.get<SecurityRiskScoreByIpResponse>(
+    API_SECURITY_GROUP.riskScoreByIp,
+    {
+      params: {
+        ...query,
+        ip: ip.trim(),
+      },
+    }
   );
   return response.data;
 };

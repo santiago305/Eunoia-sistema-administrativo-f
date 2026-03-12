@@ -64,9 +64,12 @@ export const API_SECURITY_GROUP = {
   removeBlacklist: (ip: string) => `/security/blacklist/remove/${encodeURIComponent(ip)}`,
   activitySeries: "/security/activity-series",
   reasonDistribution: "/security/reason-distribution",
+  reasons: "/security/reasons",
   methodDistribution: "/security/method-distribution",
   topRoutes: "/security/top-routes",
   riskScore: "/security/risk-score",
+  riskScoreByIp: "/security/risk-score/ip",
+  auditExport: "/security/audit-export",
 };
 
 export const API_PRODUCTS_GROUP = {
