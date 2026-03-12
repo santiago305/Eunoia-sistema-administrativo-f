@@ -5,6 +5,9 @@ type CompanyLogoBlockProps = {
   loading: boolean;
   name: string;
   logoUrl: string;
+  certUrl?: string;
+  certLabel?: string;
+  certLabelMaxChars?: number;
   onPickLogo: (file: File) => void;
   onPickCert: (file: File) => void;
   disabled?: boolean;
@@ -16,6 +19,9 @@ export function CompanyLogoBlock({
   loading,
   name,
   logoUrl,
+  certUrl,
+  certLabel,
+  certLabelMaxChars,
   onPickLogo,
   onPickCert,
   disabled,
@@ -29,9 +35,15 @@ export function CompanyLogoBlock({
     setImageFailed(false);
   }, [logoUrl]);
 
+  const resolvedCertLabel = certLabel || "Documento cargado";
+  const certLabelText =
+    certLabelMaxChars && resolvedCertLabel.length > certLabelMaxChars
+      ? `${resolvedCertLabel.slice(0, Math.max(0, certLabelMaxChars - 1))}…`
+      : resolvedCertLabel;
+
   return (
     <div className="flex items-center gap-4">
-      <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-black/10 bg-black/5">
+      <div className="relative h-25 w-20 mb-10 overflow-hidden rounded-2xl border border-black/10 bg-black/5">
         {hasLogo ? (
           <img
             src={logoUrl}
@@ -50,9 +62,30 @@ export function CompanyLogoBlock({
         )}
       </div>
 
+      
+
       <div className="flex-1">
         <p className="text-sm font-semibold">{loading ? "Cargando..." : name}</p>
         <p className="text-xs text-black/60">PNG/JPG. Recomendado: cuadrado, buena luz.</p>
+
+        {(certLabel || certUrl) && (
+          <div>
+            <p className="font-semibold text-sm mt-2">Certificado</p>
+            <p className="truncate text-xs text-black/60">{certLabelText}</p>
+            {certUrl && (
+              <a
+                href={certUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-lg border 
+                border-black/10 px-2 py-1 text-[11px] font-semibold text-black/70 transition 
+                hover:bg-black/5"
+              >
+                Ver
+              </a>
+            )}
+          </div>
+        )}
 
         <div className="mt-3 flex flex-wrap gap-2">
           <label
