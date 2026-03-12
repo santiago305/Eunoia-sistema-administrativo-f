@@ -17,7 +17,6 @@ type PaymentMethodFormModalProps = {
 
 const DEFAULT_FORM: PaymentMethodFormState = {
   name: "",
-  number: "",
   isActive: true,
 };
 
@@ -60,7 +59,6 @@ export function PaymentMethodFormModal({
         if (cancelled) return;
         setForm({
           name: method.name ?? "",
-          number: method.number ?? "",
           isActive: method.isActive ?? true,
         });
       } catch (e: any) {
@@ -93,13 +91,11 @@ export function PaymentMethodFormModal({
         if (!paymentMethodId) return;
         await updatePaymentMethod(paymentMethodId, {
           name: form.name.trim() || undefined,
-          number: form.number.trim() || undefined,
         });
         await setPaymentMethodActive(paymentMethodId, { isActive: form.isActive });
       } else {
         await createPaymentMethod({
           name: form.name.trim(),
-          number: form.number.trim() || undefined,
           isActive: form.isActive,
         });
       }

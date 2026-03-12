@@ -10,7 +10,7 @@ import {
   getAllPaymentMethods,
   getPaymentMethodsByCompany,
 } from "@/services/paymentMethodService";
-import type { PaymentMethod } from "@/pages/payment-methods/types/paymentMethod";
+import type { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
 import { PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
 
 type PaymentMethodListModalProps = {
@@ -29,11 +29,12 @@ export function PaymentMethodListModal({
   companyId,
 }: PaymentMethodListModalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
-  const [rows, setRows] = useState<PaymentMethod[]>([]);
+  const [rows, setRows] = useState<PaymentMethodPivot[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState("");
+  const [number, setNumber] = useState("");
 
   const loadCompanyMethods = async (options?: { silent?: boolean }) => {
     if (!companyId) return;
@@ -74,7 +75,7 @@ export function PaymentMethodListModal({
     const selectedSet = new Set(rows.map((r) => r.methodId));
     return allMethods
       .filter((m) => !selectedSet.has(m.methodId))
-      .map((m) => ({ value: m.methodId, label: `${m.name} ${m.number ? `- ${m.number}` : ''}` }));
+      .map((m) => ({ value: m.methodId, label: `${m.name}` }));
   }, [allMethods, rows]);
 
   useEffect(() => {
@@ -88,9 +89,10 @@ export function PaymentMethodListModal({
     clearFlash();
     setAdding(true);
     try {
-      await createCompanyMethod({ companyId, methodId: selectedId });
+      await createCompanyMethod({ companyId, methodId: selectedId, number:number });
       showFlash(successResponse("Metodo agregado"));
       setSelectedId("");
+      setNumber("");
       await loadCompanyMethods({ silent: true });
     } catch {
       showFlash(errorResponse("No se pudo agregar el metodo"));
@@ -122,18 +124,33 @@ export function PaymentMethodListModal({
           <div className="flex flex-col gap-3 px-5 py-4 border-b border-black/10 text-xs text-black/60">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="flex-1">
-                <FilterableSelect
-                  value={selectedId}
-                  onChange={setSelectedId}
-                  options={availableOptions}
-                  placeholder="Seleccionar metodo"
-                  searchPlaceholder="Buscar metodo..."
-                  className="h-10"
-                  textSize="text-xs"
-                />
+                <label className="text-xs">
+                  Metodo
+                  <FilterableSelect
+                    value={selectedId}
+                    onChange={setSelectedId}
+                    options={availableOptions}
+                    placeholder="Seleccionar metodo"
+                    searchPlaceholder="Buscar metodo..."
+                    className="h-10"
+                    textSize="text-xs mt-2"
+                  />
+                </label>
+              </div>
+              <div className="flex-1">
+                <label className="text-xs">
+                  Número
+                  <input
+                    className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 
+                    text-xs outline-none focus:ring-2"
+                    value={number}
+                    onChange={(e) => setNumber(e.target.value)}
+                  />
+                </label>
               </div>
               <PrimaryButton type="submit" disabled={!selectedId || adding}
               onClick={addMethod}
+              className="mt-5"
               >
                 <Plus className="h-4 w-4" />
                 {adding ? "Añadiendo..." : "Añadir"}

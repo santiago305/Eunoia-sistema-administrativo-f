@@ -18,7 +18,15 @@ export type ListPaymentMethodsQuery = z.infer<typeof listPaymentMethodsQuerySche
 export type PaymentMethod = {
   methodId: string;
   name: string;
-  number?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PaymentMethodPivot = {
+  methodId: string;
+  name: string;
+  number?:string;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -41,9 +49,11 @@ export type PaymentMethodGetByIdResponse = {
 export type CompanyMethod = {
   companyId: string;
   methodId: string;
+  number:string;
 };
 
 export type SupplierMethod = {
   supplierId: string;
   methodId: string;
+  number:string;
 };

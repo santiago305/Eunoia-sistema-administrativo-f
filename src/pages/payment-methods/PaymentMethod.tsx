@@ -105,7 +105,6 @@ export default function PaymentMethod() {
     rows: Array<{
       methodId: string;
       name: string;
-      number?: string | null;
       isActive: boolean;
     }>,
   ) => {
@@ -116,7 +115,7 @@ export default function PaymentMethod() {
     };
     const lines = rows.map((row, index) => {
       const csvId = String(index + 1).padStart(5, "0");
-      return [csvId, row.name, row.number ?? "", String(row.isActive)]
+      return [csvId, row.name, String(row.isActive)]
         .map((v) => escape(String(v)))
         .join(",");
     });
@@ -261,7 +260,6 @@ export default function PaymentMethod() {
                 <thead className="sticky top-0 z-10 bg-gray-50">
                   <tr className="border-b border-black/10 text-xs text-black/60">
                     <th className="py-3 px-5 text-left">Metodo</th>
-                    <th className="py-3 px-5 text-left">Nómero</th>
                     <th className="py-3 px-5 text-left">Estado</th>
                     <th className="py-3 px-5 text-right">Acciones</th>
                   </tr>
@@ -287,10 +285,6 @@ export default function PaymentMethod() {
                             <p className="font-medium leading-5 truncate">{method.name}</p>
                             <p className="text-xs text-black/50 truncate">UUID: {method.methodId}</p>
                           </div>
-                        </td>
-
-                        <td className="py-4 px-5 text-black/70 select-text">
-                          <p className="truncate max-w-[320px]">{method.number || "-"}</p>
                         </td>
 
                         <td className="py-4 px-5 select-text">
@@ -360,7 +354,6 @@ export default function PaymentMethod() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="mt-1 font-semibold truncate">{method.name}</p>
-                        <p className="mt-1 text-[11px] text-black/70 truncate">{method.number || "-"}</p>
                         <div className="mt-3">
                           <StatusPill active={method.isActive} PRIMARY={PRIMARY} />
                         </div>
