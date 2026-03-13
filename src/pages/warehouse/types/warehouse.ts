@@ -35,6 +35,15 @@ export type WarehouseLocation = {
   description?: string;
 };
 
+export enum DocType {
+  IN = 'IN',
+  OUT = 'OUT',
+  TRANSFER = 'TRANSFER',
+  ADJUSTMENT = 'ADJUSTMENT',
+  PRODUCTION = 'PRODUCTION'
+}
+
+
 export type WarehouseLocationsResponse = {
   locations: WarehouseLocation[];
 };

@@ -65,6 +65,8 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.purchases, name: "purchases", isProtected: true },
   { path: RoutesPaths.purchaseEdit, name: "purchases", isProtected: true },
 
+  { path: RoutesPaths.production, name: "production", isProtected: true, rolesAllowed: ["admin", "moderator"] },
+
   // Rutas de seguridad
   { path: RoutesPaths.security, name: "security", isProtected: true, rolesAllowed: ["admin"]},
   { path: RoutesPaths.ipsdetails, name: "ipsdetails", isProtected: true, rolesAllowed: ["admin"]},

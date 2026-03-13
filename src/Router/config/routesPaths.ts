@@ -50,6 +50,9 @@ export const RoutesPaths = {
   //payment-method
   paymentMethods:'/metodos-pago',
   
+  //payment-method
+  production:'/producción',
+  
   // seguridad
   security: "/seguridad",
   ipsdetails: "/seguridad/ips/:ip",

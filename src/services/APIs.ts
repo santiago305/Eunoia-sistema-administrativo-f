@@ -165,10 +165,28 @@ export const API_PURCHASE_GROUP = {
   removeItem: (id: string, itemId: string) => `/purchases/orders/${id}/items/${itemId}`,
 };
 
+export const API_PRODUCTION_ORDERS_GROUP = {
+  base: "/production-orders",
+  create: "/production-orders",
+  list: "/production-orders",
+  byId: (id: string) => `/production-orders/${id}`,
+  update: (id: string) => `/production-orders/${id}`,
+  start: (id: string) => `/production-orders/${id}/start`,
+  close: (id: string) => `/production-orders/${id}/close`,
+  cancel: (id: string) => `/production-orders/${id}/cancel`,
+  addItem: (id: string) => `/production-orders/${id}/items`,
+  updateItem: (id: string, itemId: string) => `/production-orders/${id}/items/${itemId}`,
+  removeItem: (id: string, itemId: string) => `/production-orders/${id}/items/${itemId}`,
+};
+
 export const API_PAYMENT_GROUP = {
   create: "/payments",
   remove: (id: string) => `/payments/${id}`,
 }
+
+export const API_DOCUMENT_SERIES_GROUP = {
+  list: "/inventory/document-series",
+};
 
 export const API_PAYMENT_METHODS_GROUP = {
   base: "/payment-methods",

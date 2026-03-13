@@ -59,6 +59,7 @@ export type PrimaVariant = {
   unitName?: string;
   baseUnitId?: string;
   isActive?: boolean;
+  type?:string;
 };
 export type FinishedProducts = {
   id?: string;
@@ -70,6 +71,7 @@ export type FinishedProducts = {
   unitName?: string;
   baseUnitId?: string;
   isActive?: boolean;
+  type?:string;
 };
 
 export type ProductOption = { productId: string; name: string; sku?: string | null };
