@@ -1,6 +1,7 @@
 import { 
     IconHome,
     IconPaymentMethod,
+    IconProduction,
     IconPurchase, 
     IconRowMaterial, 
     IconStock, IconUsers, 
@@ -97,6 +98,11 @@ export const getSidebarItems = (): SidebarItem[] => [
                 href: RoutesPaths.rowVariant,
             },
         ],
+    },
+    {
+        label: "Producción",
+        href: RoutesPaths.production,
+        icon: <IconProduction className="text-sidebar-foreground" />
     },
     {
         label: "Almacenes",

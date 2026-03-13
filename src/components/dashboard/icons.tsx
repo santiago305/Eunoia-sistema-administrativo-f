@@ -15,7 +15,8 @@ import {
   Pickaxe,
   Store,
   Factory,
-  Banknote
+  Banknote,
+  PencilRuler
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -28,6 +29,9 @@ export const IconSettings = ({ className }: { className?: string }) => (
 
 export const IconWarehouse = ({ className }: { className?: string }) => (
   <Warehouse className={className} size={20} />
+);
+export const IconProduction = ({ className }: { className?: string }) => (
+  <PencilRuler  className={className} size={20} />
 );
 export const IconPaymentMethod = ({ className }: { className?: string }) => (
   <Banknote className={className} size={20} />
