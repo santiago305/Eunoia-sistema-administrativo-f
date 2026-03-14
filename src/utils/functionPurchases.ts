@@ -62,6 +62,12 @@ export const addDaysToIsoDate = (days?: number | null) => {
   date.setDate(date.getDate() + days);
   return toLocalIso(date);
 };
+export const buildMonthStartIso = () => {
+  const date = new Date();
+  date.setDate(1);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString().slice(0, 10);
+};
 
 export const addDaysToIsoDateFrom = (baseIso: string, days?: number | null) => {
   if (!baseIso) return "";

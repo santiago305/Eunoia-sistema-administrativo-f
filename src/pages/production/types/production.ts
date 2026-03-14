@@ -13,8 +13,14 @@ export type AddProductionOrderItemDto = z.infer<typeof addProductionOrderItemSch
 export type UpdateProductionOrderItemDto = z.infer<typeof updateProductionOrderItemSchema>;
 export type ListProductionOrdersQuery = z.infer<typeof listProductionOrdersQuerySchema>;
 
-export type ProductionStatus = "DRAFT" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
+export enum ProductionStatus {
+  DRAFT = "DRAFT",
+  IN_PROGRESS = "IN_PROGRESS",
+  PARTIAL = "PARTIAL",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+}
 export type ProductionOrderItem = {
   itemId?: string;
   finishedItemId: string;

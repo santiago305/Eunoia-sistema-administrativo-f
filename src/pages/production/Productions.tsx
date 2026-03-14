@@ -11,34 +11,21 @@ import {
   listProductionOrders,
   startProductionOrder,
 } from "@/services/productionService";
-import { toDateInputValue, tryShowPicker, todayIso } from "@/utils/functionPurchases";
+import { toDateInputValue, tryShowPicker, todayIso, buildMonthStartIso } from "@/utils/functionPurchases";
 import { Dropdown } from "@/pages/purchases/components/PurchaseDropdown";
-import { Menu, PauseCircle, PlayCircle, CheckCircle2, Plus } from "lucide-react";
+import { Menu, OctagonAlert, Plus, Timer } from "lucide-react";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
-import type { ProductionOrder } from "@/pages/production/types/production";
-import { formatDate } from "@/component/TimerToEnd";
+import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
+import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 
 const PRIMARY = "#21b8a6";
 
-const buildMonthStartIso = () => {
-  const date = new Date();
-  date.setDate(1);
-  date.setHours(0, 0, 0, 0);
-  return date.toISOString().slice(0, 10);
-};
-
-enum ProductionStatus {
-  DRAFT = "DRAFT",
-  IN_PROGRESS = "IN_PROGRESS",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-}
-
 const statusLabels: Record<ProductionStatus, string> = {
   [ProductionStatus.DRAFT]: "Borrador",
   [ProductionStatus.IN_PROGRESS]: "En proceso",
+  [ProductionStatus.PARTIAL]: "Parcial",
   [ProductionStatus.COMPLETED]: "Completado",
   [ProductionStatus.CANCELLED]: "Cancelado",
 };
@@ -191,6 +178,7 @@ export default function Production() {
     void loadOrders();
   }, [page, warehouseId, statusFilter, fromDate, toDate]);
 
+  const now = new Date().toISOString();
   const safePage = Math.max(1, pagination.page || page);
   const totalPages = Math.max(1, pagination.totalPages);
   const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
@@ -229,7 +217,8 @@ export default function Production() {
               Fecha inicio
               <input
                 type="date"
-                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
+                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px]
+                mt-1 outline-none focus:ring-2"
                 style={ringStyle}
                 value={toDateInputValue(fromDate)}
                 onClick={(e) => tryShowPicker(e.currentTarget)}
@@ -243,7 +232,8 @@ export default function Production() {
               Fecha fin
               <input
                 type="date"
-                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
+                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px]
+                mt-1 outline-none focus:ring-2"
                 style={ringStyle}
                 value={toDateInputValue(toDate)}
                 onClick={(e) => tryShowPicker(e.currentTarget)}
@@ -267,7 +257,7 @@ export default function Production() {
                 placeholder="Almacén (todos)"
                 searchPlaceholder="Buscar almacén..."
                 className="h-8"
-                textSize="text-[10px]"
+                textSize="text-[10px] mt-1"
               />
             </label>
 
@@ -309,12 +299,13 @@ export default function Production() {
             <table className="w-full h-full table-fixed">
               <thead className="sticky top-0 z-10 bg-gray-50">
                 <tr className="border-b border-black/10 text-black/60 text-[10px]">
-                  <th className="py-3 px-3 text-left w-[80px]">Fecha</th>
-                  <th className="py-3 px-3 text-left w-[120px]">Referencia</th>
+                  <th className="py-3 px-3 text-left w-[80px]">Registro</th>
+                  <th className="py-3 px-3 text-left w-[80px]">Referencia</th>
                   <th className="py-3 px-3 text-left w-[120px]">Almacén origen</th>
                   <th className="py-3 px-3 text-left w-[120px]">Almacén destino</th>
-                  <th className="py-3 px-3 text-left w-[90px]">Fecha culminación</th>
                   <th className="py-3 px-3 text-left w-[70px]">Estado</th>
+                  <th className="py-3 px-3 text-left w-[120px]">T. Producción</th>
+                  <th className="py-3 px-3 text-left w-[90px]">Termino</th>
                   <th className="py-3 px-0 text-left w-[20px]"></th>
                 </tr>
               </thead>
@@ -323,54 +314,106 @@ export default function Production() {
                   const fromWarehouse = order.fromWarehouseId ? warehouseMetaById.get(order.fromWarehouseId) : undefined;
                   const toWarehouse = order.toWarehouseId ? warehouseMetaById.get(order.toWarehouseId) : undefined;
                   const statusLabel = order.status ? (statusLabels[order.status] ?? order.status) : "-";
-                  const date = order.createdAt ? formatDate(new Date(order.createdAt)) : "-";
-                  const orderId = order.productionId ?? "";
-
+                  const dateCreated = formatDate(new Date(order.manufactureDate ?? "-"));
+                  const timeCreated = order.manufactureDate
+                      ? new Date(order.manufactureDate).toLocaleTimeString("es-PE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                        })
+                      : undefined;
+                  const dateEnd = formatDate(new Date(order.manufactureDate ?? "-"));
+                  const timeEnd = order.manufactureDate
+                      ? new Date(order.manufactureDate).toLocaleTimeString("es-PE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                        })
+                      : undefined;
                   return (
                     <tr key={order.productionId ?? `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt}`} className="border-b border-black/5 text-[10px]">
-                      <td className="py-1 px-3 text-black/70">{date}</td>
+                      <td className="py-1 px-3 text-black/70">
+                        {dateCreated} <br/>
+                        {timeCreated}
+                      </td>
                       <td className="py-1 px-3 text-black/70">{order.reference ?? "-"}</td>
                       <td className="py-1 px-3 text-black/70">
                         <div>{fromWarehouse?.label ?? order.fromWarehouseId ?? "-"}</div>
-                        <div className="text-[10px] text-black/50">{fromWarehouse?.address ?? ""}</div>
                       </td>
                       <td className="py-1 px-3 text-black/70">
                         <div>{toWarehouse?.label ?? order.toWarehouseId ?? "-"}</div>
-                        <div className="text-[10px] text-black/50">{toWarehouse?.address ?? ""}</div>
                       </td>
-                  <td className="py-1 px-3 text-black/70">
-                    {order.manufactureDate ? formatDate(new Date(order.manufactureDate)) : "-"}
-                  </td>
                       <td className="py-1 px-3">
-                        <span className="inline-flex rounded-lg px-2 py-1 text-[11px] font-medium 
-                        bg-slate-50 text-slate-700">{statusLabel}</span>
+                        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium 
+                        bg-slate-50 text-slate-700">{statusLabel}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex h-full items-center justify-center">
+                            {order.status === ProductionStatus.IN_PROGRESS && (
+                                <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                                    <TimerToEnd from={now} to={order.manufactureDate ?? ""} 
+                                    loadProductionOrders={loadOrders} />
+                                </span>
+                            )}
+                            {order.status === ProductionStatus.PARTIAL && (
+                                <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                                    <OctagonAlert className="h-4 w-4" />
+                                    <span className="mt-1">Por Ing.</span>
+                                </span>
+                            )}
+                            {order.status === ProductionStatus.COMPLETED && (
+                                <span className="flex flex-col items-center rounded-lg p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                                    <Timer className="h-4 w-4" />
+                                    <span className="mt-1">Completado</span>
+                                </span>
+                            )}
+                        </div>
+                      </td>
+                      <td className="py-1 px-3 text-black/70">
+                        {dateEnd} <br />
+                        {timeEnd}
                       </td>
                       <td className="py-1 px-0">
                         <Dropdown trigger={<Menu className="h-4 w-4" />}>
-                          <button
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
-                            text-[11px] text-black/70 hover:bg-black/[0.04]"
-                            onClick={() => handleStart(order.productionId ?? "")}
-                            type="button"
-                          >
-                            Iniciar
-                          </button>
+                        {
+                          order.status === ProductionStatus.DRAFT && (
+                            <>
+                            <button
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
+                              text-[11px] text-black/70 hover:bg-black/[0.04]"
+                              onClick={() => handleStart(order.productionId ?? "")}
+                              type="button"
+                            >
+                              Procesar
+                            </button>
+                            <button
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
+                              text-[11px] text-rose-700 hover:bg-rose-50"
+                              onClick={() => handleCancel(order.productionId ?? "")}
+                              type="button"
+                            >
+                              Cancelar
+                            </button>
+                            </>
+                          )
+                        }
+                        {
+                          (
+                            order.status === ProductionStatus.IN_PROGRESS || 
+                            order.status === ProductionStatus.PARTIAL
+                          ) && (
                           <button
                             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
                             text-[11px] text-black/70 hover:bg-black/[0.04]"
                             onClick={() => handleClose(order.productionId ?? "")}
                             type="button"
                           >
-                            Cerrar
+                            Ingresar a elmacen
                           </button>
-                          <button
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
-                            text-[11px] text-rose-700 hover:bg-rose-50"
-                            onClick={() => handleCancel(order.productionId ?? "")}
-                            type="button"
-                          >
-                            Cancelar
-                          </button>
+                          )
+                        }
+
                         </Dropdown>
                       </td>
                     </tr>
