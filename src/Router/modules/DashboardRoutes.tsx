@@ -44,7 +44,8 @@ const Purchase = lazy(() => import("@/pages/purchases/Purchase"));
 const Purchases = lazy(() => import("@/pages/purchases/Purchases"));
 const Company = lazy(() => import("@/pages/company/Company"));
 const PaymentMethods = lazy(() => import("@/pages/payment-methods/PaymentMethod"));
-const Production = lazy(() => import("@/pages/production/Production"));
+const Production = lazy(() => import("@/pages/production/Productions"));
+const ProductionCreate = lazy(() => import("@/pages/production/Production"));
 
 const withRouteGuard = (path: string, element: ReactElement) => {
     const routeMeta = getRouteMetaByPath(path);
@@ -179,6 +180,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.production,
                 element: withRouteGuard(RoutesPaths.production, <Production />),
+            },
+            {
+                path: RoutesPaths.productionCreate,
+                element: withRouteGuard(RoutesPaths.productionCreate, <ProductionCreate />),
             },
         ],
     },

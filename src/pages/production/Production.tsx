@@ -1,419 +1,440 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { listActive } from "@/services/warehouseServices";
-import {
-  cancelProductionOrder,
-  closeProductionOrder,
-  listProductionOrders,
-  startProductionOrder,
-} from "@/services/productionService";
-import { toDateInputValue, tryShowPicker, todayIso } from "@/utils/functionPurchases";
-import { Dropdown } from "@/pages/purchases/components/PurchaseDropdown";
-import { Menu, PauseCircle, PlayCircle, CheckCircle2, Plus } from "lucide-react";
-import type { Warehouse } from "@/pages/warehouse/types/warehouse";
-import type { ProductionOrder } from "@/pages/production/types/production";
-import { formatDate } from "@/component/TimerToEnd";
-import { ProductionOrderModal } from "@/pages/production/components/ProductionOrderModal";
+import { listFinishedWithRecipes } from "@/services/catalogService";
+import { createProductionOrder } from "@/services/productionService";
+import { listDocumentSeries } from "@/services/documentSeriesService";
+import { money, toDateTimeInputValue, tryShowPicker } from "@/utils/functionPurchases";
+import type { AddProductionOrderItemDto, CreateProductionOrderDto } from "@/pages/production/types/production";
+import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
+import type { FinishedProducts } from "@/pages/catalog/types/variant";
+import { RoutesPaths } from "@/Router/config/routesPaths";
+import { useNavigate } from "react-router-dom";
+import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
+import { useSidebarContext } from "@/components/dashboard/SidebarContext";
+import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 
 const PRIMARY = "#21b8a6";
 
-const buildMonthStartIso = () => {
-  const date = new Date();
-  date.setDate(1);
-  date.setHours(0, 0, 0, 0);
-  return date.toISOString().slice(0, 10);
-};
+const buildEmptyForm = (): CreateProductionOrderDto => ({
+  fromWarehouseId: "",
+  toWarehouseId: "",
+  serieId: "",
+  reference: "",
+  manufactureDate: new Date().toISOString(),
+  items: [],
+});
 
-enum ProductionStatus {
-  DRAFT = "DRAFT",
-  IN_PROGRESS = "IN_PROGRESS",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-}
+const buildEmptyItem = (): AddProductionOrderItemDto => ({
+  finishedItemId: "",
+  quantity: 1,
+  unitCost: 0,
+  type: "",
+});
 
-const statusLabels: Record<ProductionStatus, string> = {
-  [ProductionStatus.DRAFT]: "Borrador",
-  [ProductionStatus.IN_PROGRESS]: "En proceso",
-  [ProductionStatus.COMPLETED]: "Completado",
-  [ProductionStatus.CANCELLED]: "Cancelado",
-};
-
-export default function Production() {
+export default function ProductionCreate() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const navigate = useNavigate();
   const { setCollapsed } = useSidebarContext();
 
-  const [warehouseId, setWarehouseId] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | ProductionStatus>("");
-  const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-  const [toDate, setToDate] = useState(() => todayIso());
-  const [page, setPage] = useState(1);
-  const limit = 10;
-
-  const [orders, setOrders] = useState<ProductionOrder[]>([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit,
-    totalPages: 1,
-    hasPrev: false,
-    hasNext: false,
-  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string; address?: string }[]>([]);
-  const [openOrderModal, setOpenOrderModal] = useState(false);
+  const [form, setForm] = useState<CreateProductionOrderDto>(() => buildEmptyForm());
+  const [pendingItem, setPendingItem] = useState<AddProductionOrderItemDto>(() => buildEmptyItem());
+  const [openItemModal, setOpenItemModal] = useState(false);
+  const [openNavigateModal, setOpenNavigateModal] = useState(false);
+  const [products, setProducts] = useState<FinishedProducts[]>([]);
+  const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
+  const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
 
   const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
+
+  const resetForm = () => {
+    setForm(buildEmptyForm());
+    setPendingItem(buildEmptyItem());
+    setOpenItemModal(false);
+    setSerie({ value: "", label: "" });
+  };
 
   const loadWarehouses = async () => {
     try {
       const res = await listActive();
       const options =
-        res?.map((s: Warehouse) => {
-          const address = `${s.department}-${s.province}-${s.district}`;
-          return {
-            value: s.warehouseId,
-            label: s.name,
-            address,
-          };
-        }) ?? [];
-      setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
+        res?.map((s) => ({
+          value: s.warehouseId,
+          label: `${s.name}`,
+        })) ?? [];
+      setWarehouseOptions(options);
     } catch {
-      setWarehouseOptions([{ value: "", label: "Todos" }]);
+      setWarehouseOptions([]);
       showFlash(errorResponse("Error al cargar almacenes"));
     }
   };
 
-  const loadOrders = async () => {
-    console.log("loadOrders called", {
-      loading,
-      page,
-      warehouseId,
-      statusFilter,
-      fromDate,
-      toDate,
-    });
-    if (loading) return;
-    clearFlash();
-    setLoading(true);
-    setError(null);
+  const loadFinishedProducts = async () => {
     try {
-      const res = await listProductionOrders({
-        page,
-        limit,
-        warehouseId: warehouseId || undefined,
-        status: statusFilter || undefined,
-        from: fromDate || undefined,
-        to: toDate || undefined,
-      });
-      console.log("loadOrders result", {
-        items: res.items?.length,
-        total: res.total,
-        first: res.items?.[0],
-      });
-      setOrders(res.items ?? []);
-      const nextTotal = res.total ?? 0;
-      const nextPage = res.page ?? page;
-      const nextLimit = res.limit ?? limit;
-      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || limit)));
-      setPagination({
-        total: nextTotal,
-        page: nextPage,
-        limit: nextLimit,
-        totalPages: nextTotalPages,
-        hasPrev: nextPage > 1,
-        hasNext: nextPage < nextTotalPages,
-      });
+      const res = await listFinishedWithRecipes();
+      setProducts(res);
     } catch {
-      setOrders([]);
-      setPagination((prev) => ({
-        ...prev,
-        total: 0,
-        totalPages: 1,
-        hasPrev: false,
-        hasNext: false,
-      }));
-      setError("Error al listar producciones");
-      showFlash(errorResponse("Error al listar producciones"));
+      setProducts([]);
+      showFlash(errorResponse("Error al cargar productos terminados"));
+    }
+  };
+
+  const loadSeries = async (warehouseId: string) => {
+    if (!warehouseId) {
+      setSerie({ value: "", label: "" });
+      return;
+    }
+    try {
+      const res = await listDocumentSeries({ warehouseId, docType: DocType.PRODUCTION, isActive: true });
+      setSerie({ value: res[0].id, label: res[0].code });
+      setForm((prev) => ({ ...prev, serieId: res[0].id }));
+    } catch {
+      setSerie({ value: "", label: "" });
+      setForm((prev) => ({ ...prev, serieId: "" }));
+      showFlash(errorResponse("Error al cargar series"));
+    }
+  };
+
+  useEffect(() => {
+    resetForm();
+    void loadWarehouses();
+    void loadFinishedProducts();
+  }, []);
+
+  useEffect(() => {
+    setCollapsed(false);
+  }, []);
+
+  const productOptions = useMemo(
+    () =>
+      (products ?? []).map((v) => ({
+        value: v.itemId ?? v.id ?? "",
+        label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
+      })),
+    [products]
+  );
+
+  const addItem = () => {
+    const { finishedItemId, quantity, unitCost } = pendingItem;
+    const selected = products.find((p) => (p.itemId ?? p.id) === finishedItemId);
+
+    if (!finishedItemId) {
+      showFlash(errorResponse("Selecciona un producto"));
+      return;
+    }
+    if (quantity <= 0) {
+      showFlash(errorResponse("La cantidad debe ser mayor a 0"));
+      return;
+    }
+    if (unitCost < 0) {
+      showFlash(errorResponse("El costo debe ser mayor o igual a 0"));
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      items: [
+        ...(prev.items ?? []),
+        {
+          finishedItemId,
+          quantity,
+          unitCost,
+          type: selected?.type ?? "",
+        },
+      ],
+    }));
+    setPendingItem(buildEmptyItem());
+  };
+
+  const removeItem = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      items: (prev.items ?? []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateItem = (index: number, patch: Partial<AddProductionOrderItemDto>) => {
+    setForm((prev) => ({
+      ...prev,
+      items: (prev.items ?? []).map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const totalCost = useMemo(() => {
+    return (form.items ?? []).reduce((acc, item) => acc + item.quantity * item.unitCost, 0);
+  }, [form.items]);
+
+  const saveOrder = async () => {
+    clearFlash();
+    if (!form.fromWarehouseId || !form.toWarehouseId || !form.serieId) {
+      showFlash(errorResponse("Completa los datos de documento"));
+      return;
+    }
+    if (!form.items?.length) {
+      showFlash(errorResponse("Agrega al menos un item"));
+      return;
+    }
+    setLoading(true);
+    try {
+      await createProductionOrder({
+        ...form,
+        reference: form.reference?.trim() || undefined,
+        items: form.items ?? [],
+      });
+      showFlash(successResponse("Orden de produccion creada"));
+      setOpenNavigateModal(true);
+    } catch {
+      showFlash(errorResponse("Error al crear la orden de produccion"));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStart = async (id: string) => {
-    clearFlash();
-    try {
-      await startProductionOrder(id);
-      showFlash(successResponse("Orden iniciada"));
-      loadOrders();
-    } catch {
-      showFlash(errorResponse("Error al iniciar la orden"));
-    }
-  };
-
-  const handleClose = async (id: string) => {
-    clearFlash();
-    try {
-      await closeProductionOrder(id);
-      showFlash(successResponse("Orden cerrada"));
-      loadOrders();
-    } catch {
-      showFlash(errorResponse("Error al cerrar la orden"));
-    }
-  };
-
-  const handleCancel = async (id: string) => {
-    clearFlash();
-    try {
-      await cancelProductionOrder(id);
-      showFlash(successResponse("Orden cancelada"));
-      loadOrders();
-    } catch {
-      showFlash(errorResponse("Error al cancelar la orden"));
-    }
-  };
-
-  useEffect(() => {
-    void loadWarehouses();
-  }, []);
-
-  useEffect(() => {
-    setCollapsed(true);
-  }, []);
-
-  useEffect(() => {
-    void loadOrders();
-  }, [page, warehouseId, statusFilter, fromDate, toDate]);
-
-  const safePage = Math.max(1, pagination.page || page);
-  const totalPages = Math.max(1, pagination.totalPages);
-  const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
-  const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
-
-  const warehouseMetaById = useMemo(() => {
-    const map = new Map<string, { label: string; address?: string }>();
-    warehouseOptions.forEach((opt) => {
-      if (opt.value) map.set(opt.value, { label: opt.label, address: opt.address });
-    });
-    return map;
-  }, [warehouseOptions]);
-
-  const listKey = useMemo(() => `${page}|${warehouseId}|${statusFilter}|${fromDate}|${toDate}`, [page, warehouseId, statusFilter, fromDate, toDate]);
-
   return (
     <div className="w-full min-h-screen bg-white">
-      <PageTitle title="Producción" />
-      <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 pt-2 space-y-4">
+      <PageTitle title="Orden de produccion" />
+      <div className="mx-auto w-full max-w-[1500px] 
+        px-4 pt-2 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">Producción</h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-0 text-[10px]">
-              Total: <span className="font-semibold text-black">{pagination.total}</span>
-            </div>
+            <h1 className="text-xl font-semibold tracking-tight">Orden de produccion</h1>
           </div>
         </div>
 
-        <section className=" bg-gray-50 shadow-sm  p-4 space-y-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.2fr_0.2fr_1fr_1fr]">
-            <label className="text-[10px] text-black/60 font-bold">
-              Fecha inicio
-              <input
-                type="date"
-                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                style={ringStyle}
-                value={toDateInputValue(fromDate)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </label>
-            <label className="text-[10px] text-black/60 font-bold">
-              Fecha fin
-              <input
-                type="date"
-                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                style={ringStyle}
-                value={toDateInputValue(toDate)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) => {
-                  setToDate(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </label>
-
-            <label className="text-[10px] text-black/60 font-bold">
-              Almacén
-              <FilterableSelect
-                value={warehouseId}
-                onChange={(value) => {
-                  setWarehouseId(value);
-                  setPage(1);
-                }}
-                options={warehouseOptions}
-                placement="bottom"
-                placeholder="Almacén (todos)"
-                searchPlaceholder="Buscar almacén..."
-                className="h-8"
-                textSize="text-[10px]"
-              />
-            </label>
-
-            <label className="text-[10px] text-black/60 font-bold">
-              Estado
-              <div className="mt-1 grid grid-cols-[1fr_auto] gap-2">
-                <select
-                  className="h-8 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                  style={ringStyle}
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as "" | ProductionStatus);
-                    setPage(1);
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] 
+          max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
+          <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden 
+            flex flex-col ">
+            <div className="border-b border-black/10 p-3 sm:p-4">
+              <p className="text-xs font-semibold">Productos terminados</p>
+              <div className="mt-2 grid grid-cols-1 gap-2 xl:grid-cols-[1fr_auto]">
+                <FilterableSelect
+                  value={pendingItem.finishedItemId}
+                  onChange={(value) => {
+                    setPendingItem((prev) => ({ ...prev, finishedItemId: value }));
+                    setOpenItemModal(Boolean(value));
                   }}
-                >
-                  <option value="">Estado (todos)</option>
-                  <option value={ProductionStatus.DRAFT}>Borrador</option>
-                  <option value={ProductionStatus.IN_PROGRESS}>En proceso</option>
-                  <option value={ProductionStatus.COMPLETED}>Completado</option>
-                  <option value={ProductionStatus.CANCELLED}>Cancelado</option>
-                </select>
+                  options={productOptions}
+                  placement="bottom"
+                  placeholder="Producto terminado"
+                  searchPlaceholder="Buscar producto..."
+                  className="h-9"
+                  textSize="text-[11px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              <table className="w-full text-xs table-fixed">
+                <thead className="sticky top-0 z-10 bg-white">
+                  <tr className="border-b border-black/10 text-[10px] text-black/60">
+                    <th className="py-2 px-4 text-left w-25">SKU</th>
+                    <th className="py-2 px-4 text-left w-32">Producto</th>
+                    <th className="py-2 px-4 text-left w-15">Unidad</th>
+                    <th className="py-2 px-4 text-left w-18">Cantidad</th>
+                    <th className="py-2 px-4 text-left w-22">Costo unit.</th>
+                    <th className="py-2 px-4 text-left w-20"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(form.items ?? []).map((item, index) => {
+                    const product = products.find((p) => (p.itemId ?? p.id) === item.finishedItemId);
+                    return (
+                      <tr key={`${item.finishedItemId}-${index}`} className="border-b border-black/5 text-[10px]">
+                        <td className="py-2 px-4 text-black/70">{product?.sku}</td>
+                        <td className="py-2 px-4 text-black/70">{product?.productName}</td>
+                        <td className="py-2 px-4 text-black/70">{product?.unitName}</td>
+                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
+                          <input
+                            type="number"
+                            min={1}
+                            className="h-8 w-15 rounded-lg border border-black/10 bg-white px-2 text-[10px] text-right outline-none focus:ring-2"
+                            style={ringStyle}
+                            value={item.quantity === 0 ? 1 : item.quantity}
+                            onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
+                          />
+                        </td>
+                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
+                          <input
+                            type="number"
+                            min={0}
+                            className="h-8 w-18 rounded-lg border border-black/10 bg-white px-2 text-[10px] text-right outline-none focus:ring-2"
+                            style={ringStyle}
+                            value={item.unitCost === 0 ? "" : item.unitCost}
+                            placeholder="0"
+                            onChange={(e) =>
+                              updateItem(index, { unitCost: e.target.value === "" ? 0 : Number(e.target.value) })
+                            }
+                          />
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className="flex items-center justify-end">
+                            <button
+                              type="button"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 bg-white hover:bg-black/[0.03] text-rose-600"
+                              title="Eliminar"
+                              onClick={() => removeItem(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {(form.items ?? []).length === 0 && (
+                <div className="px-4 py-8 text-xs text-black/60">Aun no agregas items.</div>
+              )}
+            </div>
+
+            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[11px] text-black/60">Total costo items</div>
+                <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
+                  <span className="font-semibold text-black tabular-nums">{money(totalCost, "PEN")}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto 
+            flex flex-col max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
+            <div className="border-b border-black/10 px-3 sm:px-4 py-2">
+              <p className="text-xs font-semibold">Datos de documento</p>
+            </div>
+            <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-4">
+                <label className="text-[11px] text-black/70">
+                  Almacen origen
+                  <FilterableSelect
+                    value={form.fromWarehouseId}
+                    onChange={(value) => {
+                      setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
+                      void loadSeries(value);
+                    }}
+                    options={warehouseOptions}
+                    placement="bottom"
+                    placeholder="Seleccionar almacen"
+                    searchPlaceholder="Buscar almacen..."
+                    className="h-9"
+                    textSize="text-[11px] mt-1"
+                  />
+                </label>
+                <label className="text-[11px] text-black/70">
+                  Almacen destino
+                  <FilterableSelect
+                    value={form.toWarehouseId}
+                    onChange={(value) => {
+                      setForm((prev) => ({ ...prev, toWarehouseId: value }));
+                    }}
+                    options={warehouseOptions}
+                    placement="bottom"
+                    placeholder="Seleccionar almacen"
+                    searchPlaceholder="Buscar almacen..."
+                    className="h-9"
+                    textSize="text-[11px] mt-1"
+                  />
+                </label>
+              </div>
+              <div className="space-y-1 grid grid-cols-2 gap-4">
+                <label className="text-[11px] text-black/70">
+                  Serie
+                  <input
+                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
+                    style={ringStyle}
+                    value={serie.label}
+                    placeholder="Serie"
+                    disabled
+                  />
+                </label>
+                <label className="text-[11px] text-black/70">
+                  Referencia
+                  <input
+                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
+                    style={ringStyle}
+                    value={form.reference ?? ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, reference: e.target.value }))}
+                    placeholder="Referencia"
+                  />
+                </label>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-black/70">
+                  Fecha de culminacion
+                  <input
+                    type="datetime-local"
+                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
+                    style={ringStyle}
+                    value={toDateTimeInputValue(form.manufactureDate)}
+                    onClick={(e) => tryShowPicker(e.currentTarget)}
+                    onChange={(e) => setForm((prev) => ({ ...prev, manufactureDate: e.target.value }))}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  className="inline-flex h-8 items-center gap-2 rounded-lg border px-3 text-[10px] text-white focus:outline-none focus:ring-2"
-                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                  onClick={() => setOpenOrderModal(true)}
+                  className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03]"
+                  onClick={resetForm}
                 >
-                  <Plus className="h-4 w-4" />
-                  Orden de producción
+                  Limpiar
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
+                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                  disabled={
+                    loading ||
+                    !form.fromWarehouseId ||
+                    !form.toWarehouseId ||
+                    !form.serieId ||
+                    !(form.items ?? []).length
+                  }
+                  onClick={saveOrder}
+                >
+                  {loading ? "Guardando..." : "Guardar"}
                 </button>
               </div>
-            </label>
-          </div>
-        </section>
-
-        <section className=" border-black/10 bg-white shadow-sm overflow-hidden">
-          <div className="max-h-[calc(100vh-220px)] min-h-[calc(100vh-220px)] overflow-auto">
-            <table className="w-full h-full table-fixed">
-              <thead className="sticky top-0 z-10 bg-gray-50">
-                <tr className="border-b border-black/10 text-black/60 text-[10px]">
-                  <th className="py-3 px-3 text-left w-[80px]">Fecha</th>
-                  <th className="py-3 px-3 text-left w-[120px]">Referencia</th>
-                  <th className="py-3 px-3 text-left w-[120px]">Almacén origen</th>
-                  <th className="py-3 px-3 text-left w-[120px]">Almacén destino</th>
-                  <th className="py-3 px-3 text-left w-[90px]">Fecha culminación</th>
-                  <th className="py-3 px-3 text-left w-[70px]">Estado</th>
-                  <th className="py-3 px-0 text-left w-[20px]"></th>
-                </tr>
-              </thead>
-              <tbody key={listKey}>
-                {orders.map((order) => {
-                  const fromWarehouse = order.fromWarehouseId ? warehouseMetaById.get(order.fromWarehouseId) : undefined;
-                  const toWarehouse = order.toWarehouseId ? warehouseMetaById.get(order.toWarehouseId) : undefined;
-                  const statusLabel = order.status ? (statusLabels[order.status] ?? order.status) : "-";
-                  const date = order.createdAt ? formatDate(new Date(order.createdAt)) : "-";
-                  const orderId = order.productionId ?? "";
-
-                  return (
-                    <tr key={order.productionId ?? `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt}`} className="border-b border-black/5 text-[10px]">
-                      <td className="py-1 px-3 text-black/70">{date}</td>
-                      <td className="py-1 px-3 text-black/70">{order.reference ?? "-"}</td>
-                      <td className="py-1 px-3 text-black/70">
-                        <div>{fromWarehouse?.label ?? order.fromWarehouseId ?? "-"}</div>
-                        <div className="text-[10px] text-black/50">{fromWarehouse?.address ?? ""}</div>
-                      </td>
-                      <td className="py-1 px-3 text-black/70">
-                        <div>{toWarehouse?.label ?? order.toWarehouseId ?? "-"}</div>
-                        <div className="text-[10px] text-black/50">{toWarehouse?.address ?? ""}</div>
-                      </td>
-                  <td className="py-1 px-3 text-black/70">
-                    {order.manufactureDate ? formatDate(new Date(order.manufactureDate)) : "-"}
-                  </td>
-                      <td className="py-1 px-3">
-                        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">{statusLabel}</span>
-                      </td>
-                      <td className="py-1 px-0">
-                        <Dropdown trigger={<Menu className="h-4 w-4" />}>
-                          <button
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                            onClick={() => orderId && handleStart(orderId)}
-                            type="button"
-                          >
-                            <PlayCircle className="h-4 w-4" />
-                            Iniciar
-                          </button>
-                          <button
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                            onClick={() => orderId && handleClose(orderId)}
-                            type="button"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Cerrar
-                          </button>
-                          <button
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] text-rose-700 hover:bg-rose-50"
-                            onClick={() => orderId && handleCancel(orderId)}
-                            type="button"
-                          >
-                            <PauseCircle className="h-4 w-4" />
-                            Cancelar
-                          </button>
-                        </Dropdown>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {!loading && orders.length === 0 && <div className="px-5 py-8 text-[10px] text-black/60">No hay órdenes con los filtros actuales.</div>}
-            {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-[10px] text-black/60">
-            <span className="hidden sm:inline">
-              Mostrando {startIndex}-{endIndex} de {pagination.total}
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[10px] hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={!pagination.hasPrev || loading}
-                onClick={() => setPage(Math.max(1, safePage - 1))}
-                type="button"
-              >
-                Anterior
-              </button>
-
-              <span className="tabular-nums">
-                Página {safePage} de {totalPages}
-              </span>
-
-              <button
-                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[10px] hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={!pagination.hasNext || loading}
-                onClick={() => setPage(safePage + 1)}
-                type="button"
-              >
-                Siguiente
-              </button>
             </div>
-          </div>
-        </section>
+          </aside>
+        </div>
       </div>
-      <ProductionOrderModal
-        open={openOrderModal}
-        onClose={() => setOpenOrderModal(false)}
-        onCreated={loadOrders}
+
+      <ProductionItemModal
+        open={openItemModal}
+        pendingItem={pendingItem}
+        ringStyle={ringStyle}
+        primaryColor={PRIMARY}
+        onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
+        onClose={() => setOpenItemModal(false)}
+        onAdd={() => {
+          addItem();
+          setOpenItemModal(false);
+        }}
+      />
+
+      <ModalNavigateProduction
+        open={openNavigateModal}
+        onClose={() => setOpenNavigateModal(false)}
+        onNewProduction={() => {
+          setOpenNavigateModal(false);
+          resetForm();
+        }}
+        onGoToList={() => {
+          setOpenNavigateModal(false);
+          navigate(RoutesPaths.production);
+        }}
         primaryColor={PRIMARY}
       />
     </div>

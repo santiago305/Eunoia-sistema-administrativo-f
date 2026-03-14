@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState} from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
-import { createVariant, getVariantById, listRowMaterials, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
-import { listProducts } from "@/services/productService";
+import { createVariant, getVariantById, listProductFinishedActives, listRowMaterials, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
 import type { ProductOption, Variant, VariantForm } from "@/pages/catalog/types/variant";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -96,15 +95,16 @@ export default function CatalogVariants() {
 
   const loadProducts = async () => {
       try {
-          const batch = 100;
-          const first = await listProducts({ page: 1, limit: batch, type: ProductTypes.FINISHED });
-          const all = [...(first.items ?? [])];
-          const pages = Math.max(1, Math.ceil((first.total ?? all.length) / batch));
-          for (let p = 2; p <= pages; p += 1) {
-              const res = await listProducts({ page: p, limit: batch, type: ProductTypes.FINISHED });
-              if (res.items?.length) all.push(...res.items);
-          }
-          setProducts(all.map((p) => ({ productId: p.id, name: p.name, sku: p.sku ?? null })));
+          const res = await listProductFinishedActives();
+          let objets:ProductOption[] = [];
+          res.map((r)=>{
+            objets.push({
+              productId:r.id ?? '',
+              name:r.name ?? '',
+              sku:r.sku
+            })
+          })
+          setProducts(objets);
       } catch {
           setProducts([]);
           showFlash(errorResponse("Error al cargar productos"));
@@ -455,7 +455,9 @@ export default function CatalogVariants() {
                 </tr>
               </thead>
               <AnimatePresence mode="wait" initial={false}>
-                <motion.tbody key={`${page}|${statusFilter}|${productFilter}|${debouncedSearch}`} initial={shouldReduceMotion ? false : { opacity: 0 }} animate={shouldReduceMotion ? false : { opacity: 1 }} exit={shouldReduceMotion ? undefined : { opacity: 0 }}>
+                <motion.tbody key={`${page}|${statusFilter}|${productFilter}|${debouncedSearch}`} 
+                initial={shouldReduceMotion ? false : { opacity: 0 }} animate={shouldReduceMotion ? false :
+                 { opacity: 1 }} exit={shouldReduceMotion ? undefined : { opacity: 0 }}>
                   {variants.map((v) => (
 
                     <tr key={v.id} className="border-b border-black/5 text-[11px]">
@@ -485,7 +487,8 @@ export default function CatalogVariants() {
                           <div className="flex flex-col gap-1">
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] 
+                              text-black/80 hover:bg-black/[0.03]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openEquivalences(v.productId, v.baseUnitId, v.sku);
@@ -496,7 +499,8 @@ export default function CatalogVariants() {
                             </button>
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] 
+                              text-black/80 hover:bg-black/[0.03]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openRecipes(v.id, v.sku);
@@ -507,7 +511,8 @@ export default function CatalogVariants() {
                             </button>
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] 
+                              text-black/80 hover:bg-black/[0.03]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 void openEdit(v.id);
@@ -519,7 +524,8 @@ export default function CatalogVariants() {
                             <button
                               type="button"
                               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                                v.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                                v.isActive ? "text-rose-700 hover:bg-rose-50" : 
+                                "text-cyan-700 hover:bg-cyan-50"
                               }`}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -538,7 +544,8 @@ export default function CatalogVariants() {
                 </motion.tbody>
               </AnimatePresence>
             </table>
-            {!loading && variants.length === 0 && <div className="px-5 py-8 text-sm text-black/60">No hay variantes con los filtros actuales.</div>}
+            {!loading && variants.length === 0 && <div className="px-5 py-8 text-sm text-black/60">
+            No hay variantes con los filtros actuales.</div>}
           </div>
 
           {/* Mobile/Tablet cards */}
@@ -568,10 +575,12 @@ export default function CatalogVariants() {
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           <StatusPill active={!!v.isActive} PRIMARY={PRIMARY} />
-                          <span className="rounded-full bg-black/[0.03] px-2.5 py-1 text-[11px] text-black/70 tabular-nums">
+                          <span className="rounded-full bg-black/[0.03] px-2.5 py-1 text-[11px] 
+                          text-black/70 tabular-nums">
                             Precio:{money(v.price, 'PEN')}
                           </span>
-                          <span className="rounded-full bg-black/[0.03] px-2.5 py-1 text-[11px] text-black/70 tabular-nums">
+                          <span className="rounded-full bg-black/[0.03] px-2.5 py-1 text-[11px] 
+                          text-black/70 tabular-nums">
                             Costo:{v.cost ? money(v.cost, 'PEN') : "-"}
                           </span>
                         </div>
@@ -639,8 +648,11 @@ export default function CatalogVariants() {
         <Modal title="Nueva variante" onClose={() => setOpenCreate(false)} className="max-w-lg">
           <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>Cancelar</button>
-            <button className="rounded-lg border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
+            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" 
+            onClick={() => setOpenCreate(false)}>Cancelar</button>
+            <button className="rounded-lg border px-4 py-2 text-sm text-white" 
+            style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+             onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
           </div>
         </Modal>
       )}
@@ -649,14 +661,18 @@ export default function CatalogVariants() {
         <Modal title="Editar variante" onClose={() => setEditingVariantId(null)} className="max-w-lg">
           <VariantFormFields form={form} setForm={setForm} products={products} />
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingVariantId(null)}>Cancelar</button>
-            <button className="rounded-lg border px-4 py-2 text-sm text-white" style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>Guardar cambios</button>
+            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => 
+              setEditingVariantId(null)}>Cancelar</button>
+            <button className="rounded-lg border px-4 py-2 text-sm text-white" 
+            style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>
+              Guardar cambios</button>
           </div>
         </Modal>
       )}
 
       {equivalenceVariantId && equivalenceBaseUnitId && (
-        <Modal title={`Equivalencias de variante (${sku})`} onClose={() => setEquivalenceVariantId(null)} className="max-w-2xl">
+        <Modal title={`Equivalencias de variante (${sku})`} onClose={() => 
+        setEquivalenceVariantId(null)} className="max-w-2xl">
           <EquivalenceFormFields
             productId={equivalenceVariantId}
             baseUnitId={equivalenceBaseUnitId}
