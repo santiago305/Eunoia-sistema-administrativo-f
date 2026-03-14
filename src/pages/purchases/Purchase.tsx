@@ -69,7 +69,7 @@ export default function PurchaseCreateLocal() {
             const normalized = (result ?? [])
                 .map((row) => ({
                     ...row,
-                    stockItemId: row.stockItemId ?? row.id ?? row.primaId ?? "",
+                    stockItemId: row.itemId ?? row.id ?? row.primaId ?? "",
                     isActive: row.isActive ?? true,
                 }))
                 .filter((row) => row.stockItemId);
@@ -175,7 +175,7 @@ export default function PurchaseCreateLocal() {
     }, []);
 
     const productOptions = (products ?? []).map((v) => ({
-        value: v.stockItemId ?? v.id ?? "",
+        value: v.itemId ?? v.id ?? "",
         label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
     }));
 
@@ -278,7 +278,7 @@ export default function PurchaseCreateLocal() {
 
     const itemsView = useMemo(() => {
         return (form.items ?? []).map((item) => {
-            const product = products.find((p) => p.stockItemId === item.stockItemId);
+            const product = products.find((p) => p.itemId === item.stockItemId);
             return {
                 item,
                 sku: product?.sku ?? "-",

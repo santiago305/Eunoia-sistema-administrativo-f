@@ -51,7 +51,7 @@ export type ListVariantsResponse = {
 export type PrimaVariant = {
   id?: string;
   primaId?: string;
-  stockItemId?: string;
+  itemId?: string;
   sku?: string;
   productName?: string;
   productDescription?: string;
@@ -61,9 +61,20 @@ export type PrimaVariant = {
   isActive?: boolean;
   type?:string;
 };
+export type ProductListActive = {
+  id?: string;
+  primaId?: string;
+  itemId?: string;
+  sku?: string;
+  name?: string;
+  description?: string;
+  baseUnitId?: string;
+  isActive?: boolean;
+  type?:string;
+};
 export type FinishedProducts = {
   id?: string;
-  stockItemId?: string;
+  itemId?: string;
   sku?: string;
   productName?: string;
   productDescription?: string;

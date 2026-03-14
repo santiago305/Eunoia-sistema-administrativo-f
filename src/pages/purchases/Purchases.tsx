@@ -7,7 +7,7 @@ import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { listAll } from "@/services/supplierService";
 import { listActive } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setSentPurchase } from "@/services/purchaseService";
-import { money, toDateInputValue, tryShowPicker, todayIso } from "@/utils/functionPurchases";
+import { money, toDateInputValue, tryShowPicker, todayIso, buildMonthStartIso } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -36,13 +36,6 @@ const docTypeLabels: Record<VoucherDocType, string> = {
   [VoucherDocTypes.FACTURA]: "Factura",
   [VoucherDocTypes.BOLETA]: "Boleta",
   [VoucherDocTypes.NOTA_VENTA]: "Nota de venta",
-};
-
-const buildMonthStartIso = () => {
-  const date = new Date();
-  date.setDate(1);
-  date.setHours(0, 0, 0, 0);
-  return date.toISOString().slice(0, 10);
 };
 
 const normalizeNumber = (raw: string) => raw.trim().replace(/\s+/g, "");
@@ -445,7 +438,6 @@ export default function Purchases() {
                                           </td>
                                           <td className="py-1 px-3 text-black/70">
                                               <div>{warehouseMeta?.label ?? "-"}</div>
-                                              <div className="text-[10px] text-black/50">{warehouseMeta?.address ?? ""}</div>
                                           </td>
                                           <td className="py-1 px-3 text-black/70">{purchase.paymentForm}</td>
                                           <td className="py-1 px-3 text-left text-black/70 tabular-nums">{money(purchase.total ?? 0, purchase.currency)}</td>
@@ -458,7 +450,8 @@ export default function Purchases() {
                                               <div className="flex h-full items-center justify-center">
                                                   {purchase.status === PurchaseOrderStatuses.SENT && (
                                                       <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                                          <TimerToEnd from={now} to={purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />
+                                                          <TimerToEnd from={now} to={purchase.expectedAt ?? ""} 
+                                                          loadPurchases={loadPurchases} />
                                                       </span>
                                                   )}
                                                   {purchase.status === PurchaseOrderStatuses.PARTIAL && (

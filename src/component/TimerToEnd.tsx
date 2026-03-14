@@ -4,7 +4,8 @@ type TimerToEndProps = {
     from: string;
     to: string;
     className?: string;
-    loadPurchases: () => void
+    loadPurchases?: () => void;
+    loadProductionOrders?: () => void;
 };
 
 const pad2 = (value: number) => String(value).padStart(2, "0");
@@ -16,16 +17,6 @@ export const formatDate = (d: Date) => {
     return `${dd}/${mm}/${yy}`;
 };
 
-const formatTime12 = (d: Date) => {
-    let hours = d.getHours();
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12;
-    hours = hours === 0 ? 12 : hours;
-    const hh = pad2(hours);
-    const mm = pad2(d.getMinutes());
-    const ss = pad2(d.getSeconds());
-    return `${hh}:${mm}:${ss} ${ampm}`;
-};
 
 const formatDuration = (ms: number) => {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -43,7 +34,8 @@ const formatDuration = (ms: number) => {
     return parts.join(", ");
 };
 
-export default function TimerToEnd({ from, to, className, loadPurchases }: TimerToEndProps) {
+export default function TimerToEnd({ from, to, className, loadPurchases,loadProductionOrders
+}: TimerToEndProps) {
     const [now, setNow] = useState(() => Date.now());
     const [didReload, setDidReload] = useState(false);
     const [waitUntil, setWaitUntil] = useState<number | null>(null);
@@ -71,7 +63,12 @@ export default function TimerToEnd({ from, to, className, loadPurchases }: Timer
             if (now >= waitUntil) {
                 setDidReload(true);
                 setWaitUntil(null);
-                loadPurchases();
+                if(loadPurchases){
+                    loadPurchases();
+                }
+                if(loadProductionOrders){
+                    loadProductionOrders();
+                }
             }
         }
     }, [to, now, didReload, loadPurchases, waitUntil]);

@@ -9,6 +9,7 @@ import {
   UpdateVariantDto,
   Variant,
   PrimaVariant,
+  ProductListActive,
 } from "@/pages/catalog/types/variant";
 
 export const listVariants = async (params: ListVariantsQuery): Promise<ListVariantsResponse> => {
@@ -19,8 +20,25 @@ export const listRowMaterials = async (): Promise<PrimaVariant[]> => {
   const res = await axiosInstance.get(API_VARIANTS_GROUP.listRowMaterials);
   return res.data;
 };
+export const listProduct = async (): Promise<PrimaVariant[]> => {
+  const res = await axiosInstance.get(API_VARIANTS_GROUP.listRowMaterials);
+  return res.data;
+};
 export const listFinishedProducts= async (): Promise<PrimaVariant[]> => {
   const res = await axiosInstance.get(API_PRODUCTS_GROUP.productFinisheds);
+  return res.data;
+};
+
+export const listProductFinishedActives= async (): Promise<ProductListActive[]> => {
+  const res = await axiosInstance.get(API_PRODUCTS_GROUP.productFinishedsActive);
+  return res.data;
+};
+export const listProductPrimaActives= async (): Promise<ProductListActive[]> => {
+  const res = await axiosInstance.get(API_PRODUCTS_GROUP.productPrimasActive);
+  return res.data;
+};
+export const listFinishedWithRecipes= async (): Promise<PrimaVariant[]> => {
+  const res = await axiosInstance.get(API_PRODUCTS_GROUP.finishedWithRecipes);
   return res.data;
 };
 

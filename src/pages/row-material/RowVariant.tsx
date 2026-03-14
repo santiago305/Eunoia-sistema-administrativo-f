@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
-import { createVariant, getVariantById, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
+import { createVariant, getVariantById, listProductPrimaActives, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
 import { listProducts } from "@/services/productService";
 import type { ProductOption, Variant, VariantForm } from "@/pages/catalog/types/variant";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -86,18 +86,19 @@ export default function RowVariant() {
 
   const loadProducts = async () => {
     try {
-      const batch = 100;
-      const first = await listProducts({ page: 1, limit: batch, type: ProductTypes.PRIMA });
-      const all = [...(first.items ?? [])];
-      const pages = Math.max(1, Math.ceil((first.total ?? all.length) / batch));
-      for (let p = 2; p <= pages; p += 1) {
-        const res = await listProducts({ page: p, limit: batch, type: ProductTypes.PRIMA });
-        if (res.items?.length) all.push(...res.items);
-      }
-      setProducts(all.map((p) => ({ productId: p.id, name: p.name, sku: p.sku ?? null })));
+        const res = await listProductPrimaActives();
+        let objets:ProductOption[] = [];
+        res.map((r)=>{
+          objets.push({
+            productId:r.id ?? '',
+            name:r.name ?? '',
+            sku:r.sku
+          })
+        })
+        setProducts(objets);
     } catch {
-      setProducts([]);
-      showFlash(errorResponse("Error al cargar productos"));
+        setProducts([]);
+        showFlash(errorResponse("Error al cargar productos"));
     }
   };
 
