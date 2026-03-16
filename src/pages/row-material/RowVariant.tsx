@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { createVariant, getVariantById, listProductPrimaActives, listVariants, updateVariant, updateVariantActive } from "@/services/catalogService";
-import { listProducts } from "@/services/productService";
 import type { ProductOption, Variant, VariantForm } from "@/pages/catalog/types/variant";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -122,7 +121,7 @@ export default function RowVariant() {
         page,
         limit,
         q: debouncedSearch || undefined,
-        isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
+        isActive: statusFilter === "active" ? "true" : "false",
         type: ProductTypes.PRIMA,
         productId: productFilter || undefined,
       });
@@ -170,10 +169,6 @@ export default function RowVariant() {
       setLoadingEquivalences(false);
     }
   };
-
-  useEffect(() => {
-    void loadUnits();
-  }, []);
 
   useEffect(() => {
     void loadProducts();
@@ -253,6 +248,7 @@ export default function RowVariant() {
   };
 
   const openEquivalences = (productId: string, baseUnitId: string, skuValue: string) => {
+    loadUnits();
     setEquivalenceVariantId(productId);
     setEquivalenceBaseUnitId(baseUnitId);
     setSku(skuValue);
@@ -396,9 +392,8 @@ export default function RowVariant() {
                   setPage(1);
                 }}
               >
-                <option value="all">Estado (todos)</option>
                 <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
+                <option value="inactive">Eliminados</option>
               </select>
             </div>
           </div>
@@ -459,46 +454,53 @@ export default function RowVariant() {
                         <StatusPill active={!!v.isActive} PRIMARY={PRIMARY} />
                       </td>
                       <td className="py-3 px-0">
-                        <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
-                          <div className="flex flex-col gap-1">
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                              onClick={(e) => {
+                        <Dropdown
+                          trigger={<Menu className="h-4 w-4" />}
+                          menuClassName="min-w-52 p-2"
+                          itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                          items={[
+                            {
+                              label: (
+                                <>
+                                  <Layers className="h-4 w-4 text-black/60" />
+                                  Equivalencias
+                                </>
+                              ),
+                              onClick: (e:any) => {
                                 e.stopPropagation();
                                 openEquivalences(v.productId, v.baseUnitId, v.sku);
-                              }}
-                            >
-                              <Layers className="h-4 w-4 text-black/60" />
-                              Equivalencias
-                            </button>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                              onClick={(e) => {
+                              },
+                            },
+                            {
+                              label: (
+                                <>
+                                  <Pencil className="h-4 w-4 text-black/60" />
+                                  Editar
+                                </>
+                              ),
+                              onClick: (e:any) => {
                                 e.stopPropagation();
                                 void openEdit(v.id);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4 text-black/60" />
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                              },
+                            },
+                            {
+                              label: (
+                                <>
+                                  <Power className="h-4 w-4" />
+                                  {v.isActive ? "Eliminar" : "Restaurar"}
+                                </>
+                              ),
+                              className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
                                 v.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
-                              }`}
-                              onClick={(e) => {
+                              }`,
+                              onClick: (e:any) => {
                                 e.stopPropagation();
                                 setDeletingVariantId(v.id);
                                 setNextActiveState(!v.isActive);
-                              }}
-                            >
-                              <Power className="h-4 w-4" />
-                              {v.isActive ? "Desactivar" : "Activar"}
-                            </button>
-                          </div>
-                        </Dropdown>
+                              },
+                            },
+                          ].filter(Boolean)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -557,7 +559,7 @@ export default function RowVariant() {
                           <Pencil className="h-4 w-4" />
                         </IconButton>
                         <IconButton
-                          title={v.isActive ? "Desactivar" : "Activar"}
+                          title={v.isActive ? "Eliminar" : "Restaurar"}
                           onClick={() => {
                             setDeletingVariantId(v.id);
                             setNextActiveState(!v.isActive);
@@ -659,7 +661,7 @@ export default function RowVariant() {
       )}
 
       {deletingVariantId && (
-        <Modal title={nextActiveState ? "Restaurar variante" : "Desactivar variante"} onClose={() => setDeletingVariantId(null)} className="max-w-md">
+        <Modal title={nextActiveState ? "Restaurar variante" : "Eiminar variante"} onClose={() => setDeletingVariantId(null)} className="max-w-md">
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
             animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
@@ -668,8 +670,8 @@ export default function RowVariant() {
             <div className={"rounded-lg border px-3 py-2 " + (nextActiveState ? "border-teal-200 bg-teal-50" : "border-rose-200 bg-rose-50")}>
               <p className={"text-sm " + (nextActiveState ? "text-teal-800" : "text-rose-800")}>
                 {nextActiveState
-                  ? "Se activara la variante nuevamente."
-                  : "Se desactivara la variante seleccionada. Esto puede afectar ventas/stock."}
+                  ? "Se restaurara la variante nuevamente."
+                  : "Se eliminara la variante seleccionada. Esto puede afectar ventas/stock."}
               </p>
             </div>
 

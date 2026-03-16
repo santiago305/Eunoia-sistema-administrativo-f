@@ -20,8 +20,6 @@ import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { Dropdown } from "./components/PurchaseDropdown";
 import { Menu, OctagonAlert, Timer } from "lucide-react";
 
-
-
 const PRIMARY = "#21b8a6";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
@@ -42,7 +40,6 @@ const normalizeNumber = (raw: string) => raw.trim().replace(/\s+/g, "");
 
 export default function Purchases() {
   const { showFlash, clearFlash } = useFlashMessage();
-  const { setCollapsed } = useSidebarContext();
   const navigate = useNavigate();
 
   const [numeroInput, setNumeroInput] = useState("");
@@ -213,10 +210,6 @@ export default function Purchases() {
   useEffect(() => {
     void loadSuppliers();
     void loadWarehouses();
-  }, []);
-  
-  useEffect(() => {
-    setCollapsed(true);
   }, []);
 
   useEffect(() => {
@@ -473,81 +466,51 @@ export default function Purchases() {
                                               {timeEnter}
                                           </td>
                                           <td className="py-1 px-0">
-                                              <Dropdown trigger={<Menu className="h-4 w-4" />}>
-                                                  {(purchase.status === PurchaseOrderStatuses.SENT || purchase.status === PurchaseOrderStatuses.PARTIAL) && (
-                                                      <button
-                                                          className="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                                                          onClick={() => {
-                                                              EnterToWarehouse(purchase.poId ?? "");
-                                                          }}
-                                                          type="button"
-                                                      >
-                                                          Ingresar Almacen
-                                                      </button>
-                                                  )}
-                                                  {purchase.status === PurchaseOrderStatuses.DRAFT && (
-                                                      <button
-                                                          className="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                                                          onClick={() => {
-                                                              setSent(purchase.poId ?? "");
-                                                          }}
-                                                          type="button"
-                                                      >
-                                                          Procesar
-                                                      </button>
-                                                  )}
-                                                  {purchase.status === PurchaseOrderStatuses.DRAFT && (
-                                                      <button
-                                                          className="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                                                          onClick={() => {
-                                                              navigate(`/compra/${purchase.poId}`);
-                                                          }}
-                                                          type="button"
-                                                      >
-                                                          Editar
-                                                      </button>
-                                                  )}
-                                                  <button
-                                                      className="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                                                      onClick={() => {
-                                                          setModalPaymentList(true);
-                                                          setPoId(purchase.poId ?? "");
-                                                          setTotalPo(purchase.total);
-                                                          setPaymentForm(purchase.paymentForm);
-                                                      }}
-                                                      type="button"
-                                                  >
-                                                      Listar pagos
-                                                  </button>
-
-                                                  {purchase.paymentForm !== PaymentFormTypes.CREDITO && purchase.totalPaid != purchase.total && (
-                                                      <button
-                                                          className="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                                                          onClick={() => {
-                                                              setModalPayment(true);
-                                                              setTotalPaid(purchase.totalPaid ?? 0);
-                                                              setTotalToPay(purchase.totalToPay ?? 0);
+                                              <Dropdown
+                                                  trigger={<Menu className="h-4 w-4" />}
+                                                  itemClassName="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
+                                                  items={[
+                                                      (purchase.status === PurchaseOrderStatuses.SENT ||
+                                                          purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                                                          label: "Ingresar Almacen",
+                                                          onClick: () => EnterToWarehouse(purchase.poId ?? ""),
+                                                      },
+                                                      purchase.status === PurchaseOrderStatuses.DRAFT && {
+                                                          label: "Procesar",
+                                                          onClick: () => setSent(purchase.poId ?? ""),
+                                                      },
+                                                      purchase.status === PurchaseOrderStatuses.DRAFT && {
+                                                          label: "Editar",
+                                                          onClick: () => navigate(`/compra/${purchase.poId}`),
+                                                      },
+                                                      {
+                                                          label: "Listar pagos",
+                                                          onClick: () => {
+                                                              setModalPaymentList(true);
                                                               setPoId(purchase.poId ?? "");
-                                                          }}
-                                                          type="button"
-                                                      >
-                                                          Pago
-                                                      </button>
-                                                  )}
-
-                                                  {purchase.paymentForm === PaymentFormTypes.CREDITO && (
-                                                      <button
-                                                          className="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                                                          onClick={() => {
+                                                              setTotalPo(purchase.total);
+                                                              setPaymentForm(purchase.paymentForm);
+                                                          },
+                                                      },
+                                                      purchase.paymentForm !== PaymentFormTypes.CREDITO &&
+                                                          purchase.totalPaid != purchase.total && {
+                                                              label: "Pago",
+                                                              onClick: () => {
+                                                                  setModalPayment(true);
+                                                                  setTotalPaid(purchase.totalPaid ?? 0);
+                                                                  setTotalToPay(purchase.totalToPay ?? 0);
+                                                                  setPoId(purchase.poId ?? "");
+                                                              },
+                                                          },
+                                                      purchase.paymentForm === PaymentFormTypes.CREDITO && {
+                                                          label: "Ver cuotas",
+                                                          onClick: () => {
                                                               setModalQuotaList(true);
                                                               setPoId(purchase.poId ?? "");
-                                                          }}
-                                                          type="button"
-                                                      >
-                                                          Ver cuotas
-                                                      </button>
-                                                  )}
-                                              </Dropdown>
+                                                          },
+                                                      },
+                                                  ].filter(Boolean)}
+                                              />
                                           </td>
                                       </tr>
                                   );

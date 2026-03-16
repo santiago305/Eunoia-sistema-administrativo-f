@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { createProduct, getProductById, updateProduct, updateProductActive } from "@/services/productService";
+import { createProduct, getById, updateProduct, updateProductActive } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { ProductType } from "@/pages/catalog/types/ProductTypes";
@@ -86,7 +86,7 @@ export function ProductFormModal({
     clearFlash();
     setLoading(true);
 
-    getProductById(productId)
+    getById(productId)
       .then((product) => {
         setForm({
           name: product.name ?? "",

@@ -180,7 +180,7 @@ export default function Providers() {
                 }}
               >
                 <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
+                <option value="inactive">Eliminados</option>
               </select>
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function Providers() {
             <table className="w-full h-full table-fixed">
               <thead className="sticky top-0 z-10 bg-gray-50">
                 <tr className="border-b border-black/10 text-xs text-black/60 text-[11px]">
-                  <th className="py-3 px-5 text-left w-30">Documento</th>
+                  <th className="py-3 px-5 text-left w-30">ID</th>
                   <th className="py-3 px-5 text-left w-60">Proveedor</th>
                   <th className="py-3 px-5 text-left w-40">Email</th>
                   <th className="py-3 px-5 text-left w-25">Telefono</th>
@@ -231,48 +231,53 @@ export default function Providers() {
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-end gap-2">
-                        <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
-                          <div className="flex flex-col gap-1">
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                              onClick={(event) => {
-                                event.stopPropagation();
+                        <Dropdown
+                          trigger={<Menu className="h-4 w-4" />}
+                          menuClassName="min-w-52 p-2"
+                          itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                          items={[
+                            {
+                              label: (
+                                <>
+                                  <Pencil className="h-4 w-4 text-black/60" />
+                                  Editar
+                                </>
+                              ),
+                              onClick: (e:any) => {
+                                e.stopPropagation();
                                 openEdit(supplier.supplierId);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4 text-black/60" />
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                              onClick={(event) => {
-                                event.stopPropagation();
+                              },
+                            },
+                            {
+                              label: (
+                                <>
+                                  <IconPaymentMethod />
+                                  Metodos de pago
+                                </>
+                              ),
+                              onClick: (e:any) => {
+                                e.stopPropagation();
                                 setMethodSupplierId(supplier.supplierId);
-                              }}
-                            >
-                              <IconPaymentMethod/>
-                              Metodos de pago
-                            </button>
-                            <button
-                              type="button"
-                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                                supplier.isActive
-                                  ? "text-rose-700 hover:bg-rose-50"
-                                  : "text-cyan-700 hover:bg-cyan-50"
-                              }`}
-                              onClick={(event) => {
-                                event.stopPropagation();
+                              },
+                            },
+                            {
+                              label: (
+                                <>
+                                  <Power className="h-4 w-4" />
+                                  {supplier.isActive ? "Eliminar" : "Restaurar"}
+                                </>
+                              ),
+                              className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                supplier.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                              }`,
+                              onClick: (e:any) => {
+                                e.stopPropagation();
                                 setToggleSupplierId(supplier.supplierId);
                                 setNextActiveState(!supplier.isActive);
-                              }}
-                            >
-                              <Power className="h-4 w-4" />
-                              {supplier.isActive ? "Desactivar" : "Activar"}
-                            </button>
-                          </div>
-                        </Dropdown>
+                              },
+                            },
+                          ].filter(Boolean)}
+                        />
                       </div>
                     </td>
                   </tr>

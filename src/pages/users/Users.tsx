@@ -61,7 +61,7 @@ export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [usersError, setUsersError] = useState("");
-  const [status, setStatus] = useState<UserListStatus>("all");
+  const [status, setStatus] = useState<UserListStatus>("active");
 
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);

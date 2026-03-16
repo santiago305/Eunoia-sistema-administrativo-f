@@ -3,10 +3,10 @@ import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { useProducts } from "@/hooks/useProducts";
 import { listProductEquivalences } from "@/services/equivalenceService";
-import { getProductById, listProducts } from "@/services/productService";
+import { getById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Layers, LayoutGrid, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, Download, Layers, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
@@ -62,7 +62,7 @@ export default function RowMaterial() {
       () => ({
           page,
           limit,
-          isActive: (statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false") as ListProductsQuery["isActive"],
+          isActive: (statusFilter === "active" ? "true" : "false") as ListProductsQuery["isActive"],
           q: debouncedName.trim() || undefined,
           type: PRODUCT_TYPE,
       }),
@@ -80,17 +80,15 @@ export default function RowMaterial() {
     return () => clearTimeout(handler);
   }, [searchText]);
 
-  useEffect(() => {
-    const loadUnits = async () => {
-      try {
-        const res = await listUnits();
-        setUnits(res);
-      } catch {
-        showFlash(errorResponse("Error al cargar unidades"));
-      }
-    };
-    void loadUnits();
-  }, [showFlash]);
+  const loadUnits = async () => {
+    try {
+      const res = await listUnits();
+      setUnits(res);
+    } catch {
+      showFlash(errorResponse("Error al cargar unidades"));
+    }
+  };
+
 
   const effectiveLimit = apiLimit ?? limit;
   const safePage = Math.max(1, apiPage || page);
@@ -108,6 +106,7 @@ export default function RowMaterial() {
 
   const startCreate = () => {
     setEditingProductId(null);
+    loadUnits();
     setOpenCreate(true);
   };
 
@@ -179,8 +178,9 @@ export default function RowMaterial() {
   const openEquivalences = async (productId: string) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
+    loadUnits();
     try {
-      const fresh = await getProductById(productId);
+      const fresh = await getById(productId);
       setEquivalenceProductId(fresh.id);
       setEquivalenceProductName(fresh.name);
       setEquivalenceBaseUnitId(fresh.baseUnitId ?? "");
@@ -354,9 +354,8 @@ export default function RowMaterial() {
                         setPage(1);
                     }}
                 >
-                  <option value="all">Estado (todos)</option>
                   <option value="active">Activos</option>
-                  <option value="inactive">Inactivos</option>
+                  <option value="inactive">Eliminados</option>
                 </select>
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/40">▾</span>
               </div>
@@ -440,55 +439,61 @@ export default function RowMaterial() {
                                             <Dropdown
                                                 trigger={<Menu className="h-4 w-4" />}
                                                 menuClassName="min-w-52 p-2"
-                                            >
-                                              <div className="flex flex-col gap-1">
-                                                <button
-                                                    type="button"
-                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        void openEquivalences(product.id);
-                                                    }}
-                                                >
-                                                    <Layers className="h-4 w-4 text-black/60" />
-                                                    Equivalencias
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openVariantsModal(product.id);
-                                                    }}
-                                                >
-                                                    <Boxes className="h-4 w-4 text-black/60" />
-                                                    Ver variantes
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        void openEdit(product.id);
-                                                    }}
-                                                >
-                                                    <Pencil className="h-4 w-4 text-black/60" />
-                                                    Editar
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px]
-                                                     ${product.isActive ? 'text-rose-700 hover:bg-rose-50' : 'text-cyan-700 hover:bg-cyan-50'}`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeletingProductId(product.id);
-                                                    }}
-                                                >
-                                                    <Power className="h-4 w-4" />
-                                                    {product.isActive ? "Desactivar" : "Activar"}
-                                                </button>
-                                              </div>
-                                            </Dropdown>
+                                                itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                items={[
+                                                    {
+                                                        label: (
+                                                            <>
+                                                                <Layers className="h-4 w-4 text-black/60" />
+                                                                Equivalencias
+                                                            </>
+                                                        ),
+                                                        onClick: (e:any) => {
+                                                            e.stopPropagation();
+                                                            void openEquivalences(product.id);
+                                                        },
+                                                    },
+                                                    {
+                                                        label: (
+                                                            <>
+                                                                <Boxes className="h-4 w-4 text-black/60" />
+                                                                Ver variantes
+                                                            </>
+                                                        ),
+                                                        onClick: (e:any) => {
+                                                            e.stopPropagation();
+                                                            openVariantsModal(product.id);
+                                                        },
+                                                    },
+                                                    {
+                                                        label: (
+                                                            <>
+                                                                <Pencil className="h-4 w-4 text-black/60" />
+                                                                Editar
+                                                            </>
+                                                        ),
+                                                        onClick: (e:any) => {
+                                                            e.stopPropagation();
+                                                            void openEdit(product.id);
+                                                        },
+                                                    },
+                                                    {
+                                                        label: (
+                                                            <>
+                                                                <Power className="h-4 w-4" />
+                                                                {product.isActive ? "Eliminar" : "Restaurar"}
+                                                            </>
+                                                        ),
+                                                        className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                                            product.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                                                        }`,
+                                                        onClick: (e:any) => {
+                                                            e.stopPropagation();
+                                                            setDeletingProductId(product.id);
+                                                        },
+                                                    },
+                                                ].filter(Boolean)}
+                                            />
                                       </td>
                                   </motion.tr>
                               );
@@ -558,7 +563,7 @@ export default function RowMaterial() {
                                               </IconButton>
 
                                               <IconButton
-                                                  title={product.isActive ? "Desactivar" : "Activar"}
+                                                  title={product.isActive ? "Eliminar" : "Restaurar"}
                                                   onClick={(e) => {
                                                       e.stopPropagation();
                                                       setDeletingProductId(product.id);

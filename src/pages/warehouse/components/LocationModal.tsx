@@ -62,7 +62,7 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
             const res = await listLocations({
                 page,
                 limit,
-                isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
+                isActive:statusFilter === "active" ? "true" : "false",
                 warehouseId: warehouse.warehouseId,
             });
 
@@ -212,9 +212,8 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                                     setPage(1);
                                 }}
                             >
-                                <option value="all">Estado (todos)</option>
                                 <option value="active">Activos</option>
-                                <option value="inactive">Inactivos</option>
+                                <option value="inactive">Eliminados</option>
                             </select>
                         </div>
 
