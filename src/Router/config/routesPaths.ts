@@ -46,9 +46,6 @@ export const RoutesPaths = {
 
   //company
   company:'/empresa',
-
-  //payment-method
-  paymentMethods:'/metodos-pago',
   
   //production
   production:'/Ordenes de produccion',

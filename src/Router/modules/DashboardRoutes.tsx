@@ -43,7 +43,6 @@ const Providers = lazy(() => import("@/pages/providers/Providers"));
 const Purchase = lazy(() => import("@/pages/purchases/Purchase"));
 const Purchases = lazy(() => import("@/pages/purchases/Purchases"));
 const Company = lazy(() => import("@/pages/company/Company"));
-const PaymentMethods = lazy(() => import("@/pages/payment-methods/PaymentMethod"));
 const Production = lazy(() => import("@/pages/production/Productions"));
 const ProductionCreate = lazy(() => import("@/pages/production/Production"));
 
@@ -172,10 +171,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.company,
                 element: withRouteGuard(RoutesPaths.company, <Company />),
-            },
-            {
-                path: RoutesPaths.paymentMethods,
-                element: withRouteGuard(RoutesPaths.paymentMethods, <PaymentMethods />),
             },
             {
                 path: RoutesPaths.production,

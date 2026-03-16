@@ -295,7 +295,10 @@ export function FilterableSelectOptions({
     }, [children, q]);
 
     return (
-        <div className={`max-h-56 overflow-auto ${className ?? ""}`}>
+        <div
+            className={`max-h-56 overflow-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/20 [&::-webkit-scrollbar-track]:bg-transparent ${className ?? ""}`}
+            style={{ scrollbarWidth: "thin" }}
+        >
             {items.length === 0 && <div className={`px-3 py-2 ${textSize} text-black/50`}>{emptyLabel}</div>}
             {items}
         </div>
