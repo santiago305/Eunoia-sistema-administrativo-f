@@ -31,15 +31,43 @@ export type ProductionOrderItem = {
 
 export type ProductionOrder = {
   productionId?: string;
-  fromWarehouseId: string;
-  toWarehouseId: string;
+  status?: ProductionStatus;
   serieId: string;
+  correlative?: number;
   reference?: string | null;
   manufactureDate: string;
-  status?: ProductionStatus;
+  fromWarehouseId: string;
+  toWarehouseId: string;
   createdAt?: string;
   updatedAt?: string;
   items?: ProductionOrderItem[];
+  fromWarehouse?: ProductionOrderWarehouse | null;
+  toWarehouse?: ProductionOrderWarehouse | null;
+  serie?: ProductionOrderSerie | null;
+};
+
+export type ProductionOrderWarehouse = {
+  id: string;
+  name: string;
+  department: string;
+  province: string;
+  district: string;
+  address: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type ProductionOrderSerie = {
+  id: string;
+  code: string;
+  name: string;
+  docType: string;
+  warehouseId: string;
+  nextNumber: number;
+  padding: number;
+  separator: string;
+  isActive: boolean;
+  createdAt: string;
 };
 
 export type ProductionOrderListResponse = {
