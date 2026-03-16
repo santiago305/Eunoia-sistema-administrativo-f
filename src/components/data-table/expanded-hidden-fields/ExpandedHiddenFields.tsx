@@ -31,7 +31,7 @@ export function ExpandedHiddenFields<TData extends Record<string, any>>({
   if (hiddenFields.length === 0) return null;
 
   return (
-    <div className={className ?? "grid gap-3 md:grid-cols-2 xl:grid-cols-4"}>
+    <div className={className ?? "grid gap-3 md:grid-cols-2 xl:grid-cols-5"}>
       {hiddenFields.map((field) => {
         const rawValue = row[field.key];
         const content: ReactNode = field.render

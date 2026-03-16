@@ -48,12 +48,13 @@ export function getProvidersColumns({
           columnHelper.display({
             id: "expander",
             header: "",
-            size: 48,
+            size: 10,
             cell: ({ row }) => (
               <button
                 type="button"
                 onClick={row.getToggleExpandedHandler()}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-black/10 hover:bg-black/[0.03]"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border 
+                border-black/10 hover:bg-black/[0.03]"
               >
                 {row.getIsExpanded() ? (
                   <ChevronDown className="h-4 w-4 text-black/60" />

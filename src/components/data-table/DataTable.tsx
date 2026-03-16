@@ -36,7 +36,7 @@ export function DataTable<TData>({
     <div
       className={
         containerClassName ??
-        "max-h-[calc(100vh-238px)] min-h-[calc(100vh-238px)] overflow-auto"
+        "max-h-[calc(100vh-300px)] min-h-[calc(100vh-260px)] overflow-auto"
       }
     >
       <table className={tableClassName ?? "w-full table-fixed"}>

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Table } from "@tanstack/react-table";
 
 type Props<TData> = {
@@ -13,8 +14,23 @@ export function DataTableColumnMenu<TData>({
   onToggleOpen,
   hiddenColumnIds = ["actions", "expander"],
 }: Props<TData>) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        onToggleOpen();
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open, onToggleOpen]);
+
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <button
         type="button"
         className="h-10 rounded-lg border border-black/10 bg-white px-3 text-sm hover:bg-black/[0.03]"
