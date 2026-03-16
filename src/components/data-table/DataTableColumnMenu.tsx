@@ -33,7 +33,7 @@ export function DataTableColumnMenu<TData>({
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="h-10 rounded-lg border border-black/10 bg-white px-3 text-sm hover:bg-black/[0.03]"
+        className="h-9 rounded-lg border border-black/10 bg-white px-3 text-sm hover:bg-black/[0.03]"
         onClick={onToggleOpen}
       >
         Columnas
