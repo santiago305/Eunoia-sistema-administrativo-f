@@ -32,20 +32,6 @@ export function PaymentMethodFormFields({
           disabled={disabled}
         />
       </label>
-
-      <label className="text-xs">
-        Estado
-        <select
-          className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-xs bg-white outline-none focus:ring-2"
-          style={ringStyle}
-          value={form.isActive ? "active" : "inactive"}
-          onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.value === "active" }))}
-          disabled={disabled}
-        >
-          <option value="active">Activo</option>
-          <option value="inactive">Inactivo</option>
-        </select>
-      </label>
     </div>
   );
 }

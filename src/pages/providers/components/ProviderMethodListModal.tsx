@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/settings/modal";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { PaymentMethodSelectComposed } from "@/pages/company/components/PaymentMethodSelectComposed";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { Plus, Power } from "lucide-react";
+import { PaymentMethodFormModal } from "@/pages/payment-methods/components/PaymentMethodFormModal";
 import {
   createSupplierMethod,
   deleteSupplierMethod,
@@ -21,6 +22,7 @@ type ProviderMethodListModalProps = {
 };
 
 type SelectOption = { value: string; label: string };
+const PRIMARY = "#21b8a6";
 
 export function ProviderMethodListModal({
   title,
@@ -35,6 +37,8 @@ export function ProviderMethodListModal({
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [number, setNumber] = useState("");
+  const [openCreateMethod, setOpenCreateMethod] = useState(false);
+  const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
 
   const loadSupplierMethods = async (options?: { silent?: boolean }) => {
     if (!supplierId) return;
@@ -92,6 +96,7 @@ export function ProviderMethodListModal({
       await createSupplierMethod({ supplierId, methodId: selectedId, number:number });
       showFlash(successResponse("Metodo agregado"));
       setSelectedId("");
+      setNumber("");
       await loadSupplierMethods({ silent: true });
     } catch {
       showFlash(errorResponse("No se pudo agregar el metodo"));
@@ -125,14 +130,16 @@ export function ProviderMethodListModal({
               <div className="flex-1">
                 <label className="text-xs">
                   Metodo de pago
-                  <FilterableSelect
+                  <PaymentMethodSelectComposed
                     value={selectedId}
                     onChange={setSelectedId}
                     options={availableOptions}
-                    placeholder="Seleccionar metodo"
-                    searchPlaceholder="Buscar metodo..."
+                    onCreate={() => setOpenCreateMethod(true)}
+                    onEdit={(methodId) => setEditingMethodId(methodId)}
                     className="h-10"
-                    textSize="text-xs mt-2"
+                    textSize="text-xs"
+                    disabled={adding}
+                    emptyLabel="Sin resultados"
                   />
                 </label>
               </div>
@@ -157,7 +164,7 @@ export function ProviderMethodListModal({
             </div>
           </div>
 
-          <div className="max-h-100 overflow-auto min-h-70">
+          <div className="max-h-80 min-h-30 overflow-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="border-b border-black/10 text-xs text-black/60">
@@ -190,6 +197,21 @@ export function ProviderMethodListModal({
           </div>
         </div>
       </div>
+      <PaymentMethodFormModal
+        open={openCreateMethod || Boolean(editingMethodId)}
+        mode={editingMethodId ? "edit" : "create"}
+        paymentMethodId={editingMethodId}
+        onClose={() => {
+          setOpenCreateMethod(false);
+          setEditingMethodId(null);
+        }}
+        onSaved={() => {
+          void loadAllMethods({ silent: true });
+          void loadSupplierMethods({ silent: true });
+        }}
+        primaryColor={PRIMARY}
+        entityLabel="metodo de pago"
+      />
     </Modal>
   );
 }
