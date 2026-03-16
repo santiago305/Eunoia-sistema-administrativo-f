@@ -5,15 +5,29 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
-import { Menu, Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
-import { StatusPill } from "@/components/StatusTag";
-import { Dropdown } from "@/pages/purchases/components/PurchaseDropdown";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
-import { IconPaymentMethod } from "@/components/dashboard/icons";
+import { ProviderExpandedRow } from "./components/data-table/ProviderExpandedRow";
+import { getProvidersColumns } from "./components/data-table/Provider.columns";
+import { providerExpandedFields } from "./components/data-table/providerExpandedFields";
+
+import { DataTable } from "@/components/data-table/DataTable";
+import { DataTableColumnMenu } from "@/components/data-table/DataTableColumnMenu";
+import { DataTablePagination } from "@/components/data-table/DataTablePagination";
+import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
+
+import {
+  getCoreRowModel,
+  getExpandedRowModel,
+  useReactTable,
+  type ExpandedState,
+  type PaginationState,
+  type VisibilityState,
+} from "@tanstack/react-table";
 
 const PRIMARY = "#21b8a6";
-
+const DEFAULT_LIMIT = 10;
 
 export default function Providers() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -21,20 +35,32 @@ export default function Providers() {
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("active");
-  const [page, setPage] = useState(1);
-  const limit = 10;
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [pagination, setPagination] = useState({
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [serverPagination, setServerPagination] = useState({
     total: 0,
     page: 1,
-    limit,
+    limit: DEFAULT_LIMIT,
     totalPages: 1,
     hasPrev: false,
     hasNext: false,
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const [paginationState, setPaginationState] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: DEFAULT_LIMIT,
+  });
+
+  const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    tradeName: false,
+    address: false,
+    note: false,
+  });
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
@@ -42,33 +68,47 @@ export default function Providers() {
   const [nextActiveState, setNextActiveState] = useState(false);
   const [methodSupplierId, setMethodSupplierId] = useState<string | null>(null);
 
+  const page = paginationState.pageIndex + 1;
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timeout = setTimeout(() => {
       setDebouncedSearch(searchText.trim());
-      setPage(1);
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+      setExpanded({});
     }, 400);
-    return () => clearTimeout(t);
+
+    return () => clearTimeout(timeout);
   }, [searchText]);
-  
+
+  const getSupplierDisplayName = (supplier: Supplier) => {
+    const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
+    return fullName || supplier.tradeName || "-";
+  };
+
   const loadSuppliers = async () => {
     clearFlash();
     setLoading(true);
     setError(null);
+
     try {
       const res = await listSuppliers({
         page,
-        limit,
+        limit: paginationState.pageSize,
         q: debouncedSearch || undefined,
         isActive: statusFilter === "active" ? "true" : "false",
       });
 
-      setSuppliers(res.items ?? []);
+      const items = res.items ?? [];
       const nextTotal = res.total ?? 0;
       const nextPage = res.page ?? page;
-      const nextLimit = res.limit ?? limit;
-      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || limit)));
-      setPagination({
+      const nextLimit = res.limit ?? paginationState.pageSize;
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / nextLimit));
+
+      setSuppliers(items);
+      setServerPagination({
         total: nextTotal,
         page: nextPage,
         limit: nextLimit,
@@ -78,13 +118,14 @@ export default function Providers() {
       });
     } catch {
       setSuppliers([]);
-      setPagination((prev) => ({
-        ...prev,
+      setServerPagination({
         total: 0,
+        page: 1,
+        limit: paginationState.pageSize,
         totalPages: 1,
         hasPrev: false,
         hasNext: false,
-      }));
+      });
       setError("Error al listar proveedores");
       showFlash(errorResponse("Error al listar proveedores"));
     } finally {
@@ -94,12 +135,11 @@ export default function Providers() {
 
   useEffect(() => {
     void loadSuppliers();
-  }, [page, debouncedSearch, statusFilter]);
+  }, [page, paginationState.pageSize, debouncedSearch, statusFilter]);
 
-  const safePage = Math.max(1, pagination.page || page);
-  const totalPages = Math.max(1, pagination.totalPages);
-  const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
-  const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
+  useEffect(() => {
+    setExpanded({});
+  }, [columnVisibility]);
 
   const startCreate = () => {
     setEditingSupplierId(null);
@@ -113,6 +153,7 @@ export default function Providers() {
 
   const confirmToggleActive = async () => {
     if (!toggleSupplierId) return;
+
     try {
       await updateSupplierActive(toggleSupplierId, { isActive: nextActiveState });
       setToggleSupplierId(null);
@@ -123,16 +164,56 @@ export default function Providers() {
     }
   };
 
-  const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedSearch}`, [page, statusFilter, debouncedSearch]);
-  const getSupplierDisplayName = (supplier: Supplier) => {
-    const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
-    return fullName || supplier.tradeName || "-";
-  };
+  const columns = useMemo(
+    () =>
+      getProvidersColumns({
+        primaryColor: PRIMARY,
+        columnVisibility,
+        getSupplierDisplayName,
+        onEdit: openEdit,
+        onOpenMethods: setMethodSupplierId,
+        onToggleActive: (supplier) => {
+          setToggleSupplierId(supplier.supplierId);
+          setNextActiveState(!supplier.isActive);
+        },
+      }),
+    [columnVisibility]
+  );
+  const canExpandRows = useMemo(
+    () => hasHiddenExpandableFields(providerExpandedFields, columnVisibility),
+    [columnVisibility]
+  );
+
+  const table = useReactTable({
+    data: suppliers,
+    columns,
+    state: {
+      pagination: paginationState,
+      expanded,
+      columnVisibility,
+    },
+    onPaginationChange: setPaginationState,
+    onExpandedChange: setExpanded,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowCanExpand: () => canExpandRows,
+    getRowId: (row) => row.supplierId,
+    manualPagination: true,
+    pageCount: serverPagination.totalPages,
+  });
+
+  const safePage = serverPagination.page;
+  const totalPages = serverPagination.totalPages;
+  const startIndex =
+    serverPagination.total === 0 ? 0 : (safePage - 1) * serverPagination.limit + 1;
+  const endIndex = Math.min(safePage * serverPagination.limit, serverPagination.total);
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <div className="min-h-screen w-full bg-white text-black">
       <PageTitle title="Proveedores" />
-      <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-3 space-y-5">
+
+      <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 py-3 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold tracking-tight">Proveedores</h1>
@@ -140,7 +221,7 @@ export default function Providers() {
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
-              Total: <span className="font-semibold text-black">{pagination.total}</span>
+              Total: <span className="font-semibold text-black">{serverPagination.total}</span>
             </div>
 
             <button
@@ -155,8 +236,8 @@ export default function Providers() {
           </div>
         </div>
 
-        <section className="bg-gray-50 shadow-sm  p-4 space-y-3">
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
+        <section className="space-y-3 bg-gray-50 p-4 shadow-sm">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1fr)_280px_auto]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <input
@@ -176,148 +257,73 @@ export default function Providers() {
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
-                  setPage(1);
+                  setPaginationState((prev) => ({
+                    ...prev,
+                    pageIndex: 0,
+                  }));
+                  setExpanded({});
                 }}
               >
                 <option value="active">Activos</option>
                 <option value="inactive">Eliminados</option>
               </select>
             </div>
+
+            <DataTableColumnMenu
+              table={table}
+              open={showColumnMenu}
+              onToggleOpen={() => setShowColumnMenu((prev) => !prev)}
+              hiddenColumnIds={["expander", "actions"]}
+            />
           </div>
         </section>
 
-        <section className=" border-black/10 bg-white shadow-sm overflow-hidden"> 
-          <div className="max-h-[calc(100vh-238px)] min-h-[calc(100vh-238px)] overflow-auto">
-            <table className="w-full h-full table-fixed">
-              <thead className="sticky top-0 z-10 bg-gray-50">
-                <tr className="border-b border-black/10 text-xs text-black/60 text-[11px]">
-                  <th className="py-3 px-5 text-left w-30">ID</th>
-                  <th className="py-3 px-5 text-left w-60">Proveedor</th>
-                  <th className="py-3 px-5 text-left w-40">Email</th>
-                  <th className="py-3 px-5 text-left w-25">Telefono</th>
-                  <th className="py-3 px-5 text-left w-40">Direccion</th>
-                  <th className="py-3 px-5 text-center w-25">T. Espera</th>
-                  <th className="py-3 px-5 text-left w-30">Nota</th>
-                  <th className="py-3 px-5 text-left w-20">Estado</th>
-                  <th className="py-3 px-5 text-right w-30"></th>
-                </tr>
-              </thead>
-
-              <tbody key={listKey}>
-                {suppliers.map((supplier) => (
-                  <tr key={supplier.supplierId} className="border-b border-black/5 text-[11px]">
-                    <td className="py-3 px-5">
-                      <div className="text-black/60 text-xs">{supplier.documentNumber}</div>
-                    </td>
-                    <td className="py-3 px-5">
-                      <div className="text-black/70">{getSupplierDisplayName(supplier)}</div>
-                    </td>
-                    <td className="py-3 px-5">
-                      <div className="text-black/70">{supplier.email || "-"}</div>
-                    </td>
-                    <td className="py-3 px-5 text-black/70">
-                      <div>{supplier.phone || "-"}</div>
-                    </td>
-                    <td className="py-3 px-5 text-black/70">{supplier.address ?? "-"}</td>
-                    <td className="py-3 px-5 text-black/70">
-                      <div className="flex items-center justify-center gap-2">
-                        {supplier.leadTimeDays ?? "-"}
-                        <Timer className="h-4 w-4" />
-                      </div>
-                    </td>
-                    <td className="py-3 px-5 text-black/70">{supplier.note ?? "-"}</td>
-                    <td className="py-3 px-5">
-                      <StatusPill active={supplier.isActive} PRIMARY={PRIMARY} />
-                    </td>
-                    <td className="py-3 px-5">
-                      <div className="flex items-center justify-end gap-2">
-                        <Dropdown
-                          trigger={<Menu className="h-4 w-4" />}
-                          menuClassName="min-w-52 p-2"
-                          itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                          items={[
-                            {
-                              label: (
-                                <>
-                                  <Pencil className="h-4 w-4 text-black/60" />
-                                  Editar
-                                </>
-                              ),
-                              onClick: (e:any) => {
-                                e.stopPropagation();
-                                openEdit(supplier.supplierId);
-                              },
-                            },
-                            {
-                              label: (
-                                <>
-                                  <IconPaymentMethod />
-                                  Metodos de pago
-                                </>
-                              ),
-                              onClick: (e:any) => {
-                                e.stopPropagation();
-                                setMethodSupplierId(supplier.supplierId);
-                              },
-                            },
-                            {
-                              label: (
-                                <>
-                                  <Power className="h-4 w-4" />
-                                  {supplier.isActive ? "Eliminar" : "Restaurar"}
-                                </>
-                              ),
-                              className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                                supplier.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
-                              }`,
-                              onClick: (e:any) => {
-                                e.stopPropagation();
-                                setToggleSupplierId(supplier.supplierId);
-                                setNextActiveState(!supplier.isActive);
-                              },
-                            },
-                          ].filter(Boolean)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {!loading && suppliers.length === 0 && (
-              <div className="px-5 py-8 text-sm text-black/60">No hay proveedores con los filtros actuales.</div>
+        <section className="overflow-hidden bg-white shadow-sm">
+          <DataTable
+            table={table}
+            loading={loading}
+            error={error}
+            emptyMessage="No hay proveedores con los filtros actuales."
+            renderExpandedRow={(row) => (
+              <ProviderExpandedRow
+                supplier={row.original}
+                columnVisibility={columnVisibility}
+              />
             )}
-            {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
-          </div>
+            headerCellClassName={(header) => {
+              if (header.column.id === "actions") return "px-5 py-3 text-right";
+              if (header.column.id === "leadTimeDays") return "px-5 py-3 text-center";
+              if (header.column.id === "expander") return "px-5 py-3 text-center";
+              return "px-5 py-3 text-left";
+            }}
+            bodyCellClassName={(cell) => {
+              if (cell.column.id === "actions") return "px-5 py-3 align-middle text-right";
+              if (cell.column.id === "leadTimeDays") return "px-5 py-3 align-middle text-center";
+              if (cell.column.id === "expander") return "px-5 py-3 align-middle text-center";
+              return "px-5 py-3 align-middle";
+            }}
+          />
 
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-xs text-black/60">
-            <span className="hidden sm:inline">
-              Mostrando {startIndex}-{endIndex} de {pagination.total}
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={!pagination.hasPrev || loading}
-                onClick={() => setPage(Math.max(1, safePage - 1))}
-                type="button"
-              >
-                Anterior
-              </button>
-
-              <span className="tabular-nums">Pagina {safePage} de {totalPages}</span>
-
-              <button
-                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={!pagination.hasNext || loading}
-                onClick={() => setPage(safePage + 1)}
-                type="button"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
+          <DataTablePagination
+            loading={loading}
+            total={serverPagination.total}
+            page={safePage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            pageSize={paginationState.pageSize}
+            hasPrev={serverPagination.hasPrev}
+            hasNext={serverPagination.hasNext}
+            onPageSizeChange={(value) => {
+              setPaginationState({
+                pageIndex: 0,
+                pageSize: value,
+              });
+              setExpanded({});
+            }}
+            onPrevious={() => table.previousPage()}
+            onNext={() => table.nextPage()}
+          />
         </section>
       </div>
 
@@ -326,7 +332,7 @@ export default function Providers() {
         mode="create"
         onClose={() => setOpenCreate(false)}
         onSaved={() => {
-          setPage(1);
+          setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
           void loadSuppliers();
         }}
         primaryColor={PRIMARY}
@@ -344,14 +350,25 @@ export default function Providers() {
       />
 
       {toggleSupplierId && (
-        <Modal title={nextActiveState ? "Activar proveedor" : "Desactivar proveedor"} onClose={() => setToggleSupplierId(null)} className="max-w-md">
+        <Modal
+          title={nextActiveState ? "Activar proveedor" : "Desactivar proveedor"}
+          onClose={() => setToggleSupplierId(null)}
+          className="max-w-md"
+        >
           <p className="text-sm text-black/70">
-            {nextActiveState ? "Se activara el proveedor nuevamente." : "Se desactivara el proveedor seleccionado."}
+            {nextActiveState
+              ? "Se activara el proveedor nuevamente."
+              : "Se desactivara el proveedor seleccionado."}
           </p>
+
           <div className="mt-4 flex justify-end gap-2">
-            <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => setToggleSupplierId(null)}>
+            <button
+              className="rounded-lg border border-black/10 px-4 py-2 text-sm"
+              onClick={() => setToggleSupplierId(null)}
+            >
               Cancelar
             </button>
+
             <button
               className="rounded-lg border px-4 py-2 text-sm text-white"
               style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
@@ -374,5 +391,3 @@ export default function Providers() {
     </div>
   );
 }
-
-
