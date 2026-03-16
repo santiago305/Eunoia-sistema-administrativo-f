@@ -7,7 +7,6 @@ import { listSuppliers, updateSupplierActive } from "@/services/supplierService"
 import type { Supplier } from "@/pages/providers/types/supplier";
 import { Menu, Pencil, Plus, Power, Search, SlidersHorizontal, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
-import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { StatusPill } from "@/components/StatusTag";
 import { Dropdown } from "@/pages/purchases/components/PurchaseDropdown";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
@@ -21,7 +20,7 @@ export default function Providers() {
 
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -42,7 +41,6 @@ export default function Providers() {
   const [toggleSupplierId, setToggleSupplierId] = useState<string | null>(null);
   const [nextActiveState, setNextActiveState] = useState(false);
   const [methodSupplierId, setMethodSupplierId] = useState<string | null>(null);
-  const { setCollapsed } = useSidebarContext();
 
 
   useEffect(() => {
@@ -53,10 +51,6 @@ export default function Providers() {
     return () => clearTimeout(t);
   }, [searchText]);
   
-  useEffect(() => {
-      setCollapsed(true);
-  }, []);
-
   const loadSuppliers = async () => {
     clearFlash();
     setLoading(true);
@@ -66,7 +60,7 @@ export default function Providers() {
         page,
         limit,
         q: debouncedSearch || undefined,
-        isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
+        isActive: statusFilter === "active" ? "true" : "false",
       });
 
       setSuppliers(res.items ?? []);
@@ -185,7 +179,6 @@ export default function Providers() {
                   setPage(1);
                 }}
               >
-                <option value="all">Estado (todos)</option>
                 <option value="active">Activos</option>
                 <option value="inactive">Inactivos</option>
               </select>

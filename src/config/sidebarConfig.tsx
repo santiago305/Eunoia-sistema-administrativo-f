@@ -133,11 +133,6 @@ export const getSidebarItems = (): SidebarItem[] => [
         href: RoutesPaths.security,
         icon: <IconUsers className="text-sidebar-foreground" />,
     },
-    {
-        label: "Metodos",
-        href: RoutesPaths.paymentMethods,
-        icon: <IconPaymentMethod className="text-sidebar-foreground" />,
-    },
 ];
 
 

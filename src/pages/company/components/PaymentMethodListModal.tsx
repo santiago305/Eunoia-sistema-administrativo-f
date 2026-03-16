@@ -154,13 +154,16 @@ export function PaymentMethodListModal({
                   />
                 </label>
               </div>
-              <PrimaryButton type="submit" disabled={!selectedId || adding}
-              onClick={addMethod}
-              className="mt-5"
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg border px-3 h-9 mt-6
+                text-xs text-white focus:outline-none focus:ring-2"
+                disabled={!selectedId || adding} onClick={addMethod}                
+                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
               >
                 <Plus className="h-4 w-4" />
-                {adding ? "Añadiendo..." : "Añadir"}
-              </PrimaryButton>
+                {adding ? "Anadiendo..." : "Anadir"}
+              </button>
             </div>
           </div>
 

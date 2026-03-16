@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { FilterableSelectComposed as FS } from "@/components/SelectFilterableComposed";
-import { Plus } from "lucide-react";
+import { Pencil, PencilIcon, Plus } from "lucide-react";
 
 type SelectOption = { value: string; label: string };
 
@@ -58,7 +58,7 @@ export function PaymentMethodSelectComposed({
                         <span
                           role="button"
                           tabIndex={0}
-                          className="rounded-md border border-black/10 bg-white px-2 py-1 text-[10px] 
+                          className="rounded-md border border-black/10 bg-gray-100 px-2 py-1 text-[10px] 
                           text-black/70 hover:bg-black/[0.03]"
                           onClick={() => {
                             onChange(opt.value);
@@ -72,7 +72,7 @@ export function PaymentMethodSelectComposed({
                             }
                           }}
                         >
-                          Editar
+                          <Pencil className="w-4 h-4 "/>
                         </span>
                       )}
                     </div>
