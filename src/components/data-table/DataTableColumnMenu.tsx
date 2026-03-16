@@ -6,6 +6,7 @@ type Props<TData> = {
   open: boolean;
   onToggleOpen: () => void;
   hiddenColumnIds?: string[];
+  className?: string;
 };
 
 export function DataTableColumnMenu<TData>({
@@ -13,6 +14,7 @@ export function DataTableColumnMenu<TData>({
   open,
   onToggleOpen,
   hiddenColumnIds = ["actions", "expander"],
+  className = 'h-9'
 }: Props<TData>) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,7 +35,7 @@ export function DataTableColumnMenu<TData>({
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="h-9 rounded-lg border border-black/10 bg-white px-3 text-sm hover:bg-black/[0.03]"
+        className={`${className} rounded-lg border border-black/10 bg-white px-3 text-sm hover:bg-black/[0.03]`}
         onClick={onToggleOpen}
       >
         Columnas

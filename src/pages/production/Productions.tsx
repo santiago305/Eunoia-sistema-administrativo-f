@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+﻿import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -12,15 +12,30 @@ import {
   startProductionOrder,
 } from "@/services/productionService";
 import { toDateInputValue, tryShowPicker, todayIso, buildMonthStartIso } from "@/utils/functionPurchases";
-import { Dropdown } from "@/pages/purchases/components/PurchaseDropdown";
-import { Menu, OctagonAlert, Plus, Timer } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
-import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 
+import { DataTable } from "@/components/data-table/DataTable";
+import { DataTableColumnMenu } from "@/components/data-table/DataTableColumnMenu";
+import { DataTablePagination } from "@/components/data-table/DataTablePagination";
+import {
+  getCoreRowModel,
+  getExpandedRowModel,
+  useReactTable,
+  type ExpandedState,
+  type PaginationState,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import { getProductionColumns } from "./components/data-table/Production.columns";
+import { ProductionExpandedRow } from "./components/data-table/ProductionExpandedRow";
+import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
+import { productionExpandedFields } from "./components/data-table/productionExpandedFields";
+
 const PRIMARY = "#21b8a6";
+const DEFAULT_LIMIT = 10;
 
 const statusLabels: Record<ProductionStatus, string> = {
   [ProductionStatus.DRAFT]: "Borrador",
@@ -32,21 +47,18 @@ const statusLabels: Record<ProductionStatus, string> = {
 
 export default function Production() {
   const { showFlash, clearFlash } = useFlashMessage();
-  const { setCollapsed } = useSidebarContext();
   const navigate = useNavigate();
 
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | ProductionStatus>("");
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
   const [toDate, setToDate] = useState(() => todayIso());
-  const [page, setPage] = useState(1);
-  const limit = 10;
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit,
+    limit: DEFAULT_LIMIT,
     totalPages: 1,
     hasPrev: false,
     hasNext: false,
@@ -54,7 +66,22 @@ export default function Production() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string; address?: string }[]>([]);
+  const [warehouseOptions, setWarehouseOptions] = useState<
+    { value: string; label: string; address?: string }[]
+  >([]);
+
+  const [paginationState, setPaginationState] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: DEFAULT_LIMIT,
+  });
+  const page = paginationState.pageIndex + 1;
+  const limit = paginationState.pageSize;
+
+  const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    serie: false,
+  });
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
 
   const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
 
@@ -78,14 +105,6 @@ export default function Production() {
   };
 
   const loadOrders = async () => {
-    console.log("loadOrders called", {
-      loading,
-      page,
-      warehouseId,
-      statusFilter,
-      fromDate,
-      toDate,
-    });
     if (loading) return;
     clearFlash();
     setLoading(true);
@@ -98,11 +117,6 @@ export default function Production() {
         status: statusFilter || undefined,
         from: fromDate || undefined,
         to: toDate || undefined,
-      });
-      console.log("loadOrders result", {
-        items: res.items?.length,
-        total: res.total,
-        first: res.items?.[0],
       });
       setOrders(res.items ?? []);
       const nextTotal = res.total ?? 0;
@@ -171,37 +185,65 @@ export default function Production() {
   }, []);
 
   useEffect(() => {
-    setCollapsed(true);
-  }, []);
+    void loadOrders();
+  }, [page, limit, warehouseId, statusFilter, fromDate, toDate]);
 
   useEffect(() => {
-    void loadOrders();
-  }, [page, warehouseId, statusFilter, fromDate, toDate]);
+    setExpanded({});
+  }, [columnVisibility, warehouseId, statusFilter, fromDate, toDate]);
 
-  const now = new Date().toISOString();
+  const nowIso = useMemo(() => new Date().toISOString(), []);
   const safePage = Math.max(1, pagination.page || page);
   const totalPages = Math.max(1, pagination.totalPages);
-  const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
+  const startIndex =
+    pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
   const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
 
-  const warehouseMetaById = useMemo(() => {
-    const map = new Map<string, { label: string; address?: string }>();
-    warehouseOptions.forEach((opt) => {
-      if (opt.value) map.set(opt.value, { label: opt.label, address: opt.address });
-    });
-    return map;
-  }, [warehouseOptions]);
+  const columns = useMemo(
+    () =>
+      getProductionColumns({
+        columnVisibility,
+        nowIso,
+        statusLabels,
+        onStart: handleStart,
+        onClose: handleClose,
+        onCancel: handleCancel,
+        loadOrders,
+      }),
+    [columnVisibility, nowIso]
+  );
 
-  const listKey = useMemo(() => `${page}|${warehouseId}|${statusFilter}|${fromDate}|${toDate}`, [page, warehouseId, statusFilter, fromDate, toDate]);
+  const canExpandRows = useMemo(
+    () => hasHiddenExpandableFields(productionExpandedFields, columnVisibility),
+    [columnVisibility]
+  );
+
+  const table = useReactTable({
+    data: orders,
+    columns,
+    state: {
+      pagination: paginationState,
+      expanded,
+      columnVisibility,
+    },
+    onPaginationChange: setPaginationState,
+    onExpandedChange: setExpanded,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowCanExpand: () => canExpandRows,
+    getRowId: (row) => row.productionId ?? `${row.fromWarehouseId}-${row.toWarehouseId}-${row.createdAt ?? ""}`,
+    manualPagination: true,
+    pageCount: totalPages,
+  });
 
   return (
     <div className="w-full min-h-screen bg-white">
-      <PageTitle title="Producción" />
-      <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] 
-      px-4 sm:px-6 lg:px-8 pt-2 space-y-4">
+      <PageTitle title="Produccion" />
+      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">Producción</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Produccion</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -211,67 +253,64 @@ export default function Production() {
           </div>
         </div>
 
-        <section className=" bg-gray-50 shadow-sm  p-4 space-y-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.2fr_0.2fr_1fr_1fr]">
-            <label className="text-[10px] text-black/60 font-bold">
+        <section className="space-y-3 bg-gray-50 p-4 shadow-sm">
+          <div className="grid gap-3 grid-cols-[0.2fr_0.2fr_0.4fr_0.4fr_0.3fr_0.1fr]">
+            <label className="text-[10px] font-bold text-black/60">
               Fecha inicio
               <input
                 type="date"
-                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px]
-                mt-1 outline-none focus:ring-2"
+                className="mt-1 h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
                 style={ringStyle}
                 value={toDateInputValue(fromDate)}
                 onClick={(e) => tryShowPicker(e.currentTarget)}
                 onChange={(e) => {
                   setFromDate(e.target.value);
-                  setPage(1);
+                  setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               />
             </label>
-            <label className="text-[10px] text-black/60 font-bold">
+            <label className="text-[10px] font-bold text-black/60">
               Fecha fin
               <input
                 type="date"
-                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px]
-                mt-1 outline-none focus:ring-2"
+                className="mt-1 h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
                 style={ringStyle}
                 value={toDateInputValue(toDate)}
                 onClick={(e) => tryShowPicker(e.currentTarget)}
                 onChange={(e) => {
                   setToDate(e.target.value);
-                  setPage(1);
+                  setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               />
             </label>
 
-            <label className="text-[10px] text-black/60 font-bold">
-              Almacén
+            <label className="text-[10px] font-bold text-black/60">
+              Almacen
               <FilterableSelect
                 value={warehouseId}
                 onChange={(value) => {
                   setWarehouseId(value);
-                  setPage(1);
+                  setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
                 options={warehouseOptions}
                 placement="bottom"
-                placeholder="Almacén (todos)"
-                searchPlaceholder="Buscar almacén..."
+                placeholder="Almacen (todos)"
+                searchPlaceholder="Buscar almacen..."
                 className="h-8"
                 textSize="text-[10px] mt-1"
               />
             </label>
 
-            <label className="text-[10px] text-black/60 font-bold">
+            <label className="text-[10px] font-bold text-black/60">
               Estado
-              <div className="mt-1 grid grid-cols-[1fr_auto] gap-2">
+              <div className="mt-1 gap-2">
                 <select
-                  className="h-8 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 
-                  text-[10px] outline-none focus:ring-2"
+                  className="h-8 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
                   style={ringStyle}
                   value={statusFilter}
                   onChange={(e) => {
                     setStatusFilter(e.target.value as "" | ProductionStatus);
-                    setPage(1);
+                    setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
                   }}
                 >
                   <option value="">Estado (todos)</option>
@@ -280,162 +319,69 @@ export default function Production() {
                   <option value={ProductionStatus.COMPLETED}>Completado</option>
                   <option value={ProductionStatus.CANCELLED}>Cancelado</option>
                 </select>
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center gap-2 rounded-lg border px-3 text-[10px] text-white focus:outline-none focus:ring-2"
-                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
-                  onClick={() => navigate(RoutesPaths.productionCreate)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Orden de producción
-                </button>
               </div>
             </label>
-          </div>
-        </section>
-
-        <section className=" border-black/10 bg-white shadow-sm overflow-hidden">
-          <div className="max-h-[calc(100vh-220px)] min-h-[calc(100vh-220px)] overflow-auto">
-            <table className="w-full h-full table-fixed">
-              <thead className="sticky top-0 z-10 bg-gray-50">
-                <tr className="border-b border-black/10 text-black/60 text-[10px]">
-                  <th className="py-3 px-3 text-left w-[80px]">Registro</th>
-                  <th className="py-3 px-3 text-left w-[80px]">Referencia</th>
-                  <th className="py-3 px-3 text-left w-[120px]">Almacén origen</th>
-                  <th className="py-3 px-3 text-left w-[120px]">Almacén destino</th>
-                  <th className="py-3 px-3 text-left w-[70px]">Estado</th>
-                  <th className="py-3 px-3 text-left w-[120px]">T. Producción</th>
-                  <th className="py-3 px-3 text-left w-[90px]">Termino</th>
-                  <th className="py-3 px-0 text-left w-[20px]"></th>
-                </tr>
-              </thead>
-              <tbody key={listKey}>
-                {orders.map((order) => {
-                  const fromWarehouse = order.fromWarehouseId ? warehouseMetaById.get(order.fromWarehouseId) : undefined;
-                  const toWarehouse = order.toWarehouseId ? warehouseMetaById.get(order.toWarehouseId) : undefined;
-                  const statusLabel = order.status ? (statusLabels[order.status] ?? order.status) : "-";
-                  const dateCreated = formatDate(new Date(order.manufactureDate ?? "-"));
-                  const timeCreated = order.manufactureDate
-                      ? new Date(order.manufactureDate).toLocaleTimeString("es-PE", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                        })
-                      : undefined;
-                  const dateEnd = formatDate(new Date(order.manufactureDate ?? "-"));
-                  const timeEnd = order.manufactureDate
-                      ? new Date(order.manufactureDate).toLocaleTimeString("es-PE", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                        })
-                      : undefined;
-                  return (
-                    <tr key={order.productionId ?? `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt}`} className="border-b border-black/5 text-[10px]">
-                      <td className="py-1 px-3 text-black/70">
-                        {dateCreated} <br/>
-                        {timeCreated}
-                      </td>
-                      <td className="py-1 px-3 text-black/70">{order.reference ?? "-"}</td>
-                      <td className="py-1 px-3 text-black/70">
-                        <div>{fromWarehouse?.label ?? order.fromWarehouseId ?? "-"}</div>
-                      </td>
-                      <td className="py-1 px-3 text-black/70">
-                        <div>{toWarehouse?.label ?? order.toWarehouseId ?? "-"}</div>
-                      </td>
-                      <td className="py-1 px-3">
-                        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium 
-                        bg-slate-50 text-slate-700">{statusLabel}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex h-full items-center justify-center">
-                            {order.status === ProductionStatus.IN_PROGRESS && (
-                                <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                    <TimerToEnd from={now} to={order.manufactureDate ?? ""} 
-                                    loadProductionOrders={loadOrders} />
-                                </span>
-                            )}
-                            {order.status === ProductionStatus.PARTIAL && (
-                                <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                    <OctagonAlert className="h-4 w-4" />
-                                    <span className="mt-1">Por Ing.</span>
-                                </span>
-                            )}
-                            {order.status === ProductionStatus.COMPLETED && (
-                                <span className="flex flex-col items-center rounded-lg p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                    <Timer className="h-4 w-4" />
-                                    <span className="mt-1">Completado</span>
-                                </span>
-                            )}
-                        </div>
-                      </td>
-                      <td className="py-1 px-3 text-black/70">
-                        {dateEnd} <br />
-                        {timeEnd}
-                      </td>
-                      <td className="py-1 px-0">
-                        <Dropdown
-                          trigger={<Menu className="h-4 w-4" />}
-                          itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-black/70 hover:bg-black/[0.04]"
-                          items={[
-                            order.status === ProductionStatus.DRAFT && {
-                              label: "Procesar",
-                              onClick: () => handleStart(order.productionId ?? ""),
-                            },
-                            order.status === ProductionStatus.DRAFT && {
-                              label: "Cancelar",
-                              className:
-                                "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-rose-700 hover:bg-rose-50",
-                              onClick: () => handleCancel(order.productionId ?? ""),
-                            },
-                            (order.status === ProductionStatus.IN_PROGRESS ||
-                              order.status === ProductionStatus.PARTIAL) && {
-                              label: "Ingresar a elmacen",
-                              onClick: () => handleClose(order.productionId ?? ""),
-                            },
-                          ].filter(Boolean)}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {!loading && orders.length === 0 && <div className="px-5 py-8 text-[10px] text-black/60">No hay órdenes con los filtros actuales.</div>}
-            {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-[10px] text-black/60">
-            <span className="hidden sm:inline">
-              Mostrando {startIndex}-{endIndex} de {pagination.total}
-            </span>
-
-            <div className="flex items-center gap-2">
               <button
-                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[10px] hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={!pagination.hasPrev || loading}
-                onClick={() => setPage(Math.max(1, safePage - 1))}
                 type="button"
+                className="inline-flex h-8 items-center gap-2 rounded-lg border px-3 
+                text-[11px] text-white focus:outline-none focus:ring-2 mt-5"
+                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                onClick={() => navigate(RoutesPaths.productionCreate)}
               >
-                Anterior
+                <Plus className="h-4 w-4" />
+                Orden de produccion
               </button>
-
-              <span className="tabular-nums">
-                Página {safePage} de {totalPages}
-              </span>
-
-              <button
-                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[10px] hover:bg-black/[0.03] disabled:opacity-40"
-                disabled={!pagination.hasNext || loading}
-                onClick={() => setPage(safePage + 1)}
-                type="button"
-              >
-                Siguiente
-              </button>
+            <div className="flex items-center justify-end">
+              <DataTableColumnMenu
+                table={table}
+                open={showColumnMenu}
+                onToggleOpen={() => setShowColumnMenu((prev) => !prev)}
+                hiddenColumnIds={['expander', 'actions']}
+                className="h-8 mt-5"
+              />
             </div>
           </div>
+
+        </section>
+
+        <section className="overflow-hidden border-black/10 bg-white shadow-sm">
+          <DataTable
+            table={table}
+            loading={loading}
+            error={error}
+            emptyMessage="No hay ordenes con los filtros actuales."
+            renderExpandedRow={(row) => (
+              <ProductionExpandedRow order={row.original} columnVisibility={columnVisibility} />
+            )}
+            headerCellClassName={(header) => {
+              if (header.column.id === "actions") return "px-3 py-3 text-right";
+              if (header.column.id === "expander") return "px-3 py-3 text-center";
+              return "px-3 py-3 text-left";
+            }}
+            bodyCellClassName={(cell) => {
+              if (cell.column.id === "actions") return "px-3 py-3 align-middle text-right";
+              if (cell.column.id === "expander") return "px-3 py-3 align-middle text-center";
+              return "px-3 py-3 align-middle";
+            }}
+          />
+
+          <DataTablePagination
+            loading={loading}
+            total={pagination.total}
+            page={safePage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            pageSize={paginationState.pageSize}
+            hasPrev={pagination.hasPrev}
+            hasNext={pagination.hasNext}
+            onPageSizeChange={(value) => {
+              setPaginationState({ pageIndex: 0, pageSize: value });
+              setExpanded({});
+            }}
+            onPrevious={() => table.previousPage()}
+            onNext={() => table.nextPage()}
+          />
         </section>
       </div>
     </div>
