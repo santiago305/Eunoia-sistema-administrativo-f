@@ -149,7 +149,7 @@ export default function CatalogVariants() {
         page,
         limit,
         q: debouncedSearch || undefined,
-        isActive: statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false",
+        isActive: statusFilter === "active" ? "true" : "false",
         type: ProductTypes.FINISHED,
         productId: productFilter || undefined,
       });
@@ -200,6 +200,7 @@ export default function CatalogVariants() {
 
   const loadRecipes = async (variantId: string) => {
     setLoadingRecipes(true);
+    loadPrimaVariants();
     try {
       const res = await listProductRecipes({ variantId });
       setRecipes(res ?? []);
@@ -211,18 +212,9 @@ export default function CatalogVariants() {
     }
   };
 
-  useEffect(()=>{
-    void loadUnits();
-  },[]);
-
   useEffect(() => {
       void loadProducts();
   }, []);
-
-  useEffect(() => {
-    void loadPrimaVariants();
-  }, []);
-
 
   useEffect(() => {
     void loadVariants();
@@ -295,6 +287,7 @@ export default function CatalogVariants() {
   };
 
   const openEquivalences = (productId: string, baseUnitId: string, sku: string) => {
+    loadUnits();
     setEquivalenceVariantId(productId);
     setEquivalenceBaseUnitId(baseUnitId);
     setSku(sku);
@@ -424,9 +417,8 @@ export default function CatalogVariants() {
               <select className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
                value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
-                <option value="all">Estado (todos)</option>
                 <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
+                <option value="inactive">Eliminados</option>
               </select>
             </div>
           </div>
@@ -483,61 +475,65 @@ export default function CatalogVariants() {
                         <StatusPill active={!!v.isActive} PRIMARY={PRIMARY} />
                       </td>
                       <td className="py-3 px-0">
-                        <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
-                          <div className="flex flex-col gap-1">
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] 
-                              text-black/80 hover:bg-black/[0.03]"
-                              onClick={(e) => {
+                        <Dropdown
+                          trigger={<Menu className="h-4 w-4" />}
+                          menuClassName="min-w-52 p-2"
+                          itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                          items={[
+                            {
+                              label: (
+                                <>
+                                  <Layers className="h-4 w-4 text-black/60" />
+                                  Equivalencias
+                                </>
+                              ),
+                              onClick: (e:any) => {
                                 e.stopPropagation();
                                 openEquivalences(v.productId, v.baseUnitId, v.sku);
-                              }}
-                            >
-                              <Layers className="h-4 w-4 text-black/60" />
-                              Equivalencias
-                            </button>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] 
-                              text-black/80 hover:bg-black/[0.03]"
-                              onClick={(e) => {
+                              },
+                            },
+                            {
+                              label: (
+                                <>
+                                  <LayoutGrid className="h-4 w-4 text-black/60" />
+                                  Recetas
+                                </>
+                              ),
+                              onClick: (e:any) => {
                                 e.stopPropagation();
                                 openRecipes(v.id, v.sku);
-                              }}
-                            >
-                              <LayoutGrid className="h-4 w-4 text-black/60" />
-                              Recetas
-                            </button>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] 
-                              text-black/80 hover:bg-black/[0.03]"
-                              onClick={(e) => {
+                              },
+                            },
+                            {
+                              label: (
+                                <>
+                                  <Pencil className="h-4 w-4 text-black/60" />
+                                  Editar
+                                </>
+                              ),
+                              onClick: (e:any) => {
                                 e.stopPropagation();
                                 void openEdit(v.id);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4 text-black/60" />
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                                v.isActive ? "text-rose-700 hover:bg-rose-50" : 
-                                "text-cyan-700 hover:bg-cyan-50"
-                              }`}
-                              onClick={(e) => {
+                              },
+                            },
+                            {
+                              label: (
+                                <>
+                                  <Power className="h-4 w-4" />
+                                  {v.isActive ? "Eliminar" : "Restaurar"}
+                                </>
+                              ),
+                              className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                v.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                              }`,
+                              onClick: (e:any) => {
                                 e.stopPropagation();
                                 setDeletingVariantId(v.id);
                                 setNextActiveState(!v.isActive);
-                              }}
-                            >
-                              <Power className="h-4 w-4" />
-                              {v.isActive ? "Desactivar" : "Activar"}
-                            </button>
-                          </div>
-                        </Dropdown>
+                              },
+                            },
+                          ].filter(Boolean)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -594,7 +590,7 @@ export default function CatalogVariants() {
                           <Pencil className="h-4 w-4" />
                         </IconButton>
                         <IconButton
-                          title={v.isActive ? "Desactivar" : "Activar"}
+                          title={v.isActive ? "Eliminar" : "Restaurar"}
                           onClick={() => {
                             setDeletingVariantId(v.id);
                             setNextActiveState(!v.isActive);
@@ -719,7 +715,8 @@ export default function CatalogVariants() {
 
             <div className="mt-4 flex justify-end gap-2">
               <button
-                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] 
+                focus:outline-none focus:ring-2 focus:ring-black/10"
                 onClick={() => setDeletingVariantId(null)}
               >
                 Cancelar

@@ -19,7 +19,7 @@ const PRIMARY_HOVER = "#1aa392";
 export default function Warehouses() {
     const shouldReduceMotion = useReducedMotion();
     const [searchText, setSearchText] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("active");
     const [openCreate, setOpenCreate] = useState(false);
     const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
     const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
@@ -271,9 +271,8 @@ export default function Warehouses() {
                                     setPage(1);
                                 }}
                             >
-                                <option value="all">Estado (todos)</option>
                                 <option value="active">Activos</option>
-                                <option value="inactive">Inactivos</option>
+                                <option value="inactive">Eliminados</option>
                             </select>
                             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/40">▾</span>
                         </div>
@@ -315,7 +314,6 @@ export default function Warehouses() {
                                                     <td className="py-4 px-5 select-text">
                                                         <div className="min-w-0">
                                                             <p className="font-medium leading-5 truncate">{w.name}</p>
-                                                            <p className="text-xs text-black/50 truncate">UUID: {w.warehouseId}</p>
                                                         </div>
                                                     </td>
 
@@ -334,45 +332,52 @@ export default function Warehouses() {
 
                                                     <td className="py-4 px-5 select-text">
                                                         <div className="flex items-center justify-end">
-                                                            <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
-                                                                <div className="flex flex-col gap-1">
-                                                                    <button
-                                                                        type="button"
-                                                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                                        onClick={(e) => {
+                                                            <Dropdown
+                                                                trigger={<Menu className="h-4 w-4" />}
+                                                                menuClassName="min-w-52 p-2"
+                                                                itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                                items={[
+                                                                    {
+                                                                        label: (
+                                                                            <>
+                                                                                <Boxes className="h-4 w-4 text-black/60" />
+                                                                                Ver ubicaciones
+                                                                            </>
+                                                                        ),
+                                                                        onClick: (e:any) => {
                                                                             e.stopPropagation();
                                                                             openLocationsModal({ warehouseId: w.warehouseId, name: w.name });
-                                                                        }}
-                                                                    >
-                                                                        <Boxes className="h-4 w-4 text-black/60" />
-                                                                        Ver ubicaciones
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                                        onClick={(e) => {
+                                                                        },
+                                                                    },
+                                                                    {
+                                                                        label: (
+                                                                            <>
+                                                                                <Pencil className="h-4 w-4 text-black/60" />
+                                                                                Editar
+                                                                            </>
+                                                                        ),
+                                                                        onClick: (e:any) => {
                                                                             e.stopPropagation();
                                                                             startEdit(w.warehouseId);
-                                                                        }}
-                                                                    >
-                                                                        <Pencil className="h-4 w-4 text-black/60" />
-                                                                        Editar
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                                                        },
+                                                                    },
+                                                                    {
+                                                                        label: (
+                                                                            <>
+                                                                                <Power className="h-4 w-4" />
+                                                                                {w.isActive ? "Eliminar" : "Restaurar"}
+                                                                            </>
+                                                                        ),
+                                                                        className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
                                                                             w.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
-                                                                        }`}
-                                                                        onClick={(e) => {
+                                                                        }`,
+                                                                        onClick: (e:any) => {
                                                                             e.stopPropagation();
                                                                             setDeletingWarehouseId(w.warehouseId);
-                                                                        }}
-                                                                    >
-                                                                        <Power className="h-4 w-4" />
-                                                                        {w.isActive ? "Desactivar" : "Activar"}
-                                                                    </button>
-                                                                </div>
-                                                            </Dropdown>
+                                                                        },
+                                                                    },
+                                                                ].filter(Boolean)}
+                                                            />
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -437,7 +442,7 @@ export default function Warehouses() {
                                                         <Pencil className="h-4 w-4" />
                                                     </IconButton>
                                                     <IconButton
-                                                        title={w.isActive ? "Desactivar" : "Activar"}
+                                                        title={w.isActive ? "Eliminar" : "Restaurar"}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setDeletingWarehouseId(w.warehouseId);

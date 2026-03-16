@@ -3,10 +3,10 @@ import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { useProducts } from "@/hooks/useProducts";
 import { listProductEquivalences } from "@/services/equivalenceService";
-import { getProductById, listProducts } from "@/services/productService";
+import { getById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Layers, LayoutGrid, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Download,Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
@@ -17,7 +17,7 @@ import { listProductRecipes } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
 import { RecipeFormFields } from "./components/RecipeFormFields";
 import type { PrimaVariant, VariantListItem } from "@/pages/catalog/types/variant";
-import { listRowMaterials, listVariants } from "@/services/catalogService";
+import {  getVariantByIdp, listRowMaterials } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
 import { ProductFormModal } from "./components/ProductFormModal";
@@ -27,6 +27,7 @@ import { StatusPill } from "@/components/StatusTag";
 import { money } from "@/utils/functionPurchases";
 import { IconButton } from "@/components/IconBoton";
 import { Dropdown } from "../purchases/components/PurchaseDropdown";
+import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
 
 const PRIMARY = "#21b8a6";
 const PRIMARY_HOVER = "#1aa392";
@@ -129,21 +130,14 @@ export default function CatalogProducts() {
         return () => clearTimeout(handler);
     }, [searchText]);
 
-    useEffect(() => {
-        const loadUnits = async () => {
-            try {
-                const res = await listUnits();
-                setUnits(res);
-            } catch {
-                showFlash(errorResponse("Error al cargar unidades"));
-            }
-        };
-        void loadUnits();
-    }, [showFlash]);
-
-    useEffect(() => {
-        void loadPrimaVariants();
-    }, [showFlash]);
+    const loadUnits = async () => {
+        try {
+            const res = await listUnits();
+            setUnits(res);
+        } catch {
+            showFlash(errorResponse("Error al cargar unidades"));
+        }
+    };
 
     const effectiveLimit = apiLimit ?? limit;
     const safePage = Math.max(1, apiPage || page);
@@ -195,11 +189,12 @@ export default function CatalogProducts() {
         }
     };
 
-    const openEquivalences = async (productId: string) => {
+      const openEquivalences = async (productId: string) => {
         const product = products.find((p) => p.id === productId);
         if (!product) return;
+        loadUnits();
         try {
-            const fresh = await getProductById(productId);
+            const fresh = await getById(productId);
             setEquivalenceProductId(fresh.id);
             setEquivalenceProductName(fresh.name);
             setEquivalenceBaseUnitId(fresh.baseUnitId ?? "");
@@ -225,8 +220,8 @@ export default function CatalogProducts() {
         setVariantsLoading(true);
         setVariantsError(null);
         try {
-            const res = await listVariants({ page: 1, limit: 100, productId: product.id, type: PRODUCT_TYPE });
-            setVariants(res.items ?? []);
+            const res = await getVariantByIdp(productId);
+            setVariants(res ?? []);
         } catch {
             setVariants([]);
             setVariantsError("Error al cargar variantes");
@@ -403,9 +398,8 @@ export default function CatalogProducts() {
                                     setPage(1);
                                 }}
                             >
-                                <option value="all">Estado (todos)</option>
                                 <option value="active">Activos</option>
-                                <option value="inactive">Inactivos</option>
+                                <option value="inactive">Eliminados</option>
                             </select>
                         </div>
                     </div>
@@ -488,67 +482,18 @@ export default function CatalogProducts() {
                                                     </td>
 
                                                     <td className="py-4 px-0">
-                                                        <Dropdown trigger={<Menu className="h-4 w-4" />} menuClassName="min-w-52 p-2">
-                                                            <div className="flex flex-col gap-1">
-                                                                <button
-                                                                    type="button"
-                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        void openEquivalences(product.id);
-                                                                    }}
-                                                                >
-                                                                    <Layers className="h-4 w-4 text-black/60" />
-                                                                    Equivalencias
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] disabled:opacity-50"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openRecipes(product.id, product.sku ?? "-");
-                                                                    }}
-                                                                >
-                                                                    <LayoutGrid className="h-4 w-4 text-black/60" />
-                                                                    Recetas
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openVariantsModal(product.id);
-                                                                    }}
-                                                                >
-                                                                    <Boxes className="h-4 w-4 text-black/60" />
-                                                                    Ver variantes
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        void openEdit(product.id);
-                                                                    }}
-                                                                >
-                                                                    <Pencil className="h-4 w-4 text-black/60" />
-                                                                    Editar
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                                                                        product.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
-                                                                    }`}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setDeletingProductId(product.id);
-                                                                    }}
-                                                                >
-                                                                    <Power className="h-4 w-4" />
-                                                                    {product.isActive ? "Desactivar" : "Activar"}
-                                                                </button>
-                                                            </div>
-                                                        </Dropdown>
+                                                        <Dropdown
+                                                            trigger={<Menu className="h-4 w-4" />}
+                                                            menuClassName="min-w-52 p-2"
+                                                            itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                                                            items={getDropdownItemProducts(product, {
+                                                                openEquivalences,
+                                                                openRecipes,
+                                                                openVariantsModal,
+                                                                openEdit,
+                                                                setDeletingProductId,
+                                                            })}
+                                                        />
                                                     </td>
                                                 </motion.tr>
                                             );
@@ -613,7 +558,7 @@ export default function CatalogProducts() {
                                                     </IconButton>
 
                                                     <IconButton
-                                                        title={product.isActive ? "Desactivar" : "Activar"}
+                                                        title={product.isActive ? "Eliminar" : "Restaurar"}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setDeletingProductId(product.id);

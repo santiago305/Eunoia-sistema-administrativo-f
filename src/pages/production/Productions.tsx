@@ -375,46 +375,27 @@ export default function Production() {
                         {timeEnd}
                       </td>
                       <td className="py-1 px-0">
-                        <Dropdown trigger={<Menu className="h-4 w-4" />}>
-                        {
-                          order.status === ProductionStatus.DRAFT && (
-                            <>
-                            <button
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
-                              text-[11px] text-black/70 hover:bg-black/[0.04]"
-                              onClick={() => handleStart(order.productionId ?? "")}
-                              type="button"
-                            >
-                              Procesar
-                            </button>
-                            <button
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
-                              text-[11px] text-rose-700 hover:bg-rose-50"
-                              onClick={() => handleCancel(order.productionId ?? "")}
-                              type="button"
-                            >
-                              Cancelar
-                            </button>
-                            </>
-                          )
-                        }
-                        {
-                          (
-                            order.status === ProductionStatus.IN_PROGRESS || 
-                            order.status === ProductionStatus.PARTIAL
-                          ) && (
-                          <button
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left 
-                            text-[11px] text-black/70 hover:bg-black/[0.04]"
-                            onClick={() => handleClose(order.productionId ?? "")}
-                            type="button"
-                          >
-                            Ingresar a elmacen
-                          </button>
-                          )
-                        }
-
-                        </Dropdown>
+                        <Dropdown
+                          trigger={<Menu className="h-4 w-4" />}
+                          itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-black/70 hover:bg-black/[0.04]"
+                          items={[
+                            order.status === ProductionStatus.DRAFT && {
+                              label: "Procesar",
+                              onClick: () => handleStart(order.productionId ?? ""),
+                            },
+                            order.status === ProductionStatus.DRAFT && {
+                              label: "Cancelar",
+                              className:
+                                "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-rose-700 hover:bg-rose-50",
+                              onClick: () => handleCancel(order.productionId ?? ""),
+                            },
+                            (order.status === ProductionStatus.IN_PROGRESS ||
+                              order.status === ProductionStatus.PARTIAL) && {
+                              label: "Ingresar a elmacen",
+                              onClick: () => handleClose(order.productionId ?? ""),
+                            },
+                          ].filter(Boolean)}
+                        />
                       </td>
                     </tr>
                   );

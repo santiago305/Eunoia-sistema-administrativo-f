@@ -117,7 +117,7 @@ export function UsersRightPanel({
                           togglingStatus ? "cursor-not-allowed opacity-60" : "hover:bg-rose-100 active:scale-[.99]"
                         )}
                       >
-                        {togglingStatus ? "..." : "Desactivar"}
+                        {togglingStatus ? "..." : "Eliminar"}
                       </button>
                     ) : (
                       <button

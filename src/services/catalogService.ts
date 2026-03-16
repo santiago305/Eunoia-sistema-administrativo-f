@@ -1,5 +1,5 @@
 import axiosInstance from "@/common/utils/axios";
-import { API_PRODUCTS_GROUP, API_VARIANTS_GROUP } from "./APIs";
+import { API_PAYMENT_GROUP, API_PRODUCTS_GROUP, API_VARIANTS_GROUP } from "./APIs";
 import {
   CreateVariantResponse,
   CreateVariantDto,
@@ -49,6 +49,10 @@ export const createVariant = async (payload: CreateVariantDto): Promise<CreateVa
 
 export const getVariantById = async (id: string): Promise<Variant> => {
   const response = await axiosInstance.get(API_VARIANTS_GROUP.byId(id));
+  return response.data;
+};
+export const getVariantByIdp = async (id: string): Promise<Variant[]> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.byId(id));
   return response.data;
 };
 

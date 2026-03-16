@@ -52,11 +52,10 @@ export function UsersLeftPanel({
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_34px_rgba(0,0,0,.04)]">
       <div className="border-b border-zinc-100 p-3">
-        <div className="mb-2 grid grid-cols-3 gap-1 rounded-xl bg-zinc-100 p-1">
+        <div className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-zinc-100 p-1">
           {([
-            { key: "all", label: "Todos" },
             { key: "active", label: "Activos" },
-            { key: "inactive", label: "Inactivos" },
+            { key: "inactive", label: "Eliminados" },
           ] as const).map((opt) => (
             <button
               key={opt.key}
