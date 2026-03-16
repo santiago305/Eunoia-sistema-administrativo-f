@@ -370,7 +370,7 @@ export default function Providers() {
           title="Metodos de pago del proveedor"
           supplierId={methodSupplierId}
           close={() => setMethodSupplierId(null)}
-          className="max-w-3xl"
+          className="max-w-[600px]"
         />
       )}
     </div>

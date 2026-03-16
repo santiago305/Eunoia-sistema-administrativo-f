@@ -321,7 +321,7 @@ export default function CompanyPage() {
           <PaymentMethodListModal
             title="Metodos de pago"
             close={() => setOpenPaymentMethods(false)}
-            className="max-w-[700px]"
+            className="max-w-[600px]"
             companyId={company.companyId}
           />
         )}
