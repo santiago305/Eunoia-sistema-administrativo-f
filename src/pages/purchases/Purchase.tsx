@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { AfectType, CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes, VoucherDocTypes } from "@/pages/purchases/types/purchaseEnums";
 import type { AfectTypeType } from "@/pages/purchases/types/purchaseEnums";
 import { FinishedProducts } from "@/pages/catalog/types/variant";
-import { listRowMaterials } from "@/services/catalogService";
+import { searchProductAndVariant } from "@/services/catalogService";
 import { listAll } from "@/services/supplierService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -57,22 +57,33 @@ export default function PurchaseCreateLocal() {
     const [openPaymentModal, setOpenPaymentModal] = useState(false);
     const [openNavigateModal, setOpenNavigateModal] = useState(false);
 
+    const [productQuery, setProductQuery] = useState("");
+
+
     const [form, setForm] = useState<PurchaseOrder>(() => buildEmptyForm());
     const { poId } = useParams<{ poId: string }>();
     const isEdit = Boolean(poId);
 
     const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
 
-    const loadPrimaVariants = async () => {
+    const searchPrimaVariants = async () => {
+        if (!productQuery.trim()) {
+            setProducts([]);
+            return;
+        }
+        const raw = true;
         try {
-            const result = await listRowMaterials();
+            const result = await searchProductAndVariant({
+                q: productQuery,
+                raw: raw,
+            });
             const normalized = (result ?? [])
                 .map((row) => ({
                     ...row,
-                    stockItemId: row.itemId ?? row.id ?? row.primaId ?? "",
+                    itemId: row.itemId ?? row.id ?? row.primaId ?? "",
                     isActive: row.isActive ?? true,
                 }))
-                .filter((row) => row.stockItemId);
+                .filter((row) => row.itemId);
             setProducts(normalized);
         } catch {
             setProducts([]);
@@ -107,7 +118,7 @@ export default function PurchaseCreateLocal() {
             const res = await listActive();
             const options =
                 res?.map((s) => {
-                    const direction = `${s.name} (${s.department}-${s.province}-${s.district})`;
+                    const direction = `${s.name}`;
                     return {
                         value: s.warehouseId,
                         label: direction,
@@ -168,7 +179,6 @@ export default function PurchaseCreateLocal() {
     };
 
     useEffect(() => {
-        void loadPrimaVariants();
         void loadSuppliers();
         void loadUnits();
         void loadWarehouses();
@@ -370,6 +380,19 @@ export default function PurchaseCreateLocal() {
 
         void loadPurchase();
     }, [poId, showFlash]);
+   
+    useEffect(() => {
+    const id = setTimeout(() => {
+        if (productQuery.trim()) {
+        void searchPrimaVariants();
+        } else {
+        setProducts([]);
+        }
+    }, 500);
+
+    return () => clearTimeout(id);
+    }, [productQuery]);
+
 
     const clearEquivalence = () => {
         setOpenEquivalence(false);
@@ -406,6 +429,7 @@ export default function PurchaseCreateLocal() {
                                         placement="bottom"
                                         placeholder="Seleccionar producto"
                                         searchPlaceholder="Buscar producto..."
+                                        onSearchChange={(text) => setProductQuery(text)}
                                     />
                                 </div>
                                 <button
@@ -756,9 +780,6 @@ export default function PurchaseCreateLocal() {
                 primaryColor={PRIMARY}
                 entityLabel="materia prima"
                 onClose={() => setOpenCreatePrima(false)}
-                onSaved={() => {
-                    void loadPrimaVariants();
-                }}
             />
             <WarehouseFormModal
                 open={openCreateWarehouse}

@@ -10,7 +10,8 @@ type Props = {
     searchPlaceholder?: string;
     placement?: "bottom" | "top";
     className?: string;
-    textSize?:string
+    textSize?:string;
+    onSearchChange?: (value: string) => void;
 };
 
 export function FilterableSelect({
@@ -21,7 +22,8 @@ export function FilterableSelect({
     searchPlaceholder = "Buscar...",
     placement = "bottom",
     className = "h-10",
-    textSize = "text-xs"
+    textSize = "text-xs",
+    onSearchChange,
 }: Props) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
@@ -70,7 +72,11 @@ export function FilterableSelect({
                             className={`h-9 w-full rounded-md border border-black/10 px-2 ${textSize}`}
                             placeholder={searchPlaceholder}
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => {
+                                const next = e.target.value;
+                                setQuery(next);
+                                onSearchChange?.(next);
+                            }}
                             autoFocus
                         />
                     </div>

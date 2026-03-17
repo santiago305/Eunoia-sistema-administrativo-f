@@ -94,6 +94,8 @@ export const API_VARIANTS_GROUP = {
   create:"/catalog/variants",
   list:"/catalog/variants",
   listRowMaterials: "/catalog/variants/row-materials",
+  searchProductAndVariant: (q: string, raw = true, withRecipes = false) =>
+  `/catalog/products/variants/search?q=${encodeURIComponent(q)}&raw=${raw}&withRecipes=${withRecipes}`,
   byId: (id: string) => `/catalog/variants/${id}`,
   update: (id: string) => `/catalog/variants/${id}`,
   updateActive: (id: string) => `/catalog/variants/${id}/active`
