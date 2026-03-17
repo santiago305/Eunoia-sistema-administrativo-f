@@ -165,6 +165,7 @@ export const API_PURCHASE_GROUP = {
   list: "/purchases/orders",
   update: (id: string) => `/purchases/orders/${id}`,
   setSent: (id: string) => `/purchases/orders/${id}/sent`,
+  setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
   setActive: (id: string) => `/purchases/orders/${id}/active`,

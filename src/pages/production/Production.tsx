@@ -5,7 +5,7 @@ import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
-import { listFinishedWithRecipes, searchProductAndVariant } from "@/services/catalogService";
+import { searchProductAndVariant } from "@/services/catalogService";
 import { createProductionOrder } from "@/services/productionService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money, toDateTimeInputValue, tryShowPicker } from "@/utils/functionPurchases";
