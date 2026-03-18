@@ -3,10 +3,9 @@ import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { listAll } from "@/services/supplierService";
 import { listActive } from "@/services/warehouseServices";
-import { enterPurchaseOrder, listPurchaseOrders, setSentPurchase } from "@/services/purchaseService";
+import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
 import { money, toDateInputValue, tryShowPicker, todayIso, buildMonthStartIso } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
@@ -178,6 +177,21 @@ export default function Purchases() {
     clearFlash();
     try {
       const res = await setSentPurchase(id);
+      if(res.type === 'error'){
+        showFlash(errorResponse(res.message));
+      }
+      if(res.type === 'success'){
+        showFlash(successResponse(res.message));
+        loadPurchases();
+      }
+    } catch {
+      showFlash(errorResponse("Error al iniciar espera de mercaderia"));
+    }
+  };
+  const cancelOrder = async (id:string) => {
+    clearFlash();
+    try {
+      const res = await setCancelPurchase(id);
       if(res.type === 'error'){
         showFlash(errorResponse(res.message));
       }
@@ -478,6 +492,10 @@ export default function Purchases() {
                                                       purchase.status === PurchaseOrderStatuses.DRAFT && {
                                                           label: "Procesar",
                                                           onClick: () => setSent(purchase.poId ?? ""),
+                                                      },
+                                                      purchase.status === PurchaseOrderStatuses.DRAFT && {
+                                                          label: "Cancelar",
+                                                          onClick: () => cancelOrder(purchase.poId ?? ""),
                                                       },
                                                       purchase.status === PurchaseOrderStatuses.DRAFT && {
                                                           label: "Editar",

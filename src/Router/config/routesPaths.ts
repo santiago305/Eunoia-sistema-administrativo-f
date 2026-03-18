@@ -49,6 +49,7 @@ export const RoutesPaths = {
   
   //production
   production:'/Ordenes de produccion',
+  productionKardex:'/Ordenes de produccion/kardex',
   productionCreate: "/nueva orden de produccion",
   
   // seguridad

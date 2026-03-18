@@ -94,6 +94,8 @@ export const API_VARIANTS_GROUP = {
   create:"/catalog/variants",
   list:"/catalog/variants",
   listRowMaterials: "/catalog/variants/row-materials",
+  searchProductAndVariant: (q: string, raw = true, withRecipes = false) =>
+  `/catalog/products/variants/search?q=${encodeURIComponent(q)}&raw=${raw}&withRecipes=${withRecipes}`,
   byId: (id: string) => `/catalog/variants/${id}`,
   update: (id: string) => `/catalog/variants/${id}`,
   updateActive: (id: string) => `/catalog/variants/${id}/active`
@@ -163,6 +165,7 @@ export const API_PURCHASE_GROUP = {
   list: "/purchases/orders",
   update: (id: string) => `/purchases/orders/${id}`,
   setSent: (id: string) => `/purchases/orders/${id}/sent`,
+  setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
   setActive: (id: string) => `/purchases/orders/${id}/active`,
@@ -193,6 +196,10 @@ export const API_PAYMENT_GROUP = {
 
 export const API_DOCUMENT_SERIES_GROUP = {
   list: "/inventory/document-series",
+};
+
+export const API_KARDEX_GROUP = {
+  list: "/inventory/ledger",
 };
 
 export const API_PAYMENT_METHODS_GROUP = {

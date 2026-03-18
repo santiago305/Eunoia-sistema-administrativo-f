@@ -30,6 +30,10 @@ export const setSentPurchase = async (id:string): Promise<{type:string, message:
   const response = await axiosInstance.patch(API_PURCHASE_GROUP.setSent(id));
   return response.data;
 };
+export const setCancelPurchase = async (id:string): Promise<{type:string, message:string}> => {
+  const response = await axiosInstance.patch(API_PURCHASE_GROUP.setCancel(id));
+  return response.data;
+};
 
 export const enterPurchaseOrder = async (id:string): Promise<{type:string, message:string}> => {
   const response = await axiosInstance.post(API_PURCHASE_GROUP.enterPurchase(id));

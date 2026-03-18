@@ -5,7 +5,7 @@ import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
-import { listFinishedWithRecipes } from "@/services/catalogService";
+import { searchProductAndVariant } from "@/services/catalogService";
 import { createProductionOrder } from "@/services/productionService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money, toDateTimeInputValue, tryShowPicker } from "@/utils/functionPurchases";
@@ -49,6 +49,7 @@ export default function ProductionCreate() {
   const [products, setProducts] = useState<FinishedProducts[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
+  const [query, setQuery] = useState("");
 
   const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
 
@@ -74,9 +75,11 @@ export default function ProductionCreate() {
     }
   };
 
-  const loadFinishedProducts = async () => {
+  const searchFinishedProducts = async () => {
     try {
-      const res = await listFinishedWithRecipes();
+      const res = await searchProductAndVariant({
+        q:query, raw:false, withRecipes:true
+      });
       setProducts(res);
     } catch {
       setProducts([]);
@@ -103,7 +106,6 @@ export default function ProductionCreate() {
   useEffect(() => {
     resetForm();
     void loadWarehouses();
-    void loadFinishedProducts();
   }, []);
 
   useEffect(() => {
@@ -194,6 +196,17 @@ export default function ProductionCreate() {
       setLoading(false);
     }
   };
+   useEffect(() => {
+      const id = setTimeout(() => {
+          if (query.trim()) {
+          void searchFinishedProducts();
+          } else {
+          setProducts([]);
+          }
+      }, 500);
+  
+      return () => clearTimeout(id);
+      }, [query]);
 
   return (
     <div className="w-full min-h-screen bg-white">
@@ -225,6 +238,7 @@ export default function ProductionCreate() {
                   searchPlaceholder="Buscar producto..."
                   className="h-9"
                   textSize="text-[11px]"
+                  onSearchChange={(text) => setQuery(text)}
                 />
               </div>
             </div>
