@@ -1,6 +1,5 @@
 import { 
     IconHome,
-    IconPaymentMethod,
     IconProduction,
     IconPurchase, 
     IconRowMaterial, 
@@ -97,6 +96,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Variantes",
                 href: RoutesPaths.rowVariant,
             },
+            {
+                label: "Kardex",
+                href: RoutesPaths.KardexPrima,
+            },
         ],
     },
     {
@@ -110,11 +113,7 @@ export const getSidebarItems = (): SidebarItem[] => [
             {
                 label: "Crear orden",
                 href: RoutesPaths.productionCreate,
-            },
-            {
-                label: "Kardex",
-                href: RoutesPaths.productionKardex,
-            },
+            }
         ],
     },
     {

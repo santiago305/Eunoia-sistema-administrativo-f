@@ -34,6 +34,8 @@ export const RoutesPaths = {
   rowMaterial:'/materia-prima',
   rowVariant:'/materia-prima/variantes',
   rowMaterialSummary:'/materia-prima/resumen',
+  KardexPrima:'/materia-prima/kardex',
+
   
   //provedores
   providers:'/contactos/proveedores',
@@ -49,7 +51,6 @@ export const RoutesPaths = {
   
   //production
   production:'/Ordenes de produccion',
-  productionKardex:'/Ordenes de produccion/kardex',
   productionCreate: "/nueva orden de produccion",
   
   // seguridad
