@@ -111,6 +111,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Crear orden",
                 href: RoutesPaths.productionCreate,
             },
+            {
+                label: "Kardex",
+                href: RoutesPaths.productionKardex,
+            },
         ],
     },
     {

@@ -198,6 +198,10 @@ export const API_DOCUMENT_SERIES_GROUP = {
   list: "/inventory/document-series",
 };
 
+export const API_KARDEX_GROUP = {
+  list: "/inventory/ledger",
+};
+
 export const API_PAYMENT_METHODS_GROUP = {
   base: "/payment-methods",
   create: "/payment-methods",

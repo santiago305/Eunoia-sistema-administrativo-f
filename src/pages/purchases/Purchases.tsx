@@ -3,7 +3,6 @@ import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { listAll } from "@/services/supplierService";
 import { listActive } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
