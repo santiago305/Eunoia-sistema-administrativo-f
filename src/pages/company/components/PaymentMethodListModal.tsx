@@ -12,7 +12,6 @@ import {
   getPaymentMethodsByCompany,
 } from "@/services/paymentMethodService";
 import type { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
-import { PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
 
 type PaymentMethodListModalProps = {
   title: string;

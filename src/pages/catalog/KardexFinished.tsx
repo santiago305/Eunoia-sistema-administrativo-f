@@ -72,12 +72,12 @@ export default function KardexProduction() {
     });
     const [loading, setLoading] = useState(false);
 
-    const searchPrimas = async () => {
+    const searchFinished = async () => {
         if (!productQuery.trim()) {
             setProducts([]);
             return;
         }
-        const raw = true;
+        const raw = false;
         try {
             const result = await searchProductAndVariant({
                 q: productQuery,
@@ -172,7 +172,7 @@ export default function KardexProduction() {
     useEffect(() => {
         const id = setTimeout(() => {
             if (productQuery.trim()) {
-                void searchPrimas();
+                void searchFinished();
             } else {
                 setProducts([]);
             }
@@ -259,10 +259,10 @@ export default function KardexProduction() {
 
     return (
         <div className="w-full min-h-screen bg-white text-black">
-            <PageTitle title="Kardex de materia prima y materiales" />
+            <PageTitle title="Kardex de productos terminados" />
             <div className="px-6 py-6 space-y-3">
                 <div>
-                    <h1 className="text-xl font-semibold">Kardex de materia prima y materiales</h1>
+                    <h1 className="text-xl font-semibold">Kardex de productos terminados</h1>
                     <p className="text-sm text-black/60">Auditoría viva de movimientos.</p>
                 </div>
 

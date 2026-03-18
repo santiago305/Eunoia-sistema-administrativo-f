@@ -51,6 +51,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.catalogSummary, name: "catalogSummary", isProtected: true },
   { path: RoutesPaths.catalogProducts, name: "catalogProducts", isProtected: true },
   { path: RoutesPaths.catalogVariants, name: "catalogVariants", isProtected: true },
+  { path: RoutesPaths.KardexFinished, name: "kardexFinished", isProtected: true, rolesAllowed: ["admin", "moderator"] },
 
   { path: RoutesPaths.warehouses, name: "warehouses", isProtected: true },
   { path: RoutesPaths.location, name: "location", isProtected: true },
