@@ -6,9 +6,9 @@ export type KardexListQuery = z.infer<typeof listKardexQuerySchema>;
 export type LedgerWarehouseSnapshot = {
   id: string;
   name: string;
-  department: string;
-  province: string;
-  district: string;
+  department?: string | null;
+  province?: string | null;
+  district?: string | null;
   address?: string | null;
   isActive?: boolean;
   createdAt?: string;
@@ -21,15 +21,18 @@ export type LedgerProductSnapshot = {
   barcode?: string | null;
   isActive?: boolean;
   createdAt?: string;
+  unidad?:string | null;
 };
 
 export type LedgerVariantSnapshot = {
   id: string;
+  name: string;
   productId?: string | null;
   sku: string;
   barcode?: string | null;
   isActive?: boolean;
   createdAt?: string;
+  unidad?:string | null;
 };
 
 export type LedgerStockItemSnapshot = {
@@ -43,14 +46,22 @@ export type LedgerStockItemSnapshot = {
   variant?: LedgerVariantSnapshot | null;
 };
 
+export type LedgerSerieSnapshot = {
+  id: string;
+  code: string;
+};
+
 export type LedgerDocumentSnapshot = {
   id: string;
   docType?: string;
   status?: string;
   serieId?: string | null;
+  serie?: LedgerSerieSnapshot | null;
   correlative?: number | null;
   fromWarehouseId?: string | null;
   toWarehouseId?: string | null;
+  fromWarehouse?: LedgerWarehouseSnapshot | null;
+  toWarehouse?: LedgerWarehouseSnapshot | null;
   referenceId?: string | null;
   referenceType?: string | null;
   note?: string | null;
@@ -119,6 +130,7 @@ export type LedgerProductionSnapshot = {
   toWarehouseId: string;
   docType?: string | null;
   serieId?: string | null;
+  serie?: string | null;
   correlative?: number | null;
   status?: string | null;
   reference?: string | null;

@@ -58,6 +58,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.rowMaterialSummary, name: "rowMaterialSummary", isProtected: true },
   { path: RoutesPaths.rowVariant, name: "rowVariant", isProtected: true },
   { path: RoutesPaths.rowMaterial, name: "rowMaterial", isProtected: true },
+  { path: RoutesPaths.KardexPrima, name: "kardexPrima", isProtected: true, rolesAllowed: ["admin", "moderator"] },
 
   { path: RoutesPaths.providers, name: "providers", isProtected: true },
 
@@ -66,7 +67,6 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.purchaseEdit, name: "purchases", isProtected: true },
 
   { path: RoutesPaths.production, name: "production", isProtected: true, rolesAllowed: ["admin", "moderator"] },
-  { path: RoutesPaths.productionKardex, name: "productionKardex", isProtected: true, rolesAllowed: ["admin", "moderator"] },
   { path: RoutesPaths.productionCreate, name: "productionCreate", isProtected: true, rolesAllowed: ["admin", "moderator"] },
 
   // Rutas de seguridad

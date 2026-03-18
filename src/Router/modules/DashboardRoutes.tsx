@@ -44,7 +44,7 @@ const Purchase = lazy(() => import("@/pages/purchases/Purchase"));
 const Purchases = lazy(() => import("@/pages/purchases/Purchases"));
 const Company = lazy(() => import("@/pages/company/Company"));
 const Production = lazy(() => import("@/pages/production/Productions"));
-const ProductionKardex = lazy(() => import("@/pages/production/KardexProduction"));
+const KardexPrima = lazy(() => import("@/pages/row-material/KardexPrima"));
 const ProductionCreate = lazy(() => import("@/pages/production/Production"));
 
 const withRouteGuard = (path: string, element: ReactElement) => {
@@ -146,6 +146,10 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.rowVariant, <RowVariant />),
             },
             {
+                path: RoutesPaths.KardexPrima,
+                element: withRouteGuard(RoutesPaths.KardexPrima, <KardexPrima />),
+            },
+            {
                 path: RoutesPaths.providers,
                 element: withRouteGuard(RoutesPaths.providers, <Providers />),
             },
@@ -176,10 +180,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.production,
                 element: withRouteGuard(RoutesPaths.production, <Production />),
-            },
-            {
-                path: RoutesPaths.productionKardex,
-                element: withRouteGuard(RoutesPaths.productionKardex, <ProductionKardex />),
             },
             {
                 path: RoutesPaths.productionCreate,
