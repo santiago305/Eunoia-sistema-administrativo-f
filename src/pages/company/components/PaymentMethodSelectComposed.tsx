@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { FilterableSelectComposed as FS } from "@/components/SelectFilterableComposed";
-import { Pencil, PencilIcon, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 
 type SelectOption = { value: string; label: string };
 

@@ -81,6 +81,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Variantes",
                 href: RoutesPaths.catalogVariants,
             },
+            {
+                label: "Kardex",
+                href: RoutesPaths.KardexFinished,
+            },
         ],
     },
     {

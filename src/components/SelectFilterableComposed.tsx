@@ -43,9 +43,9 @@ type ContextValue = {
     textSize: string;
     usePortal: boolean;
     selectedLabel: string | null;
-    wrapperRef: React.RefObject<HTMLDivElement>;
-    buttonRef: React.RefObject<HTMLButtonElement>;
-    contentRef: React.RefObject<HTMLDivElement>;
+    wrapperRef: React.RefObject<HTMLDivElement | null>;
+    buttonRef: React.RefObject<HTMLButtonElement | null>;
+    contentRef: React.RefObject<HTMLDivElement | null>;
     anchorRect: DOMRect | null;
 };
 
