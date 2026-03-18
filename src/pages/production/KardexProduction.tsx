@@ -172,7 +172,7 @@ export default function KardexProduction() {
       } else {
         setProducts([]);
       }
-    }, 1000);
+    }, 500);
 
     return () => clearTimeout(id);
   }, [productQuery]);
