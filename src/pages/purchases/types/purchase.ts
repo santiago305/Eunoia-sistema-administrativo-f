@@ -27,6 +27,32 @@ export type ListPurchaseOrdersQuery = z.infer<typeof listPurchaseOrdersQuerySche
 
 export type PurchaseOrderItem = {
   stockItemId: string,
+  stockItem?: {
+    type?: string;
+    product?: {
+      id?: string;
+      name?: string;
+      description?: string;
+      baseUnitId?: string;
+      sku?: string;
+      isActive?: boolean;
+      type?: string;
+      baseUnitName?: string;
+      baseUnitCode?: string;
+    };
+    variant?: {
+      id?: string;
+      productId?: string;
+      productName?: string;
+      productDescription?: string;
+      baseUnitId?: string;
+      unitCode?: string;
+      unitName?: string;
+      sku?: string;
+      isActive?: boolean;
+      createdAt?: string;
+    };
+  };
   unitBase:string,
   equivalence:string,
   factor:number,

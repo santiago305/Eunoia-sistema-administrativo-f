@@ -67,11 +67,23 @@ export default function PurchaseCreateLocal() {
 
     const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
 
+    const mergeProducts = (current: FinishedProducts[], incoming: FinishedProducts[]) => {
+        const map = new Map<string, FinishedProducts>();
+        current.forEach((item) => {
+            const key = item.itemId ?? item.id ?? "";
+            if (!key) return;
+            map.set(key, item);
+        });
+        incoming.forEach((item) => {
+            const key = item.itemId ?? item.id ?? "";
+            if (!key) return;
+            map.set(key, item);
+        });
+        return Array.from(map.values());
+    };
+
     const searchPrimaVariants = async () => {
-        if (!productQuery.trim()) {
-            setProducts([]);
-            return;
-        }
+        if (!productQuery.trim()) return;
         const raw = true;
         try {
             const result = await searchProductAndVariant({
@@ -85,11 +97,36 @@ export default function PurchaseCreateLocal() {
                     isActive: row.isActive ?? true,
                 }))
                 .filter((row) => row.itemId);
-            setProducts(normalized);
+            setProducts((prev) => (isEdit ? mergeProducts(prev, normalized) : normalized));
         } catch {
-            setProducts([]);
+            if (!isEdit) {
+                setProducts([]);
+            }
             showFlash(errorResponse("Error al cargar variantes PRIMA"));
         }
+    };
+
+    const mapOrderProducts = (items: PurchaseOrderItem[]) => {
+        const map = new Map<string, FinishedProducts>();
+        items.forEach((item) => {
+            const product = item.stockItem?.product;
+            const variant = item.stockItem?.variant;
+            const id = variant?.id ?? product?.id ?? item.stockItemId;
+            if (!id || map.has(id)) return;
+            map.set(id, {
+                id,
+                itemId: id,
+                sku: variant?.sku ?? product?.sku ?? undefined,
+                productName: variant?.productName ?? product?.name ?? undefined,
+                productDescription: variant?.productDescription ?? product?.description ?? undefined,
+                unitName: variant?.unitName ?? product?.baseUnitName ?? undefined,
+                unitCode: variant?.unitCode ?? product?.baseUnitCode ?? undefined,
+                baseUnitId: variant?.baseUnitId ?? product?.baseUnitId ?? undefined,
+                isActive: variant?.isActive ?? product?.isActive ?? undefined,
+                type: item.stockItem?.type ?? product?.type ?? undefined,
+            });
+        });
+        return Array.from(map.values());
     };
 
     const loadSuppliers = async () => {
@@ -326,7 +363,7 @@ export default function PurchaseCreateLocal() {
             expectedAt: form.expectedAt ?? "",
             dateIssue: form.dateIssue ?? "",
             dateExpiration: form.dateExpiration ? form.dateExpiration : undefined,
-            items: form.items ?? [],
+            items: (form.items ?? []).map(({ stockItem, ...rest }) => rest),
             payments: (form.payments ?? []).map((p) => ({
                 currency: p.currency,
                 date: p.date,
@@ -374,10 +411,12 @@ export default function PurchaseCreateLocal() {
                 setForm((prev) => ({
                     ...prev,
                     ...data,
-                    items: data.items ?? [],
+                    items: (data.items ?? []).map(({ stockItem, ...rest }) => rest),
                     payments: data.payments ?? [],
                     quotas: data.quotas ?? [],
                 }));
+                const mappedProducts = mapOrderProducts(data.items ?? []);
+                setProducts(mappedProducts);
             } catch {
                 showFlash(errorResponse("Error al cargar la compra."));
             }
@@ -387,16 +426,16 @@ export default function PurchaseCreateLocal() {
     }, [poId, showFlash]);
    
     useEffect(() => {
-    const id = setTimeout(() => {
-        if (productQuery.trim()) {
-        void searchPrimaVariants();
-        } else {
-        setProducts([]);
-        }
-    }, 500);
+        const id = setTimeout(() => {
+            if (productQuery.trim()) {
+                void searchPrimaVariants();
+            } else if (!isEdit) {
+                setProducts([]);
+            }
+        }, 500);
 
-    return () => clearTimeout(id);
-    }, [productQuery]);
+        return () => clearTimeout(id);
+    }, [productQuery, isEdit]);
 
 
     const clearEquivalence = () => {
