@@ -6,14 +6,14 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
-import { createProductionOrder } from "@/services/productionService";
+import { createProductionOrder, getProductionOrder, updateProductionOrder } from "@/services/productionService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money, toDateTimeInputValue, tryShowPicker } from "@/utils/functionPurchases";
-import type { AddProductionOrderItemDto, CreateProductionOrderDto } from "@/pages/production/types/production";
+import type { AddProductionOrderItemDto, CreateProductionOrderDto, ProductionOrderItem } from "@/pages/production/types/production";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { RoutesPaths } from "@/Router/config/routesPaths";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
 import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
@@ -40,6 +40,8 @@ export default function ProductionCreate() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
   const { setCollapsed } = useSidebarContext();
+  const { productionId } = useParams<{ productionId: string }>();
+  const isEdit = Boolean(productionId);
 
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateProductionOrderDto>(() => buildEmptyForm());
@@ -47,6 +49,7 @@ export default function ProductionCreate() {
   const [openItemModal, setOpenItemModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [products, setProducts] = useState<FinishedProducts[]>([]);
+  const [searchResults, setSearchResults] = useState<FinishedProducts[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
@@ -80,11 +83,34 @@ export default function ProductionCreate() {
       const res = await searchProductAndVariant({
         q:query, raw:false, withRecipes:true
       });
-      setProducts(res);
+      setSearchResults(res);
     } catch {
-      setProducts([]);
+      setSearchResults([]);
       showFlash(errorResponse("Error al cargar productos terminados"));
     }
+  };
+
+  const mapOrderProducts = (items: ProductionOrderItem[]) => {
+    const map = new Map<string, FinishedProducts>();
+    items.forEach((item) => {
+      const product = item.finishedItem?.product;
+      const variant = item.finishedItem?.variant;
+      const id = variant?.id ?? product?.id ?? item.finishedItemId;
+      if (!id || map.has(id)) return;
+      map.set(id, {
+        id,
+        itemId: id,
+        sku: variant?.sku ?? product?.sku ?? undefined,
+        productName: variant?.productName ?? product?.name ?? undefined,
+        productDescription: variant?.productDescription ?? product?.description ?? undefined,
+        unitName: variant?.unitName ?? product?.baseUnitName ?? undefined,
+        unitCode: variant?.unitCode ?? product?.baseUnitCode ?? undefined,
+        baseUnitId: variant?.baseUnitId ?? product?.baseUnitId ?? undefined,
+        isActive: variant?.isActive ?? product?.isActive ?? undefined,
+        type: item.finishedItem?.type ?? product?.type ?? undefined,
+      });
+    });
+    return Array.from(map.values());
   };
 
   const loadSeries = async (warehouseId: string) => {
@@ -114,16 +140,18 @@ export default function ProductionCreate() {
 
   const productOptions = useMemo(
     () =>
-      (products ?? []).map((v) => ({
+      (searchResults ?? []).map((v) => ({
         value: v.itemId ?? v.id ?? "",
         label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
       })),
-    [products]
+    [searchResults]
   );
 
   const addItem = () => {
     const { finishedItemId, quantity, unitCost } = pendingItem;
-    const selected = products.find((p) => (p.itemId ?? p.id) === finishedItemId);
+    const selected =
+      searchResults.find((p) => (p.itemId ?? p.id) === finishedItemId) ??
+      products.find((p) => (p.itemId ?? p.id) === finishedItemId);
 
     if (!finishedItemId) {
       showFlash(errorResponse("Selecciona un producto"));
@@ -150,6 +178,13 @@ export default function ProductionCreate() {
         },
       ],
     }));
+    setProducts((prev) => {
+      if (!selected) return prev;
+      const selectedId = selected.itemId ?? selected.id;
+      if (!selectedId) return prev;
+      const exists = prev.some((p) => (p.itemId ?? p.id) === selectedId);
+      return exists ? prev : [...prev, selected];
+    });
     setPendingItem(buildEmptyItem());
   };
 
@@ -183,30 +218,80 @@ export default function ProductionCreate() {
     }
     setLoading(true);
     try {
-      await createProductionOrder({
+      const payload = {
         ...form,
         reference: form.reference?.trim() || undefined,
         items: form.items ?? [],
-      });
-      showFlash(successResponse("Orden de produccion creada"));
+      };
+      if (isEdit && productionId) {
+        await updateProductionOrder(productionId, payload);
+        showFlash(successResponse("Orden de produccion actualizada"));
+      } else {
+        await createProductionOrder(payload);
+        showFlash(successResponse("Orden de produccion creada"));
+      }
       setOpenNavigateModal(true);
     } catch {
-      showFlash(errorResponse("Error al crear la orden de produccion"));
+      showFlash(errorResponse("Error al guardar la orden de produccion"));
     } finally {
       setLoading(false);
     }
   };
-   useEffect(() => {
-      const id = setTimeout(() => {
-          if (query.trim()) {
-          void searchFinishedProducts();
-          } else {
-          setProducts([]);
-          }
-      }, 500);
-  
-      return () => clearTimeout(id);
-      }, [query]);
+  useEffect(() => {
+    if (!productionId) return;
+
+    const loadOrder = async () => {
+      setLoading(true);
+      clearFlash();
+      try {
+        const data = await getProductionOrder(productionId);
+        setForm({
+          fromWarehouseId: data.fromWarehouseId ?? "",
+          toWarehouseId: data.toWarehouseId ?? "",
+          serieId: data.serieId ?? "",
+          reference: data.reference ?? "",
+          manufactureDate: data.manufactureDate ?? new Date().toISOString(),
+          items: (data.items ?? []).map((item) => ({
+            finishedItemId: item.finishedItemId,
+            quantity: item.quantity,
+            unitCost: item.unitCost ?? 0,
+            type: item.type ?? "",
+          })),
+        });
+        setSerie({
+          value: data.serieId ?? "",
+          label: data.serie?.code ?? "",
+        });
+        const mappedProducts = mapOrderProducts(data.items ?? []);
+        setProducts(mappedProducts);
+      } catch {
+        showFlash(errorResponse("Error al cargar la orden de produccion"));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadOrder();
+  }, [productionId, clearFlash, showFlash]);
+ 
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (query.trim()) {
+        void searchFinishedProducts();
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(id);
+  }, [query]);
+    
+  const hasInvalidPrice = (form.items ?? []).some((item) => {
+    const cost = Number(item.unitCost);
+    return !Number.isFinite(cost) || cost <= 0;
+  });
+
+
 
   return (
     <div className="w-full min-h-screen bg-white">
@@ -413,7 +498,8 @@ export default function ProductionCreate() {
                     !form.fromWarehouseId ||
                     !form.toWarehouseId ||
                     !form.serieId ||
-                    !(form.items ?? []).length
+                    !(form.items ?? []).length ||
+                    hasInvalidPrice
                   }
                   onClick={saveOrder}
                 >

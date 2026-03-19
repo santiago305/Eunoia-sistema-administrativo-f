@@ -21,9 +21,47 @@ export enum ProductionStatus {
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
 }
+
 export type ProductionOrderItem = {
   itemId?: string;
   finishedItemId: string;
+  finishedItem?: {
+    type?: string | null;
+    product?: {
+      id: string;
+      name?: string | null;
+      description?: string | null;
+      baseUnitId?: string | null;
+      baseUnitName?: string | null;
+      baseUnitCode?: string | null;
+      sku?: string | null;
+      barcode?: string | null;
+      price?: number | null;
+      cost?: number | null;
+      attributes?: Record<string, unknown> | null;
+      isActive?: boolean | null;
+      type?: string | null;
+      createdAt?: string;
+      updatedAt?: string;
+    } | null;
+    variant?: {
+      id: string;
+      productId?: string | null;
+      productName?: string | null;
+      productDescription?: string | null;
+      baseUnitId?: string | null;
+      unitCode?: string | null;
+      unitName?: string | null;
+      sku?: string | null;
+      barcode?: string | null;
+      attributes?: Record<string, unknown> | null;
+      price?: number | null;
+      cost?: number | null;
+      isActive?: boolean | null;
+      createdAt?: string;
+      updatedAt?: string;
+    } | null;
+  } | null;
   quantity: number;
   unitCost: number | null;
   type?:string | null;
@@ -61,13 +99,6 @@ export type ProductionOrderSerie = {
   id: string;
   code: string;
   name: string;
-  docType: string;
-  warehouseId: string;
-  nextNumber: number;
-  padding: number;
-  separator: string;
-  isActive: boolean;
-  createdAt: string;
 };
 
 export type ProductionOrderListResponse = {
