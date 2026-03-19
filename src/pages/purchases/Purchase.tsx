@@ -56,6 +56,7 @@ export default function PurchaseCreateLocal() {
     const [openEquivalences, setOpenEquivalence] = useState(false);
     const [openPaymentModal, setOpenPaymentModal] = useState(false);
     const [openNavigateModal, setOpenNavigateModal] = useState(false);
+    const [lastSavedPoId, setLastSavedPoId] = useState("");
 
     const [productQuery, setProductQuery] = useState("");
 
@@ -350,6 +351,10 @@ export default function PurchaseCreateLocal() {
             const res = poId ? await updatePurchaseOrder(poId, payload) : await createPurchaseOrder(payload);
             if (res.type === "success") {
                 showFlash(successResponse("Compra registrada."));
+                const nextPoId = res.order?.poId ?? poId ?? "";
+                if (nextPoId) {
+                    setLastSavedPoId(nextPoId);
+                }
                 setOpenPaymentModal(false);
                 setOpenNavigateModal(true);
             }
@@ -943,6 +948,7 @@ export default function PurchaseCreateLocal() {
                 onNewPurchase={() => {
                     setOpenNavigateModal(false);
                     resetForm();
+                    setLastSavedPoId("");
                     if (isEdit) {
                         navigate("/compra");
                     }
@@ -951,6 +957,7 @@ export default function PurchaseCreateLocal() {
                     setOpenNavigateModal(false);
                     navigate("/compras");
                 }}
+                poId={lastSavedPoId || poId}
                 primaryColor={PRIMARY}
                 isEdit={isEdit}
             />
