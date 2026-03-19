@@ -65,7 +65,7 @@ export function ModalNavegate({
   if (!open) return null;
 
   return (
-    <Modal title="Compra procesada" className="max-w-5xl h-[95vh]" closeOnBackdrop={false}>
+    <Modal title="Compra procesada" className="max-w-5xl h-[95vh]">
       <div className="space-y-6">
         <div className="space-y-2">
           <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">

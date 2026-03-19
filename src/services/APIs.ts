@@ -197,6 +197,7 @@ export const API_PAYMENT_GROUP = {
 export const API_PDF_GENERATED_GROUP = {
   invoice: "/pdf-generated/invoice",
   purchaseOrderPdf: (id: string) => `/pdf-generated/purchase/${id}/pdf`,
+  productionOrderPdf: (id: string) => `/pdf-generated/production/${id}/pdf`,
 };
 
 export const API_DOCUMENT_SERIES_GROUP = {
