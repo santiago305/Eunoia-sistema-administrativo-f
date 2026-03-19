@@ -32,6 +32,7 @@ import { getProductionColumns } from "./components/data-table/Production.columns
 import { ProductionExpandedRow } from "./components/data-table/ProductionExpandedRow";
 import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
 import { productionExpandedFields } from "./components/data-table/productionExpandedFields";
+import { getProductionOrderPdf } from "@/services/pdfServices";
 
 const PRIMARY = "#21b8a6";
 const DEFAULT_LIMIT = 10;
@@ -184,6 +185,21 @@ export default function Production() {
     navigate(RoutesPaths.productionEdit.replace(":productionId", encodeURIComponent(id)));
   };
 
+  const openProductionPdf = async (id: string) => {
+      clearFlash();
+      try {
+          const blob = await getProductionOrderPdf(id);
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `orden-compra-${id}.pdf`;
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      } catch {
+          showFlash(errorResponse("Error al generar el PDF"));
+      }
+  };
   useEffect(() => {
     void loadWarehouses();
   }, []);
@@ -213,6 +229,7 @@ export default function Production() {
         onClose: handleClose,
         onCancel: handleCancel,
         onEdit: handleEdit,
+        onPdf: openProductionPdf,
         loadOrders,
       }),
     [columnVisibility, nowIso]

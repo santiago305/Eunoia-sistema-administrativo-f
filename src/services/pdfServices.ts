@@ -16,3 +16,9 @@ export const getPurchaseOrderPdf = async (id: string): Promise<Blob> => {
   });
   return response.data;
 };
+export const getProductionOrderPdf = async (id: string): Promise<Blob> => {
+  const response = await axiosInstance.get<Blob>(API_PDF_GENERATED_GROUP.productionOrderPdf(id), {
+    responseType: "blob",
+  });
+  return response.data;
+};

@@ -45,6 +45,7 @@ export default function ProductionCreate() {
   const [pendingItem, setPendingItem] = useState<AddProductionOrderItemDto>(() => buildEmptyItem());
   const [openItemModal, setOpenItemModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
+  const [lastSavedProductionId, setLastSavedProductionId] = useState("");
   const [products, setProducts] = useState<FinishedProducts[]>([]);
   const [searchResults, setSearchResults] = useState<FinishedProducts[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
@@ -153,6 +154,11 @@ export default function ProductionCreate() {
       showFlash(errorResponse("El costo debe ser mayor o igual a 0"));
       return;
     }
+    const alreadyAdded = (form.items ?? []).some((item) => item.finishedItemId === finishedItemId);
+    if (alreadyAdded) {
+      showFlash(errorResponse("El producto ya fue agregado"));
+      return;
+    }
 
     setForm((prev) => ({
       ...prev,
@@ -212,11 +218,18 @@ export default function ProductionCreate() {
         items: form.items ?? [],
       };
       if (isEdit && productionId) {
-        await updateProductionOrder(productionId, payload);
+        const res = await updateProductionOrder(productionId, payload);
+        console.log("[production] update response", res);
         showFlash(successResponse("Orden de produccion actualizada"));
+        const nextId = res.productionId
+        if (nextId) setLastSavedProductionId(nextId);
       } else {
-        await createProductionOrder(payload);
+        const res = await createProductionOrder(payload);
+
         showFlash(successResponse("Orden de produccion creada"));
+        const nextId = res.productionId;
+        console.log("[production] resolved productionId", nextId);
+        if (nextId) setLastSavedProductionId(nextId);
       }
       setOpenNavigateModal(true);
     } catch {
@@ -521,11 +534,16 @@ export default function ProductionCreate() {
         onNewProduction={() => {
           setOpenNavigateModal(false);
           resetForm();
+          setLastSavedProductionId("");
+          if (isEdit) {
+            navigate(RoutesPaths.productionCreate);
+          }
         }}
         onGoToList={() => {
           setOpenNavigateModal(false);
           navigate(RoutesPaths.production);
         }}
+        productionId={lastSavedProductionId || productionId}
         primaryColor={PRIMARY}
       />
     </div>

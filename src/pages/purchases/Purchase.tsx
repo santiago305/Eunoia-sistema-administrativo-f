@@ -111,7 +111,8 @@ export default function PurchaseCreateLocal() {
         items.forEach((item) => {
             const product = item.stockItem?.product;
             const variant = item.stockItem?.variant;
-            const id = variant?.id ?? product?.id ?? item.stockItemId;
+            const id = item.stockItem?.product ? item.stockItem?.product?.id :
+            item.stockItem?.variant?.id;
             if (!id || map.has(id)) return;
             map.set(id, {
                 id,

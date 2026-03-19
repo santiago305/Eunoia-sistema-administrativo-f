@@ -16,6 +16,7 @@ type ProductionColumnsParams = {
   onClose: (id: string) => void;
   onCancel: (id: string) => void;
   onEdit: (id: string) => void;
+  onPdf: (id: string) => void;
   loadOrders: () => void;
 };
 
@@ -27,6 +28,7 @@ export function getProductionColumns({
   onClose,
   onCancel,
   onEdit,
+  onPdf,
   loadOrders,
 }: ProductionColumnsParams): ColumnDef<ProductionOrder, any>[] {
   const canExpandRows = hasHiddenExpandableFields(productionExpandedFields, columnVisibility);
@@ -196,10 +198,14 @@ export function getProductionColumns({
                 label:"Editar",
                 onClick: () => onEdit(order.productionId ?? ""),
               },
+              {
+                label: "Abrir pdf",
+                onClick: () => onPdf(order.productionId ?? ""),
+              },
               order.status === "DRAFT" && {
                 label: "Cancelar",
                 className:
-                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-rose-700 hover:bg-rose-50",
+                "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-rose-700 hover:bg-rose-50",
                 onClick: () => onCancel(order.productionId ?? ""),
               },
               (order.status === "IN_PROGRESS" || order.status === "PARTIAL") && {

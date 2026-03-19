@@ -511,45 +511,47 @@ export default function Purchases() {
                                                           onClick: () => setSent(purchase.poId ?? ""),
                                                       },
                                                       purchase.status === PurchaseOrderStatuses.DRAFT && {
-                                                          label: "Cancelar",
-                                                          onClick: () => cancelOrder(purchase.poId ?? ""),
-                                                      },
-                                                      purchase.status === PurchaseOrderStatuses.DRAFT && {
                                                           label: "Editar",
                                                           onClick: () => navigate(`/compra/${purchase.poId}`),
-                                                      },
-                                                      {
-                                                          label: "Listar pagos",
-                                                          onClick: () => {
-                                                              setModalPaymentList(true);
-                                                              setPoId(purchase.poId ?? "");
-                                                              setTotalPo(purchase.total);
-                                                              setPaymentForm(purchase.paymentForm);
-                                                          },
-                                                      },
-                                                      purchase.paymentForm !== PaymentFormTypes.CREDITO &&
-                                                          purchase.totalPaid != purchase.total && {
-                                                              label: "Pago",
-                                                              onClick: () => {
-                                                                  setModalPayment(true);
-                                                                  setTotalPaid(purchase.totalPaid ?? 0);
-                                                                  setTotalToPay(purchase.totalToPay ?? 0);
-                                                                  setPoId(purchase.poId ?? "");
-                                                              },
-                                                          },
-                                                      purchase.paymentForm === PaymentFormTypes.CREDITO && {
-                                                          label: "Ver cuotas",
-                                                          onClick: () => {
-                                                              setModalQuotaList(true);
-                                                              setPoId(purchase.poId ?? "");
-                                                          }
-                                                      },
-                                                      {
-                                                        label: "Abrir pdf",
-                                                        onClick: () => {
-                                                            openPurchasePdf(purchase.poId ?? "");
-                                                        }
-                                                      }
+                                                        },
+                                                        {
+                                                            label: "Listar pagos",
+                                                            onClick: () => {
+                                                                setModalPaymentList(true);
+                                                                setPoId(purchase.poId ?? "");
+                                                                setTotalPo(purchase.total);
+                                                                setPaymentForm(purchase.paymentForm);
+                                                            },
+                                                        },
+                                                        purchase.paymentForm !== PaymentFormTypes.CREDITO &&
+                                                        purchase.totalPaid != purchase.total && {
+                                                            label: "Pago",
+                                                            onClick: () => {
+                                                                setModalPayment(true);
+                                                                setTotalPaid(purchase.totalPaid ?? 0);
+                                                                setTotalToPay(purchase.totalToPay ?? 0);
+                                                                setPoId(purchase.poId ?? "");
+                                                            },
+                                                        },
+                                                        purchase.paymentForm === PaymentFormTypes.CREDITO && {
+                                                            label: "Ver cuotas",
+                                                            onClick: () => {
+                                                                setModalQuotaList(true);
+                                                                setPoId(purchase.poId ?? "");
+                                                            }
+                                                        },
+                                                        {
+                                                            label: "Abrir pdf",
+                                                            onClick: () => {
+                                                                openPurchasePdf(purchase.poId ?? "");
+                                                            }
+                                                        },
+                                                        purchase.status === PurchaseOrderStatuses.DRAFT && {
+                                                            label: "Cancelar",
+                                                            className:`flex w-full items-center gap-2 rounded-lg px-3 py-2 
+                                                            text-left text-[11px] text-rose-700 hover:bg-rose-50`,
+                                                            onClick: () => cancelOrder(purchase.poId ?? ""),
+                                                        },
                                                   ].filter(Boolean)}
                                               />
                                           </td>

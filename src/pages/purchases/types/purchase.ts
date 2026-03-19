@@ -29,6 +29,7 @@ export type PurchaseOrderItem = {
   stockItemId: string,
   stockItem?: {
     type?: string;
+    stockItemId: string,
     product?: {
       id?: string;
       name?: string;
