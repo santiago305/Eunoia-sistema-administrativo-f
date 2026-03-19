@@ -18,6 +18,7 @@ import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocT
 import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { Dropdown } from "./components/PurchaseDropdown";
 import { Menu, OctagonAlert, Timer } from "lucide-react";
+import { getPurchaseOrderPdf } from "@/services/pdfServices";
 
 const PRIMARY = "#21b8a6";
 
@@ -203,6 +204,22 @@ export default function Purchases() {
       showFlash(errorResponse("Error al iniciar espera de mercaderia"));
     }
   };
+  const openPurchasePdf = async (id: string) => {
+    clearFlash();
+    try {
+        const blob = await getPurchaseOrderPdf(id);
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `orden-compra-${id}.pdf`;
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+        showFlash(errorResponse("Error al generar el PDF"));
+    }
+};
+
   const EnterToWarehouse = async (id:string) => {
     clearFlash();
     try {
@@ -525,8 +542,14 @@ export default function Purchases() {
                                                           onClick: () => {
                                                               setModalQuotaList(true);
                                                               setPoId(purchase.poId ?? "");
-                                                          },
+                                                          }
                                                       },
+                                                      {
+                                                        label: "Abrir pdf",
+                                                        onClick: () => {
+                                                            openPurchasePdf(purchase.poId ?? "");
+                                                        }
+                                                      }
                                                   ].filter(Boolean)}
                                               />
                                           </td>

@@ -194,6 +194,11 @@ export const API_PAYMENT_GROUP = {
   remove: (id: string) => `/payments/${id}`,
 }
 
+export const API_PDF_GENERATED_GROUP = {
+  invoice: "/pdf-generated/invoice",
+  purchaseOrderPdf: (id: string) => `/pdf-generated/purchase/${id}/pdf`,
+};
+
 export const API_DOCUMENT_SERIES_GROUP = {
   list: "/inventory/document-series",
 };
