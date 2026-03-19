@@ -34,6 +34,7 @@ import { Dispatch, SetStateAction } from "react";
                         placement="bottom"
                         placeholder="Seleccionar unidad"
                         searchPlaceholder="Buscar unidad..."
+                        className=" h-11"
                     />
                 </label>
             </div>
