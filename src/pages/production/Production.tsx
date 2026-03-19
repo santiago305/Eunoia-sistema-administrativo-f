@@ -15,7 +15,6 @@ import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
-import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 
 const PRIMARY = "#21b8a6";
@@ -39,10 +38,8 @@ const buildEmptyItem = (): AddProductionOrderItemDto => ({
 export default function ProductionCreate() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
-  const { setCollapsed } = useSidebarContext();
   const { productionId } = useParams<{ productionId: string }>();
   const isEdit = Boolean(productionId);
-
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateProductionOrderDto>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<AddProductionOrderItemDto>(() => buildEmptyItem());
@@ -128,15 +125,6 @@ export default function ProductionCreate() {
       showFlash(errorResponse("Error al cargar series"));
     }
   };
-
-  useEffect(() => {
-    resetForm();
-    void loadWarehouses();
-  }, []);
-
-  useEffect(() => {
-    setCollapsed(false);
-  }, []);
 
   const productOptions = useMemo(
     () =>
@@ -237,41 +225,41 @@ export default function ProductionCreate() {
       setLoading(false);
     }
   };
+
+  const loadOrder = async (productionId:string) => {
+    setLoading(true);
+    clearFlash();
+    try {
+      const data = await getProductionOrder(productionId);
+      setForm({
+        fromWarehouseId: data.fromWarehouseId ?? "",
+        toWarehouseId: data.toWarehouseId ?? "",
+        serieId: data.serieId ?? "",
+        reference: data.reference ?? "",
+        manufactureDate: data.manufactureDate ?? new Date().toISOString(),
+        items: (data.items ?? []).map((item) => ({
+          finishedItemId: item.finishedItemId,
+          quantity: item.quantity,
+          unitCost: item.unitCost ?? 0,
+          type: item.type ?? "",
+        })),
+      });
+      setSerie({
+        value: data.serieId ?? "",
+        label: data.serie?.code ?? "",
+      });
+      const mappedProducts = mapOrderProducts(data.items ?? []);
+      setProducts(mappedProducts);
+    } catch {
+      showFlash(errorResponse("Error al cargar la orden de produccion"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!productionId) return;
-
-    const loadOrder = async () => {
-      setLoading(true);
-      clearFlash();
-      try {
-        const data = await getProductionOrder(productionId);
-        setForm({
-          fromWarehouseId: data.fromWarehouseId ?? "",
-          toWarehouseId: data.toWarehouseId ?? "",
-          serieId: data.serieId ?? "",
-          reference: data.reference ?? "",
-          manufactureDate: data.manufactureDate ?? new Date().toISOString(),
-          items: (data.items ?? []).map((item) => ({
-            finishedItemId: item.finishedItemId,
-            quantity: item.quantity,
-            unitCost: item.unitCost ?? 0,
-            type: item.type ?? "",
-          })),
-        });
-        setSerie({
-          value: data.serieId ?? "",
-          label: data.serie?.code ?? "",
-        });
-        const mappedProducts = mapOrderProducts(data.items ?? []);
-        setProducts(mappedProducts);
-      } catch {
-        showFlash(errorResponse("Error al cargar la orden de produccion"));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadOrder();
+    void loadOrder(productionId);
   }, [productionId, clearFlash, showFlash]);
  
   useEffect(() => {
@@ -285,13 +273,16 @@ export default function ProductionCreate() {
 
     return () => clearTimeout(id);
   }, [query]);
+
+  useEffect(() => {
+    resetForm();
+    void loadWarehouses();
+  }, []);
     
   const hasInvalidPrice = (form.items ?? []).some((item) => {
     const cost = Number(item.unitCost);
     return !Number.isFinite(cost) || cost <= 0;
   });
-
-
 
   return (
     <div className="w-full min-h-screen bg-white">
