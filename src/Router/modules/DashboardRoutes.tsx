@@ -190,6 +190,10 @@ export const dashboardRoutes: RouteObject[] = [
                 path: RoutesPaths.productionCreate,
                 element: withRouteGuard(RoutesPaths.productionCreate, <ProductionCreate />),
             },
+            {
+                path: RoutesPaths.productionEdit,
+                element: withRouteGuard(RoutesPaths.productionEdit, <ProductionCreate />),
+            },
         ],
     },
 ];

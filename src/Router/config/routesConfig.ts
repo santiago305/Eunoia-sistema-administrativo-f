@@ -69,6 +69,7 @@ export const routesConfig: RouteMetadata[] = [
 
   { path: RoutesPaths.production, name: "production", isProtected: true, rolesAllowed: ["admin", "moderator"] },
   { path: RoutesPaths.productionCreate, name: "productionCreate", isProtected: true, rolesAllowed: ["admin", "moderator"] },
+  { path: RoutesPaths.productionEdit, name: "productionEdit", isProtected: true, rolesAllowed: ["admin", "moderator"] },
 
   // Rutas de seguridad
   { path: RoutesPaths.security, name: "security", isProtected: true, rolesAllowed: ["admin"]},

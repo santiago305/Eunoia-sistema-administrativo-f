@@ -15,6 +15,7 @@ type ProductionColumnsParams = {
   onStart: (id: string) => void;
   onClose: (id: string) => void;
   onCancel: (id: string) => void;
+  onEdit: (id: string) => void;
   loadOrders: () => void;
 };
 
@@ -25,6 +26,7 @@ export function getProductionColumns({
   onStart,
   onClose,
   onCancel,
+  onEdit,
   loadOrders,
 }: ProductionColumnsParams): ColumnDef<ProductionOrder, any>[] {
   const canExpandRows = hasHiddenExpandableFields(productionExpandedFields, columnVisibility);
@@ -186,9 +188,13 @@ export function getProductionColumns({
             trigger={<Menu className="h-4 w-4" />}
             itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-black/70 hover:bg-black/[0.04]"
             items={[
-              order.status === "DRAFT" && {
+              order.status === "DRAFT" &&  {
                 label: "Procesar",
                 onClick: () => onStart(order.productionId ?? ""),
+              },
+              order.status === "DRAFT" &&  {
+                label:"Editar",
+                onClick: () => onEdit(order.productionId ?? ""),
               },
               order.status === "DRAFT" && {
                 label: "Cancelar",

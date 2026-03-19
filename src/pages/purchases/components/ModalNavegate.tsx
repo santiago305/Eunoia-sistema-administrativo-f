@@ -62,15 +62,6 @@ export function ModalNavegate({
     };
   }, [open, poId]);
 
-  const handleDownload = () => {
-    if (!pdfUrl || !poId) return;
-    const link = document.createElement("a");
-    link.href = pdfUrl;
-    link.download = `orden-compra-${poId}.pdf`;
-    link.click();
-    link.remove();
-  };
-
   if (!open) return null;
 
   return (

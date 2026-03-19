@@ -3,7 +3,6 @@ import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { useSidebarContext } from "@/components/dashboard/SidebarContext";
 import { listActive } from "@/services/warehouseServices";
 import {
   cancelProductionOrder,
@@ -180,6 +179,11 @@ export default function Production() {
     }
   };
 
+  const handleEdit = (id: string) => {
+    if (!id) return;
+    navigate(RoutesPaths.productionEdit.replace(":productionId", encodeURIComponent(id)));
+  };
+
   useEffect(() => {
     void loadWarehouses();
   }, []);
@@ -208,6 +212,7 @@ export default function Production() {
         onStart: handleStart,
         onClose: handleClose,
         onCancel: handleCancel,
+        onEdit: handleEdit,
         loadOrders,
       }),
     [columnVisibility, nowIso]
