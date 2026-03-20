@@ -17,7 +17,7 @@ const Sidebar = ({ user, onLogout }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "h-screen bg-sidebar flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out shrink-0 select-none",
+        "flex h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300 ease-in-out select-none",
         isCollapsed ? "w-[60px]" : "w-[200px]"
       )}
     >
@@ -30,5 +30,3 @@ const Sidebar = ({ user, onLogout }: SidebarProps) => {
 };
 
 export default Sidebar;
-
-
