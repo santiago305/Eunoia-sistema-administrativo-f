@@ -49,7 +49,7 @@ const SidebarBody = () => {
   }, [userRole]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 py-4 select-none">
+    <div className="scroll-moderno flex-1 overflow-y-auto px-3 py-4 select-none">
       <nav>
         {items.map((item, index) => (
           <SidebarItemComponent key={item.label + index} item={item} />

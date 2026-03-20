@@ -193,6 +193,30 @@ textarea {
   resize: none;
 }
 
+.scroll-moderno {
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150, 150, 150, 0.6) transparent;
+}
+
+.scroll-moderno::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scroll-moderno::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-moderno::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.6);
+  border-radius: 10px;
+}
+
+.scroll-moderno::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.8);
+}
+
 @layer components {
   .page-shell {
     @apply min-h-full w-full bg-slate-50 p-6;

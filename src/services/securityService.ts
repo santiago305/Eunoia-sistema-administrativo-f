@@ -13,6 +13,7 @@ import {
 import type {
   SecurityActivitySeriesResponse,
   SecurityActiveBanItem,
+  SecurityPaginatedResponse,
   SecurityRiskScoreByIpResponse,
   SecurityBlacklistPayload,
   SecurityHistoryByIpResponse,
@@ -79,8 +80,11 @@ export const getSecurityTopIps = async (params?: SecurityTopIpsParams) => {
 };
 
 export const getSecurityActiveBans = async () => {
-  const response = await axiosInstance.get<SecurityActiveBanItem[]>(API_SECURITY_GROUP.activeBans);
-  return response.data;
+  const response = await axiosInstance.get<
+    SecurityActiveBanItem[] | SecurityPaginatedResponse<SecurityActiveBanItem>
+  >(API_SECURITY_GROUP.activeBans);
+
+  return Array.isArray(response.data) ? response.data : response.data.data ?? [];
 };
 
 export const getSecurityActivitySeries = async (params?: SecuritySeriesParams) => {

@@ -111,13 +111,19 @@ export default function SecurityPage() {
   }, [fetchAll, pollingPaused]);
 
   const stats = useMemo(() => {
-    const temporary = activeBans.filter(
-      (item) => !item.manualPermanentBan && item.banLevel === "TEMPORARY"
-    ).length;
+    const temporary = activeBans.filter((item) => {
+      if (item.manualPermanentBan) return false;
+      if (item.banLevel === "TEMPORARY") return true;
+      if (typeof item.banLevel === "number") return item.banLevel < 4;
+      return false;
+    }).length;
 
-    const permanent = activeBans.filter(
-      (item) => item.manualPermanentBan || item.banLevel === "PERMANENT"
-    ).length;
+    const permanent = activeBans.filter((item) => {
+      if (item.manualPermanentBan) return true;
+      if (item.banLevel === "PERMANENT") return true;
+      if (typeof item.banLevel === "number") return item.banLevel >= 4;
+      return false;
+    }).length;
 
     const totalViolations = topIps.reduce((acc, item) => acc + item.violations, 0);
 

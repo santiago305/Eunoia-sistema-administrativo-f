@@ -4,16 +4,31 @@ export type SecurityTopIpItem = {
   lastViolationAt: string | null;
 };
 
-export type SecurityBanLevel = "TEMPORARY" | "PERMANENT" | string;
+export type SecurityBanLevel = "TEMPORARY" | "PERMANENT" | number | string;
 
 export type SecurityActiveBanItem = {
+  id?: string;
   ip: string;
   banLevel: SecurityBanLevel;
   bannedUntil: string | null;
   manualPermanentBan: boolean;
   notes?: string | null;
+  lastReason?: string | null;
+  createdBy?: string | null;
+  reviewedBy?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  createdAtLocal?: string;
+  updatedAtLocal?: string;
+  bannedUntilLocal?: string;
+  timeZone?: string;
+};
+
+export type SecurityPaginatedResponse<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
 };
 
 export type SecurityViolationItem = {

@@ -45,7 +45,7 @@ export function ActiveBansSection({
               </thead>
               <tbody className="bg-white">
                 {activeBans.map((item) => (
-                  <tr key={item.ip} className="border-t border-zinc-100 transition hover:bg-zinc-50/60">
+                  <tr key={item.id ?? item.ip} className="border-t border-zinc-100 transition hover:bg-zinc-50/60">
                     <td className="px-5 py-4">
                       <button
                         onClick={() => onNavigate(buildIpDetailPath(item.ip))}
@@ -63,7 +63,11 @@ export function ActiveBansSection({
                           getBanBadgeStyles(item.banLevel, item.manualPermanentBan)
                         )}
                       >
-                        {item.manualPermanentBan ? "MANUAL PERMANENTE" : item.banLevel}
+                        {item.manualPermanentBan
+                          ? "MANUAL PERMANENTE"
+                          : typeof item.banLevel === "number"
+                            ? `Nivel ${item.banLevel}`
+                            : item.banLevel}
                       </span>
                     </td>
 
@@ -72,7 +76,7 @@ export function ActiveBansSection({
                     </td>
 
                     <td className="max-w-[280px] px-5 py-4 text-sm text-zinc-600">
-                      <div className="line-clamp-2">{item.notes?.trim() || "Sin detalle"}</div>
+                      <div className="line-clamp-2">{item.notes?.trim() || item.lastReason?.trim() || "Sin detalle"}</div>
                     </td>
 
                     <td className="px-5 py-4">

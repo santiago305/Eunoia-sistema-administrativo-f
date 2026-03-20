@@ -27,9 +27,14 @@ export const formatDate = (value?: string | null) => {
   }).format(date);
 };
 
-export const getBanBadgeStyles = (banLevel?: string, permanent?: boolean) => {
+export const getBanBadgeStyles = (banLevel?: string | number, permanent?: boolean) => {
   if (permanent) return "border-red-200 bg-red-50 text-red-700";
   if (banLevel === "PERMANENT") return "border-red-200 bg-red-50 text-red-700";
   if (banLevel === "TEMPORARY") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (typeof banLevel === "number") {
+    return banLevel >= 4
+      ? "border-red-200 bg-red-50 text-red-700"
+      : "border-amber-200 bg-amber-50 text-amber-700";
+  }
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
 };
