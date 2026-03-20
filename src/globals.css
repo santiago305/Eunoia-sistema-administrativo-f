@@ -193,27 +193,27 @@ textarea {
   resize: none;
 }
 
-.scroll-moderno {
+.scroll-area {
   overflow: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(150, 150, 150, 0.6) transparent;
 }
 
-.scroll-moderno::-webkit-scrollbar {
+.scroll-area::-webkit-scrollbar {
   width: 5px;
 }
 
-.scroll-moderno::-webkit-scrollbar-track {
+.scroll-area::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.scroll-moderno::-webkit-scrollbar-thumb {
+.scroll-area::-webkit-scrollbar-thumb {
   background: rgba(150, 150, 150, 0.6);
   border-radius: 10px;
 }
 
-.scroll-moderno::-webkit-scrollbar-thumb:hover {
+.scroll-area::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 120, 120, 0.8);
 }
 
