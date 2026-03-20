@@ -11,6 +11,7 @@ import { buildMonthStartIso, toDateInputValue, todayIso, tryShowPicker } from "@
 import type { LedgerEntry } from "@/pages/catalog/types/kardex";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
+import { getDocumentInventoryPdf, getProductionOrderPdf, getPurchaseOrderPdf } from "@/services/pdfServices";
 
 const DEFAULT_LIMIT = 25;
 
@@ -110,6 +111,56 @@ export default function KardexProduction() {
         } catch {
             setWarehouseOptions([{ value: "", label: "" }]);
             showFlash(errorResponse("Error al cargar almacenes"));
+        }
+    };
+    const openProductionPdf = async (id: string) => {
+        clearFlash();
+        try {
+            const blob = await getProductionOrderPdf(id);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `orden-compra-${id}.pdf`;
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch {
+            showFlash(errorResponse("Error al generar el PDF"));
+        }
+    };
+
+    const openDocumentInventoryPdf = async (id: string) => {
+        if (!id) {
+            showFlash(errorResponse("No hay documento para este movimiento"));
+            return;
+        }
+        clearFlash();
+        try {
+            const blob = await getDocumentInventoryPdf(id);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `documento-inventario-${id}.pdf`;
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch {
+            showFlash(errorResponse("Error al generar el PDF"));
+        }
+    };
+    const openPurchasePdf = async (id: string) => {
+        clearFlash();
+        try {
+            const blob = await getPurchaseOrderPdf(id);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `orden-compra-${id}.pdf`;
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch {
+            showFlash(errorResponse("Error al generar el PDF"));
         }
     };
 
@@ -478,10 +529,35 @@ export default function KardexProduction() {
                                     selectedRow.referenceDoc.createdBy?.name}
                                 </p>
                             </div>
-                            <button className="mt-4 text-xs px-3 py-1 rounded-md border mr-3
-                            border-black/10">Ver documento</button>
-                            <button className="mt-4 text-xs px-3 py-1 rounded-md border 
-                            border-black/10">Ver movimiento</button>
+                            <button
+                                className="mt-4 text-xs px-3 py-1 rounded-md border mr-3 border-black/10"
+                                onClick={() => {
+                                    const productionId = selectedRow?.referenceDoc?.production?.id ?? "";
+                                    const purchaseId = selectedRow?.referenceDoc?.purchase?.id ?? "";
+
+                                    if (productionId) {
+                                        void openProductionPdf(productionId);
+                                        return;
+                                    }
+
+                                    if (purchaseId) {
+                                        void openPurchasePdf(purchaseId);
+                                        return;
+                                    }
+
+                                    showFlash(errorResponse("No hay documento para este movimiento"));
+                                }}
+                            >
+                                Ver documento
+                            </button>
+                            <button
+                                className="mt-4 text-xs px-3 py-1 rounded-md border border-black/10"
+                                onClick={() => {
+                                    void openDocumentInventoryPdf(selectedRow?.docId ?? "");
+                                }}
+                            >
+                                Ver movimiento
+                            </button>
                         </div>
                         <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                             <p className="text-sm font-semibold">Tendencia semanal</p>

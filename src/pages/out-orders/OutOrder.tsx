@@ -201,8 +201,8 @@ export default function OutOrder() {
         items: form.items ?? [],
       };
       const res = await createOutOrder(payload);
-      const nextId = res.outOrderId ?? "";
-      if (nextId) setLastSavedOutOrderId(nextId);
+      const nextId = res.docId ?? "";
+      setLastSavedOutOrderId(nextId);
       showFlash(successResponse("Salida registrada"));
       setOpenNavigateModal(true);
     } catch {
@@ -435,7 +435,7 @@ export default function OutOrder() {
         }}
         onGoToList={() => {
           setOpenNavigateModal(false);
-          navigate(RoutesPaths.stockDocuments);
+          navigate(RoutesPaths.KardexFinished);
         }}
         outOrderId={lastSavedOutOrderId}
         primaryColor={PRIMARY}

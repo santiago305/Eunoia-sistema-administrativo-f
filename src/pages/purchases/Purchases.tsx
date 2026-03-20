@@ -205,20 +205,20 @@ export default function Purchases() {
     }
   };
   const openPurchasePdf = async (id: string) => {
-    clearFlash();
-    try {
-        const blob = await getPurchaseOrderPdf(id);
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `orden-compra-${id}.pdf`;
-        link.click();
-        link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-        showFlash(errorResponse("Error al generar el PDF"));
-    }
-};
+        clearFlash();
+        try {
+            const blob = await getPurchaseOrderPdf(id);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `orden-compra-${id}.pdf`;
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch {
+            showFlash(errorResponse("Error al generar el PDF"));
+        }
+    };
 
   const EnterToWarehouse = async (id:string) => {
     clearFlash();

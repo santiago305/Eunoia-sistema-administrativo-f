@@ -17,7 +17,9 @@ export type ItemOutOrder = {
 export type AddOutOrderItemDto = ItemOutOrder;
 
 export type OutOrderResponse = {
-  outOrderId?: string;
+  type:string,
+  message:string,
+  docId:string
 };
 
 export type SerieOption = {

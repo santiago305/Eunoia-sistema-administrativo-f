@@ -1,5 +1,5 @@
 import { Modal } from "@/components/settings/modal";
-import { getOutOrderPdf } from "@/services/pdfServices";
+import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import { useEffect, useState } from "react";
 
 type ModalNavigateOutOrderProps = {
@@ -42,7 +42,7 @@ export function ModalNavigateOutOrder({
       setError(null);
       setPdfUrl(null);
       try {
-        const blob = await getOutOrderPdf(outOrderId);
+        const blob = await getDocumentInventoryPdf(outOrderId);
         if (!alive) return;
         objectUrl = URL.createObjectURL(blob);
         setPdfUrl(objectUrl);
@@ -101,7 +101,7 @@ export function ModalNavigateOutOrder({
               style={{ backgroundColor: accent, borderColor: `${accent}33` }}
               onClick={onGoToList}
             >
-              Ir a documentos de inventario
+              Ir a kardex de productos terminados
             </button>
           </div>
         </div>
