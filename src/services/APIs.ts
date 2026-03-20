@@ -208,6 +208,10 @@ export const API_KARDEX_GROUP = {
   list: "/inventory/ledger",
 };
 
+export const API_DOCUMENT_INVENTORY_GROUP = {
+  outOrderCreated: "/inventory/documents/create-add-item-post-out",
+};
+
 export const API_PAYMENT_METHODS_GROUP = {
   base: "/payment-methods",
   create: "/payment-methods",

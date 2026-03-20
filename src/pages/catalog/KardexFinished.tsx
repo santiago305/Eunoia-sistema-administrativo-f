@@ -472,7 +472,8 @@ export default function KardexProduction() {
                                 <p>
                                     <span className="font-semibold">Responsable:</span> &nbsp;
                                     {selectedRow?.referenceDoc?.production && 
-                                    selectedRow.referenceDoc.createdBy?.name}
+                                    selectedRow.referenceDoc.createdBy?.name
+                                    }
                                     {selectedRow?.referenceDoc?.purchase && 
                                     selectedRow.referenceDoc.createdBy?.name}
                                 </p>

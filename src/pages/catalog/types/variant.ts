@@ -74,7 +74,7 @@ export type ProductListActive = {
 };
 export type FinishedProducts = {
   id?: string;
-  itemId: string;
+  itemId?: string;
   productId?: string;
   variantId?: string | null;
   sku?: string;

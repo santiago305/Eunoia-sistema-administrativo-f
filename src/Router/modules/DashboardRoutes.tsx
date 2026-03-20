@@ -47,6 +47,7 @@ const Production = lazy(() => import("@/pages/production/Productions"));
 const KardexPrima = lazy(() => import("@/pages/row-material/KardexPrima"));
 const KardexFinished = lazy(() => import("@/pages/catalog/KardexFinished"));
 const ProductionCreate = lazy(() => import("@/pages/production/Production"));
+const OutOrder = lazy(() => import("@/pages/out-orders/OutOrder"));
 
 const withRouteGuard = (path: string, element: ReactElement) => {
     const routeMeta = getRouteMetaByPath(path);
@@ -193,6 +194,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.productionEdit,
                 element: withRouteGuard(RoutesPaths.productionEdit, <ProductionCreate />),
+            },
+            {
+                path: RoutesPaths.outOrder,
+                element: withRouteGuard(RoutesPaths.outOrder, <OutOrder />),
             },
         ],
     },

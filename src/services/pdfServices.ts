@@ -22,3 +22,8 @@ export const getProductionOrderPdf = async (id: string): Promise<Blob> => {
   });
   return response.data;
 };
+
+export const getOutOrderPdf = async (_id: string): Promise<Blob> => {
+  // TODO: implementar llamada axios para generar PDF de salida.
+  return new Blob();
+};

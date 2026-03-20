@@ -1,5 +1,6 @@
 import { 
     IconHome,
+    IconOutOrder,
     IconProduction,
     IconPurchase, 
     IconRowMaterial, 
@@ -14,6 +15,11 @@ export const getSidebarItems = (): SidebarItem[] => [
         label: "Home",
         href: RoutesPaths.dashboard,
         icon: <IconHome className="text-sidebar-foreground" />,
+    },
+    {
+        label: "Orden de salida",
+        href: RoutesPaths.outOrder,
+        icon: <IconOutOrder className="text-sidebar-foreground" />,
     },
     {
         label: "Compras",

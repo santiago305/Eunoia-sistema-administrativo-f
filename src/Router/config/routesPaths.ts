@@ -54,6 +54,8 @@ export const RoutesPaths = {
   production:'/Ordenes de produccion',
   productionCreate: "/nueva orden de produccion",
   productionEdit: "/nueva orden de produccion/:productionId",
+
+  outOrder:"/Ordenes de salidas",
   
   // seguridad
   security: "/seguridad",
