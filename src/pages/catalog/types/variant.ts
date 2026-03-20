@@ -74,15 +74,17 @@ export type ProductListActive = {
 };
 export type FinishedProducts = {
   id?: string;
-  itemId?: string;
+  itemId: string;
+  productId?: string;
+  variantId?: string | null;
   sku?: string;
   productName?: string;
   productDescription?: string;
-  unitCode?: string;
   unitName?: string;
+  unitCode?: string;
   baseUnitId?: string;
   isActive?: boolean;
-  type?:string;
+  type?: string;
 };
 
 export type ProductOption = { productId: string; name: string; sku?: string | null };
