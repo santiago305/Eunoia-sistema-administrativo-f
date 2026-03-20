@@ -1,4 +1,3 @@
-// src/types/warehouse.d.ts
 import { createWarehouseSchema, updateWarehouseSchema, updateWarehouseActiveSchema, listWarehousesQuerySchema } from "@/schemas/warehouseSchema";
 import { z } from "zod";
 
