@@ -26,8 +26,9 @@ interface SidebarItemProps {
 }
 
 const SidebarItemComponent = ({ item }: SidebarItemProps) => {
-  const { isCollapsed } = useSidebarContext();
+  const { isCollapsed, isMobile } = useSidebarContext();
   const location = useLocation();
+  const isSidebarCollapsed = isCollapsed && !isMobile;
 
   const hasChildren = !!item.children?.length;
   const isActive = item.href === location.pathname;
@@ -64,7 +65,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const parentBaseClass = cn(
     "group flex w-full items-center rounded-xl transition-all duration-200",
     "min-h-10",
-    isCollapsed ? "justify-center px-2 py-2" : "px-2.5 py-2",
+    isSidebarCollapsed ? "justify-center px-2 py-2" : "px-2.5 py-2",
     isParentHighlighted
       ? "bg-primary/10 text-primary shadow-sm"
       : "text-sidebar-foreground hover:bg-sidebar-accent/70"
@@ -72,7 +73,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
   const labelClass = cn(
     "truncate text-[14px] font-medium transition-all duration-200",
-    isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+    isSidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
   );
 
   const childLinkClass = (active?: boolean) =>
@@ -99,7 +100,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const ParentInnerContent = () => (
     <>
       {renderIcon()}
-      {!isCollapsed && (
+      {!isSidebarCollapsed && (
         <span className={cn("ml-3 flex-1 text-left", labelClass)}>
           {item.label}
         </span>
@@ -110,7 +111,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   // ---------------------------------------------
   // COLLAPSED + CHILDREN => POPOVER
   // ---------------------------------------------
-  if (isCollapsed && hasChildren) {
+  if (isSidebarCollapsed && hasChildren) {
     return (
       <div className="mb-1">
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
@@ -185,7 +186,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   // ---------------------------------------------
   // COLLAPSED + SIN CHILDREN => TOOLTIP
   // ---------------------------------------------
-  if (isCollapsed && !hasChildren) {
+  if (isSidebarCollapsed && !hasChildren) {
     const singleItem = item.href ? (
       <Link to={item.href} className={parentBaseClass}>
         {renderIcon()}
@@ -262,7 +263,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
       )}
 
       <AnimatePresence initial={false}>
-        {hasChildren && isOpen && !isCollapsed && (
+        {hasChildren && isOpen && !isSidebarCollapsed && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}

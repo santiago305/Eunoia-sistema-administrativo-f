@@ -4,7 +4,6 @@ import { useSidebarContext } from "./SidebarContext";
 import SidebarHeader from "./SidebarHeader";
 import SidebarBody from "./SidebarBody";
 import SidebarFooter from "./SidebarFooter";
-import SidebarToggle from "./SidebarToggle";
 import type { User } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -48,12 +47,11 @@ const MobileSidebar = ({ user, onLogout }: MobileSidebarProps) => {
 
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-screen w-[280px] flex-col border-l border-sidebar-border bg-sidebar shadow-xl transition-transform duration-300 ease-in-out select-none",
+          "fixed inset-y-0 right-0 z-50 flex h-screen w-[220px] flex-col border-l border-sidebar-border bg-sidebar shadow-xl transition-transform duration-300 ease-in-out select-none",
           isMobileSidebarOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
         <SidebarHeader />
-        <SidebarToggle />
         <SidebarBody />
         <SidebarFooter user={user} onLogout={onLogout} />
       </aside>

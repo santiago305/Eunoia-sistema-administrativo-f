@@ -24,6 +24,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
   const { isCollapsed, isMobile } = useSidebarContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const isSidebarCollapsed = isCollapsed && !isMobile;
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -51,7 +52,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
       onClick={isMobile ? () => setIsMobileMenuOpen((prev) => !prev) : undefined}
       className={cn(
         "w-full flex items-center rounded-lg transition-all duration-200 hover:bg-sidebar-accent cursor-pointer select-none",
-        isCollapsed ? "justify-center p-2" : "gap-3 px-3 py-2"
+        isSidebarCollapsed ? "justify-center p-2" : "gap-3 px-3 py-2"
       )}
     >
       <Avatar className="h-9 w-9 shrink-0 border-2 border-primary/20">
@@ -64,7 +65,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
       <div
         className={cn(
           "min-w-0 flex flex-col items-start overflow-hidden transition-all duration-200 select-none",
-          isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+          isSidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
         )}
       >
         <span className="text-sm font-medium text-sidebar-foreground truncate max-w-[120px]">
@@ -137,7 +138,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
         {triggerButton}
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align={isCollapsed ? "center" : "start"} side="top" className="w-auto mb-2">
+      <DropdownMenuContent align={isSidebarCollapsed ? "center" : "start"} side="top" className="w-auto mb-2">
         <div className="px-2 py-1.5 select-none">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-muted-foreground">{user.email}</p>
