@@ -127,31 +127,35 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
           <PopoverContent
             side="right"
             align="start"
-            sideOffset={10}
-            className="w-56 rounded-xl border border-border bg-popover p-2 shadow-xl"
+            sideOffset={12}
+            className={cn(
+              "w-auto rounded-2xl border border-border/60 bg-popover/95 p-1.5",
+              "shadow-[0_10px_30px_rgba(15,23,42,0.10),0_2px_8px_rgba(15,23,42,0.06)]",
+              "backdrop-blur-md"
+            )}
           >
-            <div className="mb-1 px-2 py-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="px-2.5 pb-1 pt-1">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">
                 {item.label}
               </p>
             </div>
 
-            {item.href && (
-              <Link
-                to={item.href}
-                onClick={() => setPopoverOpen(false)}
-                className={cn(
-                  "mb-1 flex min-h-9 items-center rounded-lg px-3 py-2 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-foreground hover:bg-accent"
-                )}
-              >
-                Resumen
-              </Link>
-            )}
+            <div className="space-y-0.5">
+              {item.href && (
+                <Link
+                  to={item.href}
+                  onClick={() => setPopoverOpen(false)}
+                  className={cn(
+                    "flex min-h-[34px] items-center rounded-xl px-3 py-1.5 text-[13px] transition-all duration-200",
+                    isActive
+                      ? "bg-primary/9 text-primary font-medium shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+                      : "text-foreground/90 hover:bg-accent/70"
+                  )}
+                >
+                  <span className="truncate">Resumen</span>
+                </Link>
+              )}
 
-            <div className="space-y-1">
               {item.children?.map((child, index) => {
                 const childActive = child.href === location.pathname;
 
@@ -161,13 +165,13 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
                     to={child.href || "#"}
                     onClick={() => setPopoverOpen(false)}
                     className={cn(
-                      "flex min-h-9 items-center rounded-lg px-3 py-2 text-sm transition-colors",
+                      "flex min-h-[34px] items-center rounded-xl px-3 py-1.5 text-[13px] transition-all duration-200",
                       childActive
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        ? "bg-primary/9 text-primary font-medium shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+                        : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
                     )}
                   >
-                    {child.label}
+                    <span className="truncate">{child.label}</span>
                   </Link>
                 );
               })}
