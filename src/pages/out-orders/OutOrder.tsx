@@ -88,7 +88,7 @@ export default function OutOrder() {
         return;
       }
       const nextSerie = res[0];
-      const nextNumber = Number(nextSerie.nextNumber ?? 0) + 1;
+      const nextNumber = Number(nextSerie.nextNumber ?? 0);
       setSerie({
         value: nextSerie.id,
         label: `${nextSerie.code}-${nextNumber}`,
