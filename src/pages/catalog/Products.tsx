@@ -6,7 +6,7 @@ import { listProductEquivalences } from "@/services/equivalenceService";
 import { getById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Download,Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Download, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
@@ -17,7 +17,7 @@ import { listProductRecipes } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
 import { RecipeFormFields } from "./components/RecipeFormFields";
 import type { PrimaVariant, VariantListItem } from "@/pages/catalog/types/variant";
-import {  getVariantByIdp, listRowMaterials } from "@/services/catalogService";
+import { getVariantByIdp, listRowMaterials } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { EquivalenceFormFields } from "./components/EquivalenceFormField";
 import { ProductFormModal } from "./components/ProductFormModal";
@@ -26,7 +26,7 @@ import { fadeUp, item, list } from "@/utils/animations";
 import { StatusPill } from "@/components/StatusTag";
 import { money } from "@/utils/functionPurchases";
 import { IconButton } from "@/components/IconBoton";
-import { Dropdown } from "../purchases/components/PurchaseDropdown";
+import { Dropdown } from "../../components/Dropdown";
 import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
 
 const PRIMARY = "hsl(var(--primary))";
@@ -189,7 +189,7 @@ export default function CatalogProducts() {
         }
     };
 
-      const openEquivalences = async (productId: string) => {
+    const openEquivalences = async (productId: string) => {
         const product = products.find((p) => p.id === productId);
         if (!product) return;
         loadUnits();
@@ -366,12 +366,7 @@ export default function CatalogProducts() {
                     </div>
                 </motion.div>
 
-                <motion.section
-                    initial={shouldReduceMotion ? false : "hidden"}
-                    animate={shouldReduceMotion ? false : "show"}
-                    variants={fadeUp}
-                    className=" bg-gray-50 p-4 sm:p-5 shadow-sm"
-                >
+                <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} variants={fadeUp} className=" bg-gray-50 p-4 sm:p-5 shadow-sm">
                     <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
                         <div className="relative">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
@@ -404,12 +399,7 @@ export default function CatalogProducts() {
                         </div>
                     </div>
                 </motion.section>
-                <motion.section
-                    initial={shouldReduceMotion ? false : "hidden"}
-                    animate={shouldReduceMotion ? false : "show"}
-                    variants={fadeUp}
-                    className="bg-white shadow-sm overflow-hidden"
-                >
+                <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} variants={fadeUp} className="bg-white shadow-sm overflow-hidden">
                     <div className="hidden lg:block">
                         <div className="max-h-[calc(100vh-280px)] min-h-[calc(100vh-280px)] overflow-auto">
                             <table className="w-full text-sm table-fixed">
@@ -439,12 +429,14 @@ export default function CatalogProducts() {
                                     >
                                         {sortedProducts.map((product) => {
                                             return (
-                                                <motion.tr key={product.id} 
-                                                variants={shouldReduceMotion ? undefined : item} 
-                                                layout 
-                                                className="border-b border-black/5 hover:bg-black/[0.02]
+                                                <motion.tr
+                                                    key={product.id}
+                                                    variants={shouldReduceMotion ? undefined : item}
+                                                    layout
+                                                    className="border-b border-black/5 hover:bg-black/[0.02]
                                                 text-[11px]
-                                                ">
+                                                "
+                                                >
                                                     <td className="py-4 px-5">
                                                         <p className="font-medium">{product.sku || "-"}</p>
                                                     </td>
@@ -471,10 +463,10 @@ export default function CatalogProducts() {
                                                         <p className="line-clamp-2">{product.attributes?.color}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">{ money(Number(product.price), 'PEN')}</p>
+                                                        <p className="line-clamp-2">{money(Number(product.price), "PEN")}</p>
                                                     </td>
                                                     <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2"> { money(Number(product.cost), 'PEN')}</p>
+                                                        <p className="line-clamp-2"> {money(Number(product.cost), "PEN")}</p>
                                                     </td>
 
                                                     <td className="py-4 px-5">
@@ -728,9 +720,3 @@ export default function CatalogProducts() {
         </div>
     );
 }
-
-
-
-
-
-
