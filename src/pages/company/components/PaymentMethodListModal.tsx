@@ -150,6 +150,7 @@ export function PaymentMethodListModal({
                     text-xs outline-none focus:ring-2"
                     value={number}
                     onChange={(e) => setNumber(e.target.value)}
+                    disabled={adding}
                   />
                 </label>
               </div>
@@ -157,7 +158,8 @@ export function PaymentMethodListModal({
                 type="button"
                 className="inline-flex items-center gap-2 rounded-lg border px-3 h-9 mt-6
                 text-xs text-white focus:outline-none focus:ring-2"
-                disabled={!selectedId || adding} onClick={addMethod}                
+                disabled={!selectedId || adding}
+                onClick={addMethod}
                 style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
               >
                 <Plus className="h-4 w-4" />
@@ -182,6 +184,7 @@ export function PaymentMethodListModal({
                     <td className="py-2 px-5 text-left">{m.number ?? "-"}</td>
                     <td className="py-2 px-5 text-right">
                       <button
+                        type="button"
                         className="inline-flex h-6 w-6 items-center justify-center
                          rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
                         onClick={() => removeMethod(m.methodId)}

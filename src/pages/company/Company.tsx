@@ -287,11 +287,12 @@ export default function CompanyPage() {
                     </div>
                   </Card>
                 <div className="mt-2">
-                    <PrimaryButton type="submit" disabled={loading}
+                    <PrimaryButton type="button" disabled={loading}
                     className="w-full"
                     onClick={(e) => {
-                        e.preventDefault(),
-                        setOpenPaymentMethods(true)}}
+                        e.preventDefault();
+                        setOpenPaymentMethods(true);
+                    }}
                     >
                         Ver metodos de pago
                     </PrimaryButton>
@@ -301,7 +302,6 @@ export default function CompanyPage() {
             <div className="space-y-6 lg:col-span-8">
               <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
                 <div className="rounded-2xl border border-black/10 bg-white shadow-sm">
-                  <CardHeader title="" subtitle="" />
                   <CompanyFormSection
                       formValues={formValues}
                       formErrors={formErrors}
