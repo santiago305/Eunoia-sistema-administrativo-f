@@ -121,8 +121,8 @@ export function EquivalenceFormFields({
                 const toLabel = (units ?? []).find((u) => u.id === eq.toUnitId);
                 return (
                   <tr key={eq.id} className="border-b border-black/5">
-                    <td className="py-2 px-5 text-left">{toLabel ? `${toLabel.name} (${eq.factor})` : eq.toUnitId}</td>
-                    <td className="py-2 px-5 text-left">Equivale a {eq.factor} - {fromLabel?.name}</td>
+                    <td className="py-2 px-5 text-left">{fromLabel ? `${fromLabel.name} (${eq.factor})` : eq.toUnitId}</td>
+                    <td className="py-2 px-5 text-left">Equivale a {eq.factor} - {toLabel?.name}</td>
                     <td>
                       <button
                         className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
