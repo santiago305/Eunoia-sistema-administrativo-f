@@ -340,7 +340,7 @@ export default function KardexProduction() {
                 </div>
 
                 <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-[0.5fr_0.5fr_1fr] gap-3">
                         <div className="grid grid-cols-2 gap-2">
                             <input
                                 type="date"
