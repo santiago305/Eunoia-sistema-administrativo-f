@@ -117,7 +117,7 @@ export default function PurchaseCreateLocal() {
         })
         .filter((row) => row.itemId);
 
-      setProducts((prev) => (isEdit ? mergeProducts(prev, normalized) : normalized));
+      setProducts((prev) => (mergeProducts(prev, normalized)));
     } catch {
       if (!isEdit) setProducts([]);
       showFlash(errorResponse("Error al cargar variantes PRIMA"));
