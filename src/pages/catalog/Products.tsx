@@ -244,7 +244,7 @@ export default function CatalogProducts() {
             productName: variantsProduct.name,
             create: "1",
         });
-        navigate(`/catalogo/variantes?${params.toString()}`);
+        navigate(`/catalago/variantes?${params.toString()}`);
     };
 
     const buildCsv = (
