@@ -321,7 +321,7 @@ export default function Purchases() {
                             />
                         </label>
                         <label className="text-[10px] text-black/60 font-bold">
-                            Número de documento
+                            N. documento
                             <input
                                 className="h-8 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-[10px] outline-none focus:ring-2"
                                 style={ringStyle}
