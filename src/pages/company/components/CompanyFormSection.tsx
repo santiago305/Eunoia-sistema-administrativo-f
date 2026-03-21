@@ -1,32 +1,10 @@
-import type { FormEvent } from "react";
-
-import {
-  UbigeoSelectSection,
-  type UbigeoSelection,
-} from "@/components/UbigeoSelectSection";
-import type {
-  CompanyFormErrors,
-  CompanyFormValues,
-} from "../types/companyFormTypes";
 import { FloatingInput } from "@/components/FloatingInput";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
-import { Building2, Key, MapPin, Phone } from "lucide-react";
 import { FloatingRadioGroup } from "@/components/FloatingRadioGroup";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
-
-type CompanyFormSectionProps = {
-  formValues: CompanyFormValues;  
-  formErrors: CompanyFormErrors;
-  ubigeoSelection: UbigeoSelection;
-  loading: boolean;
-  saving: boolean;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onFieldChange: <K extends keyof CompanyFormValues>(
-    field: K,
-    value: CompanyFormValues[K]
-  ) => void;
-  onUbigeoChange: (next: UbigeoSelection) => void;
-};
+import { UbigeoSelectSection } from "@/components/UbigeoSelectSection";
+import { Building2, Key, MapPin, Phone } from "lucide-react";
+import type { CompanyFormSectionProps } from "@/pages/company/types/companyComponentTypes";
 
 export function CompanyFormSection({
   formValues,
@@ -42,7 +20,6 @@ export function CompanyFormSection({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 p-5">
-
       <div>
         <SectionHeaderForm icon={Building2} title="Identificación" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -50,7 +27,7 @@ export function CompanyFormSection({
             label="Razón social"
             name="name"
             value={formValues.name ?? ""}
-            onChange={(e) => onFieldChange("name", e.target.value)}
+            onChange={(event) => onFieldChange("name", event.target.value)}
             error={formErrors.name}
             disabled={disabled}
           />
@@ -59,7 +36,7 @@ export function CompanyFormSection({
             label="RUC"
             name="ruc"
             value={formValues.ruc ?? ""}
-            onChange={(e) => onFieldChange("ruc", e.target.value)}
+            onChange={(event) => onFieldChange("ruc", event.target.value)}
             error={formErrors.ruc}
             disabled={disabled}
             inputMode="numeric"
@@ -90,7 +67,9 @@ export function CompanyFormSection({
             label="Urbanización"
             name="urbanization"
             value={formValues.urbanization ?? ""}
-            onChange={(e) => onFieldChange("urbanization", e.target.value)}
+            onChange={(event) =>
+              onFieldChange("urbanization", event.target.value)
+            }
             error={formErrors.urbanization}
             disabled={disabled}
           />
@@ -99,13 +78,13 @@ export function CompanyFormSection({
             label="Dirección"
             name="address"
             value={formValues.address ?? ""}
-            onChange={(e) => onFieldChange("address", e.target.value)}
+            onChange={(event) => onFieldChange("address", event.target.value)}
             error={formErrors.address}
             disabled={disabled}
           />
         </div>
       </div>
-      
+
       <div>
         <SectionHeaderForm icon={Phone} title="Contacto" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -113,7 +92,7 @@ export function CompanyFormSection({
             label="Teléfono"
             name="phone"
             value={formValues.phone ?? ""}
-            onChange={(e) => onFieldChange("phone", e.target.value)}
+            onChange={(event) => onFieldChange("phone", event.target.value)}
             error={formErrors.phone}
             disabled={disabled}
           />
@@ -123,13 +102,13 @@ export function CompanyFormSection({
             name="email"
             type="email"
             value={formValues.email ?? ""}
-            onChange={(e) => onFieldChange("email", e.target.value)}
+            onChange={(event) => onFieldChange("email", event.target.value)}
             error={formErrors.email}
             disabled={disabled}
           />
         </div>
       </div>
-      
+
       <div>
         <SectionHeaderForm icon={Key} title="SUNAT / SOL" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -137,7 +116,7 @@ export function CompanyFormSection({
             label="Código local"
             name="codLocal"
             value={formValues.codLocal ?? ""}
-            onChange={(e) => onFieldChange("codLocal", e.target.value)}
+            onChange={(event) => onFieldChange("codLocal", event.target.value)}
             error={formErrors.codLocal}
             disabled={disabled}
           />
@@ -146,7 +125,7 @@ export function CompanyFormSection({
             label="SOL Usuario"
             name="solUser"
             value={formValues.solUser ?? ""}
-            onChange={(e) => onFieldChange("solUser", e.target.value)}
+            onChange={(event) => onFieldChange("solUser", event.target.value)}
             error={formErrors.solUser}
             disabled={disabled}
           />
@@ -156,7 +135,7 @@ export function CompanyFormSection({
             name="solPass"
             type="password"
             value={formValues.solPass ?? ""}
-            onChange={(e) => onFieldChange("solPass", e.target.value)}
+            onChange={(event) => onFieldChange("solPass", event.target.value)}
             error={formErrors.solPass}
             disabled={disabled}
           />

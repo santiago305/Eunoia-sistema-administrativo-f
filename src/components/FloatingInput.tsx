@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react";
 import { forwardRef, useMemo, useState, type ChangeEvent, type InputHTMLAttributes } from "react";
 
 type FloatingInputProps = {
@@ -88,7 +89,11 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(fu
             onClick={() => setShowPassword((prev) => !prev)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-black/50 hover:text-black"
           >
-            {showPassword ? "Ocultar" : "Ver"}
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
           </button>
         )}
       </div>

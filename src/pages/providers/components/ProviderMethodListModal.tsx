@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/settings/modal";
-import { PaymentMethodSelectComposed } from "@/pages/company/components/PaymentMethodSelectComposed";
+import { PaymentMethodSelectComposed } from "@/pages/payment-methods/components/PaymentMethodSelectComposed";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { Plus, Power } from "lucide-react";

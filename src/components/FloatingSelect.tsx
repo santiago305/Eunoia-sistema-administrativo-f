@@ -31,7 +31,7 @@ export function FloatingSelect({
   options,
   onChange,
   error,
-  placeholder = "Seleccionar...",
+  placeholder,
   disabled = false,
   className = "",
   containerClassName = "",

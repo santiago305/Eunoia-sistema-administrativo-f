@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import { twMerge } from "tailwind-merge";
 
 type ButtonVariant =
   | "primary"
@@ -11,7 +12,7 @@ type ButtonVariant =
   | "ghost"
   | "link";
 
-type ButtonSize = "sm" | "md" | "lg" | "icon";
+type ButtonSize = "sm" | "md" | "lg" | "icon" | "custom";
 
 type SystemButtonProps = {
   children?: ReactNode;
@@ -24,7 +25,7 @@ type SystemButtonProps = {
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
+  return twMerge(classes.filter(Boolean).join(" "));
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -51,6 +52,7 @@ const sizeClasses: Record<ButtonSize, string> = {
   md: "h-10 px-4 text-sm rounded-lg",
   lg: "h-11 px-5 text-sm rounded-xl",
   icon: "h-10 w-10 rounded-lg p-0",
+  custom: "",
 };
 
 export function SystemButton({
@@ -73,9 +75,8 @@ export function SystemButton({
       type={type}
       disabled={isDisabled}
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium outline-none transition-all duration-200",
+        "inline-flex items-center justify-center gap-2 font-medium outline-none transition-all duration-200 select-none",
         "focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-60",
-        "select-none",
         variantClasses[variant],
         sizeClasses[size],
         fullWidth && "w-full",

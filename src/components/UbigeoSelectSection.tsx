@@ -163,7 +163,6 @@ export function UbigeoSelectSection({
             });
           }}
           options={departmentOptions}
-          placeholder="Seleccionar departamento"
           searchable
           searchPlaceholder="Buscar departamento..."
           emptyMessage="Sin departamentos"
@@ -194,7 +193,6 @@ export function UbigeoSelectSection({
             });
           }}
           options={provinceOptions}
-          placeholder="Seleccionar provincia"
           searchable
           searchPlaceholder="Buscar provincia..."
           emptyMessage="Sin provincias"
@@ -224,7 +222,6 @@ export function UbigeoSelectSection({
             });
           }}
           options={districtOptions}
-          placeholder="Seleccionar distrito"
           searchable
           searchPlaceholder="Buscar distrito..."
           emptyMessage="Sin distritos"
