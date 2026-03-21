@@ -6,9 +6,9 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
-import { listKardex } from "@/services/kardexService";
+import { getDailyTotals, listKardex } from "@/services/kardexService";
 import { buildMonthStartIso, toDateInputValue, todayIso, tryShowPicker } from "@/utils/functionPurchases";
-import type { LedgerEntry } from "@/pages/catalog/types/kardex";
+import type { KardexDailyTotal, LedgerEntry } from "@/pages/catalog/types/kardex";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import { getDocumentInventoryPdf, getProductionOrderPdf, getPurchaseOrderPdf } from "@/services/pdfServices";
@@ -61,7 +61,9 @@ export default function KardexProduction() {
 
     const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>([]);
     const [rows, setRows] = useState<LedgerEntry[]>([]);
+    const [dailyTotals, setDailyTotals] = useState<KardexDailyTotal[]>([]);
     const [selectedRow, setSelectedRow] = useState<LedgerEntry | null>(null);
+    const totalsRequestRef = useRef(0);
 
     const [pagination, setPagination] = useState({
         total: 0,
@@ -216,6 +218,29 @@ export default function KardexProduction() {
         }
     };
 
+    const loadDailyTotals = async () => {
+        if (!stockItemId) {
+            setDailyTotals([]);
+            return;
+        }
+        const requestId = ++totalsRequestRef.current;
+        clearFlash();
+        try {
+            const res = await getDailyTotals({
+                stockItemId,
+                warehouseId: warehouseId || undefined,
+                from: fromDate || undefined,
+                to: toDate || undefined,
+            });
+            if (requestId !== totalsRequestRef.current) return;
+            setDailyTotals(res ?? []);
+        } catch {
+            if (requestId !== totalsRequestRef.current) return;
+            setDailyTotals([]);
+            showFlash(errorResponse("Error al cargar tendencia"));
+        }
+    };
+
     useEffect(() => {
         void loadWarehouses();
     }, []);
@@ -235,6 +260,10 @@ export default function KardexProduction() {
     useEffect(() => {
         void loadLedger();
     }, [pagination.page, pagination.limit, warehouseId, fromDate, toDate, stockItemId]);
+
+    useEffect(() => {
+        void loadDailyTotals();
+    }, [warehouseId, fromDate, toDate, stockItemId]);
 
     useEffect(() => {
         setSelectedRow(rows[0] ?? null);
@@ -271,14 +300,11 @@ export default function KardexProduction() {
         const totals = new Map<string, number>();
         for (const day of days) totals.set(day.key, 0);
 
-        for (const row of rows) {
-            if (!row.createdAt) continue;
-            const d = new Date(row.createdAt);
-            if (d < startDate || d > endDate) continue;
-            const key = toLocalDateKey(d);
-            const qty = Number(row.quantity) || 0;
-            const signed = row.direction === "OUT" ? -qty : qty;
-            totals.set(key, (totals.get(key) ?? 0) + signed);
+        for (const total of dailyTotals) {
+            if (!total?.day) continue;
+            const key = String(total.day).slice(0, 10);
+            if (!totals.has(key)) continue;
+            totals.set(key, Number(total.balance ?? 0));
         }
 
         const labels = days.map((d) => d.label);
@@ -304,7 +330,7 @@ export default function KardexProduction() {
                 },
             ],
         };
-    }, [rows, toDate]);
+    }, [dailyTotals, toDate]);
 
     const ref = useEChart(movementsChart);
 
