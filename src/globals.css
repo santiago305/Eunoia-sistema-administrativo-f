@@ -31,13 +31,10 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-  --color-teal: hsl(var(--teal));
-  --color-teal-light: hsl(var(--teal-light));
-  --color-teal-dark: hsl(var(--teal-dark));
 }
 
 /* Modern Minimal Dashboard Design System
-   Primary/Teal: #21b8a6 → HSL: 174 69% 42%
+   Primary token -> HSL: 174 69% 42%
    Clean white backgrounds with black text
 */
 
@@ -52,15 +49,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
 
-    /* Teal #21b8a6 = HSL 174 69% 42% */
+    /* Primary token = HSL 174 69% 42% */
     --primary: 174 69% 42%;
     --primary-foreground: 0 0% 100%;
     
-    /* Teal variants */
-    --teal: 174 69% 42%;
-    --teal-light: 174 69% 95%;
-    --teal-dark: 174 69% 30%;
-
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 0%;
 
@@ -104,11 +96,6 @@
     --primary: 174 69% 50%;
     --primary-foreground: 0 0% 5%;
     
-    /* Teal variants dark */
-    --teal: 174 69% 50%;
-    --teal-light: 174 69% 20%;
-    --teal-dark: 174 69% 60%;
-
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
 
@@ -174,7 +161,6 @@
   th,
   td,
   label,
-  input,
   textarea,
   select,
   h1,
@@ -215,31 +201,5 @@ textarea {
 
 .scroll-area::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 120, 120, 0.8);
-}
-
-@layer components {
-  .page-shell {
-    @apply min-h-full w-full bg-slate-50 p-6;
-  }
-
-  .page-card {
-    @apply w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg;
-  }
-
-  .page-card-wide {
-    @apply max-w-6xl;
-  }
-
-  .page-card-header {
-    @apply border-b border-slate-200 px-6 py-4;
-  }
-
-  .page-card-title {
-    @apply text-lg font-semibold text-slate-900;
-  }
-
-  .page-card-subtitle {
-    @apply mt-1 text-sm text-slate-500;
-  }
 }
 

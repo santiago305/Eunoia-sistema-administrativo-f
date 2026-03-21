@@ -39,7 +39,7 @@ export function ProductFormModal({
   productId,
   productType,
   units,
-  primaryColor = "#21b8a6",
+  primaryColor = "hsl(var(--primary))",
   entityLabel,
   onClose,
   onSaved,
@@ -177,7 +177,7 @@ export function ProductFormModal({
         </button>
         <button
           className="rounded-2xl border px-4 py-2 text-sm text-white disabled:opacity-50"
-          style={{ backgroundColor: primaryColor, borderColor: `${primaryColor}33` }}
+          style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
           onClick={saveProduct}
           disabled={!canSave || saving || loading}
         >

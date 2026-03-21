@@ -43,6 +43,7 @@ export function PaymentMethodSelectComposed({
           searchPlaceholder={searchPlaceholder}
           className={className}
           textSize={textSize}
+          disabled={disabled}
         >
           <FS.Trigger />
           <FS.Content>
@@ -61,10 +62,12 @@ export function PaymentMethodSelectComposed({
                           className="rounded-md border border-black/10 bg-gray-100 px-2 py-1 text-[10px] 
                           text-black/70 hover:bg-black/[0.03]"
                           onClick={() => {
+                            if (disabled) return;
                             onChange(opt.value);
                             onEdit(opt.value);
                           }}
                           onKeyDown={(e) => {
+                            if (disabled) return;
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
                               onChange(opt.value);

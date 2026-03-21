@@ -35,7 +35,7 @@ export default function ItemMobile({ user, avatarSrc, showUsersActive, onRemove,
                                 <button
                                 className="h-7 rounded-xl bg-red-100 ring-1 ring-red-400 hover:bg-red-200 cursor-pointer
                                 text-[#d63737ba] hover:text-red-500 text-md px-3
-                                focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
+                                focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none"
                                     onClick={() => void onRemove(user.user_id)}
                                     aria-label="Desactivar usuario"
                                 >
@@ -45,7 +45,7 @@ export default function ItemMobile({ user, avatarSrc, showUsersActive, onRemove,
                                 <button
                                     className="h-7 rounded-xl bg-blue-100 hover:bg-blue-200 cursor-pointer
                                     text-[#4f60e5b2] hover:text-blue-500 text-lg ring-1 ring-blue-400 px-3
-                                    focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 outline-none"
+                                    focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none"
                                     onClick={() => void onRestore(user.user_id)}
                                     aria-label="Restaurar usuario"
                                 >

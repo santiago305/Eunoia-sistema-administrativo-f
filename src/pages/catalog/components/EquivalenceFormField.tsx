@@ -91,7 +91,7 @@ export function EquivalenceFormFields({
         <button
           type="button"
           className="rounded-xl border h-10 text-xl text-white mt-7"
-          style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+          style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
           onClick={() => void handleCreate()}
           disabled={!productId || !baseUnitId || !fromUnitId || !factor}
         >

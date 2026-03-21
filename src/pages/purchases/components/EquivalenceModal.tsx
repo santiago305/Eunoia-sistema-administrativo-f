@@ -329,7 +329,7 @@ export function EquivalenceModal({
 
         <button
           className="rounded-lg border px-4 py-2 text-sm text-white"
-          style={{ backgroundColor: primaryColor, borderColor: `${primaryColor}33` }}
+          style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
           onClick={() => {
             clearFlash();
             if (!itemId) return;

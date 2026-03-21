@@ -11,12 +11,12 @@ export default function Message({ type, text, icon, color }: MessageProps) {
     <div
       className="p-3 rounded-sm flex"
       style={{
-        backgroundColor: `${color}2f`,
-        border: `1px solid ${color}73`,
+        backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`,
         color: '#ffffff93',
       }}
     >
-      <div className="p-2 pl-0 border-r-2" style={{ borderColor: `${color}73` }}>
+      <div className="p-2 pl-0 border-r-2" style={{ borderColor: `color-mix(in srgb, ${color} 45%, transparent)` }}>
         <div className="h-10 w-10" style={{ color }}>
           {icon ?? 'icon'}
         </div>

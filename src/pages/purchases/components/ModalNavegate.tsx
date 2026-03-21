@@ -12,7 +12,7 @@ type ModalNavegateProps = {
   isEdit?: boolean;
 };
 
-const DEFAULT_PRIMARY = "#21b8a6";
+const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
 export function ModalNavegate({
   open,
@@ -99,7 +99,7 @@ export function ModalNavegate({
             <button
               type="button"
               className="flex-1 rounded-xl border px-4 py-2 text-sm text-white"
-              style={{ backgroundColor: accent, borderColor: `${accent}33` }}
+              style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
               onClick={onGoToList}
             >
               Ir a listado de compras

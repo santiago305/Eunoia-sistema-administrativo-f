@@ -25,7 +25,7 @@ import { IconButton } from "@/components/IconBoton";
 import { fadeUp, item, list } from "@/utils/animations";
 import { Dropdown } from "../purchases/components/PurchaseDropdown";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 
 
@@ -374,7 +374,7 @@ export default function CatalogVariants() {
               type="button"
               onClick={openNew}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-white transition focus:outline-none focus:ring-2"
-              style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, boxShadow: "0 1px 0 rgba(0,0,0,0.02)" }}
+              style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`, boxShadow: "0 1px 0 rgba(0,0,0,0.02)" }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
               }}
@@ -396,7 +396,7 @@ export default function CatalogVariants() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <input
                 className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
-                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
                 placeholder="Buscar por SKU, producto o ID"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -406,7 +406,7 @@ export default function CatalogVariants() {
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <select className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2" 
-                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties} value={productFilter} 
+                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties} value={productFilter} 
                 onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}>
                 <option value="">Producto (todos)</option>
                 {products.map((p) => <option key={p.productId} value={p.productId}>{p.name}</option>)}
@@ -415,7 +415,7 @@ export default function CatalogVariants() {
             <div className="relative">
               <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <select className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
-               style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+               style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
                value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
                 <option value="active">Activos</option>
                 <option value="inactive">Eliminados</option>
@@ -647,7 +647,7 @@ export default function CatalogVariants() {
             <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" 
             onClick={() => setOpenCreate(false)}>Cancelar</button>
             <button className="rounded-lg border px-4 py-2 text-sm text-white" 
-            style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+            style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
              onClick={() => void saveCreate()} disabled={!form.productId}>Guardar</button>
           </div>
         </Modal>
@@ -660,7 +660,7 @@ export default function CatalogVariants() {
             <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={() => 
               setEditingVariantId(null)}>Cancelar</button>
             <button className="rounded-lg border px-4 py-2 text-sm text-white" 
-            style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }} onClick={() => void saveEdit()}>
+            style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }} onClick={() => void saveEdit()}>
               Guardar cambios</button>
           </div>
         </Modal>
@@ -725,7 +725,7 @@ export default function CatalogVariants() {
                 className="rounded-lg border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 disabled:opacity-50"
                 style={
                   nextActiveState
-                    ? ({ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties)
+                    ? ({ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`, "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties)
                     : ({ backgroundColor: "#e11d48", borderColor: "#e11d4833", "--tw-ring-color": "#e11d4822" } as React.CSSProperties)
                 }
                 onClick={() => void confirmToggleActive()}

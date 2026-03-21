@@ -14,7 +14,7 @@ import type {
 } from "./types/security.api";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 
-const BRAND = "#21b8a6";
+const BRAND = "hsl(var(--primary))";
 
 const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(" ");

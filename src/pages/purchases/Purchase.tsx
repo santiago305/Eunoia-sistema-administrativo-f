@@ -45,7 +45,7 @@ import { getById } from "@/services/purchaseService";
 import { SupplierOption } from "../providers/types/supplier";
 import { WarehouseSelectOption } from "../warehouse/types/warehouse";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
 
 export default function PurchaseCreateLocal() {
@@ -71,7 +71,7 @@ export default function PurchaseCreateLocal() {
   const { poId } = useParams<{ poId: string }>();
   const isEdit = Boolean(poId);
 
-  const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
+  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
 
   const mergeProducts = (current: FinishedProducts[], incoming: FinishedProducts[]) => {
     const map = new Map<string, FinishedProducts>();
@@ -403,7 +403,7 @@ export default function PurchaseCreateLocal() {
                 <button
                   type="button"
                   className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-xs text-white focus:outline-none focus:ring-2"
-                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                   onClick={() => setOpenCreatePrima(true)}
                 >
                   <Plus className="h-4 w-4" />
@@ -611,7 +611,7 @@ export default function PurchaseCreateLocal() {
                   <button
                     type="button"
                     className="inline-flex h-9 w-10 items-center justify-center rounded-lg border text-white focus:outline-none focus:ring-2"
-                    style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, ...ringStyle }}
+                    style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`, ...ringStyle }}
                     title="Agregar almacen"
                     onClick={() => setOpenCreateWarehouse(true)}
                   >
@@ -646,7 +646,7 @@ export default function PurchaseCreateLocal() {
                   <button
                     type="button"
                     className="inline-flex h-9 w-10 items-center justify-center rounded-lg border text-white focus:outline-none focus:ring-2"
-                    style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33`, ...ringStyle }}
+                    style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`, ...ringStyle }}
                     title="Agregar proveedor"
                     onClick={() => setOpenAddSupplier(true)}
                   >
@@ -732,7 +732,7 @@ export default function PurchaseCreateLocal() {
                 <button
                   type="button"
                   className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
-                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                   disabled={
                     !form.items?.length ||
                     !form.serie.trim() ||

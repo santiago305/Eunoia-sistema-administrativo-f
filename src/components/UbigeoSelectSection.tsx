@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
 import { ubigeoPeru } from "@/data/ubigeoPeru";
 
 export type UbigeoDepartment = { id: string; name: string };
 export type UbigeoProvince = { id: string; name: string; departmentId: string };
-export type UbigeoDistrict = { id: string; name: string; provinceId: string; departmentId: string };
+export type UbigeoDistrict = {
+  id: string;
+  name: string;
+  provinceId: string;
+  departmentId: string;
+};
 
 export type UbigeoData = {
   departments: UbigeoDepartment[];
@@ -27,6 +33,12 @@ type Props = {
   lockUbigeo?: boolean;
   className?: string;
   textSize?: string;
+  errors?: {
+    department?: string;
+    province?: string;
+    district?: string;
+    ubigeo?: string;
+  };
 };
 
 export function UbigeoSelectSection({
@@ -35,8 +47,8 @@ export function UbigeoSelectSection({
   disabled = false,
   showUbigeoInput = false,
   lockUbigeo = true,
-  className = "h-10",
-  textSize = "text-xs",
+  className = "",
+  errors,
 }: Props) {
   const [ids, setIds] = useState({
     departmentId: "",
@@ -46,7 +58,7 @@ export function UbigeoSelectSection({
 
   const departmentOptions = useMemo(
     () => ubigeoPeru.departments.map((d) => ({ value: d.id, label: d.name })),
-    [ubigeoPeru.departments]
+    []
   );
 
   const provinceOptions = useMemo(
@@ -54,7 +66,7 @@ export function UbigeoSelectSection({
       ubigeoPeru.provinces
         .filter((p) => p.departmentId === ids.departmentId)
         .map((p) => ({ value: p.id, label: p.name })),
-    [ubigeoPeru.provinces, ids.departmentId]
+    [ids.departmentId]
   );
 
   const districtOptions = useMemo(
@@ -62,7 +74,7 @@ export function UbigeoSelectSection({
       ubigeoPeru.districts
         .filter((d) => d.provinceId === ids.provinceId)
         .map((d) => ({ value: d.id, label: d.name })),
-    [ubigeoPeru.districts, ids.provinceId]
+    [ids.provinceId]
   );
 
   useEffect(() => {
@@ -73,12 +85,14 @@ export function UbigeoSelectSection({
 
     if (normalizedUbigeo) {
       const district = ubigeoPeru.districts.find((d) => d.id === normalizedUbigeo);
+
       if (district) {
         setIds({
           departmentId: district.departmentId,
           provinceId: district.provinceId,
           districtId: district.id,
         });
+
         if (!normalizedDistrict || !normalizedProvince || !normalizedDepartment) {
           onChange({
             ubigeo: district.id,
@@ -89,6 +103,7 @@ export function UbigeoSelectSection({
             district: district.name,
           });
         }
+
         return;
       }
     }
@@ -97,12 +112,14 @@ export function UbigeoSelectSection({
       ubigeoPeru.departments.find(
         (d) => d.name.toLowerCase() === normalizedDepartment.toLowerCase()
       )?.id ?? "";
+
     const provinceId =
       ubigeoPeru.provinces.find(
         (p) =>
           p.name.toLowerCase() === normalizedProvince.toLowerCase() &&
           (!departmentId || p.departmentId === departmentId)
       )?.id ?? "";
+
     const districtId =
       ubigeoPeru.districts.find(
         (d) =>
@@ -119,101 +136,116 @@ export function UbigeoSelectSection({
 
   return (
     <section className="space-y-3">
-      <div className={`grid grid-cols-1 gap-3 ${showUbigeoInput ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
-        <div>
-         <label className={textSize}>Departamento</label>
-          <FilterableSelect
-            value={ids.departmentId}
-            onChange={(departmentId) => {
-              const departmentName =
-                ubigeoPeru.departments.find((d) => d.id === departmentId)?.name ?? "";
-              setIds({
-                departmentId,
-                provinceId: "",
-                districtId: "",
-              });
-              onChange({
-                ubigeo: "",
-                department: departmentName,
-                province: "",
-                district: "",
-              });
-            }}
-            options={departmentOptions}
-            placeholder="Departamento"
-            searchPlaceholder="Buscar departamento..."
-            className={className}
-            textSize={textSize}
-          />
-        </div>
+      <div
+        className={`grid grid-cols-1 gap-4 ${
+          showUbigeoInput ? "sm:grid-cols-4" : "sm:grid-cols-3"
+        }`}
+      >
+        <FloatingSelect
+          label="Departamento"
+          name="department"
+          value={ids.departmentId}
+          onChange={(departmentId) => {
+            const departmentName =
+              ubigeoPeru.departments.find((d) => d.id === departmentId)?.name ?? "";
 
-        <div>
-         <label className={textSize}>Provincia</label>
-          <FilterableSelect
-            value={ids.provinceId}
-            onChange={(provinceId) => {
-              const provinceName =
-                ubigeoPeru.provinces.find((p) => p.id === provinceId)?.name ?? "";
-              setIds((prev) => ({
-                ...prev,
-                provinceId,
-                districtId: "",
-              }));
-              onChange({
-                ubigeo: "",
-                department: value.department,
-                province: provinceName,
-                district: "",
-              });
-            }}
-            options={provinceOptions}
-            placeholder="Provincia"
-            searchPlaceholder="Buscar provincia..."
-            className={className}
-            textSize={textSize}
-          />
-        </div>
+            setIds({
+              departmentId,
+              provinceId: "",
+              districtId: "",
+            });
 
-        <div>
-         <label className={textSize}>Distrito</label>
-          <FilterableSelect
-            value={ids.districtId}
-            onChange={(districtId) => {
-              const districtName =
-                ubigeoPeru.districts.find((d) => d.id === districtId)?.name ?? "";
-              setIds((prev) => ({
-                ...prev,
-                districtId,
-              }));
-              onChange({
-                ubigeo: districtId,
-                department: value.department,
-                province: value.province,
-                district: districtName,
-              });
-            }}
-            options={districtOptions}
-            placeholder="Distrito"
-            searchPlaceholder="Buscar distrito..."
-            className={className}
-            textSize={textSize}
-          />
-        </div>
-      {showUbigeoInput && (
-        <div className="max-w-[220px]">
-          <label className={textSize}>Ubigeo</label>
-          <input
-            className={`${className} w-full rounded-lg border border-black/10 px-3 ${textSize} outline-none focus:ring-2`}
+            onChange({
+              ubigeo: "",
+              department: departmentName,
+              province: "",
+              district: "",
+            });
+          }}
+          options={departmentOptions}
+          placeholder="Seleccionar departamento"
+          searchable
+          searchPlaceholder="Buscar departamento..."
+          emptyMessage="Sin departamentos"
+          error={errors?.department}
+          disabled={disabled}
+          className={className}
+        />
+
+        <FloatingSelect
+          label="Provincia"
+          name="province"
+          value={ids.provinceId}
+          onChange={(provinceId) => {
+            const provinceName =
+              ubigeoPeru.provinces.find((p) => p.id === provinceId)?.name ?? "";
+
+            setIds((prev) => ({
+              ...prev,
+              provinceId,
+              districtId: "",
+            }));
+
+            onChange({
+              ubigeo: "",
+              department: value.department,
+              province: provinceName,
+              district: "",
+            });
+          }}
+          options={provinceOptions}
+          placeholder="Seleccionar provincia"
+          searchable
+          searchPlaceholder="Buscar provincia..."
+          emptyMessage="Sin provincias"
+          error={errors?.province}
+          disabled={disabled || !ids.departmentId}
+          className={className}
+        />
+
+        <FloatingSelect
+          label="Distrito"
+          name="district"
+          value={ids.districtId}
+          onChange={(districtId) => {
+            const districtName =
+              ubigeoPeru.districts.find((d) => d.id === districtId)?.name ?? "";
+
+            setIds((prev) => ({
+              ...prev,
+              districtId,
+            }));
+
+            onChange({
+              ubigeo: districtId,
+              department: value.department,
+              province: value.province,
+              district: districtName,
+            });
+          }}
+          options={districtOptions}
+          placeholder="Seleccionar distrito"
+          searchable
+          searchPlaceholder="Buscar distrito..."
+          emptyMessage="Sin distritos"
+          error={errors?.district}
+          disabled={disabled || !ids.provinceId}
+          className={className}
+        />
+
+        {showUbigeoInput && (
+          <FloatingInput
+            label="Ubigeo"
+            name="ubigeo"
             value={value.ubigeo}
             readOnly={lockUbigeo}
             disabled={disabled}
             onChange={(e) => onChange({ ...value, ubigeo: e.target.value })}
-            placeholder="Ubigeo"
+            error={errors?.ubigeo}
+            className={className}
           />
-        </div>
-      )}
+        )}
       </div>
-
     </section>
   );
 }

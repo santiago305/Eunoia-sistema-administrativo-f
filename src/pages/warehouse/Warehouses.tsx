@@ -26,7 +26,7 @@ import { WarehouseExpandedRow } from "./components/data-table/WarehouseExpandedR
 import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
 import { warehouseExpandedFields } from "./components/data-table/warehouseExpandedFields";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
 
@@ -320,7 +320,7 @@ export default function Warehouses() {
               title="Nuevo almacen"
               style={{
                 backgroundColor: PRIMARY,
-                borderColor: `${PRIMARY}33`,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                 boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
               }}
               onMouseEnter={(e) => {
@@ -347,7 +347,7 @@ export default function Warehouses() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <input
                 className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
-                style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                 placeholder="Buscar (nombre / depto / provincia / distrito)"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
@@ -360,7 +360,7 @@ export default function Warehouses() {
               <select
                 className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9
                  text-sm outline-none focus:ring-2"
-                style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                 value={statusFilter}
                 onChange={(event) => {
                   setStatusFilter(event.target.value);

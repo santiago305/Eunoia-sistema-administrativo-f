@@ -1,15 +1,39 @@
 import { PROFILE_PRIMARY, cn } from "./profile.utils";
 import type { FieldProps } from "../types/components.types";
 
-export function Card({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl border border-black/10 bg-white shadow-sm">{children}</div>;
+type CardProps = {
+  children: React.ReactNode;
+};
+
+export function Card({ children }: CardProps) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-black/8 bg-white shadow-sm">
+      {children}
+    </div>
+  );
 }
 
-export function CardHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+type CardHeaderProps = {
+  title: string;
+  subtitle?: string;
+};
+
+export function CardHeader({ title, subtitle }: CardHeaderProps) {
   return (
-    <div className="p-5 pb-4">
-      <p className="text-sm font-semibold">{title}</p>
-      {subtitle && <p className="text-xs text-black/60">{subtitle}</p>}
+    <div className="px-5 py-5">
+      <div className="flex items-start gap-3"> 
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold tracking-tight text-black">
+            {title}
+          </h3>
+
+          {subtitle && (
+            <p className="mt-1 max-w-sm text-sm leading-5 text-black/60">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

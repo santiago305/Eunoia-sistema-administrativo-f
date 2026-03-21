@@ -43,7 +43,7 @@ export function CompanyLogoBlock({
 
   return (
     <div className="flex items-center gap-4">
-      <div className="relative h-25 w-20 mb-10 overflow-hidden rounded-2xl border border-black/10 bg-black/5">
+      <div className="relative h-25 w-20 mb-10 overflow-hidden rounded-lg border border-black/10 bg-black/5">
         {hasLogo ? (
           <img
             src={logoUrl}

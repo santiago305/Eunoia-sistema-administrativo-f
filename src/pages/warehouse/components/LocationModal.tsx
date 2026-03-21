@@ -11,7 +11,7 @@ import { IconButton } from "@/components/IconBoton";
 
 type WarehouseRef = { warehouseId: string; name: string } | null;
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 
 export type WarehouseLocationsModalProps = {
@@ -205,7 +205,7 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                             </div>
                             <select
                                 className="h-9 rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
-                                style={{ "--tw-ring-color": `${primaryColor}33` } as React.CSSProperties}
+                                style={{ "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as React.CSSProperties}
                                 value={statusFilter}
                                 onChange={(e) => {
                                     setStatusFilter(e.target.value);
@@ -230,7 +230,7 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                                 type="button"
                                 onClick={openNew}
                                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm text-white focus:outline-none focus:ring-2"
-                                style={{ backgroundColor: primaryColor, borderColor: `${primaryColor}33` }}
+                                style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
                                 onMouseEnter={(e) => {
                                     (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
                                 }}
@@ -354,7 +354,7 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                         </button>
                         <button
                             className="rounded-2xl border px-4 py-2 text-sm text-white"
-                            style={{ backgroundColor: primaryColor, borderColor: `${primaryColor}33` }}
+                            style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
                             onClick={() => void saveCreate()}
                             disabled={!form.warehouseId || !form.code.trim()}
                         >
@@ -373,7 +373,7 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                         </button>
                         <button
                             className="rounded-2xl border px-4 py-2 text-sm text-white"
-                            style={{ backgroundColor: primaryColor, borderColor: `${primaryColor}33` }}
+                            style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
                             onClick={() => void saveEdit()}
                         >
                             Guardar cambios
@@ -393,7 +393,7 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                         </button>
                         <button
                             className="rounded-2xl border px-4 py-2 text-sm text-white"
-                            style={{ backgroundColor: primaryColor, borderColor: `${primaryColor}33` }}
+                            style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
                             onClick={() => void confirmToggleActive()}
                         >
                             Confirmar

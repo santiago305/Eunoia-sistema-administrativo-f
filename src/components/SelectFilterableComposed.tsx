@@ -27,6 +27,7 @@ type RootProps = {
     className?: string;
     textSize?: string;
     usePortal?: boolean;
+    disabled?: boolean;
 };
 
 type ContextValue = {
@@ -42,6 +43,7 @@ type ContextValue = {
     className: string;
     textSize: string;
     usePortal: boolean;
+    disabled: boolean;
     selectedLabel: string | null;
     wrapperRef: React.RefObject<HTMLDivElement | null>;
     buttonRef: React.RefObject<HTMLButtonElement | null>;
@@ -97,6 +99,7 @@ export function FilterableSelectRoot({
     className = "h-10",
     textSize = "text-xs",
     usePortal = true,
+    disabled = false,
 }: RootProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
@@ -163,6 +166,7 @@ export function FilterableSelectRoot({
         className,
         textSize,
         usePortal,
+        disabled,
         selectedLabel,
         wrapperRef,
         buttonRef,
@@ -184,15 +188,22 @@ type TriggerProps = {
 };
 
 export function FilterableSelectTrigger({ className }: TriggerProps) {
-    const { open, setOpen, selectedLabel, placeholder, textSize, className: rootClass, buttonRef } =
+    const { open, setOpen, selectedLabel, placeholder, textSize, className: rootClass, buttonRef, disabled } =
         useSelectContext();
     const finalClass = className ?? rootClass;
     return (
         <button
             ref={buttonRef}
             type="button"
-            className={`${finalClass} w-full rounded-lg border border-black/10 bg-white px-3 ${textSize} text-left`}
-            onClick={() => setOpen(!open)}
+            className={[
+                `${finalClass} w-full rounded-lg border border-black/10 bg-white px-3 ${textSize} text-left`,
+                disabled ? "cursor-not-allowed bg-black/5 text-black/45" : "",
+            ].join(" ")}
+            onClick={() => {
+                if (disabled) return;
+                setOpen(!open);
+            }}
+            disabled={disabled}
         >
             {selectedLabel ? selectedLabel : <span className="text-black/50">{placeholder}</span>}
         </button>
@@ -255,7 +266,7 @@ type SearchProps = {
 };
 
 export function FilterableSelectSearch({ className }: SearchProps) {
-    const { query, setQuery, searchPlaceholder, textSize } = useSelectContext();
+    const { query, setQuery, searchPlaceholder, textSize, disabled } = useSelectContext();
     return (
         <div className="p-2 border-b border-black/5">
             <input
@@ -264,6 +275,7 @@ export function FilterableSelectSearch({ className }: SearchProps) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 autoFocus
+                disabled={disabled}
             />
         </div>
     );
@@ -313,19 +325,21 @@ type OptionProps = {
 };
 
 export function FilterableSelectOption({ value, label, children, className }: OptionProps) {
-    const { onChange, setOpen, setQuery, textSize } = useSelectContext();
+    const { onChange, setOpen, setQuery, textSize, disabled } = useSelectContext();
     const finalLabel = label ?? (typeof children === "string" ? children : String(value));
     return (
         <div
             role="button"
-            tabIndex={0}
-            className={`w-full px-3 py-2 text-left ${textSize} hover:bg-black/[0.03] ${className ?? ""}`}
+            tabIndex={disabled ? -1 : 0}
+            className={`w-full px-3 py-2 text-left ${textSize} ${disabled ? "cursor-not-allowed text-black/45" : "hover:bg-black/[0.03]"} ${className ?? ""}`}
             onClick={() => {
+                if (disabled) return;
                 onChange(value);
                 setOpen(false);
                 setQuery("");
             }}
             onKeyDown={(e) => {
+                if (disabled) return;
                 if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     onChange(value);

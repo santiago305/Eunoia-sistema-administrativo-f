@@ -18,7 +18,7 @@ export function PaymentMethodFormFields({
   primaryColor,
   disabled,
 }: PaymentMethodFormFieldsProps) {
-  const ringStyle = { "--tw-ring-color": `${primaryColor}33` } as CSSProperties;
+  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties;
 
   return (
     <div className="space-y-3">

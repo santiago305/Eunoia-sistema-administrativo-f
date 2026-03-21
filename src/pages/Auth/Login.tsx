@@ -8,7 +8,7 @@ export default function Page() {
       {/* Fondo sutil, sin exagerar */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute -top-40 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#7fe3d6]/15 blur-3xl sm:h-96 sm:w-96" />
-        <div className="absolute -bottom-56 right-[-120px] h-[420px] w-[420px] rounded-full bg-[#21b8a6]/10 blur-3xl sm:h-[520px] sm:w-[520px]" />
+        <div className="absolute -bottom-56 right-[-120px] h-[420px] w-[420px] rounded-full bg-primary/10 blur-3xl sm:h-[520px] sm:w-[520px]" />
       </div>
 
       {/* Contenido centrado */}

@@ -13,7 +13,7 @@ const tagUser = ({totals}: TagUserProps ) => {
             >
 
               <div className="justify-center hidden md:flex">
-                  <div className="w-[250px] h-[100px] bg-[#f1fff5] border-e-[#21b8a6] border-e-6 rounded-2xl">
+                  <div className="w-[250px] h-[100px] bg-[#f1fff5] border-e-primary border-e-6 rounded-2xl">
                       <div className="pb-4">
                           <p className="pl-4 pt-3 text-md text-gray-600 font-semibold font-sans text-start">Total desabilitados</p>
                           <span className="pl-4  text-3xl text-gray-700 font-semibold font-sans text-start flex">
@@ -25,7 +25,7 @@ const tagUser = ({totals}: TagUserProps ) => {
               </div>
 
               <div className="justify-center hidden md:flex">
-                  <div className="w-[250px] h-[100px] bg-[#f1fff5] rounded-2xl border-e-[#21b8a6] border-e-6">
+                  <div className="w-[250px] h-[100px] bg-[#f1fff5] rounded-2xl border-e-primary border-e-6">
                       <div className="pb-4">
                           <p className="pl-4 pt-3 text-md text-gray-600 font-semibold font-sans text-start">Total activos</p>
                           <span className="pl-4  text-3xl text-gray-700 font-semibold font-sans text-start flex">
@@ -37,7 +37,7 @@ const tagUser = ({totals}: TagUserProps ) => {
               </div>
 
               <div className="justify-center hidden md:flex">
-                  <div className="w-[250px] h-[100px] bg-[#f1fff5] rounded-2xl border-e-[#21b8a6] border-e-6">
+                  <div className="w-[250px] h-[100px] bg-[#f1fff5] rounded-2xl border-e-primary border-e-6">
                       <div className="pb-4">
                           <p className="pl-4 pt-3 text-md text-gray-600 font-semibold font-sans text-start">Total usuarios</p>
                           <span className="pl-4  text-3xl text-gray-700 font-semibold font-sans text-start flex">
@@ -48,7 +48,7 @@ const tagUser = ({totals}: TagUserProps ) => {
                   </div>
               </div>
               <div className="md:hidden justify-center flex">
-                  <div className="w-[250px] h-[80px] bg-[#f1fff5] border-e-[#21b8a6] border-e-6 rounded-2xl">
+                  <div className="w-[250px] h-[80px] bg-[#f1fff5] border-e-primary border-e-6 rounded-2xl">
                       <div className="pb-4">
                           <span className="pl-4  text-2xl text-gray-700 font-semibold font-sans text-start flex">
                               {totals.inactive}
@@ -58,7 +58,7 @@ const tagUser = ({totals}: TagUserProps ) => {
                   </div>
               </div>
               <div className="justify-center flex md:hidden">
-                  <div className="w-[250px] h-[80px] bg-[#f1fff5] rounded-2xl border-e-[#21b8a6] border-e-6">
+                  <div className="w-[250px] h-[80px] bg-[#f1fff5] rounded-2xl border-e-primary border-e-6">
                       <div className="pb-4">
                           <span className="pl-4  text-2xl text-gray-700 font-semibold font-sans text-start flex">
                               {totals.active}
@@ -69,7 +69,7 @@ const tagUser = ({totals}: TagUserProps ) => {
               </div>
 
               <div className="flex justify-center md:hidden">
-                  <div className="w-[250px] h-[80px] bg-[#f1fff5] rounded-2xl border-e-[#21b8a6] border-e-6">
+                  <div className="w-[250px] h-[80px] bg-[#f1fff5] rounded-2xl border-e-primary border-e-6">
                       <div className="pb-4">
                           <span className="pl-4  text-2xl text-gray-700 font-semibold font-sans text-start flex">
                               {totals.total}

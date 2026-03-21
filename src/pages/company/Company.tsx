@@ -8,13 +8,14 @@ import { createCompany, getCompany, updateCompany, uploadCompanyCert, uploadComp
 import { env } from "@/env";
 import { createCompanySchema } from "@/schemas/companySchemas";
 import type { Company } from "@/pages/company/types/company";
-import { Card, CardHeader, PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
+import { Card, CardHeader } from "@/pages/profile/components/ProfilePrimitives";
 import { CompanyLogoBlock } from "./components/CompanyLogoBlock";
 import { CompanyFormSection } from "./components/CompanyFormSection";
 import { PaymentMethodListModal } from "./components/PaymentMethodListModal";
 import type { CompanyFormErrors, CompanyFormValues } from "./types/companyFormTypes";
+import { SystemButton } from "@/components/SystemButton";
 
-const COMPANY_PRIMARY = "#21b8a6";
+const COMPANY_PRIMARY = "hsl(var(--primary))";
 
 function resolveCompanyLogoUrl(rawLogoUrl?: string | null) {
     const raw = rawLogoUrl?.trim();
@@ -257,51 +258,67 @@ export default function CompanyPage() {
         }
     };
     return (
-      <div className="min-h-screen w-full bg-white text-black">
+      <div className="min-h-screen w-full">
         <PageTitle title="Empresa" />
 
         <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 lg:max-w-[1280px] lg:px-8 2xl:max-w-[1600px] 2xl:px-10">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="flex flex-col gap-2">
-            <h1 className="text-xl font-semibold">Información de la empresa</h1>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="flex flex-col gap-1"
+          >
+            <div className="flex items-center gap-3">
+              {/* Línea decorativa */}
+              <span className="h-6 w-1 rounded-full bg-primary" />
+
+              <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+                Información de la empresa
+              </h1>
+            </div>
+
+            <p className="text-sm text-gray-500 ml-4">
+              Completa los datos principales de tu empresa
+            </p>
           </motion.div>
 
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-            {hasCompany && (
-                <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="lg:col-span-4">
-                  <Card>
-                    <CardHeader title="Logo" subtitle="Se mostrara en documentos y pantallas." />
-                    <div className="p-5 pt-0">
-                        <CompanyLogoBlock
-                            loading={loading}
-                            name={displayName}
-                            logoUrl={logoUrl}
-                            certUrl={certUrl || undefined}
-                            certLabel={certLabel || undefined}
-                            onPickLogo={onPickLogo}
-                            onPickCert={onPickCert}
-                            disabled={savingLogo || !hasCompany}
-                            certDisabled={savingCert || !hasCompany}
-                            COMPANY_PRIMARY={COMPANY_PRIMARY}
-                            certLabelMaxChars={20}
-                        />
-                    </div>
-                  </Card>
-                <div className="mt-2">
-                    <PrimaryButton type="submit" disabled={loading}
-                    className="w-full"
+            
+            <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="lg:col-span-4">
+              <Card>
+                <CardHeader title="Logo" subtitle="Se mostrara en documentos y pantallas." />
+                <div className="p-5 pt-0">
+                    <CompanyLogoBlock
+                        loading={loading}
+                        name={displayName}
+                        logoUrl={logoUrl}
+                        certUrl={certUrl || undefined}
+                        certLabel={certLabel || undefined}
+                        onPickLogo={onPickLogo}
+                        onPickCert={onPickCert}
+                        disabled={savingLogo || !hasCompany}
+                        certDisabled={savingCert || !hasCompany}
+                        COMPANY_PRIMARY={COMPANY_PRIMARY}
+                        certLabelMaxChars={20}
+                    />
+                </div>
+              </Card>
+              {hasCompany && (
+                <div className="mt-2 shadow-sm rounded-lg">
+                    <SystemButton fullWidth variant="outline"disabled={loading} 
                     onClick={(e) => {
-                        e.preventDefault(),
-                        setOpenPaymentMethods(true)}}
+                        e.preventDefault();
+                        setOpenPaymentMethods(true);
+                    }}
                     >
                         Ver metodos de pago
-                    </PrimaryButton>
+                    </SystemButton>
                 </div>
-                </motion.section>
-            )}
+              )}    
+            </motion.section>
             <div className="space-y-6 lg:col-span-8">
               <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-                <div className="rounded-2xl border border-black/10 bg-white shadow-sm">
-                  <CardHeader title="" subtitle="" />
+                <div className="rounded-lg border border-black/10 bg-white shadow-sm">
                   <CompanyFormSection
                       formValues={formValues}
                       formErrors={formErrors}
