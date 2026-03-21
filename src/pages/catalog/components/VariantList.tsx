@@ -22,7 +22,8 @@ export function VariantList({
                 <p className="text-sm text-black/70">{variantsLoading ? "Cargando variantes..." : `Total: ${variants.length}`}</p>
                 {onCreateVariant && (
                     <button
-                        className="rounded-2xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
+                        className="rounded-2xl border px-3 py-2 text-xs text-white 
+                        focus:outline-none focus:ring-2 mb-1"
                         style={{ backgroundColor: primary, borderColor: `${primary}33`, "--tw-ring-color": `${primary}33` } as CSSProperties}
                         onMouseEnter={(e) => {
                             (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
