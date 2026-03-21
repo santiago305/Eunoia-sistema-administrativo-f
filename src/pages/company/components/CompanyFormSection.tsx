@@ -4,9 +4,6 @@ import {
   UbigeoSelectSection,
   type UbigeoSelection,
 } from "@/components/UbigeoSelectSection";
-
-import { PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
-
 import type {
   CompanyFormErrors,
   CompanyFormValues,
@@ -15,9 +12,10 @@ import { FloatingInput } from "@/components/FloatingInput";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { Building2, Key, MapPin, Phone } from "lucide-react";
 import { FloatingRadioGroup } from "@/components/FloatingRadioGroup";
+import { SystemButton } from "@/components/SystemButton";
 
 type CompanyFormSectionProps = {
-  formValues: CompanyFormValues;
+  formValues: CompanyFormValues;  
   formErrors: CompanyFormErrors;
   ubigeoSelection: UbigeoSelection;
   loading: boolean;
@@ -192,9 +190,9 @@ export function CompanyFormSection({
             : "Actualiza lo necesario y guarda los cambios."}
         </p>
 
-        <PrimaryButton type="submit" disabled={disabled}>
+        <SystemButton type="submit" disabled={disabled}>
           {saving ? "Guardando..." : "Guardar cambios"}
-        </PrimaryButton>
+        </SystemButton>
       </div>
     </form>
   );
