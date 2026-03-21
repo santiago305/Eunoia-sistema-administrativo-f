@@ -96,8 +96,8 @@ export function EquivalenceModal({
         const fromName = fromLabel?.name ?? "UNIDADES";
         const toName = toLabel?.name ?? "UNIDADES";
 
-        setPendingEquivalence(fromName);
-        setPendingUnitBase(toName);
+        setPendingEquivalence(toName);
+        setPendingUnitBase(fromName);
         setPendingFactor(best.factor ?? 1);
       } else {
         setPendingEquivalence("UNIDADES");
@@ -287,8 +287,8 @@ export function EquivalenceModal({
                 const fromName = fromLabel?.name ?? "UNIDADES";
                 const toName = toLabel?.name ?? "UNIDADES";
                 const isActive =
-                  pendingEquivalence === fromName &&
-                  pendingUnitBase === toName &&
+                  pendingEquivalence === toName &&
+                  pendingUnitBase === fromName &&
                   pendingFactor === (eq.factor ?? 1);
 
                 return (
@@ -296,16 +296,16 @@ export function EquivalenceModal({
                     key={eq.id}
                     className={`border-b border-black/5 hover:bg-gray-300 hover:text-white cursor-pointer ${isActive ? "bg-gray-300 text-white" : ""}`}
                     onClick={() => {
-                      setPendingEquivalence(fromName || "UNIDADES");
+                      setPendingEquivalence(toName || "UNIDADES");
                       setPendingFactor(eq.factor ?? 1);
-                      setPendingUnitBase(toName || "UNIDADES");
+                      setPendingUnitBase(fromName || "UNIDADES");
                     }}
                   >
                     <td className="py-2 px-5 text-left">
-                      {fromLabel ? `${fromLabel.name} x ${eq.factor}` : eq.fromUnitId}
+                      {toLabel ? `${toLabel.name} (${eq.factor})` : eq.toUnitId}
                     </td>
                     <td className="py-2 px-5 text-left">
-                      Equivale a {eq.factor} - {toLabel?.name ?? eq.toUnitId}
+                      Equivale a {eq.factor} - {fromLabel?.name ?? eq.fromUnitId}
                     </td>
                     <td>
                       <span className="text-xs text-black/40"></span>
