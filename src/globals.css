@@ -9,6 +9,10 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
   --color-muted: hsl(var(--muted));
@@ -52,6 +56,12 @@
     /* Primary token = HSL 174 69% 42% */
     --primary: 174 69% 42%;
     --primary-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
     
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 0%;
@@ -95,6 +105,12 @@
 
     --primary: 174 69% 50%;
     --primary-foreground: 0 0% 5%;
+
+    --success: 142 69% 52%;
+    --success-foreground: 0 0% 5%;
+
+    --warning: 38 92% 58%;
+    --warning-foreground: 0 0% 5%;
     
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;

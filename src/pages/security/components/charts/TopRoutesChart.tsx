@@ -1,74 +1,52 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-
+import { motion } from "framer-motion";
 import type { SecurityTopRouteItem } from "../../types/security.api";
-import { ChartTooltip } from "./ChartTooltip";
 
-const TOP_ROUTES_CHART_COLORS = [
-  "#16a34a",
-  "#15803d",
-  "#22c55e",
-  "#4ade80",
-  "#65a30d",
-  "#84cc16",
-];
-
-export function TopRoutesChart({
-  data,
-}: {
+type TopRoutesChartProps = {
   data: SecurityTopRouteItem[];
-}) {
+};
+
+export function TopRoutesChart({ data }: TopRoutesChartProps) {
   const sortedData = [...data].sort((a, b) => b.count - a.count);
+  const maxCount = sortedData[0]?.count ?? 0;
+
+  if (sortedData.length === 0) {
+    return (
+      <div className="flex h-[180px] items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-4 text-center text-sm text-muted-foreground">
+        No hay rutas para mostrar en el rango seleccionado.
+      </div>
+    );
+  }
 
   return (
-    <div className="h-[290px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={sortedData}
-          layout="vertical"
-          margin={{ left: 40 }}
-          barCategoryGap="25%"
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+    <div className="space-y-2.5">
+      {sortedData.map((route, index) => {
+        const percentage = maxCount > 0 ? (route.count / maxCount) * 100 : 0;
 
-          <XAxis
-            type="number"
-            tick={{ fill: "#71717a", fontSize: 12 }}
-            axisLine={false}
-            tickLine={false}
-          />
+        return (
+          <div key={route.path} className="space-y-1">
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="max-w-[180px] truncate text-xs font-mono-tight text-foreground"
+                title={route.path}
+              >
+                {route.path}
+              </span>
+              <span className="shrink-0 text-xs font-mono-tight text-muted-foreground">
+                {route.count}
+              </span>
+            </div>
 
-          <YAxis
-            type="category"
-            dataKey="path"
-            tick={{ fill: "#71717a", fontSize: 12 }}
-            axisLine={false}
-            tickLine={false}
-            width={130}
-          />
-
-          <Tooltip content={<ChartTooltip />} />
-
-          <Bar dataKey="count" radius={[0, 10, 10, 0]} name="Eventos" barSize={26}>
-            {sortedData.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={
-                  TOP_ROUTES_CHART_COLORS[index % TOP_ROUTES_CHART_COLORS.length]
-                }
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <motion.div
+                className="h-full rounded-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${percentage}%` }}
+                transition={{ duration: 0.8, delay: index * 0.08 }}
               />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ban, Clock3, ShieldAlert, TrendingUp } from "lucide-react";
+import { Activity, AlertTriangle, Ban, Clock } from "lucide-react";
 
 import {
   getSecurityActiveBans,
@@ -105,35 +105,10 @@ export default function SecurityPage() {
 
     const interval = window.setInterval(() => {
       void fetchAll();
-    }, 8000);
+    }, 20000);
 
     return () => window.clearInterval(interval);
   }, [fetchAll, pollingPaused]);
-
-  const stats = useMemo(() => {
-    const temporary = activeBans.filter((item) => {
-      if (item.manualPermanentBan) return false;
-      if (item.banLevel === "TEMPORARY") return true;
-      if (typeof item.banLevel === "number") return item.banLevel < 4;
-      return false;
-    }).length;
-
-    const permanent = activeBans.filter((item) => {
-      if (item.manualPermanentBan) return true;
-      if (item.banLevel === "PERMANENT") return true;
-      if (typeof item.banLevel === "number") return item.banLevel >= 4;
-      return false;
-    }).length;
-
-    const totalViolations = topIps.reduce((acc, item) => acc + item.violations, 0);
-
-    return {
-      temporary,
-      permanent,
-      totalViolations,
-      totalBans: activeBans.length,
-    };
-  }, [activeBans, topIps]);
 
   const handleBlacklist = async (ip: string, notes?: string) => {
     try {
@@ -253,35 +228,11 @@ export default function SecurityPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
-        <StatCard
-          title="Bans activos"
-          value={stats.totalBans}
-          hint="IPs bloqueadas actualmente"
-          icon={<ShieldAlert className="h-5 w-5" />}
-          tone="danger"
-        />
-        <StatCard
-          title="Temporales"
-          value={stats.temporary}
-          hint="Baneos con vencimiento"
-          icon={<Clock3 className="h-5 w-5" />}
-          tone="warning"
-        />
-        <StatCard
-          title="Permanentes"
-          value={stats.permanent}
-          hint="Bloqueos manuales o permanentes"
-          icon={<Ban className="h-5 w-5" />}
-          tone="default"
-        />
-        <StatCard
-          title="Violaciones top"
-          value={stats.totalViolations}
-          hint="Suma visible del ranking actual"
-          icon={<TrendingUp className="h-5 w-5" />}
-          tone="success"
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <StatCard label="Bans activos" value={1} subtitle="IPs bloqueadas actualmente" icon={Ban} variant="primary" />
+        <StatCard label="Temporales" value={0} subtitle="Baneos con vencimiento" icon={Clock} />
+        <StatCard label="Permanentes" value={1} subtitle="Bloqueos manuales o permanentes" icon={AlertTriangle} variant="warning" />
+        <StatCard label="Violaciones top" value="2,880" subtitle="Suma visible del ranking actual" icon={Activity} variant="destructive" />
       </div>
 
       <AnalyticsSection
@@ -307,7 +258,7 @@ export default function SecurityPage() {
         ipRiskResult={ipRiskResult}
       />
 
-      <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.45fr]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
         <TopIpsSection
           loading={loading}
           topIps={topIps}
