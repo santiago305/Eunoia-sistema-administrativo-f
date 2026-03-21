@@ -1,6 +1,4 @@
-import { FloatingInput } from "@/components/FloatingInput";
 import { PROFILE_PRIMARY, cn } from "./profile.utils";
-import type { FieldProps } from "../types/components.types";
 
 export function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -10,25 +8,6 @@ export function InfoRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-export function Field({ label, error, className, ...props }: FieldProps) {
-  const { name, value, defaultValue, onChange, ...inputProps } = props;
-
-  return (
-    <FloatingInput
-      {...inputProps}
-      name={name ?? label}
-      label={label}
-      value={typeof value === "string" || typeof value === "number" ? value : undefined}
-      defaultValue={defaultValue}
-      onChange={onChange}
-      error={error}
-      className={cn("", className)}
-    />
-  );
-}
-
-export const PasswordField = Field;
 
 export function PrimaryButton({
   children,

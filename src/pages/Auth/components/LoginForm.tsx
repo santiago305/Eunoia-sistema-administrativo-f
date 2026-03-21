@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { FloatingInput } from "@/components/FloatingInput";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginCredentials } from "@/pages/Auth/types/auth";
 import { LoginSchema } from "@/schemas/authSchemas";
 import { useAuth } from "@/hooks/useAuth";
-import FormField from "@/components/ui/formField";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -129,20 +129,17 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
         <p className="mt-1 text-xs text-black/60 sm:text-sm">Ingresa tus credenciales para continuar.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4 sm:mt-6">
-          <FormField<LoginCredentials>
-            name="email"
+          <FloatingInput
             label="Correo electronico"
-            placeholder="correo@ejemplo.com"
-            register={register}
+            type="email"
+            {...register("email")}
             error={errors.email?.message}
           />
 
-          <FormField<LoginCredentials>
-            name="password"
+          <FloatingInput
             label="Contrasena"
-            placeholder="********"
             type="password"
-            register={register}
+            {...register("password")}
             error={errors.password?.message}
           />
 

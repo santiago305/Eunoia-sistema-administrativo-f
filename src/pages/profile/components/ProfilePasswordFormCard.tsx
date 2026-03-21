@@ -1,5 +1,6 @@
 import { Card, CardHeader } from "@/components/AppCard";
-import { PasswordField, PrimaryButton } from "./ProfilePrimitives";
+import { FloatingInput } from "@/components/FloatingInput";
+import { PrimaryButton } from "./ProfilePrimitives";
 import type { ProfilePasswordFormCardProps } from "../types/components.types";
 export function ProfilePasswordFormCard({ form, onSubmit, saving, loading }: ProfilePasswordFormCardProps) {
   return (
@@ -7,24 +8,21 @@ export function ProfilePasswordFormCard({ form, onSubmit, saving, loading }: Pro
       <CardHeader title="Seguridad" subtitle="Cambia tu contrasena" />
       <form onSubmit={onSubmit} className="p-5 pt-0">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <PasswordField
+          <FloatingInput
             label="Contrasena actual"
             type="password"
-            placeholder="********"
             {...form.register("currentPassword")}
             error={form.formState.errors.currentPassword?.message}
           />
-          <PasswordField
+          <FloatingInput
             label="Nueva contrasena"
             type="password"
-            placeholder="Minimo 8 caracteres"
             {...form.register("newPassword")}
             error={form.formState.errors.newPassword?.message}
           />
-          <PasswordField
+          <FloatingInput
             label="Confirmar"
             type="password"
-            placeholder="Repite la nueva"
             {...form.register("confirmNewPassword")}
             error={form.formState.errors.confirmNewPassword?.message}
           />

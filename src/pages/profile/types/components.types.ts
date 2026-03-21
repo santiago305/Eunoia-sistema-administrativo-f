@@ -36,9 +36,4 @@ export type ProfileSidebarCardProps = {
   onRemoveAvatar: () => void;
 };
 
-export type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-  error?: string;
-};
-
 

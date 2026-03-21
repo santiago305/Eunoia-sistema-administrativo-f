@@ -5,8 +5,8 @@ import type { CreateUserRequest, UserRoleOptionApi } from "@/pages/users/types/u
 import { createUser } from "@/services/userService";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { Eye, EyeOff, X, UserPlus } from "lucide-react";
-import { FormInput } from "@/components/formInput";
+import { X, UserPlus } from "lucide-react";
+import { FloatingInput } from "@/components/FloatingInput";
 import { RolePicker } from "./roleButton";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema } from "@/schemas/userSchemas";
@@ -15,7 +15,6 @@ import type { UserFormProps } from "../types/components.types";
 export const UserForm = ({ closeModal }: UserFormProps) => {
     const { showFlash, clearFlash } = useFlashMessage();
     const [roles, setRoles] = useState<UserRoleOptionApi[]>([]);
-    const [eyeBool, setEyeBool] = useState(true);
 
     const {
         register,
@@ -122,73 +121,44 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             <form onSubmit={handleSubmit(submit)} className="px-5 py-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
-                            Nombre
-                        </label>
-                        <FormInput
-                            placeholder="Ej: Santiago Yacila"
+                        <FloatingInput
+                            label="Nombre"
                             error={errors.name?.message}
                             {...register("name")}
                         />
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
-                            Correo electrónico
-                        </label>
-                        <FormInput
+                        <FloatingInput
+                            label="Correo electrónico"
                             type="email"
-                            placeholder="usuario@mail.com"
                             error={errors.email?.message}
                             {...register("email")}
                         />
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
-                            Teléfono
-                        </label>
-                        <FormInput
+                        <FloatingInput
+                            label="Teléfono"
                             type="text"
-                            placeholder="+51 9XXXXXXXX"
                             error={errors.telefono?.message}
                             {...register("telefono")}
                         />
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
-                            Contraseña
-                        </label>
-
-                        <div className="flex gap-2">
-                            <div className="w-full">
-                                <FormInput
-                                    type={eyeBool ? "password" : "text"}
-                                    placeholder="Ingrese contraseña"
-                                    error={errors.password?.message}
-                                    {...register("password", {
-                                        required: "La contraseña es obligatoria",
-                                        minLength: { value: 8, message: "Mínimo 8 caracteres" },
-                                    })}
-                                />
-                            </div>
-
-                            <button
-                                type="button"
-                                className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-primary/20"
-                                onClick={() => setEyeBool((prev) => !prev)}
-                                aria-label={eyeBool ? "Mostrar contraseña" : "Ocultar contraseña"}
-                            >
-                                {eyeBool ? <Eye size={15} /> : <EyeOff size={15} />}
-                            </button>
-                        </div>
+                        <FloatingInput
+                            label="Contraseña"
+                            type="password"
+                            error={errors.password?.message}
+                            {...register("password", {
+                                required: "La contraseña es obligatoria",
+                                minLength: { value: 8, message: "Mínimo 8 caracteres" },
+                            })}
+                        />
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-[12px] font-medium text-zinc-700">
-                            Rol
-                        </label>
 
                         <input
                             type="hidden"
