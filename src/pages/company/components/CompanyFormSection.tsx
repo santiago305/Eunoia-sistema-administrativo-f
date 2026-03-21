@@ -68,21 +68,14 @@ export function CompanyFormSection({
           onChange={onUbigeoChange}
           disabled={disabled}
           showUbigeoInput
-          className="h-9"
-          textSize="text-xs mt-1"
+          className=""
+          errors={{
+            department: formErrors.department,
+            province: formErrors.province,
+            district: formErrors.district,
+            ubigeo: formErrors.ubigeo,
+          }}
         />
-
-        {(formErrors.department ||
-          formErrors.province ||
-          formErrors.district ||
-          formErrors.ubigeo) && (
-          <p className="text-xs font-semibold text-red-500">
-            {formErrors.department ||
-              formErrors.province ||
-              formErrors.district ||
-              formErrors.ubigeo}
-          </p>
-        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

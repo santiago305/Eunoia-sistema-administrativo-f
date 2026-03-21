@@ -39,7 +39,7 @@ export function FloatingInput({
             "peer h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition-all",
             error
               ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-              : "border-black/20 focus:border-primary focus:ring-2 focus:ring-blue-100",
+              : "border-black/20 focus:border-primary focus:ring-2 focus:ring-primary/30",
             disabled ? "cursor-not-allowed bg-black/5 text-black/50" : "",
             className,
           ].join(" ")}
