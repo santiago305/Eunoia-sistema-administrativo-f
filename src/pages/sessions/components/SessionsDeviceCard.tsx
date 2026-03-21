@@ -1,3 +1,4 @@
+import { SystemButton} from "@/components/SystemButton";
 import type { SessionsDeviceCardProps } from "../types/components.types";
 
 const SessionsDeviceCard = ({ session, revokingId, onRevoke, onOpenDetails }: SessionsDeviceCardProps) => {
@@ -26,27 +27,27 @@ const SessionsDeviceCard = ({ session, revokingId, onRevoke, onOpenDetails }: Se
         </div>
 
         <div className="flex items-center gap-2 md:justify-end">
-          <button
-            type="button"
+          <SystemButton
             disabled={session.isCurrent || revokingId === session.id}
             onClick={() => onRevoke(session.id)}
+            variant="outline"
             className={[
-              "rounded-xl px-4 py-2 text-sm font-medium border transition",
+              "text-sm font-medium border transition",
               session.isCurrent
                 ? "border-black/10 text-black/40 cursor-not-allowed bg-black/5"
                 : "border-black/15 text-black hover:bg-black/5",
             ].join(" ")}
           >
-            {session.isCurrent ? "Estas aqui" : "Eliminar 1 sesion"}
-          </button>
-          <button
-            type="button"
+            {session.isCurrent ? "Estas aqui" : "Cerrar"}
+          </SystemButton>
+          <SystemButton
             onClick={() => onOpenDetails(session)}
-            className="rounded-xl px-4 py-2 text-sm font-medium text-black border border-black/10 hover:bg-black/5 transition"
+            variant="outline"
+            className="text-sm font-medium hover:bg-black/5 transition"
             title="Ver detalles"
           >
             Detalles
-          </button>
+          </SystemButton>
         </div>
       </div>
 
