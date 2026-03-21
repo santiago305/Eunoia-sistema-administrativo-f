@@ -325,7 +325,10 @@ export default function PurchaseCreateLocal() {
       setForm((prev) => ({
         ...prev,
         ...data,
-        items: (data.items ?? []).map(({ stockItem, ...rest }) => rest),
+        items: (data.items ?? []).map(({ stockItem, ...rest }) => ({
+          ...rest,
+          factor: Number(rest.factor ?? 1),
+        })),
         payments: data.payments ?? [],
         quotas: data.quotas ?? [],
       }));

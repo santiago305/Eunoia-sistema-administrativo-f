@@ -1,4 +1,5 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { Boxes, Scale } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { errorResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -11,6 +12,10 @@ import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PurchaseOrder, PurchaseOrderItem } from "@/pages/purchases/types/purchase";
 import { recalcItem } from "@/utils/functionPurchases";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SystemButton } from "@/components/SystemButton";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 
 type EquivalenceModalProps = {
   open: boolean;
@@ -223,137 +228,167 @@ export function EquivalenceModal({
 
   if (!open) return null;
 
+  const afectTypeOptions = [
+    { value: AfectType.TAXED, label: "GRAVADA - OPERACION ONEROSA" },
+    { value: AfectType.EXEMPT, label: "EXONERADA - OPERACION ONEROSA" },
+  ];
+
   return (
-    <Modal onClose={handleClose} title="Agregar Producto" className="w-md">
-      <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-1">
-        <label className="text-sm">
-          Tipo de afectación
-          <select
-            className="mt-2 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm"
-            value={documentType === VoucherDocTypes.NOTA_VENTA ? AfectType.EXEMPT : pendingItemAfectType}
-            onChange={(e) => setPendingItemAfectType(e.target.value as AfectTypeType)}
-          >
-            <option value={AfectType.TAXED}>GRAVADA - OPERACION ONEROSA</option>
-            <option value={AfectType.EXEMPT}>EXONERADA - OPERACION ONEROSA</option>
-          </select>
-        </label>
+    <Modal onClose={handleClose} title="Agregar Producto" className="w-lg">
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-black/10 p-4 md:p-5">
+          <SectionHeaderForm icon={Boxes} title="Datos del producto" />
 
-        <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="text-sm">
-            Cantidad
-            <input
-              type="number"
-              min={1}
-              className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-              value={pendingItemQuantity}
-              onChange={(e) => setPendingItemQuantity(Number(e.target.value || 1))}
+          <div className="mt-4 mb-3 grid grid-cols-1 gap-3 md:grid-cols-1">
+            <FloatingSelect
+              label="Tipo de afectación"
+              name="afectType"
+              value={
+                documentType === VoucherDocTypes.NOTA_VENTA
+                  ? AfectType.EXEMPT
+                  : pendingItemAfectType
+              }
+              onChange={(value) => setPendingItemAfectType(value as AfectTypeType)}
+              options={afectTypeOptions}
+              placeholder="Seleccionar tipo de afectación"
+              searchable={false}
+              disabled={documentType === VoucherDocTypes.NOTA_VENTA}
             />
-          </label>
 
-          <label className="text-sm">
-            Precio unit.
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-              value={pendingItemUnitPrice}
-              onChange={(e) => setPendingItemUnitPrice(Number(e.target.value || 0))}
-            />
-          </label>
-        </div>
-      </div>
+            <div className="mb-0 mt-1 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <FloatingInput
+                label="Cantidad"
+                name="quantity"
+                type="number"
+                min={1}
+                value={String(pendingItemQuantity)}
+                onChange={(e) => setPendingItemQuantity(Number(e.target.value || 1))}
+              />
 
-      <div className="rounded-lg border border-black/10 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
-          <span>Listado de equivalencias</span>
-          <span>{loading ? "Cargando..." : `${equivalences.length} registros`}</span>
+              <FloatingInput
+                label="Precio unit."
+                name="unitPrice"
+                type="number"
+                min={0}
+                step="0.01"
+                value={String(pendingItemUnitPrice)}
+                onChange={(e) => setPendingItemUnitPrice(Number(e.target.value || 0))}
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="max-h-56 overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-white z-10">
-              <tr className="border-b border-black/10 text-xs text-black/60">
-                <th className="py-2 px-5 text-left">Unidad de medida</th>
-                <th className="py-2 px-5 text-left">Equivalencia</th>
-                <th></th>
-              </tr>
-            </thead>
+        <div className="rounded-2xl border border-black/10 p-4 md:p-5">
+          <SectionHeaderForm icon={Scale} title="Equivalencias" />
 
-            <tbody>
-              {equivalences.map((eq) => {
-                const fromLabel = units.find((u) => u.id === eq.fromUnitId);
-                const toLabel = units.find((u) => u.id === eq.toUnitId);
-                const fromName = fromLabel?.name ?? "UNIDADES";
-                const toName = toLabel?.name ?? "UNIDADES";
-                const isActive =
-                  pendingEquivalence === toName &&
-                  pendingUnitBase === fromName &&
-                  pendingFactor === (eq.factor ?? 1);
+          <div className="mt-4 rounded-lg border border-black/10 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
+              <span>Listado de equivalencias</span>
+              <span>{loading ? "Cargando..." : `${equivalences.length} registros`}</span>
+            </div>
 
-                return (
-                  <tr
-                    key={eq.id}
-                    className={`border-b border-black/5 hover:bg-gray-300 hover:text-white cursor-pointer ${isActive ? "bg-gray-300 text-white" : ""}`}
-                    onClick={() => {
-                      setPendingEquivalence(toName || "UNIDADES");
-                      setPendingFactor(eq.factor ?? 1);
-                      setPendingUnitBase(fromName || "UNIDADES");
-                    }}
-                  >
-                    <td className="py-2 px-5 text-left">
-                      {toLabel ? `${toLabel.name} (${eq.factor})` : eq.toUnitId}
-                    </td>
-                    <td className="py-2 px-5 text-left">
-                      Equivale a {eq.factor} - {fromLabel?.name ?? eq.fromUnitId}
-                    </td>
-                    <td>
-                      <span className="text-xs text-black/40"></span>
-                    </td>
+            <div className="max-h-56 overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white z-10">
+                  <tr className="border-b border-black/10 text-xs text-black/60">
+                    <th className="py-2 px-5 text-left">Unidad de medida</th>
+                    <th className="py-2 px-5 text-left">Equivalencia</th>
+                    <th></th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
 
-          {!loading && equivalences.length === 0 && (
-            <div className="px-4 py-4 text-sm text-black/60">No hay equivalencias registradas.</div>
-          )}
+                <tbody>
+                  {equivalences.map((eq) => {
+                    const fromLabel = units.find((u) => u.id === eq.fromUnitId);
+                    const toLabel = units.find((u) => u.id === eq.toUnitId);
+                    const fromName = fromLabel?.name ?? "UNIDADES";
+                    const toName = toLabel?.name ?? "UNIDADES";
+                    const isActive =
+                      pendingEquivalence === toName &&
+                      pendingUnitBase === fromName &&
+                      pendingFactor === (eq.factor ?? 1);
+
+                    return (
+                      <tr
+                        key={eq.id}
+                        className={`cursor-pointer border-b border-black/5 transition ${
+                          isActive ? "bg-black/5" : "hover:bg-black/[0.03]"
+                        }`}
+                        onClick={() => {
+                          setPendingEquivalence(toName || "UNIDADES");
+                          setPendingFactor(eq.factor ?? 1);
+                          setPendingUnitBase(fromName || "UNIDADES");
+                        }}
+                      >
+                        <td className="py-2 px-5 text-left">
+                          {toLabel ? `${toLabel.name} (${eq.factor})` : eq.toUnitId}
+                        </td>
+                        <td className="py-2 px-5 text-left">
+                          Equivale a {eq.factor} - {fromLabel?.name ?? eq.fromUnitId}
+                        </td>
+                        <td className="px-5 py-2 text-right">
+                          {isActive ? (
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: primaryColor }}
+                            />
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {!loading && equivalences.length === 0 && (
+                <div className="px-4 py-4 text-sm text-black/60">
+                  No hay equivalencias registradas.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-4 flex justify-end gap-2">
-        <button className="rounded-lg border border-black/10 px-4 py-2 text-sm" onClick={handleClose}>
-          Cancelar
-        </button>
+        <div className="mt-4 flex justify-end gap-2">
+          <SystemButton variant="secondary" onClick={handleClose}>
+            Cancelar
+          </SystemButton>
 
-        <button
-          className="rounded-lg border px-4 py-2 text-sm text-white"
-          style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
-          onClick={() => {
-            clearFlash();
-            if (!itemId) return;
-            const hasSelection = Boolean(pendingEquivalence || pendingUnitBase);
-            const hasEquivalences = equivalences.length > 0;
-            if (hasEquivalences && !hasSelection) {
-              showFlash(errorResponse("Debe elegir una equivalencia"));
-              return;
-            }
-            addSelectedProduct(itemId, {
-              quantity: pendingItemQuantity,
-              unitPrice: pendingItemUnitPrice,
-              afectType:
-                documentType === VoucherDocTypes.NOTA_VENTA ? AfectType.EXEMPT : pendingItemAfectType,
-              equivalence: pendingEquivalence,
-              factor: pendingFactor,
-              unitBase: pendingUnitBase,
-            });
+          <SystemButton
+            style={{
+              backgroundColor: primaryColor,
+              borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+            }}
+            onClick={() => {
+              clearFlash();
+              if (!itemId) return;
 
-            handleClose();
-          }}
-        >
-          Agregar
-        </button>
+              const hasSelection = Boolean(pendingEquivalence || pendingUnitBase);
+              const hasEquivalences = equivalences.length > 0;
+
+              if (hasEquivalences && !hasSelection) {
+                showFlash(errorResponse("Debe elegir una equivalencia"));
+                return;
+              }
+
+              addSelectedProduct(itemId, {
+                quantity: pendingItemQuantity,
+                unitPrice: pendingItemUnitPrice,
+                afectType:
+                  documentType === VoucherDocTypes.NOTA_VENTA
+                    ? AfectType.EXEMPT
+                    : pendingItemAfectType,
+                equivalence: pendingEquivalence,
+                factor: Number(pendingFactor),
+                unitBase: pendingUnitBase,
+              });
+
+              handleClose();
+            }}
+          >
+            Agregar
+          </SystemButton>
+        </div>
       </div>
     </Modal>
   );

@@ -1,9 +1,12 @@
-import { FilterableSelect } from "@/components/SelectFilterable";
 import { createProductEquivalence, deleteProductEquivalence } from "@/services/equivalenceService";
 import { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import { ListUnitResponse } from "@/pages/catalog/types/unit";
 import { Power } from "lucide-react";
 import { useState } from "react";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { Plus } from "lucide-react";
+import { SystemButton } from "@/components/SystemButton";
 
 export function EquivalenceFormFields({
   productId,
@@ -57,49 +60,41 @@ export function EquivalenceFormFields({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_45px]">
-        <label className="text-sm">
-          <div className="mb-2">Unidad origen</div>
-          <input
-            className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60"
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_45px] mt-2">
+          <FloatingInput
+            label="Unidad origen"
             value={baseUnitLabel}
+            name="origin"
             disabled
           />
-        </label>
-        <label className="text-sm">
-          <div className="mb-2">Factor</div>
-          <input
+          <FloatingInput
+            label="Factor"
             type="number"
-            min="0"
-            step="1"
-            className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+            name="factor"
             value={factor}
+            min={1}
             onChange={(e) => setFactor(e.target.value)}
           />
-        </label>
-        <label className="text-sm">
-          <div className="mb-2">Unidad destino</div>
-          <FilterableSelect
+          <FloatingSelect
+            label="Unidad de destino"
+            name="destino"
             value={fromUnitId}
-            onChange={setFromUnitId}
+            onChange={(value) => setFromUnitId(value)}
             options={unitOptions}
-            placement="bottom"
             placeholder="Seleccionar unidad"
+            searchable
             searchPlaceholder="Buscar unidad..."
+            emptyMessage="Sin unidades de medida"
           />
-        </label>
-        <button
-          type="button"
-          className="rounded-xl border h-10 text-xl text-white mt-7"
-          style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
-          onClick={() => void handleCreate()}
-          disabled={!productId || !baseUnitId || !fromUnitId || !factor}
-        >
-          +
-        </button>
+          <SystemButton 
+            leftIcon={<Plus className="h-4 w-4" />}
+            className="h-10"
+            style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
+            onClick={() => void handleCreate()}
+            disabled={!productId || !baseUnitId || !fromUnitId || !factor}
+            >
+          </SystemButton>
       </div>
-
-      <div className="flex justify-end"></div>
 
       <div className="rounded-2xl border border-black/10 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
@@ -124,14 +119,16 @@ export function EquivalenceFormFields({
                     <td className="py-2 px-5 text-left">{fromLabel ? `${fromLabel.name} (${eq.factor})` : eq.toUnitId}</td>
                     <td className="py-2 px-5 text-left">Equivale a {eq.factor} - {toLabel?.name}</td>
                     <td>
-                      <button
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
+                      <SystemButton
+                        variant="danger"
+                        size="custom"
+                        className="h-8 w-9 rounded-lg"
                         onClick={() => {
                           void deleteEquivalence(eq.id);
                         }}
                       >
                         <Power className="h-4 w-4" />
-                      </button>
+                      </SystemButton>
                     </td>
                   </tr>
                 );

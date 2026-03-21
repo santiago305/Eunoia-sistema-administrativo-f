@@ -1,10 +1,12 @@
-import { FilterableSelect } from "@/components/SelectFilterable";
 import { createProductRecipe, deleteProductRecipe } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
 import { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
-import { Power } from "lucide-react";
+import { Power, Plus } from "lucide-react";
 import { useState } from "react";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SystemButton } from "@/components/SystemButton";
 
 export function RecipeFormFields({
     finishedVariantId,
@@ -61,39 +63,43 @@ export function RecipeFormFields({
 
     return (
         <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_150px_100px_45px]">
-                <label className="text-sm">
-                    <div className="mb-2">Materia prima y materiales</div>
-                    <FilterableSelect
-                        value={primaVariantId}
-                        onChange={setPrimaVariantId}
-                        options={primaVariantOptions}
-                        placement="bottom"
-                        placeholder="Seleccionar producto"
-                        searchPlaceholder="Buscar producto..."
-                    />
-                </label>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.5fr_45px] mt-2">
+                <FloatingSelect
+                    label="Materia prima"
+                    name="materia-prima"
+                    value={primaVariantId}
+                    onChange={(value) => setPrimaVariantId(value)}
+                    options={primaVariantOptions}
+                    searchable
+                    searchPlaceholder="Buscar producto..."
+                    emptyMessage="Sin productos"
+                />
 
-                <label className="text-sm">
-                    <div className="mb-2">Unidad base</div>
-                    <input className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60" value={baseUnitLabel} disabled />
-                </label>
-                <label className="text-sm">
-                    <div className="mb-2">Cantidad</div>
-                    <input type="number" min="0" step="1" className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-                </label>
-                <button
-                    type="button"
-                    className="rounded-xl border h-10 text-xl text-white mt-7"
+                <FloatingInput
+                    label="Unidad base"
+                    name="unit-base"
+                    value={baseUnitLabel}
+                    disabled
+                />
+
+                <FloatingInput
+                    label="Cantidad"
+                    type="number"
+                    name="cantidad"
+                    value={quantity}
+                    min="0"
+                    step="1"
+                    onChange={(e) => setQuantity(e.target.value)}
+                />
+
+                <SystemButton
+                    leftIcon={<Plus className="h-4 w-4" />}
+                    className="h-10"
                     style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                     onClick={() => void handleCreate()}
                     disabled={!finishedVariantId || !primaVariantId || !quantity}
-                >
-                    +
-                </button>
+                />
             </div>
-
-            <div className="flex justify-end"></div>
 
             <div className="rounded-2xl border border-black/10 overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
@@ -123,14 +129,16 @@ export function RecipeFormFields({
                                             {r.quantity} - {unitLabel}
                                         </td>
                                         <td>
-                                            <button
-                                                className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
+                                            <SystemButton
+                                                variant="danger"
+                                                size="custom"
+                                                className="h-8 w-9 rounded-lg"
                                                 onClick={() => {
                                                     void deleteRecipe(r.id);
                                                 }}
                                             >
                                                 <Power className="h-4 w-4" />
-                                            </button>
+                                            </SystemButton>
                                         </td>
                                     </tr>
                                 );
