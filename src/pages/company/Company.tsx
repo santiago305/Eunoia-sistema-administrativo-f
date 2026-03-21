@@ -301,7 +301,7 @@ export default function CompanyPage() {
             )}
             <div className="space-y-6 lg:col-span-8">
               <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-                <div className="rounded-2xl border border-black/10 bg-white shadow-sm">
+                <div className="rounded-lg border border-black/10 bg-white shadow-sm">
                   <CompanyFormSection
                       formValues={formValues}
                       formErrors={formErrors}
