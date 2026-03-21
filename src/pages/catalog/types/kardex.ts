@@ -184,3 +184,19 @@ export type KardexListResponse = {
   limit: number;
   balances?: KardexBalances;
 };
+
+export type KardexTotalsQuery = {
+  warehouseId?: string;
+  stockItemId?: string;
+  locationId?: string;
+  docId?: string;
+  from?: string;
+  to?: string;
+};
+
+export type KardexDailyTotal = {
+  day: string;
+  entrada: number;
+  salida: number;
+  balance: number;
+};

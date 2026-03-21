@@ -207,6 +207,7 @@ export const API_DOCUMENT_SERIES_GROUP = {
 
 export const API_KARDEX_GROUP = {
   list: "/inventory/ledger",
+  totals: "/inventory/ledger/totals/daily",
 };
 
 export const API_DOCUMENT_INVENTORY_GROUP = {
