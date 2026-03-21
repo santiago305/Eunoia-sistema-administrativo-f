@@ -1,10 +1,10 @@
 import { RoutesPaths } from "@/Router/config/routesPaths";
 
-export const BRAND = "#21b8a6";
+export const BRAND = "hsl(var(--primary))";
 
 export const CHART_COLORS = [
   "#f59e0b",
-  "#21b8a6",
+  "hsl(var(--primary))",
   "#0f172a",
   "#14b8a6",
   "#6366f1",

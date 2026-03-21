@@ -14,7 +14,7 @@ const SessionsQuickActions = ({ totalCount, revokingAll, onRevokeAll }: Sessions
           "mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-medium transition",
           totalCount === 0 || revokingAll ? "bg-black/5 text-black/40 cursor-not-allowed" : "text-white",
         ].join(" ")}
-        style={totalCount === 0 || revokingAll ? undefined : { backgroundColor: "#21b8a6" }}
+        style={totalCount === 0 || revokingAll ? undefined : { backgroundColor: "hsl(var(--primary))" }}
       >
         {revokingAll ? "Cerrando sesiones..." : "Cerrar todas"}
       </button>

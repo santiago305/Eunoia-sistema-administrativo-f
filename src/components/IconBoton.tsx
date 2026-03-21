@@ -32,7 +32,7 @@ export const IconButton = ({
                         ? ({
                               "--p": PRIMARY,
                               "--p-hover": PRIMARY_HOVER,
-                              "--p-200": `${PRIMARY}33`,
+                              "--p-200": `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                           } as React.CSSProperties)
                         : undefined
                 }

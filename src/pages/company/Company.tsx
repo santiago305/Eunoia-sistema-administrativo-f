@@ -14,7 +14,7 @@ import { CompanyFormSection } from "./components/CompanyFormSection";
 import { PaymentMethodListModal } from "./components/PaymentMethodListModal";
 import type { CompanyFormErrors, CompanyFormValues } from "./types/companyFormTypes";
 
-const COMPANY_PRIMARY = "#21b8a6";
+const COMPANY_PRIMARY = "hsl(var(--primary))";
 
 function resolveCompanyLogoUrl(rawLogoUrl?: string | null) {
     const raw = rawLogoUrl?.trim();

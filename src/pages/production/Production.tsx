@@ -17,7 +17,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 const buildEmptyForm = (): CreateProductionOrderDto => ({
   fromWarehouseId: "",
@@ -52,7 +52,7 @@ export default function ProductionCreate() {
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
 
-  const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
+  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
 
   const resetForm = () => {
     setForm(buildEmptyForm());
@@ -496,7 +496,7 @@ export default function ProductionCreate() {
                 <button
                   type="button"
                   className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
-                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                   disabled={
                     loading ||
                     !form.fromWarehouseId ||

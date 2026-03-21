@@ -36,7 +36,7 @@ export function PaymentMethodFormModal({
   const [error, setError] = useState<string | null>(null);
 
   const primaryRing = useMemo(
-    () => ({ "--tw-ring-color": `${primaryColor}33` } as CSSProperties),
+    () => ({ "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties),
     [primaryColor],
   );
 
@@ -142,7 +142,7 @@ export function PaymentMethodFormModal({
             style={
               {
                 backgroundColor: primaryColor,
-                borderColor: `${primaryColor}33`,
+                borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
                 ...primaryRing,
               } as CSSProperties
             }

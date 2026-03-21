@@ -22,7 +22,7 @@ export function RecipeFormFields({
     onCreated: () => Promise<void>;
 }) {
     
-    const PRIMARY = "#21b8a6";
+    const PRIMARY = "hsl(var(--primary))";
     const [primaVariantId, setPrimaVariantId] = useState("");
     const [quantity, setQuantity] = useState("1");
     const activePrimaVariants = (primaVariants ?? []).filter((v) => v.isActive !== false);
@@ -85,7 +85,7 @@ export function RecipeFormFields({
                 <button
                     type="button"
                     className="rounded-xl border h-10 text-xl text-white mt-7"
-                    style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                    style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                     onClick={() => void handleCreate()}
                     disabled={!finishedVariantId || !primaVariantId || !quantity}
                 >

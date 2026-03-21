@@ -10,7 +10,7 @@ const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean)
 function RoleChip({ role }: { role: Role }) {
   const styles: Record<Role, string> = {
     admin: "border-zinc-300 bg-zinc-900 text-white",
-    moderator: "border-[#21b8a6]/20 bg-[#21b8a6]/8 text-[#16897d]",
+    moderator: "border-primary/20 bg-primary/8 text-[#16897d]",
     adviser: "border-indigo-200 bg-indigo-50 text-indigo-600",
   };
 
@@ -150,7 +150,7 @@ export function UsersRightPanel({
                   </div>
 
                   {roleDraft !== selected.role && (
-                    <span className="rounded-full border border-[#21b8a6]/20 bg-[#21b8a6]/8 px-2 py-1 text-[10px] text-[#16897d]">
+                    <span className="rounded-full border border-primary/20 bg-primary/8 px-2 py-1 text-[10px] text-[#16897d]">
                       Pendiente
                     </span>
                   )}
@@ -162,7 +162,7 @@ export function UsersRightPanel({
                     onChange={(e) => setRoleDraft(e.target.value as Role)}
                     className={cn(
                       "h-9 flex-1 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition",
-                      "focus:border-[#21b8a6]/40 focus:ring-4 focus:ring-[#21b8a6]/10"
+                      "focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
                     )}
                   >
                     {ROLES.map((r) => (

@@ -22,8 +22,8 @@ export function ActivitySeriesChart({
         <AreaChart data={data}>
           <defs>
             <linearGradient id="violationsFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#21b8a6" stopOpacity={0.22} />
-              <stop offset="95%" stopColor="#21b8a6" stopOpacity={0.02} />
+              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.22} />
+              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -33,7 +33,7 @@ export function ActivitySeriesChart({
           <Area
             type="monotone"
             dataKey="violations"
-            stroke="#21b8a6"
+            stroke="hsl(var(--primary))"
             strokeWidth={3}
             fill="url(#violationsFill)"
             name="Violaciones"

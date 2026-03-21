@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { FilterableSelect } from "@/components/SelectFilterable";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -34,7 +34,7 @@ import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidd
 import { productionExpandedFields } from "./components/data-table/productionExpandedFields";
 import { getProductionOrderPdf } from "@/services/pdfServices";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
 
 const statusLabels: Record<ProductionStatus, string> = {
@@ -83,7 +83,7 @@ export default function Production() {
   });
   const [showColumnMenu, setShowColumnMenu] = useState(false);
 
-  const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
+  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
 
   const loadWarehouses = async () => {
     try {
@@ -347,7 +347,7 @@ export default function Production() {
                 type="button"
                 className="inline-flex h-8 items-center gap-2 rounded-lg border px-3 
                 text-[11px] text-white focus:outline-none focus:ring-2 mt-5"
-                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                 onClick={() => navigate(RoutesPaths.productionCreate)}
               >
                 <Plus className="h-4 w-4" />

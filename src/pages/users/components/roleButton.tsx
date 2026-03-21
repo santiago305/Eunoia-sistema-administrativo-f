@@ -34,8 +34,8 @@ export const RolePicker = ({ roles, value, onChange, error }: { roles: Role[]; v
                     grid place-items-center transition
                     ${
                         active
-                            ? "border-[#21b8a6]/40 bg-[#21b8a6]/10 text-zinc-700 ring-4 ring-[#21b8a6]/20 outline-none"
-                            : "text-zinc-500 hover:text-zinc-700 outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                            ? "border-primary/40 bg-primary/10 text-zinc-700 ring-4 ring-primary/20 outline-none"
+                            : "text-zinc-500 hover:text-zinc-700 outline-none focus:ring-4 focus:ring-primary/20"
                     }`}
                     aria-pressed={!!active}
                     title={LABELS[desc]}

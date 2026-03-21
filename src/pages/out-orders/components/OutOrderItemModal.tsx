@@ -13,7 +13,7 @@ type OutOrderItemModalProps = {
   onAdd: () => void;
 };
 
-const DEFAULT_PRIMARY = "#21b8a6";
+const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
 export function OutOrderItemModal({
   open,
@@ -63,7 +63,7 @@ export function OutOrderItemModal({
         <button
           type="button"
           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-xs text-white focus:outline-none focus:ring-2"
-          style={{ backgroundColor: accent, borderColor: `${accent}33` }}
+          style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
           onClick={onAdd}
         >
           <Plus className="h-4 w-4" />

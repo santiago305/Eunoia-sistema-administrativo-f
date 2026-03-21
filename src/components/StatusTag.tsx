@@ -9,8 +9,8 @@ export const StatusPill =
             style={
                 active
                     ? ({
-                          "--p-50": `${PRIMARY}14`,
-                          "--p-200": `${PRIMARY}33`,
+                          "--p-50": `color-mix(in srgb, ${PRIMARY} 8%, transparent)`,
+                          "--p-200": `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                           "--p-700": PRIMARY,
                       } as React.CSSProperties)
                     : undefined

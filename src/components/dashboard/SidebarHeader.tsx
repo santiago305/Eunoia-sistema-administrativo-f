@@ -12,7 +12,7 @@ const SidebarHeader = () => {
         </div>
       ) : (
         <div className="flex items-center">
-          <div className="text-3xl font-semibold tracking-tight text-[#21b8a6] sm:text-4xl">
+          <div className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
             EUNOIA
           </div>
         </div>

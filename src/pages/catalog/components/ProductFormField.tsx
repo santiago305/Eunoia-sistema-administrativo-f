@@ -20,7 +20,7 @@ import { Dispatch, SetStateAction } from "react";
                     Nombre
                     <input
                         className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                        style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                        style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
                         value={form.name}
                         onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                     />
@@ -42,7 +42,7 @@ import { Dispatch, SetStateAction } from "react";
                 Descripción
                 <textarea
                     className="mt-2 min-h-[90px] w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
-                    style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                    style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
                     value={form.description}
                     onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
                 />

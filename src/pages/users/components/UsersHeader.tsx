@@ -1,7 +1,7 @@
 import type { CountUsersByRoleResponse } from "@/services/userService";
 import { ROLE_LABELS } from "../types/roles.types";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
 

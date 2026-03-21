@@ -21,7 +21,7 @@ type PaymentMethodListModalProps = {
 };
 
 type SelectOption = { value: string; label: string };
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 export function PaymentMethodListModal({
   title,
@@ -158,7 +158,7 @@ export function PaymentMethodListModal({
                 className="inline-flex items-center gap-2 rounded-lg border px-3 h-9 mt-6
                 text-xs text-white focus:outline-none focus:ring-2"
                 disabled={!selectedId || adding} onClick={addMethod}                
-                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
               >
                 <Plus className="h-4 w-4" />
                 {adding ? "Anadiendo..." : "Anadir"}

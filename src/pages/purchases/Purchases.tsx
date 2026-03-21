@@ -20,7 +20,7 @@ import { Dropdown } from "./components/PurchaseDropdown";
 import { Menu, OctagonAlert, Timer } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
   [PurchaseOrderStatuses.DRAFT]: "Borrador",
@@ -78,7 +78,7 @@ export default function Purchases() {
   const [paymentForm, setPaymentForm] = useState("");
   
 
-  const ringStyle = { "--tw-ring-color": `${PRIMARY}33` } as CSSProperties;
+  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
 
   useEffect(() => {
     const t = setTimeout(() => {

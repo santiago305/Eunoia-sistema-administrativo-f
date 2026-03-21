@@ -9,7 +9,7 @@ import { PaymentModal } from "./PaymentModal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 export type PaymentListModalProps = {
   title: string;
@@ -117,7 +117,7 @@ export function PaymentListModal({
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs text-white"
-                style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                 onClick={() => {
                   setModalPayment(true);
                 }}

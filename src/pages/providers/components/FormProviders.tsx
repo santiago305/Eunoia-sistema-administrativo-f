@@ -25,7 +25,7 @@ export function SupplierFormFields({
               <SlidersHorizontal className="pointer-events-none absolute left-3 mt-1 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <select
                 className="mt-2 h-9 w-full rounded-lg border border-black/10 px-3 text-xs appearance-none  bg-white pl-10 pr-9  outline-none focus:ring-2"
-                style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                 value={form.documentType}
                 onChange={(e) => {
                   setForm((prev) => ({ ...prev, documentType: e.target.value  as DocumentType}));

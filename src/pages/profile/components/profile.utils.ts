@@ -3,7 +3,7 @@ import { env } from "@/env";
 import type { CurrentUser, CurrentUserResponse } from "@/pages/profile/types/userProfile";
 import type { BackendErrorPayload } from "../types/profile.types";
 
-export const PROFILE_PRIMARY = "#21b8a6";
+export const PROFILE_PRIMARY = "hsl(var(--primary))";
 
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");

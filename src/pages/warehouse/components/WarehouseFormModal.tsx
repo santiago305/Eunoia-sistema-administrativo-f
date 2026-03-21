@@ -47,7 +47,7 @@ export function WarehouseFormModal({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const primaryRing = useMemo(() => ({ "--tw-ring-color": `${primaryColor}33` } as CSSProperties), [primaryColor]);
+    const primaryRing = useMemo(() => ({ "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties), [primaryColor]);
 
     useEffect(() => {
         if (!open) return;
@@ -213,8 +213,8 @@ export function WarehouseFormModal({
                         style={
                             {
                                 backgroundColor: primaryColor,
-                                borderColor: `${primaryColor}33`,
-                                "--tw-ring-color": `${primaryColor}33`,
+                                borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                                "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
                             } as CSSProperties
                         }
                         onClick={handleSubmit}

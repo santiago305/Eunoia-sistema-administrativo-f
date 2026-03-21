@@ -9,7 +9,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { getPaymentMethodsBySupplier } from "@/services/paymentMethodService";
 import { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
 
-const DEFAULT_PRIMARY = "#21b8a6";
+const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
 export type PurchasePaymentModalProps = {
   open: boolean;
@@ -45,7 +45,7 @@ export function PurchasePaymentModal({
 }: PurchasePaymentModalProps) {
 
   const accent = primaryColor ?? DEFAULT_PRIMARY;
-  const computedRingStyle = (ringStyle ?? ({ "--tw-ring-color": `${accent}33` } as CSSProperties)) as CSSProperties;
+  const computedRingStyle = (ringStyle ?? ({ "--tw-ring-color": `color-mix(in srgb, ${accent} 20%, transparent)` } as CSSProperties)) as CSSProperties;
 
   const showCredit = form.paymentForm === PaymentFormTypes.CREDITO;
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
@@ -234,7 +234,7 @@ export function PurchasePaymentModal({
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
-                style={{ backgroundColor: accent, borderColor: `${accent}33` }}
+                style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
                 onClick={() => addPayment(pendingAmount)}
               >
                 <Plus className="h-4 w-4" />
@@ -399,7 +399,7 @@ export function PurchasePaymentModal({
           <button
             type="button"
             className="rounded-xl border px-4 py-2 text-sm text-white disabled:opacity-40"
-            style={{ backgroundColor: accent, borderColor: `${accent}33` }}
+            style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
             disabled={saveDisabled}
             onClick={ onSave}
           >

@@ -55,7 +55,7 @@ export function SupplierFormModal({
   supplierId,
   onClose,
   onSaved,
-  primaryColor = "#21b8a6",
+  primaryColor = "hsl(var(--primary))",
 }: SupplierFormModalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
 
@@ -206,7 +206,7 @@ export function SupplierFormModal({
         </button>
         <button
           className="rounded-2xl border px-4 py-2 text-sm text-white disabled:opacity-50"
-          style={{ backgroundColor: primaryColor, borderColor: `${primaryColor}33` } as CSSProperties}
+          style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties}
           onClick={saveSupplier}
           disabled={!canSave || saving || loading}
         >

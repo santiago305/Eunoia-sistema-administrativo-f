@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { findAllRoles } from "@/services/roleService";
 import type { CreateUserRequest, UserRoleOptionApi } from "@/pages/users/types/users.types";
@@ -94,7 +94,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
             <div className="flex items-start justify-between gap-3 border-b border-zinc-100 px-5 py-4">
                 <div className="min-w-0">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#21b8a6]/10 text-[#21b8a6]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <UserPlus size={16} />
                         </div>
 
@@ -176,7 +176,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
 
                             <button
                                 type="button"
-                                className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                                className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-primary/20"
                                 onClick={() => setEyeBool((prev) => !prev)}
                                 aria-label={eyeBool ? "Mostrar contraseña" : "Ocultar contraseña"}
                             >
@@ -212,7 +212,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
                 <div className="mt-4 flex items-center justify-end gap-2 border-t border-zinc-100 pt-4">
                     <button
                         type="button"
-                        className="inline-flex h-[40px] items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-[13px] font-medium text-zinc-700 transition hover:bg-zinc-50 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                        className="inline-flex h-[40px] items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-[13px] font-medium text-zinc-700 transition hover:bg-zinc-50 focus:outline-none focus:ring-4 focus:ring-primary/20"
                         onClick={closeModal}
                     >
                         Cancelar
@@ -220,7 +220,7 @@ export const UserForm = ({ closeModal }: UserFormProps) => {
 
                     <button
                         type="submit"
-                        className="inline-flex h-[40px] items-center justify-center rounded-xl bg-[#21b8a6] px-4 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(33,184,166,0.18)] transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-[#21b8a6]/20"
+                        className="inline-flex h-[40px] items-center justify-center rounded-xl bg-primary px-4 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(33,184,166,0.18)] transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-primary/20"
                     >
                         Crear usuario
                     </button>

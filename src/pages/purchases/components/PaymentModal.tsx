@@ -9,7 +9,7 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 export type PaymentProps = {
   title:string,
@@ -113,7 +113,7 @@ export function PaymentModal ({
                   min={0}
                   max={totalToPay}
                   className="h-14 w-full rounded-lg border border-black/10 bg-white px-4 text-lg outline-none focus:ring-2"
-                  style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                  style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                   value={form.amount}
                   onChange={(e) => setForm((prev) => ({...prev, amount: e.target.value}))}
                   onBlur={() => {
@@ -128,7 +128,7 @@ export function PaymentModal ({
                 <button
                   type="button"
                   className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-lg text-white"
-                  style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                   onClick={handleSave}
                   disabled={saving}
                 >
@@ -144,7 +144,7 @@ export function PaymentModal ({
                 <input
                   type="date"
                   className="mt-2 h-11 w-full rounded-lg border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                  style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                  style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                   value={toDateInputValue(form.date)}
                   onClick={(e) => tryShowPicker(e.currentTarget)}
                   onChange={(e) => setForm((prev)=> ({...prev, date:e.target.value}))}
@@ -154,7 +154,7 @@ export function PaymentModal ({
                 Metodo
                 <select
                   className="mt-2 h-11 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                  style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                  style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                   value={form.method}
                   onChange={(e) => setForm((prev) => ({...prev, method:e.target.value as PaymentType}))}
                 >
@@ -169,7 +169,7 @@ export function PaymentModal ({
                 Moneda 
                 <select
                   className="mt-2 h-11 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                  style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                  style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                   value={form.currency}
                   onChange={(e) => setForm((prev) => ({...prev, currency: e.target.value as CurrencyType }))}
                   disabled={true}
@@ -182,7 +182,7 @@ export function PaymentModal ({
                 Número de operación
                 <input
                   className="mt-2 h-11 w-full rounded-lg border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                  style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                  style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                   value={form.operationNumber ?? ""}
                   onChange={(e) => setForm((prev) => ({...prev, operationNumber: e.target.value}))}
                   placeholder="Número de operación"
@@ -192,7 +192,7 @@ export function PaymentModal ({
                 Nota
                 <input
                   className="mt-2 h-11 w-full rounded-lg border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                  style={{ "--tw-ring-color": `${PRIMARY}33` } as CSSProperties}
+                  style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
                   value={form.note ?? ""}
                   onChange={(e) => setForm((prev)=> ({...prev, note: e.target.value}))}
                   placeholder="Nota"

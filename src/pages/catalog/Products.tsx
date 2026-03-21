@@ -29,7 +29,7 @@ import { IconButton } from "@/components/IconBoton";
 import { Dropdown } from "../purchases/components/PurchaseDropdown";
 import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const PRODUCT_TYPE = ProductTypes.FINISHED;
 
@@ -350,7 +350,7 @@ export default function CatalogProducts() {
                             title="Nuevo producto"
                             style={{
                                 backgroundColor: PRIMARY,
-                                borderColor: `${PRIMARY}33`,
+                                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                                 boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
                             }}
                             onMouseEnter={(e) => {
@@ -377,7 +377,7 @@ export default function CatalogProducts() {
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
                             <input
                                 className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
-                                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
                                 placeholder="Buscar por nombre (exacto)"
                                 value={searchText}
                                 onChange={(event) => {
@@ -391,7 +391,7 @@ export default function CatalogProducts() {
                             <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
                             <select
                                 className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
-                                style={{ "--tw-ring-color": `${PRIMARY}33` } as React.CSSProperties}
+                                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
                                 value={statusFilter}
                                 onChange={(event) => {
                                     setStatusFilter(event.target.value);

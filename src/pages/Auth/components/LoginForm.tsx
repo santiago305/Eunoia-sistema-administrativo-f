@@ -116,7 +116,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
     <div className={cn("w-full", className)} {...props}>
       <div className="mb-5 text-center sm:mb-6">
         <p className="text-[10px] tracking-[0.25em] text-black/60 sm:text-[11px]">ADMINISTRACION</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-[#21b8a6] sm:text-4xl">EUNOIA</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl">EUNOIA</h1>
       </div>
 
       <div
@@ -151,9 +151,9 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
             disabled={submitting || isTemporarilyBlocked}
             className={cn(
               "mt-2 w-full rounded-xl text-white cursor-pointer",
-              "bg-[#21b8a6] hover:bg-[#19a897]",
+              "bg-primary hover:bg-[#19a897]",
               "shadow-sm",
-              "focus-visible:ring-2 focus-visible:ring-[#21b8a6] focus-visible:ring-offset-2",
+              "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               "disabled:cursor-not-allowed disabled:opacity-70"
             )}
           >

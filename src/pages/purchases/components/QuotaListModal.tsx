@@ -10,7 +10,7 @@ import { PaymentModal } from "./PaymentModal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 export type QuotaListModalProps = {
   title: string;
@@ -132,7 +132,7 @@ export function QuotaListModal({
                             <button
                               type="button"
                               className="inline-flex items-center gap-2 rounded-xl border px-2 py-1 text-xs text-white"
-                              style={{ backgroundColor: PRIMARY, borderColor: `${PRIMARY}33` }}
+                              style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                               onClick={() => {
                                 openPaymentModal(q);
                                 setQtaId(q.quotaId ?? "");

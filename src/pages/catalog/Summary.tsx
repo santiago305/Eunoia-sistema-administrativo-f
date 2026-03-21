@@ -25,7 +25,7 @@ type Product = {
   updatedAt: string;
 };
 
-const PRIMARY = "#21b8a6";
+const PRIMARY = "hsl(var(--primary))";
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -253,13 +253,13 @@ export default function CatalogSummary() {
   ) => {
     const iconWrap =
       tone === "primary"
-        ? "border-[#21b8a6]/25 bg-[#21b8a6]/10"
+        ? "border-primary/25 bg-primary/10"
         : tone === "danger"
         ? "border-rose-600/20 bg-rose-50"
         : "border-black/10 bg-black/[0.02]";
 
     const iconColor =
-      tone === "primary" ? "text-[#21b8a6]" : tone === "danger" ? "text-rose-600" : "text-black/70";
+      tone === "primary" ? "text-primary" : tone === "danger" ? "text-rose-600" : "text-black/70";
 
     return (
       <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
@@ -301,7 +301,7 @@ export default function CatalogSummary() {
               <span className="text-black/60">Total</span>{" "}
               <span className="font-semibold text-black tabular-nums">{totals.total}</span>
             </div>
-            <div className="rounded-2xl border border-[#21b8a6]/25 bg-[#21b8a6]/10 px-3 py-2 text-xs">
+            <div className="rounded-2xl border border-primary/25 bg-primary/10 px-3 py-2 text-xs">
               <span className="text-black/60">Activos</span>{" "}
               <span className="font-semibold text-black tabular-nums">{totals.active}</span>
             </div>
@@ -394,7 +394,7 @@ export default function CatalogSummary() {
                 <p className="text-sm font-semibold">Nuevos productos</p>
                 <p className="text-xs text-black/60">Últimos 6 meses (según muestra cargada).</p>
               </div>
-              <div className="rounded-2xl border border-[#21b8a6]/25 bg-[#21b8a6]/10 p-3">
+              <div className="rounded-2xl border border-primary/25 bg-primary/10 p-3">
                 <Activity className="h-5 w-5" style={{ color: PRIMARY }} />
               </div>
             </div>
@@ -520,14 +520,14 @@ export default function CatalogSummary() {
                             className={[
                               "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
                               product.isActive
-                                ? "bg-[#21b8a6]/10 text-[#0f766e] ring-[#21b8a6]/25"
+                                ? "bg-primary/10 text-[#0f766e] ring-primary/25"
                                 : "bg-rose-50 text-rose-700 ring-rose-600/15",
                             ].join(" ")}
                           >
                             <span
                               className={[
                                 "h-1.5 w-1.5 rounded-full",
-                                product.isActive ? "bg-[#21b8a6]" : "bg-rose-500",
+                                product.isActive ? "bg-primary" : "bg-rose-500",
                               ].join(" ")}
                             />
                             {product.isActive ? "Activo" : "Inactivo"}
@@ -568,14 +568,14 @@ export default function CatalogSummary() {
                           className={[
                             "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
                             product.isActive
-                              ? "bg-[#21b8a6]/10 text-[#0f766e] ring-[#21b8a6]/25"
+                              ? "bg-primary/10 text-[#0f766e] ring-primary/25"
                               : "bg-rose-50 text-rose-700 ring-rose-600/15",
                           ].join(" ")}
                         >
                           <span
                             className={[
                               "h-1.5 w-1.5 rounded-full",
-                              product.isActive ? "bg-[#21b8a6]" : "bg-rose-500",
+                              product.isActive ? "bg-primary" : "bg-rose-500",
                             ].join(" ")}
                           />
                           {product.isActive ? "Activo" : "Inactivo"}

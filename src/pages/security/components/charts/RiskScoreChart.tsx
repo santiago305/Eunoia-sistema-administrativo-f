@@ -22,7 +22,7 @@ function getRiskColor(value: number) {
     case "high":
       return "#f59e0b";
     case "medium":
-      return "#21b8a6";
+      return "hsl(var(--primary))";
     case "low":
     default:
       return "#22c55e";

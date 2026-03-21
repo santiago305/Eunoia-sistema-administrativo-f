@@ -16,7 +16,7 @@ export const FormInput = forwardRef<HTMLInputElement, Props>(
                     type={type}
                     placeholder={placeholder}
                     className={`h-10 w-full rounded-xl bg-gray-100 px-3 text-[14px] text-gray-600 outline-none transition
-                    focus:border-[#21b8a6] focus:ring-4 focus:ring-[#21b8a6]/20 focus:text-gray-800
+                    focus:border-primary focus:ring-4 focus:ring-primary/20 focus:text-gray-800
                     placeholder:text-gray-500 ${className ?? ""}`}
                     {...props}
                 />
