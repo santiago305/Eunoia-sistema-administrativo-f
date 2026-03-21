@@ -191,13 +191,10 @@ export default function PurchaseCreateLocal() {
     }
   };
 
-  useEffect(() => {
-    void loadSuppliers();
-    void loadWarehouses();
-  }, []);
+
 
   const productOptions = (products ?? []).map((v) => ({
-    value: v.itemId,
+    value: v.itemId!,
     label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
   }));
 
@@ -237,17 +234,6 @@ export default function PurchaseCreateLocal() {
       { totalPrice: 0, totalValue: 0, totalIgv: 0, totalTaxed: 0, totalExempted: 0 },
     );
   }, [form.items]);
-
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      totalTaxed: totals.totalTaxed,
-      totalExempted: totals.totalExempted,
-      totalIgv: totals.totalIgv,
-      purchaseValue: totals.totalValue,
-      total: totals.totalPrice,
-    }));
-  }, [totals.totalTaxed, totals.totalExempted, totals.totalIgv, totals.totalValue, totals.totalPrice]);
 
   const itemsView = useMemo(() => {
     return (form.items ?? []).map((item) => {
@@ -332,30 +318,29 @@ export default function PurchaseCreateLocal() {
     }
   };
 
+  const loadPurchase = async (poId:string) => {
+    try {
+      const data = await getById(poId);
+
+      setForm((prev) => ({
+        ...prev,
+        ...data,
+        items: (data.items ?? []).map(({ stockItem, ...rest }) => rest),
+        payments: data.payments ?? [],
+        quotas: data.quotas ?? [],
+      }));
+
+      const mappedProducts = mapOrderProducts(data.items ?? []);
+      setProducts(mappedProducts);
+    } catch {
+      showFlash(errorResponse("Error al cargar la compra."));
+    }
+  };
+  
   useEffect(() => {
     if (!poId) return;
-
-    const loadPurchase = async () => {
-      try {
-        const data = await getById(poId);
-
-        setForm((prev) => ({
-          ...prev,
-          ...data,
-          items: (data.items ?? []).map(({ stockItem, ...rest }) => rest),
-          payments: data.payments ?? [],
-          quotas: data.quotas ?? [],
-        }));
-
-        const mappedProducts = mapOrderProducts(data.items ?? []);
-        setProducts(mappedProducts);
-      } catch {
-        showFlash(errorResponse("Error al cargar la compra."));
-      }
-    };
-
-    void loadPurchase();
-  }, [poId, showFlash]);
+    void loadPurchase(poId);
+  }, [poId]);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -368,6 +353,22 @@ export default function PurchaseCreateLocal() {
 
     return () => clearTimeout(id);
   }, [productQuery, isEdit]);
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      totalTaxed: totals.totalTaxed,
+      totalExempted: totals.totalExempted,
+      totalIgv: totals.totalIgv,
+      purchaseValue: totals.totalValue,
+      total: totals.totalPrice,
+    }));
+  }, [totals.totalTaxed, totals.totalExempted, totals.totalIgv, totals.totalValue, totals.totalPrice]);
+
+  useEffect(() => {
+    void loadSuppliers();
+    void loadWarehouses();
+  }, []);
 
   const currency = form.currency;
 
