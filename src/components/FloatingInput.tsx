@@ -1,17 +1,17 @@
-import { useState, type ChangeEvent, type InputHTMLAttributes } from "react";
+import { forwardRef, useMemo, useState, type ChangeEvent, type InputHTMLAttributes } from "react";
 
 type FloatingInputProps = {
   label: string;
   name: string;
-  value: string;
+  value?: string | number;
   error?: string;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
 } & Omit<
   InputHTMLAttributes<HTMLInputElement>,
   "name" | "value" | "onChange" | "placeholder"
 >;
 
-export function FloatingInput({
+export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(function FloatingInput({
   label,
   name,
   value,
@@ -20,22 +20,36 @@ export function FloatingInput({
   type = "text",
   disabled,
   className = "",
+  defaultValue,
   ...props
-}: FloatingInputProps) {
+}: FloatingInputProps, ref) {
   const [showPassword, setShowPassword] = useState(false);
+  const [uncontrolledValue, setUncontrolledValue] = useState(String(defaultValue ?? ""));
 
-  const hasValue = value.trim().length > 0;
+  const resolvedValue = useMemo(() => {
+    if (value !== undefined && value !== null) return String(value);
+    return uncontrolledValue;
+  }, [uncontrolledValue, value]);
+
+  const hasValue = resolvedValue.trim().length > 0;
   const isPassword = type === "password";
 
   return (
     <div className="w-full">
       <div className="relative">
         <input
+          ref={ref}
           id={name}
           name={name}
           type={isPassword ? (showPassword ? "text" : "password") : type}
           value={value}
-          onChange={onChange}
+          defaultValue={defaultValue}
+          onChange={(event) => {
+            if (value === undefined) {
+              setUncontrolledValue(event.target.value);
+            }
+            onChange?.(event);
+          }}
           disabled={disabled}
           placeholder=" "
           className={[
@@ -82,4 +96,4 @@ export function FloatingInput({
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
-}
+});

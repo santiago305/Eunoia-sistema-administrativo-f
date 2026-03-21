@@ -1,4 +1,5 @@
-import { Card, CardHeader, PasswordField, PrimaryButton } from "./ProfilePrimitives";
+import { Card, CardHeader } from "@/components/AppCard";
+import { PasswordField, PrimaryButton } from "./ProfilePrimitives";
 import type { ProfilePasswordFormCardProps } from "../types/components.types";
 export function ProfilePasswordFormCard({ form, onSubmit, saving, loading }: ProfilePasswordFormCardProps) {
   return (

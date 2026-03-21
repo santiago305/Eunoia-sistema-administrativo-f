@@ -1,4 +1,5 @@
-import { Card, CardHeader, Field, PrimaryButton } from "./ProfilePrimitives";
+import { Card, CardHeader } from "@/components/AppCard";
+import { Field, PrimaryButton } from "./ProfilePrimitives";
 import type { ProfileInfoFormCardProps } from "../types/components.types";
 export function ProfileInfoFormCard({ form, onSubmit, saving, loading, hasSession }: ProfileInfoFormCardProps) {
   return (

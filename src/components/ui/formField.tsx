@@ -1,6 +1,4 @@
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import FieldError from "./FieldError";
+import { FloatingInput } from "@/components/FloatingInput";
 import type { FieldValues, Path, UseFormRegister } from "react-hook-form";
 
 interface FormFieldProps<TFieldValues extends FieldValues> {
@@ -20,14 +18,20 @@ export default function FormField<TFieldValues extends FieldValues>({
   register,
   error,
 }: FormFieldProps<TFieldValues>) {
+  const { ref, ...field } = register(name);
+
   return (
-    <div className="grid gap-1">
-      <Label htmlFor={name}>{label}</Label>
-      <Input {...register(name)} type={type} placeholder={placeholder} />
-      <div className="min-h-3 h-auto">
-        <FieldError error={error} />
-      </div>
-    </div>
+    <FloatingInput
+      ref={ref}
+      {...field}
+      name={String(name)}
+      label={label}
+      type={type}
+      defaultValue=""
+      title={placeholder || undefined}
+      autoComplete={type === "password" ? "current-password" : undefined}
+      error={error}
+    />
   );
 }
 

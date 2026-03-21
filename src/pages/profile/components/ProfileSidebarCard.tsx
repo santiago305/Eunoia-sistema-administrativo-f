@@ -1,5 +1,6 @@
+import { Card, CardHeader } from "@/components/AppCard";
 import { ProfileAvatarBlock } from "./ProfileAvatarBlock";
-import { Card, CardHeader, InfoRow } from "./ProfilePrimitives";
+import { InfoRow } from "./ProfilePrimitives";
 import type { ProfileSidebarCardProps } from "../types/components.types";
 
 export function ProfileSidebarCard({

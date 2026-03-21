@@ -1,3 +1,4 @@
+import { Card, CardHeader } from "@/components/AppCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
@@ -8,7 +9,6 @@ import { createCompany, getCompany, updateCompany, uploadCompanyCert, uploadComp
 import { env } from "@/env";
 import { createCompanySchema } from "@/schemas/companySchemas";
 import type { Company } from "@/pages/company/types/company";
-import { Card, CardHeader } from "@/pages/profile/components/ProfilePrimitives";
 import { CompanyLogoBlock } from "./components/CompanyLogoBlock";
 import { CompanyFormSection } from "./components/CompanyFormSection";
 import { PaymentMethodListModal } from "./components/PaymentMethodListModal";
