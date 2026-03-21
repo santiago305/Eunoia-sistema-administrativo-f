@@ -1,4 +1,4 @@
-import type { ChangeEvent, InputHTMLAttributes } from "react";
+import { useState, type ChangeEvent, type InputHTMLAttributes } from "react";
 
 type FloatingInputProps = {
   label: string;
@@ -22,7 +22,10 @@ export function FloatingInput({
   className = "",
   ...props
 }: FloatingInputProps) {
+  const [showPassword, setShowPassword] = useState(false);
+
   const hasValue = value.trim().length > 0;
+  const isPassword = type === "password";
 
   return (
     <div className="w-full">
@@ -30,13 +33,14 @@ export function FloatingInput({
         <input
           id={name}
           name={name}
-          type={type}
+          type={isPassword ? (showPassword ? "text" : "password") : type}
           value={value}
           onChange={onChange}
           disabled={disabled}
           placeholder=" "
           className={[
             "peer h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition-all",
+            isPassword ? "pr-10" : "", // espacio para el icono 👁️
             error
               ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100"
               : "border-black/20 focus:border-primary focus:ring-2 focus:ring-primary/30",
@@ -46,6 +50,7 @@ export function FloatingInput({
           {...props}
         />
 
+        {/* LABEL */}
         <label
           htmlFor={name}
           className={[
@@ -61,6 +66,17 @@ export function FloatingInput({
         >
           {label}
         </label>
+
+        {/* 👁️ TOGGLE PASSWORD */}
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-black/50 hover:text-black"
+          >
+            {showPassword ? "Ocultar" : "Ver"}
+          </button>
+        )}
       </div>
 
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
