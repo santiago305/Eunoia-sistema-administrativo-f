@@ -29,13 +29,10 @@ export function DataTableColumnToggle({
     <div className="relative inline-block">
       <details className="group">
         <summary className="list-none">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm transition hover:bg-muted/50"
-          >
+          <span className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm transition hover:bg-muted/50">
             <Settings2 className="h-4 w-4" />
             Columnas
-          </button>
+          </span>
         </summary>
 
         <div className="absolute right-0 z-20 mt-2 w-64 rounded-2xl border border-border bg-background p-3 shadow-xl">
