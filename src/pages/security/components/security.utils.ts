@@ -27,7 +27,44 @@ export const formatDate = (value?: string | null) => {
   }).format(date);
 };
 
-export const getBanBadgeStyles = (banLevel?: string | number, permanent?: boolean) => {
+/**
+ * Convierte una fecha a una etiqueta relativa en español para mostrar cuánto
+ * tiempo ha pasado desde la última actualización del panel.
+ */
+export const formatRelativeTime = (
+  value?: Date | string | null,
+  now = Date.now(),
+) => {
+  if (!value) return "sin actualizar";
+
+  const date = value instanceof Date ? value : new Date(value);
+  const timestamp = date.getTime();
+
+  if (Number.isNaN(timestamp)) return "sin actualizar";
+
+  const diffMs = Math.max(0, now - timestamp);
+  const diffSeconds = Math.floor(diffMs / 1000);
+
+  if (diffSeconds < 10) return "justo ahora";
+  if (diffSeconds < 60) return `hace ${diffSeconds} s`;
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes === 1) return "hace 1 min";
+  if (diffMinutes < 60) return `hace ${diffMinutes} min`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours === 1) return "hace 1 h";
+  if (diffHours < 24) return `hace ${diffHours} h`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "hace 1 día";
+  return `hace ${diffDays} días`;
+};
+
+export const getBanBadgeStyles = (
+  banLevel?: string | number,
+  permanent?: boolean,
+) => {
   if (permanent) return "border-red-200 bg-red-50 text-red-700";
   if (banLevel === "PERMANENT") return "border-red-200 bg-red-50 text-red-700";
   if (banLevel === "TEMPORARY") return "border-amber-200 bg-amber-50 text-amber-700";

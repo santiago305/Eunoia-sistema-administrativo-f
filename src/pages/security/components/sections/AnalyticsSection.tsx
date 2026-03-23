@@ -1,4 +1,4 @@
-import { BarChart3, Route } from "lucide-react";
+import { Activity } from "lucide-react";
 import { useMemo } from "react";
 
 import type {
@@ -8,13 +8,13 @@ import type {
   SecurityRiskScoreResponse,
   SecurityTopRouteItem,
 } from "../../types/security.api";
-import { BRAND } from "../security.utils";
 import { ActivitySeriesChart } from "../charts/ActivitySeriesChart";
 import { MethodDistributionChart } from "../charts/MethodDistributionChart";
 import { ReasonDistributionChart } from "../charts/ReasonDistributionChart";
 import { RiskScoreChart } from "../charts/RiskScoreChart";
 import { TopRoutesChart } from "../charts/TopRoutesChart";
 import { SectionCard } from "../SectionCard";
+import { SystemButton } from "@/components/SystemButton";
 
 export function AnalyticsSection({
   activitySeries,
@@ -51,46 +51,39 @@ export function AnalyticsSection({
   const hasSecondaryCharts = hasReasonDistribution || hasMethodDistribution || hasTopRoutes;
 
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-6 2xl:grid-cols-2">
-        <SectionCard
-          title="Actividad sospechosa"
-          subtitle="Tendencia de eventos, bans e IPs unicas dentro del rango seleccionado."
-          right={
-            <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-              Serie temporal
-            </div>
-          }
-        >
-          <ActivitySeriesChart data={activitySeries} />
+    <div className="grid gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-4">
+          <SectionCard title="Actividad sospechosa" subtitle="Tendencia de eventos en el rango seleccionado" className="lg:col-span-3">
 
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Pico mas alto</p>
-              <p className="mt-2 text-xl font-semibold text-zinc-950">{peakHour.violations}</p>
+          <ActivitySeriesChart data={activitySeries} />
+          <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-border">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Pico máx. auto</p>
+              <p className="text-sm font-semibold font-mono-tight text-foreground">{peakHour.violations}</p>
             </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Hora critica</p>
-              <p className="mt-2 text-xl font-semibold text-zinc-950">{peakHour.label}</p>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Hora crítica</p>
+              <p className="text-sm font-semibold font-mono-tight text-foreground">{peakHour.label}</p>
             </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Total eventos</p>
-              <p className="mt-2 text-xl font-semibold text-zinc-950">{totalEvents}</p>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total eventos</p>
+              <p className="text-sm font-semibold font-mono-tight text-foreground">{totalEvents}</p>
             </div>
           </div>
         </SectionCard>
 
         <SectionCard
           title="Riesgo general"
-          subtitle="Indicador consolidado de severidad del periodo."
-          right={
-            <div
-              className="inline-flex items-center gap-2 rounded-full border border-[rgba(33,184,166,.14)] bg-[rgba(33,184,166,.07)] px-3 py-1.5 text-xs font-medium text-[var(--brand)] shadow-sm"
-              style={{ ["--brand" as string]: BRAND }}
-            >
-              <span className="h-2 w-2 rounded-full bg-[var(--brand)]" />
-              Score operativo
-            </div>
+          subtitle="Indicador consolidado del período"
+          className="lg:col-span-2"
+          action={
+            <SystemButton 
+            size="sm" 
+            variant="outline" 
+            className="h-6 text-xs gap-1"
+            leftIcon={<Activity className="h-3 w-3" />}>
+              Score histórico
+            </SystemButton>
           }
         >
           <div className="flex items-center justify-center py-1">
@@ -98,7 +91,7 @@ export function AnalyticsSection({
           </div>
 
           <div className="mt-2 rounded-2xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-white p-4">
-            <p className="text-sm leading-6 text-zinc-600">
+            <p className="text-xs leading-6 text-zinc-600">
               Este score se construye a partir de señales como bans activos, reincidencias, IPs
               únicas, crecimiento de violaciones y rutas críticas afectadas.
             </p>
@@ -107,7 +100,7 @@ export function AnalyticsSection({
       </div>
 
       {hasSecondaryCharts && (
-        <div className="grid gap-6 2xl:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           {hasReasonDistribution && (
             <SectionCard
               title="Causas principales"
@@ -121,12 +114,6 @@ export function AnalyticsSection({
             <SectionCard
               title="Metodos HTTP"
               subtitle="Distribucion de actividad sospechosa por metodo."
-              right={
-                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-600">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  Metodos
-                </div>
-              }
             >
               <MethodDistributionChart data={methodDistribution} />
             </SectionCard>
@@ -136,12 +123,6 @@ export function AnalyticsSection({
             <SectionCard
               title="Top rutas atacadas"
               subtitle="Endpoints mas afectados por eventos sospechosos."
-              right={
-                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-600">
-                  <Route className="h-3.5 w-3.5" />
-                  Rutas criticas
-                </div>
-              }
             >
               <TopRoutesChart data={topRoutes} />
             </SectionCard>

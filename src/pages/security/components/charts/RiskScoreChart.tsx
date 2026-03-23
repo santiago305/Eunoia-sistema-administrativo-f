@@ -1,4 +1,9 @@
-import { PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer } from "recharts";
+import {
+  PolarAngleAxis,
+  RadialBar,
+  RadialBarChart,
+  ResponsiveContainer,
+} from "recharts";
 
 type RiskTone = "low" | "medium" | "high" | "critical";
 
@@ -40,20 +45,24 @@ export function RiskScoreChart({
   const color = getRiskColor(safeValue);
 
   return (
-    <div className="relative h-[260px] w-full max-w-[320px]">
+    <div className="relative h-[150px] w-full max-w-[200px]">
+      {/* Glow */}
       <div
-        className="absolute inset-x-1/2 top-1/2 z-0 h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl opacity-20"
+        className="absolute inset-0 z-0 m-auto h-[90px] w-[90px] rounded-full blur-xl opacity-20"
         style={{ backgroundColor: color }}
       />
 
       <ResponsiveContainer width="100%" height="100%">
         <RadialBarChart
-          data={[{ name: "score", value: safeValue, fill: color }]}
-          innerRadius="74%"
-          outerRadius="92%"
+          data={[
+            { name: "full", value: 100, fill: "#edf1f5" }, // fondo completo
+            { name: "score", value: safeValue, fill: color }, // progreso
+          ]}
+          innerRadius="65%"
+          outerRadius="90%"
           startAngle={90}
           endAngle={-270}
-          barSize={16}
+          barSize={10}
         >
           <PolarAngleAxis
             type="number"
@@ -61,22 +70,30 @@ export function RiskScoreChart({
             tick={false}
           />
 
+          {/* Fondo */}
           <RadialBar
             dataKey="value"
-            background={{ fill: "#edf1f5" }}
             cornerRadius={999}
+            data={[{ value: 100, fill: "#edf1f5" }]}
+            isAnimationActive={false}
+          />
+
+          {/* Progreso */}
+          <RadialBar
+            dataKey="value"
+            cornerRadius={999}
+            data={[{ value: safeValue, fill: color }]}
           />
         </RadialBarChart>
       </ResponsiveContainer>
 
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <div className="flex h-[124px] w-[124px] flex-col items-center justify-center rounded-full border border-zinc-200/80 bg-white/90 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-sm">
-          <span className="text-[42px] font-semibold leading-none tracking-[-0.05em] text-zinc-950">
+      {/* Centro */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="flex h-[80px] w-[80px] flex-col items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
+          <span className="text-xl font-semibold text-zinc-900">
             {safeValue}
           </span>
-          <span className="mt-1 text-sm font-medium text-zinc-500">
-            {label}
-          </span>
+          <span className="text-[10px] text-zinc-500">{label}</span>
         </div>
       </div>
     </div>

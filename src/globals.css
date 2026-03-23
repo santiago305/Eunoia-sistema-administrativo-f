@@ -1,6 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@300;400;500&display=swap');
+
 @import "tailwindcss";
 
 @theme {
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.875rem;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -9,6 +15,10 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
   --color-muted: hsl(var(--muted));
@@ -40,6 +50,8 @@
 
 @layer base {
   :root {
+    --text-base: 14px;
+
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
 
@@ -52,6 +64,12 @@
     /* Primary token = HSL 174 69% 42% */
     --primary: 174 69% 42%;
     --primary-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
     
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 0%;
@@ -82,54 +100,18 @@
     --sidebar-border: 0 0% 92%;
     --sidebar-ring: 174 69% 42%;
   }
-
-  .dark {
-    --background: 0 0% 5%;
-    --foreground: 0 0% 98%;
-
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 174 69% 50%;
-    --primary-foreground: 0 0% 5%;
-    
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-
-    --accent: 174 69% 15%;
-    --accent-foreground: 174 69% 80%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 174 69% 50%;
-
-    /* Sidebar tokens dark */
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-muted: 0 0% 50%;
-    --sidebar-primary: 174 69% 50%;
-    --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 174 69% 50%;
-  }
 }
 @layer base {
+  html {
+    font-size: var(--text-base);
+  }
+
   * {
     @apply border-border;
   }
 
   body {
+    font-family: var(--font-sans);
     @apply bg-background text-foreground antialiased;
   }
 
@@ -202,4 +184,6 @@ textarea {
 .scroll-area::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 120, 120, 0.8);
 }
+
+
 

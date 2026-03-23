@@ -13,14 +13,15 @@ import {
 import type {
   SecurityActivitySeriesResponse,
   SecurityActiveBanItem,
-  SecurityPaginatedResponse,
-  SecurityRiskScoreByIpResponse,
   SecurityBlacklistPayload,
   SecurityHistoryByIpResponse,
+  SecurityListResponse,
   SecurityMethodDistributionResponse,
   SecurityMutationResponse,
-  SecurityReasonDistributionResponse,
+  SecurityPaginatedResponse,
   SecurityReasonCatalogResponse,
+  SecurityReasonDistributionResponse,
+  SecurityRiskScoreByIpResponse,
   SecurityRiskScoreResponse,
   SecuritySeriesGroupBy,
   SecurityTopIpItem,
@@ -34,6 +35,11 @@ export type SecurityTopIpsParams = {
 };
 
 export type SecurityHistoryParams = {
+  limit?: number;
+};
+
+export type SecurityActiveBansParams = {
+  page?: number;
   limit?: number;
 };
 
@@ -79,12 +85,35 @@ export const getSecurityTopIps = async (params?: SecurityTopIpsParams) => {
   }));
 };
 
-export const getSecurityActiveBans = async () => {
+export const getSecurityActiveBans = async (
+  params?: SecurityActiveBansParams,
+): Promise<SecurityListResponse<SecurityActiveBanItem>> => {
   const response = await axiosInstance.get<
     SecurityActiveBanItem[] | SecurityPaginatedResponse<SecurityActiveBanItem>
-  >(API_SECURITY_GROUP.activeBans);
+  >(API_SECURITY_GROUP.activeBans, {
+    params: params
+      ? {
+          ...(params.page ? { page: params.page } : {}),
+          ...(params.limit ? { limit: params.limit } : {}),
+        }
+      : undefined,
+  });
 
-  return Array.isArray(response.data) ? response.data : response.data.data ?? [];
+  if (Array.isArray(response.data)) {
+    return {
+      data: response.data,
+      pagination: null,
+    };
+  }
+
+  return {
+    data: response.data.data ?? [],
+    pagination: {
+      total: Number(response.data.total) || 0,
+      page: Number(response.data.page) || 1,
+      limit: Number(response.data.limit) || 10,
+    },
+  };
 };
 
 export const getSecurityActivitySeries = async (params?: SecuritySeriesParams) => {

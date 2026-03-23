@@ -40,7 +40,7 @@ export function ReasonDistributionChart({ data }: Props) {
   if (!chartData.length) {
     return (
       <div className="bg-white p-3">
-        <div className="flex h-[280px] items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-500">
+        <div className="flex h-[200px] items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-500">
           No hay datos de distribución por motivo.
         </div>
       </div>
@@ -50,7 +50,7 @@ export function ReasonDistributionChart({ data }: Props) {
   return (
     <div className="bg-white p-2 sm:p-3">
       <div className="grid gap-5">
-        <div className="relative h-[300px] w-full">
+        <div className="relative h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Tooltip
@@ -90,8 +90,8 @@ export function ReasonDistributionChart({ data }: Props) {
                 data={chartData}
                 dataKey="value"
                 nameKey="label"
-                innerRadius={78}
-                outerRadius={110}
+                innerRadius={58}
+                outerRadius={82}
                 paddingAngle={3}
                 stroke="#ffffff"
                 strokeWidth={4}
@@ -168,7 +168,7 @@ function renderActiveShape(props: unknown) {
         cx={cx}
         cy={cy}
         innerRadius={innerRadius}
-        outerRadius={outerRadius + 4}
+        outerRadius={outerRadius + 2}
         startAngle={startAngle}
         endAngle={endAngle}
         fill={fill}

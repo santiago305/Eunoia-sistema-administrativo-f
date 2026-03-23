@@ -1,48 +1,39 @@
-import { cn } from "./security.utils";
+import { LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
 
-export function StatCard({
-  title,
-  value,
-  hint,
-  icon,
-  tone = "default",
-}: {
-  title: string;
+interface StatCardProps {
+  label: string;
   value: string | number;
-  hint: string;
-  icon: React.ReactNode;
-  tone?: "default" | "success" | "warning" | "danger";
-}) {
-  const toneStyles = {
-    default: "border-zinc-200 bg-white",
-    success:
-      "border-[rgba(33,184,166,.16)] bg-[linear-gradient(180deg,rgba(33,184,166,.08),rgba(255,255,255,1))]",
-    warning:
-      "border-amber-200 bg-[linear-gradient(180deg,rgba(251,191,36,.10),rgba(255,255,255,1))]",
-    danger:
-      "border-red-200 bg-[linear-gradient(180deg,rgba(239,68,68,.08),rgba(255,255,255,1))]",
-  };
-
-  return (
-    <div
-      className={cn(
-        "rounded-[28px] border p-5 shadow-[0_14px_36px_rgba(15,23,42,.05)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(15,23,42,.08)]",
-        toneStyles[tone]
-      )}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-zinc-500">{title}</p>
-          <h3 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-zinc-950 md:text-4xl">
-            {value}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">{hint}</p>
-        </div>
-
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/50 bg-white/80 text-zinc-800 shadow-sm">
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
+  subtitle: string;
+  icon: LucideIcon;
+  variant?: "default" | "primary" | "warning" | "destructive";
 }
+
+const variantStyles = {
+  default: "bg-card border-border",
+  primary: "bg-accent border-primary/20",
+  warning: "bg-warning/5 border-warning/20",
+  destructive: "bg-destructive/5 border-destructive/20",
+};
+
+const iconVariantStyles = {
+  default: "text-muted-foreground",
+  primary: "text-primary",
+  warning: "text-warning",
+  destructive: "text-destructive",
+};
+
+export const StatCard = ({ label, value, subtitle, icon: Icon, variant = "default" }: StatCardProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    className={`rounded-lg border px-4 py-3 ${variantStyles[variant]}`}
+  >
+    <div className="flex items-center justify-between mb-1">
+      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">{label}</span>
+      <Icon className={`h-3.5 w-3.5 ${iconVariantStyles[variant]}`} />
+    </div>
+    <p className="text-xl font-semibold tracking-tight text-foreground font-mono font-light">{value}</p>
+    <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+  </motion.div>
+);
