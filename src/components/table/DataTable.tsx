@@ -1,19 +1,64 @@
+import { ArrowDown, ArrowUp, ArrowUpDown, CheckSquare, MinusSquare, Square } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useMemo } from "react";
-import { DataTableColumnToggle } from "./DataTableColumnToggle";
+import { useEffect, useMemo, useState } from "react";
+import { DataTableColumnManager } from "./DataTableColumnManager";
 import { DataTablePagination } from "./DataTablePagination";
-import type { DataTableProps } from "./types";
+import { DataTableResponsiveCards } from "./DataTableResponsiveCards";
+import { DataTableToolbar } from "./DataTableToolbar";
+import type {
+  DataTableColumn,
+  DataTableColumnPreference,
+  DataTableProps,
+  DataTableSortState,
+} from "./types";
 import { useLocalStorage } from "./use-local-storage";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+function getCellValue<T extends Record<string, unknown>>(
+  row: T,
+  column: DataTableColumn<T>,
+) {
+  if (column.accessorKey) return row[column.accessorKey];
+  return undefined;
+}
+
+function normalizeSearchText(value: unknown) {
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value).toLowerCase();
+}
+
+function compareValues(a: unknown, b: unknown) {
+  if (a == null && b == null) return 0;
+  if (a == null) return -1;
+  if (b == null) return 1;
+
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() - b.getTime();
+  }
+
+  if (typeof a === "number" && typeof b === "number") {
+    return a - b;
+  }
+
+  if (typeof a === "boolean" && typeof b === "boolean") {
+    return Number(a) - Number(b);
+  }
+
+  return String(a).localeCompare(String(b), "es", {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 export function DataTable<T extends Record<string, unknown>>({
   data,
   columns,
   tableId,
-  selectableColumns = false,
   loading = false,
   emptyMessage = "No hay registros disponibles.",
   rowKey,
@@ -27,63 +72,40 @@ export function DataTable<T extends Record<string, unknown>>({
   onRowClick,
   rowClickable = true,
   rowClassName,
+  selectableColumns = false,
+  showSearch = false,
+  searchPlaceholder = "Buscar...",
+  searchValue,
+  onSearchChange,
+  globalSearchFn,
+  stickyHeader = true,
+  responsiveCards = true,
+  selectableRows = false,
+  selectedRowKeys,
+  defaultSelectedRowKeys = [],
+  onSelectedRowKeysChange,
+  initialSort = null,
+  controlledSort,
+  onSortChange,
 }: DataTableProps<T>) {
-  const storageKey = `data-table-columns:${tableId}`;
+  const preferenceStorageKey = `data-table-preferences:${tableId}`;
+  const controlledSearch = typeof searchValue === "string";
+  const [internalSearch, setInternalSearch] = useState("");
+  const activeSearch = controlledSearch ? searchValue : internalSearch;
 
-  const defaultVisibleColumns = useMemo(() => {
-    return columns
-      .filter((column) => column.visible !== false)
-      .map((column) => column.id);
-  }, [columns]);
-
-  const [visibleColumnIds, setVisibleColumnIds] = useLocalStorage<string[]>(
-    storageKey,
-    defaultVisibleColumns,
+  const [columnPreferences, setColumnPreferences] = useLocalStorage<DataTableColumnPreference>(
+    preferenceStorageKey,
+    {
+      visibleColumnIds: columns.filter((column) => column.visible !== false).map((column) => column.id),
+      orderedColumnIds: columns.map((column) => column.id),
+    },
   );
 
-  useEffect(() => {
-    const validIds = columns.map((column) => column.id);
+  const [internalSelectedRowKeys, setInternalSelectedRowKeys] = useState<string[]>(defaultSelectedRowKeys);
+  const [internalSort, setInternalSort] = useState<DataTableSortState>(initialSort);
 
-    setVisibleColumnIds((prev) => {
-      const filtered = prev.filter((id) => validIds.includes(id));
-
-      if (filtered.length === 0) {
-        return defaultVisibleColumns;
-      }
-
-      const missingDefaultIds = defaultVisibleColumns.filter(
-        (id) => !filtered.includes(id),
-      );
-
-      if (missingDefaultIds.length > 0) {
-        return [...filtered, ...missingDefaultIds];
-      }
-
-      return filtered;
-    });
-  }, [columns, defaultVisibleColumns, setVisibleColumnIds]);
-
-  const visibleColumns = useMemo(() => {
-    if (!selectableColumns) return columns;
-    return columns.filter((column) => visibleColumnIds.includes(column.id));
-  }, [columns, selectableColumns, visibleColumnIds]);
-
-  const toggleColumn = (columnId: string) => {
-    setVisibleColumnIds((prev) => {
-      const exists = prev.includes(columnId);
-
-      if (exists) {
-        const next = prev.filter((id) => id !== columnId);
-        return next.length > 0 ? next : prev;
-      }
-
-      return [...prev, columnId];
-    });
-  };
-
-  const resetColumns = () => {
-    setVisibleColumnIds(defaultVisibleColumns);
-  };
+  const sort = controlledSort !== undefined ? controlledSort : internalSort;
+  const activeSelectedRowKeys = selectedRowKeys ?? internalSelectedRowKeys;
 
   const resolveRowKey = (row: T, index: number) => {
     if (typeof rowKey === "function") return rowKey(row, index);
@@ -91,41 +113,337 @@ export function DataTable<T extends Record<string, unknown>>({
     return String(index);
   };
 
+  useEffect(() => {
+    const validIds = columns.map((column) => column.id);
+    const defaultVisibleIds = columns.filter((column) => column.visible !== false).map((column) => column.id);
+    const defaultOrderedIds = columns.map((column) => column.id);
+
+    setColumnPreferences((previous) => {
+      const previousVisible = previous?.visibleColumnIds ?? [];
+      const previousOrdered = previous?.orderedColumnIds ?? [];
+
+      const visibleColumnIds = previousVisible.filter((id) => validIds.includes(id));
+      const missingVisible = defaultVisibleIds.filter((id) => !visibleColumnIds.includes(id));
+
+      const orderedColumnIds = [
+        ...previousOrdered.filter((id) => validIds.includes(id)),
+        ...defaultOrderedIds.filter((id) => !previousOrdered.includes(id)),
+      ];
+
+      return {
+        visibleColumnIds: visibleColumnIds.length > 0 ? [...visibleColumnIds, ...missingVisible] : defaultVisibleIds,
+        orderedColumnIds,
+      };
+    });
+  }, [columns, setColumnPreferences]);
+
+  const orderedColumns = useMemo(() => {
+    const columnMap = new Map(columns.map((column) => [column.id, column]));
+    const storedOrder = columnPreferences.orderedColumnIds
+      .map((id) => columnMap.get(id))
+      .filter(Boolean) as DataTableColumn<T>[];
+
+    const pinnedLeft = storedOrder.filter((column) => column.pinned === "left");
+    const normal = storedOrder.filter((column) => !column.pinned);
+    const pinnedRight = storedOrder.filter((column) => column.pinned === "right");
+
+    return [...pinnedLeft, ...normal, ...pinnedRight];
+  }, [columnPreferences.orderedColumnIds, columns]);
+
+  const visibleColumns = useMemo(() => {
+    const ids = selectableColumns
+      ? columnPreferences.visibleColumnIds
+      : columns.filter((column) => column.visible !== false).map((column) => column.id);
+
+    return orderedColumns.filter((column) => ids.includes(column.id));
+  }, [columnPreferences.visibleColumnIds, columns, orderedColumns, selectableColumns]);
+
+  const toggleColumn = (columnId: string) => {
+    setColumnPreferences((previous) => {
+      const exists = previous.visibleColumnIds.includes(columnId);
+
+      if (exists) {
+        const nextVisible = previous.visibleColumnIds.filter((id) => id !== columnId);
+        return {
+          ...previous,
+          visibleColumnIds: nextVisible.length > 0 ? nextVisible : previous.visibleColumnIds,
+        };
+      }
+
+      return {
+        ...previous,
+        visibleColumnIds: [...previous.visibleColumnIds, columnId],
+      };
+    });
+  };
+
+  const moveColumn = (columnId: string, targetColumnId: string) => {
+    setColumnPreferences((previous) => {
+      const sourceColumn = columns.find((column) => column.id === columnId);
+      const targetColumn = columns.find((column) => column.id === targetColumnId);
+
+      if (!sourceColumn || !targetColumn) return previous;
+      if (sourceColumn.lockPosition || targetColumn.lockPosition) return previous;
+      if (sourceColumn.pinned !== targetColumn.pinned) return previous;
+
+      const nextOrder = [...previous.orderedColumnIds];
+      const sourceIndex = nextOrder.indexOf(columnId);
+      const targetIndex = nextOrder.indexOf(targetColumnId);
+
+      if (sourceIndex < 0 || targetIndex < 0) return previous;
+
+      nextOrder.splice(sourceIndex, 1);
+      nextOrder.splice(targetIndex, 0, columnId);
+
+      return {
+        ...previous,
+        orderedColumnIds: nextOrder,
+      };
+    });
+  };
+
+  const resetColumns = () => {
+    setColumnPreferences({
+      visibleColumnIds: columns.filter((column) => column.visible !== false).map((column) => column.id),
+      orderedColumnIds: columns.map((column) => column.id),
+    });
+  };
+
+  const filteredData = useMemo(() => {
+    const query = activeSearch.trim().toLowerCase();
+    if (!query) return data;
+
+    return data.filter((row) => {
+      if (globalSearchFn) return globalSearchFn(row, query);
+
+      return columns
+        .filter((column) => column.searchable !== false)
+        .some((column) => {
+          const value = column.searchValue
+            ? column.searchValue(row)
+            : column.accessorKey
+              ? row[column.accessorKey]
+              : getCellValue(row, column);
+
+          return normalizeSearchText(value).includes(query);
+        });
+    });
+  }, [activeSearch, columns, data, globalSearchFn]);
+
+  const sortedData = useMemo(() => {
+    if (!sort) return filteredData;
+
+    const selectedColumn = columns.find((column) => column.id === sort.columnId);
+    if (!selectedColumn || selectedColumn.sortable === false) return filteredData;
+
+    const sorted = [...filteredData].sort((rowA, rowB) => {
+      const valueA =
+        typeof selectedColumn.sortAccessor === "function"
+          ? selectedColumn.sortAccessor(rowA)
+          : selectedColumn.sortAccessor
+            ? rowA[selectedColumn.sortAccessor]
+            : selectedColumn.accessorKey
+              ? rowA[selectedColumn.accessorKey]
+              : undefined;
+
+      const valueB =
+        typeof selectedColumn.sortAccessor === "function"
+          ? selectedColumn.sortAccessor(rowB)
+          : selectedColumn.sortAccessor
+            ? rowB[selectedColumn.sortAccessor]
+            : selectedColumn.accessorKey
+              ? rowB[selectedColumn.accessorKey]
+              : undefined;
+
+      const result = compareValues(valueA, valueB);
+      return sort.direction === "asc" ? result : result * -1;
+    });
+
+    return sorted;
+  }, [columns, filteredData, sort]);
+
+  const setSortValue = (nextSort: DataTableSortState) => {
+    if (controlledSort === undefined) {
+      setInternalSort(nextSort);
+    }
+    onSortChange?.(nextSort);
+  };
+
+  const handleToggleSort = (columnId: string) => {
+    const selectedColumn = columns.find((column) => column.id === columnId);
+    if (!selectedColumn || selectedColumn.sortable === false) return;
+
+    if (!sort || sort.columnId !== columnId) {
+      setSortValue({ columnId, direction: "asc" });
+      return;
+    }
+
+    if (sort.direction === "asc") {
+      setSortValue({ columnId, direction: "desc" });
+      return;
+    }
+
+    setSortValue(null);
+  };
+
+  const updateSelectedRows = (nextKeys: string[]) => {
+    if (selectedRowKeys === undefined) {
+      setInternalSelectedRowKeys(nextKeys);
+    }
+
+    const selectedRows = sortedData.filter((row, index) =>
+      nextKeys.includes(resolveRowKey(row, index)),
+    );
+
+    onSelectedRowKeysChange?.(nextKeys, {
+      selectedKeys: nextKeys,
+      selectedRows,
+    });
+  };
+
+  const handleToggleRow = (row: T, index: number) => {
+    const key = resolveRowKey(row, index);
+    const exists = activeSelectedRowKeys.includes(key);
+
+    updateSelectedRows(
+      exists
+        ? activeSelectedRowKeys.filter((item) => item !== key)
+        : [...activeSelectedRowKeys, key],
+    );
+  };
+
+  const allVisibleKeys = sortedData.map((row, index) => resolveRowKey(row, index));
+  const allSelected = selectableRows && allVisibleKeys.length > 0 && allVisibleKeys.every((key) => activeSelectedRowKeys.includes(key));
+  const someSelected = selectableRows && !allSelected && allVisibleKeys.some((key) => activeSelectedRowKeys.includes(key));
+
+  const handleToggleAllRows = () => {
+    if (!selectableRows) return;
+
+    if (allSelected) {
+      updateSelectedRows(activeSelectedRowKeys.filter((key) => !allVisibleKeys.includes(key)));
+      return;
+    }
+
+    updateSelectedRows(Array.from(new Set([...activeSelectedRowKeys, ...allVisibleKeys])));
+  };
+
   const isRowClickable = !!onRowClick && rowClickable !== false;
 
   return (
     <div className={cn("w-full", className)}>
-      {selectableColumns && (
-        <div className="mb-4 flex justify-end">
-          <DataTableColumnToggle
-            columns={columns.map((column) => ({
-              id: column.id,
-              header: column.header,
-              hideable: column.hideable,
-            }))}
-            visibleColumnIds={visibleColumnIds}
-            onToggle={toggleColumn}
-            onReset={resetColumns}
-          />
-        </div>
-      )}
+      <DataTableToolbar
+        showSearch={showSearch}
+        searchValue={activeSearch}
+        searchPlaceholder={searchPlaceholder}
+        onSearchChange={(value) => {
+          if (controlledSearch) {
+            onSearchChange?.(value);
+            return;
+          }
+          setInternalSearch(value);
+        }}
+        selectionInfo={
+          selectableRows ? (
+            <div className="inline-flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+              <CheckSquare className="h-4 w-4" />
+              {activeSelectedRowKeys.length} fila(s) seleccionada(s)
+            </div>
+          ) : null
+        }
+        rightContent={
+          selectableColumns ? (
+            <DataTableColumnManager
+              columns={orderedColumns.map((column) => ({
+                id: column.id,
+                header: column.header,
+                hideable: column.hideable,
+                pinned: column.pinned,
+                lockPosition: column.lockPosition,
+              }))}
+              visibleColumnIds={columnPreferences.visibleColumnIds}
+              orderedColumnIds={columnPreferences.orderedColumnIds}
+              onToggle={toggleColumn}
+              onMove={moveColumn}
+              onReset={resetColumns}
+            />
+          ) : null
+        }
+      />
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
-        <div className="overflow-x-auto">
+      {responsiveCards ? (
+        <DataTableResponsiveCards
+          data={sortedData}
+          columns={visibleColumns}
+          loading={loading}
+          emptyMessage={emptyMessage}
+          animated={animated}
+          rowClickable={isRowClickable}
+          onRowClick={onRowClick}
+          rowClassName={rowClassName}
+          resolveRowKey={resolveRowKey}
+        />
+      ) : null}
+
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-background shadow-sm md:block">
+        <div className="max-h-[70vh] overflow-auto">
           <table className={cn("w-full min-w-full text-sm", tableClassName)}>
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                {visibleColumns.map((column) => (
-                  <th
-                    key={column.id}
-                    className={cn(
-                      "px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground",
-                      column.headerClassName,
-                    )}
-                  >
-                    {column.header}
+            <thead className={cn(stickyHeader && "sticky top-0 z-10") }>
+              <tr className="border-b border-border bg-muted/95 backdrop-blur">
+                {selectableRows ? (
+                  <th className="w-12 px-4 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={handleToggleAllRows}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border transition hover:bg-background"
+                    >
+                      {allSelected ? (
+                        <CheckSquare className="h-4 w-4" />
+                      ) : someSelected ? (
+                        <MinusSquare className="h-4 w-4" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </button>
                   </th>
-                ))}
+                ) : null}
+
+                {visibleColumns.map((column) => {
+                  const isSorted = sort?.columnId === column.id;
+                  const canSort = column.sortable !== false && (!!column.accessorKey || !!column.sortAccessor);
+
+                  return (
+                    <th
+                      key={column.id}
+                      style={column.width ? { width: column.width } : undefined}
+                      className={cn(
+                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+                        column.headerClassName,
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{column.header}</span>
+
+                        {canSort ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSort(column.id)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-background hover:text-foreground"
+                          >
+                            {isSorted ? (
+                              sort?.direction === "asc" ? (
+                                <ArrowUp className="h-4 w-4" />
+                              ) : (
+                                <ArrowDown className="h-4 w-4" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4" />
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
 
@@ -133,6 +451,7 @@ export function DataTable<T extends Record<string, unknown>>({
               {loading ? (
                 Array.from({ length: 5 }).map((_, rowIndex) => (
                   <tr key={rowIndex} className="border-b border-border/60">
+                    {selectableRows ? <td className="px-4 py-4"><div className="h-4 w-4 animate-pulse rounded bg-muted" /></td> : null}
                     {visibleColumns.map((column) => (
                       <td key={column.id} className="px-4 py-4">
                         <div className="h-4 w-full animate-pulse rounded bg-muted" />
@@ -140,17 +459,17 @@ export function DataTable<T extends Record<string, unknown>>({
                     ))}
                   </tr>
                 ))
-              ) : data.length === 0 ? (
+              ) : sortedData.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={visibleColumns.length || 1}
+                    colSpan={visibleColumns.length + (selectableRows ? 1 : 0) || 1}
                     className="px-4 py-10 text-center text-sm text-muted-foreground"
                   >
                     {emptyMessage}
                   </td>
                 </tr>
               ) : (
-                data.map((row, index) => {
+                sortedData.map((row, index) => {
                   const rowClasses = cn(
                     "border-b border-border/60 transition-colors",
                     hoverable && "hover:bg-muted/40",
@@ -167,63 +486,25 @@ export function DataTable<T extends Record<string, unknown>>({
                       }
                     : {};
 
-                  if (animated) {
-                    return (
-                      <motion.tr
-                        key={resolveRowKey(row, index)}
-                        {...motionProps}
-                        onClick={
-                          isRowClickable
-                            ? () => onRowClick?.(row, index)
-                            : undefined
-                        }
-                        className={rowClasses}
-                      >
-                        {visibleColumns.map((column) => {
-                          const isCellClickable =
-                            !!column.onCellClick && column.clickable !== false;
+                  const rowKeyValue = resolveRowKey(row, index);
+                  const isSelected = activeSelectedRowKeys.includes(rowKeyValue);
 
-                          return (
-                            <td
-                              key={column.id}
-                              onClick={
-                                isCellClickable
-                                  ? (event) => {
-                                      event.stopPropagation();
-                                      column.onCellClick?.(row, index, event);
-                                    }
-                                  : undefined
-                              }
-                              className={cn(
-                                "px-4 py-3 text-foreground",
-                                column.className,
-                                isCellClickable &&
-                                  "cursor-pointer hover:underline",
-                              )}
-                            >
-                              {column.cell
-                                ? column.cell(row, index)
-                                : column.accessorKey
-                                  ? String(row[column.accessorKey] ?? "")
-                                  : null}
-                            </td>
-                          );
-                        })}
-                      </motion.tr>
-                    );
-                  }
+                  const rowCells = (
+                    <>
+                      {selectableRows ? (
+                        <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleRow(row, index)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border transition hover:bg-muted"
+                          >
+                            {isSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                          </button>
+                        </td>
+                      ) : null}
 
-                  return (
-                    <tr
-                      key={resolveRowKey(row, index)}
-                      onClick={
-                        isRowClickable ? () => onRowClick?.(row, index) : undefined
-                      }
-                      className={rowClasses}
-                    >
                       {visibleColumns.map((column) => {
-                        const isCellClickable =
-                          !!column.onCellClick && column.clickable !== false;
+                        const isCellClickable = !!column.onCellClick && column.clickable !== false;
 
                         return (
                           <td
@@ -239,8 +520,7 @@ export function DataTable<T extends Record<string, unknown>>({
                             className={cn(
                               "px-4 py-3 text-foreground",
                               column.className,
-                              isCellClickable &&
-                                "cursor-pointer hover:underline",
+                              isCellClickable && "cursor-pointer hover:underline",
                             )}
                           >
                             {column.cell
@@ -251,6 +531,29 @@ export function DataTable<T extends Record<string, unknown>>({
                           </td>
                         );
                       })}
+                    </>
+                  );
+
+                  if (animated) {
+                    return (
+                      <motion.tr
+                        key={rowKeyValue}
+                        {...motionProps}
+                        onClick={isRowClickable ? () => onRowClick?.(row, index) : undefined}
+                        className={cn(rowClasses, isSelected && "bg-primary/5")}
+                      >
+                        {rowCells}
+                      </motion.tr>
+                    );
+                  }
+
+                  return (
+                    <tr
+                      key={rowKeyValue}
+                      onClick={isRowClickable ? () => onRowClick?.(row, index) : undefined}
+                      className={cn(rowClasses, isSelected && "bg-primary/5")}
+                    >
+                      {rowCells}
                     </tr>
                   );
                 })
