@@ -1,11 +1,15 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Banknote } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import { SystemButton } from "@/components/SystemButton";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { listQuotas } from "@/services/purchaseService";
 import type { CreditQuota } from "@/pages/purchases/types/purchase";
 import type { CurrencyType } from "@/pages/purchases/types/purchaseEnums";
 import { CurrencyTypes } from "@/pages/purchases/types/purchaseEnums";
 import { money } from "@/utils/functionPurchases";
-import { Banknote, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import { PaymentModal } from "./PaymentModal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
@@ -25,6 +29,13 @@ export type QuotaListModalProps = {
 type SelectedTotals = {
   totalPaid: number;
   totalToPay: number;
+};
+
+type QuotaRow = CreditQuota & {
+  id: string;
+  paid: number;
+  pending: number;
+  isFullyPaid: boolean;
 };
 
 export function QuotaListModal({
@@ -48,19 +59,19 @@ export function QuotaListModal({
   const { showFlash, clearFlash } = useFlashMessage();
 
   const loadQuotas = async () => {
-      if (!poId || quotas) return;
-      setLoading(true);
-      clearFlash();
-      setError(null);
-      try {
-          const data = await listQuotas(poId);
-          setRows(data ?? []);
-      } catch {
-          setRows([]);
-          showFlash(errorResponse("No se pudieron cargar las cuotas."));
-      } finally {
-          setLoading(false);
-      }
+    if (!poId) return;
+    setLoading(true);
+    clearFlash();
+    setError(null);
+    try {
+      const data = await listQuotas(poId);
+      setRows(data ?? []);
+    } catch {
+      setRows([]);
+      showFlash(errorResponse("No se pudieron cargar las cuotas."));
+    } finally {
+      setLoading(false);
+    }
   };
   useEffect(() => {
     void loadQuotas();
@@ -70,9 +81,7 @@ export function QuotaListModal({
     if (quotas) setRows(quotas);
   }, [quotas]);
 
-  const listKey = useMemo(() => `${rows.length}|${poId}`, [rows.length, poId]);
-
-  const openPaymentModal = (quota: CreditQuota) => {
+  const openPaymentModal = useCallback((quota: CreditQuota) => {
     const paid = quota.totalPaid ?? 0;
     const pending = (quota.totalToPay ?? 0) - paid;
     setSelectedTotals({
@@ -80,80 +89,119 @@ export function QuotaListModal({
       totalToPay: pending,
     });
     setModalPayment(true);
-  };
+  }, []);
+
+  const quotaRows = useMemo<QuotaRow[]>(
+    () =>
+      rows.map((q, index) => {
+        const paid = q.totalPaid ?? 0;
+        const pending = (q.totalToPay ?? 0) - paid;
+
+        return {
+          ...q,
+          id: q.quotaId ?? `${q.number}-${q.expirationDate ?? index}`,
+          paid,
+          pending,
+          isFullyPaid: pending <= 0,
+        };
+      }),
+    [rows],
+  );
+
+  const columns = useMemo<DataTableColumn<QuotaRow>[]>(
+    () => [
+      {
+        id: "number",
+        header: "Cuota",
+        accessorKey: "number",
+        hideable: false,
+      },
+      {
+        id: "expirationDate",
+        header: "Vence",
+        cell: (row) =>
+          row.expirationDate ? new Date(row.expirationDate).toLocaleDateString() : "-",
+        hideable: false,
+      },
+      {
+        id: "paymentDate",
+        header: "Pago",
+        cell: (row) =>
+          row.paymentDate ? new Date(row.paymentDate).toLocaleDateString() : "-",
+      },
+      {
+        id: "total",
+        header: "Total",
+        cell: (row) => money(row.totalToPay ?? 0, currency),
+        hideable: false,
+      },
+      {
+        id: "paid",
+        header: "Pagado",
+        cell: (row) => money(row.paid, currency),
+        hideable: false,
+      },
+      {
+        id: "pending",
+        header: "Pendiente",
+        cell: (row) => money(row.pending, currency),
+        hideable: false,
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: (row) => (
+          <div className="flex justify-end">
+            {!row.isFullyPaid && (
+              <SystemButton
+                size="sm"
+                leftIcon={<Banknote className="h-4 w-4" />}
+                style={{
+                  backgroundColor: PRIMARY,
+                  borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                }}
+                onClick={() => {
+                  openPaymentModal(row);
+                  setQtaId(row.quotaId ?? "");
+                }}
+                title="Agregar pago"
+              >
+                Agregar
+              </SystemButton>
+            )}
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+    ],
+    [currency, openPaymentModal],
+  );
 
   return (
     <Modal onClose={close} title={title} className={className}>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-black/60">
-            {loading ? "Cargando..." : `${rows.length} cuotas`}
+      <div className="space-y-4">
+        <div className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <SectionHeaderForm icon={Banknote} title="Listado de cuotas" />
+            <div className="text-xs text-black/60">
+              {loading ? "Cargando..." : `${rows.length} registros`}
+            </div>
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-black/10 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
-            <span>Listado de cuotas</span>
-            <span>{loading ? "Cargando..." : `${rows.length} registros`}</span>
-          </div>
-          <div className="max-h-200 overflow-auto">
-            <table className="w-full text-sm table-fixed">
-              <thead className="sticky top-0 bg-white z-10">
-                <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-2 px-5 text-left w-5">Cuota</th>
-                  <th className="py-2 px-5 text-left w-15">Vence</th>
-                  <th className="py-2 px-5 text-left w-15">Pago</th>
-                  <th className="py-2 px-5 text-left w-20">Total</th>
-                  <th className="py-2 px-5 text-left w-20">Pagado</th>
-                  <th className="py-2 px-5 text-left w-20">Pendiente</th>
-                  <th className="py-2 px-5 text-right w-25">Acciones</th>
-                </tr>
-              </thead>
-              <tbody key={listKey}>
-                {rows.map((q) => {
-                  const paid = q.totalPaid ?? 0;
-                  const pending = (q.totalToPay ?? 0) - paid;
-                  const isFullyPaid = pending <= 0;
-                  return (
-                    <tr key={q.quotaId ?? `${q.number}-${q.expirationDate}`} className="border-b border-black/5">
-                      <td className="py-2 px-5 text-left">{q.number}</td>
-                      <td className="py-2 px-5 text-left">
-                        {q.expirationDate ? new Date(q.expirationDate).toLocaleDateString() : "-"}
-                      </td>
-                      <td className="py-2 px-5 text-left">
-                        {q.paymentDate ? new Date(q.paymentDate).toLocaleDateString() : "-"}
-                      </td>
-                      <td className="py-2 px-5 text-left">{money(q.totalToPay ?? 0, currency)}</td>
-                      <td className="py-2 px-5 text-left">{money(paid, currency)}</td>
-                      <td className="py-2 px-5 text-left">{money(pending, currency)}</td>
-                      <td className="py-2 px-5 text-left">
-                        {
-                          !isFullyPaid && (
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-2 rounded-xl border px-2 py-1 text-xs text-white"
-                              style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
-                              onClick={() => {
-                                openPaymentModal(q);
-                                setQtaId(q.quotaId ?? "");
-                              }}
-                              title="Agregar pago"
-                            >
-                              Agregar <Banknote className="h-6 w-6" />
-                            </button>
-                          )
-                        }
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {!loading && rows.length === 0 && (
-              <div className="px-4 py-4 text-sm text-black/60">No hay cuotas registradas.</div>
-            )}
-            {error && <div className="px-4 py-4 text-sm text-rose-600">{error}</div>}
-          </div>
+          <DataTable
+            tableId={`purchase-quotas-table-${poId}`}
+            data={quotaRows}
+            columns={columns}
+            rowKey="id"
+            loading={loading}
+            emptyMessage="No hay cuotas registradas."
+            hoverable={false}
+            animated={false}
+          />
+
+          {error && <div className="px-4 py-2 text-sm text-rose-600">{error}</div>}
         </div>
       </div>
       {modalPayment && (

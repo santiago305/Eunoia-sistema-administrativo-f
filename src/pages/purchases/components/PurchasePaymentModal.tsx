@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Calendar, Plus, Trash2, Wallet } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import { SystemButton } from "@/components/SystemButton";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes } from "@/pages/purchases/types/purchaseEnums";
 import type { CreditQuota, Payment, PurchaseOrder } from "@/pages/purchases/types/purchase";
-import { todayIso, toDateInputValue, clampQuotas, buildQuotas, tryShowPicker } from "@/utils/functionPurchases";
+import { todayIso, toDateInputValue, clampQuotas, buildQuotas, tryShowPicker, normalizeMoney, parseDecimalInput } from "@/utils/functionPurchases";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { errorResponse, successResponse } from "@/common/utils/response";
+import { errorResponse } from "@/common/utils/response";
 import { getPaymentMethodsBySupplier } from "@/services/paymentMethodService";
-import { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
+import { PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
 
 const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
@@ -33,7 +39,6 @@ export function PurchasePaymentModal({
   form,
   setForm,
   totalPrice,
-  ringStyle,
   primaryColor,
   currency,
   formatMoney,
@@ -45,7 +50,6 @@ export function PurchasePaymentModal({
 }: PurchasePaymentModalProps) {
 
   const accent = primaryColor ?? DEFAULT_PRIMARY;
-  const computedRingStyle = (ringStyle ?? ({ "--tw-ring-color": `color-mix(in srgb, ${accent} 20%, transparent)` } as CSSProperties)) as CSSProperties;
 
   const showCredit = form.paymentForm === PaymentFormTypes.CREDITO;
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
@@ -129,117 +133,197 @@ export function PurchasePaymentModal({
       return { ...prev, quotas, numQuotas: quotas.length };
     });
   };
-  const methodOptions = useMemo( () =>
-    (paymentMethods ?? []).map((m) => ({
-      value: m.methodId,
-      label: `${m.name} ${m.number ? `- ${m.number}` : '' }`,
-    })),
-  [paymentMethods],
-);
+
+  const paymentFormOptions = [
+    { value: PaymentFormTypes.CONTADO, label: "Contado" },
+    { value: PaymentFormTypes.CREDITO, label: "Credito" },
+  ];
+
+  const currencyOptions = [
+    { value: CurrencyTypes.PEN, label: "PEN (S/)" },
+    { value: CurrencyTypes.USD, label: "USD ($)" },
+  ];
+
+  const methodOptions = useMemo(
+    () =>
+      (paymentMethods ?? []).map((m) => {
+        const label = `${m.name} ${m.number ? `- ${m.number}` : ""}`.trim();
+        return {
+          value: label,
+          label,
+        };
+      }),
+    [paymentMethods],
+  );
+
+  type QuotaRow = CreditQuota & {
+    id: string;
+    rowIndex: number;
+  };
+
+  const quotaRows = useMemo<QuotaRow[]>(
+    () =>
+      (form.quotas ?? []).map((quota, index) => ({
+        ...quota,
+        id: quota.quotaId ?? `quota-${index}`,
+        rowIndex: index,
+      })),
+    [form.quotas],
+  );
+
+  const quotaColumns = useMemo<DataTableColumn<QuotaRow>[]>(
+    () => [
+      {
+        id: "expirationDate",
+        header: "Fecha de pago",
+        cell: (row) => (
+          <FloatingInput
+            label="Fecha"
+            name={`quota-date-${row.rowIndex}`}
+            type="date"
+            value={toDateInputValue(row.expirationDate)}
+            onClick={(e) => tryShowPicker(e.currentTarget)}
+            onChange={(e) => updateQuota(row.rowIndex, { expirationDate: e.target.value })}
+            className="h-9 text-xs"
+          />
+        ),
+        hideable: false,
+      },
+      {
+        id: "totalToPay",
+        header: "Total a pagar",
+        cell: (row) => (
+          <FloatingInput
+            label="Total"
+            name={`quota-total-${row.rowIndex}`}
+            type="number"
+            min={0}
+            value={row.totalToPay}
+            onChange={(e) => updateQuota(row.rowIndex, { totalToPay: Number(e.target.value || 0) })}
+            className="h-9 text-xs"
+          />
+        ),
+        hideable: false,
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: (row) => (
+          <div className="flex justify-end">
+            <SystemButton
+              variant="danger"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => removeQuota(row.rowIndex)}
+              title="Eliminar cuota"
+            >
+              <Trash2 className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+    ],
+    [updateQuota, removeQuota],
+  );
+
   return (
     <Modal onClose={onClose} title={title} className={className}>
       <div className="space-y-4">
-        <div className="space-y-1">
-          <label className="text-xs text-black/60">Forma de pago</label>
-          <select
-            className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
-            style={computedRingStyle}
-            value={form.paymentForm}
-            onChange={(e) => {
-              const next = e.target.value as PurchaseOrder["paymentForm"];
-              setForm((prev) => {
-                if (next !== PaymentFormTypes.CREDITO) {
-                  return {
-                    ...prev,
-                    paymentForm: next,
-                    creditDays: 0,
-                    numQuotas: 0,
-                    quotas: [],
-                  };
-                }
-                const baseDate = toDateInputValue(prev.dateIssue) || todayIso();
-                const creditDays = Math.max(0, prev.creditDays ?? 0);
-                const numQuotas = clampQuotas(creditDays, prev.numQuotas ?? 0);
+        <FloatingSelect
+          label="Forma de pago"
+          name="payment-form"
+          value={form.paymentForm}
+          onChange={(value) => {
+            const next = value as PurchaseOrder["paymentForm"];
+            setForm((prev) => {
+              if (next !== PaymentFormTypes.CREDITO) {
                 return {
                   ...prev,
                   paymentForm: next,
-                  creditDays,
-                  numQuotas,
-                  payments: [],
-                  quotas: buildQuotas(baseDate, creditDays, numQuotas, totalPrice),
+                  creditDays: 0,
+                  numQuotas: 0,
+                  quotas: [],
                 };
-              });
-            }}
-          >
-            <option value={PaymentFormTypes.CONTADO}>Contado</option>
-            <option value={PaymentFormTypes.CREDITO}>Credito</option>
-          </select>
-        </div>
+              }
+              const baseDate = toDateInputValue(prev.dateIssue) || todayIso();
+              const creditDays = Math.max(0, prev.creditDays ?? 0);
+              const numQuotas = clampQuotas(creditDays, prev.numQuotas ?? 0);
+              return {
+                ...prev,
+                paymentForm: next,
+                creditDays,
+                numQuotas,
+                payments: [],
+                quotas: buildQuotas(baseDate, creditDays, numQuotas, totalPrice),
+              };
+            });
+          }}
+          options={paymentFormOptions}
+          searchable={false}
+        />
 
         {showCredit && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs text-black/60">Dias de credito</label>
-              <input
-                type="number"
-                min={0}
-                className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
-                style={computedRingStyle}
-                value={form.creditDays ?? 0}
-                onChange={(e) => {
-                  const creditDays = Math.max(0, Number(e.target.value || 0));
-                  setForm((prev) => {
-                    const baseDate = toDateInputValue(prev.dateIssue) || todayIso();
-                    const nextNum = clampQuotas(creditDays, prev.numQuotas ?? 0);
-                    return {
-                      ...prev,
-                      creditDays,
-                      numQuotas: nextNum,
-                      quotas: buildQuotas(baseDate, creditDays, nextNum, totalPrice),
-                    };
-                  });
-                }}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-black/60">Numero de cuotas</label>
-              <input
-                type="number"
-                min={0}
-                className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
-                style={computedRingStyle}
-                value={form.numQuotas ?? 0}
-                onChange={(e) => {
-                  const rawNum = Math.max(0, Number(e.target.value || 0));
-                  setForm((prev) => {
-                    const creditDays = Math.max(0, prev.creditDays ?? 0);
-                    const nextNum = clampQuotas(creditDays, rawNum);
-                    const baseDate = toDateInputValue(prev.dateIssue) || todayIso();
-                    return {
-                      ...prev,
-                      numQuotas: nextNum,
-                      quotas: buildQuotas(baseDate, creditDays, nextNum, totalPrice),
-                    };
-                  });
-                }}
-              />
-            </div>
+            <FloatingInput
+              label="Dias de credito"
+              name="credit-days"
+              type="number"
+              min={0}
+              value={form.creditDays ?? 0}
+              onChange={(e) => {
+                const creditDays = Math.max(0, Number(e.target.value || 0));
+                setForm((prev) => {
+                  const baseDate = toDateInputValue(prev.dateIssue) || todayIso();
+                  const nextNum = clampQuotas(creditDays, prev.numQuotas ?? 0);
+                  return {
+                    ...prev,
+                    creditDays,
+                    numQuotas: nextNum,
+                    quotas: buildQuotas(baseDate, creditDays, nextNum, totalPrice),
+                  };
+                });
+              }}
+            />
+            <FloatingInput
+              label="Numero de cuotas"
+              name="credit-quotas"
+              type="number"
+              min={0}
+              value={form.numQuotas ?? 0}
+              onChange={(e) => {
+                const rawNum = Math.max(0, Number(e.target.value || 0));
+                setForm((prev) => {
+                  const creditDays = Math.max(0, prev.creditDays ?? 0);
+                  const nextNum = clampQuotas(creditDays, rawNum);
+                  const baseDate = toDateInputValue(prev.dateIssue) || todayIso();
+                  return {
+                    ...prev,
+                    numQuotas: nextNum,
+                    quotas: buildQuotas(baseDate, creditDays, nextNum, totalPrice),
+                  };
+                });
+              }}
+            />
           </div>
         )}
 
         {!showCredit && (
           <div className="rounded-3xl border border-black/10 bg-white p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold">Pagos</p>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
-                style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
+              <SectionHeaderForm icon={Wallet} title="Pagos" />
+              <SystemButton
+                leftIcon={<Plus className="h-4 w-4" />}
+                style={{
+                  backgroundColor: accent,
+                  borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                }}
                 onClick={() => addPayment(pendingAmount)}
               >
-                <Plus className="h-4 w-4" />
                 Agregar
-              </button>
+              </SystemButton>
             </div>
 
             {(form.payments ?? []).length === 0 && <div className="text-xs text-black/60">Aun no agregas pagos.</div>}
@@ -250,74 +334,74 @@ export function PurchasePaymentModal({
               return (
                 <div key={`payment-${index}`} className="rounded-xl border border-black/10 p-3 space-y-2">
                   <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_50px] gap-2">
-                    <select
-                      className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                      style={computedRingStyle}
+                    <FloatingSelect
+                      label="Metodo"
+                      name={`payment-method-${index}`}
                       value={payment.method}
-                      onChange={(e) => updatePayment(index, { method: e.target.value as Payment["method"] })}
-                    >
-                      {methodOptions.map((opt) => (
-                        <option key={opt.value} value={opt.label}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <input
+                      onChange={(value) => updatePayment(index, { method: value as Payment["method"] })}
+                      options={methodOptions}
+                      searchable={false}
+                      className="h-9 text-xs"
+                    />
+                    <FloatingInput
+                      label="Fecha"
+                      name={`payment-date-${index}`}
                       type="date"
-                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                      style={computedRingStyle}
                       value={toDateInputValue(payment.date)}
                       onClick={(e) => tryShowPicker(e.currentTarget)}
                       onChange={(e) => updatePayment(index, { date: e.target.value })}
+                      className="h-9 text-xs"
                     />
 
-                    <select
-                      className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                      style={computedRingStyle}
+                    <FloatingSelect
+                      label="Moneda"
+                      name={`payment-currency-${index}`}
                       value={payment.currency}
-                      onChange={(e) => updatePayment(index, { currency: e.target.value as CurrencyType })}
-                      disabled={true}
-                    >
-                      <option value={CurrencyTypes.PEN}>PEN (S/)</option>
-                      <option value={CurrencyTypes.USD}>USD ($)</option>
-                    </select>
-                    <input
+                      onChange={(value) => updatePayment(index, { currency: value as CurrencyType })}
+                      options={currencyOptions}
+                      searchable={false}
+                      disabled
+                      className="h-9 text-xs"
+                    />
+                    <FloatingInput
+                      label="Monto"
+                      name={`payment-amount-${index}`}
                       type="number"
                       min={0}
                       max={maxForPayment}
-                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                      style={computedRingStyle}
-                      value={payment.amount ?? ""}
+                      value={String(payment.amount ?? "")}
                       onChange={(e) => {
-                        const next = Number(e.target.value || 0);
+                        const next = normalizeMoney(parseDecimalInput(e.target.value ));
                         updatePayment(index, { amount: Math.min(Math.max(0, next), maxForPayment) });
                       }}
-                      placeholder="Monto"
+                      className="h-9 text-xs"
                     />
                     <div className="flex justify-end">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 rounded-xl border border-black/10 px-3 py-2 text-xs text-rose-600"
+                      <SystemButton
+                        variant="danger"
+                        size="icon"
+                        className="h-9 w-9"
                         onClick={() => removePayment(index)}
+                        title="Eliminar pago"
                       >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
+                        <Trash2 className="h-4 w-4" />
+                      </SystemButton>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <input
-                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                      style={computedRingStyle}
+                    <FloatingInput
+                      label="Numero de operacion"
+                      name={`payment-operation-${index}`}
                       value={payment.operationNumber ?? ""}
                       onChange={(e) => updatePayment(index, { operationNumber: e.target.value })}
-                      placeholder="Número de operación"
+                      className="h-9 text-xs"
                     />
-                    <input
-                      className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                      style={computedRingStyle}
+                    <FloatingInput
+                      label="Nota"
+                      name={`payment-note-${index}`}
                       value={payment.note ?? ""}
                       onChange={(e) => updatePayment(index, { note: e.target.value })}
-                      placeholder="Nota"
+                      className="h-9 text-xs"
                     />
                   </div>
                 </div>
@@ -328,56 +412,18 @@ export function PurchasePaymentModal({
 
         {showCredit && (
           <div className="rounded-3xl border border-black/10 bg-white p-4 space-y-3">
-            {(form.quotas ?? []).length === 0 && <div className="text-xs text-black/60">Aun no agregas cuotas.</div>}
-            <div className="flex-1 max-h-[300px] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-white">
-                  <tr className="border-b border-black/10 text-xs text-black/60">
-                    <th className="py-3 px-5 text-left">Fecha de pago</th>
-                    <th className="py-3 px-5 text-left">Total a pagar</th>
-                    <th className="py-3 px-5 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(form.quotas ?? []).map((quota, index) => (
-                    <tr key={`quota-${index}`}>
-                      <td className="py-2 px-5">
-                        <input
-                          type="date"
-                          className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                          style={computedRingStyle}
-                          value={toDateInputValue(quota.expirationDate)}
-                          onClick={(e) => tryShowPicker(e.currentTarget)}
-                          onChange={(e) => updateQuota(index, { expirationDate: e.target.value })}
-                        />
-                      </td>
-                      <td className="py-2 px-5">
-                        <input
-                          type="number"
-                          min={0}
-                          className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-                          style={computedRingStyle}
-                          value={quota.totalToPay}
-                          onChange={(e) => updateQuota(index, { totalToPay: Number(e.target.value || 0) })}
-                          placeholder="Total a pagar"
-                        />
-                      </td>
-                      <td className="py-2 px-5">
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-2 rounded-xl border border-black/10 px-3 py-2 text-xs text-rose-600"
-                            onClick={() => removeQuota(index)}
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SectionHeaderForm icon={Calendar} title="Cuotas" />
+
+            <DataTable
+              tableId="purchase-quotas-editor"
+              data={quotaRows}
+              columns={quotaColumns}
+              rowKey="id"
+              emptyMessage="Aun no agregas cuotas."
+              hoverable={false}
+              animated={false}
+              className="max-h-[300px] overflow-auto"
+            />
           </div>
         )}
 
@@ -393,18 +439,16 @@ export function PurchasePaymentModal({
         </div>
 
         <div className="flex justify-end gap-2">
-          <button className="rounded-xl border border-black/10 px-4 py-2 text-sm" onClick={onClose}>
+          <SystemButton variant="outline" onClick={onClose}>
             Cerrar
-          </button>
-          <button
-            type="button"
-            className="rounded-xl border px-4 py-2 text-sm text-white disabled:opacity-40"
+          </SystemButton>
+          <SystemButton
             style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
             disabled={saveDisabled}
-            onClick={ onSave}
+            onClick={onSave}
           >
             {isEdit ? "Actualizar Comprobante" : "Generar Comprobante"}
-          </button>
+          </SystemButton>
         </div>
       </div>
     </Modal>

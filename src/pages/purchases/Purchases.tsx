@@ -127,7 +127,6 @@ export default function Purchases() {
     };
 
     const loadPurchases = async () => {
-        if (loading) return;
         clearFlash();
         setLoading(true);
         setError(null);
