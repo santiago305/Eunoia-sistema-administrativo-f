@@ -23,8 +23,8 @@ import type {
   SecurityActivitySeriesItem,
   SecurityActiveBanItem,
   SecurityMethodDistributionItem,
-  SecurityReasonDistributionItem,
   SecurityReasonCatalogItem,
+  SecurityReasonDistributionItem,
   SecurityRiskScoreByIpResponse,
   SecurityRiskScoreResponse,
   SecurityTopIpItem,
@@ -45,6 +45,9 @@ export default function SecurityPage() {
 
   const [topIps, setTopIps] = useState<SecurityTopIpItem[]>([]);
   const [activeBans, setActiveBans] = useState<SecurityActiveBanItem[]>([]);
+  const [activeBansPage, setActiveBansPage] = useState(1);
+  const [activeBansLimit, setActiveBansLimit] = useState(10);
+  const [activeBansTotal, setActiveBansTotal] = useState(0);
   const [activitySeries, setActivitySeries] = useState<SecurityActivitySeriesItem[]>([]);
   const [reasonDistribution, setReasonDistribution] = useState<SecurityReasonDistributionItem[]>([]);
   const [methodDistribution, setMethodDistribution] = useState<SecurityMethodDistributionItem[]>([]);
@@ -70,7 +73,7 @@ export default function SecurityPage() {
 
       const [ips, bans, activity, reasons, methods, routes, risk, catalog] = await Promise.all([
         getSecurityTopIps({ hours, limit: topLimit, reason: reasonFilter || undefined }),
-        getSecurityActiveBans(),
+        getSecurityActiveBans({ page: activeBansPage, limit: activeBansLimit }),
         getSecurityActivitySeries({ hours, reason: reasonFilter || undefined }),
         getSecurityReasonDistribution({ hours }),
         getSecurityMethodDistribution({ hours, reason: reasonFilter || undefined }),
@@ -80,7 +83,10 @@ export default function SecurityPage() {
       ]);
 
       setTopIps(ips);
-      setActiveBans(bans);
+      setActiveBans(bans.data);
+      setActiveBansPage(bans.pagination?.page ?? 1);
+      setActiveBansLimit(bans.pagination?.limit ?? Math.max(bans.data.length, 1));
+      setActiveBansTotal(bans.pagination?.total ?? bans.data.length);
       setActivitySeries(activity.data);
       setReasonDistribution(reasons.data);
       setMethodDistribution(methods.data);
@@ -94,7 +100,7 @@ export default function SecurityPage() {
     } finally {
       setLoading(false);
     }
-  }, [hours, reasonFilter, topLimit]);
+  }, [activeBansLimit, activeBansPage, hours, reasonFilter, topLimit]);
 
   useEffect(() => {
     void fetchAll();
@@ -268,9 +274,11 @@ export default function SecurityPage() {
         <ActiveBansSection
           loading={loading}
           activeBans={activeBans}
+          pagination={{ page: activeBansPage, limit: activeBansLimit, total: activeBansTotal }}
           mutating={mutating}
           onNavigate={navigate}
           onUnban={handleUnban}
+          onPageChange={setActiveBansPage}
         />
       </div>
     </DashboardShell>

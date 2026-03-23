@@ -57,7 +57,7 @@ const DashboardContent = () => {
         />
       ) : null}
 
-      <main className="relative h-full flex-1 overflow-y-auto">
+      <main className="scroll-area relative h-full flex-1 overflow-y-auto">
         {isMobile ? (
           <button
             type="button"

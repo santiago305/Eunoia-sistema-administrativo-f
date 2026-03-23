@@ -31,6 +31,17 @@ export type SecurityPaginatedResponse<T> = {
   limit: number;
 };
 
+export type SecurityPaginatedMeta = {
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export type SecurityListResponse<T> = {
+  data: T[];
+  pagination: SecurityPaginatedMeta | null;
+};
+
 export type SecurityViolationItem = {
   reason: string;
   path: string;
