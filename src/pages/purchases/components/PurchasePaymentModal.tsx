@@ -422,7 +422,7 @@ export function PurchasePaymentModal({
               emptyMessage="Aun no agregas cuotas."
               hoverable={false}
               animated={false}
-              className="max-h-[300px] overflow-auto"
+              className="max-h-[230px] overflow-auto"
             />
           </div>
         )}

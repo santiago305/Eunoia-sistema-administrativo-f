@@ -387,6 +387,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[70px]",
             className: "text-black/70",
             hideable: true,
+                    sortable: false,
         },
         {
             id: "docLabel",
@@ -395,6 +396,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[80px]",
             className: "text-black/70",
             hideable: true,
+                    sortable: false,
         },
         {
             id: "numero",
@@ -403,6 +405,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[70px]",
             className: "text-black/70",
             hideable: true,
+                    sortable: false,
         },
         {
             id: "supplier",
@@ -418,6 +421,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[80px]",
             className: "text-black/70",
             hideable: true,
+            sortable: false,
         },
         {
             id: "warehouse",
@@ -426,6 +430,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[80px]",
             className: "text-black/70",
             hideable: true,
+            sortable: false,
         },
         {
             id: "paymentForm",
@@ -434,6 +439,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[50px]",
             className: "text-black/70",
             hideable: true,
+            sortable: false,
         },
         {
             id: "total",
@@ -446,6 +452,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
+            sortable: false,
         },
         {
             id: "totalPaid",
@@ -458,6 +465,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
+            sortable: false,
         },
         {
             id: "totalToPay",
@@ -470,6 +478,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
+            sortable: false,
         },
         {
             id: "status",
@@ -482,6 +491,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[60px]",
             className: "text-black/70",
             hideable: true,
+            sortable: false,
         },
         {
             id: "waitTime",
@@ -510,6 +520,7 @@ export default function Purchases() {
             headerClassName: "text-center w-[80px]",
             className: "text-center",
             hideable: true,
+            sortable: false,
         },
         {
             id: "expectedAt",
@@ -528,6 +539,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[70px]",
             className: "text-black/70",
             hideable: true,
+            sortable: false,
         },
         {
             id: "actions",
@@ -594,6 +606,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[20px]",
             className: "text-left",
             hideable: true,
+            sortable: false,
         },
     ];
 
@@ -703,7 +716,7 @@ export default function Purchases() {
                     </div>
                 </section>
 
-                <section className=" bg-white shadow-sm overflow-auto">
+                <section className=" bg-white shadow-sm ">
                     <DataTable
                         tableId="purchase-list"
                         data={purchaseRows}
@@ -714,8 +727,7 @@ export default function Purchases() {
                         emptyMessage="No hay compras con los filtros actuales."
                         hoverable={false}
                         animated={false}
-                        className="overflow-hidden"
-                        tableClassName="table-fixed text-[10px] overflow-hidden"
+                        tableClassName="table-fixed text-[10px]"
                     />
 
                     {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}

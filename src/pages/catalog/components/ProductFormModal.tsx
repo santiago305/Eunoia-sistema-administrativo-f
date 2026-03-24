@@ -136,20 +136,21 @@ export function ProductFormModal({
 
   const variantColumns = useMemo<DataTableColumn<VariantRow>[]>(
     () => [
-      { id: "sku", header: "SKU", accessorKey: "sku", className: "text-black/70", hideable: false },
+      { id: "sku", header: "SKU", accessorKey: "sku", className: "text-black/70", hideable: false, sortable: false, },
       {
         id: "presentation",
         header: "Presentación",
         accessorKey: "presentation",
         className: "text-black/70",
         hideable: false,
+        sortable: false,
       },
-      { id: "variant", header: "Variante", accessorKey: "variant", className: "text-black/70", hideable: false },
-      { id: "color", header: "Color", accessorKey: "color", className: "text-black/70", hideable: false },
-      { id: "unit", header: "Unidad", accessorKey: "unit", className: "text-black/70", hideable: false },
-      { id: "price", header: "Precio", accessorKey: "price", className: "text-black/70", hideable: false },
-      { id: "cost", header: "Costo", accessorKey: "cost", className: "text-black/70", hideable: false },
-      { id: "status", header: "Estado", accessorKey: "status", className: "text-black/70", hideable: false },
+      { id: "variant", header: "Variante", accessorKey: "variant", className: "text-black/70", hideable: false, sortable: false, },
+      { id: "color", header: "Color", accessorKey: "color", className: "text-black/70", hideable: false, sortable: false, },
+      { id: "unit", header: "Unidad", accessorKey: "unit", className: "text-black/70", hideable: false, sortable: false, },
+      { id: "price", header: "Precio", accessorKey: "price", className: "text-black/70", hideable: false, sortable: false, },
+      { id: "cost", header: "Costo", accessorKey: "cost", className: "text-black/70", hideable: false, sortable: false, },
+      { id: "status", header: "Estado", accessorKey: "status", className: "text-black/70", hideable: false, sortable: false, },
     ],
     [],
   );
@@ -170,7 +171,6 @@ export function ProductFormModal({
     return [{ value: workingProductId, label: `${name} ${form.attribute.presentation??""}
       ${form.attribute.variant??""} ${form.attribute.color??""}  ${form.customSku ? `- (${form.customSku})`: ""}` }, ...variantOptions];
   }, [workingProductId, workingProductName, form.name, variantOptions]);
-
 
   const variantProductOptions = useMemo<ProductOption[]>(() => {
     if (!workingProductId) return [];
@@ -579,7 +579,12 @@ export function ProductFormModal({
         {workspaceTab === "variantCreated" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <SectionHeaderForm icon={Boxes} title="Variantes" />
+              <SectionHeaderForm
+                icon={Boxes}
+                title={`Variantes del producto - ${form.name} ${form.attribute.presentation ?? ""}
+                ${form.attribute.variant ?? ""} ${form.attribute.color??""}
+                ${form.sku ? ` - ${form.sku}` : ""}${form.customSku ? `(${form.customSku})` : ""}`}
+              />
               <SystemButton
                 variant="outline"
                 className="h-10 whitespace-nowrap"
