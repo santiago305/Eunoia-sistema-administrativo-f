@@ -1,12 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
 import { Modal } from "@/components/settings/modal";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { StatusPill } from "@/components/StatusTag";
+import { SystemButton } from "@/components/SystemButton";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 import { useProducts } from "@/hooks/useProducts";
 import { listProductEquivalences } from "@/services/equivalenceService";
 import { getById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Layers, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, Download, Filter, Layers, Menu, Pencil, Plus, Power } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
@@ -14,13 +21,12 @@ import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import { EquivalenceFormFields } from "../catalog/components/EquivalenceFormField";
 import { ProductFormModal } from "../catalog/components/ProductFormModal";
-import { ListProductsQuery } from "@/pages/catalog/types/product";
+import type { ListProductsQuery, Product } from "@/pages/catalog/types/product";
 import { listVariants } from "@/services/catalogService";
 import { useNavigate } from "react-router-dom";
 import { VariantList } from "../catalog/components/VariantList";
 import { VariantListItem } from "@/pages/catalog/types/variant";
 import { fadeUp, item, list } from "@/utils/animations";
-import { StatusPill } from "@/components/StatusTag";
 import { IconButton } from "@/components/IconBoton";
 import { money } from "@/utils/functionPurchases";
 import { Dropdown } from "../../components/Dropdown";
@@ -28,6 +34,10 @@ import { Dropdown } from "../../components/Dropdown";
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const PRODUCT_TYPE = ProductTypes.PRIMA;
+const STATUS_OPTIONS = [
+    { value: "active", label: "Activos" },
+    { value: "inactive", label: "Eliminados" },
+];
 
 export default function RowMaterial() {
     const shouldReduceMotion = useReducedMotion();
@@ -197,6 +207,161 @@ export default function RowMaterial() {
         setEquivalences([]);
     };
 
+    const columns = useMemo<DataTableColumn<Product>[]>(
+        () => [
+            {
+                id: "sku",
+                header: "SKU",
+                cell: (row) => <span className="font-medium">{row.sku || "-"}</span>,
+                headerClassName: "text-left w-[90px]",
+                className: "text-black/70",
+            },
+            {
+                id: "name",
+                header: "Materia prima",
+                cell: (row) => (
+                    <div className="min-w-0">
+                        <p className="font-medium leading-5 truncate">{row.name}</p>
+                    </div>
+                ),
+                headerClassName: "text-left w-[120px]",
+                className: "text-black/70",
+            },
+            {
+                id: "description",
+                header: "Descripción",
+                cell: (row) => <p className="line-clamp-2 text-black/70">{row.description || "-"}</p>,
+                headerClassName: "text-left w-[120px]",
+                className: "text-black/70",
+            },
+            {
+                id: "unit",
+                header: "Unidad",
+                cell: (row) => {
+                    if (!row.baseUnitName) return <span className="text-black/70">-</span>;
+                    return (
+                        <span className="line-clamp-2 text-black/70">
+                            {row.baseUnitName} {row.baseUnitCode ? `(${row.baseUnitCode})` : ""}
+                        </span>
+                    );
+                },
+                headerClassName: "text-left w-[110px]",
+                className: "text-black/70",
+            },
+            {
+                id: "presentation",
+                header: "Presentación",
+                cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.presentation || "-"}</span>,
+                headerClassName: "text-left w-[110px]",
+                className: "text-black/70",
+            },
+            {
+                id: "variant",
+                header: "Variante",
+                cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.variant || "-"}</span>,
+                headerClassName: "text-left w-[120px]",
+                className: "text-black/70",
+            },
+            {
+                id: "color",
+                header: "Color",
+                cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.color || "-"}</span>,
+                headerClassName: "text-left w-[110px]",
+                className: "text-black/70",
+            },
+            {
+                id: "price",
+                header: "Precio",
+                cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{money(Number(row.price), "PEN")}</span>,
+                headerClassName: "text-left w-[90px]",
+                className: "text-black/70",
+            },
+            {
+                id: "cost",
+                header: "Costo",
+                cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{money(Number(row.cost), "PEN")}</span>,
+                headerClassName: "text-left w-[90px]",
+                className: "text-black/70",
+            },
+            {
+                id: "status",
+                header: "Estado",
+                cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
+                headerClassName: "text-left w-[90px]",
+                className: "text-black/70",
+            },
+            {
+                id: "actions",
+                header: "",
+                cell: (row) => (
+                    <div className="flex justify-end">
+                        <Dropdown
+                            trigger={<Menu className="h-4 w-4" />}
+                            menuClassName="min-w-52 p-2"
+                            itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                            items={[
+                                {
+                                    label: (
+                                        <>
+                                            <Layers className="h-4 w-4 text-black/60" />
+                                            Equivalencias
+                                        </>
+                                    ),
+                                    onClick: (e: MouseEvent<HTMLButtonElement>) => {
+                                        e.stopPropagation();
+                                        void openEquivalences(row.id);
+                                    },
+                                },
+                                {
+                                    label: (
+                                        <>
+                                            <Boxes className="h-4 w-4 text-black/60" />
+                                            Ver variantes
+                                        </>
+                                    ),
+                                    onClick: (e: MouseEvent<HTMLButtonElement>) => {
+                                        e.stopPropagation();
+                                        openVariantsModal(row.id);
+                                    },
+                                },
+                                {
+                                    label: (
+                                        <>
+                                            <Pencil className="h-4 w-4 text-black/60" />
+                                            Editar
+                                        </>
+                                    ),
+                                    onClick: (e: MouseEvent<HTMLButtonElement>) => {
+                                        e.stopPropagation();
+                                        void openEdit(row.id);
+                                    },
+                                },
+                                {
+                                    label: (
+                                        <>
+                                            <Power className="h-4 w-4" />
+                                            {row.isActive ? "Eliminar" : "Restaurar"}
+                                        </>
+                                    ),
+                                    className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                                        row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
+                                    }`,
+                                    onClick: (e: MouseEvent<HTMLButtonElement>) => {
+                                        e.stopPropagation();
+                                        setDeletingProductId(row.id);
+                                    },
+                                },
+                            ].filter(Boolean)}
+                        />
+                    </div>
+                ),
+                headerClassName: "text-right w-[40px]",
+                className: "text-right",
+            },
+        ],
+        [openEdit, openEquivalences, openVariantsModal],
+    );
+
     const buildCsv = (
         rows: Array<{
             id: string;
@@ -281,216 +446,78 @@ export default function RowMaterial() {
                             Total: <span className="font-semibold text-black">{total}</span>
                         </div>
 
-                        <button
-                            type="button"
-                            className="inline-flex items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-[11px] hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
+                        <SystemButton
+                            variant="outline"
+                            size="sm"
+                            className="text-[11px]"
                             onClick={downloadCsv}
-                            disabled={exporting}
+                            loading={exporting}
+                            leftIcon={<Download className="h-4 w-4" />}
                             title="Exportar CSV"
                         >
-                            <Download className="h-4 w-4" />
                             {exporting ? "Exportando..." : "Exportar CSV"}
-                        </button>
+                        </SystemButton>
 
-                        <button
-                            type="button"
-                            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[11px] text-white focus:outline-none focus:ring-2"
+                        <SystemButton
+                            size="sm"
+                            className="text-[11px]"
                             onClick={startCreate}
+                            leftIcon={<Plus className="h-4 w-4" />}
                             title="Nueva materia prima"
-                            style={{
-                                backgroundColor: PRIMARY,
-                                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-                            }}
-                            onMouseEnter={(e) => {
-                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-                            }}
-                            onMouseLeave={(e) => {
-                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-                            }}
                         >
-                            <Plus className="h-4 w-4" />
                             Nueva materia prima
-                        </button>
+                        </SystemButton>
                     </div>
                 </motion.div>
 
                 {/* Filtros */}
-                <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} variants={fadeUp} className="bg-gray-50 shadow-sm  p-4 space-y-3">
+                <motion.section
+                    initial={shouldReduceMotion ? false : "hidden"}
+                    animate={shouldReduceMotion ? false : "show"}
+                    variants={fadeUp}
+                    className="bg-gray-50 shadow-sm p-4 space-y-3 rounded-2xl border border-black/10"
+                >
+                    <SectionHeaderForm icon={Filter} title="Filtros" />
                     <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
-                        <div className="relative">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-                            <input
-                                className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
-                                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
-                                placeholder="Buscar por nombre (exacto)"
-                                value={searchText}
-                                onChange={(event) => {
-                                    setSearchText(event.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                        </div>
+                        <FloatingInput
+                            label="Buscar por nombre (exacto)"
+                            name="row-material-search"
+                            value={searchText}
+                            onChange={(event) => {
+                                setSearchText(event.target.value);
+                                setPage(1);
+                            }}
+                            className="h-9 text-xs"
+                        />
 
-                        <div className="relative">
-                            <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-                            <select
-                                className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9 text-sm outline-none focus:ring-2"
-                                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as React.CSSProperties}
-                                value={statusFilter}
-                                onChange={(event) => {
-                                    setStatusFilter(event.target.value);
-                                    setPage(1);
-                                }}
-                            >
-                                <option value="active">Activos</option>
-                                <option value="inactive">Eliminados</option>
-                            </select>
-                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/40">▾</span>
-                        </div>
+                        <FloatingSelect
+                            label="Estado"
+                            name="status-filter"
+                            value={statusFilter}
+                            options={STATUS_OPTIONS}
+                            onChange={(value) => {
+                                setStatusFilter(value);
+                                setPage(1);
+                            }}
+                            className="h-9 text-xs"
+                        />
                     </div>
                 </motion.section>
                 <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} variants={fadeUp} className=" bg-white shadow-sm overflow-hidden">
                     <div className="hidden lg:block">
-                        <div className="max-h-[calc(100vh-248px)] min-h-[calc(100vh-248px)] overflow-auto">
-                            <table className="w-full text-sm table-fixed ">
-                                <thead className="sticky top-0 z-10 bg-gray-50">
-                                    <tr className="border-b border-black/10 text-[11px] text-black/60">
-                                        <th className="py-3 px-5 text-left w-37">SKU</th>
-                                        <th className="py-3 px-5 text-left w-32">Materia prima</th>
-                                        <th className="py-3 px-5 text-left w-40">Descripción</th>
-                                        <th className="py-3 px-5 text-left w-25">Unidad</th>
-                                        <th className="py-3 px-5 text-left w-20">Presentación</th>
-                                        <th className="py-3 px-5 text-left w-20">Variante</th>
-                                        <th className="py-3 px-5 text-left w-20">Color</th>
-                                        <th className="py-3 px-5 text-left w-20">Precio</th>
-                                        <th className="py-3 px-5 text-left w-20">Costo</th>
-                                        <th className="py-3 px-5 text-left w-20">Estado</th>
-                                        <th className="py-3 px-5 text-left w-15"></th>
-                                    </tr>
-                                </thead>
+                        <div className="max-h-[calc(100vh-248px)] overflow-auto">
+                            <DataTable
+                                tableId="row-materials"
+                                data={sortedProducts}
+                                columns={columns}
+                                rowKey="id"
+                                loading={loading}
+                                emptyMessage="No hay materias primas con los filtros actuales."
+                                animated={!shouldReduceMotion}
+                                className="overflow-hidden"
+                                tableClassName="table-fixed text-[11px]"
+                            />
 
-                                <AnimatePresence mode="wait" initial={false}>
-                                    <motion.tbody
-                                        key={listKey}
-                                        variants={shouldReduceMotion ? undefined : list}
-                                        initial={shouldReduceMotion ? false : "hidden"}
-                                        animate={shouldReduceMotion ? false : "show"}
-                                        exit={shouldReduceMotion ? undefined : "exit"}
-                                    >
-                                        {sortedProducts.map((product) => {
-                                            return (
-                                                <motion.tr
-                                                    key={product.id}
-                                                    variants={shouldReduceMotion ? undefined : item}
-                                                    layout
-                                                    className="border-b border-black/5 hover:bg-black/[0.02]
-                                  text-[11px]"
-                                                >
-                                                    <td className="py-4 px-5">
-                                                        <p className="font-medium">{product.sku || "-"}</p>
-                                                    </td>
-                                                    <td className="py-4 px-5  text-black/70">
-                                                        <div className="min-w-0">
-                                                            <p className="font-medium leading-5 truncate">{product.name}</p>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">{product.description || "-"}</p>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">
-                                                            {product.baseUnitName} ({product.baseUnitCode})
-                                                        </p>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">{product.attributes?.presentation}</p>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">{product.attributes?.variant}</p>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">{product.attributes?.color}</p>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">{money(Number(product.price), "PEN")}</p>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-black/70">
-                                                        <p className="line-clamp-2">{money(Number(product.cost), "PEN")}</p>
-                                                    </td>
-
-                                                    <td className="py-4 px-5">
-                                                        <StatusPill active={product.isActive} PRIMARY={PRIMARY} />
-                                                    </td>
-
-                                                    <td className="py-4 px-0">
-                                                        <Dropdown
-                                                            trigger={<Menu className="h-4 w-4" />}
-                                                            menuClassName="min-w-52 p-2"
-                                                            itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                                                            items={[
-                                                                {
-                                                                    label: (
-                                                                        <>
-                                                                            <Layers className="h-4 w-4 text-black/60" />
-                                                                            Equivalencias
-                                                                        </>
-                                                                    ),
-                                                                    onClick: (e: any) => {
-                                                                        e.stopPropagation();
-                                                                        void openEquivalences(product.id);
-                                                                    },
-                                                                },
-                                                                {
-                                                                    label: (
-                                                                        <>
-                                                                            <Boxes className="h-4 w-4 text-black/60" />
-                                                                            Ver variantes
-                                                                        </>
-                                                                    ),
-                                                                    onClick: (e: any) => {
-                                                                        e.stopPropagation();
-                                                                        openVariantsModal(product.id);
-                                                                    },
-                                                                },
-                                                                {
-                                                                    label: (
-                                                                        <>
-                                                                            <Pencil className="h-4 w-4 text-black/60" />
-                                                                            Editar
-                                                                        </>
-                                                                    ),
-                                                                    onClick: (e: any) => {
-                                                                        e.stopPropagation();
-                                                                        void openEdit(product.id);
-                                                                    },
-                                                                },
-                                                                {
-                                                                    label: (
-                                                                        <>
-                                                                            <Power className="h-4 w-4" />
-                                                                            {product.isActive ? "Eliminar" : "Restaurar"}
-                                                                        </>
-                                                                    ),
-                                                                    className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                                                                        product.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
-                                                                    }`,
-                                                                    onClick: (e: any) => {
-                                                                        e.stopPropagation();
-                                                                        setDeletingProductId(product.id);
-                                                                    },
-                                                                },
-                                                            ].filter(Boolean)}
-                                                        />
-                                                    </td>
-                                                </motion.tr>
-                                            );
-                                        })}
-                                    </motion.tbody>
-                                </AnimatePresence>
-                            </table>
-
-                            {products.length === 0 && !loading && <div className="px-5 py-8 text-sm text-black/60">No hay materias primas con los filtros actuales.</div>}
                             {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
                         </div>
                     </div>
@@ -530,13 +557,14 @@ export default function RowMaterial() {
                                                 </IconButton>
 
                                                 <div className="flex flex-col gap-2">
-                                                    <button
-                                                        type="button"
-                                                        className="inline-flex h-8 items-center justify-center rounded-xl border border-black/10 bg-white px-2.5 text-[11px] hover:bg-black/[0.03] disabled:opacity-50"
+                                                    <SystemButton
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-[11px] h-8"
                                                         onClick={() => void openEquivalences(product.id)}
                                                     >
                                                         Equivalencias
-                                                    </button>
+                                                    </SystemButton>
 
                                                     <IconButton
                                                         title="Editar"
@@ -585,27 +613,31 @@ export default function RowMaterial() {
                         </span>
 
                         <div className="flex items-center gap-2">
-                            <button
-                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[11px] hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                            <SystemButton
+                                variant="outline"
+                                size="sm"
+                                className="text-[11px] h-8"
                                 disabled={!hasPrev || loading}
                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                 type="button"
                             >
                                 Anterior
-                            </button>
+                            </SystemButton>
 
                             <span className="tabular-nums">
                                 Página {safePage} de {totalPages}
                             </span>
 
-                            <button
-                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[11px] hover:bg-black/[0.03] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-black/10"
+                            <SystemButton
+                                variant="outline"
+                                size="sm"
+                                className="text-[11px] h-8"
                                 disabled={!hasNext || loading}
                                 onClick={() => setPage(safePage + 1)}
                                 type="button"
                             >
                                 Siguiente
-                            </button>
+                            </SystemButton>
                         </div>
                     </div>
                 </motion.section>
@@ -653,18 +685,22 @@ export default function RowMaterial() {
                         <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catálogo visible y procesos internos.</p>
 
                         <div className="mt-4 flex justify-end gap-2">
-                            <button
-                                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
+                            <SystemButton
+                                variant="outline"
+                                size="sm"
+                                className="text-[11px]"
                                 onClick={() => setDeletingProductId(null)}
                             >
                                 Cancelar
-                            </button>
-                            <button
-                                className="rounded-lg border border-rose-600/20 bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
+                            </SystemButton>
+                            <SystemButton
+                                variant="danger"
+                                size="sm"
+                                className="text-[11px]"
                                 onClick={confirmDelete}
                             >
                                 Confirmar
-                            </button>
+                            </SystemButton>
                         </div>
                     </motion.div>
                 </Modal>
