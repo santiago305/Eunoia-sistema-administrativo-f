@@ -300,30 +300,30 @@ export default function RowMaterial() {
                             menuClassName="min-w-52 p-2"
                             itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
                             items={[
-                                {
-                                    label: (
-                                        <>
-                                            <Layers className="h-4 w-4 text-black/60" />
-                                            Equivalencias
-                                        </>
-                                    ),
-                                    onClick: (e: MouseEvent<HTMLButtonElement>) => {
-                                        e.stopPropagation();
-                                        void openEquivalences(row.id);
-                                    },
-                                },
-                                {
-                                    label: (
-                                        <>
-                                            <Boxes className="h-4 w-4 text-black/60" />
-                                            Ver variantes
-                                        </>
-                                    ),
-                                    onClick: (e: MouseEvent<HTMLButtonElement>) => {
-                                        e.stopPropagation();
-                                        openVariantsModal(row.id);
-                                    },
-                                },
+                                // {
+                                //     label: (
+                                //         <>
+                                //             <Layers className="h-4 w-4 text-black/60" />
+                                //             Equivalencias
+                                //         </>
+                                //     ),
+                                //     onClick: (e: MouseEvent<HTMLButtonElement>) => {
+                                //         e.stopPropagation();
+                                //         void openEquivalences(row.id);
+                                //     },
+                                // },
+                                // {
+                                //     label: (
+                                //         <>
+                                //             <Boxes className="h-4 w-4 text-black/60" />
+                                //             Ver variantes
+                                //         </>
+                                //     ),
+                                //     onClick: (e: MouseEvent<HTMLButtonElement>) => {
+                                //         e.stopPropagation();
+                                //         openVariantsModal(row.id);
+                                //     },
+                                // },
                                 {
                                     label: (
                                         <>
