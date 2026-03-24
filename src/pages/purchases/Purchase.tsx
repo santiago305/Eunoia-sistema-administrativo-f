@@ -1,5 +1,8 @@
+// PurchaseCreateLocal.tsx
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Newspaper, Boxes, Plus, Trash2 } from "lucide-react";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 import {
   AfectType,
   CurrencyType,
@@ -13,7 +16,10 @@ import { searchProductAndVariant } from "@/services/catalogService";
 import { listAll } from "@/services/supplierService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { SystemButton } from "@/components/SystemButton";
 import type {
   CreatePurchaseOrderDto,
   PurchaseOrder,
@@ -39,6 +45,11 @@ import {
   addDaysToIsoDateFrom,
   buildQuotas,
   todayIso,
+  normalizeMoney,
+  normalizePrice,
+  normalizeQuantity,
+  parseDecimalInput,
+  lineTotalFromItem,
 } from "@/utils/functionPurchases";
 import { useNavigate, useParams } from "react-router-dom";
 import { getById } from "@/services/purchaseService";
@@ -47,6 +58,19 @@ import { WarehouseSelectOption } from "../warehouse/types/warehouse";
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
+
+type PurchaseItemRow = {
+  id: string;
+  stockItemId: string;
+  sku: string;
+  name: string;
+  unit: string;
+  equivalence: string | number;
+  factor: number;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+};
 
 export default function PurchaseCreateLocal() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -71,7 +95,20 @@ export default function PurchaseCreateLocal() {
   const { poId } = useParams<{ poId: string }>();
   const isEdit = Boolean(poId);
 
-  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
+  const ringStyle = {
+    "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+  } as CSSProperties;
+
+  const documentTypeOptions = [
+    { value: VoucherDocTypes.FACTURA, label: "Factura" },
+    { value: VoucherDocTypes.BOLETA, label: "Boleta" },
+    { value: VoucherDocTypes.NOTA_VENTA, label: "Nota de venta" },
+  ];
+
+  const currencyOptions = [
+    { value: CurrencyTypes.PEN, label: "PEN (S/)" },
+    { value: CurrencyTypes.USD, label: "USD ($)" },
+  ];
 
   const mergeProducts = (current: FinishedProducts[], incoming: FinishedProducts[]) => {
     const map = new Map<string, FinishedProducts>();
@@ -117,7 +154,7 @@ export default function PurchaseCreateLocal() {
         })
         .filter((row) => row.itemId);
 
-      setProducts((prev) => (mergeProducts(prev, normalized)));
+      setProducts((prev) => mergeProducts(prev, normalized));
     } catch {
       if (!isEdit) setProducts([]);
       showFlash(errorResponse("Error al cargar variantes PRIMA"));
@@ -191,8 +228,6 @@ export default function PurchaseCreateLocal() {
     }
   };
 
-
-
   const productOptions = (products ?? []).map((v) => ({
     value: v.itemId!,
     label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
@@ -201,9 +236,21 @@ export default function PurchaseCreateLocal() {
   const updateItem = (itemIdToUpdate: string, patch: Partial<PurchaseOrderItem>) => {
     setForm((prev) => ({
       ...prev,
-      items: (prev.items ?? []).map((item) =>
-        item.stockItemId === itemIdToUpdate ? recalcItem({ ...item, ...patch }) : item,
-      ),
+      items: (prev.items ?? []).map((item) => {
+        if (item.stockItemId !== itemIdToUpdate) return item;
+
+        const normalizedPatch: Partial<PurchaseOrderItem> = { ...patch };
+
+        if (normalizedPatch.quantity !== undefined) {
+          normalizedPatch.quantity = normalizeQuantity(normalizedPatch.quantity);
+        }
+
+        if (normalizedPatch.unitPrice !== undefined) {
+          normalizedPatch.unitPrice = normalizePrice(normalizedPatch.unitPrice);
+        }
+
+        return recalcItem({ ...item, ...normalizedPatch });
+      }),
     }));
   };
 
@@ -216,18 +263,19 @@ export default function PurchaseCreateLocal() {
 
   const totals = useMemo(() => {
     const items = form.items ?? [];
+
     return items.reduce(
       (acc, item) => {
-        const lineTotal = item.unitPrice * item.quantity;
-        const lineValue = item.purchaseValue;
-        const lineIgv = item.amountIgv;
+        const lineTotal = normalizeMoney(lineTotalFromItem(item));
+        const lineValue = normalizeMoney(item.purchaseValue ?? 0);
+        const lineIgv = normalizeMoney(item.amountIgv ?? 0);
         const isTaxed = item.afectType === AfectType.TAXED;
 
-        acc.totalPrice += lineTotal;
-        acc.totalValue += lineValue;
-        acc.totalIgv += lineIgv;
-        acc.totalTaxed += isTaxed ? lineValue : 0;
-        acc.totalExempted += !isTaxed ? lineValue : 0;
+        acc.totalPrice = normalizeMoney(acc.totalPrice + lineTotal);
+        acc.totalValue = normalizeMoney(acc.totalValue + lineValue);
+        acc.totalIgv = normalizeMoney(acc.totalIgv + lineIgv);
+        acc.totalTaxed = normalizeMoney(acc.totalTaxed + (isTaxed ? lineValue : 0));
+        acc.totalExempted = normalizeMoney(acc.totalExempted + (!isTaxed ? lineValue : 0));
 
         return acc;
       },
@@ -235,15 +283,21 @@ export default function PurchaseCreateLocal() {
     );
   }, [form.items]);
 
-  const itemsView = useMemo(() => {
+  const itemRows = useMemo<PurchaseItemRow[]>(() => {
     return (form.items ?? []).map((item) => {
       const product = products.find((p) => p.itemId === item.stockItemId);
 
       return {
-        item,
+        id: item.stockItemId,
+        stockItemId: item.stockItemId,
         sku: product?.sku ?? "-",
         name: product?.productName ?? "Producto",
-        unit: product?.unitName ?? "-",
+        unit: item.unitBase ?? "-",
+        equivalence: item.equivalence,
+        factor: Number(item.factor ?? 1),
+        quantity: normalizeQuantity(item.quantity ?? 0),
+        unitPrice: normalizePrice(item.unitPrice ?? 0),
+        totalPrice: normalizeMoney(lineTotalFromItem(item)),
       };
     });
   }, [form.items, products]);
@@ -266,22 +320,30 @@ export default function PurchaseCreateLocal() {
       paymentForm: form.paymentForm,
       creditDays: form.creditDays ?? 0,
       numQuotas: form.numQuotas ?? 0,
-      totalTaxed: form.totalTaxed,
-      totalExempted: form.totalExempted,
-      totalIgv: form.totalIgv,
-      purchaseValue: form.purchaseValue,
-      total: form.total,
+      totalTaxed: normalizeMoney(form.totalTaxed),
+      totalExempted: normalizeMoney(form.totalExempted),
+      totalIgv: normalizeMoney(form.totalIgv),
+      purchaseValue: normalizeMoney(form.purchaseValue),
+      total: normalizeMoney(form.total),
       note: form.note ?? "",
       status: form.status,
       expectedAt: form.expectedAt ?? "",
       dateIssue: form.dateIssue ?? "",
       dateExpiration: form.dateExpiration ? form.dateExpiration : undefined,
-      items: (form.items ?? []).map(({ stockItem, ...rest }) => rest),
+      items: (form.items ?? []).map(({ stockItem, ...rest }) => ({
+        ...rest,
+        quantity: normalizeQuantity(rest.quantity),
+        unitPrice: normalizePrice(rest.unitPrice),
+        unitValue: normalizePrice(rest.unitValue),
+        baseWithoutIgv: normalizeMoney(rest.baseWithoutIgv),
+        amountIgv: normalizeMoney(rest.amountIgv),
+        purchaseValue: normalizeMoney(rest.purchaseValue),
+      })),
       payments: (form.payments ?? []).map((p) => ({
         currency: p.currency,
         date: p.date,
         method: p.method,
-        amount: p.amount ?? 0,
+        amount: normalizeMoney(p.amount ?? 0),
         quotaId: p.quotaId ?? undefined,
         poId: p.poId ?? undefined,
         note: p.note ?? undefined,
@@ -291,8 +353,8 @@ export default function PurchaseCreateLocal() {
         number: q.number,
         expirationDate: q.expirationDate,
         paymentDate: q.paymentDate ?? undefined,
-        totalToPay: q.totalToPay,
-        totalPaid: q.totalPaid ?? undefined,
+        totalToPay: normalizeMoney(q.totalToPay),
+        totalPaid: normalizeMoney(q.totalPaid ?? 0),
         poId: q.poId ?? undefined,
       })),
     };
@@ -318,14 +380,19 @@ export default function PurchaseCreateLocal() {
     }
   };
 
-  const loadPurchase = async (poId:string) => {
+  const loadPurchase = async (poId: string) => {
     try {
       const data = await getById(poId);
 
       setForm((prev) => ({
         ...prev,
         ...data,
-        items: (data.items ?? []).map(({ stockItem, ...rest }) => rest),
+        items: (data.items ?? []).map(({ stockItem, ...rest }) =>
+          recalcItem({
+            ...rest,
+            factor: Number(rest.factor ?? 1),
+          }),
+        ),
         payments: data.payments ?? [],
         quotas: data.quotas ?? [],
       }));
@@ -336,7 +403,7 @@ export default function PurchaseCreateLocal() {
       showFlash(errorResponse("Error al cargar la compra."));
     }
   };
-  
+
   useEffect(() => {
     if (!poId) return;
     void loadPurchase(poId);
@@ -349,7 +416,7 @@ export default function PurchaseCreateLocal() {
       } else if (!isEdit) {
         setProducts([]);
       }
-    }, 500);
+    }, 1000);
 
     return () => clearTimeout(id);
   }, [productQuery, isEdit]);
@@ -357,11 +424,11 @@ export default function PurchaseCreateLocal() {
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
-      totalTaxed: totals.totalTaxed,
-      totalExempted: totals.totalExempted,
-      totalIgv: totals.totalIgv,
-      purchaseValue: totals.totalValue,
-      total: totals.totalPrice,
+      totalTaxed: normalizeMoney(totals.totalTaxed),
+      totalExempted: normalizeMoney(totals.totalExempted),
+      totalIgv: normalizeMoney(totals.totalIgv),
+      purchaseValue: normalizeMoney(totals.totalValue),
+      total: normalizeMoney(totals.totalPrice),
     }));
   }, [totals.totalTaxed, totals.totalExempted, totals.totalIgv, totals.totalValue, totals.totalPrice]);
 
@@ -372,129 +439,181 @@ export default function PurchaseCreateLocal() {
 
   const currency = form.currency;
 
+  const itemColumns = useMemo<DataTableColumn<PurchaseItemRow>[]>(() => {
+    return [
+      {
+        id: "sku",
+        header: "SKU",
+        accessorKey: "sku",
+        className: "text-black/70",
+        headerClassName: "text-left",
+        hideable: false,
+      },
+      {
+        id: "name",
+        header: "Producto",
+        accessorKey: "name",
+        className: "text-black/70",
+        headerClassName: "text-left",
+        hideable: false,
+      },
+      {
+        id: "unit",
+        header: "Unidad",
+        cell: (row) => (
+          <span className="text-black/70">
+            {row.equivalence} x {row.factor}
+          </span>
+        ),
+        headerClassName: "text-left",
+      },
+      {
+        id: "quantity",
+        header: "Cantidad",
+        cell: (row) => (
+          <div className="w-24">
+            <FloatingInput
+              label="Cant."
+              name={`quantity-${row.stockItemId}`}
+              type="number"
+              min={0}
+              step="0.001"
+              value={String(row.quantity)}
+              onChange={(e) =>
+                updateItem(row.stockItemId, {
+                  quantity: parseDecimalInput(e.target.value),
+                })
+              }
+              className="h-9 text-xs"
+            />
+          </div>
+        ),
+        headerClassName: "text-left",
+        hideable: false,
+      },
+      {
+        id: "unitPrice",
+        header: "Precio unit.",
+        cell: (row) => (
+          <div className="w-24">
+            <FloatingInput
+              label="P. unit"
+              name={`unit-price-${row.stockItemId}`}
+              type="number"
+              min={0}
+              step="0.0001"
+              value={String(row.unitPrice)}
+              onChange={(e) =>
+                updateItem(row.stockItemId, {
+                  unitPrice: parseDecimalInput(e.target.value),
+                })
+              }
+              className="h-9 text-xs text-right"
+            />
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+      {
+        id: "totalPrice",
+        header: "Precio total",
+        cell: (row) => (
+          <div className="w-28">
+            <FloatingInput
+              label="Total"
+              name={`total-price-${row.stockItemId}`}
+              type="number"
+              min={0}
+              step="0.01"
+              value={String(row.totalPrice || 0)}
+              onChange={(e) => {
+                const nextTotal = normalizeMoney(parseDecimalInput(e.target.value));
+                const nextUnitPrice =
+                  row.quantity > 0 ? normalizePrice(nextTotal / row.quantity) : 0;
+
+                updateItem(row.stockItemId, { unitPrice: nextUnitPrice });
+              }}
+              className="h-9 text-xs text-right"
+            />
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: (row) => (
+          <div className="flex items-center justify-end">
+            <SystemButton
+              variant="danger"
+              size="icon"
+              className="h-8 w-8"
+              title="Eliminar"
+              onClick={() => removeItem(row.stockItemId)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+    ];
+  }, []);
+
   return (
     <div className="w-full min-h-screen bg-white text-black">
       <div className="h-screen w-full px-3 sm:px-4 lg:px-6 py-0">
-        <div className="mt-4 grid h-[calc(100vh-64px)] grid-cols-1 gap-3 lg:grid-cols-[4fr_2fr]">
+        <div className="mt-4 grid h-[calc(100vh-64px)] grid-cols-1 gap-3 lg:grid-cols-[6fr_2fr]">
           <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="border-b border-black/10 p-3 sm:p-4">
-              <p className="text-xs font-semibold">Productos</p>
+              <SectionHeaderForm icon={Boxes} title="Productos" />
 
               <div className="mt-2 grid gap-2 xl:grid-cols-[85%_1fr] px-0 grid-cols-[85%_1fr]">
-                <div className="relative">
-                  <FilterableSelect
-                    value={itemId}
-                    onChange={(value) => {
-                      setItemId(value);
-                      if (value) {
-                        setOpenEquivalence(true);
-                      } else {
-                        setOpenEquivalence(false);
-                      }
-                    }}
-                    options={productOptions}
-                    placement="bottom"
-                    placeholder="Seleccionar producto"
-                    searchPlaceholder="Buscar producto..."
-                    onSearchChange={(text) => setProductQuery(text)}
-                  />
-                </div>
+                <FloatingSelect
+                  label="Producto"
+                  name="producto"
+                  value={itemId}
+                  onChange={(value) => {
+                    setItemId(value);
+                    setOpenEquivalence(Boolean(value));
+                  }}
+                  options={productOptions}
+                  searchable
+                  searchPlaceholder="Buscar producto..."
+                  emptyMessage="Sin productos"
+                  onSearchChange={(text) => setProductQuery(text)}
+                />
 
-                <button
-                  type="button"
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-xs text-white focus:outline-none focus:ring-2"
-                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
+                <SystemButton
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="h-10"
+                  style={{
+                    backgroundColor: PRIMARY,
+                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                  }}
                   onClick={() => setOpenCreatePrima(true)}
                 >
-                  <Plus className="h-4 w-4" />
-                  <span className="font-semibold">Crear</span>
-                </button>
+                  Crear
+                </SystemButton>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto">
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 z-10 bg-white">
-                  <tr className="border-b border-black/10 text-[11px] text-black/60">
-                    <th className="py-2 px-4 text-left">SKU</th>
-                    <th className="py-2 px-4 text-left">Producto</th>
-                    <th className="py-2 px-4 text-left">Unidad</th>
-                    <th className="py-2 px-4 text-left">Cantidad</th>
-                    <th className="py-2 px-4 text-right">Precio unit.</th>
-                    <th className="py-2 px-4 text-right">Precio total</th>
-                    <th className="py-2 px-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {itemsView.map(({ item, sku, name }) => {
-                    const totalPrice = item.quantity * item.unitPrice;
-
-                    return (
-                      <tr key={item.stockItemId} className="border-b border-black/5">
-                        <td className="py-2 px-4">
-                          <div className="text-black/70">{sku}</div>
-                        </td>
-
-                        <td className="py-2 px-4">
-                          <div className="text-black/70">{name}</div>
-                        </td>
-
-                        <td className="py-2 px-4 text-black/70">
-                          {item.equivalence} x {item.factor}
-                        </td>
-
-                        <td className="py-2 px-4">
-                          <input
-                            type="number"
-                            min={1}
-                            className="h-9 w-20 rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
-                            style={ringStyle}
-                            value={item.quantity}
-                            onChange={(e) =>
-                              updateItem(item.stockItemId, { quantity: Number(e.target.value) })
-                            }
-                          />
-                        </td>
-
-                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
-                          <input
-                            type="number"
-                            min={0}
-                            className="h-9 w-20 rounded-lg border border-black/10 bg-white px-2 text-xs text-right outline-none focus:ring-2"
-                            style={ringStyle}
-                            value={item.unitPrice}
-                            onChange={(e) =>
-                              updateItem(item.stockItemId, { unitPrice: Number(e.target.value) })
-                            }
-                          />
-                        </td>
-
-                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
-                          {money(totalPrice, currency)}
-                        </td>
-
-                        <td className="py-2 px-4">
-                          <div className="flex items-center justify-end">
-                            <button
-                              type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 bg-white hover:bg-black/[0.03] text-rose-600"
-                              title="Eliminar"
-                              onClick={() => removeItem(item.stockItemId)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {itemsView.length === 0 && (
-                <div className="px-4 py-8 text-xs text-black/60">Aun no agregas productos.</div>
-              )}
+            <div className="flex-1 overflow-auto p-3 sm:p-4">
+              <DataTable
+                tableId="purchase-create-items-table"
+                data={itemRows}
+                columns={itemColumns}
+                rowKey="id"
+                emptyMessage="Aun no agregas productos."
+                hoverable={false}
+                animated={false}
+              />
             </div>
 
             <div className="border-t border-black/10 px-3 sm:px-4 py-3">
@@ -516,83 +635,66 @@ export default function PurchaseCreateLocal() {
 
           <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="border-b border-black/10 px-3 sm:px-4 py-2">
-              <p className="text-xs font-semibold">Datos del comprobante</p>
+              <SectionHeaderForm icon={Newspaper} title="Documento" />
             </div>
 
-            <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-1">
+            <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] text-black/60">Tipo de comprobante</label>
-                  <select
-                    className="h-9 w-full appearance-none rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
-                    style={ringStyle}
-                    value={form.documentType}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        documentType: e.target.value as PurchaseOrder["documentType"],
-                      }))
-                    }
-                  >
-                    <option value={VoucherDocTypes.FACTURA}>Factura</option>
-                    <option value={VoucherDocTypes.BOLETA}>Boleta</option>
-                    <option value={VoucherDocTypes.NOTA_VENTA}>Nota de venta</option>
-                  </select>
-                </div>
+                <FloatingSelect
+                  label="Tipo"
+                  name="document-type"
+                  value={form.documentType}
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      documentType: value as PurchaseOrder["documentType"],
+                    }))
+                  }
+                  options={documentTypeOptions}
+                />
 
-                <div className="space-y-1">
-                  <label className="text-[11px] text-black/60">Moneda</label>
-                  <select
-                    className="h-9 w-full appearance-none rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
-                    style={ringStyle}
-                    value={form.currency}
-                    disabled={true}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        currency: e.target.value as CurrencyType,
-                      }))
-                    }
-                  >
-                    <option value={CurrencyTypes.PEN}>PEN (S/)</option>
-                    <option value={CurrencyTypes.USD}>USD ($)</option>
-                  </select>
-                </div>
+                <FloatingSelect
+                  label="Moneda"
+                  name="currency"
+                  value={form.currency}
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      currency: value as CurrencyType,
+                    }))
+                  }
+                  options={currencyOptions}
+                  disabled
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] text-black/60">Serie</label>
-                  <input
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
-                    style={ringStyle}
-                    value={form.serie}
-                    onChange={(e) => setForm((prev) => ({ ...prev, serie: e.target.value }))}
-                    placeholder="F001"
-                  />
-                </div>
+                <FloatingInput
+                  label="Serie"
+                  name="serie"
+                  value={form.serie}
+                  onChange={(e) => setForm((prev) => ({ ...prev, serie: e.target.value }))}
+                />
 
-                <div className="space-y-1">
-                  <label className="text-[11px] text-black/60">Numero</label>
-                  <input
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
-                    style={ringStyle}
-                    value={form.correlative ? String(form.correlative) : ""}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        correlative: Number(e.target.value || 0),
-                      }))
-                    }
-                    placeholder="00000001"
-                  />
-                </div>
+                <FloatingInput
+                  label="Número"
+                  name="correlative"
+                  type="number"
+                  value={form.correlative ? String(form.correlative) : ""}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      correlative: Number(e.target.value || 0),
+                    }))
+                  }
+                />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-black/60">Almacen</label>
                 <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <FilterableSelect
+                  <FloatingSelect
+                    label="Almacén"
+                    name="warehouse"
                     value={form.warehouseId}
                     onChange={(value) => {
                       setForm((prev) => ({
@@ -601,29 +703,31 @@ export default function PurchaseCreateLocal() {
                       }));
                     }}
                     options={warehouseOptions}
-                    placement="bottom"
-                    placeholder="Seleccionar almacen"
-                    searchPlaceholder="Buscar almacen..."
-                    className="h-9"
-                    textSize="text-[11px]"
+                    searchable
+                    searchPlaceholder="Buscar almacén..."
+                    emptyMessage="Sin almacenes"
                   />
 
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border text-white focus:outline-none focus:ring-2"
-                    style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`, ...ringStyle }}
-                    title="Agregar almacen"
+                  <SystemButton
+                    size="icon"
+                    className="h-10 w-10"
+                    style={{
+                      backgroundColor: PRIMARY,
+                      borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                    }}
+                    title="Agregar almacén"
                     onClick={() => setOpenCreateWarehouse(true)}
                   >
                     <Plus className="h-4 w-4" />
-                  </button>
+                  </SystemButton>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-black/60">Proveedor</label>
                 <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <FilterableSelect
+                  <FloatingSelect
+                    label="Proveedor"
+                    name="supplier"
                     value={form.supplierId}
                     onChange={(value) => {
                       const selected = supplierOptions.find((s) => s.value === value);
@@ -636,68 +740,65 @@ export default function PurchaseCreateLocal() {
                       }));
                     }}
                     options={supplierOptions}
-                    placement="bottom"
-                    placeholder="Seleccionar proveedor"
+                    searchable
                     searchPlaceholder="Buscar proveedor..."
-                    className="h-9"
-                    textSize="text-[11px]"
+                    emptyMessage="Sin proveedores"
                   />
 
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border text-white focus:outline-none focus:ring-2"
-                    style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`, ...ringStyle }}
+                  <SystemButton
+                    size="icon"
+                    className="h-10 w-10"
+                    style={{
+                      backgroundColor: PRIMARY,
+                      borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                    }}
                     title="Agregar proveedor"
                     onClick={() => setOpenAddSupplier(true)}
                   >
                     <Plus className="h-4 w-4" />
-                  </button>
+                  </SystemButton>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] text-black/60">Fecha de emision</label>
-                  <input
-                    type="datetime-local"
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
-                    style={ringStyle}
-                    value={toDateTimeInputValue(form.dateIssue)}
-                    onClick={(e) => tryShowPicker(e.currentTarget)}
-                    onChange={(e) => {
-                      const nextDate = e.target.value;
-                      const selected = supplierOptions.find((s) => s.value === form.supplierId);
-                      const leadDays = selected?.days ?? 0;
+              <div className="grid grid-cols-1 gap-3">
+                <FloatingInput
+                  label="Fecha de emisión"
+                  name="date-issue"
+                  type="datetime-local"
+                  value={toDateTimeInputValue(form.dateIssue)}
+                  onClick={(e) => tryShowPicker(e.currentTarget)}
+                  onChange={(e) => {
+                    const nextDate = e.target.value;
+                    const selected = supplierOptions.find((s) => s.value === form.supplierId);
+                    const leadDays = selected?.days ?? 0;
 
-                      setForm((prev) => {
-                        const creditDays = Math.max(0, prev.creditDays ?? 0);
-                        const numQuotas = clampQuotas(creditDays, prev.numQuotas ?? 0);
+                    setForm((prev) => {
+                      const creditDays = Math.max(0, prev.creditDays ?? 0);
+                      const numQuotas = clampQuotas(creditDays, prev.numQuotas ?? 0);
 
-                        return {
-                          ...prev,
-                          dateIssue: nextDate,
-                          expectedAt: addDaysToIsoDateFrom(nextDate, leadDays),
-                          quotas:
-                            prev.paymentForm === PaymentFormTypes.CREDITO
-                              ? buildQuotas(nextDate, creditDays, numQuotas, totals.totalPrice)
-                              : (prev.quotas ?? []),
-                        };
-                      });
-                    }}
-                  />
-                </div>
+                      return {
+                        ...prev,
+                        dateIssue: nextDate,
+                        expectedAt: addDaysToIsoDateFrom(nextDate, leadDays),
+                        quotas:
+                          prev.paymentForm === PaymentFormTypes.CREDITO
+                            ? buildQuotas(nextDate, creditDays, numQuotas, totals.totalPrice)
+                            : (prev.quotas ?? []),
+                      };
+                    });
+                  }}
+                />
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] text-black/60">Fecha de ingreso a almacen</label>
-                  <input
-                    type="datetime-local"
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2"
-                    style={ringStyle}
-                    value={toDateTimeInputValue(form.expectedAt)}
-                    onClick={(e) => tryShowPicker(e.currentTarget)}
-                    onChange={(e) => setForm((prev) => ({ ...prev, expectedAt: e.target.value }))}
-                  />
-                </div>
+              <div className="grid grid-cols-1">
+                <FloatingInput
+                  label="Fecha de ingreso a almacén"
+                  name="expected-at"
+                  type="datetime-local"
+                  value={toDateTimeInputValue(form.expectedAt)}
+                  onClick={(e) => tryShowPicker(e.currentTarget)}
+                  onChange={(e) => setForm((prev) => ({ ...prev, expectedAt: e.target.value }))}
+                />
               </div>
 
               <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
@@ -705,7 +806,7 @@ export default function PurchaseCreateLocal() {
                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
                   <div className="flex items-center justify-between">
                     <span>Items</span>
-                    <span className="font-semibold tabular-nums">{itemsView.length}</span>
+                    <span className="font-semibold tabular-nums">{itemRows.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Total valor</span>
@@ -732,7 +833,10 @@ export default function PurchaseCreateLocal() {
                 <button
                   type="button"
                   className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
-                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
+                  style={{
+                    backgroundColor: PRIMARY,
+                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                  }}
                   disabled={
                     !form.items?.length ||
                     !form.serie.trim() ||
@@ -759,7 +863,7 @@ export default function PurchaseCreateLocal() {
                                   date: todayIso(),
                                   operationNumber: "",
                                   currency: prev.currency,
-                                  amount: totals.totalPrice,
+                                  amount: normalizeMoney(totals.totalPrice),
                                   note: "",
                                 },
                               ],

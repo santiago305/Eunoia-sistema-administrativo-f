@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import { SystemButton } from "@/components/SystemButton";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listAll } from "@/services/supplierService";
@@ -17,10 +22,8 @@ import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { Dropdown } from "../../components/Dropdown";
-import { Menu, OctagonAlert, Timer } from "lucide-react";
+import { Filter, Menu, OctagonAlert, Timer } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
-
-const PRIMARY = "hsl(var(--primary))";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
@@ -38,6 +41,21 @@ const docTypeLabels: Record<VoucherDocType, string> = {
 
 const normalizeNumber = (raw: string) => raw.trim().replace(/\s+/g, "");
 
+type PurchaseRow = {
+    id: string;
+    purchase: PurchaseOrder;
+    numero: string;
+    supplierLabel: string;
+    supplierDoc: string;
+    warehouseLabel: string;
+    statusLabel: string;
+    docLabel: string;
+    date: string;
+    time?: string;
+    dateEnter: string;
+    timeEnter?: string;
+};
+
 export default function Purchases() {
     const { showFlash, clearFlash } = useFlashMessage();
     const navigate = useNavigate();
@@ -46,8 +64,8 @@ export default function Purchases() {
     const [debouncedNumero, setDebouncedNumero] = useState("");
     const [supplierId, setSupplierId] = useState("");
     const [warehouseId, setWarehouseId] = useState("");
-    const [documentType, setDocumentType] = useState<"" | VoucherDocType>("");
-    const [statusFilter, setStatusFilter] = useState<"" | PurchaseOrderStatus>("");
+    const [documentType, setDocumentType] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
     const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
     const [toDate, setToDate] = useState(() => todayIso());
     const [page, setPage] = useState(1);
@@ -77,7 +95,21 @@ export default function Purchases() {
     const [poId, setPoId] = useState("");
     const [paymentForm, setPaymentForm] = useState("");
 
-    const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
+    const docTypeOptions = [
+        { value: "", label: "todos" },
+        { value: VoucherDocTypes.BOLETA, label: "Boleta" },
+        { value: VoucherDocTypes.FACTURA, label: "Factura" },
+        { value: VoucherDocTypes.NOTA_VENTA, label: "Nota de venta" },
+    ];
+
+    const statusOptions = [
+        { value: "", label: "todos" },
+        { value: PurchaseOrderStatuses.DRAFT, label: "Borrador" },
+        { value: PurchaseOrderStatuses.SENT, label: "Enviado" },
+        { value: PurchaseOrderStatuses.PARTIAL, label: "Parcial" },
+        { value: PurchaseOrderStatuses.RECEIVED, label: "Recibido" },
+        { value: PurchaseOrderStatuses.CANCELLED, label: "Cancelado" },
+    ];
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -127,7 +159,6 @@ export default function Purchases() {
     };
 
     const loadPurchases = async () => {
-        if (loading) return;
         clearFlash();
         setLoading(true);
         setError(null);
@@ -269,10 +300,302 @@ export default function Purchases() {
         return map;
     }, [warehouseOptions]);
 
-    const listKey = useMemo(
-        () => `${page}|${debouncedNumero}|${supplierId}|${warehouseId}|${documentType}|${statusFilter}|${fromDate}|${toDate}`,
-        [page, debouncedNumero, supplierId, warehouseId, documentType, statusFilter, fromDate, toDate],
+    const supplierSelectOptions = useMemo(
+        () =>
+            supplierOptions.map((opt) => {
+                const doc = opt.doc ? ` (${opt.doc})` : "";
+                return {
+                    value: opt.value,
+                    label: `${opt.label}${doc}`.trim(),
+                };
+            }),
+        [supplierOptions],
     );
+
+    const warehouseSelectOptions = useMemo(
+        () =>
+            warehouseOptions.map((opt) => {
+                const address = opt.address ? ` - ${opt.address}` : "";
+                return {
+                    value: opt.value,
+                    label: `${opt.label}${address}`.trim(),
+                };
+            }),
+        [warehouseOptions],
+    );
+
+    const purchaseRows = useMemo<PurchaseRow[]>(
+        () =>
+            purchases.map((purchase) => {
+                const numero = [purchase.serie, purchase.correlative]
+                    .filter((v) => v !== null && v !== undefined && String(v).length > 0)
+                    .join("-");
+                const supplierMeta = purchase.supplierId ? supplierMetaById.get(purchase.supplierId) : undefined;
+                const warehouseMeta = purchase.warehouseId ? warehouseMetaById.get(purchase.warehouseId) : undefined;
+                const statusLabel = purchase.status ? (statusLabels[purchase.status] ?? purchase.status) : "-";
+                const docLabel = purchase.documentType ? (docTypeLabels[purchase.documentType] ?? purchase.documentType) : "-";
+                const date = formatDate(new Date(purchase.dateIssue ?? ""));
+                const time = purchase.dateIssue
+                    ? new Date(purchase.dateIssue).toLocaleTimeString("es-PE", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                      })
+                    : undefined;
+                const dateEnter = formatDate(new Date(purchase.expectedAt ?? ""));
+                const timeEnter = purchase.expectedAt
+                    ? new Date(purchase.expectedAt).toLocaleTimeString("es-PE", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                      })
+                    : undefined;
+
+                return {
+                    id: purchase.poId ?? `${purchase.supplierId}-${purchase.createdAt ?? numero}`,
+                    purchase,
+                    numero,
+                    supplierLabel: supplierMeta?.label ?? "-",
+                    supplierDoc: supplierMeta?.doc ?? "",
+                    warehouseLabel: warehouseMeta?.label ?? "-",
+                    statusLabel,
+                    docLabel,
+                    date,
+                    time,
+                    dateEnter,
+                    timeEnter,
+                };
+        }),
+        [purchases, supplierMetaById, warehouseMetaById],
+    );
+
+    const columns: DataTableColumn<PurchaseRow>[] = [
+        {
+            id: "dateIssue",
+            header: "Emisión",
+            cell: (row) => (
+                <div className="text-black/70">
+                    {row.date}
+                    {row.time ? (
+                        <>
+                            <br />
+                            {row.time}
+                        </>
+                    ) : null}
+                </div>
+            ),
+            headerClassName: "text-left w-[70px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "docLabel",
+            header: "Documento",
+            accessorKey: "docLabel",
+            headerClassName: "text-left w-[80px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "numero",
+            header: "Numero",
+            accessorKey: "numero",
+            headerClassName: "text-left w-[70px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "supplier",
+            header: "Proveedor",
+            cell: (row) => (
+                <div className="text-black/70">
+                    <div>{row.supplierLabel}</div>
+                    {row.supplierDoc ? (
+                        <div className="text-[10px] text-black/50">{row.supplierDoc}</div>
+                    ) : null}
+                </div>
+            ),
+            headerClassName: "text-left w-[80px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "warehouse",
+            header: "Almacen",
+            accessorKey: "warehouseLabel",
+            headerClassName: "text-left w-[80px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "paymentForm",
+            header: "Forma",
+            cell: (row) => <span className="text-black/70">{row.purchase.paymentForm}</span>,
+            headerClassName: "text-left w-[50px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "total",
+            header: "Total",
+            cell: (row) => (
+                <span className="text-black/70 tabular-nums">
+                    {money(row.purchase.total ?? 0, row.purchase.currency)}
+                </span>
+            ),
+            headerClassName: "text-left w-[60px]",
+            className: "text-left",
+            hideable: true,
+        },
+        {
+            id: "totalPaid",
+            header: "Pagado",
+            cell: (row) => (
+                <span className="text-black/70 tabular-nums">
+                    {money(row.purchase.totalPaid ?? 0, row.purchase.currency)}
+                </span>
+            ),
+            headerClassName: "text-left w-[60px]",
+            className: "text-left",
+            hideable: true,
+        },
+        {
+            id: "totalToPay",
+            header: "Pendiente",
+            cell: (row) => (
+                <span className="text-black/70 tabular-nums">
+                    {money(row.purchase.totalToPay ?? 0, row.purchase.currency)}
+                </span>
+            ),
+            headerClassName: "text-left w-[60px]",
+            className: "text-left",
+            hideable: true,
+        },
+        {
+            id: "status",
+            header: "Estado",
+            cell: (row) => (
+                <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                    {row.statusLabel}
+                </span>
+            ),
+            headerClassName: "text-left w-[60px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "waitTime",
+            header: "T. Espera",
+            cell: (row) => (
+                <div className="flex h-full items-center justify-center">
+                    {row.purchase.status === PurchaseOrderStatuses.SENT && (
+                        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                            <TimerToEnd from={now} to={row.purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />
+                        </span>
+                    )}
+                    {row.purchase.status === PurchaseOrderStatuses.PARTIAL && (
+                        <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                            <OctagonAlert className="h-4 w-4" />
+                            <span className="mt-1">Por Ing.</span>
+                        </span>
+                    )}
+                    {row.purchase.status === PurchaseOrderStatuses.RECEIVED && (
+                        <span className="flex flex-col items-center rounded-lg p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                            <Timer className="h-4 w-4" />
+                            <span className="mt-1">Completado</span>
+                        </span>
+                    )}
+                </div>
+            ),
+            headerClassName: "text-center w-[80px]",
+            className: "text-center",
+            hideable: true,
+        },
+        {
+            id: "expectedAt",
+            header: "Ing. Almacen",
+            cell: (row) => (
+                <div className="text-black/70">
+                    {row.dateEnter}
+                    {row.timeEnter ? (
+                        <>
+                            <br />
+                            {row.timeEnter}
+                        </>
+                    ) : null}
+                </div>
+            ),
+            headerClassName: "text-left w-[70px]",
+            className: "text-black/70",
+            hideable: true,
+        },
+        {
+            id: "actions",
+            header: "",
+            cell: (row) => (
+                <Dropdown
+                    trigger={<Menu className="h-4 w-4" />}
+                    itemClassName="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
+                    items={[
+                        (row.purchase.status === PurchaseOrderStatuses.SENT ||
+                            row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                            label: "Ingresar Almacen",
+                            onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
+                        },
+                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            label: "Procesar",
+                            onClick: () => setSent(row.purchase.poId ?? ""),
+                        },
+                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            label: "Editar",
+                            onClick: () => navigate(`/compra/${row.purchase.poId}`),
+                        },
+                        {
+                            label: "Listar pagos",
+                            onClick: () => {
+                                setModalPaymentList(true);
+                                setPoId(row.purchase.poId ?? "");
+                                setTotalPo(row.purchase.total);
+                                setPaymentForm(row.purchase.paymentForm);
+                            },
+                        },
+                        row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
+                            row.purchase.totalPaid != row.purchase.total && {
+                                label: "Pago",
+                                onClick: () => {
+                                    setModalPayment(true);
+                                    setTotalPaid(row.purchase.totalPaid ?? 0);
+                                    setTotalToPay(row.purchase.totalToPay ?? 0);
+                                    setPoId(row.purchase.poId ?? "");
+                                },
+                            },
+                        row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
+                            label: "Ver cuotas",
+                            onClick: () => {
+                                setModalQuotaList(true);
+                                setPoId(row.purchase.poId ?? "");
+                            },
+                        },
+                        {
+                            label: "Abrir pdf",
+                            onClick: () => {
+                                openPurchasePdf(row.purchase.poId ?? "");
+                            },
+                        },
+                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            label: "Cancelar",
+                            className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 
+                                                            text-left text-[11px] text-rose-700 hover:bg-rose-50`,
+                            onClick: () => cancelOrder(row.purchase.poId ?? ""),
+                        },
+                    ].filter(Boolean)}
+                />
+            ),
+            headerClassName: "text-left w-[20px]",
+            className: "text-left",
+            hideable: true,
+        },
+    ];
 
     return (
         <div className="w-full min-h-screen bg-white">
@@ -290,277 +613,112 @@ export default function Purchases() {
                     </div>
                 </div>
 
-                <section className=" bg-gray-50 shadow-sm  p-4 space-y-3">
+                <section className="bg-gray-50 shadow-sm p-4 space-y-4 rounded-2xl border border-black/10">
+                    <SectionHeaderForm icon={Filter} title="Filtros" />
+
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.2fr_0.2fr_0.5fr_1fr_1fr_0.5fr_0.6fr]">
-                        <label className="text-[10px] text-black/60 font-bold">
-                            Fecha inicio
-                            <input
-                                type="date"
-                                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                                style={ringStyle}
-                                value={toDateInputValue(fromDate)}
-                                onClick={(e) => tryShowPicker(e.currentTarget)}
-                                onChange={(e) => {
-                                    setFromDate(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                        </label>
-                        <label className="text-[10px] text-black/60 font-bold">
-                            Fecha fin
-                            <input
-                                type="date"
-                                className="h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                                style={ringStyle}
-                                value={toDateInputValue(toDate)}
-                                onClick={(e) => tryShowPicker(e.currentTarget)}
-                                onChange={(e) => {
-                                    setToDate(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                        </label>
-                        <label className="text-[10px] text-black/60 font-bold">
-                            N. documento
-                            <input
-                                className="h-8 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-[10px] outline-none focus:ring-2"
-                                style={ringStyle}
-                                value={numeroInput}
-                                onChange={(e) => setNumeroInput(e.target.value)}
-                            />
-                        </label>
+                        <FloatingInput
+                            label="Fecha inicio"
+                            name="from-date"
+                            type="date"
+                            value={toDateInputValue(fromDate)}
+                            onClick={(e) => tryShowPicker(e.currentTarget)}
+                            onChange={(e) => {
+                                setFromDate(e.target.value);
+                                setPage(1);
+                            }}
+                            className="h-9 text-xs"
+                        />
+                        <FloatingInput
+                            label="Fecha fin"
+                            name="to-date"
+                            type="date"
+                            value={toDateInputValue(toDate)}
+                            onClick={(e) => tryShowPicker(e.currentTarget)}
+                            onChange={(e) => {
+                                setToDate(e.target.value);
+                                setPage(1);
+                            }}
+                            className="h-9 text-xs"
+                        />
+                        <FloatingInput
+                            label="N. documento"
+                            name="document-number"
+                            value={numeroInput}
+                            onChange={(e) => setNumeroInput(e.target.value)}
+                            className="h-9 text-xs"
+                        />
 
-                        <label className="text-[10px] text-black/60 font-bold">
-                            Proveedor
-                            <FilterableSelect
-                                value={supplierId}
-                                onChange={(value) => {
-                                    setSupplierId(value);
-                                    setPage(1);
-                                }}
-                                options={supplierOptions}
-                                placement="bottom"
-                                placeholder="Proveedor (todos)"
-                                searchPlaceholder="Buscar proveedor..."
-                                className="h-8"
-                                textSize="text-[10px]"
-                            />
-                        </label>
+                        <FloatingSelect
+                            label="Proveedor"
+                            name="supplier"
+                            value={supplierId}
+                            onChange={(value) => {
+                                setSupplierId(value);
+                                setPage(1);
+                            }}
+                            options={supplierSelectOptions}
+                            searchable
+                            className="h-9 text-xs"
+                        />
 
-                        <label className="text-[10px] text-black/60 font-bold">
-                            Almacen
-                            <FilterableSelect
-                                value={warehouseId}
-                                onChange={(value) => {
-                                    setWarehouseId(value);
-                                    setPage(1);
-                                }}
-                                options={warehouseOptions}
-                                placement="bottom"
-                                placeholder="Almacen (todos)"
-                                searchPlaceholder="Buscar almacen..."
-                                className="h-8"
-                                textSize="text-[10px]"
-                            />
-                        </label>
+                        <FloatingSelect
+                            label="Almacen"
+                            name="warehouse"
+                            value={warehouseId}
+                            onChange={(value) => {
+                                setWarehouseId(value);
+                                setPage(1);
+                            }}
+                            options={warehouseSelectOptions}
+                            searchable
+                            className="h-9 text-xs"
+                        />
 
-                        <label className="text-[10px] text-black/60 font-bold">
-                            Tipo de documento
-                            <select
-                                className="h-8 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                                style={ringStyle}
-                                value={documentType}
-                                onChange={(e) => {
-                                    setDocumentType(e.target.value as "" | VoucherDocType);
-                                    setPage(1);
-                                }}
-                            >
-                                <option value="">Documento (todos)</option>
-                                <option value={VoucherDocTypes.BOLETA}>Boleta</option>
-                                <option value={VoucherDocTypes.FACTURA}>Factura</option>
-                                <option value={VoucherDocTypes.NOTA_VENTA}>Nota de venta</option>
-                            </select>
-                        </label>
+                        <FloatingSelect
+                            label="Tipo"
+                            name="document-type"
+                            value={documentType}
+                            onChange={(value) => {
+                                setDocumentType(value);
+                                setPage(1);
+                            }}
+                            options={docTypeOptions}
+                            searchable
+                            className="h-9 text-xs"
+                        />
 
-                        <label className="text-[10px] text-black/60 font-semibold">
-                            Estado
-                            <select
-                                className="h-8 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                                style={ringStyle}
-                                value={statusFilter}
-                                onChange={(e) => {
-                                    setStatusFilter(e.target.value as "" | PurchaseOrderStatus);
-                                    setPage(1);
-                                }}
-                            >
-                                <option value="">Estado (todos)</option>
-                                <option value={PurchaseOrderStatuses.DRAFT}>Borrador</option>
-                                <option value={PurchaseOrderStatuses.SENT}>Enviado</option>
-                                <option value={PurchaseOrderStatuses.PARTIAL}>Parcial</option>
-                                <option value={PurchaseOrderStatuses.RECEIVED}>Recibido</option>
-                                <option value={PurchaseOrderStatuses.CANCELLED}>Cancelado</option>
-                            </select>
-                        </label>
+                        <FloatingSelect
+                            label="Estado"
+                            name="status"
+                            value={statusFilter}
+                            onChange={(value) => {
+                                setStatusFilter(value);
+                                setPage(1);
+                            }}
+                            options={statusOptions}
+                            searchable
+                            className="h-9 text-xs"
+                        />
                     </div>
                 </section>
 
-                <section className=" border-black/10 bg-white shadow-sm overflow-hidden">
-                    <div className="max-h-[calc(100vh-220px)] min-h-[calc(100vh-220px)] overflow-auto">
-                        <table className="w-full h-full table-fixed">
-                            <thead className="sticky top-0 z-10 bg-gray-50">
-                                <tr className="border-b border-black/10 text-black/60 text-[10px]">
-                                    <th className="py-3 px-3 text-left w-[60px]">Fecha emision</th>
-                                    <th className="py-3 px-3 text-left w-[40px]">Documento</th>
-                                    <th className="py-3 px-3 text-left w-[50px]">Numero</th>
-                                    <th className="py-3 px-3 text-left w-[130px]">Proveedor</th>
-                                    <th className="py-3 px-3 text-left w-[92px]">Almacen</th>
-                                    <th className="py-3 px-3 text-left w-[45px]">Forma</th>
-                                    <th className="py-3 px-3 text-left w-[50px]">Total</th>
-                                    <th className="py-3 px-3 text-left w-[50px]">Pagado</th>
-                                    <th className="py-3 px-3 text-left w-[50px]">Pendiente</th>
-                                    <th className="py-3 px-3 text-left w-[50px]">Estado</th>
-                                    <th className="py-3 px-3 text-center w-[83px]">T. Espera</th>
-                                    <th className="py-3 px-3 text-left w-[60px]">Ing. Almacen</th>
-                                    <th className="py-3 px-0 text-left w-[20px]"></th>
-                                </tr>
-                            </thead>
-                            <tbody key={listKey}>
-                                {purchases.map((purchase) => {
-                                    const numero = [purchase.serie, purchase.correlative].filter((v) => v !== null && v !== undefined && String(v).length > 0).join("-");
-                                    const supplierMeta = purchase.supplierId ? supplierMetaById.get(purchase.supplierId) : undefined;
-                                    const warehouseMeta = purchase.warehouseId ? warehouseMetaById.get(purchase.warehouseId) : undefined;
-                                    const statusLabel = purchase.status ? (statusLabels[purchase.status] ?? purchase.status) : "-";
-                                    const docLabel = purchase.documentType ? (docTypeLabels[purchase.documentType] ?? purchase.documentType) : "-";
-                                    const date = formatDate(new Date(purchase.dateIssue ?? ""));
-                                    const time = purchase.dateIssue
-                                        ? new Date(purchase.dateIssue).toLocaleTimeString("es-PE", {
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                              second: "2-digit",
-                                          })
-                                        : undefined;
-                                    const dateEnter = formatDate(new Date(purchase.expectedAt ?? ""));
-                                    const timeEnter = purchase.expectedAt
-                                        ? new Date(purchase.expectedAt).toLocaleTimeString("es-PE", {
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                              second: "2-digit",
-                                          })
-                                        : undefined;
-                                    return (
-                                        <tr key={purchase.poId ?? `${purchase.supplierId}-${purchase.createdAt ?? numero}`} className="border-b border-black/5 text-[10px]">
-                                            <td className="py-1 px-3 text-black/70">
-                                                {date} <br />
-                                                {time}
-                                            </td>
-                                            <td className="py-1 px-3 text-black/70">{docLabel}</td>
-                                            <td className="py-1 px-3 text-black/70">{numero}</td>
-                                            <td className="py-1 px-3 text-black/70">
-                                                <div>{supplierMeta?.label ?? "-"}</div>
-                                                <div className="text-[10px] text-black/50">{supplierMeta?.doc ?? ""}</div>
-                                            </td>
-                                            <td className="py-1 px-3 text-black/70">
-                                                <div>{warehouseMeta?.label ?? "-"}</div>
-                                            </td>
-                                            <td className="py-1 px-3 text-black/70">{purchase.paymentForm}</td>
-                                            <td className="py-1 px-3 text-left text-black/70 tabular-nums">{money(purchase.total ?? 0, purchase.currency)}</td>
-                                            <td className="py-1 px-3 text-left text-black/70 tabular-nums">{money(purchase.totalPaid ?? 0, purchase.currency)}</td>
-                                            <td className="py-1 px-3 text-left text-black/70 tabular-nums">{money(purchase.totalToPay ?? 0, purchase.currency)}</td>
-                                            <td className="py-1 px-3">
-                                                <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">{statusLabel}</span>
-                                            </td>
-                                            <td className="py-1 px-3 align-middle">
-                                                <div className="flex h-full items-center justify-center">
-                                                    {purchase.status === PurchaseOrderStatuses.SENT && (
-                                                        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                                            <TimerToEnd from={now} to={purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />
-                                                        </span>
-                                                    )}
-                                                    {purchase.status === PurchaseOrderStatuses.PARTIAL && (
-                                                        <span className="flex flex-col items-center rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                                            <OctagonAlert className="h-4 w-4" />
-                                                            <span className="mt-1">Por Ing.</span>
-                                                        </span>
-                                                    )}
-                                                    {purchase.status === PurchaseOrderStatuses.RECEIVED && (
-                                                        <span className="flex flex-col items-center rounded-lg p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                                                            <Timer className="h-4 w-4" />
-                                                            <span className="mt-1">Completado</span>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="py-1 px-3 text-black/70">
-                                                {dateEnter} <br />
-                                                {timeEnter}
-                                            </td>
-                                            <td className="py-1 px-0">
-                                                <Dropdown
-                                                    trigger={<Menu className="h-4 w-4" />}
-                                                    itemClassName="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                                                    items={[
-                                                        (purchase.status === PurchaseOrderStatuses.SENT || purchase.status === PurchaseOrderStatuses.PARTIAL) && {
-                                                            label: "Ingresar Almacen",
-                                                            onClick: () => EnterToWarehouse(purchase.poId ?? ""),
-                                                        },
-                                                        purchase.status === PurchaseOrderStatuses.DRAFT && {
-                                                            label: "Procesar",
-                                                            onClick: () => setSent(purchase.poId ?? ""),
-                                                        },
-                                                        purchase.status === PurchaseOrderStatuses.DRAFT && {
-                                                            label: "Editar",
-                                                            onClick: () => navigate(`/compra/${purchase.poId}`),
-                                                        },
-                                                        {
-                                                            label: "Listar pagos",
-                                                            onClick: () => {
-                                                                setModalPaymentList(true);
-                                                                setPoId(purchase.poId ?? "");
-                                                                setTotalPo(purchase.total);
-                                                                setPaymentForm(purchase.paymentForm);
-                                                            },
-                                                        },
-                                                        purchase.paymentForm !== PaymentFormTypes.CREDITO &&
-                                                            purchase.totalPaid != purchase.total && {
-                                                                label: "Pago",
-                                                                onClick: () => {
-                                                                    setModalPayment(true);
-                                                                    setTotalPaid(purchase.totalPaid ?? 0);
-                                                                    setTotalToPay(purchase.totalToPay ?? 0);
-                                                                    setPoId(purchase.poId ?? "");
-                                                                },
-                                                            },
-                                                        purchase.paymentForm === PaymentFormTypes.CREDITO && {
-                                                            label: "Ver cuotas",
-                                                            onClick: () => {
-                                                                setModalQuotaList(true);
-                                                                setPoId(purchase.poId ?? "");
-                                                            },
-                                                        },
-                                                        {
-                                                            label: "Abrir pdf",
-                                                            onClick: () => {
-                                                                openPurchasePdf(purchase.poId ?? "");
-                                                            },
-                                                        },
-                                                        purchase.status === PurchaseOrderStatuses.DRAFT && {
-                                                            label: "Cancelar",
-                                                            className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 
-                                                            text-left text-[11px] text-rose-700 hover:bg-rose-50`,
-                                                            onClick: () => cancelOrder(purchase.poId ?? ""),
-                                                        },
-                                                    ].filter(Boolean)}
-                                                />
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                <section className=" bg-white shadow-sm overflow-auto">
+                    <DataTable
+                        tableId="purchase-list"
+                        data={purchaseRows}
+                        columns={columns}
+                        rowKey="id"
+                        loading={loading}
+                        selectableColumns={true}
+                        emptyMessage="No hay compras con los filtros actuales."
+                        hoverable={false}
+                        animated={false}
+                        className="overflow-hidden"
+                        tableClassName="table-fixed text-[10px] overflow-hidden"
+                    />
 
-                        {!loading && purchases.length === 0 && <div className="px-5 py-8 text-[10px] text-black/60">No hay compras con los filtros actuales.</div>}
-                        {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
-                    </div>
+                    {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
 
                     <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-[10px] text-black/60">
                         <span className="hidden sm:inline">
@@ -568,27 +726,31 @@ export default function Purchases() {
                         </span>
 
                         <div className="flex items-center gap-2">
-                            <button
-                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[10px] hover:bg-black/[0.03] disabled:opacity-40"
+                            <SystemButton
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-8"
                                 disabled={!pagination.hasPrev || loading}
                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                 type="button"
                             >
                                 Anterior
-                            </button>
+                            </SystemButton>
 
                             <span className="tabular-nums">
                                 Pagina {safePage} de {totalPages}
                             </span>
 
-                            <button
-                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[10px] hover:bg-black/[0.03] disabled:opacity-40"
+                            <SystemButton
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-8"
                                 disabled={!pagination.hasNext || loading}
                                 onClick={() => setPage(safePage + 1)}
                                 type="button"
                             >
                                 Siguiente
-                            </button>
+                            </SystemButton>
                         </div>
                     </div>
                 </section>

@@ -1,5 +1,7 @@
 import { Modal } from "@/components/settings/modal";
+import { SystemButton } from "@/components/SystemButton";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
+import { Plus, List } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type ModalNavegateProps = {
@@ -89,21 +91,26 @@ export function ModalNavegate({
             )}
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              className="flex-1 rounded-xl border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03]"
+            <SystemButton
+              leftIcon={<Plus className="h-4 w-4" />}
+              variant="ghost"
+              className="flex-1 bg-gray-200"
               onClick={onNewPurchase}
             >
               Ingresar nueva compra
-            </button>
-            <button
-              type="button"
-              className="flex-1 rounded-xl border px-4 py-2 text-sm text-white"
-              style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
+            </SystemButton>
+
+            <SystemButton
+              leftIcon={<List className="h-4 w-4" />}
+              className="flex-1"
+              style={{
+                backgroundColor: accent,
+                borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
+              }}
               onClick={onGoToList}
             >
               Ir a listado de compras
-            </button>
+            </SystemButton>
           </div>
         </div>
       </div>

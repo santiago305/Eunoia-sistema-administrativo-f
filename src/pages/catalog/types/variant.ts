@@ -87,7 +87,16 @@ export type FinishedProducts = {
   type?: string;
 };
 
-export type ProductOption = { productId: string; name: string; sku?: string | null };
+export type ProductOption = { 
+  productId: string;
+  name: string; sku?: string | null,
+  customSku?:string 
+  attributes?: {
+    presentation?: string,
+    variant?:string,
+    color?:string
+  };
+};
 export type VariantForm = {
   productId: string;
   barcode: string;
@@ -99,6 +108,7 @@ export type VariantForm = {
     color?:string
   };
   isActive: boolean;
+  customSku?:string
 };
 
 

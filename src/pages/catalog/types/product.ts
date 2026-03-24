@@ -48,6 +48,7 @@ export type ProductForm = {
       variant?:string
     }
     baseUnitId: string;
+    customSku?:string;
 };
 
 export type ProductListResponse = {

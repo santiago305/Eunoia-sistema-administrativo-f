@@ -83,10 +83,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Productos",
                 href: RoutesPaths.catalogProducts,
             },
-            {
-                label: "Variantes",
-                href: RoutesPaths.catalogVariants,
-            },
+            // {
+            //     label: "Variantes",
+            //     href: RoutesPaths.catalogVariants,
+            // },
             {
                 label: "Kardex",
                 href: RoutesPaths.KardexFinished,
@@ -102,10 +102,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Materias Primas",
                 href: RoutesPaths.rowMaterial,
             },
-            {
-                label: "Variantes",
-                href: RoutesPaths.rowVariant,
-            },
+            // {
+            //     label: "Variantes",
+            //     href: RoutesPaths.rowVariant,
+            // },
             {
                 label: "Kardex",
                 href: RoutesPaths.KardexPrima,

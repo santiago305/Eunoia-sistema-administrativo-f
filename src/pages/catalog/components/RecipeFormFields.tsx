@@ -1,10 +1,14 @@
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { useCallback, useMemo, useState } from "react";
 import { createProductRecipe, deleteProductRecipe } from "@/services/productRecipeService";
 import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
 import { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
-import { Power } from "lucide-react";
-import { useState } from "react";
+import { Power, Plus } from "lucide-react";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SystemButton } from "@/components/SystemButton";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 
 export function RecipeFormFields({
     finishedVariantId,
@@ -38,6 +42,81 @@ export function RecipeFormFields({
             ? `${selectedPrimaVariant.unitName} (${selectedPrimaVariant.unitCode})`
             : ((units ?? []).find((u) => u.id === selectedPrimaVariant?.baseUnitId)?.name ?? (selectedPrimaVariant?.baseUnitId ? selectedPrimaVariant.baseUnitId : "Sin unidad base"));
 
+    type RecipeRow = {
+        id: string;
+        primaLabel: string;
+        consumption: string;
+    };
+
+    const deleteRecipe = useCallback(async (id: string) => {
+        try {
+            await deleteProductRecipe(id);
+            await onCreated();
+        } catch {
+            console.log("algo salio mal");
+        }
+    }, [onCreated]);
+
+    const recipeRows = useMemo<RecipeRow[]>(
+        () =>
+            (recipes ?? []).map((recipe) => {
+                const prima = (primaVariants ?? []).find((v) => v.id === recipe.primaVariantId);
+                const unitLabel =
+                    prima?.unitName && prima?.unitCode
+                        ? `${prima.unitName} (${prima.unitCode})`
+                        : ((units ?? []).find((u) => u.id === prima?.baseUnitId)?.name ?? (prima?.baseUnitId ? prima.baseUnitId : recipe.primaVariantId));
+                const primaLabel = prima ? `${prima.productName ?? "Producto"} (${prima.sku ?? "-"})` : recipe.primaVariantId;
+
+                return {
+                    id: recipe.id,
+                    primaLabel,
+                    consumption: `${recipe.quantity} - ${unitLabel}`,
+                };
+            }),
+        [recipes, primaVariants, units],
+    );
+
+    const columns = useMemo<DataTableColumn<RecipeRow>[]>(
+        () => [
+            {
+                id: "prima",
+                header: "Materia prima",
+                accessorKey: "primaLabel",
+                className: "text-black/70",
+                hideable: false,
+            },
+            {
+                id: "consumption",
+                header: "Consumo",
+                accessorKey: "consumption",
+                className: "text-black/70",
+                hideable: false,
+            },
+            {
+                id: "actions",
+                header: "",
+                cell: (row) => (
+                    <div className="flex justify-end">
+                        <SystemButton
+                            variant="danger"
+                            size="custom"
+                            className="h-8 w-9 rounded-lg"
+                            onClick={() => {
+                                void deleteRecipe(row.id);
+                            }}
+                        >
+                            <Power className="h-4 w-4" />
+                        </SystemButton>
+                    </div>
+                ),
+                headerClassName: "text-right w-[40px]",
+                className: "text-right",
+                hideable: false,
+            },
+        ],
+        [deleteRecipe],
+    );
+
     const handleCreate = async () => {
         if (!finishedVariantId || !primaVariantId || !quantity) return;
         await createProductRecipe({
@@ -50,98 +129,61 @@ export function RecipeFormFields({
         await onCreated();
     };
 
-    const deleteRecipe = async (id: string) => {
-        try {
-            await deleteProductRecipe(id);
-            await onCreated();
-        } catch {
-            console.log("algo salio mal");
-        }
-    };
-
     return (
         <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_150px_100px_45px]">
-                <label className="text-sm">
-                    <div className="mb-2">Materia prima y materiales</div>
-                    <FilterableSelect
-                        value={primaVariantId}
-                        onChange={setPrimaVariantId}
-                        options={primaVariantOptions}
-                        placement="bottom"
-                        placeholder="Seleccionar producto"
-                        searchPlaceholder="Buscar producto..."
-                    />
-                </label>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.5fr_45px] mt-2">
+                <FloatingSelect
+                    label="Materia prima"
+                    name="materia-prima"
+                    value={primaVariantId}
+                    onChange={(value) => setPrimaVariantId(value)}
+                    options={primaVariantOptions}
+                    searchable
+                    searchPlaceholder="Buscar producto..."
+                    emptyMessage="Sin productos"
+                />
 
-                <label className="text-sm">
-                    <div className="mb-2">Unidad base</div>
-                    <input className="h-10 w-full rounded-lg border border-black/10 bg-gray-100 px-3 text-sm text-black/60" value={baseUnitLabel} disabled />
-                </label>
-                <label className="text-sm">
-                    <div className="mb-2">Cantidad</div>
-                    <input type="number" min="0" step="1" className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-                </label>
-                <button
-                    type="button"
-                    className="rounded-xl border h-10 text-xl text-white mt-7"
+                <FloatingInput
+                    label="Unidad base"
+                    name="unit-base"
+                    value={baseUnitLabel}
+                    disabled
+                />
+
+                <FloatingInput
+                    label="Cantidad"
+                    type="number"
+                    name="cantidad"
+                    className="text-black/90"
+                    value={quantity}
+                    min="0"
+                    step="1"
+                    onChange={(e) => setQuantity(e.target.value)}
+                />
+
+                <SystemButton
+                    leftIcon={<Plus className="h-4 w-4" />}
+                    className="h-10"
                     style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                     onClick={() => void handleCreate()}
                     disabled={!finishedVariantId || !primaVariantId || !quantity}
-                >
-                    +
-                </button>
+                />
             </div>
 
-            <div className="flex justify-end"></div>
-
             <div className="rounded-2xl border border-black/10 overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 text-xs text-black/60">
-                    <span>Listado de recetas</span>
-                    <span>{loading ? "Cargando..." : `${recipes.length} registros`}</span>
-                </div>
-                <div className="max-h-56 overflow-auto">
-                    <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-white z-10">
-                            <tr className="border-b border-black/10 text-xs text-black/60">
-                                <th className="py-2 px-5 text-left">Materia prima</th>
-                                <th className="py-2 px-5 text-left">Consumo</th>
-                                <th className="py-2 px-5 text-left"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {recipes.map((r) => {
-                                const prima = (primaVariants ?? []).find((v) => v.id === r.primaVariantId);
-                                const unitLabel =
-                                    prima?.unitName && prima?.unitCode
-                                        ? `${prima.unitName} (${prima.unitCode})`
-                                        : ((units ?? []).find((u) => u.id === prima?.baseUnitId)?.name ?? (prima?.baseUnitId ? prima.baseUnitId : r.primaVariantId));
-                                return (
-                                    <tr key={r.id} className="border-b border-black/5">
-                                        <td className="py-2 px-5 text-left">{prima ? `${prima.productName ?? "Producto"} (${prima.sku})` : r.primaVariantId}</td>
-                                        <td className="py-2 px-5 text-left">
-                                            {r.quantity} - {unitLabel}
-                                        </td>
-                                        <td>
-                                            <button
-                                                className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
-                                                onClick={() => {
-                                                    void deleteRecipe(r.id);
-                                                }}
-                                            >
-                                                <Power className="h-4 w-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                    {!loading && recipes.length === 0 && <div className="px-4 py-4 text-sm text-black/60">No hay recetas registradas.</div>}
-                </div>
+                <DataTable
+                    tableId={`recipe-list-${finishedVariantId}`}
+                    data={recipeRows}
+                    columns={columns}
+                    rowKey="id"
+                    loading={loading}
+                    emptyMessage="No hay recetas registradas."
+                    hoverable={false}
+                    animated={false}
+                    className="text-xs [&>div]:overflow-visible [&>div>div]:max-h-50 [&>div>div]:overflow-y-auto"
+                    tableClassName="text-xs [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-white"
+                />
             </div>
         </div>
     );
 }
-
-
