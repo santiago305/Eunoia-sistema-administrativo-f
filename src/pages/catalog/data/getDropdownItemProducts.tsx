@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Boxes, LayoutGrid, Layers, Pencil, Power } from "lucide-react";
+import type { MouseEvent, ReactNode } from "react";
+import { Pencil, Power } from "lucide-react";
 
 type ProductLite = {
   id: string;
@@ -8,57 +8,57 @@ type ProductLite = {
 };
 
 type Handlers = {
-  openEquivalences: (productId: string) => void | Promise<void>;
-  openRecipes: (productId: string, sku: string) => void;
-  openVariantsModal: (productId: string) => void | Promise<void>;
-  openEdit: (productId: string) => void | Promise<void>;
-  setDeletingProductId: (productId: string) => void;
+  openEquivalences?: (productId: string) => void | Promise<void>;
+  openRecipes?: (productId: string, sku: string) => void;
+  openVariantsModal?: (productId: string) => void | Promise<void>;
+  openEdit?: (productId: string) => void | Promise<void>;
+  setDeletingProductId?: (productId: string) => void;
 };
 
 type DropdownItem = {
   label: ReactNode;
-  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
   className?: string;
 };
 
 export function getDropdownItemProducts(product: ProductLite, handlers: Handlers): DropdownItem[] {
   return [
-    {
-      label: (
-        <>
-          <Layers className="h-4 w-4 text-black/60" />
-          Equivalencias
-        </>
-      ),
-      onClick: (e) => {
-        e.stopPropagation();
-        void handlers.openEquivalences(product.id);
-      },
-    },
-    {
-      label: (
-        <>
-          <LayoutGrid className="h-4 w-4 text-black/60" />
-          Recetas
-        </>
-      ),
-      onClick: (e) => {
-        e.stopPropagation();
-        handlers.openRecipes(product.id, product.sku ?? "-");
-      },
-    },
-    {
-      label: (
-        <>
-          <Boxes className="h-4 w-4 text-black/60" />
-          Ver variantes
-        </>
-      ),
-      onClick: (e) => {
-        e.stopPropagation();
-        void handlers.openVariantsModal(product.id);
-      },
-    },
+    // {
+    //   label: (
+    //     <>
+    //       <Layers className="h-4 w-4 text-black/60" />
+    //       Equivalencias
+    //     </>
+    //   ),
+    //   onClick: (e) => {
+    //     e.stopPropagation();
+    //     void handlers.openEquivalences(product.id);
+    //   },
+    // },
+    // {
+    //   label: (
+    //     <>
+    //       <LayoutGrid className="h-4 w-4 text-black/60" />
+    //       Recetas
+    //     </>
+    //   ),
+    //   onClick: (e) => {
+    //     e.stopPropagation();
+    //     handlers.openRecipes(product.id, product.sku ?? "-");
+    //   },
+    // },
+    // {
+    //   label: (
+    //     <>
+    //       <Boxes className="h-4 w-4 text-black/60" />
+    //       Ver variantes
+    //     </>
+    //   ),
+    //   onClick: (e) => {
+    //     e.stopPropagation();
+    //     void handlers.openVariantsModal(product.id);
+    //   },
+    // },
     {
       label: (
         <>
@@ -68,7 +68,7 @@ export function getDropdownItemProducts(product: ProductLite, handlers: Handlers
       ),
       onClick: (e) => {
         e.stopPropagation();
-        void handlers.openEdit(product.id);
+        void handlers.openEdit?.(product.id);
       },
     },
     {
@@ -83,7 +83,7 @@ export function getDropdownItemProducts(product: ProductLite, handlers: Handlers
       }`,
       onClick: (e) => {
         e.stopPropagation();
-        handlers.setDeletingProductId(product.id);
+        handlers.setDeletingProductId?.(product.id);
       },
     },
   ];

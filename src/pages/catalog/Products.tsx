@@ -479,9 +479,6 @@ export default function CatalogProducts() {
                                                             menuClassName="min-w-52 p-2"
                                                             itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
                                                             items={getDropdownItemProducts(product, {
-                                                                openEquivalences,
-                                                                openRecipes,
-                                                                openVariantsModal,
                                                                 openEdit,
                                                                 setDeletingProductId,
                                                             })}
