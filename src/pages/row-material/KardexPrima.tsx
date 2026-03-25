@@ -1,586 +1,628 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import { SystemButton } from "@/components/SystemButton";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { getDailyTotals, listKardex } from "@/services/kardexService";
-import { buildMonthStartIso, toDateInputValue, todayIso, tryShowPicker } from "@/utils/functionPurchases";
+import {
+  buildMonthStartIso,
+  toDateInputValue,
+  todayIso,
+  tryShowPicker,
+} from "@/utils/functionPurchases";
 import type { KardexDailyTotal, LedgerEntry } from "@/pages/catalog/types/kardex";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
-import { getProductionOrderPdf, getPurchaseOrderPdf, getDocumentInventoryPdf } from "@/services/pdfServices";
+import {
+  getProductionOrderPdf,
+  getPurchaseOrderPdf,
+  getDocumentInventoryPdf,
+} from "@/services/pdfServices";
+import { Boxes, FileText, Filter, LineChart } from "lucide-react";
 
+const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 25;
 
 const toLocalDateKey = (date: Date) => {
-    const pad = (value: number) => String(value).padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 const useEChart = (options: echarts.EChartsOption) => {
-    const ref = useRef<HTMLDivElement | null>(null);
-    const chartRef = useRef<echarts.EChartsType | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const chartRef = useRef<echarts.EChartsType | null>(null);
 
-    useEffect(() => {
-        if (!ref.current) return;
-        chartRef.current = echarts.init(ref.current);
+  useEffect(() => {
+    if (!ref.current) return;
+    chartRef.current = echarts.init(ref.current);
 
-        const handle = () => chartRef.current?.resize();
-        window.addEventListener("resize", handle);
-        const timer = setTimeout(() => chartRef.current?.resize(), 50);
+    const handle = () => chartRef.current?.resize();
+    window.addEventListener("resize", handle);
+    const timer = setTimeout(() => chartRef.current?.resize(), 50);
 
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener("resize", handle);
-            chartRef.current?.dispose();
-            chartRef.current = null;
-        };
-    }, []);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handle);
+      chartRef.current?.dispose();
+      chartRef.current = null;
+    };
+  }, []);
 
-    useEffect(() => {
-        if (!chartRef.current) return;
-        chartRef.current.setOption(options, { notMerge: true });
-        chartRef.current.resize();
-    }, [options]);
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.setOption(options, { notMerge: true });
+    chartRef.current.resize();
+  }, [options]);
 
-    return ref;
+  return ref;
+};
+
+type KardexRow = {
+  id: string;
+  fechaHora: string;
+  tercero: string;
+  documento: string;
+  tipo: string;
+  entrada: number;
+  salida: string | number;
+  saldo: number;
+  original: LedgerEntry;
 };
 
 export default function KardexProduction() {
-    const { showFlash, clearFlash } = useFlashMessage();
+  const { showFlash, clearFlash } = useFlashMessage();
 
-    const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-    const [toDate, setToDate] = useState(() => todayIso());
-    const [warehouseId, setWarehouseId] = useState("");
-    const [productQuery, setProductQuery] = useState("");
-    const [products, setProducts] = useState<PrimaVariant[]>([]);
-    const [stockItemId, setStockItemId] = useState("");
+  const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
+  const [toDate, setToDate] = useState(() => todayIso());
+  const [warehouseId, setWarehouseId] = useState("");
+  const [productQuery, setProductQuery] = useState("");
+  const [products, setProducts] = useState<PrimaVariant[]>([]);
+  const [stockItemId, setStockItemId] = useState("");
 
-    const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>([]);
-    const [rows, setRows] = useState<LedgerEntry[]>([]);
-    const [dailyTotals, setDailyTotals] = useState<KardexDailyTotal[]>([]);
-    const [selectedRow, setSelectedRow] = useState<LedgerEntry | null>(null);
-    const totalsRequestRef = useRef(0);
+  const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>([]);
+  const [rows, setRows] = useState<LedgerEntry[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<KardexDailyTotal[]>([]);
+  const [selectedRow, setSelectedRow] = useState<LedgerEntry | null>(null);
+  const totalsRequestRef = useRef(0);
 
-    const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: DEFAULT_LIMIT,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false,
+  });
+  const [loading, setLoading] = useState(false);
+
+  const [openPdfModal, setOpenPdfModal] = useState(false);
+  const [pdfTitle, setPdfTitle] = useState("Documento");
+  const [pdfLoader, setPdfLoader] = useState<(() => Promise<Blob>) | null>(null);
+
+  const openPdfModalWith = (title: string, loader: () => Promise<Blob>) => {
+    setPdfTitle(title);
+    setPdfLoader(() => loader);
+    setOpenPdfModal(true);
+  };
+
+  const searchPrimas = async () => {
+    if (!productQuery.trim()) {
+      setProducts([]);
+      return;
+    }
+
+    try {
+      const result = await searchProductAndVariant({
+        q: productQuery,
+        raw: true,
+      });
+
+      const normalized =
+        (result ?? [])
+          .map((row) => ({
+            ...row,
+            itemId: row.itemId ?? row.id ?? row.primaId ?? "",
+            isActive: row.isActive ?? true,
+          }))
+          .filter((row) => row.itemId) ?? [];
+
+      setProducts(normalized);
+    } catch {
+      setProducts([]);
+      showFlash(errorResponse("Error al cargar variantes PRIMA"));
+    }
+  };
+
+  const loadWarehouses = async () => {
+    try {
+      const res = await listActive();
+      const options =
+        res?.map((s: Warehouse) => ({
+          value: s.warehouseId,
+          label: s.name,
+        })) ?? [];
+      setWarehouseOptions(options);
+    } catch {
+      setWarehouseOptions([]);
+      showFlash(errorResponse("Error al cargar almacenes"));
+    }
+  };
+
+  const loadLedger = async () => {
+    if (loading) return;
+
+    if (!stockItemId) {
+      setRows([]);
+      setPagination((prev) => ({
+        ...prev,
         total: 0,
-        page: 1,
-        limit: DEFAULT_LIMIT,
         totalPages: 1,
         hasPrev: false,
         hasNext: false,
-    });
-    const [loading, setLoading] = useState(false);
+      }));
+      return;
+    }
 
-    const searchPrimas = async () => {
-        if (!productQuery.trim()) {
-            setProducts([]);
-            return;
-        }
-        const raw = true;
-        try {
-            const result = await searchProductAndVariant({
-                q: productQuery,
-                raw,
-            });
-            const normalized =
-                (result ?? [])
-                    .map((row) => ({
-                        ...row,
-                        itemId: row.itemId ?? row.id ?? row.primaId ?? "",
-                        isActive: row.isActive ?? true,
-                    }))
-                    .filter((row) => row.itemId) ?? [];
-            setProducts(normalized);
-        } catch {
-            setProducts([]);
-            showFlash(errorResponse("Error al cargar variantes PRIMA"));
-        }
-    };
+    clearFlash();
+    setLoading(true);
 
-    const loadWarehouses = async () => {
-        try {
-            const res = await listActive();
-            const options =
-                res?.map((s: Warehouse) => ({
-                    value: s.warehouseId,
-                    label: s.name,
-                })) ?? [];
-            setWarehouseOptions([...options]);
-        } catch {
-            setWarehouseOptions([{ value: "", label: "" }]);
-            showFlash(errorResponse("Error al cargar almacenes"));
-        }
-    };
-    const openProductionPdf = async (id: string) => {
-            clearFlash();
-            try {
-                const blob = await getProductionOrderPdf(id);
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `orden-compra-${id}.pdf`;
-                link.click();
-                link.remove();
-                window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-            } catch {
-                showFlash(errorResponse("Error al generar el PDF"));
-            }
-        };
-    
-        const openPurchasePdf = async (id: string) => {
-            clearFlash();
-            try {
-                const blob = await getPurchaseOrderPdf(id);
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `orden-compra-${id}.pdf`;
-                link.click();
-                link.remove();
-                window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-            } catch {
-                showFlash(errorResponse("Error al generar el PDF"));
-            }
-        };
-        const openDocumentInventoryPdf = async (id: string) => {
-            clearFlash();
-            try {
-                const blob = await getDocumentInventoryPdf(id);
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `orden-compra-${id}.pdf`;
-                link.click();
-                link.remove();
-                window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-            } catch {
-                showFlash(errorResponse("Error al generar el PDF"));
-            }
-        };
+    try {
+      const res = await listKardex({
+        page: pagination.page,
+        limit: pagination.limit,
+        stockItemId,
+        warehouseId: warehouseId || undefined,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+      });
 
-    const loadLedger = async () => {
-        if (loading) return;
-        if (!stockItemId) {
-            setRows([]);
-            setPagination((prev) => ({
-                ...prev,
-                total: 0,
-                totalPages: 1,
-                hasPrev: false,
-                hasNext: false,
-            }));
-            return;
-        }
-        clearFlash();
-        setLoading(true);
-        try {
-            const res = await listKardex({
-                page: pagination.page,
-                limit: pagination.limit,
-                stockItemId,
-                warehouseId: warehouseId || undefined,
-                from: fromDate || undefined,
-                to: toDate || undefined,
-            });
-            setRows(res.items ?? []);
-            const nextTotal = res.total ?? 0;
-            const nextPage = res.page ?? pagination.page;
-            const nextLimit = res.limit ?? pagination.limit;
-            const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || pagination.limit)));
-            setPagination({
-                total: nextTotal,
-                page: nextPage,
-                limit: nextLimit,
-                totalPages: nextTotalPages,
-                hasPrev: nextPage > 1,
-                hasNext: nextPage < nextTotalPages,
-            });
-        } catch {
-            setRows([]);
-            setPagination((prev) => ({
-                ...prev,
-                total: 0,
-                totalPages: 1,
-                hasPrev: false,
-                hasNext: false,
-            }));
-            showFlash(errorResponse("Error al cargar kardex"));
-        } finally {
-            setLoading(false);
-        }
-    };
+      setRows(res.items ?? []);
 
-    const loadDailyTotals = async () => {
-        if (!stockItemId) {
-            setDailyTotals([]);
-            return;
-        }
-        const requestId = ++totalsRequestRef.current;
-        clearFlash();
-        try {
-            const res = await getDailyTotals({
-                stockItemId,
-                warehouseId: warehouseId || undefined,
-                from: fromDate || undefined,
-                to: toDate || undefined,
-            });
-            if (requestId !== totalsRequestRef.current) return;
-            setDailyTotals(res ?? []);
-        } catch {
-            if (requestId !== totalsRequestRef.current) return;
-            setDailyTotals([]);
-            showFlash(errorResponse("Error al cargar tendencia"));
-        }
-    };
+      const nextTotal = res.total ?? 0;
+      const nextPage = res.page ?? pagination.page;
+      const nextLimit = res.limit ?? pagination.limit;
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || pagination.limit)));
 
-    useEffect(() => {
-        void loadWarehouses();
-    }, []);
+      setPagination({
+        total: nextTotal,
+        page: nextPage,
+        limit: nextLimit,
+        totalPages: nextTotalPages,
+        hasPrev: nextPage > 1,
+        hasNext: nextPage < nextTotalPages,
+      });
+    } catch {
+      setRows([]);
+      setPagination((prev) => ({
+        ...prev,
+        total: 0,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      }));
+      showFlash(errorResponse("Error al cargar kardex"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        const id = setTimeout(() => {
-            if (productQuery.trim()) {
-                void searchPrimas();
-            } else {
-                setProducts([]);
-            }
-        }, 500);
+  const loadDailyTotals = async () => {
+    if (!stockItemId) {
+      setDailyTotals([]);
+      return;
+    }
 
-        return () => clearTimeout(id);
-    }, [productQuery]);
+    const requestId = ++totalsRequestRef.current;
+    clearFlash();
 
-    useEffect(() => {
-        void loadLedger();
-    }, [pagination.page, pagination.limit, warehouseId, fromDate, toDate, stockItemId]);
+    try {
+      const res = await getDailyTotals({
+        stockItemId,
+        warehouseId: warehouseId || undefined,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+      });
 
-    useEffect(() => {
-        void loadDailyTotals();
-    }, [warehouseId, fromDate, toDate, stockItemId]);
+      if (requestId !== totalsRequestRef.current) return;
+      setDailyTotals(res ?? []);
+    } catch {
+      if (requestId !== totalsRequestRef.current) return;
+      setDailyTotals([]);
+      showFlash(errorResponse("Error al cargar tendencia"));
+    }
+  };
 
-    useEffect(() => {
-        setSelectedRow(rows[0] ?? null);
-    }, [rows]);
+  useEffect(() => {
+    void loadWarehouses();
+  }, []);
 
-    const startIndex = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
-    const endIndex = Math.min(pagination.page * pagination.limit, pagination.total);
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (productQuery.trim()) {
+        void searchPrimas();
+      } else {
+        setProducts([]);
+      }
+    }, 500);
 
-    const productOptions = useMemo(
-        () =>
-            (products ?? []).map((p) => ({
-                value: p.itemId ?? p.id ?? p.primaId ?? "",
-                label: `${p.productName ?? "Producto"} (${p.sku ?? "-"})`,
-            })),
-        [products],
-    );
+    return () => clearTimeout(id);
+  }, [productQuery]);
 
-    const movementsChart = useMemo<echarts.EChartsOption>(() => {
-        const endValue = toDateInputValue(toDate) || toDateInputValue(todayIso());
-        const endDate = endValue ? new Date(`${endValue}T23:59:59`) : new Date();
-        const startDate = new Date(endDate);
-        startDate.setDate(endDate.getDate() - 6);
-        startDate.setHours(0, 0, 0, 0);
+  useEffect(() => {
+    void loadLedger();
+  }, [pagination.page, pagination.limit, warehouseId, fromDate, toDate, stockItemId]);
 
-        const days: { key: string; label: string }[] = [];
-        const cursor = new Date(startDate);
-        while (cursor <= endDate) {
-            const iso = toLocalDateKey(cursor);
-            const label = cursor.toLocaleDateString("es-PE", { weekday: "short" });
-            days.push({ key: iso, label });
-            cursor.setDate(cursor.getDate() + 1);
-        }
+  useEffect(() => {
+    void loadDailyTotals();
+  }, [warehouseId, fromDate, toDate, stockItemId]);
 
-        const totals = new Map<string, number>();
-        for (const day of days) totals.set(day.key, 0);
+  useEffect(() => {
+    setSelectedRow(rows[0] ?? null);
+  }, [rows]);
 
-        for (const total of dailyTotals) {
-            if (!total?.day) continue;
-            const key = String(total.day).slice(0, 10);
-            if (!totals.has(key)) continue;
-            totals.set(key, Number(total.balance ?? 0));
-        }
+  const productOptions = useMemo(
+    () =>
+      (products ?? []).map((p) => ({
+        value: p.itemId ?? p.id ?? p.primaId ?? "",
+        label: `${p.productName ?? "Producto"} (${p.sku ?? "-"})`,
+      })),
+    [products],
+  );
 
-        const labels = days.map((d) => d.label);
-        const data = days.map((d) => totals.get(d.key) ?? 0);
+  const kardexRows = useMemo<KardexRow[]>(
+    () =>
+      rows.map((row) => {
+        const date = row.createdAt ? new Date(row.createdAt) : null;
+        const balance = row.balance ?? 0;
+        const entryQty = row.direction === "IN" ? row.quantity : 0;
+        const exitQty = row.direction === "OUT" ? row.quantity : 0;
+
+        const tercero = row.referenceDoc?.purchase
+          ? row.referenceDoc.supplier?.name ?? row.referenceDoc.supplier?.tradeName ?? "-"
+          : "-";
+
+        const documento = row.referenceDoc?.production
+          ? `${row.referenceDoc.production.serie}-${row.referenceDoc.production.correlative}`
+          : row.referenceDoc?.purchase
+            ? `${row.referenceDoc.purchase.serie}-${row.referenceDoc.purchase.correlative}`
+            : "-";
 
         return {
-            grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
-            xAxis: {
-                type: "category",
-                data: labels,
-                axisLabel: { color: "#111" },
-            },
-            yAxis: { type: "value", axisLabel: { color: "#111" } },
-            tooltip: { trigger: "axis" },
-            series: [
-                {
-                    type: "line",
-                    data,
-                    smooth: true,
-                    lineStyle: { color: "#0f766e" },
-                    itemStyle: { color: "#0f766e" },
-                    areaStyle: { color: "rgba(15, 118, 110, 0.12)" },
-                },
-            ],
+          id: row.id ?? `${row.docId ?? "doc"}-${row.createdAt ?? ""}`,
+          fechaHora: date
+            ? date.toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" })
+            : "-",
+          tercero,
+          documento,
+          tipo: row.direction ?? "-",
+          entrada: entryQty,
+          salida: exitQty ? `-${exitQty}` : 0,
+          saldo: balance,
+          original: row,
         };
-    }, [dailyTotals, toDate]);
+      }),
+    [rows],
+  );
 
-    const ref = useEChart(movementsChart);
+  const columns: DataTableColumn<KardexRow>[] = [
+    {
+      id: "fechaHora",
+      header: "Fecha y hora",
+      accessorKey: "fechaHora",
+      className: "w-80",
+      hideable: false,
+      sortable: false,
+    },
+    {
+      id: "tercero",
+      header: "Proveedor / Cliente",
+      className: "w-120",
+      accessorKey: "tercero",
+      sortable: false,
+    },
+    {
+      id: "documento",
+      header: "Documento",
+      accessorKey: "documento",
+      className: "w-40",
+      sortable: false,
+    },
+    {
+      id: "tipo",
+      header: "Tipo",
+      className: "w-10",
+      cell: (row) => (
+        <span className={row.tipo === "IN" ? "text-emerald-600" : "text-red-600"}>
+          {row.tipo}
+        </span>
+      ),
+      sortable: false,
+    },
+    {
+      id: "entrada",
+      header: "Entrada",
+      accessorKey: "entrada",
+      className: "text-right tabular-nums",
+      headerClassName: "text-right",
+      sortable: false,
+    },
+    {
+      id: "salida",
+      header: "Salida",
+      accessorKey: "salida",
+      className: "text-right tabular-nums",
+      headerClassName: "text-right",
+      sortable: false,
+    },
+    {
+      id: "saldo",
+      header: "Saldo",
+      accessorKey: "saldo",
+      className: "text-right tabular-nums",
+      headerClassName: "text-right",
+      sortable: false,
+    },
+  ];
 
-    return (
-        <div className="w-full min-h-screen bg-white text-black">
-            <PageTitle title="Kardex de materia prima y materiales" />
-            <div className="px-6 py-6 space-y-3">
-                <div>
-                    <h1 className="text-xl font-semibold">Kardex de materia prima y materiales</h1>
-                    <p className="text-sm text-black/60">Auditoría viva de movimientos.</p>
-                </div>
+  const movementsChart = useMemo<echarts.EChartsOption>(() => {
+    const endValue = toDateInputValue(toDate) || toDateInputValue(todayIso());
+    const endDate = endValue ? new Date(`${endValue}T23:59:59`) : new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 6);
+    startDate.setHours(0, 0, 0, 0);
 
-                <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-[0.5fr_0.5fr_1fr] gap-3">
-                        <div className="grid grid-cols-2 gap-2">
-                            <input
-                                type="date"
-                                className="h-9 rounded-lg border border-black/10 px-3 text-sm"
-                                value={toDateInputValue(fromDate)}
-                                onClick={(e) => tryShowPicker(e.currentTarget)}
-                                onChange={(e) => {
-                                    setFromDate(e.target.value);
-                                    setPagination((prev) => ({ ...prev, page: 1 }));
-                                }}
-                            />
-                            <input
-                                type="date"
-                                className="h-9 rounded-lg border border-black/10 px-3 text-sm"
-                                value={toDateInputValue(toDate)}
-                                onClick={(e) => tryShowPicker(e.currentTarget)}
-                                onChange={(e) => {
-                                    setToDate(e.target.value);
-                                    setPagination((prev) => ({ ...prev, page: 1 }));
-                                }}
-                            />
-                        </div>
-                        <FilterableSelect
-                            value={warehouseId}
-                            onChange={(value) => {
-                                setWarehouseId(value);
-                                setPagination((prev) => ({ ...prev, page: 1 }));
-                            }}
-                            options={warehouseOptions}
-                            placement="bottom"
-                            placeholder="Almacen"
-                            searchPlaceholder="Buscar almacen..."
-                            className="h-9"
-                            textSize="text-sm"
-                        />
-                        <FilterableSelect
-                            value={stockItemId}
-                            onChange={(value) => {
-                                setStockItemId(value);
-                                setPagination((prev) => ({ ...prev, page: 1 }));
-                            }}
-                            options={productOptions}
-                            placement="bottom"
-                            placeholder="Seleccionar producto"
-                            searchPlaceholder="Buscar producto..."
-                            onSearchChange={(text) => setProductQuery(text)}
-                            className="h-9"
-                            textSize="text-sm"
-                        />
-                    </div>
-                </section>
+    const days: { key: string; label: string }[] = [];
+    const cursor = new Date(startDate);
+    while (cursor <= endDate) {
+      const iso = toLocalDateKey(cursor);
+      const label = cursor.toLocaleDateString("es-PE", { weekday: "short" });
+      days.push({ key: iso, label });
+      cursor.setDate(cursor.getDate() + 1);
+    }
 
-                <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                    <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold">Registros</p>
-                            <button className="text-xs px-3 py-1 rounded-md border border-black/10">Exportar CSV</button>
-                        </div>
-                        <div className="mt-4 overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="text-xs text-black/60">
-                                    <tr className="border-b border-black/10">
-                                        <th className="py-2 text-left" title="Fecha y hora del movimiento">
-                                            Fecha y hora
-                                        </th>
-                                        <th className="py-2 text-left" title="Tipo de transacción">
-                                            Provedor/Cliente
-                                        </th>
-                                        <th className="py-2 text-left" title="Tipo de transacción">
-                                            Documento
-                                        </th>
-                                        <th className="py-2 text-left" title="Tipo de transacción">
-                                            Tipo
-                                        </th>
-                                        <th className="py-2 text-right" title="Entrada">
-                                            Entrada
-                                        </th>
-                                        <th className="py-2 text-right" title="Salida">
-                                            Salida
-                                        </th>
-                                        <th className="py-2 text-right" title="Saldo">
-                                            Saldo
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rows.map((row) => {
-                                        const date = row.createdAt ? new Date(row.createdAt) : null;
-                                        const balance = row.balance ?? 0;
-                                        const entryQty = row.direction === "IN" ? row.quantity : 0;
-                                        const exitQty = row.direction === "OUT" ? row.quantity : 0;
-                                        return (
-                                            <tr
-                                                key={row.id}
-                                                className={`border-b border-black/5 cursor-pointer text-xs
-                                                    ${selectedRow?.id === row.id ? "bg-black/[0.03]" : ""}`}
-                                                onClick={() => setSelectedRow(row)}
-                                            >
-                                                <td className="py-3">{date ? date.toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" }) : "-"}</td>
-                                                 <td>
-                                                    {row.referenceDoc?.production && (
-                                                        <span>  - </span>
-                                                    )}
-                                                    {row.referenceDoc?.purchase && (
-                                                        <span>
-                                                            {
-                                                            row.referenceDoc.supplier?.name ?? 
-                                                            row.referenceDoc.supplier?.tradeName 
-                                                            } 
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="py-3">
-                                                    {row.referenceDoc?.production && (
-                                                        <span>
-                                                            {row.referenceDoc.production.serie}-{row.referenceDoc.production.correlative} 
-                                                        </span>
-                                                    )}
-                                                    {row.referenceDoc?.purchase && (
-                                                        <span>
-                                                            {row.referenceDoc.purchase.serie}-{row.referenceDoc.purchase.correlative} 
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="py-3 text-left tabular-nums">
-                                                    <span className={row.direction === "IN" ? "text-emerald-600" : "text-red-600"}>{row.direction}</span>
-                                                </td>
-                                                <td className="py-3 text-right tabular-nums">{entryQty}</td>
-                                                <td className="py-3 text-right tabular-nums">
-                                                {
-                                                    exitQty ? `-${exitQty}` : exitQty
-                                                }
-                                                </td>
-                                                <td className="py-3 text-right tabular-nums">{balance}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {!loading && !stockItemId && (
-                                        <tr>
-                                            <td className="py-6 text-center text-sm text-black/50" colSpan={9}>
-                                                Seleccione un producto para ver el kardex.
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {!loading && stockItemId && rows.length === 0 && (
-                                        <tr>
-                                            <td className="py-6 text-center text-sm text-black/50" colSpan={9}>
-                                                No hay movimientos para los filtros actuales.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-black/60">
-                            <span>
-                                Mostrando {startIndex}-{endIndex} de {pagination.total}
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
-                                    disabled={pagination.page === 1}
-                                    onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-                                    type="button"
-                                >
-                                    Anterior
-                                </button>
-                                <span>
-                                    Página {pagination.page} de {pagination.totalPages}
-                                </span>
-                                <button
-                                    className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
-                                    disabled={pagination.page >= pagination.totalPages}
-                                    onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
-                                    type="button"
-                                >
-                                    Siguiente
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+    const totals = new Map<string, number>();
+    for (const day of days) totals.set(day.key, 0);
 
-                    <div className="space-y-3">
-                        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                            <p className="text-sm font-semibold underline underline-offset-4">Detalle movimiento</p>
-                            <div className="mt-2 text-xs space-y-1">
-                                <p>
-                                    <span className="font-semibold">Documento:
-                                    </span> &nbsp; 
-                                    {
-                                    selectedRow?.document?.serie?.code ? 
-                                    `${selectedRow?.document?.serie?.code}-${selectedRow.document.correlative}`
-                                    :''}
-                                </p>
-                                <p>
-                                    <span className="font-semibold">Unidad base:</span>  &nbsp;
-                                    {selectedRow?.stockItem?.product && 
-                                    `${selectedRow?.stockItem?.product?.unidad} x 1`} 
-                                    {selectedRow?.stockItem?.variant && 
-                                    `${selectedRow?.stockItem?.variant?.unidad} x 1`} 
-                                </p>
-                                <p>
-                                    <span className="font-semibold">Responsable:</span> &nbsp;
-                                    {selectedRow?.referenceDoc?.production && 
-                                    selectedRow.referenceDoc.createdBy?.name}
-                                    {selectedRow?.referenceDoc?.purchase && 
-                                    selectedRow.referenceDoc.createdBy?.name}
-                                </p>
-                            </div>
-                            <button className="mt-4 text-xs px-3 py-1 rounded-md border mr-3
-                            border-black/10"
-                                 onClick={() => {
-                                    const productionId = selectedRow?.referenceDoc?.production?.id ?? "";
-                                    const purchaseId = selectedRow?.referenceDoc?.purchase?.id ?? "";
+    for (const total of dailyTotals) {
+      if (!total?.day) continue;
+      const key = String(total.day).slice(0, 10);
+      if (!totals.has(key)) continue;
+      totals.set(key, Number(total.balance ?? 0));
+    }
 
-                                    if (productionId) {
-                                        void openProductionPdf(productionId);
-                                        return;
-                                    }
+    const labels = days.map((d) => d.label);
+    const data = days.map((d) => totals.get(d.key) ?? 0);
 
-                                    if (purchaseId) {
-                                        void openPurchasePdf(purchaseId);
-                                        return;
-                                    }
-                                
-                            }}>Ver documento</button>
-                            <button className="mt-4 text-xs px-3 py-1 rounded-md border 
-                            border-black/10"
-                            onClick={()=>{
-                                openDocumentInventoryPdf(selectedRow?.docId ?? "")
-                            }}
-                            >Ver movimiento</button>
-                        </div>
-                        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                            <p className="text-sm font-semibold">Tendencia semanal</p>
-                            <div ref={ref} className="mt-4" style={{ height: 180 }} />
-                        </div>
-                    </div>
-                </section>
-            </div>
+    return {
+      grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: labels,
+        axisLabel: { color: "#111" },
+      },
+      yAxis: { type: "value", axisLabel: { color: "#111" } },
+      tooltip: { trigger: "axis" },
+      series: [
+        {
+          type: "line",
+          data,
+          smooth: true,
+          lineStyle: { color: "#0f766e" },
+          itemStyle: { color: "#0f766e" },
+          areaStyle: { color: "rgba(15, 118, 110, 0.12)" },
+        },
+      ],
+    };
+  }, [dailyTotals, toDate]);
+
+  const ref = useEChart(movementsChart);
+
+  return (
+    <div className="w-full min-h-screen bg-white text-black">
+      <PageTitle title="Kardex de materia prima y materiales" />
+
+      <div className="px-6 py-6 space-y-4">
+        <div>
+          <h1 className="text-xl font-semibold">Kardex de materia prima y materiales</h1>
+          <p className="text-sm text-black/60">Auditoría viva de movimientos.</p>
         </div>
-    );
+
+        <section className="rounded-2xl border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
+          <SectionHeaderForm icon={Filter} title="Filtros" />
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.5fr_0.5fr_1fr]">
+            <div className="grid grid-cols-2 gap-2">
+              <FloatingInput
+                label="Fecha inicio"
+                name="fromDate"
+                type="date"
+                value={toDateInputValue(fromDate)}
+                onClick={(e) => tryShowPicker(e.currentTarget)}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+              />
+              <FloatingInput
+                label="Fecha fin"
+                name="toDate"
+                type="date"
+                value={toDateInputValue(toDate)}
+                onClick={(e) => tryShowPicker(e.currentTarget)}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+              />
+            </div>
+
+            <FloatingSelect
+              label="Almacén"
+              name="warehouseId"
+              value={warehouseId}
+              onChange={(value) => {
+                setWarehouseId(value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              options={warehouseOptions}
+              searchable
+              searchPlaceholder="Buscar almacén..."
+              emptyMessage="Sin almacenes"
+            />
+
+            <FloatingSelect
+              label="Producto"
+              name="stockItemId"
+              value={stockItemId}
+              onChange={(value) => {
+                setStockItemId(value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              options={productOptions}
+              searchable
+              searchPlaceholder="Buscar producto..."
+              emptyMessage="Sin productos"
+              onSearchChange={(text) => setProductQuery(text)}
+            />
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-black/10 flex items-center justify-between">
+              <SectionHeaderForm icon={Boxes} title="Registros" />
+              <SystemButton variant="success" type="button">
+                Exportar CSV
+              </SystemButton>
+            </div>
+
+            <div className="p-5">
+              <DataTable
+                tableId="kardex-raw-material-table"
+                data={kardexRows}
+                columns={columns}
+                rowKey="id"
+                loading={loading}
+                emptyMessage={
+                  !stockItemId
+                    ? "Seleccione un producto para ver el kardex."
+                    : "No hay movimientos para los filtros actuales."
+                }
+                hoverable={false}
+                animated={false}
+                pagination={{
+                  page: pagination.page,
+                  limit: pagination.limit,
+                  total: pagination.total,
+                }}
+                onPageChange={(nextPage) =>
+                  setPagination((prev) => ({ ...prev, page: nextPage }))
+                }
+                onRowClick={(row) => setSelectedRow(row.original)}
+                rowClassName={(row) =>
+                selectedRow?.id === row.original.id
+                    ? "bg-primary/10 border-l-4 border-l-primary"
+                    : ""
+                }
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm space-y-4">
+              <SectionHeaderForm icon={FileText} title="Detalle movimiento" />
+
+              <div className="text-xs space-y-2">
+                <p>
+                  <span className="font-semibold">Documento:</span>&nbsp;
+                  {selectedRow?.document?.serie?.code
+                    ? `${selectedRow.document.serie.code}-${selectedRow.document.correlative}`
+                    : "-"}
+                </p>
+
+                <p>
+                  <span className="font-semibold">Unidad base:</span>&nbsp;
+                  {selectedRow?.stockItem?.product && `${selectedRow.stockItem.product.unidad} x 1`}
+                  {selectedRow?.stockItem?.variant && `${selectedRow.stockItem.variant.unidad} x 1`}
+                  {!selectedRow?.stockItem?.product && !selectedRow?.stockItem?.variant && "-"}
+                </p>
+
+                <p>
+                  <span className="font-semibold">Responsable:</span>&nbsp;
+                  {selectedRow?.referenceDoc?.createdBy?.name ?? "-"}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <SystemButton
+                  variant="link"
+                  type="button"
+                  onClick={() => {
+                    const productionId = selectedRow?.referenceDoc?.production?.id ?? "";
+                    const purchaseId = selectedRow?.referenceDoc?.purchase?.id ?? "";
+
+                    if (productionId) {
+                      openPdfModalWith("Orden de producción", () => getProductionOrderPdf(productionId));
+                      return;
+                    }
+
+                    if (purchaseId) {
+                      openPdfModalWith("Orden de compra", () => getPurchaseOrderPdf(purchaseId));
+                      return;
+                    }
+
+                    showFlash(errorResponse("No hay documento para este movimiento"));
+                  }}
+                >
+                  Ver documento
+                </SystemButton>
+
+                <SystemButton
+                  variant="link"
+                  type="button"
+                  onClick={() => {
+                    const docId = selectedRow?.docId ?? "";
+                    if (!docId) {
+                      showFlash(errorResponse("No hay documento para este movimiento"));
+                      return;
+                    }
+                    openPdfModalWith("Movimiento de inventario", () => getDocumentInventoryPdf(docId));
+                  }}
+                >
+                  Ver movimiento
+                </SystemButton>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+              <SectionHeaderForm icon={LineChart} title="Tendencia semanal" />
+              <div ref={ref} className="mt-4" style={{ height: 180 }} />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {pdfLoader && (
+        <PdfViewerModal
+          open={openPdfModal}
+          onClose={() => {
+            setOpenPdfModal(false);
+            setPdfLoader(null);
+          }}
+          title={pdfTitle}
+          getPdf={pdfLoader}
+          primaryColor={PRIMARY}
+        />
+      )}
+    </div>
+  );
 }

@@ -24,6 +24,7 @@ import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 import { Dropdown } from "../../components/Dropdown";
 import { Filter, Menu, OctagonAlert, Timer } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
+import { PdfViewerModal } from "@/components/ModalOpenPdf";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
@@ -94,6 +95,9 @@ export default function Purchases() {
     const [totalPo, setTotalPo] = useState(0);
     const [poId, setPoId] = useState("");
     const [paymentForm, setPaymentForm] = useState("");
+    const [openPdfModal, setOpenPdfModal] = useState(false);
+    const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
+
 
     const docTypeOptions = [
         { value: "", label: "todos" },
@@ -234,20 +238,10 @@ export default function Purchases() {
             showFlash(errorResponse("Error al iniciar espera de mercaderia"));
         }
     };
-    const openPurchasePdf = async (id: string) => {
+    const openPurchasePdf = (id: string) => {
         clearFlash();
-        try {
-            const blob = await getPurchaseOrderPdf(id);
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `orden-compra-${id}.pdf`;
-            link.click();
-            link.remove();
-            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        } catch {
-            showFlash(errorResponse("Error al generar el PDF"));
-        }
+        setSelectedProductionId(id);
+        setOpenPdfModal(true);
     };
 
     const EnterToWarehouse = async (id: string) => {
@@ -775,6 +769,15 @@ export default function Purchases() {
                     loadPurchases={loadPurchases}
                 />
             )}
+            <PdfViewerModal
+                open={openPdfModal}
+                onClose={() => {
+                    setOpenPdfModal(false);
+                    setSelectedProductionId(null);
+                }}
+                title="Orden de producción"
+                getPdf={() => getPurchaseOrderPdf(selectedProductionId!)}
+            />
         </div>
     );
 }

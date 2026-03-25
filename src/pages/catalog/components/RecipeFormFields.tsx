@@ -183,9 +183,8 @@ export function RecipeFormFields({
                     emptyMessage="No hay recetas registradas."
                     hoverable={false}
                     animated={false}
-                    className="text-xs [&>div]:overflow-visible [&>div>div]:max-h-5
-                    sortable: false,0 [&>div>div]:overflow-y-auto"
-                    tableClassName="text-xs [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-white"
+                    className="text-xs"
+                    tableClassName="text-xs"
                 />
             </div>
         </div>

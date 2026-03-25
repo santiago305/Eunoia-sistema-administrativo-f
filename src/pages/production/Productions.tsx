@@ -27,6 +27,7 @@ import { listActive } from "@/services/warehouseServices";
 import {
   cancelProductionOrder,
   closeProductionOrder,
+  getProductionOrder,
   listProductionOrders,
   startProductionOrder,
 } from "@/services/productionService";
@@ -37,6 +38,8 @@ import { ProductionStatus, type ProductionOrder } from "@/pages/production/types
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
+import { ProductionItemsModal } from "./components/ModalMerma";
+import { PdfViewerModal } from "@/components/ModalOpenPdf";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -85,6 +88,10 @@ export default function Production() {
   const [statusFilter, setStatusFilter] = useState<"all" | ProductionStatus>("all");
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
   const [toDate, setToDate] = useState(() => todayIso());
+  const [order, setOrder] = useState<ProductionOrder>();
+  const [openItemsModal, setOpenItemsModal] = useState(false);
+  const [openPdfModal, setOpenPdfModal] = useState(false);
+  const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
@@ -204,26 +211,29 @@ export default function Production() {
       showFlash(errorResponse("Error al cancelar la orden"));
     }
   };
+  
+  const handleMerma = async (id: string) => {
+    clearFlash();
+    try {
+      const res = await getProductionOrder(id);
+      setOrder(res);
+      setOpenItemsModal(true);
+      showFlash(successResponse("Orden cancelada"));
+      await loadOrders();
+    } catch {
+      showFlash(errorResponse("Error al cancelar la orden"));
+    }
+  };
 
   const handleEdit = (id: string) => {
     if (!id) return;
     navigate(RoutesPaths.productionEdit.replace(":productionId", encodeURIComponent(id)));
   };
 
-  const openProductionPdf = async (id: string) => {
+  const openProductionPdf = (id: string) => {
     clearFlash();
-    try {
-      const blob = await getProductionOrderPdf(id);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `orden-produccion-${id}.pdf`;
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      showFlash(errorResponse("Error al generar el PDF"));
-    }
+    setSelectedProductionId(id);
+    setOpenPdfModal(true);
   };
 
   useEffect(() => {
@@ -403,6 +413,25 @@ export default function Production() {
                     ),
                     onClick: () => handleClose(order.productionId ?? ""),
                   },
+                  (order.status === ProductionStatus.IN_PROGRESS ||
+                    order.status === ProductionStatus.PARTIAL) && {
+                    label: (
+                      <>
+                        <PackageCheck className="h-4 w-4 text-black/60" />
+                        Ingresar a almacén
+                      </>
+                    ),
+                    onClick: () => handleClose(order.productionId ?? ""),
+                  },
+                  order.status === ProductionStatus.COMPLETED && {
+                    label: (
+                      <>
+                        <PackageCheck className="h-4 w-4 text-black/60" />
+                        Ingresar merma
+                      </>
+                    ),
+                    onClick: () => handleMerma(order.productionId ?? ""),
+                  },
                 ].filter(Boolean)}
               />
             </div>
@@ -503,7 +532,6 @@ export default function Production() {
         <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
           <div className="p-4 sm:p-5 border-b border-black/10">
             <SectionHeaderForm icon={Factory} title="Listado de órdenes" />
-            
           </div>
 
           <div className="p-4 sm:p-5">
@@ -525,6 +553,23 @@ export default function Production() {
             />
           </div>
         </section>
+        <ProductionItemsModal
+          open={openItemsModal}
+          order={order}
+          onClose={() => setOpenItemsModal(false)}
+          primaryColor={PRIMARY}
+        />
+        <PdfViewerModal
+          open={openPdfModal}
+          onClose={() => {
+            setOpenPdfModal(false);
+            setSelectedProductionId(null);
+          }}
+          title="Orden de producción"
+          getPdf={() => getProductionOrderPdf(selectedProductionId!)}
+          primaryColor={PRIMARY}
+        />
+                
       </div>
     </div>
   );
