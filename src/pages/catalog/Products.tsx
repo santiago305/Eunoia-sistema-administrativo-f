@@ -158,7 +158,7 @@ export default function CatalogProducts() {
     const hasNext = safePage < totalPages;
 
     const sortedProducts = useMemo(() => {
-        return [...products].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return [...products].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [products]);
 
     const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedName}`, [page, statusFilter, debouncedName]);

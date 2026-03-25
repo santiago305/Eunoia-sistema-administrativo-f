@@ -15,6 +15,7 @@ import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { createAdjustment } from "@/services/adjustmentService";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
+import { getStock } from "@/services/inventoryService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
@@ -221,12 +222,23 @@ export default function AdjustmentRowMaterial() {
     const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
     const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
     const [query, setQuery] = useState("");
+    const [stockLoading, setStockLoading] = useState(false);
+    const [stockError, setStockError] = useState<string | null>(null);
+    const [stockSummary, setStockSummary] = useState<{
+        itemId: string;
+        sku?: string;
+        name?: string;
+        unit?: string;
+        value?: number | null;
+    } | null>(null);
 
     const resetForm = () => {
         setForm(buildEmptyForm());
         setPendingItem(buildEmptyItem());
         setSerie({ value: "", label: "" });
         setProducts([]);
+        setStockSummary(null);
+        setStockError(null);
     };
 
     const loadWarehouses = async () => {
@@ -249,6 +261,8 @@ export default function AdjustmentRowMaterial() {
         if (!warehouseId) {
             setSerie({ value: "", label: "" });
             setForm((prev) => ({ ...prev, serieId: "" }));
+            setStockSummary(null);
+            setStockError(null);
             return;
         }
         try {
@@ -484,6 +498,51 @@ export default function AdjustmentRowMaterial() {
         }
     };
 
+    const extractStockValue = (data: any) => {
+        if (data == null) return null;
+        if (typeof data === "number") return data;
+        const candidates = ["stock", "quantity", "available", "balance", "total", "onHand"];
+        for (const key of candidates) {
+            const value = data?.[key];
+            if (typeof value === "number") return value;
+        }
+        return null;
+    };
+
+    const handleRowClick = async (row: AdjustmentItemRow) => {
+        if (!form.fromWarehouseId) {
+            showFlash(errorResponse("Selecciona un almacén"));
+            return;
+        }
+        setStockLoading(true);
+        setStockError(null);
+        try {
+            const data = await getStock({
+                warehouseId: form.fromWarehouseId,
+                itemId: row.stockItemId,
+            });
+            const value = extractStockValue(data);
+            setStockSummary({
+                itemId: row.stockItemId,
+                sku: row.customSku ?? row.sku,
+                name: row.productName,
+                unit: row.unitName,
+                value,
+            });
+        } catch {
+            setStockError("Error al obtener stock");
+            setStockSummary({
+                itemId: row.stockItemId,
+                sku: row.customSku ?? row.sku,
+                name: row.productName,
+                unit: row.unitName,
+                value: null,
+            });
+        } finally {
+            setStockLoading(false);
+        }
+    };
+
     useEffect(() => {
         const id = setTimeout(() => {
             if (query.trim()) {
@@ -542,6 +601,8 @@ export default function AdjustmentRowMaterial() {
                                 emptyMessage="Aún no agregas items."
                                 animated={false}
                                 tableClassName="table-fixed text-[10px]"
+                                onRowClick={handleRowClick}
+                                rowClassName={(row) => (row.stockItemId === stockSummary?.itemId ? "bg-primary/5" : undefined)}
                             />
                         </div>
 
@@ -582,6 +643,29 @@ export default function AdjustmentRowMaterial() {
                                 onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
                                 className="h-9 text-xs text-black/90"
                             />
+                            <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
+                                <p className="text-[11px] font-semibold text-black">Resumen</p>
+                                <div className="mt-2 space-y-1 text-[11px] text-black/70">
+                                    <div className="flex items-center justify-between">
+                                        <span>Materia prima</span>
+                                        <span className="font-semibold text-right">{stockSummary?.name ?? "-"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span>SKU</span>
+                                        <span className="font-semibold tabular-nums">{stockSummary?.sku ?? "-"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span>Unidad</span>
+                                        <span className="font-semibold tabular-nums">{stockSummary?.unit ?? "-"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span>Stock</span>
+                                        <span className="font-semibold tabular-nums">
+                                            {stockLoading ? "Cargando..." : stockError ? "-" : stockSummary?.value ?? "-"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="border-t border-black/10 px-3 sm:px-4 py-3">

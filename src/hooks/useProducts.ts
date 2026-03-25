@@ -68,9 +68,25 @@ export function useProducts(params: ListProductsQuery & { name?: string }) {
   const create = useCallback(
     async (payload: CreateProductDto) => {
       await createProduct(payload);
-      await fetchProducts();
+      // After create, force first page so the newest item is visible
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await listProducts({ ...query, page: 1 });
+        setState({
+          items: res.items ?? [],
+          total: res.total ?? 0,
+          page: res.page ?? 1,
+          limit: res.limit ?? query.limit ?? 25,
+        });
+      } catch {
+        setError("Error al cargar productos.");
+        setState((prev) => ({ ...prev, items: [], total: 0 }));
+      } finally {
+        setLoading(false);
+      }
     },
-    [fetchProducts]
+    [query]
   );
 
   const update = useCallback(
