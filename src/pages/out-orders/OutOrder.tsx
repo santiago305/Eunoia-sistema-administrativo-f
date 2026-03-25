@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Boxes, ClipboardList, FileText, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import { SystemButton } from "@/components/SystemButton";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
@@ -34,9 +39,20 @@ const buildEmptyItem = (): AddOutOrderItemDto => ({
   unitCost: undefined,
 });
 
+type OutOrderItemRow = {
+  id: string;
+  itemId: string;
+  sku: string;
+  productName: string;
+  unitName: string;
+  quantity: number;
+  unitCost?: number;
+};
+
 export default function OutOrder() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<AddOutOrderItemDto>(() => buildEmptyItem());
@@ -49,13 +65,13 @@ export default function OutOrder() {
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
 
-  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
-
   const resetForm = () => {
     setForm(buildEmptyForm());
     setPendingItem(buildEmptyItem());
     setSerie({ value: "", label: "" });
     setProducts([]);
+    setSearchResults([]);
+    setQuery("");
   };
 
   const loadWarehouses = async () => {
@@ -80,19 +96,28 @@ export default function OutOrder() {
       setForm((prev) => ({ ...prev, serieId: "" }));
       return;
     }
+
     try {
-      const res = await listDocumentSeries({ warehouseId, docType: DocType.OUT, isActive: true });
+      const res = await listDocumentSeries({
+        warehouseId,
+        docType: DocType.OUT,
+        isActive: true,
+      });
+
       if (!res?.length) {
         setSerie({ value: "", label: "" });
         setForm((prev) => ({ ...prev, serieId: "" }));
         return;
       }
+
       const nextSerie = res[0];
       const nextNumber = Number(nextSerie.nextNumber ?? 0);
+
       setSerie({
         value: nextSerie.id,
         label: `${nextSerie.code}-${nextNumber}`,
       });
+
       setForm((prev) => ({ ...prev, serieId: nextSerie.id }));
     } catch {
       setSerie({ value: "", label: "" });
@@ -118,13 +143,14 @@ export default function OutOrder() {
     () =>
       (searchResults ?? []).map((v) => ({
         value: v.itemId ?? v.id ?? "",
-        label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
-      })),
+        label: `${v.productName ?? "Materia vrima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
+        ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      })),
     [searchResults],
   );
 
   const addItem = () => {
     const { itemId, quantity, unitCost } = pendingItem;
+
     const selected =
       searchResults.find((p) => (p.itemId ?? p.id) === itemId) ??
       products.find((p) => (p.itemId ?? p.id) === itemId);
@@ -133,18 +159,22 @@ export default function OutOrder() {
       showFlash(errorResponse("Selecciona un producto"));
       return;
     }
+
     if (quantity <= 0) {
       showFlash(errorResponse("La cantidad debe ser mayor a 0"));
       return;
     }
+
     if (unitCost !== undefined && unitCost < 0) {
       showFlash(errorResponse("El costo debe ser mayor o igual a 0"));
       return;
     }
+
     if (!selected) {
       showFlash(errorResponse("Producto no encontrado"));
       return;
     }
+
     const alreadyAdded = (form.items ?? []).some((item) => item.itemId === itemId);
     if (alreadyAdded) {
       showFlash(errorResponse("El producto ya fue agregado"));
@@ -155,12 +185,14 @@ export default function OutOrder() {
       ...prev,
       items: [...(prev.items ?? []), { itemId, quantity, unitCost }],
     }));
+
     setProducts((prev) => {
       const selectedId = selected.itemId ?? selected.id;
       if (!selectedId) return prev;
       const exists = prev.some((p) => (p.itemId ?? p.id) === selectedId);
       return exists ? prev : [...prev, selected];
     });
+
     setPendingItem(buildEmptyItem());
   };
 
@@ -184,22 +216,26 @@ export default function OutOrder() {
 
   const saveOrder = async () => {
     clearFlash();
+
     if (!form.fromWarehouseId || !form.serieId) {
       showFlash(errorResponse("Completa los datos del documento"));
       return;
     }
+
     if (!form.items?.length) {
       showFlash(errorResponse("Agrega al menos un item"));
       return;
     }
 
     setLoading(true);
+
     try {
       const payload: CreateOutOrder = {
         ...form,
         note: form.note?.trim() || undefined,
         items: form.items ?? [],
       };
+
       const res = await createOutOrder(payload);
       const nextId = res.docId ?? "";
       setLastSavedOutOrderId(nextId);
@@ -229,9 +265,124 @@ export default function OutOrder() {
     void loadWarehouses();
   }, []);
 
+  const itemRows = useMemo<OutOrderItemRow[]>(() => {
+    return (form.items ?? []).map((item, index) => {
+      const product = products.find((p) => (p.itemId ?? p.id) === item.itemId);
+
+      return {
+        id: `${item.itemId}-${index}`,
+        itemId: item.itemId,
+        sku: product?.sku ?? "-",
+        productName: product?.productName ?? "Producto",
+        unitName: product?.unitName ?? "-",
+        quantity: item.quantity,
+        unitCost: item.unitCost,
+      };
+    });
+  }, [form.items, products]);
+
+  const columns: DataTableColumn<OutOrderItemRow>[] = [
+    {
+      id: "sku",
+      header: "SKU",
+      accessorKey: "sku",
+      hideable: false,
+      sortable: false,
+    },
+    {
+      id: "productName",
+      header: "Producto",
+      accessorKey: "productName",
+      hideable: false,
+      sortable: false,
+    },
+    {
+      id: "unitName",
+      header: "Unidad",
+      accessorKey: "unitName",
+      sortable: false,
+    },
+    {
+      id: "quantity",
+      header: "Cantidad",
+      cell: (row) => {
+        const index = itemRows.findIndex((item) => item.id === row.id);
+        return (
+          <div className="w-24">
+            <FloatingInput
+              label="Cantidad"
+              name={`quantity-${row.id}`}
+              type="number"
+              min={1}
+              value={String(row.quantity === 0 ? 1 : row.quantity)}
+              onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
+              className="h-9 text-xs"
+            />
+          </div>
+        );
+      },
+      className: "text-right",
+      headerClassName: "text-right",
+      sortable: false,
+      hideable: false,
+    },
+    {
+      id: "unitCost",
+      header: "Costo unit.",
+      cell: (row) => {
+        const index = itemRows.findIndex((item) => item.id === row.id);
+        return (
+          <div className="w-28">
+            <FloatingInput
+              label="Costo"
+              name={`unitCost-${row.id}`}
+              type="number"
+              min={0}
+              value={row.unitCost ?? ""}
+              onChange={(e) =>
+                updateItem(index, {
+                  unitCost: e.target.value === "" ? undefined : Number(e.target.value),
+                })
+              }
+              className="h-9 text-xs text-right"
+            />
+          </div>
+        );
+      },
+      className: "text-right",
+      headerClassName: "text-right",
+      sortable: false,
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: (row) => {
+        const index = itemRows.findIndex((item) => item.id === row.id);
+        return (
+          <div className="flex justify-end">
+            <SystemButton
+              type="button"
+              variant="danger"
+              size="icon"
+              title="Eliminar"
+              onClick={() => removeItem(index)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        );
+      },
+      className: "text-right",
+      headerClassName: "text-right",
+      sortable: false,
+      hideable: false,
+    },
+  ];
+
   return (
     <div className="w-full min-h-screen bg-white">
       <PageTitle title="Orden de salida" />
+
       <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
@@ -241,167 +392,108 @@ export default function OutOrder() {
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
           <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
-            <div className="border-b border-black/10 p-3 sm:p-4">
-              <p className="text-xs font-semibold">Productos</p>
-              <div className="mt-2 grid grid-cols-1 gap-2 xl:grid-cols-[1fr_auto]">
-                <FilterableSelect
+            <div className="border-b border-black/10 p-4 space-y-4">
+              <SectionHeaderForm icon={Boxes} title="Productos" />
+
+              <div className="grid grid-cols-1 gap-2">
+                <FloatingSelect
+                  label="Producto"
+                  name="pending-item"
                   value={pendingItem.itemId}
                   onChange={(value) => {
                     setPendingItem((prev) => ({ ...prev, itemId: value }));
                     setOpenItemModal(Boolean(value));
                   }}
                   options={productOptions}
-                  placement="bottom"
-                  placeholder="Seleccionar producto"
+                  searchable
                   searchPlaceholder="Buscar producto..."
-                  className="h-9"
-                  textSize="text-[11px]"
+                  emptyMessage="Sin productos"
                   onSearchChange={(text) => setQuery(text)}
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto">
-              <table className="w-full text-xs table-fixed">
-                <thead className="sticky top-0 z-10 bg-white">
-                  <tr className="border-b border-black/10 text-[10px] text-black/60">
-                    <th className="py-2 px-4 text-left w-25">SKU</th>
-                    <th className="py-2 px-4 text-left w-32">Producto</th>
-                    <th className="py-2 px-4 text-left w-15">Unidad</th>
-                    <th className="py-2 px-4 text-left w-18">Cantidad</th>
-                    <th className="py-2 px-4 text-left w-22">Costo unit.</th>
-                    <th className="py-2 px-4 text-left w-20"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(form.items ?? []).map((item, index) => {
-                    const product = products.find((p) => (p.itemId ?? p.id) === item.itemId);
-                    return (
-                      <tr key={`${item.itemId}-${index}`} className="border-b border-black/5 text-[10px]">
-                        <td className="py-2 px-4 text-black/70">{product?.sku}</td>
-                        <td className="py-2 px-4 text-black/70">{product?.productName}</td>
-                        <td className="py-2 px-4 text-black/70">{product?.unitName}</td>
-                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
-                          <input
-                            type="number"
-                            min={1}
-                            className="h-8 w-15 rounded-lg border border-black/10 bg-white px-2 text-[10px] text-right outline-none focus:ring-2"
-                            style={ringStyle}
-                            value={item.quantity === 0 ? 1 : item.quantity}
-                            onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
-                          />
-                        </td>
-                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
-                          <input
-                            type="number"
-                            min={0}
-                            className="h-8 w-18 rounded-lg border border-black/10 bg-white px-2 text-[10px] text-right outline-none focus:ring-2"
-                            style={ringStyle}
-                            value={item.unitCost ?? ""}
-                            placeholder="0"
-                            onChange={(e) =>
-                              updateItem(index, { unitCost: e.target.value === "" ? undefined : Number(e.target.value) })
-                            }
-                          />
-                        </td>
-                        <td className="py-2 px-4">
-                          <div className="flex items-center justify-end">
-                            <button
-                              type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 bg-white hover:bg-black/[0.03] text-rose-600"
-                              title="Eliminar"
-                              onClick={() => removeItem(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {(form.items ?? []).length === 0 && (
-                <div className="px-4 py-8 text-xs text-black/60">Aun no agregas items.</div>
-              )}
+            <div className="flex-1 overflow-auto p-4">
+              <DataTable
+                tableId="out-order-items-table"
+                data={itemRows}
+                columns={columns}
+                rowKey="id"
+                loading={false}
+                emptyMessage="Aun no agregas items."
+                hoverable={false}
+                animated={false}
+                tableClassName="table-fixed text-[11px]"
+              />
             </div>
 
-            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
+            <div className="border-t border-black/10 px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="text-[11px] text-black/60">Total costo items</div>
                 <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-                  <span className="font-semibold text-black tabular-nums">{money(totalCost, CURRENCY)}</span>
+                  <span className="font-semibold text-black tabular-nums">
+                    {money(totalCost, CURRENCY)}
+                  </span>
                 </div>
               </div>
             </div>
           </section>
 
           <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto flex flex-col max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
-            <div className="border-b border-black/10 px-3 sm:px-4 py-2">
-              <p className="text-xs font-semibold">Datos de documento</p>
-            </div>
-            <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-2">
-              <div className="grid grid-cols-2 gap-4">
-                <label className="text-[11px] text-black/70">
-                  Almacen
-                  <FilterableSelect
-                    value={form.fromWarehouseId}
-                    onChange={(value) => {
-                      setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
-                      void loadSeries(value);
-                    }}
-                    options={warehouseOptions}
-                    placement="bottom"
-                    placeholder="Seleccionar almacen"
-                    searchPlaceholder="Buscar almacen..."
-                    className="h-9"
-                    textSize="text-[11px] mt-1"
-                  />
-                </label>
-                <label className="text-[11px] text-black/70">
-                  Serie
-                  <input
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
-                    style={ringStyle}
-                    value={serie.label}
-                    placeholder="Serie"
-                    disabled
-                  />
-                </label>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] text-black/70">
-                  Nota
-                  <input
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
-                    style={ringStyle}
-                    value={form.note ?? ""}
-                    onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-                    placeholder="Nota"
-                  />
-                </label>
-              </div>
+            <div className="border-b border-black/10 p-4">
+              <SectionHeaderForm icon={ClipboardList} title="Datos de documento" />
             </div>
 
-            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
+            <div className="flex-1 overflow-hidden p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FloatingSelect
+                  label="Almacén"
+                  name="fromWarehouseId"
+                  value={form.fromWarehouseId}
+                  onChange={(value) => {
+                    setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
+                    void loadSeries(value);
+                  }}
+                  options={warehouseOptions}
+                  searchable
+                  searchPlaceholder="Buscar almacén..."
+                  emptyMessage="Sin almacenes"
+                />
+
+                <FloatingInput
+                  label="Serie"
+                  name="serie"
+                  value={serie.label}
+                  disabled
+                />
+              </div>
+
+              <FloatingInput
+                label="Nota"
+                name="note"
+                value={form.note ?? ""}
+                onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
+              />
+            </div>
+
+            <div className="border-t border-black/10 px-4 py-3">
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03]"
-                  onClick={resetForm}
-                >
+                <SystemButton type="button" variant="danger" className="flex-1 bg-gray-500" onClick={resetForm}>
                   Limpiar
-                </button>
-                <button
+                </SystemButton>
+
+                <SystemButton
                   type="button"
-                  className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
-                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
+                  className="flex-1"
+                  style={{
+                    backgroundColor: PRIMARY,
+                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                  }}
                   disabled={loading || !form.fromWarehouseId || !form.serieId || !(form.items ?? []).length}
                   onClick={saveOrder}
                 >
                   {loading ? "Guardando..." : "Guardar"}
-                </button>
+                </SystemButton>
               </div>
             </div>
           </aside>
@@ -411,7 +503,6 @@ export default function OutOrder() {
       <OutOrderItemModal
         open={openItemModal}
         pendingItem={pendingItem}
-        ringStyle={ringStyle}
         primaryColor={PRIMARY}
         onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
         onClose={() => {

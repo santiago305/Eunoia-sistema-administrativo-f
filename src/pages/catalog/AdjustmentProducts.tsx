@@ -632,7 +632,7 @@ export default function AdjustmentProducts() {
                                     name="adjustment-serie" 
                                     value={serie.label} 
                                     disabled 
-                                    className="h-9 text-xs text-black/95" />
+                                    className="h-9 text-xs text-black/90" />
                             </div>
                             <FloatingInput
                                 label="Nota"

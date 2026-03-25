@@ -230,8 +230,8 @@ export default function PurchaseCreateLocal() {
 
   const productOptions = (products ?? []).map((v) => ({
     value: v.itemId!,
-    label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
-  }));
+    label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
+    ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      }));
 
   const updateItem = (itemIdToUpdate: string, patch: Partial<PurchaseOrderItem>) => {
     setForm((prev) => ({

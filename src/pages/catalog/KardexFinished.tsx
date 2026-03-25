@@ -276,8 +276,8 @@ export default function KardexProduction() {
     () =>
       (products ?? []).map((p) => ({
         value: p.itemId ?? p.id ?? p.primaId ?? "",
-        label: `${p.productName ?? "Producto"} (${p.sku ?? "-"})`,
-      })),
+        label: `${p.productName ?? "Materia prima"} ${p.attributes?.presentation ?? ""} ${p.attributes?.variant ?? ""} ${p.attributes?.color ?? ""}
+        ${p.sku ? ` - ${p.sku}`: ""} (${p.customSku ?? "-"})`,      })),
     [products],
   );
 

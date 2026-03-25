@@ -98,7 +98,7 @@ function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: Ad
                     options={optionTypeAdjustment}
                     placeholder="Seleccionar tipo"
                     emptyMessage="Sin tipos"
-                    className="h-9 text-xs"
+                    className="h-9 text-xs text-black/90"
                 />
             </div>
 
@@ -717,7 +717,7 @@ export default function AdjustmentRowMaterial() {
                                     name="adjustment-serie"
                                     value={serie.label}
                                     disabled
-                                    className="h-9 text-xs"
+                                    className="h-9 text-xs text-black/90"
                                 />
                             </div>
 

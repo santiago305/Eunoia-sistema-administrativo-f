@@ -3,7 +3,6 @@ import {
   Factory,
   Menu,
   Plus,
-  SearchCheck,
   Timer,
   OctagonAlert,
   FileText,
@@ -27,7 +26,6 @@ import { listActive } from "@/services/warehouseServices";
 import {
   cancelProductionOrder,
   closeProductionOrder,
-  getProductionOrder,
   listProductionOrders,
   startProductionOrder,
 } from "@/services/productionService";
@@ -37,8 +35,7 @@ import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
-import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
-import { ProductionItemsModal } from "./components/ModalMerma";
+import TimerToEnd from "@/component/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 
 const PRIMARY = "hsl(var(--primary))";
@@ -88,8 +85,6 @@ export default function Production() {
   const [statusFilter, setStatusFilter] = useState<"all" | ProductionStatus>("all");
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
   const [toDate, setToDate] = useState(() => todayIso());
-  const [order, setOrder] = useState<ProductionOrder>();
-  const [openItemsModal, setOpenItemsModal] = useState(false);
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
 
@@ -205,19 +200,6 @@ export default function Production() {
     clearFlash();
     try {
       await cancelProductionOrder(id);
-      showFlash(successResponse("Orden cancelada"));
-      await loadOrders();
-    } catch {
-      showFlash(errorResponse("Error al cancelar la orden"));
-    }
-  };
-  
-  const handleMerma = async (id: string) => {
-    clearFlash();
-    try {
-      const res = await getProductionOrder(id);
-      setOrder(res);
-      setOpenItemsModal(true);
       showFlash(successResponse("Orden cancelada"));
       await loadOrders();
     } catch {
@@ -423,15 +405,6 @@ export default function Production() {
                     ),
                     onClick: () => handleClose(order.productionId ?? ""),
                   },
-                  order.status === ProductionStatus.COMPLETED && {
-                    label: (
-                      <>
-                        <PackageCheck className="h-4 w-4 text-black/60" />
-                        Ingresar merma
-                      </>
-                    ),
-                    onClick: () => handleMerma(order.productionId ?? ""),
-                  },
                 ].filter(Boolean)}
               />
             </div>
@@ -517,10 +490,10 @@ export default function Production() {
 
             <SystemButton
               leftIcon={<Plus className="h-4 w-4" />}
-              className="h-10 xl:mt-[2px]"
+              className="h-10"
               style={{
                 backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent) `,
               }}
               onClick={() => navigate(RoutesPaths.productionCreate)}
             >
@@ -553,12 +526,6 @@ export default function Production() {
             />
           </div>
         </section>
-        <ProductionItemsModal
-          open={openItemsModal}
-          order={order}
-          onClose={() => setOpenItemsModal(false)}
-          primaryColor={PRIMARY}
-        />
         <PdfViewerModal
           open={openPdfModal}
           onClose={() => {
