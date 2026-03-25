@@ -223,8 +223,14 @@ export default function AdjustmentProducts() {
     const [stockError, setStockError] = useState<string | null>(null);
     const [stockSummary, setStockSummary] = useState<{
         itemId: string;
-        sku?: string;
         name?: string;
+        sku?: string;
+        customSku?: string;
+        attributes?: {
+            presentation?: string;
+            variant?: string;
+            color?: string;
+        };
         unit?: string;
         value?: number | null;
     } | null>(null);
@@ -301,8 +307,8 @@ export default function AdjustmentProducts() {
             { value: "", label: "Seleccionar producto" },
             ...(searchResults ?? []).map((v) => ({
                 value: v.itemId ?? v.id ?? "",
-                label: `${v.productName ? `${v.productName}` : "" } ${v.attributes?.presentation ?? ""}
-                 ${v.attributes?.variant ?? ""}  ${v.attributes?.color ?? ""} (${v.sku ?? "-"})`,
+                 label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
+                ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,
             })),
         ],
         [searchResults],
@@ -506,7 +512,9 @@ export default function AdjustmentProducts() {
             const value = extractStockValue(data);
             setStockSummary({
                 itemId: row.stockItemId,
-                sku: row.customSku ?? row.sku,
+                sku: row.sku,
+                customSku: row.customSku,
+                attributes:row.attributes,
                 name: row.productName,
                 unit: row.unitName,
                 value,
@@ -515,7 +523,9 @@ export default function AdjustmentProducts() {
             setStockError("Error al obtener stock");
             setStockSummary({
                 itemId: row.stockItemId,
-                sku: row.customSku ?? row.sku,
+                sku: row.sku,
+                customSku: row.customSku,
+                attributes: row.attributes,
                 name: row.productName,
                 unit: row.unitName,
                 value: null,
@@ -634,21 +644,56 @@ export default function AdjustmentProducts() {
                             <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
                                 <p className="text-[11px] font-semibold text-black">Resumen</p>
                                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>Producto</span>
                                         <span className="font-semibold text-right">{stockSummary?.name ?? "-"}</span>
                                     </div>
-                                    <div className="flex items-center justify-between">
+
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>SKU</span>
-                                        <span className="font-semibold tabular-nums">{stockSummary?.sku ?? "-"}</span>
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {stockSummary?.sku ?? "-"}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center justify-between">
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>SKU interno</span>
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {stockSummary?.customSku ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Presentación</span>
+                                        <span className="font-semibold text-right">
+                                            {stockSummary?.attributes?.presentation ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Variante</span>
+                                        <span className="font-semibold text-right">
+                                            {stockSummary?.attributes?.variant ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Color</span>
+                                        <span className="font-semibold text-right">
+                                            {stockSummary?.attributes?.color ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>Unidad</span>
-                                        <span className="font-semibold tabular-nums">{stockSummary?.unit ?? "-"}</span>
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {stockSummary?.unit ?? "-"}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center justify-between">
+
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>Stock</span>
-                                        <span className="font-semibold tabular-nums">
+                                        <span className="font-semibold tabular-nums text-right">
                                             {stockLoading ? "Cargando..." : stockError ? "-" : stockSummary?.value ?? "-"}
                                         </span>
                                     </div>

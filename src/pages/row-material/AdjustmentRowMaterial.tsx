@@ -49,6 +49,7 @@ type AdjustmentItemModalProps = {
 function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: AdjustmentItemModalProps) {
     const { showFlash } = useFlashMessage();
     if (!open) return null;
+
     const optionTypeAdjustment = [
         { value: "REDUCIR", label: "Reducir" },
         { value: "AUMENTAR", label: "Aumentar" },
@@ -58,6 +59,7 @@ function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: Ad
         <Modal title="Agregar item" onClose={onClose} className="max-w-xl space-y-3">
             <div className="grid grid-cols-1 gap-3">
                 <SectionHeaderForm icon={Boxes} title="Materias primas" />
+
                 {pendingItem.adjustmentType === "REDUCIR" && (
                     <FloatingInput
                         label="Cantidad"
@@ -72,6 +74,7 @@ function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: Ad
                         className="h-9 text-xs text-black/90"
                     />
                 )}
+
                 {pendingItem.adjustmentType === "AUMENTAR" && (
                     <FloatingInput
                         label="Cantidad"
@@ -86,6 +89,7 @@ function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: Ad
                         className="h-9 text-xs text-black/90"
                     />
                 )}
+
                 <FloatingSelect
                     label="Tipo de ajuste"
                     name="adjustmentType"
@@ -97,6 +101,7 @@ function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: Ad
                     className="h-9 text-xs"
                 />
             </div>
+
             <div className="mt-4 flex justify-end gap-2">
                 <SystemButton variant="outline" size="sm" onClick={onClose}>
                     Cancelar
@@ -131,7 +136,15 @@ type AdjustmentResultModalProps = {
     goToLabel: string;
 };
 
-function AdjustmentResultModal({ open, adjustmentId, onNew, onGoToList, onClose, title, goToLabel }: AdjustmentResultModalProps) {
+function AdjustmentResultModal({
+    open,
+    adjustmentId,
+    onNew,
+    onGoToList,
+    onClose,
+    title,
+    goToLabel,
+}: AdjustmentResultModalProps) {
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -165,6 +178,7 @@ function AdjustmentResultModal({ open, adjustmentId, onNew, onGoToList, onClose,
         };
 
         void loadPdf();
+
         return () => {
             alive = false;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -179,9 +193,20 @@ function AdjustmentResultModal({ open, adjustmentId, onNew, onGoToList, onClose,
                 <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
                     {loading && <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">Cargando PDF...</div>}
                     {!loading && error && <div className="flex h-[60vh] items-center justify-center text-sm text-rose-600">{error}</div>}
-                    {!loading && !error && pdfUrl && <iframe title={`documento-ajuste-${adjustmentId}`} src={pdfUrl} className="h-[74vh] w-full overflow-auto" />}
-                    {!loading && !error && !pdfUrl && <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">No hay PDF disponible.</div>}
+                    {!loading && !error && pdfUrl && (
+                        <iframe
+                            title={`documento-ajuste-${adjustmentId}`}
+                            src={pdfUrl}
+                            className="h-[74vh] w-full overflow-auto"
+                        />
+                    )}
+                    {!loading && !error && !pdfUrl && (
+                        <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">
+                            No hay PDF disponible.
+                        </div>
+                    )}
                 </div>
+
                 <div className="flex flex-col sm:flex-row gap-3">
                     <SystemButton variant="outline" onClick={onNew} className="flex-1">
                         Ingresar nuevo ajuste
@@ -211,6 +236,7 @@ const buildEmptyItem = (): AdjustmentItem => ({
 export default function AdjustmentRowMaterial() {
     const { showFlash, clearFlash } = useFlashMessage();
     const navigate = useNavigate();
+
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState<CreateAdjustment>(() => buildEmptyForm());
     const [pendingItem, setPendingItem] = useState<AdjustmentItem>(() => buildEmptyItem());
@@ -226,8 +252,14 @@ export default function AdjustmentRowMaterial() {
     const [stockError, setStockError] = useState<string | null>(null);
     const [stockSummary, setStockSummary] = useState<{
         itemId: string;
-        sku?: string;
         name?: string;
+        sku?: string;
+        customSku?: string;
+        attributes?: {
+            presentation?: string;
+            variant?: string;
+            color?: string;
+        };
         unit?: string;
         value?: number | null;
     } | null>(null);
@@ -265,15 +297,23 @@ export default function AdjustmentRowMaterial() {
             setStockError(null);
             return;
         }
+
         try {
-            const res = await listDocumentSeries({ warehouseId, docType: DocType.ADJUSTMENT, isActive: true });
+            const res = await listDocumentSeries({
+                warehouseId,
+                docType: DocType.ADJUSTMENT,
+                isActive: true,
+            });
+
             if (!res?.length) {
                 setSerie({ value: "", label: "" });
                 setForm((prev) => ({ ...prev, serieId: "" }));
                 return;
             }
+
             const nextSerie = res[0];
             const nextNumber = Number(nextSerie.nextNumber ?? 0);
+
             setSerie({
                 value: nextSerie.id,
                 label: `${nextSerie.code}-${nextNumber}`,
@@ -292,6 +332,7 @@ export default function AdjustmentRowMaterial() {
                 q: query,
                 raw: true,
             });
+
             const normalized = (res ?? [])
                 .map((row: any) => {
                     const resolvedItemId = row.itemId ?? row.primaId ?? row.id ?? "";
@@ -321,7 +362,8 @@ export default function AdjustmentRowMaterial() {
             { value: "", label: "Seleccionar materia prima" },
             ...(searchResults ?? []).map((v) => ({
                 value: v.itemId ?? v.id ?? "",
-                label: `${v.productName ?? "Materia prima"} (${v.sku ?? "-"})`,
+                label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
+                ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,
             })),
         ],
         [searchResults],
@@ -329,28 +371,35 @@ export default function AdjustmentRowMaterial() {
 
     const addItem = () => {
         const { stockItemId, quantity, adjustmentType } = pendingItem;
-        const selected = searchResults.find((p) => (p.itemId ?? p.id) === stockItemId) ?? products.find((p) => (p.itemId ?? p.id) === stockItemId);
+        const selected =
+            searchResults.find((p) => (p.itemId ?? p.id) === stockItemId) ??
+            products.find((p) => (p.itemId ?? p.id) === stockItemId);
 
         if (!stockItemId) {
             showFlash(errorResponse("Selecciona una materia prima"));
             return;
         }
+
         if (quantity === 0) {
             showFlash(errorResponse("La cantidad no puede ser 0"));
             return;
         }
+
         if (adjustmentType === "REDUCIR" && quantity >= 0) {
             showFlash(errorResponse("Para reducir, ingresa una cantidad negativa"));
             return;
         }
+
         if (adjustmentType === "AUMENTAR" && quantity <= 0) {
             showFlash(errorResponse("Para aumentar, ingresa una cantidad positiva"));
             return;
         }
+
         if (!selected) {
             showFlash(errorResponse("Materia prima no encontrada"));
             return;
         }
+
         const alreadyAdded = (form.items ?? []).some((item) => item.stockItemId === stockItemId);
         if (alreadyAdded) {
             showFlash(errorResponse("La materia prima ya fue agregada"));
@@ -361,12 +410,14 @@ export default function AdjustmentRowMaterial() {
             ...prev,
             items: [...(prev.items ?? []), { stockItemId, quantity, adjustmentType }],
         }));
+
         setProducts((prev) => {
             const selectedId = selected.itemId ?? selected.id;
             if (!selectedId) return prev;
             const exists = prev.some((p) => (p.itemId ?? p.id) === selectedId);
             return exists ? prev : [...prev, selected];
         });
+
         setPendingItem(buildEmptyItem());
     };
 
@@ -391,6 +442,7 @@ export default function AdjustmentRowMaterial() {
     const itemRows = useMemo<AdjustmentItemRow[]>(() => {
         return (form.items ?? []).map((item, index) => {
             const product = products.find((p) => (p.itemId ?? p.id) === item.stockItemId);
+
             return {
                 ...item,
                 rowIndex: index,
@@ -408,16 +460,15 @@ export default function AdjustmentRowMaterial() {
             {
                 id: "sku",
                 header: "SKU",
-                cell: (row) => <span className="text-black/70">{row.customSku ?? row.sku ?? "-"}</span>,
+                cell: (row) => <span className="text-black/70">{row.customSku ?? "-"}</span>,
                 headerClassName: "text-left w-[90px]",
                 className: "text-black/70",
             },
             {
                 id: "product",
-                header: "Materia prima",
-                cell: (row) => (
-                    <span className="text-black/70">{`${row.productName ?? ""} ${row.attributes?.presentation ?? ""} ${row.attributes?.variant ?? ""} ${row.attributes?.color ?? ""} (${row.sku ?? "-"})`}</span>
-                ),
+                header: "Producto",
+                cell: (row) => <span className="text-black/70"> {`${row.productName ? `${row.productName}` : "" } ${row.attributes?.presentation ?? ""}
+                 ${row.attributes?.variant ?? ""}  ${row.attributes?.color ?? ""} ${row.attributes?.color ?? ""} (${row.sku ?? "-"})`}</span>,
                 headerClassName: "text-left w-[170px]",
                 className: "text-black/70",
             },
@@ -431,7 +482,9 @@ export default function AdjustmentRowMaterial() {
             {
                 id: "type",
                 header: "Tipo de ajuste",
-                cell: (row) => <span className="text-black/70">{row.adjustmentType}</span>,
+                cell: (row) => (
+                    <span className="text-black/70">{row.adjustmentType}</span>
+                ),
                 headerClassName: "text-left w-[130px]",
                 className: "text-black/70",
             },
@@ -470,10 +523,12 @@ export default function AdjustmentRowMaterial() {
 
     const saveAdjustment = async () => {
         clearFlash();
+
         if (!form.fromWarehouseId || !form.serieId) {
             showFlash(errorResponse("Completa los datos del documento"));
             return;
         }
+
         if (!form.items?.length) {
             showFlash(errorResponse("Agrega al menos un item"));
             return;
@@ -486,8 +541,10 @@ export default function AdjustmentRowMaterial() {
                 note: form.note?.trim() || undefined,
                 items: form.items ?? [],
             };
+
             const res = await createAdjustment(payload);
             const nextId = res.id ?? (res as { docId?: string }).docId ?? "";
+
             setLastSavedAdjustmentId(nextId);
             showFlash(successResponse("Ajuste registrado"));
             setOpenNavigateModal(true);
@@ -501,11 +558,13 @@ export default function AdjustmentRowMaterial() {
     const extractStockValue = (data: any) => {
         if (data == null) return null;
         if (typeof data === "number") return data;
+
         const candidates = ["stock", "quantity", "available", "balance", "total", "onHand"];
         for (const key of candidates) {
             const value = data?.[key];
             if (typeof value === "number") return value;
         }
+
         return null;
     };
 
@@ -514,17 +573,23 @@ export default function AdjustmentRowMaterial() {
             showFlash(errorResponse("Selecciona un almacén"));
             return;
         }
+
         setStockLoading(true);
         setStockError(null);
+
         try {
             const data = await getStock({
                 warehouseId: form.fromWarehouseId,
                 itemId: row.stockItemId,
             });
+
             const value = extractStockValue(data);
+
             setStockSummary({
                 itemId: row.stockItemId,
-                sku: row.customSku ?? row.sku,
+                sku: row.sku,
+                customSku: row.customSku,
+                attributes: row.attributes,
                 name: row.productName,
                 unit: row.unitName,
                 value,
@@ -533,7 +598,9 @@ export default function AdjustmentRowMaterial() {
             setStockError("Error al obtener stock");
             setStockSummary({
                 itemId: row.stockItemId,
-                sku: row.customSku ?? row.sku,
+                sku: row.sku,
+                customSku: row.customSku,
+                attributes: row.attributes,
                 name: row.productName,
                 unit: row.unitName,
                 value: null,
@@ -563,6 +630,7 @@ export default function AdjustmentRowMaterial() {
     return (
         <div className="w-full min-h-screen bg-white">
             <PageTitle title="Ajuste de materias primas" />
+
             <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-1">
@@ -602,7 +670,9 @@ export default function AdjustmentRowMaterial() {
                                 animated={false}
                                 tableClassName="table-fixed text-[10px]"
                                 onRowClick={handleRowClick}
-                                rowClassName={(row) => (row.stockItemId === stockSummary?.itemId ? "bg-primary/5" : undefined)}
+                                rowClassName={(row) =>
+                                    row.stockItemId === stockSummary?.itemId ? "bg-primary/5" : undefined
+                                }
                             />
                         </div>
 
@@ -610,7 +680,9 @@ export default function AdjustmentRowMaterial() {
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="text-[11px] text-black/60">Total costo items</div>
                                 <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-                                    <span className="font-semibold text-black tabular-nums">{money(totalCost, CURRENCY)}</span>
+                                    <span className="font-semibold text-black tabular-nums">
+                                        {money(totalCost, CURRENCY)}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -620,6 +692,7 @@ export default function AdjustmentRowMaterial() {
                         <div className="border-b border-black/10 px-3 sm:px-4 py-2">
                             <SectionHeaderForm icon={FileText} title="Datos de documento" />
                         </div>
+
                         <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                                 <FloatingSelect
@@ -628,14 +701,26 @@ export default function AdjustmentRowMaterial() {
                                     value={form.fromWarehouseId ?? ""}
                                     options={warehouseOptions}
                                     onChange={(value) => {
-                                        setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            fromWarehouseId: value,
+                                            serieId: "",
+                                        }));
                                         void loadSeries(value);
                                     }}
                                     className="h-9 text-xs"
                                     searchable
                                 />
-                                <FloatingInput label="Serie" name="adjustment-serie" value={serie.label} disabled className="h-9 text-xs" />
+
+                                <FloatingInput
+                                    label="Serie"
+                                    name="adjustment-serie"
+                                    value={serie.label}
+                                    disabled
+                                    className="h-9 text-xs"
+                                />
                             </div>
+
                             <FloatingInput
                                 label="Nota"
                                 name="adjustment-note"
@@ -643,25 +728,66 @@ export default function AdjustmentRowMaterial() {
                                 onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
                                 className="h-9 text-xs text-black/90"
                             />
+
                             <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
                                 <p className="text-[11px] font-semibold text-black">Resumen</p>
+
                                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>Materia prima</span>
                                         <span className="font-semibold text-right">{stockSummary?.name ?? "-"}</span>
                                     </div>
-                                    <div className="flex items-center justify-between">
+
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>SKU</span>
-                                        <span className="font-semibold tabular-nums">{stockSummary?.sku ?? "-"}</span>
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {stockSummary?.sku ?? "-"}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center justify-between">
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>SKU interno</span>
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {stockSummary?.customSku ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Presentación</span>
+                                        <span className="font-semibold text-right">
+                                            {stockSummary?.attributes?.presentation ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Variante</span>
+                                        <span className="font-semibold text-right">
+                                            {stockSummary?.attributes?.variant ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Color</span>
+                                        <span className="font-semibold text-right">
+                                            {stockSummary?.attributes?.color ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>Unidad</span>
-                                        <span className="font-semibold tabular-nums">{stockSummary?.unit ?? "-"}</span>
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {stockSummary?.unit ?? "-"}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center justify-between">
+
+                                    <div className="flex items-center justify-between gap-3">
                                         <span>Stock</span>
-                                        <span className="font-semibold tabular-nums">
-                                            {stockLoading ? "Cargando..." : stockError ? "-" : stockSummary?.value ?? "-"}
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {stockLoading
+                                                ? "Cargando..."
+                                                : stockError
+                                                  ? "-"
+                                                  : stockSummary?.value ?? "-"}
                                         </span>
                                     </div>
                                 </div>
@@ -673,7 +799,16 @@ export default function AdjustmentRowMaterial() {
                                 <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
                                     Limpiar
                                 </SystemButton>
-                                <SystemButton className="flex-1" disabled={loading || !form.fromWarehouseId || !form.serieId || !(form.items ?? []).length} onClick={saveAdjustment}>
+                                <SystemButton
+                                    className="flex-1"
+                                    disabled={
+                                        loading ||
+                                        !form.fromWarehouseId ||
+                                        !form.serieId ||
+                                        !(form.items ?? []).length
+                                    }
+                                    onClick={saveAdjustment}
+                                >
                                     {loading ? "Guardando..." : "Guardar"}
                                 </SystemButton>
                             </div>

@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Trash2 } from "lucide-react";
+import { Boxes, FileText, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { SystemButton } from "@/components/SystemButton";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
@@ -9,7 +14,11 @@ import { searchProductAndVariant } from "@/services/catalogService";
 import { createProductionOrder, getProductionOrder, updateProductionOrder } from "@/services/productionService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money, toDateTimeInputValue, tryShowPicker } from "@/utils/functionPurchases";
-import type { AddProductionOrderItemDto, CreateProductionOrderDto, ProductionOrderItem } from "@/pages/production/types/production";
+import type {
+  AddProductionOrderItemDto,
+  CreateProductionOrderDto,
+  ProductionOrderItem,
+} from "@/pages/production/types/production";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { RoutesPaths } from "@/Router/config/routesPaths";
@@ -35,11 +44,25 @@ const buildEmptyItem = (): AddProductionOrderItemDto => ({
   type: "",
 });
 
+type ProductionItemRow = AddProductionOrderItemDto & {
+  rowIndex: number;
+  sku?: string;
+  productName?: string;
+  unitName?: string;
+  attributes?: {
+        presentation?: string;
+        variant?: string;
+        color?: string;
+  };
+  customSku?:string;
+};
+
 export default function ProductionCreate() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
   const { productionId } = useParams<{ productionId: string }>();
   const isEdit = Boolean(productionId);
+
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateProductionOrderDto>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<AddProductionOrderItemDto>(() => buildEmptyItem());
@@ -52,7 +75,9 @@ export default function ProductionCreate() {
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
 
-  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
+  const ringStyle = {
+    "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+  } as CSSProperties;
 
   const resetForm = () => {
     setForm(buildEmptyForm());
@@ -79,7 +104,9 @@ export default function ProductionCreate() {
   const searchFinishedProducts = async () => {
     try {
       const res = await searchProductAndVariant({
-        q:query, raw:false, withRecipes:true
+        q: query,
+        raw: false,
+        withRecipes: true,
       });
       setSearchResults(res);
     } catch {
@@ -90,11 +117,13 @@ export default function ProductionCreate() {
 
   const mapOrderProducts = (items: ProductionOrderItem[]) => {
     const map = new Map<string, FinishedProducts>();
+
     items.forEach((item) => {
       const product = item.finishedItem?.product;
       const variant = item.finishedItem?.variant;
       const id = variant?.id ?? product?.id ?? item.finishedItemId;
       if (!id || map.has(id)) return;
+
       map.set(id, {
         id,
         itemId: id,
@@ -108,16 +137,30 @@ export default function ProductionCreate() {
         type: item.finishedItem?.type ?? product?.type ?? undefined,
       });
     });
+
     return Array.from(map.values());
   };
 
   const loadSeries = async (warehouseId: string) => {
     if (!warehouseId) {
       setSerie({ value: "", label: "" });
+      setForm((prev) => ({ ...prev, serieId: "" }));
       return;
     }
+
     try {
-      const res = await listDocumentSeries({ warehouseId, docType: DocType.PRODUCTION, isActive: true });
+      const res = await listDocumentSeries({
+        warehouseId,
+        docType: DocType.PRODUCTION,
+        isActive: true,
+      });
+
+      if (!res?.length) {
+        setSerie({ value: "", label: "" });
+        setForm((prev) => ({ ...prev, serieId: "" }));
+        return;
+      }
+
       setSerie({ value: res[0].id, label: res[0].code });
       setForm((prev) => ({ ...prev, serieId: res[0].id }));
     } catch {
@@ -128,11 +171,13 @@ export default function ProductionCreate() {
   };
 
   const productOptions = useMemo(
-    () =>
-      (searchResults ?? []).map((v) => ({
+    () => [
+      { value: "", label: "Seleccionar producto" },
+      ...(searchResults ?? []).map((v) => ({
         value: v.itemId ?? v.id ?? "",
-        label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
-      })),
+        label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
+        ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      })),
+    ],
     [searchResults]
   );
 
@@ -146,14 +191,17 @@ export default function ProductionCreate() {
       showFlash(errorResponse("Selecciona un producto"));
       return;
     }
+
     if (quantity <= 0) {
       showFlash(errorResponse("La cantidad debe ser mayor a 0"));
       return;
     }
+
     if (unitCost < 0) {
       showFlash(errorResponse("El costo debe ser mayor o igual a 0"));
       return;
     }
+
     const alreadyAdded = (form.items ?? []).some((item) => item.finishedItemId === finishedItemId);
     if (alreadyAdded) {
       showFlash(errorResponse("El producto ya fue agregado"));
@@ -172,6 +220,7 @@ export default function ProductionCreate() {
         },
       ],
     }));
+
     setProducts((prev) => {
       if (!selected) return prev;
       const selectedId = selected.itemId ?? selected.id;
@@ -179,6 +228,7 @@ export default function ProductionCreate() {
       const exists = prev.some((p) => (p.itemId ?? p.id) === selectedId);
       return exists ? prev : [...prev, selected];
     });
+
     setPendingItem(buildEmptyItem());
   };
 
@@ -200,16 +250,101 @@ export default function ProductionCreate() {
     return (form.items ?? []).reduce((acc, item) => acc + item.quantity * item.unitCost, 0);
   }, [form.items]);
 
+  const itemRows = useMemo<ProductionItemRow[]>(() => {
+    return (form.items ?? []).map((item, index) => {
+      const product = products.find((p) => (p.itemId ?? p.id) === item.finishedItemId);
+
+      return {
+        ...item,
+        rowIndex: index,
+        sku: product?.sku,
+        productName: product?.productName,
+        unitName: product?.unitName,
+      };
+    });
+  }, [form.items, products]);
+
+  const columns = useMemo<DataTableColumn<ProductionItemRow>[]>(
+    () => [
+      {
+        id: "sku",
+        header: "SKU",
+        cell: (row) => <span className="text-black/70">{row.customSku ?? "-"}</span>,
+        headerClassName: "text-left w-[90px]",
+        className: "text-black/70",
+      },
+      {
+        id: "product",
+        header: "Producto",
+        cell: (row) => <span className="text-black/70"> {`${row.productName ? `${row.productName}` : "" } ${row.attributes?.presentation ?? ""}
+          ${row.attributes?.variant ?? ""}  ${row.attributes?.color ?? ""} ${row.attributes?.color ?? ""} (${row.sku ?? "-"})`}</span>,
+        headerClassName: "text-left w-[170px]",
+        className: "text-black/70",
+      },
+      {
+        id: "unit",
+        header: "Unidad",
+        cell: (row) => <span className="text-black/70">{row.unitName ?? "-"}</span>,
+        headerClassName: "text-left w-[110px]",
+        className: "text-black/70",
+      },
+      {
+        id: "quantity",
+        header: "Cantidad",
+        cell: (row) => (
+          <FloatingInput
+            label="Cantidad"
+            name={`qty-${row.rowIndex}`}
+            type="number"
+            min={1}
+            value={String(row.quantity === 0 ? 1 : row.quantity)}
+            onChange={(e) =>
+              updateItem(row.rowIndex, {
+                quantity: Number(e.target.value),
+              })
+            }
+            className="h-8 text-[10px]"
+          />
+        ),
+        headerClassName: "text-left w-[130px]",
+        className: "text-black/70",
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: (row) => (
+          <div className="flex justify-end">
+            <SystemButton
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-rose-600"
+              onClick={() => removeItem(row.rowIndex)}
+              title="Eliminar"
+            >
+              <Trash2 className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        ),
+        headerClassName: "text-right w-[50px]",
+        className: "text-right",
+      },
+    ],
+    []
+  );
+
   const saveOrder = async () => {
     clearFlash();
+
     if (!form.fromWarehouseId || !form.toWarehouseId || !form.serieId) {
       showFlash(errorResponse("Completa los datos de documento"));
       return;
     }
+
     if (!form.items?.length) {
       showFlash(errorResponse("Agrega al menos un item"));
       return;
     }
+
     setLoading(true);
     try {
       const payload = {
@@ -217,20 +352,19 @@ export default function ProductionCreate() {
         reference: form.reference?.trim() || undefined,
         items: form.items ?? [],
       };
+
       if (isEdit && productionId) {
         const res = await updateProductionOrder(productionId, payload);
-        console.log("[production] update response", res);
         showFlash(successResponse("Orden de produccion actualizada"));
-        const nextId = res.productionId
+        const nextId = res.productionId;
         if (nextId) setLastSavedProductionId(nextId);
       } else {
         const res = await createProductionOrder(payload);
-
         showFlash(successResponse("Orden de produccion creada"));
         const nextId = res.productionId;
-        console.log("[production] resolved productionId", nextId);
         if (nextId) setLastSavedProductionId(nextId);
       }
+
       setOpenNavigateModal(true);
     } catch {
       showFlash(errorResponse("Error al guardar la orden de produccion"));
@@ -239,11 +373,13 @@ export default function ProductionCreate() {
     }
   };
 
-  const loadOrder = async (productionId:string) => {
+  const loadOrder = async (productionId: string) => {
     setLoading(true);
     clearFlash();
+
     try {
       const data = await getProductionOrder(productionId);
+
       setForm({
         fromWarehouseId: data.fromWarehouseId ?? "",
         toWarehouseId: data.toWarehouseId ?? "",
@@ -257,10 +393,12 @@ export default function ProductionCreate() {
           type: item.type ?? "",
         })),
       });
+
       setSerie({
         value: data.serieId ?? "",
         label: data.serie?.code ?? "",
       });
+
       const mappedProducts = mapOrderProducts(data.items ?? []);
       setProducts(mappedProducts);
     } catch {
@@ -273,8 +411,8 @@ export default function ProductionCreate() {
   useEffect(() => {
     if (!productionId) return;
     void loadOrder(productionId);
-  }, [productionId, clearFlash, showFlash]);
- 
+  }, [productionId]);
+
   useEffect(() => {
     const id = setTimeout(() => {
       if (query.trim()) {
@@ -291,7 +429,7 @@ export default function ProductionCreate() {
     resetForm();
     void loadWarehouses();
   }, []);
-    
+
   const hasInvalidPrice = (form.items ?? []).some((item) => {
     const cost = Number(item.unitCost);
     return !Number.isFinite(cost) || cost <= 0;
@@ -300,102 +438,49 @@ export default function ProductionCreate() {
   return (
     <div className="w-full min-h-screen bg-white">
       <PageTitle title="Orden de produccion" />
-      <div className="mx-auto w-full max-w-[1500px] 
-        px-4 pt-2 space-y-4">
+
+      <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold tracking-tight">Orden de produccion</h1>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] 
-          max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
-          <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden 
-            flex flex-col ">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
+          <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="border-b border-black/10 p-3 sm:p-4">
-              <p className="text-xs font-semibold">Productos terminados</p>
-              <div className="mt-2 grid grid-cols-1 gap-2 xl:grid-cols-[1fr_auto]">
-                <FilterableSelect
+              <SectionHeaderForm icon={Boxes} title="Productos terminados" />
+
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <FloatingSelect
+                  label="Producto terminado"
+                  name="production-finished-item"
                   value={pendingItem.finishedItemId}
+                  options={productOptions}
                   onChange={(value) => {
                     setPendingItem((prev) => ({ ...prev, finishedItemId: value }));
                     setOpenItemModal(Boolean(value));
                   }}
-                  options={productOptions}
-                  placement="bottom"
-                  placeholder="Producto terminado"
+                  searchable
                   searchPlaceholder="Buscar producto..."
-                  className="h-9"
-                  textSize="text-[11px]"
                   onSearchChange={(text) => setQuery(text)}
+                  className="h-9 text-xs"
+                  placeholder="Seleccionar producto"
+                  emptyMessage="Sin productos"
                 />
               </div>
             </div>
 
             <div className="flex-1 overflow-auto">
-              <table className="w-full text-xs table-fixed">
-                <thead className="sticky top-0 z-10 bg-white">
-                  <tr className="border-b border-black/10 text-[10px] text-black/60">
-                    <th className="py-2 px-4 text-left w-25">SKU</th>
-                    <th className="py-2 px-4 text-left w-32">Producto</th>
-                    <th className="py-2 px-4 text-left w-15">Unidad</th>
-                    <th className="py-2 px-4 text-left w-18">Cantidad</th>
-                    <th className="py-2 px-4 text-left w-22">Costo unit.</th>
-                    <th className="py-2 px-4 text-left w-20"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(form.items ?? []).map((item, index) => {
-                    const product = products.find((p) => (p.itemId ?? p.id) === item.finishedItemId);
-                    return (
-                      <tr key={`${item.finishedItemId}-${index}`} className="border-b border-black/5 text-[10px]">
-                        <td className="py-2 px-4 text-black/70">{product?.sku}</td>
-                        <td className="py-2 px-4 text-black/70">{product?.productName}</td>
-                        <td className="py-2 px-4 text-black/70">{product?.unitName}</td>
-                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
-                          <input
-                            type="number"
-                            min={1}
-                            className="h-8 w-15 rounded-lg border border-black/10 bg-white px-2 text-[10px] text-right outline-none focus:ring-2"
-                            style={ringStyle}
-                            value={item.quantity === 0 ? 1 : item.quantity}
-                            onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
-                          />
-                        </td>
-                        <td className="py-2 px-4 text-right text-black/70 tabular-nums">
-                          <input
-                            type="number"
-                            min={0}
-                            className="h-8 w-18 rounded-lg border border-black/10 bg-white px-2 text-[10px] text-right outline-none focus:ring-2"
-                            style={ringStyle}
-                            value={item.unitCost === 0 ? "" : item.unitCost}
-                            placeholder="0"
-                            onChange={(e) =>
-                              updateItem(index, { unitCost: e.target.value === "" ? 0 : Number(e.target.value) })
-                            }
-                          />
-                        </td>
-                        <td className="py-2 px-4">
-                          <div className="flex items-center justify-end">
-                            <button
-                              type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 bg-white hover:bg-black/[0.03] text-rose-600"
-                              title="Eliminar"
-                              onClick={() => removeItem(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {(form.items ?? []).length === 0 && (
-                <div className="px-4 py-8 text-xs text-black/60">Aun no agregas items.</div>
-              )}
+              <DataTable
+                tableId="production-items"
+                data={itemRows}
+                columns={columns}
+                rowKey="finishedItemId"
+                emptyMessage="Aun no agregas items."
+                animated={false}
+                tableClassName="table-fixed text-[11px]"
+              />
             </div>
 
             <div className="border-t border-black/10 px-3 sm:px-4 py-3">
@@ -408,107 +493,90 @@ export default function ProductionCreate() {
             </div>
           </section>
 
-          <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto 
-            flex flex-col max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
-            <div className="border-b border-black/10 px-3 sm:px-4 py-2">
-              <p className="text-xs font-semibold">Datos de documento</p>
+          <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto flex flex-col max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
+            <div className="border-b border-black/10 px-3 sm:px-4 py-3">
+              <SectionHeaderForm icon={FileText} title="Datos de documento" />
             </div>
-            <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-2">
+
+            <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-5 mt-2 ">
               <div className="grid grid-cols-2 gap-4">
-                <label className="text-[11px] text-black/70">
-                  Almacen origen
-                  <FilterableSelect
-                    value={form.fromWarehouseId}
-                    onChange={(value) => {
-                      setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
-                      void loadSeries(value);
-                    }}
-                    options={warehouseOptions}
-                    placement="bottom"
-                    placeholder="Seleccionar almacen"
-                    searchPlaceholder="Buscar almacen..."
-                    className="h-9"
-                    textSize="text-[11px] mt-1"
-                  />
-                </label>
-                <label className="text-[11px] text-black/70">
-                  Almacen destino
-                  <FilterableSelect
-                    value={form.toWarehouseId}
-                    onChange={(value) => {
-                      setForm((prev) => ({ ...prev, toWarehouseId: value }));
-                    }}
-                    options={warehouseOptions}
-                    placement="bottom"
-                    placeholder="Seleccionar almacen"
-                    searchPlaceholder="Buscar almacen..."
-                    className="h-9"
-                    textSize="text-[11px] mt-1"
-                  />
-                </label>
+                <FloatingSelect
+                  label="Almacen origen"
+                  name="production-from-warehouse"
+                  value={form.fromWarehouseId}
+                  options={warehouseOptions}
+                  onChange={(value) => {
+                    setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
+                    void loadSeries(value);
+                  }}
+                  searchable
+                  className="h-9 text-xs"
+                  placeholder="Seleccionar almacen"
+                  emptyMessage="Sin almacenes"
+                />
+
+                <FloatingSelect
+                  label="Almacen destino"
+                  name="production-to-warehouse"
+                  value={form.toWarehouseId}
+                  options={warehouseOptions}
+                  onChange={(value) => {
+                    setForm((prev) => ({ ...prev, toWarehouseId: value }));
+                  }}
+                  searchable
+                  className="h-9 text-xs"
+                  placeholder="Seleccionar almacen"
+                  emptyMessage="Sin almacenes"
+                />
               </div>
-              <div className="space-y-1 grid grid-cols-2 gap-4">
-                <label className="text-[11px] text-black/70">
-                  Serie
-                  <input
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
-                    style={ringStyle}
-                    value={serie.label}
-                    placeholder="Serie"
-                    disabled
-                  />
-                </label>
-                <label className="text-[11px] text-black/70">
-                  Referencia
-                  <input
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
-                    style={ringStyle}
-                    value={form.reference ?? ""}
-                    onChange={(e) => setForm((prev) => ({ ...prev, reference: e.target.value }))}
-                    placeholder="Referencia"
-                  />
-                </label>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FloatingInput
+                  label="Serie"
+                  name="production-serie"
+                  value={serie.label}
+                  disabled
+                  className="h-9 text-xs"
+                />
+
+                <FloatingInput
+                  label="Referencia"
+                  name="production-reference"
+                  value={form.reference ?? ""}
+                  onChange={(e) => setForm((prev) => ({ ...prev, reference: e.target.value }))}
+                  className="h-9 text-xs"
+                />
               </div>
-              <div className="space-y-1">
-                <label className="text-[11px] text-black/70">
-                  Fecha de culminacion
-                  <input
-                    type="datetime-local"
-                    className="h-9 w-full rounded-lg border border-black/10 bg-white px-2 text-xs outline-none focus:ring-2 mt-1"
-                    style={ringStyle}
-                    value={toDateTimeInputValue(form.manufactureDate)}
-                    onClick={(e) => tryShowPicker(e.currentTarget)}
-                    onChange={(e) => setForm((prev) => ({ ...prev, manufactureDate: e.target.value }))}
-                  />
-                </label>
-              </div>
+
+              <FloatingInput
+                label="Fecha de culminacion"
+                name="production-manufacture-date"
+                type="datetime-local"
+                value={toDateTimeInputValue(form.manufactureDate)}
+                onClick={(e) => tryShowPicker(e.currentTarget)}
+                onChange={(e) => setForm((prev) => ({ ...prev, manufactureDate: e.target.value }))}
+                className="h-9 text-xs"
+              />
             </div>
 
             <div className="border-t border-black/10 px-3 sm:px-4 py-3">
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03]"
-                  onClick={resetForm}
-                >
+                <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
                   Limpiar
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
-                  style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
+                </SystemButton>
+
+                <SystemButton
+                  className="flex-1"
                   disabled={
                     loading ||
                     !form.fromWarehouseId ||
                     !form.toWarehouseId ||
                     !form.serieId ||
-                    !(form.items ?? []).length ||
-                    hasInvalidPrice
-                  }
+                    !(form.items ?? []).length }
                   onClick={saveOrder}
                 >
                   {loading ? "Guardando..." : "Guardar"}
-                </button>
+                </SystemButton>
               </div>
             </div>
           </aside>
