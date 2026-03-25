@@ -33,6 +33,7 @@ export type Product = {
   };
   createdAt: string;
   updatedAt: string;
+  customSku?:string;
 };
 
 export type ProductForm = {
@@ -49,6 +50,7 @@ export type ProductForm = {
     }
     baseUnitId: string;
     customSku?:string;
+    sku?: string | null;
 };
 
 export type ProductListResponse = {

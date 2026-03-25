@@ -230,8 +230,8 @@ export default function PurchaseCreateLocal() {
 
   const productOptions = (products ?? []).map((v) => ({
     value: v.itemId!,
-    label: `${v.productName ?? "Producto"} (${v.sku ?? "-"})`,
-  }));
+    label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
+    ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      }));
 
   const updateItem = (itemIdToUpdate: string, patch: Partial<PurchaseOrderItem>) => {
     setForm((prev) => ({
@@ -448,6 +448,7 @@ export default function PurchaseCreateLocal() {
         className: "text-black/70",
         headerClassName: "text-left",
         hideable: false,
+        sortable: false,
       },
       {
         id: "name",
@@ -456,6 +457,7 @@ export default function PurchaseCreateLocal() {
         className: "text-black/70",
         headerClassName: "text-left",
         hideable: false,
+        sortable: false,
       },
       {
         id: "unit",
@@ -466,6 +468,7 @@ export default function PurchaseCreateLocal() {
           </span>
         ),
         headerClassName: "text-left",
+        sortable: false,
       },
       {
         id: "quantity",
@@ -490,6 +493,7 @@ export default function PurchaseCreateLocal() {
         ),
         headerClassName: "text-left",
         hideable: false,
+        sortable: false,
       },
       {
         id: "unitPrice",
@@ -515,6 +519,7 @@ export default function PurchaseCreateLocal() {
         className: "text-right",
         headerClassName: "text-right",
         hideable: false,
+        sortable: false,
       },
       {
         id: "totalPrice",
@@ -542,6 +547,7 @@ export default function PurchaseCreateLocal() {
         className: "text-right",
         headerClassName: "text-right",
         hideable: false,
+        sortable: false,
       },
       {
         id: "actions",
@@ -562,6 +568,7 @@ export default function PurchaseCreateLocal() {
         className: "text-right",
         headerClassName: "text-right",
         hideable: false,
+        sortable: false,
       },
     ];
   }, []);

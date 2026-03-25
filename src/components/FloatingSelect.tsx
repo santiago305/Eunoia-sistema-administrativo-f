@@ -210,7 +210,7 @@ export function FloatingSelect({
                           "flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors",
                           isSelected
                             ? "bg-primary/10 text-primary"
-                            : "text-black hover:bg-black/5",
+                            : "text-black/90 hover:bg-black/5",
                         ].join(" ")}
                         role="option"
                         aria-selected={isSelected}

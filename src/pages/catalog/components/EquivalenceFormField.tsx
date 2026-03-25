@@ -91,12 +91,14 @@ export function EquivalenceFormFields({
         header: "Unidad de medida",
         accessorKey: "unitName",
         hideable: false,
+        sortable: false,
       },
       {
         id: "description",
         header: "Equivalencia",
         accessorKey: "description",
         hideable: false,
+        sortable: false,
       },
       {
         id: "actions",
@@ -118,6 +120,7 @@ export function EquivalenceFormFields({
         className: "text-right",
         headerClassName: "text-right",
         hideable: false,
+        sortable: false,
       },
     ],
     [rows],

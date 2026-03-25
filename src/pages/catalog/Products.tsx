@@ -72,7 +72,7 @@ export default function CatalogProducts() {
 
     const [page, setPage] = useState(1);
     const [debouncedName, setDebouncedName] = useState("");
-    const limit = 10;
+    const limit = 8;
 
     const [exporting, setExporting] = useState(false);
 
@@ -158,7 +158,7 @@ export default function CatalogProducts() {
     const hasNext = safePage < totalPages;
 
     const sortedProducts = useMemo(() => {
-        return [...products].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return [...products].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [products]);
 
     const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedName}`, [page, statusFilter, debouncedName]);
@@ -178,7 +178,7 @@ export default function CatalogProducts() {
             {
                 id: "sku",
                 header: "SKU",
-                cell: (row) => <span className="font-medium">{row.sku || "-"}</span>,
+                cell: (row) => <span className="font-medium">{row.customSku || "-"}</span>,
                 headerClassName: "text-left w-[100px]",
                 className: "text-black/70",
             },
@@ -187,7 +187,8 @@ export default function CatalogProducts() {
                 header: "Producto",
                 cell: (row) => (
                     <div className="min-w-0">
-                        <p className="font-medium leading-5 truncate">{row.name}</p>
+                        <p className="font-medium leading-5">{row.name}
+                         {row.sku ? ` - ${row.sku}` : ""}</p>
                     </div>
                 ),
                 headerClassName: "text-left w-[120px]",
@@ -253,7 +254,7 @@ export default function CatalogProducts() {
                 id: "status",
                 header: "Estado",
                 cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
-                headerClassName: "text-left w-[90px]",
+                headerClassName: "text-left w-[80px]",
                 className: "text-black/70",
             },
             {
@@ -507,7 +508,7 @@ export default function CatalogProducts() {
                 </motion.section>
                 <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} variants={fadeUp} className="bg-white shadow-sm overflow-hidden">
                     <div className="hidden lg:block">
-                        <div className="max-h-[calc(100vh-280px)] overflow-auto">
+                        <div>
                             <DataTable
                                 tableId="catalog-products"
                                 data={sortedProducts}
@@ -516,8 +517,7 @@ export default function CatalogProducts() {
                                 loading={loading}
                                 emptyMessage="No hay productos con los filtros actuales."
                                 animated={!shouldReduceMotion}
-                                className="overflow-hidden"
-                                tableClassName="table-fixed text-[10px]"
+                                tableClassName="table-fixed text-[10px] "
                             />
 
                             {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}

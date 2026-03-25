@@ -34,11 +34,13 @@ const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
 const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
 const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
 const CatalogVariants = lazy(() => import("@/pages/catalog/Variants"));
+const CatalogAdjustments = lazy(() => import("@/pages/catalog/AdjustmentProducts"));
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/components/LocationModal"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
 const RowVariant = lazy(() => import("@/pages/row-material/RowVariant"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
+const RowMaterialAdjustments = lazy(() => import("@/pages/row-material/AdjustmentRowMaterial"));
 const Providers = lazy(() => import("@/pages/providers/Providers"));
 const Purchase = lazy(() => import("@/pages/purchases/Purchase"));
 const Purchases = lazy(() => import("@/pages/purchases/Purchases"));
@@ -128,6 +130,10 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.catalogVariants, <CatalogVariants />),
             },
             {
+                path: RoutesPaths.catalogAdjustments,
+                element: withRouteGuard(RoutesPaths.catalogAdjustments, <CatalogAdjustments />),
+            },
+            {
                 path: RoutesPaths.KardexFinished,
                 element: withRouteGuard(RoutesPaths.KardexFinished, <KardexFinished />),
             },
@@ -146,6 +152,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.rowMaterial,
                 element: withRouteGuard(RoutesPaths.rowMaterial, <RowMaterial />),
+            },
+            {
+                path: RoutesPaths.rowMaterialAdjustments,
+                element: withRouteGuard(RoutesPaths.rowMaterialAdjustments, <RowMaterialAdjustments />),
             },
             {
                 path: RoutesPaths.rowVariant,

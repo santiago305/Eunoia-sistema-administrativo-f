@@ -275,6 +275,7 @@ export function EquivalenceModal({
         accessorKey: "unitLabel",
         className: "text-black/70",
         headerClassName: "text-left",
+        sortable: false,
       },
       {
         id: "equivalence",
@@ -282,6 +283,7 @@ export function EquivalenceModal({
         accessorKey: "equivalenceLabel",
         className: "text-black/70",
         headerClassName: "text-left",
+        sortable: false,
       },
       {
         id: "active",
@@ -295,6 +297,7 @@ export function EquivalenceModal({
           ) : null,
         className: "text-right",
         headerClassName: "text-right",
+        sortable: false,
       },
     ];
   }, [pendingEquivalence, pendingUnitBase, pendingFactor, primaryColor]);
@@ -375,7 +378,8 @@ export function EquivalenceModal({
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <SystemButton variant="ghost" className=" bg-gray-200" onClick={handleClose}>
+          <SystemButton variant="ghost" 
+          className=" bg-gray-200" onClick={handleClose}>
             Cancelar
           </SystemButton>
 

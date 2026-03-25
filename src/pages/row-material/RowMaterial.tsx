@@ -13,7 +13,7 @@ import { listProductEquivalences } from "@/services/equivalenceService";
 import { getById, listProducts } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Filter, Layers, Menu, Pencil, Plus, Power } from "lucide-react";
+import { Boxes, Download, Filter,  Menu, Pencil, Plus, Power } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
@@ -505,7 +505,7 @@ export default function RowMaterial() {
                 </motion.section>
                 <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} variants={fadeUp} className=" bg-white shadow-sm overflow-hidden">
                     <div className="hidden lg:block">
-                        <div className="max-h-[calc(100vh-248px)] overflow-auto">
+                        <div>
                             <DataTable
                                 tableId="row-materials"
                                 data={sortedProducts}
@@ -514,7 +514,6 @@ export default function RowMaterial() {
                                 loading={loading}
                                 emptyMessage="No hay materias primas con los filtros actuales."
                                 animated={!shouldReduceMotion}
-                                className="overflow-hidden"
                                 tableClassName="table-fixed text-[11px]"
                             />
 

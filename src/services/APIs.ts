@@ -210,8 +210,24 @@ export const API_KARDEX_GROUP = {
   totals: "/inventory/ledger/totals/daily",
 };
 
+export const API_INVENTORY_GROUP = {
+  getStock: "/inventory/get-stock",
+  getStockQuery: (params: { warehouseId: string; itemId: string; locationId?: string }) => {
+    const search = new URLSearchParams({
+      warehouseId: params.warehouseId,
+      itemId: params.itemId,
+      ...(params.locationId ? { locationId: params.locationId } : {}),
+    });
+    return `/inventory/get-stock?${search.toString()}`;
+  },
+};
+
+
+
 export const API_DOCUMENT_INVENTORY_GROUP = {
   outOrderCreated: "/inventory/documents/create-add-item-post-out",
+  adjustmentCreated: "/inventory/documents/create-add-item-post-adjustment",
+  adjustmentAddItem: (id: string) => `/inventory/documents/${id}/items-adjustment`,
 };
 
 export const API_PAYMENT_METHODS_GROUP = {

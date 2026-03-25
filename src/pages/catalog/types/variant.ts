@@ -60,6 +60,12 @@ export type PrimaVariant = {
   baseUnitId?: string;
   isActive?: boolean;
   type?:string;
+  attributes?: {
+    presentation?: string,
+    variant?:string,
+    color?:string
+  };
+  customSku?:string;
 };
 export type ProductListActive = {
   id?: string;
@@ -85,6 +91,12 @@ export type FinishedProducts = {
   baseUnitId?: string;
   isActive?: boolean;
   type?: string;
+  attributes?: {
+    presentation?: string,
+    variant?:string,
+    color?:string
+  };
+  customSku?:string;
 };
 
 export type ProductOption = { 

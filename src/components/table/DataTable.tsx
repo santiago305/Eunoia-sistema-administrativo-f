@@ -385,7 +385,7 @@ export function DataTable<T extends Record<string, unknown>>({
       ) : null}
 
       <div className="hidden overflow-hidden rounded-2xl border border-border bg-background shadow-sm md:block">
-        <div className="max-h-[70vh] overflow-auto">
+        <div className="max-h-[90vh] overflow-auto">
           <table className={cn("w-full min-w-full text-sm", tableClassName)}>
             <thead className={cn(stickyHeader && "sticky top-0 z-10") }>
               <tr className="border-b border-border bg-muted/95 backdrop-blur">

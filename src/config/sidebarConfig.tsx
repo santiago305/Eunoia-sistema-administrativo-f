@@ -83,6 +83,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Productos",
                 href: RoutesPaths.catalogProducts,
             },
+            {
+                label: "Ajustes",
+                href: RoutesPaths.catalogAdjustments,
+            },
             // {
             //     label: "Variantes",
             //     href: RoutesPaths.catalogVariants,
@@ -101,6 +105,10 @@ export const getSidebarItems = (): SidebarItem[] => [
             {
                 label: "Materias Primas",
                 href: RoutesPaths.rowMaterial,
+            },
+            {
+                label: "Ajustes",
+                href: RoutesPaths.rowMaterialAdjustments,
             },
             // {
             //     label: "Variantes",
