@@ -260,6 +260,8 @@ export default function ProductionCreate() {
         sku: product?.sku,
         productName: product?.productName,
         unitName: product?.unitName,
+        customSku: product?.customSku,
+        attributes:product?.attributes
       };
     });
   }, [form.items, products]);
@@ -430,11 +432,6 @@ export default function ProductionCreate() {
     void loadWarehouses();
   }, []);
 
-  const hasInvalidPrice = (form.items ?? []).some((item) => {
-    const cost = Number(item.unitCost);
-    return !Number.isFinite(cost) || cost <= 0;
-  });
-
   return (
     <div className="w-full min-h-screen bg-white">
       <PageTitle title="Orden de produccion" />
@@ -511,7 +508,6 @@ export default function ProductionCreate() {
                   }}
                   searchable
                   className="h-9 text-xs"
-                  placeholder="Seleccionar almacen"
                   emptyMessage="Sin almacenes"
                 />
 
@@ -525,7 +521,6 @@ export default function ProductionCreate() {
                   }}
                   searchable
                   className="h-9 text-xs"
-                  placeholder="Seleccionar almacen"
                   emptyMessage="Sin almacenes"
                 />
               </div>
@@ -536,7 +531,7 @@ export default function ProductionCreate() {
                   name="production-serie"
                   value={serie.label}
                   disabled
-                  className="h-9 text-xs"
+                  className="h-9 text-xs text-black/90"
                 />
 
                 <FloatingInput

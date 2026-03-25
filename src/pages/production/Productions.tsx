@@ -1,6 +1,26 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Factory,
+  Menu,
+  Plus,
+  SearchCheck,
+  Timer,
+  OctagonAlert,
+  FileText,
+  Pencil,
+  Play,
+  Ban,
+  PackageCheck,
+  Filter,
+} from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FilterableSelect } from "@/components/SelectFilterable";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SystemButton } from "@/components/SystemButton";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import { Dropdown } from "@/components/Dropdown";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
@@ -10,29 +30,13 @@ import {
   listProductionOrders,
   startProductionOrder,
 } from "@/services/productionService";
+import { getProductionOrderPdf } from "@/services/pdfServices";
 import { toDateInputValue, tryShowPicker, todayIso, buildMonthStartIso } from "@/utils/functionPurchases";
-import { Plus } from "lucide-react";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
-
-import { DataTable } from "@/components/data-table/DataTable";
-import { DataTableColumnMenu } from "@/components/data-table/DataTableColumnMenu";
-import { DataTablePagination } from "@/components/data-table/DataTablePagination";
-import {
-  getCoreRowModel,
-  getExpandedRowModel,
-  useReactTable,
-  type ExpandedState,
-  type PaginationState,
-  type VisibilityState,
-} from "@tanstack/react-table";
-import { getProductionColumns } from "./components/data-table/Production.columns";
-import { ProductionExpandedRow } from "./components/data-table/ProductionExpandedRow";
-import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
-import { productionExpandedFields } from "./components/data-table/productionExpandedFields";
-import { getProductionOrderPdf } from "@/services/pdfServices";
+import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -45,12 +49,40 @@ const statusLabels: Record<ProductionStatus, string> = {
   [ProductionStatus.CANCELLED]: "Cancelado",
 };
 
+type ProductionRow = {
+  id: string;
+  registro: string;
+  serie: string;
+  referencia: string;
+  almacenOrigen: string;
+  almacenDestino: string;
+  estado?: ProductionStatus;
+  tiempoProduccion?: ProductionStatus;
+  termino: string;
+  original: ProductionOrder;
+};
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+};
+
 export default function Production() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
 
   const [warehouseId, setWarehouseId] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | ProductionStatus>("");
+  const [statusFilter, setStatusFilter] = useState<"all" | ProductionStatus>("all");
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
   const [toDate, setToDate] = useState(() => todayIso());
 
@@ -63,27 +95,15 @@ export default function Production() {
     hasPrev: false,
     hasNext: false,
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(false);
   const [warehouseOptions, setWarehouseOptions] = useState<
     { value: string; label: string; address?: string }[]
   >([]);
 
-  const [paginationState, setPaginationState] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: DEFAULT_LIMIT,
-  });
-  const page = paginationState.pageIndex + 1;
-  const limit = paginationState.pageSize;
-
-  const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    serie: false,
-  });
-  const [showColumnMenu, setShowColumnMenu] = useState(false);
-
-  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties;
+  const [page, setPage] = useState(1);
+  const limit = DEFAULT_LIMIT;
+  const nowIso = useMemo(() => new Date().toISOString(), []);
 
   const loadWarehouses = async () => {
     try {
@@ -97,6 +117,7 @@ export default function Production() {
             address,
           };
         }) ?? [];
+
       setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
     } catch {
       setWarehouseOptions([{ value: "", label: "Todos" }]);
@@ -106,23 +127,28 @@ export default function Production() {
 
   const loadOrders = async () => {
     if (loading) return;
+
     clearFlash();
     setLoading(true);
-    setError(null);
+
     try {
+      const status = statusFilter === "all" ? undefined : statusFilter;
       const res = await listProductionOrders({
         page,
         limit,
         warehouseId: warehouseId || undefined,
-        status: statusFilter || undefined,
+        status: status,
         from: fromDate || undefined,
         to: toDate || undefined,
       });
+
       setOrders(res.items ?? []);
+
       const nextTotal = res.total ?? 0;
       const nextPage = res.page ?? page;
       const nextLimit = res.limit ?? limit;
       const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || limit)));
+
       setPagination({
         total: nextTotal,
         page: nextPage,
@@ -140,7 +166,6 @@ export default function Production() {
         hasPrev: false,
         hasNext: false,
       }));
-      setError("Error al listar producciones");
       showFlash(errorResponse("Error al listar producciones"));
     } finally {
       setLoading(false);
@@ -152,7 +177,7 @@ export default function Production() {
     try {
       await startProductionOrder(id);
       showFlash(successResponse("Orden iniciada"));
-      loadOrders();
+      await loadOrders();
     } catch {
       showFlash(errorResponse("Error al iniciar la orden"));
     }
@@ -163,7 +188,7 @@ export default function Production() {
     try {
       await closeProductionOrder(id);
       showFlash(successResponse("Orden cerrada"));
-      loadOrders();
+      await loadOrders();
     } catch {
       showFlash(errorResponse("Error al cerrar la orden"));
     }
@@ -174,7 +199,7 @@ export default function Production() {
     try {
       await cancelProductionOrder(id);
       showFlash(successResponse("Orden cancelada"));
-      loadOrders();
+      await loadOrders();
     } catch {
       showFlash(errorResponse("Error al cancelar la orden"));
     }
@@ -186,224 +211,319 @@ export default function Production() {
   };
 
   const openProductionPdf = async (id: string) => {
-      clearFlash();
-      try {
-          const blob = await getProductionOrderPdf(id);
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `orden-compra-${id}.pdf`;
-          link.click();
-          link.remove();
-          window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      } catch {
-          showFlash(errorResponse("Error al generar el PDF"));
-      }
+    clearFlash();
+    try {
+      const blob = await getProductionOrderPdf(id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orden-produccion-${id}.pdf`;
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      showFlash(errorResponse("Error al generar el PDF"));
+    }
   };
+
   useEffect(() => {
     void loadWarehouses();
   }, []);
 
   useEffect(() => {
     void loadOrders();
-  }, [page, limit, warehouseId, statusFilter, fromDate, toDate]);
+  }, [page, warehouseId, statusFilter, fromDate, toDate]);
 
-  useEffect(() => {
-    setExpanded({});
-  }, [columnVisibility, warehouseId, statusFilter, fromDate, toDate]);
+  const statusOptions = [
+    { value: "all", label: "Estado (todos)" },
+    { value: ProductionStatus.DRAFT, label: "Borrador" },
+    { value: ProductionStatus.IN_PROGRESS, label: "En proceso" },
+    { value: ProductionStatus.PARTIAL, label: "Parcial" },
+    { value: ProductionStatus.COMPLETED, label: "Completado" },
+    { value: ProductionStatus.CANCELLED, label: "Cancelado" },
+  ];
 
-  const nowIso = useMemo(() => new Date().toISOString(), []);
-  const safePage = Math.max(1, pagination.page || page);
-  const totalPages = Math.max(1, pagination.totalPages);
-  const startIndex =
-    pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
-  const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
+  const rows = useMemo<ProductionRow[]>(() => {
+    return (orders ?? []).map((order) => ({
+      id:
+        order.productionId ??
+        `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt ?? ""}`,
+      registro: formatDateTime(order.manufactureDate),
+      serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
+      referencia: order.reference || "-",
+      almacenOrigen: order.fromWarehouse?.name ?? "-",
+      almacenDestino: order.toWarehouse?.name ?? "-",
+      estado: order.status ?? ProductionStatus.DRAFT,
+      tiempoProduccion: order.status ?? ProductionStatus.DRAFT,
+      termino: formatDateTime(order.manufactureDate),
+      original: order,
+    }));
+  }, [orders]);
 
-  const columns = useMemo(
-    () =>
-      getProductionColumns({
-        columnVisibility,
-        nowIso,
-        statusLabels,
-        onStart: handleStart,
-        onClose: handleClose,
-        onCancel: handleCancel,
-        onEdit: handleEdit,
-        onPdf: openProductionPdf,
-        loadOrders,
-      }),
-    [columnVisibility, nowIso]
-  );
+  const columns = useMemo<DataTableColumn<ProductionRow>[]>(() => {
+    return [
+      {
+        id: "registro",
+        header: "Registro",
+        accessorKey: "registro",
+        hideable: false,
+      },
+      {
+        id: "serie",
+        header: "Serie",
+        accessorKey: "serie",
+        sortable: false,
+      },
+      {
+        id: "referencia",
+        header: "Referencia",
+        accessorKey: "referencia",
+        sortable: false,
+      },
+      {
+        id: "almacenOrigen",
+        header: "Almacén origen",
+        accessorKey: "almacenOrigen",
+        sortable: false,
+      },
+      {
+        id: "almacenDestino",
+        header: "Almacén destino",
+        accessorKey: "almacenDestino",
+        sortable: false,
+      },
+      {
+        id: "estado",
+        header: "Estado",
+        cell: (row) => (
+          <span className="inline-flex rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
+            {row.estado ? (statusLabels[row.estado] ?? "-") : "-"}          
+          </span>
+        ),
+        hideable: false,
+        sortable: false,
+      },
+      {
+        id: "tiempoProduccion",
+        header: "T. Producción",
+        cell: (row) => {
+          const order = row.original;
 
-  const canExpandRows = useMemo(
-    () => hasHiddenExpandableFields(productionExpandedFields, columnVisibility),
-    [columnVisibility]
-  );
+          return (
+            <div className="flex h-full items-center justify-center">
+              {order.status === ProductionStatus.IN_PROGRESS && (
+                <span className="inline-flex rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
+                  <TimerToEnd
+                    from={nowIso}
+                    to={order.manufactureDate ?? ""}
+                    loadProductionOrders={loadOrders}
+                  />
+                </span>
+              )}
 
-  const table = useReactTable({
-    data: orders,
-    columns,
-    state: {
-      pagination: paginationState,
-      expanded,
-      columnVisibility,
-    },
-    onPaginationChange: setPaginationState,
-    onExpandedChange: setExpanded,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowCanExpand: () => canExpandRows,
-    getRowId: (row) => row.productionId ?? `${row.fromWarehouseId}-${row.toWarehouseId}-${row.createdAt ?? ""}`,
-    manualPagination: true,
-    pageCount: totalPages,
-  });
+              {order.status === ProductionStatus.PARTIAL && (
+                <span className="flex flex-col items-center rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
+                  <OctagonAlert className="h-4 w-4" />
+                  <span className="mt-1">Por ing.</span>
+                </span>
+              )}
+
+              {order.status === ProductionStatus.COMPLETED && (
+                <span className="flex flex-col items-center rounded-lg bg-slate-50 p-1 text-[10px] font-medium text-slate-700">
+                  <Timer className="h-4 w-4" />
+                  <span className="mt-1">Completado</span>
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: "termino",
+        header: "Término",
+        accessorKey: "termino",
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: (row) => {
+          const order = row.original;
+
+          return (
+            <div className="flex justify-end">
+              <Dropdown
+                trigger={<Menu className="h-4 w-4" />}
+                itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-black/70 hover:bg-black/[0.04]"
+                items={[
+                  order.status === ProductionStatus.DRAFT && {
+                    label: (
+                      <>
+                        <Play className="h-4 w-4 text-black/60" />
+                        Procesar
+                      </>
+                    ),
+                    onClick: () => handleStart(order.productionId ?? ""),
+                  },
+                  order.status === ProductionStatus.DRAFT && {
+                    label: (
+                      <>
+                        <Pencil className="h-4 w-4 text-black/60" />
+                        Editar
+                      </>
+                    ),
+                    onClick: () => handleEdit(order.productionId ?? ""),
+                  },
+                  {
+                    label: (
+                      <>
+                        <FileText className="h-4 w-4 text-black/60" />
+                        Abrir PDF
+                      </>
+                    ),
+                    onClick: () => openProductionPdf(order.productionId ?? ""),
+                  },
+                  order.status === ProductionStatus.DRAFT && {
+                    label: (
+                      <>
+                        <Ban className="h-4 w-4" />
+                        Cancelar
+                      </>
+                    ),
+                    className:
+                      "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-rose-700 hover:bg-rose-50",
+                    onClick: () => handleCancel(order.productionId ?? ""),
+                  },
+                  (order.status === ProductionStatus.IN_PROGRESS ||
+                    order.status === ProductionStatus.PARTIAL) && {
+                    label: (
+                      <>
+                        <PackageCheck className="h-4 w-4 text-black/60" />
+                        Ingresar a almacén
+                      </>
+                    ),
+                    onClick: () => handleClose(order.productionId ?? ""),
+                  },
+                ].filter(Boolean)}
+              />
+            </div>
+          );
+        },
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+    ];
+  }, [orders, nowIso]);
 
   return (
     <div className="w-full min-h-screen bg-white">
-      <PageTitle title="Produccion" />
+      <PageTitle title="Producción" />
+
       <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">Produccion</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Producción</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-0 text-[10px]">
+            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
               Total: <span className="font-semibold text-black">{pagination.total}</span>
             </div>
           </div>
         </div>
 
-        <section className="space-y-3 bg-gray-50 p-4 shadow-sm">
-          <div className="grid gap-3 grid-cols-[0.2fr_0.2fr_0.4fr_0.4fr_0.3fr_0.1fr]">
-            <label className="text-[10px] font-bold text-black/60">
-              Fecha inicio
-              <input
-                type="date"
-                className="mt-1 h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                style={ringStyle}
-                value={toDateInputValue(fromDate)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-                }}
-              />
-            </label>
-            <label className="text-[10px] font-bold text-black/60">
-              Fecha fin
-              <input
-                type="date"
-                className="mt-1 h-8 w-full rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                style={ringStyle}
-                value={toDateInputValue(toDate)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) => {
-                  setToDate(e.target.value);
-                  setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-                }}
-              />
-            </label>
+        <section className="rounded-2xl border border-black/10 bg-gray-50 p-4 shadow-sm space-y-4">
+          <SectionHeaderForm icon={Filter} title="Filtros" />
 
-            <label className="text-[10px] font-bold text-black/60">
-              Almacen
-              <FilterableSelect
-                value={warehouseId}
-                onChange={(value) => {
-                  setWarehouseId(value);
-                  setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-                }}
-                options={warehouseOptions}
-                placement="bottom"
-                placeholder="Almacen (todos)"
-                searchPlaceholder="Buscar almacen..."
-                className="h-8"
-                textSize="text-[10px] mt-1"
-              />
-            </label>
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.2fr_0.2fr_0.4fr_0.4fr_0.28fr]">
+            <FloatingInput
+              label="Fecha inicio"
+              name="fromDate"
+              type="date"
+              value={toDateInputValue(fromDate)}
+              onClick={(e) => tryShowPicker(e.currentTarget)}
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                setPage(1);
+              }}
+            />
 
-            <label className="text-[10px] font-bold text-black/60">
-              Estado
-              <div className="mt-1 gap-2">
-                <select
-                  className="h-8 w-full appearance-none rounded-lg border border-black/10 bg-white px-3 text-[10px] outline-none focus:ring-2"
-                  style={ringStyle}
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as "" | ProductionStatus);
-                    setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-                  }}
-                >
-                  <option value="">Estado (todos)</option>
-                  <option value={ProductionStatus.DRAFT}>Borrador</option>
-                  <option value={ProductionStatus.IN_PROGRESS}>En proceso</option>
-                  <option value={ProductionStatus.COMPLETED}>Completado</option>
-                  <option value={ProductionStatus.CANCELLED}>Cancelado</option>
-                </select>
-              </div>
-            </label>
-              <button
-                type="button"
-                className="inline-flex h-8 items-center gap-2 rounded-lg border px-3 
-                text-[11px] text-white focus:outline-none focus:ring-2 mt-5"
-                style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
-                onClick={() => navigate(RoutesPaths.productionCreate)}
-              >
-                <Plus className="h-4 w-4" />
-                Orden de produccion
-              </button>
-            <div className="flex items-center justify-end">
-              <DataTableColumnMenu
-                table={table}
-                open={showColumnMenu}
-                onToggleOpen={() => setShowColumnMenu((prev) => !prev)}
-                hiddenColumnIds={['expander', 'actions']}
-                className="h-8 mt-5"
-              />
-            </div>
+            <FloatingInput
+              label="Fecha fin"
+              name="toDate"
+              type="date"
+              value={toDateInputValue(toDate)}
+              onClick={(e) => tryShowPicker(e.currentTarget)}
+              onChange={(e) => {
+                setToDate(e.target.value);
+                setPage(1);
+              }}
+            />
+
+            <FloatingSelect
+              label="Almacén"
+              name="warehouseId"
+              value={warehouseId}
+              onChange={(value) => {
+                setWarehouseId(value);
+                setPage(1);
+              }}
+              options={warehouseOptions}
+              searchable
+              searchPlaceholder="Buscar almacén..."
+              emptyMessage="Sin almacenes"
+            />
+
+            <FloatingSelect
+              label="Estado"
+              name="statusFilter"
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value as "all" | ProductionStatus);
+                setPage(1);
+              }}
+              options={statusOptions}
+              searchable={false}
+            />
+
+            <SystemButton
+              leftIcon={<Plus className="h-4 w-4" />}
+              className="h-10 xl:mt-[2px]"
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              }}
+              onClick={() => navigate(RoutesPaths.productionCreate)}
+            >
+              Orden de producción
+            </SystemButton>
           </div>
-
         </section>
 
-        <section className="overflow-hidden border-black/10 bg-white shadow-sm">
-          <DataTable
-            table={table}
-            loading={loading}
-            error={error}
-            emptyMessage="No hay ordenes con los filtros actuales."
-            renderExpandedRow={(row) => (
-              <ProductionExpandedRow order={row.original} columnVisibility={columnVisibility} />
-            )}
-            headerCellClassName={(header) => {
-              if (header.column.id === "actions") return "px-3 py-3 text-right";
-              if (header.column.id === "expander") return "px-3 py-3 text-center";
-              return "px-3 py-3 text-left";
-            }}
-            bodyCellClassName={(cell) => {
-              if (cell.column.id === "actions") return "px-3 py-3 align-middle text-right";
-              if (cell.column.id === "expander") return "px-3 py-3 align-middle text-center";
-              return "px-3 py-3 align-middle";
-            }}
-          />
+        <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+          <div className="p-4 sm:p-5 border-b border-black/10">
+            <SectionHeaderForm icon={Factory} title="Listado de órdenes" />
+            
+          </div>
 
-          <DataTablePagination
-            loading={loading}
-            total={pagination.total}
-            page={safePage}
-            totalPages={totalPages}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            pageSize={paginationState.pageSize}
-            hasPrev={pagination.hasPrev}
-            hasNext={pagination.hasNext}
-            onPageSizeChange={(value) => {
-              setPaginationState({ pageIndex: 0, pageSize: value });
-              setExpanded({});
-            }}
-            onPrevious={() => table.previousPage()}
-            onNext={() => table.nextPage()}
-          />
+          <div className="p-4 sm:p-5">
+            <DataTable
+              tableId="production-orders-table"
+              data={rows}
+              columns={columns}
+              rowKey="id"
+              loading={loading}
+              emptyMessage="No hay órdenes con los filtros actuales."
+              hoverable={false}
+              animated={false}
+              pagination={{
+                page,
+                limit,
+                total: pagination.total,
+              }}
+              onPageChange={setPage}
+            />
+          </div>
         </section>
       </div>
     </div>

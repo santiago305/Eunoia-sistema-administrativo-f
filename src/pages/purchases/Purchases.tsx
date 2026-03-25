@@ -69,7 +69,7 @@ export default function Purchases() {
     const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
     const [toDate, setToDate] = useState(() => todayIso());
     const [page, setPage] = useState(1);
-    const limit = 10;
+    const limit = 8;
 
     const [purchases, setPurchases] = useState<PurchaseOrder[]>([]);
     const [pagination, setPagination] = useState({
@@ -387,7 +387,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[70px]",
             className: "text-black/70",
             hideable: true,
-                    sortable: false,
+            sortable: false,
         },
         {
             id: "docLabel",
@@ -396,7 +396,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[80px]",
             className: "text-black/70",
             hideable: true,
-                    sortable: false,
+            sortable: false,
         },
         {
             id: "numero",
@@ -405,7 +405,7 @@ export default function Purchases() {
             headerClassName: "text-left w-[70px]",
             className: "text-black/70",
             hideable: true,
-                    sortable: false,
+            sortable: false,
         },
         {
             id: "supplier",
@@ -432,15 +432,15 @@ export default function Purchases() {
             hideable: true,
             sortable: false,
         },
-        {
-            id: "paymentForm",
-            header: "Forma",
-            cell: (row) => <span className="text-black/70">{row.purchase.paymentForm}</span>,
-            headerClassName: "text-left w-[50px]",
-            className: "text-black/70",
-            hideable: true,
-            sortable: false,
-        },
+        // {
+        //     id: "paymentForm",
+        //     header: "Forma",
+        //     cell: (row) => <span className="text-black/70">{row.purchase.paymentForm}</span>,
+        //     headerClassName: "text-left w-[50px]",
+        //     className: "text-black/70",
+        //     hideable: true,
+        //     sortable: false,
+        // },
         {
             id: "total",
             header: "Total",
@@ -480,19 +480,19 @@ export default function Purchases() {
             hideable: true,
             sortable: false,
         },
-        {
-            id: "status",
-            header: "Estado",
-            cell: (row) => (
-                <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-                    {row.statusLabel}
-                </span>
-            ),
-            headerClassName: "text-left w-[60px]",
-            className: "text-black/70",
-            hideable: true,
-            sortable: false,
-        },
+        // {
+        //     id: "status",
+        //     header: "Estado",
+        //     cell: (row) => (
+        //         <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+        //             {row.statusLabel}
+        //         </span>
+        //     ),
+        //     headerClassName: "text-left w-[60px]",
+        //     className: "text-black/70",
+        //     hideable: true,
+        //     sortable: false,
+        // },
         {
             id: "waitTime",
             header: "T. Espera",
@@ -517,7 +517,7 @@ export default function Purchases() {
                     )}
                 </div>
             ),
-            headerClassName: "text-center w-[80px]",
+            headerClassName: "text-center w-[70px]",
             className: "text-center",
             hideable: true,
             sortable: false,
@@ -536,7 +536,7 @@ export default function Purchases() {
                     ) : null}
                 </div>
             ),
-            headerClassName: "text-left w-[70px]",
+            headerClassName: "text-left w-[50px]",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -723,48 +723,19 @@ export default function Purchases() {
                         columns={columns}
                         rowKey="id"
                         loading={loading}
-                        selectableColumns={true}
                         emptyMessage="No hay compras con los filtros actuales."
                         hoverable={false}
                         animated={false}
+                        pagination={{
+                            page,
+                            limit,
+                            total: pagination.total,
+                        }}
+                        onPageChange={setPage}
                         tableClassName="table-fixed text-[10px]"
                     />
 
                     {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-[10px] text-black/60">
-                        <span className="hidden sm:inline">
-                            Mostrando {startIndex}-{endIndex} de {pagination.total}
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                            <SystemButton
-                                variant="outline"
-                                size="sm"
-                                className="text-[10px] h-8"
-                                disabled={!pagination.hasPrev || loading}
-                                onClick={() => setPage(Math.max(1, safePage - 1))}
-                                type="button"
-                            >
-                                Anterior
-                            </SystemButton>
-
-                            <span className="tabular-nums">
-                                Pagina {safePage} de {totalPages}
-                            </span>
-
-                            <SystemButton
-                                variant="outline"
-                                size="sm"
-                                className="text-[10px] h-8"
-                                disabled={!pagination.hasNext || loading}
-                                onClick={() => setPage(safePage + 1)}
-                                type="button"
-                            >
-                                Siguiente
-                            </SystemButton>
-                        </div>
-                    </div>
                 </section>
             </div>
             {modalPayment && (
