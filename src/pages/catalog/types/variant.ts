@@ -85,6 +85,12 @@ export type FinishedProducts = {
   baseUnitId?: string;
   isActive?: boolean;
   type?: string;
+  attributes?: {
+    presentation?: string,
+    variant?:string,
+    color?:string
+  };
+  customSku?:string;
 };
 
 export type ProductOption = { 
