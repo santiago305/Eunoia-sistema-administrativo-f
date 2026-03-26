@@ -1,10 +1,13 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { Boxes } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { UbigeoSelectSection, type UbigeoSelection } from "@/components/UbigeoSelectSection";
 import { createWarehouse, getWarehouseById, updateWarehouse, updateWarehouseActive } from "@/services/warehouseServices";
-
+import { FloatingInput } from "@/components/FloatingInput";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { SystemButton } from "@/components/SystemButton";
 
 export type WarehouseFormState = {
     name: string;
@@ -47,7 +50,10 @@ export function WarehouseFormModal({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const primaryRing = useMemo(() => ({ "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties), [primaryColor]);
+    const primaryRing = useMemo(
+        () => ({ "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties),
+        [primaryColor],
+    );
 
     useEffect(() => {
         if (!open) return;
@@ -158,32 +164,30 @@ export function WarehouseFormModal({
                 animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.16 }}
             >
-                <div className="space-y-3">
-                    <div className="grid grid-cols-1">
-                        <label className="text-sm">
-                            Nombre
-                            <input
-                                className="mt-2 h-11 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2"
-                                style={primaryRing}
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                disabled={loading}
-                            />
-                        </label>
-                    </div>
-                        <UbigeoSelectSection
-                            value={{
-                                ubigeo: "",
-                                department: form.department,
-                                province: form.province,
-                                district: form.district,
-                            }}
-                            onChange={handleUbigeoChange}
-                            disabled={loading}
-                            showUbigeoInput={false}
-                            className="h-11"
-                            textSize="text-sm mt-2"
-                        />
+                <div className="space-y-4">
+                    <SectionHeaderForm icon={Boxes} title="Datos del almacén" />
+                    <FloatingInput
+                        label="Nombre"
+                        name="warehouse-name"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        disabled={loading}
+                        className="h-11 text-sm"
+                        style={primaryRing}
+                    />
+                    <UbigeoSelectSection
+                        value={{
+                            ubigeo: "",
+                            department: form.department,
+                            province: form.province,
+                            district: form.district,
+                        }}
+                        onChange={handleUbigeoChange}
+                        disabled={loading}
+                        showUbigeoInput={false}
+                        className="h-11"
+                        textSize="text-sm mt-2"
+                    />
                     <div className="grid grid-cols-1">
                         <label className="text-sm">
                             Dirección (opcional)
@@ -198,34 +202,31 @@ export function WarehouseFormModal({
                     </div>
                 </div>
 
-                {error && <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+                {error && (
+                    <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                        {error}
+                    </div>
+                )}
 
                 <div className="mt-4 flex justify-end gap-2">
-                    <button
-                        className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                        onClick={onClose}
-                        disabled={saving}
-                    >
+                    <SystemButton variant="outline" size="md" onClick={onClose} disabled={saving}>
                         Cancelar
-                    </button>
-                    <button
-                        className="rounded-lg border px-4 py-2 text-sm text-white focus:outline-none focus:ring-2"
-                        style={
-                            {
-                                backgroundColor: primaryColor,
-                                borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                                "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                            } as CSSProperties
-                        }
+                    </SystemButton>
+                    <SystemButton
+                        size="md"
+                        style={{
+                            backgroundColor: primaryColor,
+                            borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                            "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                        } as CSSProperties}
                         onClick={handleSubmit}
                         disabled={!canSubmit || loading}
+                        loading={saving}
                     >
                         {saving ? "Guardando..." : submitLabel}
-                    </button>
+                    </SystemButton>
                 </div>
             </motion.div>
         </Modal>
     );
 }
-
-

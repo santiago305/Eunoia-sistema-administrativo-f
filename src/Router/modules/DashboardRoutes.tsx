@@ -48,6 +48,8 @@ const Company = lazy(() => import("@/pages/company/Company"));
 const Production = lazy(() => import("@/pages/production/Productions"));
 const KardexPrima = lazy(() => import("@/pages/row-material/KardexPrima"));
 const KardexFinished = lazy(() => import("@/pages/catalog/KardexFinished"));
+const TransferProduct= lazy(() => import("@/pages/catalog/TransferProducts"));
+const TransferRowMaterial = lazy(() => import("@/pages/row-material/TransferRowMaterial"));
 const ProductionCreate = lazy(() => import("@/pages/production/Production"));
 const OutOrder = lazy(() => import("@/pages/out-orders/OutOrder"));
 
@@ -208,6 +210,14 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.outOrder,
                 element: withRouteGuard(RoutesPaths.outOrder, <OutOrder />),
+            },
+            {
+                path: RoutesPaths.catalogTransfer,
+                element: withRouteGuard(RoutesPaths.catalogTransfer, <TransferProduct />),
+            },
+            {
+                path: RoutesPaths.rowMaterialTransfer,
+                element: withRouteGuard(RoutesPaths.rowMaterialTransfer, <TransferRowMaterial />),
             },
         ],
     },

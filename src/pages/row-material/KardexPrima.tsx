@@ -558,7 +558,9 @@ export default function KardexProduction() {
 
                 <p>
                   <span className="font-semibold">Responsable:</span>&nbsp;
-                  {selectedRow?.referenceDoc?.createdBy?.name ?? "-"}
+                  {selectedRow?.referenceDoc?.createdBy?.name ??
+                    selectedRow?.document?.createdBy?.name ??
+                    "-"}
                 </p>
               </div>
 

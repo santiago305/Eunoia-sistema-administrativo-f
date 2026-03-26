@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, ClipboardList, FileText, Trash2 } from "lucide-react";
+import { Boxes, ClipboardList, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -13,7 +13,7 @@ import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money } from "@/utils/functionPurchases";
-import { createOutOrder } from "@/services/outOrderService";
+import { createOutOrder } from "@/services/documentService";
 import { ModalNavigateOutOrder } from "@/pages/out-orders/components/ModalNavigateOutOrder";
 import { OutOrderItemModal } from "@/pages/out-orders/components/OutOrderItemModal";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
@@ -464,6 +464,7 @@ export default function OutOrder() {
                   label="Serie"
                   name="serie"
                   value={serie.label}
+                  className="text-black/90"
                   disabled
                 />
               </div>
@@ -478,17 +479,12 @@ export default function OutOrder() {
 
             <div className="border-t border-black/10 px-4 py-3">
               <div className="flex gap-2">
-                <SystemButton type="button" variant="danger" className="flex-1 bg-gray-500" onClick={resetForm}>
+                <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
                   Limpiar
                 </SystemButton>
 
                 <SystemButton
-                  type="button"
                   className="flex-1"
-                  style={{
-                    backgroundColor: PRIMARY,
-                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                  }}
                   disabled={loading || !form.fromWarehouseId || !form.serieId || !(form.items ?? []).length}
                   onClick={saveOrder}
                 >
