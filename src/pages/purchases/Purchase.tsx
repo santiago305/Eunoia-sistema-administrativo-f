@@ -829,21 +829,11 @@ export default function PurchaseCreateLocal() {
 
             <div className="border-t border-black/10 px-3 sm:px-4 py-3">
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03]"
-                  onClick={resetForm}
-                >
+                <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
                   Limpiar
-                </button>
-
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
-                  style={{
-                    backgroundColor: PRIMARY,
-                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                  }}
+                </SystemButton>
+                <SystemButton
+                  className="flex-1"
                   disabled={
                     !form.items?.length ||
                     !form.serie.trim() ||
@@ -880,7 +870,7 @@ export default function PurchaseCreateLocal() {
                   }}
                 >
                   Agregar Pago
-                </button>
+                </SystemButton>
               </div>
             </div>
           </aside>

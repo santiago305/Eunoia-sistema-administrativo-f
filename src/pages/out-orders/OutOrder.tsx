@@ -464,6 +464,7 @@ export default function OutOrder() {
                   label="Serie"
                   name="serie"
                   value={serie.label}
+                  className="text-black/90"
                   disabled
                 />
               </div>
@@ -478,17 +479,12 @@ export default function OutOrder() {
 
             <div className="border-t border-black/10 px-4 py-3">
               <div className="flex gap-2">
-                <SystemButton type="button" variant="danger" className="flex-1 bg-gray-500" onClick={resetForm}>
+                <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
                   Limpiar
                 </SystemButton>
 
                 <SystemButton
-                  type="button"
                   className="flex-1"
-                  style={{
-                    backgroundColor: PRIMARY,
-                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                  }}
                   disabled={loading || !form.fromWarehouseId || !form.serieId || !(form.items ?? []).length}
                   onClick={saveOrder}
                 >

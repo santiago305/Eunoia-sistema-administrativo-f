@@ -65,8 +65,8 @@ export type LedgerDocumentSnapshot = {
   referenceId?: string | null;
   referenceType?: string | null;
   note?: string | null;
-  createdBy?: string | null;
-  postedBy?: string | null;
+  createdBy?: LedgerUserSnapshot;
+  postedBy?: LedgerUserSnapshot;
   postedAt?: string | null;
   createdAt?: string | null;
 };
@@ -166,6 +166,7 @@ export type LedgerEntry = {
   unitCost?: number | string | null;
   createdAt?: string | null;
   balance?: number | null;
+  createdBy?: LedgerUserSnapshot;
 };
 
 export type KardexBalances = {
