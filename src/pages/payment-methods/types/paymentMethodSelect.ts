@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 
 export type PaymentMethodSelectOption = {
   value: string;
@@ -6,6 +6,7 @@ export type PaymentMethodSelectOption = {
 };
 
 export type PaymentMethodSelectComposedProps = {
+  label?: string;
   value: string;
   onChange: (value: string) => void;
   options: PaymentMethodSelectOption[];
@@ -19,3 +20,5 @@ export type PaymentMethodSelectComposedProps = {
   emptyLabel?: string;
   renderOptionExtra?: (value: string) => ReactNode;
 };
+
+

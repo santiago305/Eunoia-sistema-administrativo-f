@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Plus, Power } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { PaymentMethodFormModal } from "@/pages/payment-methods/components/PaymentMethodFormModal";
 import { PaymentMethodSelectComposed } from "@/pages/payment-methods/components/PaymentMethodSelectComposed";
-import type {
-  PaymentMethod,
-  PaymentMethodPivot,
-} from "@/pages/payment-methods/types/paymentMethod";
+import type { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
 import type { PaymentMethodSelectOption } from "@/pages/payment-methods/types/paymentMethodSelect";
 import {
   createCompanyMethod,
@@ -16,6 +13,10 @@ import {
   getAllPaymentMethods,
   getPaymentMethodsByCompany,
 } from "@/services/paymentMethodService";
+import { FloatingInput } from "@/components/FloatingInput";
+import { SystemButton } from "@/components/SystemButton";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 
 type PaymentMethodListModalProps = {
   title: string;
@@ -69,9 +70,7 @@ export function PaymentMethodListModal({
     } catch {
       setAllMethods([]);
       if (!options?.silent) {
-        showFlash(
-          errorResponse("No se pudieron cargar los métodos de pago disponibles."),
-        );
+        showFlash(errorResponse("No se pudieron cargar los métodos de pago disponibles."));
       }
     }
   };
@@ -127,6 +126,44 @@ export function PaymentMethodListModal({
     }
   };
 
+  const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
+    () => [
+      {
+        id: "method",
+        header: "Método",
+        accessorKey: "name",
+        className: "text-black/70",
+      },
+      {
+        id: "number",
+        header: "Número",
+        cell: (row) => <span className="text-black/70">{row.number ?? "-"}</span>,
+        className: "text-black/70",
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: (row) => (
+          <div className="flex justify-end">
+            <SystemButton
+              variant="danger"
+              size="custom"
+              className="h-7 w-7 rounded-lg p-0"
+              onClick={() => removeMethod(row.methodId)}
+              title="Eliminar método"
+            >
+              <Power className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+    ],
+    [removeMethod]
+  );
+
   return (
     <Modal onClose={close} title={title} className={className}>
       <div className="space-y-3">
@@ -136,41 +173,39 @@ export function PaymentMethodListModal({
           </div>
         </div>
 
-        <div className="overflow-auto rounded-2xl border border-black/10">
+        <div className="overflow-hidden rounded-2xl border border-black/10">
           <div className="flex flex-col gap-3 border-b border-black/10 px-5 py-4 text-xs text-black/60">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="flex-1">
-                <label className="text-xs">
-                  Método
-                  <PaymentMethodSelectComposed
-                    value={selectedId}
-                    onChange={setSelectedId}
-                    options={availableOptions}
-                    onCreate={() => setOpenCreateMethod(true)}
-                    onEdit={(methodId) => setEditingMethodId(methodId)}
-                    className="h-10"
-                    textSize="text-xs"
-                    disabled={adding}
-                    emptyLabel="Sin resultados"
-                  />
-                </label>
+                <PaymentMethodSelectComposed
+                  label="Método de pago"
+                  value={selectedId}
+                  onChange={setSelectedId}
+                  options={availableOptions}
+                  onCreate={() => setOpenCreateMethod(true)}
+                  onEdit={(methodId) => setEditingMethodId(methodId)}
+                  className="h-10"
+                  textSize="text-xs"
+                  disabled={adding}
+                  emptyLabel="Sin resultados"
+                />
               </div>
 
               <div className="ml-3 flex-1">
-                <label className="text-xs">
-                  Número
-                  <input
-                    className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-xs outline-none focus:ring-2"
-                    value={number}
-                    onChange={(event) => setNumber(event.target.value)}
-                    disabled={adding}
-                  />
-                </label>
+                <FloatingInput
+                  label="Número"
+                  name="company-payment-number"
+                  value={number}
+                  onChange={(event) => setNumber(event.target.value)}
+                  disabled={adding}
+                  className="h-10 text-xs"
+                />
               </div>
 
-              <button
-                type="button"
-                className="mt-6 inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-xs text-white focus:outline-none focus:ring-2"
+              <SystemButton
+                size="sm"
+                className="mt-6"
+                leftIcon={<Plus className="h-4 w-4" />}
                 disabled={!selectedId || adding}
                 onClick={addMethod}
                 style={{
@@ -178,46 +213,22 @@ export function PaymentMethodListModal({
                   borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                 }}
               >
-                <Plus className="h-4 w-4" />
                 {adding ? "Añadiendo..." : "Añadir"}
-              </button>
+              </SystemButton>
             </div>
           </div>
 
-          <div className="max-h-80 min-h-30 overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-white">
-                <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="px-5 py-2 text-left">Método</th>
-                  <th className="px-5 py-2 text-left">Número</th>
-                  <th className="px-5 py-2 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((method) => (
-                  <tr key={method.methodId} className="border-b border-black/5">
-                    <td className="px-5 py-2 text-left">{method.name}</td>
-                    <td className="px-5 py-2 text-left">{method.number ?? "-"}</td>
-                    <td className="px-5 py-2 text-right">
-                      <button
-                        type="button"
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 font-semibold text-lime-50 hover:bg-red-400"
-                        onClick={() => removeMethod(method.methodId)}
-                        title="Eliminar método"
-                      >
-                        <Power className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {!loading && rows.length === 0 && (
-              <div className="px-4 py-4 text-sm text-black/60">
-                No hay métodos asignados.
-              </div>
-            )}
+          <div className="p-4 sm:p-5">
+            <DataTable
+              tableId="company-methods-table"
+              data={rows}
+              columns={columns}
+              rowKey="methodId"
+              loading={loading}
+              emptyMessage="No hay métodos asignados."
+              hoverable={false}
+              animated={false}
+            />
           </div>
         </div>
       </div>

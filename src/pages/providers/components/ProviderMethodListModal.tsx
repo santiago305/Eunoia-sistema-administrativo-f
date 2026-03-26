@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/settings/modal";
 import { PaymentMethodSelectComposed } from "@/pages/payment-methods/components/PaymentMethodSelectComposed";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -12,7 +12,10 @@ import {
   getPaymentMethodsBySupplier,
 } from "@/services/paymentMethodService";
 import type { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
-import { PrimaryButton } from "@/pages/profile/components/ProfilePrimitives";
+import { FloatingInput } from "@/components/FloatingInput";
+import { SystemButton } from "@/components/SystemButton";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 
 type ProviderMethodListModalProps = {
   title: string;
@@ -50,7 +53,7 @@ export function ProviderMethodListModal({
     } catch {
       setRows([]);
       if (!options?.silent) {
-        showFlash(errorResponse("No se pudieron cargar los metodos de pago."));
+        showFlash(errorResponse("No se pudieron cargar los métodos de pago."));
       }
     } finally {
       setLoading(false);
@@ -65,7 +68,7 @@ export function ProviderMethodListModal({
     } catch {
       setAllMethods([]);
       if (!options?.silent) {
-        showFlash(errorResponse("No se pudieron cargar los metodos de pago disponibles."));
+        showFlash(errorResponse("No se pudieron cargar los métodos de pago disponibles."));
       }
     }
   };
@@ -93,13 +96,13 @@ export function ProviderMethodListModal({
     clearFlash();
     setAdding(true);
     try {
-      await createSupplierMethod({ supplierId, methodId: selectedId, number:number });
-      showFlash(successResponse("Metodo agregado"));
+      await createSupplierMethod({ supplierId, methodId: selectedId, number });
+      showFlash(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
       await loadSupplierMethods({ silent: true });
     } catch {
-      showFlash(errorResponse("No se pudo agregar el metodo"));
+      showFlash(errorResponse("No se pudo agregar el método"));
     } finally {
       setAdding(false);
     }
@@ -110,94 +113,110 @@ export function ProviderMethodListModal({
     clearFlash();
     try {
       await deleteSupplierMethod(supplierId, methodId);
-      showFlash(successResponse("Metodo eliminado"));
+      showFlash(successResponse("Método eliminado"));
       await loadSupplierMethods({ silent: true });
     } catch {
-      showFlash(errorResponse("No se pudo eliminar el metodo"));
+      showFlash(errorResponse("No se pudo eliminar el método"));
     }
   };
+
+  const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
+    () => [
+      {
+        id: "method",
+        header: "Método",
+        accessorKey: "name",
+        className: "text-black/70",
+      },
+      {
+        id: "number",
+        header: "Número",
+        cell: (row) => <span className="text-black/70">{row.number ?? "-"}</span>,
+        className: "text-black/70",
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: (row) => (
+          <div className="flex justify-end">
+            <SystemButton
+              variant="danger"
+              size="custom"
+              className="h-7 w-7 rounded-lg p-0"
+              onClick={() => removeMethod(row.methodId)}
+              title="Eliminar método"
+            >
+              <Power className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+    ],
+    [removeMethod]
+  );
 
   return (
     <Modal onClose={close} title={title} className={className}>
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-xs text-black/60">{loading ? "Cargando..." : `${rows.length} metodos`}</div>
+          <div className="text-xs text-black/60">
+            {loading ? "Cargando..." : `${rows.length} métodos`}
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-black/10 overflow-auto">
+        <div className="rounded-2xl border border-black/10 overflow-hidden">
           <div className="flex flex-col gap-3 px-5 py-4 border-b border-black/10 text-xs text-black/60">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="flex-1">
-                <label className="text-xs">
-                  Metodo de pago
-                  <PaymentMethodSelectComposed
-                    value={selectedId}
-                    onChange={setSelectedId}
-                    options={availableOptions}
-                    onCreate={() => setOpenCreateMethod(true)}
-                    onEdit={(methodId) => setEditingMethodId(methodId)}
-                    className="h-10"
-                    textSize="text-xs"
-                    disabled={adding}
-                    emptyLabel="Sin resultados"
-                  />
-                </label>
+              <div className="flex-2">
+                <PaymentMethodSelectComposed
+                  label="Método de pago"
+                  value={selectedId}
+                  onChange={setSelectedId}
+                  options={availableOptions}
+                  onCreate={() => setOpenCreateMethod(true)}
+                  onEdit={(methodId) => setEditingMethodId(methodId)}
+                  className="h-10"
+                  textSize="text-xs"
+                  disabled={adding}
+                  emptyLabel="Sin resultados"
+                />
               </div>
               <div className="flex-1 ml-3">
-                <label className="text-xs">
-                  Número
-                  <input
-                    className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 
-                    text-xs outline-none focus:ring-2"
-                    value={number}
-                    onChange={(e) => setNumber(e.target.value)}
-                  />
-                </label>
-
+                <FloatingInput
+                  label="Número"
+                  name="supplier-payment-number"
+                  value={number}
+                  onChange={(e) => setNumber(e.target.value)}
+                  className="h-10 text-xs"
+                />
               </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-lg border px-3 h-9 mt-6
-                text-xs text-white focus:outline-none focus:ring-2"
-                disabled={!selectedId || adding} onClick={addMethod}                
+              <SystemButton
+                size="sm"
+                className="mb-1"
+                leftIcon={<Plus className="h-4 w-4" />}
+                disabled={!selectedId || adding}
+                onClick={addMethod}
                 style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
               >
-                <Plus className="h-4 w-4" />
-                {adding ? "Anadiendo..." : "Anadir"}
-              </button>
+                {adding ? "Añadiendo..." : ""}
+              </SystemButton>
             </div>
           </div>
 
-          <div className="max-h-80 min-h-30 overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white z-10">
-                <tr className="border-b border-black/10 text-xs text-black/60">
-                  <th className="py-2 px-5 text-left">Metodo</th>
-                  <th className="py-2 px-5 text-left">Numero</th>
-                  <th className="py-2 px-5 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((m) => (
-                  <tr key={m.methodId} className="border-b border-black/5">
-                    <td className="py-2 px-5 text-left">{m.name}</td>
-                    <td className="py-2 px-5 text-left">{m.number ?? "-"}</td>
-                    <td className="py-2 px-5 text-right">
-                      <button
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-lime-50 font-semibold hover:bg-red-400"
-                        onClick={() => removeMethod(m.methodId)}
-                        title="Eliminar metodo"
-                      >
-                        <Power className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!loading && rows.length === 0 && (
-              <div className="px-4 py-4 text-sm text-black/60">No hay metodos asignados.</div>
-            )}
+          <div className="p-4 sm:p-5">
+            <DataTable
+              tableId="supplier-methods-table"
+              data={rows}
+              columns={columns}
+              rowKey="methodId"
+              loading={loading}
+              emptyMessage="No hay métodos asignados."
+              hoverable={false}
+              animated={false}
+            />
           </div>
         </div>
       </div>
@@ -214,7 +233,7 @@ export function ProviderMethodListModal({
           void loadSupplierMethods({ silent: true });
         }}
         primaryColor={PRIMARY}
-        entityLabel="metodo de pago"
+        entityLabel="método de pago"
       />
     </Modal>
   );
