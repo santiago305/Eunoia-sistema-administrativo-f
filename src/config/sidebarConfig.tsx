@@ -87,6 +87,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Ajustes",
                 href: RoutesPaths.catalogAdjustments,
             },
+            {
+                label: "Transferencias",
+                href: RoutesPaths.catalogTransfer,
+            },
             // {
             //     label: "Variantes",
             //     href: RoutesPaths.catalogVariants,

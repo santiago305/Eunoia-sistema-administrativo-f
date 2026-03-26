@@ -13,7 +13,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
-import { createAdjustment } from "@/services/adjustmentService";
+import { createAdjustment } from "@/services/documentService";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import { getStock } from "@/services/inventoryService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";

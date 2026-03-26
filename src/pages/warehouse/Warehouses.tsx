@@ -1,34 +1,32 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/settings/modal";
 import { motion, useReducedMotion } from "framer-motion";
-import { Download, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, Download, Filter, Menu, Pencil, Plus, Power } from "lucide-react";
 
 import { useWarehouses } from "@/hooks/useWarehouse";
 import { listWarehouses } from "@/services/warehouseServices";
+import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
-import { fadeUp } from "@/utils/animations";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SystemButton } from "@/components/SystemButton";
+import { Dropdown } from "@/components/Dropdown";
+import { StatusPill } from "@/components/StatusTag";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 
-import { DataTable } from "@/components/data-table/DataTable";
-import { DataTableColumnMenu } from "@/components/data-table/DataTableColumnMenu";
-import { DataTablePagination } from "@/components/data-table/DataTablePagination";
-import {
-  getCoreRowModel,
-  getExpandedRowModel,
-  useReactTable,
-  type ExpandedState,
-  type PaginationState,
-  type VisibilityState,
-} from "@tanstack/react-table";
-import { getWarehouseColumns } from "./components/data-table/Warehouse.columns";
-import { WarehouseExpandedRow } from "./components/data-table/WarehouseExpandedRow";
-import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
-import { warehouseExpandedFields } from "./components/data-table/warehouseExpandedFields";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
+
+const statusOptions = [
+  { value: "active", label: "Activos" },
+  { value: "inactive", label: "Eliminados" },
+];
 
 export default function Warehouses() {
   const shouldReduceMotion = useReducedMotion();
@@ -43,19 +41,12 @@ export default function Warehouses() {
   const [debouncedQ, setDebouncedQ] = useState("");
   const [exporting, setExporting] = useState(false);
 
-  const [paginationState, setPaginationState] = useState<PaginationState>({
+  const [paginationState, setPaginationState] = useState({
     pageIndex: 0,
     pageSize: DEFAULT_LIMIT,
   });
   const page = paginationState.pageIndex + 1;
   const limit = paginationState.pageSize;
-
-  const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    createdAt: false,
-    updatedAt: false,
-  });
-  const [showColumnMenu, setShowColumnMenu] = useState(false);
 
   const queryParams = useMemo(
     () => ({
@@ -82,7 +73,6 @@ export default function Warehouses() {
     const handler = setTimeout(() => {
       setDebouncedQ(searchText.trim());
       setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-      setExpanded({});
     }, 450);
     return () => clearTimeout(handler);
   }, [searchText]);
@@ -96,17 +86,8 @@ export default function Warehouses() {
     }
   }, [apiPage, apiLimit, paginationState.pageIndex, paginationState.pageSize]);
 
-  useEffect(() => {
-    setExpanded({});
-  }, [columnVisibility, statusFilter]);
-
   const effectiveLimit = apiLimit ?? limit;
   const safePage = apiPage ?? page;
-  const totalPages = Math.max(1, Math.ceil(total / effectiveLimit));
-  const hasPrev = safePage > 1;
-  const hasNext = safePage < totalPages;
-  const startIndex = total === 0 ? 0 : (safePage - 1) * effectiveLimit + 1;
-  const endIndex = Math.min(safePage * effectiveLimit, total);
 
   const sortedWarehouses = useMemo(() => {
     return [...warehouses].sort(
@@ -159,42 +140,118 @@ export default function Warehouses() {
     });
   };
 
-  const columns = useMemo(
-    () =>
-      getWarehouseColumns({
-        primaryColor: PRIMARY,
-        columnVisibility,
-        formatDate,
-        onEdit: startEdit,
-        onOpenLocations: openLocationsModal,
-        onToggleActive: setDeletingWarehouseId,
-      }),
-    [columnVisibility]
+  const columns = useMemo<DataTableColumn<Warehouse>[]>(
+    () => [
+      {
+        id: "name",
+        header: "Almacén",
+        accessorKey: "name",
+        className: "text-black/70",
+        cardTitle: true,
+      },
+      {
+        id: "department",
+        header: "Departamento",
+        accessorKey: "department",
+        className: "text-black/70",
+        sortable:false
+      },
+      {
+        id: "province",
+        header: "Provincia",
+        accessorKey: "province",
+        className: "text-black/70",
+        sortable:false
+      },
+      {
+        id: "district",
+        header: "Distrito",
+        accessorKey: "district",
+        className: "text-black/70",
+        sortable:false
+      },
+      {
+        id: "address",
+        header: "Dirección",
+        cell: (row) => <span className="text-black/70">{row.address ?? "-"}</span>,
+        className: "text-black/70",
+        visible: false,
+        hideable: true,
+        sortable:false
+      },
+      {
+        id: "status",
+        header: "Estado",
+        cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
+        headerClassName: "text-left",
+        sortable:false
+      },
+      {
+        id: "createdAt",
+        header: "Creado",
+        cell: (row) => <span className="text-black/60 text-xs">{formatDate(row.createdAt)}</span>,
+        visible: false,
+        hideable: true,
+        sortable:false
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: (row) => (
+          <div className="flex items-center justify-end">
+            <Dropdown
+              trigger={<Menu className="h-4 w-4" />}
+              menuClassName="min-w-52 p-2"
+              itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+              items={[
+                {
+                  label: (
+                    <>
+                      <Boxes className="h-4 w-4 text-black/60" />
+                      Ver ubicaciones
+                    </>
+                  ),
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    openLocationsModal({ warehouseId: row.warehouseId, name: row.name });
+                  },
+                },
+                {
+                  label: (
+                    <>
+                      <Pencil className="h-4 w-4 text-black/60" />
+                      Editar
+                    </>
+                  ),
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    startEdit(row.warehouseId);
+                  },
+                },
+                {
+                  label: (
+                    <>
+                      <Power className="h-4 w-4" />
+                      {row.isActive ? "Eliminar" : "Restaurar"}
+                    </>
+                  ),
+                  className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"}`,
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    setDeletingWarehouseId(row.warehouseId);
+                  },
+                },
+              ]}
+            />
+          </div>
+        ),
+        className: "text-right",
+        headerClassName: "text-right",
+        hideable: false,
+      },
+    ],
+    [formatDate, openLocationsModal, startEdit]
   );
-
-  const canExpandRows = useMemo(
-    () => hasHiddenExpandableFields(warehouseExpandedFields, columnVisibility),
-    [columnVisibility]
-  );
-
-  const table = useReactTable({
-    data: sortedWarehouses,
-    columns,
-    state: {
-      pagination: paginationState,
-      expanded,
-      columnVisibility,
-    },
-    onPaginationChange: setPaginationState,
-    onExpandedChange: setExpanded,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowCanExpand: () => canExpandRows,
-    getRowId: (row) => row.warehouseId,
-    manualPagination: true,
-    pageCount: totalPages,
-  });
 
   const buildCsv = (
     rows: Array<{
@@ -285,39 +342,33 @@ export default function Warehouses() {
     <div className="w-full min-h-screen bg-white text-black">
       <PageTitle title="Almacenes" />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-4  px-4 py-4 sm:px-6 lg:px-8 
-      2xl:max-w-[1700px] 3xl:max-w-[1900px]">
-        <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
-          animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.18 }}
-          className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
-        >
+      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold tracking-tight">Almacenes</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs">
+            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
               Total: <span className="font-semibold text-black">{total}</span>
             </div>
 
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-black/10"
+            <SystemButton
+              variant="outline"
+              size="sm"
+              leftIcon={<Download className="h-4 w-4" />}
               onClick={downloadCsv}
               disabled={exporting}
               title="Exportar CSV"
             >
-              <Download className="h-4 w-4" />
               {exporting ? "Exportando..." : "Exportar CSV"}
-            </button>
+            </SystemButton>
 
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-white focus:outline-none focus:ring-2"
+            <SystemButton
+              size="sm"
+              leftIcon={<Plus className="h-4 w-4" />}
               onClick={startCreate}
-              title="Nuevo almacen"
+              title="Nuevo almacén"
               style={{
                 backgroundColor: PRIMARY,
                 borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
@@ -330,102 +381,75 @@ export default function Warehouses() {
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
               }}
             >
-              <Plus className="h-4 w-4" />
-              Nuevo almacen
-            </button>
+              Nuevo almacén
+            </SystemButton>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.section
-          initial={shouldReduceMotion ? false : "hidden"}
-          animate={shouldReduceMotion ? false : "show"}
-          variants={fadeUp}
-          className="bg-gray-50 p-4 shadow-sm sm:p-5"
-        >
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1fr)_240px_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <input
-                className="h-10 w-full rounded-lg border border-black/10 bg-white pl-10 pr-3 text-sm outline-none focus:ring-2"
-                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
-                placeholder="Buscar (nombre / depto / provincia / distrito)"
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-              />
-            </div>
+        <section className="rounded-2xl border border-black/10 bg-gray-50 p-4 shadow-sm space-y-4">
+          <SectionHeaderForm icon={Filter} title="Filtros" />
 
-            <div className="relative">
-              <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 
-              text-black/40" />
-              <select
-                className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-10 pr-9
-                 text-sm outline-none focus:ring-2"
-                style={{ "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)` } as CSSProperties}
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value);
-                  setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-                  setExpanded({});
-                }}
-              >
-                <option value="active">Activos</option>
-                <option value="inactive">Eliminados</option>
-              </select>
-            </div>
-
-            <DataTableColumnMenu
-              table={table}
-              open={showColumnMenu}
-              onToggleOpen={() => setShowColumnMenu((prev) => !prev)}
-              hiddenColumnIds={["expander", "actions"]}
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.45fr_0.25fr_0.2fr]">
+            <FloatingInput
+              label="Buscar"
+              name="warehouse-search"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              className="h-10 text-sm"
             />
+
+            <FloatingSelect
+              label="Estado"
+              name="warehouse-status"
+              value={statusFilter}
+              options={statusOptions}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
+              }}
+              className="h-10 text-sm"
+            />
+
+            <SystemButton
+              variant="outline"
+              size="sm"
+              className="h-10"
+              onClick={() => void refetch()}
+              disabled={loading}
+            >
+              {loading ? "Cargando..." : "Refrescar"}
+            </SystemButton>
           </div>
-        </motion.section>
+        </section>
 
-        <motion.section
-          initial={shouldReduceMotion ? false : "hidden"}
-          animate={shouldReduceMotion ? false : "show"}
-          variants={fadeUp}
-          className="overflow-hidden bg-white shadow-sm"
-        >
-          <DataTable
-            table={table}
-            loading={loading}
-            error={error ? String(error) : null}
-            emptyMessage="No hay almacenes con los filtros actuales."
-            renderExpandedRow={(row) => (
-              <WarehouseExpandedRow warehouse={row.original} columnVisibility={columnVisibility} />
-            )}
-            headerCellClassName={(header) => {
-              if (header.column.id === "actions") return "px-5 py-3 text-right";
-              if (header.column.id === "expander") return "px-5 py-3 text-center";
-              return "px-5 py-3 text-left";
-            }}
-            bodyCellClassName={(cell) => {
-              if (cell.column.id === "actions") return "px-5 py-3 align-middle text-right";
-              if (cell.column.id === "expander") return "px-5 py-3 align-middle text-center";
-              return "px-5 py-3 align-middle";
-            }}
-          />
+        <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+          <div className="p-4 sm:p-5 border-b border-black/10">
+            <SectionHeaderForm icon={Boxes} title="Listado de almacenes" />
+          </div>
 
-          <DataTablePagination
-            loading={loading}
-            total={total}
-            page={safePage}
-            totalPages={totalPages}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            pageSize={paginationState.pageSize}
-            hasPrev={hasPrev}
-            hasNext={hasNext}
-            onPageSizeChange={(value) => {
-              setPaginationState({ pageIndex: 0, pageSize: value });
-              setExpanded({});
-            }}
-            onPrevious={() => table.previousPage()}
-            onNext={() => table.nextPage()}
-          />
-        </motion.section>
+          <div className="p-4 sm:p-5">
+            <DataTable
+              tableId="warehouses-table"
+              data={sortedWarehouses}
+              columns={columns}
+              rowKey="warehouseId"
+              loading={loading}
+              emptyMessage="No hay almacenes con los filtros actuales."
+              hoverable={false}
+              animated={false}
+              pagination={{
+                page: safePage,
+                limit: effectiveLimit,
+                total,
+              }}
+              onPageChange={(nextPage) => {
+                setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+              }}
+            />
+
+            {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
+          </div>
+        </section>
       </div>
 
       <WarehouseFormModal
@@ -437,37 +461,31 @@ export default function Warehouses() {
           void refetch();
         }}
         primaryColor={PRIMARY}
-        entityLabel="almacen"
+        entityLabel="almacén"
       />
 
       {deletingWarehouseId && (
-        <Modal title="Confirmar accion" onClose={() => setDeletingWarehouseId(null)} className="max-w-md">
+        <Modal title="Confirmar acción" onClose={() => setDeletingWarehouseId(null)} className="max-w-md">
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
             animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.16 }}
           >
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
-              <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un almacen. Hazlo solo si estas seguro.
+              <span className="font-semibold">Ojo:</span> estás por cambiar el estado de un almacén. Hazlo solo si estás seguro.
             </div>
 
             <p className="mt-3 text-[11px] text-black/70">
-              Confirmas esta accion? Puede afectar disponibilidad, reportes y procesos internos.
+              ¿Confirmas esta acción? Puede afectar disponibilidad, reportes y procesos internos.
             </p>
 
             <div className="mt-4 flex justify-end gap-2">
-              <button
-                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-[11px] hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                onClick={() => setDeletingWarehouseId(null)}
-              >
+              <SystemButton variant="outline" size="sm" onClick={() => setDeletingWarehouseId(null)}>
                 Cancelar
-              </button>
-              <button
-                className="rounded-lg border border-rose-600/20 bg-rose-600 px-4 py-2 text-[11px] text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/25"
-                onClick={confirmDelete}
-              >
+              </SystemButton>
+              <SystemButton variant="danger" size="sm" onClick={confirmDelete}>
                 Confirmar
-              </button>
+              </SystemButton>
             </div>
           </motion.div>
         </Modal>

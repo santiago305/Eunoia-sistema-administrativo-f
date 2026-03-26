@@ -269,14 +269,11 @@ export default function KardexProduction() {
     setSelectedRow(rows[0] ?? null);
   }, [rows]);
 
-  const startIndex = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
-  const endIndex = Math.min(pagination.page * pagination.limit, pagination.total);
-
   const productOptions = useMemo(
     () =>
       (products ?? []).map((p) => ({
         value: p.itemId ?? p.id ?? p.primaId ?? "",
-        label: `${p.productName ?? "Materia prima"} ${p.attributes?.presentation ?? ""} ${p.attributes?.variant ?? ""} ${p.attributes?.color ?? ""}
+        label: `${p.productName ?? "Producto"} ${p.attributes?.presentation ?? ""} ${p.attributes?.variant ?? ""} ${p.attributes?.color ?? ""}
         ${p.sku ? ` - ${p.sku}`: ""} (${p.customSku ?? "-"})`,      })),
     [products],
   );
@@ -561,7 +558,9 @@ export default function KardexProduction() {
 
                 <p>
                   <span className="font-semibold">Responsable:</span>&nbsp;
-                  {selectedRow?.referenceDoc?.createdBy?.name ?? "-"}
+                    {selectedRow?.referenceDoc?.createdBy?.name ??
+                    selectedRow?.document?.createdBy?.name ??
+                    "-"}                
                 </p>
               </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, ClipboardList, FileText, Trash2 } from "lucide-react";
+import { Boxes, ClipboardList, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -13,7 +13,7 @@ import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money } from "@/utils/functionPurchases";
-import { createOutOrder } from "@/services/outOrderService";
+import { createOutOrder } from "@/services/documentService";
 import { ModalNavigateOutOrder } from "@/pages/out-orders/components/ModalNavigateOutOrder";
 import { OutOrderItemModal } from "@/pages/out-orders/components/OutOrderItemModal";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
