@@ -17,13 +17,15 @@ import { createTransfer } from "@/services/documentService";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import { getStock } from "@/services/inventoryService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
-import type { FinishedProducts } from "@/pages/catalog/types/variant";
+import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
-import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, CreateTransfer, Stock, TransferItem, TransferItemModalProps, TransferItemRow, TransferResultModalProps } from "./types/transfer";
+import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, CreateTransfer, Stock, TransferItem, TransferItemModalProps, TransferItemRow, TransferResultModalProps } from "../catalog/types/transfer";
 
 const CURRENCY = "PEN";
+
+
 
 function TransferItemModal({ open, pendingItem, onChange, onClose, onAdd }: TransferItemModalProps) {
     if (!open) return null;
@@ -125,7 +127,7 @@ function TransferResultModal({ open, transferId, onNew, onGoToList, onClose, tit
     );
 }
 
-export default function TransferProducts() {
+export default function TransferRowMaterial() {
     const { showFlash, clearFlash } = useFlashMessage();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -134,8 +136,8 @@ export default function TransferProducts() {
     const [openItemModal, setOpenItemModal] = useState(false);
     const [openNavigateModal, setOpenNavigateModal] = useState(false);
     const [lastSavedTransferId, setLastSavedTransferId] = useState("");
-    const [products, setProducts] = useState<FinishedProducts[]>([]);
-    const [searchResults, setSearchResults] = useState<FinishedProducts[]>([]);
+    const [products, setProducts] = useState<PrimaVariant[]>([]);
+    const [searchResults, setSearchResults] = useState<PrimaVariant[]>([]);
     const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
     const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
     const [query, setQuery] = useState("");
@@ -204,7 +206,7 @@ export default function TransferProducts() {
         try {
             const res = await searchProductAndVariant({
                 q: query,
-                raw: false,
+                raw: true,
             });
             setSearchResults(res ?? []);
         } catch {
@@ -213,11 +215,14 @@ export default function TransferProducts() {
         }
     };
 
+    const resolveItemId = (item?: { itemId?: string; primaId?: string; id?: string }) =>
+        item?.itemId ?? item?.primaId ?? item?.id ?? "";
+
     const productOptions = useMemo(
         () => [
             { value: "", label: "Seleccionar producto" },
             ...(searchResults ?? []).map((v) => ({
-                value: v.itemId ?? v.id ?? "",
+                value: resolveItemId(v),
                 label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}${v.sku ? ` - ${v.sku}` : ""} (${v.customSku ?? "-"})`,
             })),
         ],
@@ -227,8 +232,8 @@ export default function TransferProducts() {
     const addItem = () => {
         const { stockItemId, quantity } = pendingItem;
         const selected =
-            searchResults.find((p) => (p.itemId ?? p.id) === stockItemId) ??
-            products.find((p) => (p.itemId ?? p.id) === stockItemId);
+            searchResults.find((p) => resolveItemId(p) === stockItemId) ??
+            products.find((p) => resolveItemId(p) === stockItemId);
 
         if (!stockItemId) {
             showFlash(errorResponse("Selecciona un producto"));
@@ -253,9 +258,9 @@ export default function TransferProducts() {
             items: [...(prev.items ?? []), { stockItemId, quantity }],
         }));
         setProducts((prev) => {
-            const selectedId = selected.itemId ?? selected.id;
+            const selectedId = resolveItemId(selected);
             if (!selectedId) return prev;
-            const exists = prev.some((p) => (p.itemId ?? p.id) === selectedId);
+            const exists = prev.some((p) => resolveItemId(p) === selectedId);
             return exists ? prev : [...prev, selected];
         });
         setPendingItem(buildEmptyItemTransfer());
@@ -281,7 +286,7 @@ export default function TransferProducts() {
 
     const itemRows = useMemo<TransferItemRow[]>(() => {
         return (form.items ?? []).map((item, index) => {
-            const product = products.find((p) => (p.itemId ?? p.id) === item.stockItemId);
+            const product = products.find((p) => resolveItemId(p) === item.stockItemId);
             return {
                 ...item,
                 rowIndex: index,
@@ -467,11 +472,11 @@ export default function TransferProducts() {
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
                     <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
                         <div className="border-b border-black/10 p-3 sm:p-4">
-                            <SectionHeaderForm icon={Boxes} title="Productos" />
+                            <SectionHeaderForm icon={Boxes} title="Materia prima y materiales" />
                             <div className="mt-3 grid grid-cols-1 gap-2">
                                 <FloatingSelect
                                     label="Seleccionar producto"
-                                    name="transfer-product"
+                                    name="transfer-row-material"
                                     value={pendingItem.stockItemId}
                                     options={productOptions}
                                     onChange={(value) => {
@@ -681,15 +686,15 @@ export default function TransferProducts() {
                     setOpenNavigateModal(false);
                     resetForm();
                     setLastSavedTransferId("");
-                    navigate(RoutesPaths.catalogTransfer);
+                    navigate(RoutesPaths.rowMaterialTransfer);
                 }}
                 onGoToList={() => {
                     setOpenNavigateModal(false);
-                    navigate(RoutesPaths.KardexFinished);
+                    navigate(RoutesPaths.KardexPrima);
                 }}
                 transferId={lastSavedTransferId}
                 title="Transferencia de inventario procesada"
-                goToLabel="Ir a kardex de productos terminados"
+                goToLabel="Ir a kardex de materia prima"
             />
         </div>
     );
