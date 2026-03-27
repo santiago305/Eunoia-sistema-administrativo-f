@@ -33,8 +33,8 @@ export function RecipeFormFields({
 
     const primaVariantOptions = (activePrimaVariants ?? []).map((v) => ({
         value: v.id ?? "",
-        label: `${v.productName ?? "Producto"} (${v.sku})`,
-    }));
+        label: `${v.productName ?? "Producto"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
+        ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      })); 
 
     const selectedPrimaVariant = (activePrimaVariants ?? []).find((v) => v.id === primaVariantId);
     const baseUnitLabel =
