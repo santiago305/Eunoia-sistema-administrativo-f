@@ -1,4 +1,4 @@
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { SystemButton } from "@/components/SystemButton";
 import { Plus } from "lucide-react";
@@ -32,7 +32,8 @@ export function ProductionItemModal({
   const accent = primaryColor ?? DEFAULT_PRIMARY;
 
   return (
-    <Modal title="Agregar item" onClose={onClose} className="max-w-xs space-y-3">
+    <Modal open={open} title="Agregar item" onClose={onClose} className="w-[300px] max-h-[300px]
+     space-y-3">
       <div className="grid grid-cols-1 gap-3">
         <FloatingInput
           label="Cantidad"

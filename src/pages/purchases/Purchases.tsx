@@ -20,7 +20,7 @@ import { SupplierOption } from "../providers/types/supplier";
 import { Warehouse } from "../warehouse/types/warehouse";
 import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
-import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
+import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
 import { Dropdown } from "../../components/Dropdown";
 import { Filter, Menu, OctagonAlert, Timer } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
@@ -97,7 +97,6 @@ export default function Purchases() {
     const [paymentForm, setPaymentForm] = useState("");
     const [openPdfModal, setOpenPdfModal] = useState(false);
     const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
-
 
     const docTypeOptions = [
         { value: "", label: "todos" },
@@ -321,9 +320,7 @@ export default function Purchases() {
     const purchaseRows = useMemo<PurchaseRow[]>(
         () =>
             purchases.map((purchase) => {
-                const numero = [purchase.serie, purchase.correlative]
-                    .filter((v) => v !== null && v !== undefined && String(v).length > 0)
-                    .join("-");
+                const numero = [purchase.serie, purchase.correlative].filter((v) => v !== null && v !== undefined && String(v).length > 0).join("-");
                 const supplierMeta = purchase.supplierId ? supplierMetaById.get(purchase.supplierId) : undefined;
                 const warehouseMeta = purchase.warehouseId ? warehouseMetaById.get(purchase.warehouseId) : undefined;
                 const statusLabel = purchase.status ? (statusLabels[purchase.status] ?? purchase.status) : "-";
@@ -359,7 +356,7 @@ export default function Purchases() {
                     dateEnter,
                     timeEnter,
                 };
-        }),
+            }),
         [purchases, supplierMetaById, warehouseMetaById],
     );
 
@@ -407,9 +404,7 @@ export default function Purchases() {
             cell: (row) => (
                 <div className="text-black/70">
                     <div>{row.supplierLabel}</div>
-                    {row.supplierDoc ? (
-                        <div className="text-[10px] text-black/50">{row.supplierDoc}</div>
-                    ) : null}
+                    {row.supplierDoc ? <div className="text-[10px] text-black/50">{row.supplierDoc}</div> : null}
                 </div>
             ),
             headerClassName: "text-left w-[80px]",
@@ -438,11 +433,7 @@ export default function Purchases() {
         {
             id: "total",
             header: "Total",
-            cell: (row) => (
-                <span className="text-black/70 tabular-nums">
-                    {money(row.purchase.total ?? 0, row.purchase.currency)}
-                </span>
-            ),
+            cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.total ?? 0, row.purchase.currency)}</span>,
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
@@ -451,11 +442,7 @@ export default function Purchases() {
         {
             id: "totalPaid",
             header: "Pagado",
-            cell: (row) => (
-                <span className="text-black/70 tabular-nums">
-                    {money(row.purchase.totalPaid ?? 0, row.purchase.currency)}
-                </span>
-            ),
+            cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.totalPaid ?? 0, row.purchase.currency)}</span>,
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
@@ -464,11 +451,7 @@ export default function Purchases() {
         {
             id: "totalToPay",
             header: "Pendiente",
-            cell: (row) => (
-                <span className="text-black/70 tabular-nums">
-                    {money(row.purchase.totalToPay ?? 0, row.purchase.currency)}
-                </span>
-            ),
+            cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.totalToPay ?? 0, row.purchase.currency)}</span>,
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
@@ -543,8 +526,7 @@ export default function Purchases() {
                     trigger={<Menu className="h-4 w-4" />}
                     itemClassName="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
                     items={[
-                        (row.purchase.status === PurchaseOrderStatuses.SENT ||
-                            row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                        (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
                             label: "Ingresar Almacen",
                             onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
                         },
@@ -648,13 +630,7 @@ export default function Purchases() {
                             }}
                             className="h-9 text-xs"
                         />
-                        <FloatingInput
-                            label="N. documento"
-                            name="document-number"
-                            value={numeroInput}
-                            onChange={(e) => setNumeroInput(e.target.value)}
-                            className="h-9 text-xs"
-                        />
+                        <FloatingInput label="N. documento" name="document-number" value={numeroInput} onChange={(e) => setNumeroInput(e.target.value)} className="h-9 text-xs" />
 
                         <FloatingSelect
                             label="Proveedor"

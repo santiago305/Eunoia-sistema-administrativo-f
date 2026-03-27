@@ -1,7 +1,7 @@
 import { Boxes, ChevronDown, ChevronRight, Menu, Pencil, Power } from "lucide-react";
 import { createColumnHelper, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { StatusPill } from "@/components/StatusTag";
-import { Dropdown } from "@/components/Dropdown";
+import { ActionsPopover } from "@/components/ActionsPopover";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { warehouseExpandedFields } from "./warehouseExpandedFields";
 import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
@@ -89,49 +89,34 @@ export function getWarehouseColumns({ primaryColor, columnVisibility, formatDate
 
                 return (
                     <div className="flex items-center justify-end">
-                        <Dropdown
-                            trigger={<Menu className="h-4 w-4" />}
-                            menuClassName="min-w-52 p-2"
-                            itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                            items={[
+                        <ActionsPopover
+                            actions={[
                                 {
-                                    label: (
-                                        <>
-                                            <Boxes className="h-4 w-4 text-black/60" />
-                                            Ver ubicaciones
-                                        </>
-                                    ),
-                                    onClick: (e: any) => {
-                                        e.stopPropagation();
-                                        onOpenLocations({ warehouseId: w.warehouseId, name: w.name });
-                                    },
+                                    id: "locations",
+                                    label: "Ver ubicaciones",
+                                    icon: <Boxes className="h-4 w-4" />,
+                                    onClick: () => onOpenLocations({ warehouseId: w.warehouseId, name: w.name }),
                                 },
                                 {
-                                    label: (
-                                        <>
-                                            <Pencil className="h-4 w-4 text-black/60" />
-                                            Editar
-                                        </>
-                                    ),
-                                    onClick: (e: any) => {
-                                        e.stopPropagation();
-                                        onEdit(w.warehouseId);
-                                    },
+                                    id: "edit",
+                                    label: "Editar",
+                                    icon: <Pencil className="h-4 w-4" />,
+                                    onClick: () => onEdit(w.warehouseId),
                                 },
                                 {
-                                    label: (
-                                        <>
-                                            <Power className="h-4 w-4" />
-                                            {w.isActive ? "Eliminar" : "Restaurar"}
-                                        </>
-                                    ),
-                                    className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${w.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"}`,
-                                    onClick: (e: any) => {
-                                        e.stopPropagation();
-                                        onToggleActive(w.warehouseId);
-                                    },
+                                    id: "toggle",
+                                    label: w.isActive ? "Eliminar" : "Restaurar",
+                                    icon: <Power className="h-4 w-4" />,
+                                    danger: w.isActive,
+                                    onClick: () => onToggleActive(w.warehouseId),
                                 },
                             ]}
+                            columns={1}
+                            triggerIcon={<Menu className="h-4 w-4" />}
+                            triggerVariant="ghost"
+                            compact
+                            popoverClassName="min-w-52 p-2"
+                            itemClassName="justify-start px-3 py-2 text-[11px]"
                         />
                     </div>
                 );

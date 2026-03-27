@@ -1,22 +1,23 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
-import { Boxes, Filter, Menu, Pencil, Plus, Power, Timer } from "lucide-react";
+import { Filter, Menu, Pencil, Plus, Power, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
-import { Dropdown } from "@/components/Dropdown";
+import { ActionsPopover } from "@/components/ActionsPopover";
 import { StatusPill } from "@/components/StatusTag";
 import { IconPaymentMethod } from "@/components/dashboard/icons";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -213,52 +214,37 @@ export default function Providers() {
         header: "",
         cell: (row) => (
           <div className="flex items-center justify-end">
-            <Dropdown
-              trigger={<Menu className="h-4 w-4" />}
-              menuClassName="min-w-52 p-2"
-              itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-              items={[
+            <ActionsPopover
+              actions={[
                 {
-                  label: (
-                    <>
-                      <Pencil className="h-4 w-4 text-black/60" />
-                      Editar
-                    </>
-                  ),
-                  onClick: (e: any) => {
-                    e.stopPropagation();
-                    openEdit(row.supplierId);
-                  },
+                  id: "edit",
+                  label: "Editar",
+                  icon: <Pencil className="h-4 w-4" />,
+                  onClick: () => openEdit(row.supplierId),
                 },
                 {
-                  label: (
-                    <>
-                      <IconPaymentMethod />
-                      Métodos de pago
-                    </>
-                  ),
-                  onClick: (e: any) => {
-                    e.stopPropagation();
-                    setMethodSupplierId(row.supplierId);
-                  },
+                  id: "methods",
+                  label: "Métodos de pago",
+                  icon: <IconPaymentMethod />,
+                  onClick: () => setMethodSupplierId(row.supplierId),
                 },
                 {
-                  label: (
-                    <>
-                      <Power className="h-4 w-4" />
-                      {row.isActive ? "Eliminar" : "Restaurar"}
-                    </>
-                  ),
-                  className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                    row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"
-                  }`,
-                  onClick: (e: any) => {
-                    e.stopPropagation();
+                  id: "toggle",
+                  label: row.isActive ? "Eliminar" : "Restaurar",
+                  icon: <Power className="h-4 w-4" />,
+                  danger: row.isActive,
+                  onClick: () => {
                     setToggleSupplierId(row.supplierId);
                     setNextActiveState(!row.isActive);
                   },
                 },
               ]}
+              columns={1}
+              triggerIcon={<Menu className="h-4 w-4" />}
+              triggerVariant="ghost"
+              compact
+              popoverClassName="min-w-52 p-2"
+              itemClassName="justify-start px-3 py-2 text-[11px]"
             />
           </div>
         ),
@@ -277,11 +263,13 @@ export default function Providers() {
     <div className="min-h-screen w-full bg-white text-black">
       <PageTitle title="Proveedores" />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">Proveedores</h1>
-          </div>
+      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2
+       sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
+          <Headed
+            title="Proveedores"
+            size="lg"
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
@@ -326,25 +314,10 @@ export default function Providers() {
               }}
               className="h-10 text-sm"
             />
-
-            <SystemButton
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => void loadSuppliers()}
-              disabled={loading}
-            >
-              {loading ? "Cargando..." : "Refrescar"}
-            </SystemButton>
           </div>
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-          <div className="p-4 sm:p-5 border-b border-black/10">
-            <SectionHeaderForm icon={Boxes} title="Listado de proveedores" />
-          </div>
-
-          <div className="p-4 sm:p-5">
             <DataTable
               tableId="providers-table"
               data={suppliers}
@@ -366,7 +339,6 @@ export default function Providers() {
             />
 
             {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
-          </div>
         </section>
       </div>
 
@@ -394,6 +366,7 @@ export default function Providers() {
 
       {toggleSupplierId && (
         <Modal
+          open={true}
           title={nextActiveState ? "Activar proveedor" : "Desactivar proveedor"}
           onClose={() => setToggleSupplierId(null)}
           className="max-w-md"
@@ -425,7 +398,7 @@ export default function Providers() {
           title="Métodos de pago del proveedor"
           supplierId={methodSupplierId}
           close={() => setMethodSupplierId(null)}
-          className="max-w-[600px]"
+          className="w-[600px] max-h-[600px]"
         />
       )}
     </div>

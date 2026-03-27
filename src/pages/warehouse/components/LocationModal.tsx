@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { motion, useReducedMotion } from "framer-motion";
 import { MapPin, Pencil, Plus, Power } from "lucide-react";
 
@@ -265,7 +265,12 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
 
     return (
         <>
-            <Modal title={`Ubicaciones del almacén - ${warehouse.name}`} onClose={onClose} className="max-w-4xl">
+            <Modal
+                open={open}
+                title={`Ubicaciones del almacén - ${warehouse.name}`}
+                onClose={onClose}
+                className="w-[500px] max-h-[500px]"
+            >
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
                     animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
@@ -279,7 +284,7 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="grid grid-cols-2 items-center gap-2">
                                 <FloatingSelect
                                     label="Estado"
                                     name="location-status-filter"
@@ -293,18 +298,6 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                                     className="h-9 text-sm"
                                     containerClassName="min-w-[180px]"
                                 />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <SystemButton
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-sm"
-                                    onClick={() => void loadLocations()}
-                                    disabled={loading}
-                                >
-                                    {loading ? "Cargando..." : "Refrescar"}
-                                </SystemButton>
                                 <SystemButton
                                     size="sm"
                                     className="text-sm"
@@ -320,6 +313,9 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                                 >
                                     Nueva ubicación
                                 </SystemButton>
+                            </div>
+
+                            <div className="flex items-center gap-2">
                             </div>
                         </div>
                     </div>
@@ -346,7 +342,12 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
             </Modal>
 
             {openCreate && (
-                <Modal title="Nueva ubicación" onClose={() => setOpenCreate(false)} className="max-w-lg">
+                <Modal
+                    open={openCreate}
+                    title="Nueva ubicación"
+                    onClose={() => setOpenCreate(false)}
+                    className="w-[300px] max-h-[300px]"
+                >
                     <LocationFormFields form={form} setForm={setForm} />
                     <div className="mt-4 flex justify-end gap-2">
                         <SystemButton variant="outline" size="md" className="rounded-2xl" onClick={() => setOpenCreate(false)}>
@@ -366,7 +367,12 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
             )}
 
             {editingLocationId && (
-                <Modal title="Editar ubicación" onClose={() => setEditingLocationId(null)} className="max-w-lg">
+                <Modal
+                    open={Boolean(editingLocationId)}
+                    title="Editar ubicación"
+                    onClose={() => setEditingLocationId(null)}
+                    className="w-[300px] max-h-[300px]"
+                >
                     <LocationFormFields form={form} setForm={setForm} />
                     <div className="mt-4 flex justify-end gap-2">
                         <SystemButton variant="outline" size="md" className="rounded-2xl" onClick={() => setEditingLocationId(null)}>
@@ -385,7 +391,12 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
             )}
 
             {deletingLocationId && (
-                <Modal title={nextActiveState ? "Restaurar ubicación" : "Desactivar ubicación"} onClose={() => setDeletingLocationId(null)} className="max-w-md">
+                <Modal
+                    open={Boolean(deletingLocationId)}
+                    title={nextActiveState ? "Restaurar ubicación" : "Desactivar ubicación"}
+                    onClose={() => setDeletingLocationId(null)}
+                    className="w-[300px] max-h-[300px]"
+                >
                     <p className="text-sm text-black/70">
                         {nextActiveState ? "Se activará la ubicación nuevamente." : "Se desactivará la ubicación seleccionada."}
                     </p>
@@ -395,8 +406,8 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                         </SystemButton>
                         <SystemButton
                             size="md"
+                            variant="danger"
                             className="rounded-2xl"
-                            style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
                             onClick={() => void confirmToggleActive()}
                         >
                             Confirmar
@@ -409,11 +420,6 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
 }
 
 function LocationFormFields({ form, setForm }: { form: LocationForm; setForm: Dispatch<SetStateAction<LocationForm>> }) {
-    const statusOptions = [
-        { value: "active", label: "Activo" },
-        { value: "inactive", label: "Inactivo" },
-    ];
-
     return (
         <div className="space-y-4">
             <SectionHeaderForm icon={MapPin} title="Datos de ubicación" />
@@ -429,15 +435,6 @@ function LocationFormFields({ form, setForm }: { form: LocationForm; setForm: Di
                 name="location-description"
                 value={form.description}
                 onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-            />
-
-            <FloatingSelect
-                label="Estado"
-                name="location-status"
-                value={form.isActive ? "active" : "inactive"}
-                options={statusOptions}
-                onChange={(value) => setForm((prev) => ({ ...prev, isActive: value === "active" }))}
-                className="h-10 text-sm"
             />
         </div>
     );

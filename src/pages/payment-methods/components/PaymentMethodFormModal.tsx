@@ -97,7 +97,7 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, onClose, o
     };
 
     return (
-        <Modal title={title} onClose={onClose} className="max-w-lg">
+        <Modal title={title} onClose={onClose} className="max-w-lx">
             <motion.div initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }} animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.16 }}>
                 {loading ? (
                     <div className="px-1 py-6 text-sm text-black/60">Cargando método de pago...</div>

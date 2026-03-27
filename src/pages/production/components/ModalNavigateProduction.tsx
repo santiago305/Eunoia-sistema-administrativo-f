@@ -1,4 +1,4 @@
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { SystemButton } from "@/components/SystemButton";
 import { getProductionOrderPdf } from "@/services/pdfServices";
 import { useEffect, useState } from "react";
@@ -67,7 +67,7 @@ export function ModalNavigateProduction({
   if (!open) return null;
 
   return (
-    <Modal title="Produccion procesada" className="max-w-5xl h-[95vh]" onClose={onClose}>
+    <Modal open={open} title="Produccion procesada" className="w-[800px] max-h-[800px] h-[95vh]" onClose={onClose}>
       <div className="space-y-6">
         <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
           {loading && (

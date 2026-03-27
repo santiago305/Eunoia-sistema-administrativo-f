@@ -31,6 +31,7 @@ import {
   uploadCompanyCert,
   uploadCompanyLogo,
 } from "@/services/companyService";
+import { Headed } from "@/components/Headed";
 
 const COMPANY_PRIMARY = "hsl(var(--primary))";
 
@@ -207,18 +208,11 @@ export default function CompanyPage() {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="flex flex-col gap-1"
         >
-          <div className="flex items-center gap-3">
-            {/* Línea decorativa */}
-            <span className="h-6 w-1 rounded-full bg-primary" />
-
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-              Información de la empresa
-            </h1>
-          </div>
-
-          <p className="ml-4 text-sm text-gray-500">
-            Completa los datos principales de tu empresa
-          </p>
+          <Headed
+            title="Información de la empresa"
+            subtitle="Datos generales y de contacto"
+            size="lg"
+          />
         </motion.div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
