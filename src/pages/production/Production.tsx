@@ -25,6 +25,7 @@ import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -437,10 +438,11 @@ export default function ProductionCreate() {
       <PageTitle title="Orden de produccion" />
 
       <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">Orden de produccion</h1>
-          </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
+          <Headed
+            title="Orden de Producción"
+            size="lg"
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">

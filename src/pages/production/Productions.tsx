@@ -7,7 +7,7 @@ import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { Dropdown } from "@/components/Dropdown";
+import { ActionsPopover } from "@/components/ActionsPopover";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
@@ -20,6 +20,7 @@ import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -314,66 +315,53 @@ export default function Production() {
 
                     return (
                         <div className="flex justify-end">
-                            <Dropdown
-                                trigger={<Menu className="h-4 w-4" />}
-                                itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-black/70 hover:bg-black/[0.04]"
-                                items={[
-                                    order.status === ProductionStatus.DRAFT && {
-                                        label: (
-                                            <>
-                                                <Play className="h-4 w-4 text-black/60" />
-                                                Procesar
-                                            </>
-                                        ),
+                            <ActionsPopover
+                                actions={[
+                                    {
+                                        id: "start",
+                                        label: "Procesar",
+                                        icon: <Play className="h-4 w-4" />,
+                                        hidden: order.status !== ProductionStatus.DRAFT,
                                         onClick: () => handleStart(order.productionId ?? ""),
                                     },
-                                    order.status === ProductionStatus.DRAFT && {
-                                        label: (
-                                            <>
-                                                <Pencil className="h-4 w-4 text-black/60" />
-                                                Editar
-                                            </>
-                                        ),
+                                    {
+                                        id: "edit",
+                                        label: "Editar",
+                                        icon: <Pencil className="h-4 w-4" />,
+                                        hidden: order.status !== ProductionStatus.DRAFT,
                                         onClick: () => handleEdit(order.productionId ?? ""),
                                     },
                                     {
-                                        label: (
-                                            <>
-                                                <FileText className="h-4 w-4 text-black/60" />
-                                                Abrir PDF
-                                            </>
-                                        ),
+                                        id: "pdf",
+                                        label: "Abrir PDF",
+                                        icon: <FileText className="h-4 w-4" />,
                                         onClick: () => openProductionPdf(order.productionId ?? ""),
                                     },
-                                    order.status === ProductionStatus.DRAFT && {
-                                        label: (
-                                            <>
-                                                <Ban className="h-4 w-4" />
-                                                Cancelar
-                                            </>
-                                        ),
-                                        className: "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-rose-700 hover:bg-rose-50",
+                                    {
+                                        id: "cancel",
+                                        label: "Cancelar",
+                                        icon: <Ban className="h-4 w-4" />,
+                                        danger: true,
+                                        hidden: order.status !== ProductionStatus.DRAFT,
                                         onClick: () => handleCancel(order.productionId ?? ""),
                                     },
-                                    (order.status === ProductionStatus.IN_PROGRESS || order.status === ProductionStatus.PARTIAL) && {
-                                        label: (
-                                            <>
-                                                <PackageCheck className="h-4 w-4 text-black/60" />
-                                                Ingresar a almacén
-                                            </>
+                                    {
+                                        id: "close",
+                                        label: "Ingresar a almacÃ©n",
+                                        icon: <PackageCheck className="h-4 w-4" />,
+                                        hidden: !(
+                                            order.status === ProductionStatus.IN_PROGRESS ||
+                                            order.status === ProductionStatus.PARTIAL
                                         ),
                                         onClick: () => handleClose(order.productionId ?? ""),
                                     },
-                                    (order.status === ProductionStatus.IN_PROGRESS || order.status === ProductionStatus.PARTIAL) && {
-                                        label: (
-                                            <>
-                                                <PackageCheck className="h-4 w-4 text-black/60" />
-                                                Ingresar a almacén
-                                            </>
-                                        ),
-                                        onClick: () => handleClose(order.productionId ?? ""),
-                                    },
-                                ].filter(Boolean)}
+                                ]}
+                                columns={1}
+                                triggerIcon={<Menu className="h-4 w-4" />}
+                                triggerVariant="ghost"
+                                compact
+                                popoverClassName="min-w-52 p-2"
+                                itemClassName="justify-start px-3 py-2 text-[11px]"
                             />
                         </div>
                     );
@@ -390,10 +378,11 @@ export default function Production() {
             <PageTitle title="Producción" />
 
             <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-semibold tracking-tight">Producción</h1>
-                    </div>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
+                    <Headed
+                        title="Ordenes de Producción"
+                        size="lg"
+                    />
 
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
@@ -471,28 +460,22 @@ export default function Production() {
                 </section>
 
                 <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-                    <div className="p-4 sm:p-5 border-b border-black/10">
-                        <SectionHeaderForm icon={Factory} title="Listado de órdenes" />
-                    </div>
-
-                    <div className="p-4 sm:p-5">
-                        <DataTable
-                            tableId="production-orders-table"
-                            data={rows}
-                            columns={columns}
-                            rowKey="id"
-                            loading={loading}
-                            emptyMessage="No hay órdenes con los filtros actuales."
-                            hoverable={false}
-                            animated={false}
-                            pagination={{
-                                page,
-                                limit,
-                                total: pagination.total,
-                            }}
-                            onPageChange={setPage}
-                        />
-                    </div>
+                    <DataTable
+                        tableId="production-orders-table"
+                        data={rows}
+                        columns={columns}
+                        rowKey="id"
+                        loading={loading}
+                        emptyMessage="No hay órdenes con los filtros actuales."
+                        hoverable={false}
+                        animated={false}
+                        pagination={{
+                            page,
+                            limit,
+                            total: pagination.total,
+                        }}
+                        onPageChange={setPage}
+                    />
                 </section>
                 <PdfViewerModal
                     open={openPdfModal}
