@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { PaymentMethodSelectComposed } from "@/pages/payment-methods/components/PaymentMethodSelectComposed";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -159,7 +159,7 @@ export function ProviderMethodListModal({
   );
 
   return (
-    <Modal onClose={close} title={title} className={className}>
+    <Modal open={true} onClose={close} title={title} className={className}>
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs text-black/60">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import {
@@ -186,9 +186,10 @@ export function SupplierFormModal({
 
   return (
     <Modal
+      open={open}
       title={mode === "edit" ? "Editar proveedor" : "Nuevo proveedor"}
       onClose={onClose}
-      className="max-w-[700px] max-h-[600px]"
+      className="w-[600px] max-h-[600px]"
     >
       {loading ? (
         <div className="px-1 py-6 text-sm text-black/60">Cargando proveedor...</div>

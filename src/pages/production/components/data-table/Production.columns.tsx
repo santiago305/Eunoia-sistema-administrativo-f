@@ -2,7 +2,7 @@
 import { createColumnHelper, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { Dropdown } from "@/components/Dropdown";
 import type { ProductionOrder, ProductionStatus } from "@/pages/production/types/production";
-import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
+import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
 import { productionExpandedFields } from "./productionExpandedFields";
 import { hasHiddenExpandableFields } from "@/components/data-table/expanded-hidden-fields/hasHiddenExpandableFields";
 
