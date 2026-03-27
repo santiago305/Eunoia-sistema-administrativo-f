@@ -30,6 +30,7 @@ export type Variant = {
   productDescription?: string;
   unitCode:string;
   unitName:string;
+  customSku?:string;
 };
 
 export type VariantListItem = {
@@ -67,6 +68,20 @@ export type PrimaVariant = {
   };
   customSku?:string;
 };
+ export type VariantRow = {
+    id: string;
+    sku?: string;
+    presentation?: string;
+    variant?: string;
+    color?: string;
+    unit: string;
+    price: string;
+    cost: string;
+    status: string;
+    isActive: boolean;
+    customSku?:string;
+  };
+
 export type ProductListActive = {
   id?: string;
   primaId?: string;

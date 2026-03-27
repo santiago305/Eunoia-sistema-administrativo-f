@@ -48,6 +48,11 @@ export type ProductForm = {
       color?:string,
       variant?:string
     }
+    attributes?: {
+      presentation?: string,
+      color?:string,
+      variant?:string
+    }
     baseUnitId: string;
     customSku?:string;
     sku?: string | null;

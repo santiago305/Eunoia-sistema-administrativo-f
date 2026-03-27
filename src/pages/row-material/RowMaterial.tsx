@@ -221,7 +221,8 @@ export default function RowMaterial() {
                 header: "Materia prima",
                 cell: (row) => (
                     <div className="min-w-0">
-                        <p className="font-medium leading-5 truncate">{row.name}</p>
+                        <p className="font-medium leading-5">{row.name}
+                         {row.sku ? ` - ${row.sku}` : ""}</p>
                     </div>
                 ),
                 headerClassName: "text-left w-[120px]",
