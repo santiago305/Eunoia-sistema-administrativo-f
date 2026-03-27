@@ -5,7 +5,7 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
-import { Boxes, Filter, Menu, Pencil, Plus, Power, Timer } from "lucide-react";
+import { Filter, Menu, Pencil, Plus, Power, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -17,6 +17,7 @@ import { StatusPill } from "@/components/StatusTag";
 import { IconPaymentMethod } from "@/components/dashboard/icons";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -262,11 +263,13 @@ export default function Providers() {
     <div className="min-h-screen w-full bg-white text-black">
       <PageTitle title="Proveedores" />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">Proveedores</h1>
-          </div>
+      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2
+       sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
+          <Headed
+            title="Proveedores"
+            size="lg"
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
@@ -311,16 +314,6 @@ export default function Providers() {
               }}
               className="h-10 text-sm"
             />
-
-            <SystemButton
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => void loadSuppliers()}
-              disabled={loading}
-            >
-              {loading ? "Cargando..." : "Refrescar"}
-            </SystemButton>
           </div>
         </section>
 

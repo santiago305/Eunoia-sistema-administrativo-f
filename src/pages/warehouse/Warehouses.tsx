@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { motion, useReducedMotion } from "framer-motion";
 import { Boxes, Download, Filter, Menu, Pencil, Plus, Power } from "lucide-react";
 
@@ -12,12 +12,13 @@ import { WarehouseLocationsModal } from "./components/LocationModal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SystemButton } from "@/components/SystemButton";
-import { Dropdown } from "@/components/Dropdown";
+import { ActionsPopover } from "@/components/ActionsPopover";
 import { StatusPill } from "@/components/StatusTag";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
@@ -199,49 +200,34 @@ export default function Warehouses() {
         header: "",
         cell: (row) => (
           <div className="flex items-center justify-end">
-            <Dropdown
-              trigger={<Menu className="h-4 w-4" />}
-              menuClassName="min-w-52 p-2"
-              itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-              items={[
+            <ActionsPopover
+              actions={[
                 {
-                  label: (
-                    <>
-                      <Boxes className="h-4 w-4 text-black/60" />
-                      Ver ubicaciones
-                    </>
-                  ),
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    openLocationsModal({ warehouseId: row.warehouseId, name: row.name });
-                  },
+                  id: "locations",
+                  label: "Ver ubicaciones",
+                  icon: <Boxes className="h-4 w-4" />,
+                  onClick: () => openLocationsModal({ warehouseId: row.warehouseId, name: row.name }),
                 },
                 {
-                  label: (
-                    <>
-                      <Pencil className="h-4 w-4 text-black/60" />
-                      Editar
-                    </>
-                  ),
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    startEdit(row.warehouseId);
-                  },
+                  id: "edit",
+                  label: "Editar",
+                  icon: <Pencil className="h-4 w-4" />,
+                  onClick: () => startEdit(row.warehouseId),
                 },
                 {
-                  label: (
-                    <>
-                      <Power className="h-4 w-4" />
-                      {row.isActive ? "Eliminar" : "Restaurar"}
-                    </>
-                  ),
-                  className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50"}`,
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    setDeletingWarehouseId(row.warehouseId);
-                  },
+                  id: "toggle",
+                  label: row.isActive ? "Eliminar" : "Restaurar",
+                  icon: <Power className="h-4 w-4" />,
+                  danger: row.isActive,
+                  onClick: () => setDeletingWarehouseId(row.warehouseId),
                 },
               ]}
+              columns={1}
+              triggerIcon={<Menu className="h-4 w-4" />}
+              triggerVariant="ghost"
+              compact
+              popoverClassName="min-w-52 p-2"
+              itemClassName="justify-start px-3 py-2 text-[11px]"
             />
           </div>
         ),
@@ -343,10 +329,11 @@ export default function Warehouses() {
       <PageTitle title="Almacenes" />
 
       <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">Almacenes</h1>
-          </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
+          <Headed
+            title="Almacenes"
+            size="lg"
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
@@ -409,46 +396,29 @@ export default function Warehouses() {
               }}
               className="h-10 text-sm"
             />
-
-            <SystemButton
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => void refetch()}
-              disabled={loading}
-            >
-              {loading ? "Cargando..." : "Refrescar"}
-            </SystemButton>
           </div>
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-          <div className="p-4 sm:p-5 border-b border-black/10">
-            <SectionHeaderForm icon={Boxes} title="Listado de almacenes" />
-          </div>
-
-          <div className="p-4 sm:p-5">
-            <DataTable
-              tableId="warehouses-table"
-              data={sortedWarehouses}
-              columns={columns}
-              rowKey="warehouseId"
-              loading={loading}
-              emptyMessage="No hay almacenes con los filtros actuales."
-              hoverable={false}
-              animated={false}
-              pagination={{
-                page: safePage,
-                limit: effectiveLimit,
-                total,
-              }}
-              onPageChange={(nextPage) => {
-                setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
-              }}
-            />
-
-            {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
-          </div>
+          <DataTable
+            tableId="warehouses-table"
+            data={sortedWarehouses}
+            columns={columns}
+            rowKey="warehouseId"
+            loading={loading}
+            emptyMessage="No hay almacenes con los filtros actuales."
+            hoverable={false}
+            animated={false}
+            pagination={{
+              page: safePage,
+              limit: effectiveLimit,
+              total,
+            }}
+            onPageChange={(nextPage) => {
+              setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+            }}
+          />
+          {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
         </section>
       </div>
 
@@ -465,7 +435,12 @@ export default function Warehouses() {
       />
 
       {deletingWarehouseId && (
-        <Modal title="Confirmar acción" onClose={() => setDeletingWarehouseId(null)} className="max-w-md">
+        <Modal
+          open={true}
+          title="Confirmar acción"
+          onClose={() => setDeletingWarehouseId(null)}
+          className="w-[300px] max-h-[300px]"
+        >
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
             animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}

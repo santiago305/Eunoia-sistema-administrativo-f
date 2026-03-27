@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Boxes } from "lucide-react";
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { UbigeoSelectSection, type UbigeoSelection } from "@/components/UbigeoSelectSection";
 import { createWarehouse, getWarehouseById, updateWarehouse, updateWarehouseActive } from "@/services/warehouseServices";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -158,7 +158,7 @@ export function WarehouseFormModal({
     };
 
     return (
-        <Modal title={title} onClose={onClose} className="max-w-lg">
+        <Modal open={open} title={title} onClose={onClose} className="w-[500px] max-h-[500px]">
             <motion.div
                 initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
                 animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
