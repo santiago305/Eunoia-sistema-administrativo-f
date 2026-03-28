@@ -164,8 +164,10 @@ export function WarehouseFormModal({
                 animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.16 }}
             >
-                <div className="space-y-4">
-                    <SectionHeaderForm icon={Boxes} title="Datos del almacén" />
+                <div className="space-y-4 p-2">
+                    <div className="border-b border-black/10 px-3 sm:px-4 py-1">
+                        <SectionHeaderForm icon={Boxes} title="Datos del almacén" />
+                    </div>
                     <FloatingInput
                         label="Nombre"
                         name="warehouse-name"
