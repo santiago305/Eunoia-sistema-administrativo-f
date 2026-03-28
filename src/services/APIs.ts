@@ -228,6 +228,7 @@ export const API_DOCUMENT_INVENTORY_GROUP = {
   outOrderCreated: "/inventory/documents/create-add-item-post-out",
   adjustmentCreated: "/inventory/documents/create-add-item-post-adjustment",
   transfertCreated: "/inventory/documents/create-add-item-post-transfer",
+  listDocuments: "/inventory/documents",
   adjustmentAddItem: (id: string) => `/inventory/documents/${id}/items-adjustment`,
 };
 

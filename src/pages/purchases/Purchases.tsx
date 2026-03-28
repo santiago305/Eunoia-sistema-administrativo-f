@@ -308,10 +308,9 @@ export default function Purchases() {
     const warehouseSelectOptions = useMemo(
         () =>
             warehouseOptions.map((opt) => {
-                const address = opt.address ? ` - ${opt.address}` : "";
                 return {
                     value: opt.value,
-                    label: `${opt.label}${address}`.trim(),
+                    label: `${opt.label}`.trim(),
                 };
             }),
         [warehouseOptions],

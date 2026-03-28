@@ -1,4 +1,4 @@
-﻿import { DocType } from "@/pages/warehouse/types/warehouse";
+﻿import {  DocType } from "@/pages/warehouse/types/warehouse";
 
 export type AdjustmentItem = {
   stockItemId: string;
@@ -19,6 +19,7 @@ export type CreateAdjustment = {
   items: AdjustmentItem[];
 };
 
+
 export type AdjustmentResponse = {
   id?: string;
   docId?: string;
@@ -30,3 +31,5 @@ export type AdjustmentResponse = {
   message?: string;
   type?: string;
 };
+
+
