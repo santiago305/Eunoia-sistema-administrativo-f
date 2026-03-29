@@ -29,7 +29,8 @@ export function DataTablePagination({ page, limit, total, onPageChange }: Props)
     const pages = buildVisiblePages(page, totalPages);
 
     return (
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-0 flex flex-col gap-3 rounded-b-xl border-x border-b border-border
+         bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-muted-foreground">
                 Mostrando <span className="font-medium text-foreground">{from}</span> a{' '}
                 <span className="font-medium text-foreground">{to}</span> de{' '}

@@ -177,7 +177,7 @@ export default function ProductionCreate() {
       ...(searchResults ?? []).map((v) => ({
         value: v.itemId ?? v.id ?? "",
         label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
-        ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      })),
+        ${v.sku ? ` - ${v.sku}`: ""} ${v.customSku ? `( ${v.customSku} )`: ""}`,      })),
     ],
     [searchResults]
   );

@@ -277,14 +277,15 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
                     transition={{ duration: 0.16 }}
                 >
                     <div className="mb-4 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3
+                        border-b border-black/10 px-3 sm:px-4 py-1">
                             <SectionHeaderForm icon={MapPin} title="Ubicaciones" />
                             <div className="text-xs text-black/60">
                                 {loading ? "Cargando..." : `${pagination.total} registros`}
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="grid grid-cols-2 items-center gap-2">
+                            <div className="grid grid-cols-2 items-center gap-2 mt-2">
                                 <FloatingSelect
                                     label="Estado"
                                     name="location-status-filter"

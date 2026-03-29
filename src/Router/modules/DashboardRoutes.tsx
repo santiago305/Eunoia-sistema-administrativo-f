@@ -33,6 +33,7 @@ const StockReservations = lazy(() => import("@/pages/stock/Reservations"));
 const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
 const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
 const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
+const CatalogDocuments = lazy(() => import("@/pages/catalog/DocumentProduts"));
 const CatalogAdjustments = lazy(() => import("@/pages/catalog/AdjustmentProducts"));
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/components/LocationModal"));
@@ -40,6 +41,7 @@ const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
 const RowVariant = lazy(() => import("@/pages/row-material/RowVariant"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
 const RowMaterialAdjustments = lazy(() => import("@/pages/row-material/AdjustmentRowMaterial"));
+const RowMaterialDocuments = lazy(() => import("@/pages/row-material/DocumentRowMaterial"));
 const Providers = lazy(() => import("@/pages/providers/Providers"));
 const Purchase = lazy(() => import("@/pages/purchases/Purchase"));
 const Purchases = lazy(() => import("@/pages/purchases/Purchases"));
@@ -127,6 +129,10 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.catalogSummary, <CatalogSummary />),
             },
             {
+                path: RoutesPaths.catalogDocuments,
+                element: withRouteGuard(RoutesPaths.catalogDocuments, <CatalogDocuments />),
+            },
+            {
                 path: RoutesPaths.catalogAdjustments,
                 element: withRouteGuard(RoutesPaths.catalogAdjustments, <CatalogAdjustments />),
             },
@@ -149,6 +155,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.rowMaterial,
                 element: withRouteGuard(RoutesPaths.rowMaterial, <RowMaterial />),
+            },
+            {
+                path: RoutesPaths.rowMaterialDocuments,
+                element: withRouteGuard(RoutesPaths.rowMaterialDocuments, <RowMaterialDocuments />),
             },
             {
                 path: RoutesPaths.rowMaterialAdjustments,

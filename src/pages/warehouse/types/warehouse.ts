@@ -41,7 +41,11 @@ export enum DocType {
   ADJUSTMENT = 'ADJUSTMENT',
   PRODUCTION = 'PRODUCTION'
 }
-
+export enum DocStatus {
+  DRAFT = 'DRAFT',
+  POSTED = 'POSTED',
+  CANCELLED = 'CANCELLED',
+}
 
 export type WarehouseLocationsResponse = {
   locations: WarehouseLocation[];

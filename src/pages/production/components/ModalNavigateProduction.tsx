@@ -67,8 +67,8 @@ export function ModalNavigateProduction({
   if (!open) return null;
 
   return (
-    <Modal open={open} title="Produccion procesada" className="w-[800px] max-h-[800px] h-[95vh]" onClose={onClose}>
-      <div className="space-y-6">
+    <Modal open={open} title="Produccion procesada" className="w-[800px] max-h-[800px] h-[93vh]" onClose={onClose}>
+      <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
           {loading && (
             <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">

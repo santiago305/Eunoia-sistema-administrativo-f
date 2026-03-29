@@ -32,12 +32,12 @@ export function SupplierFormFields({
   lookupDisabled?: boolean;
 }) {
   return (
-    <div className="space-y-4 overflow-auto rounded-2xl border border-black/10 bg-white shadow-sm  flex flex-col max-h-[calc(100vh-100px)]
+    <div className="space-y-4 overflow-auto bg-white flex flex-col max-h-[calc(100vh-100px)]
      min-h-[calc(100vh-100px) p-6">
-      <div className="border-b border-black/10 px-3 sm:px-4 py-3">
-                    <SectionHeaderForm icon={FileText} title="Datos de documento" />
-                  </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="border-b border-black/10 px-3 sm:px-4 py-1">
+        <SectionHeaderForm icon={FileText} title="Datos de documento" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-2 space-y-2">
         <FloatingSelect
           label="Tipo de documento"
           name="supplier-document-type"
@@ -48,7 +48,7 @@ export function SupplierFormFields({
           }}
           className="h-9 text-xs"
         />
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-2 space-y-2">
           <FloatingInput
             label="Número de documento"
             name="supplier-document-number"
@@ -72,7 +72,7 @@ export function SupplierFormFields({
         </div>
       </div>
       {(form.documentType === DocumentType.DNI || form.documentType === DocumentType.CE) && (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 space-y-2">
           <FloatingInput
             label="Nombre"
             name="supplier-name"
@@ -105,7 +105,7 @@ export function SupplierFormFields({
         onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
         className="h-9 text-xs"
       />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 space-y-2">
         <FloatingInput
           label="Teléfono"
           name="supplier-phone"
