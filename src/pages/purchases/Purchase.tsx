@@ -576,7 +576,7 @@ export default function PurchaseCreateLocal() {
   return (
     <div className="w-full min-h-screen bg-white text-black">
       <div className="h-screen w-full px-3 sm:px-4 lg:px-6 py-0">
-        <div className="mt-4 grid h-[calc(100vh-64px)] grid-cols-1 gap-3 lg:grid-cols-[6fr_2fr]">
+        <div className="mt-4 grid h-[calc(100vh-64px)] grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr]">
           <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="border-b border-black/10 p-3 sm:p-4">
               <SectionHeaderForm icon={Boxes} title="Productos" />

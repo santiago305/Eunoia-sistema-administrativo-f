@@ -3,12 +3,12 @@ import { DocType, DocStatus } from "@/pages/warehouse/types/warehouse";
 import { ProductType } from "./ProductTypes";
 
 export type GetDocuments = {
-  docType: DocType;
-  status: DocStatus;
+  docType?: DocType;
+  status?: DocStatus;
   warehouseId?: string;
   productType?: ProductType;
-  from?: Date;
-  to?: Date;
+  from?: string | Date;
+  to?: string | Date;
   page?: string;
   limit?: string;
 };
@@ -22,6 +22,18 @@ export type DocumentInventory = {
   fromWarehouse:string;
   createdBy:User;
   createdAt:string;
+};
+export type DocumentRow = {
+    id: string;
+    document: DocumentInventory;
+    numero: string;
+    docLabel: string;
+    statusLabel: string;
+    fromWarehouse: string;
+    toWarehouse: string;
+    createdBy: string;
+    date: string;
+    time?: string;
 };
 
 export type DocumentListResponse = {

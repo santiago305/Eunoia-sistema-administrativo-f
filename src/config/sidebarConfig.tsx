@@ -84,6 +84,10 @@ export const getSidebarItems = (): SidebarItem[] => [
                 href: RoutesPaths.catalogProducts,
             },
             {
+                label: "Documentos",
+                href: RoutesPaths.catalogDocuments,
+            },
+            {
                 label: "Transferencias",
                 href: RoutesPaths.catalogTransfer,
             },
@@ -109,6 +113,10 @@ export const getSidebarItems = (): SidebarItem[] => [
             {
                 label: "Materias Primas",
                 href: RoutesPaths.rowMaterial,
+            },
+            {
+                label: "Documentos",
+                href: RoutesPaths.rowMaterialDocuments,
             },
             {
                 label: "Transferencias",
