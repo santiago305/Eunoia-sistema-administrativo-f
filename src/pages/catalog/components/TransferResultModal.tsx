@@ -1,33 +1,24 @@
 import { useEffect, useState } from "react";
-import { Modal } from "@/components/modales/Modal";
+import { Modal } from "@/components/settings/modal";
 import { SystemButton } from "@/components/SystemButton";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
+import type { TransferResultModalProps } from "@/pages/catalog/types/transfer";
 
-export type AdjustmentResultModalProps = {
-    open: boolean;
-    adjustmentId?: string;
-    onNew: () => void;
-    onGoToList: () => void;
-    onClose: () => void;
-    title: string;
-    goToLabel: string;
-};
-
-export function AdjustmentResultModal({
+export function TransferResultModal({
     open,
-    adjustmentId,
+    transferId,
     onNew,
     onGoToList,
     onClose,
     title,
     goToLabel,
-}: AdjustmentResultModalProps) {
+}: TransferResultModalProps) {
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!open || !adjustmentId) {
+        if (!open || !transferId) {
             setPdfUrl(null);
             setError(null);
             setLoading(false);
@@ -42,7 +33,7 @@ export function AdjustmentResultModal({
             setError(null);
             setPdfUrl(null);
             try {
-                const blob = await getDocumentInventoryPdf(adjustmentId);
+                const blob = await getDocumentInventoryPdf(transferId);
                 if (!alive) return;
                 objectUrl = URL.createObjectURL(blob);
                 setPdfUrl(objectUrl);
@@ -55,17 +46,16 @@ export function AdjustmentResultModal({
         };
 
         void loadPdf();
-
         return () => {
             alive = false;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [adjustmentId, open]);
+    }, [transferId, open]);
 
     if (!open) return null;
 
     return (
-        <Modal open={open} title={title} className="w-[800px] h-[95vh]" onClose={onClose}>
+        <Modal title={title} className="w-[800px] h-[95vh]" onClose={onClose}>
             <div className="space-y-6">
                 <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
                     {loading && (
@@ -80,7 +70,7 @@ export function AdjustmentResultModal({
                     )}
                     {!loading && !error && pdfUrl && (
                         <iframe
-                            title={`documento-ajuste-${adjustmentId}`}
+                            title={`documento-transfer-${transferId}`}
                             src={pdfUrl}
                             className="h-[74vh] w-full overflow-auto"
                         />
@@ -91,10 +81,9 @@ export function AdjustmentResultModal({
                         </div>
                     )}
                 </div>
-
                 <div className="flex flex-col sm:flex-row gap-3">
                     <SystemButton variant="outline" onClick={onNew} className="flex-1">
-                        Ingresar nuevo ajuste
+                        Ingresar nueva transferencia
                     </SystemButton>
                     <SystemButton onClick={onGoToList} className="flex-1">
                         {goToLabel}

@@ -22,6 +22,7 @@ import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import { AdjustmentItemModal } from "@/pages/catalog/components/AdjustmentItemModal";
 import { AdjustmentResultModal } from "@/pages/catalog/components/AdjustmentResultModal";
+import { Headed } from "@/components/Headed";
 
 const CURRENCY = "PEN";
 
@@ -389,12 +390,9 @@ export default function AdjustmentProducts() {
         <div className="w-full min-h-screen bg-white">
             <PageTitle title="Ajuste de productos" />
             <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-semibold tracking-tight">Ajuste de productos terminados</h1>
-                        <p className="text-sm">Al reducir stock solo puedes reducir hasta dejarlo en (0)</p>
-                    </div>
-                </div>
+                <Headed title="Ajuste de productos terminados" 
+                subtitle="Al reducir stock solo puedes reducir hasta dejarlo en (0)" 
+                size="lg" />
 
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
                     <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">

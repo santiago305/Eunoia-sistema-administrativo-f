@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Boxes, FileText, Plus, Trash2 } from "lucide-react";
+import { Boxes, FileText, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -7,126 +7,24 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { createTransfer } from "@/services/documentService";
-import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import { getStock } from "@/services/inventoryService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
-import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, CreateTransfer, Stock, TransferItem, TransferItemModalProps, TransferItemRow, TransferResultModalProps } from "../catalog/types/transfer";
+import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, CreateTransfer, Stock, TransferItem, TransferItemRow } from "../catalog/types/transfer";
+import { Headed } from "@/components/Headed";
+import { TransferItemModal } from "@/pages/catalog/components/TransferItemModal";
+import { TransferResultModal } from "@/pages/catalog/components/TransferResultModal";
 
 const CURRENCY = "PEN";
-
-
-
-function TransferItemModal({ open, pendingItem, onChange, onClose, onAdd }: TransferItemModalProps) {
-    if (!open) return null;
-
-    return (
-        <Modal title="Agregar item" onClose={onClose} className="max-w-xl space-y-3">
-            <div className="grid grid-cols-1 gap-3">
-                <SectionHeaderForm icon={Boxes} title="Productos" />
-                <FloatingInput
-                    label="Cantidad"
-                    name="transfer-qty"
-                    type="number"
-                    min={0.0001}
-                    value={String(pendingItem.quantity)}
-                    onChange={(e) => {
-                        const value = parseDecimalInput(e.target.value);
-                        onChange({ quantity: value < 0 ? Math.abs(value) : value });
-                    }}
-                    className="h-9 text-xs text-black/90"
-                />
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-                <SystemButton variant="outline" size="sm" onClick={onClose}>
-                    Cancelar
-                </SystemButton>
-                <SystemButton size="sm" onClick={onAdd} leftIcon={<Plus className="h-4 w-4" />}>
-                    Agregar
-                </SystemButton>
-            </div>
-        </Modal>
-    );
-}
-
-function TransferResultModal({ open, transferId, onNew, onGoToList, onClose, title, goToLabel }: TransferResultModalProps) {
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!open || !transferId) {
-            setPdfUrl(null);
-            setError(null);
-            setLoading(false);
-            return;
-        }
-
-        let alive = true;
-        let objectUrl: string | null = null;
-
-        const loadPdf = async () => {
-            setLoading(true);
-            setError(null);
-            setPdfUrl(null);
-            try {
-                const blob = await getDocumentInventoryPdf(transferId);
-                if (!alive) return;
-                objectUrl = URL.createObjectURL(blob);
-                setPdfUrl(objectUrl);
-            } catch {
-                if (!alive) return;
-                setError("No se pudo cargar el PDF.");
-            } finally {
-                if (alive) setLoading(false);
-            }
-        };
-
-        void loadPdf();
-        return () => {
-            alive = false;
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-        };
-    }, [transferId, open]);
-
-    if (!open) return null;
-
-    return (
-        <Modal title={title} className="max-w-5xl h-[95vh]" onClose={onClose}>
-            <div className="space-y-6">
-                <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
-                    {loading && <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">Cargando PDF...</div>}
-                    {!loading && error && <div className="flex h-[60vh] items-center justify-center text-sm text-rose-600">{error}</div>}
-                    {!loading && !error && pdfUrl && (
-                        <iframe title={`documento-transfer-${transferId}`} src={pdfUrl} className="h-[74vh] w-full overflow-auto" />
-                    )}
-                    {!loading && !error && !pdfUrl && (
-                        <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">No hay PDF disponible.</div>
-                    )}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <SystemButton variant="outline" onClick={onNew} className="flex-1">
-                        Ingresar nueva transferencia
-                    </SystemButton>
-                    <SystemButton onClick={onGoToList} className="flex-1">
-                        {goToLabel}
-                    </SystemButton>
-                </div>
-            </div>
-        </Modal>
-    );
-}
-
 export default function TransferRowMaterial() {
     const { showFlash, clearFlash } = useFlashMessage();
     const navigate = useNavigate();
@@ -460,14 +358,9 @@ export default function TransferRowMaterial() {
         <div className="w-full min-h-screen bg-white">
             <PageTitle title="Transferencia de productos" />
             <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-semibold tracking-tight">
-                            Transferencia entre almacenes
-                        </h1>
-                        <p className="text-sm">El almacén de origen debe tener un stock mayor a (0)</p>
-                    </div>
-                </div>
+                <Headed title="Transferencia entre almacenes" 
+                subtitle="El almacén de origen debe tener un stock mayor a (0)." 
+                size="lg" />
 
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
                     <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">

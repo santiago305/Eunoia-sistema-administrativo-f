@@ -28,6 +28,7 @@ import {
 } from "@/services/pdfServices";
 import { Boxes, FileText, Filter, LineChart } from "lucide-react";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 25;
@@ -432,10 +433,9 @@ export default function KardexProduction() {
       <PageTitle title="Kardex de productos terminados" />
 
       <div className="px-6 py-6 space-y-4">
-        <div>
-          <h1 className="text-xl font-semibold">Kardex de productos terminados</h1>
-          <p className="text-sm text-black/60">Auditoría viva de movimientos.</p>
-        </div>
+        <Headed title="Kardex de productos terminados" 
+        subtitle="Auditoría viva de movimientos." 
+        size="lg" />
 
         <section className="rounded-2xl border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
           <SectionHeaderForm icon={Filter} title="Filtros" />
