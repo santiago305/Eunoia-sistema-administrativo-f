@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Boxes, PackageCheck, Scale, FlaskConical, Save, Plus, Pencil, Power } from "lucide-react";
-import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { createProduct, getById, updateProduct, updateProductActive } from "@/services/productService";
@@ -32,6 +31,7 @@ import { RecipeFormFields } from "./RecipeFormFields";
 import { ProductFormFields } from "./ProductFormField";
 import { VariantFormFields } from "./VariantFormFields";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
+import { Modal } from "@/components/modales/Modal";
 
 type ProductFormModalProps = {
   open: boolean;
@@ -590,7 +590,8 @@ export function ProductFormModal({
     <Modal
       title={mode === "edit" ? `Editar ${label}` : `Nuevo ${label}`}
       onClose={onClose}
-      className="max-w-[800px] max-h-[600px]"
+      open={open}
+      className="w-[800px] max-h-[600px]"
     >
       <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 bg-white p-3 sm:p-4">
@@ -745,7 +746,8 @@ export function ProductFormModal({
                 emptyMessage="No hay variantes registradas."
                 hoverable={false}
                 animated={false}
-                className="max-h-56 overflow-y-auto text-xs [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none"
+                className="max-h-56 overflow-y-auto 
+                text-xs [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none"
                 tableClassName="text-xs"
               />
             </div>
@@ -777,38 +779,37 @@ export function ProductFormModal({
           </SystemButton>
         </div>
       </div>
-      {variantModalOpen && (
-        <Modal
-          title={variantModalMode === "edit" ? "Editar variante" : "Nueva variante"}
-          onClose={closeVariantModal}
-          className="max-w-lg"
-        >
-          <VariantFormFields form={variantForm} setForm={setVariantForm} 
-          products={variantProductOptions} lockProduct />
-          <div className="mt-4 flex justify-end gap-2">
-            <SystemButton variant="outline" onClick={closeVariantModal}>
-              Cancelar
-            </SystemButton>
-            <SystemButton
-              leftIcon={<Save className="h-4 w-4" />}
-              style={{
-                backgroundColor: primaryColor,
-                borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-              }}
-              onClick={() => void saveVariant()}
-              disabled={!variantForm.productId || variantSaving}
-              loading={variantSaving}
-            >
-              {variantModalMode === "edit" ? "Guardar cambios" : "Guardar"}
-            </SystemButton>
-          </div>
-        </Modal>
-      )}
-      {togglingVariantId && (
-        <Modal
-          title={nextVariantActiveState ? "Restaurar variante" : "Desactivar variante"}
-          onClose={() => setTogglingVariantId(null)}
-          className="max-w-md"
+      <Modal
+        open={variantModalOpen}
+        title={variantModalMode === "edit" ? "Editar variante" : "Nueva variante"}
+        onClose={closeVariantModal}
+        className="max-w-lg"
+      >
+        <VariantFormFields form={variantForm} setForm={setVariantForm} 
+        products={variantProductOptions} lockProduct />
+        <div className="mt-4 flex justify-end gap-2">
+          <SystemButton variant="outline" onClick={closeVariantModal}>
+            Cancelar
+          </SystemButton>
+          <SystemButton
+            leftIcon={<Save className="h-4 w-4" />}
+            style={{
+              backgroundColor: primaryColor,
+              borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+            }}
+            onClick={() => void saveVariant()}
+            disabled={!variantForm.productId || variantSaving}
+            loading={variantSaving}
+          >
+            {variantModalMode === "edit" ? "Guardar cambios" : "Guardar"}
+          </SystemButton>
+        </div>
+      </Modal>
+      <Modal
+        open={togglingVariantId ? true : false}
+        title={nextVariantActiveState ? "Restaurar variante" : "Desactivar variante"}
+        onClose={() => setTogglingVariantId(null)}
+        className="max-w-md"
         >
           <div className="space-y-4">
             <div
@@ -840,7 +841,6 @@ export function ProductFormModal({
             </div>
           </div>
         </Modal>
-      )}
     </Modal>
   );
 }

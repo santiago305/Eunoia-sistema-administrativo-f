@@ -7,7 +7,6 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
@@ -22,6 +21,7 @@ import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/war
 import type { AdjustmentItem, CreateAdjustment } from "@/pages/catalog/types/adjustment";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
+import { Modal } from "@/components/modales/Modal";
 
 const CURRENCY = "PEN";
 
@@ -47,7 +47,7 @@ type AdjustmentItemModalProps = {
 };
 
 function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: AdjustmentItemModalProps) {
-    const { showFlash, clearFlash } = useFlashMessage();
+    const { showFlash } = useFlashMessage();
 
     if (!open) return null;
     const optionTypeAdjustment = [
@@ -55,7 +55,7 @@ function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: Ad
         { value: "AUMENTAR", label: "Aumentar" },
     ];
     return (
-        <Modal title="Agregar item" onClose={onClose} className="max-w-xl space-y-3">
+        <Modal open={open} title="Agregar item" onClose={onClose} className="max-w-xl space-y-3">
             <div className="grid grid-cols-1 gap-3">
                 <SectionHeaderForm icon={Boxes} title="Productos" />
                 {pendingItem.adjustmentType === "REDUCIR" && (
@@ -171,12 +171,13 @@ function AdjustmentResultModal({ open, adjustmentId, onNew, onGoToList, onClose,
     if (!open) return null;
 
     return (
-        <Modal title={title} className="max-w-5xl h-[95vh]" onClose={onClose}>
+        <Modal open={open} title={title} className="max-w-5xl h-[95vh]" onClose={onClose}>
             <div className="space-y-6">
                 <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
                     {loading && <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">Cargando PDF...</div>}
                     {!loading && error && <div className="flex h-[60vh] items-center justify-center text-sm text-rose-600">{error}</div>}
-                    {!loading && !error && pdfUrl && <iframe title={`documento-ajuste-${adjustmentId}`} src={pdfUrl} className="h-[74vh] w-full overflow-auto" />}
+                    {!loading && !error && pdfUrl && 
+                    <iframe title={`documento-ajuste-${adjustmentId}`} src={pdfUrl} className="h-[74vh] w-full overflow-auto" />}
                     {!loading && !error && !pdfUrl && <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">No hay PDF disponible.</div>}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">

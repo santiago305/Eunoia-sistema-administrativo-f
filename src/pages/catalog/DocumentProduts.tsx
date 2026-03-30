@@ -47,7 +47,7 @@ export default function DocumentProduts() {
     const [docType, setDocType] = useState<DocType | "">("");
     const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
     const [page, setPage] = useState(1);
-    const limit = 8;
+    const limit = 10;
 
     const [documents, setDocuments] = useState<DocumentInventory[]>([]);
     const [pagination, setPagination] = useState({
@@ -294,7 +294,7 @@ export default function DocumentProduts() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between pt-2">
                     <Headed
                         title="Documentos de productos terminados"
-                        subtitle="Listado de documentos de productos terminados."
+                        subtitle="Listado de documentos de inventario de productos terminados."
                         size="lg"
                     />
                     <div className="flex flex-wrap items-center gap-2">

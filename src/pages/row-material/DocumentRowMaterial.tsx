@@ -60,7 +60,7 @@ export default function DocumentRowMaterial() {
     const [docType, setDocType] = useState<DocType | "">("");
     const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
     const [page, setPage] = useState(1);
-    const limit = 8;
+    const limit = 10;
 
     const [documents, setDocuments] = useState<DocumentInventory[]>([]);
     const [pagination, setPagination] = useState({
@@ -307,7 +307,9 @@ export default function DocumentRowMaterial() {
             <PageTitle title="Documentos" />
             <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 pt-2 space-y-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between pt-2">
-                    <Headed title="Documentos de materia prima" subtitle="Listado de documentos de materia prima." size="lg" />
+                    <Headed title="Documentos de materia prima" 
+                    subtitle="Listado de documentos de inventario de materia prima." 
+                    size="lg" />
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-0 text-[10px]">
                             Total: <span className="font-semibold text-black">{pagination.total}</span>
