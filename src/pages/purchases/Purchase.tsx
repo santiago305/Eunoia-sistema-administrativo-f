@@ -446,7 +446,7 @@ export default function PurchaseCreateLocal() {
         header: "SKU",
         accessorKey: "sku",
         className: "text-black/70",
-        headerClassName: "text-left",
+        headerClassName: "text-left h-11",
         hideable: false,
         sortable: false,
       },
@@ -611,7 +611,7 @@ export default function PurchaseCreateLocal() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-3 sm:p-4">
+            <div className="flex-1 overflow-auto">
               <DataTable
                 tableId="purchase-create-items-table"
                 data={itemRows}

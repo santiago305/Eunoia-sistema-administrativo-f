@@ -528,11 +528,6 @@ export default function Purchases() {
                             label: "Procesar",
                             onClick: () => setSent(row.purchase.poId ?? ""),
                         },
-                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
-                            id: "edit",
-                            label: "Editar",
-                            onClick: () => navigate(`/compra/${row.purchase.poId}`),
-                        },
                         row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
                         row.purchase.totalPaid != row.purchase.total && {
                             id: "payment",
@@ -552,12 +547,6 @@ export default function Purchases() {
                                 setPoId(row.purchase.poId ?? "");
                             },
                         },
-                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
-                            id: "cancel",
-                            label: "Cancelar",
-                            className: "text-rose-700 hover:bg-rose-50",
-                            onClick: () => cancelOrder(row.purchase.poId ?? ""),
-                        },
                         {
                             id: "open-pdf",
                             label: "Abrir pdf",
@@ -574,6 +563,17 @@ export default function Purchases() {
                                 setTotalPo(row.purchase.total);
                                 setPaymentForm(row.purchase.paymentForm);
                             },
+                        },
+                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            id: "edit",
+                            label: "Editar",
+                            onClick: () => navigate(`/compra/${row.purchase.poId}`),
+                        },
+                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            id: "cancel",
+                            label: "Cancelar",
+                            className: "text-rose-700 hover:bg-rose-50",
+                            onClick: () => cancelOrder(row.purchase.poId ?? ""),
                         },
                     ].filter(Boolean) as ActionItem[]}
                     columns={1}
