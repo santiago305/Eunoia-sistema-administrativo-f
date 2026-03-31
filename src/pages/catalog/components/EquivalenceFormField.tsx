@@ -168,17 +168,19 @@ export function EquivalenceFormFields({
             Agregar
           </SystemButton>
         </div>
-        <DataTable
-          tableId={`product-equivalences-${productId}`}
-          data={rows}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          emptyMessage="No hay equivalencias registradas."
-          hoverable={false}
-          animated={false}
-          className="mt-5"
-        />
+        <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm
+        mt-3">
+          <DataTable
+            tableId={`product-equivalences-${productId}`}
+            data={rows}
+            columns={columns}
+            rowKey="id"
+            loading={loading}
+            emptyMessage="No hay equivalencias registradas."
+            hoverable={false}
+            animated={false}
+          />
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import type { ProductOption, VariantForm } from "@/pages/catalog/types/variant";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
-import { Box, Boxes, Package2 } from "lucide-react";
+import { Box, Package2 } from "lucide-react";
 
 export function VariantFormFields({
   form,

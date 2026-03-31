@@ -9,6 +9,19 @@ export type AdjustmentItem = {
   adjustmentType?:string;
 };
 
+export type AdjustmentItemRow = AdjustmentItem & {
+  rowIndex: number;
+  sku?: string;
+  productName?: string;
+  unitName?: string;
+  customSku?: string;
+  attributes?: {
+    presentation?: string;
+    variant?: string;
+    color?: string;
+  };
+};
+
 export type CreateAdjustment = {
   docType: DocType;
   serieId: string;
@@ -31,5 +44,4 @@ export type AdjustmentResponse = {
   message?: string;
   type?: string;
 };
-
 

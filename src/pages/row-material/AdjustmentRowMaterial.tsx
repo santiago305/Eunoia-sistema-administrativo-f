@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Boxes, FileText, Plus, Trash2 } from "lucide-react";
+import { Boxes, FileText, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -7,218 +7,24 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { createAdjustment } from "@/services/documentService";
-import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import { getStock } from "@/services/inventoryService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import type { AdjustmentItem, CreateAdjustment } from "@/pages/catalog/types/adjustment";
+import type { AdjustmentItem, AdjustmentItemRow, CreateAdjustment } from "@/pages/catalog/types/adjustment";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
+import { AdjustmentItemModal } from "@/pages/catalog/components/AdjustmentItemModal";
+import { AdjustmentResultModal } from "@/pages/catalog/components/AdjustmentResultModal";
+import { Headed } from "@/components/Headed";
 
 const CURRENCY = "PEN";
-
-type AdjustmentItemRow = AdjustmentItem & {
-    rowIndex: number;
-    sku?: string;
-    productName?: string;
-    unitName?: string;
-    customSku?: string;
-    attributes?: {
-        presentation?: string;
-        variant?: string;
-        color?: string;
-    };
-};
-
-type AdjustmentItemModalProps = {
-    open: boolean;
-    pendingItem: AdjustmentItem;
-    onChange: (patch: Partial<AdjustmentItem>) => void;
-    onClose: () => void;
-    onAdd: () => void;
-};
-
-function AdjustmentItemModal({ open, pendingItem, onChange, onClose, onAdd }: AdjustmentItemModalProps) {
-    const { showFlash } = useFlashMessage();
-    if (!open) return null;
-
-    const optionTypeAdjustment = [
-        { value: "REDUCIR", label: "Reducir" },
-        { value: "AUMENTAR", label: "Aumentar" },
-    ];
-
-    return (
-        <Modal title="Agregar item" onClose={onClose} className="max-w-xl space-y-3">
-            <div className="grid grid-cols-1 gap-3">
-                <SectionHeaderForm icon={Boxes} title="Materias primas" />
-
-                {pendingItem.adjustmentType === "REDUCIR" && (
-                    <FloatingInput
-                        label="Cantidad"
-                        name="adjustment-qty"
-                        type="number"
-                        max={-0.0001}
-                        value={String(pendingItem.quantity)}
-                        onChange={(e) => {
-                            const value = parseDecimalInput(e.target.value);
-                            onChange({ quantity: value > 0 ? -Math.abs(value) : value });
-                        }}
-                        className="h-9 text-xs text-black/90"
-                    />
-                )}
-
-                {pendingItem.adjustmentType === "AUMENTAR" && (
-                    <FloatingInput
-                        label="Cantidad"
-                        name="adjustment-qty"
-                        type="number"
-                        min={0.0001}
-                        value={String(pendingItem.quantity)}
-                        onChange={(e) => {
-                            const value = parseDecimalInput(e.target.value);
-                            onChange({ quantity: value < 0 ? Math.abs(value) : value });
-                        }}
-                        className="h-9 text-xs text-black/90"
-                    />
-                )}
-
-                <FloatingSelect
-                    label="Tipo de ajuste"
-                    name="adjustmentType"
-                    value={pendingItem.adjustmentType ?? ""}
-                    onChange={(value) => onChange({ adjustmentType: value })}
-                    options={optionTypeAdjustment}
-                    placeholder="Seleccionar tipo"
-                    emptyMessage="Sin tipos"
-                    className="h-9 text-xs text-black/90"
-                />
-            </div>
-
-            <div className="mt-4 flex justify-end gap-2">
-                <SystemButton variant="outline" size="sm" onClick={onClose}>
-                    Cancelar
-                </SystemButton>
-                <SystemButton
-                    size="sm"
-                    onClick={() => {
-                        if (!pendingItem.adjustmentType) {
-                            return showFlash(errorResponse("Debe ingresar el tipo de ajuste"));
-                        }
-                        if (pendingItem.quantity === 0) {
-                            return showFlash(errorResponse("La cantidad no puede ser cero"));
-                        }
-                        onAdd();
-                    }}
-                    leftIcon={<Plus className="h-4 w-4" />}
-                >
-                    Agregar
-                </SystemButton>
-            </div>
-        </Modal>
-    );
-}
-
-type AdjustmentResultModalProps = {
-    open: boolean;
-    adjustmentId?: string;
-    onNew: () => void;
-    onGoToList: () => void;
-    onClose: () => void;
-    title: string;
-    goToLabel: string;
-};
-
-function AdjustmentResultModal({
-    open,
-    adjustmentId,
-    onNew,
-    onGoToList,
-    onClose,
-    title,
-    goToLabel,
-}: AdjustmentResultModalProps) {
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!open || !adjustmentId) {
-            setPdfUrl(null);
-            setError(null);
-            setLoading(false);
-            return;
-        }
-
-        let alive = true;
-        let objectUrl: string | null = null;
-
-        const loadPdf = async () => {
-            setLoading(true);
-            setError(null);
-            setPdfUrl(null);
-            try {
-                const blob = await getDocumentInventoryPdf(adjustmentId);
-                if (!alive) return;
-                objectUrl = URL.createObjectURL(blob);
-                setPdfUrl(objectUrl);
-            } catch {
-                if (!alive) return;
-                setError("No se pudo cargar el PDF.");
-            } finally {
-                if (alive) setLoading(false);
-            }
-        };
-
-        void loadPdf();
-
-        return () => {
-            alive = false;
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-        };
-    }, [adjustmentId, open]);
-
-    if (!open) return null;
-
-    return (
-        <Modal title={title} className="max-w-5xl h-[95vh]" onClose={onClose}>
-            <div className="space-y-6">
-                <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
-                    {loading && <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">Cargando PDF...</div>}
-                    {!loading && error && <div className="flex h-[60vh] items-center justify-center text-sm text-rose-600">{error}</div>}
-                    {!loading && !error && pdfUrl && (
-                        <iframe
-                            title={`documento-ajuste-${adjustmentId}`}
-                            src={pdfUrl}
-                            className="h-[74vh] w-full overflow-auto"
-                        />
-                    )}
-                    {!loading && !error && !pdfUrl && (
-                        <div className="flex h-[60vh] items-center justify-center text-sm text-black/60">
-                            No hay PDF disponible.
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <SystemButton variant="outline" onClick={onNew} className="flex-1">
-                        Ingresar nuevo ajuste
-                    </SystemButton>
-                    <SystemButton onClick={onGoToList} className="flex-1">
-                        {goToLabel}
-                    </SystemButton>
-                </div>
-            </div>
-        </Modal>
-    );
-}
 
 const buildEmptyForm = (): CreateAdjustment => ({
     docType: DocType.ADJUSTMENT,
@@ -632,11 +438,9 @@ export default function AdjustmentRowMaterial() {
             <PageTitle title="Ajuste de materias primas" />
 
             <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-semibold tracking-tight">Ajuste de materias primas</h1>
-                    </div>
-                </div>
+                <Headed title="Ajuste de materias primas"
+                subtitle="Al reducir stock solo puedes reducir hasta dejarlo en (0)"  
+                size="lg" />
 
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
                     <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
@@ -820,6 +624,7 @@ export default function AdjustmentRowMaterial() {
             <AdjustmentItemModal
                 open={openItemModal}
                 pendingItem={pendingItem}
+                sectionTitle="Materias primas"
                 onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
                 onClose={() => {
                     setOpenItemModal(false);

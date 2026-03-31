@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Banknote, Wallet } from "lucide-react";
-import { Modal } from "@/components/settings/modal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SystemButton } from "@/components/SystemButton";
@@ -22,6 +21,7 @@ import {
 import { createPayment } from "@/services/paymentService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
+import { Modal } from "@/components/modales/Modal";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -36,6 +36,7 @@ export type PaymentProps = {
   loadPurchases?: () => void;
   loadQuotas?: () => void;
   onSaved?: () => void | Promise<void>;
+  open:boolean;
 };
 
 type PaymentForm = Omit<Payment, "amount"> & { amount: string };
@@ -51,6 +52,7 @@ export function PaymentModal({
   loadPurchases,
   loadQuotas,
   onSaved,
+  open,
 }: PaymentProps) {
   const [form, setForm] = useState<PaymentForm>({
     method: PaymentTypes.EFECTIVO,
@@ -118,7 +120,7 @@ export function PaymentModal({
   };
 
   return (
-    <Modal onClose={close} title={title} className={className}>
+    <Modal open={open} onClose={close} title={title} className={className}>
       <div className="p-4 sm:p-5 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="rounded-3xl border border-black/10 bg-emerald-50/70 p-4">

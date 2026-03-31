@@ -149,7 +149,7 @@ export function Modal({
               onClick={(e) => e.stopPropagation()}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                "relative flex h-auto max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden",
+                "relative flex h-auto max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-visible",
                 "rounded-xl border border-border bg-background",
                 "shadow-[0_20px_50px_-18px_rgba(0,0,0,0.22)] dark:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.7)]",
                 className

@@ -28,6 +28,7 @@ import {
 } from "@/services/pdfServices";
 import { Boxes, FileText, Filter, LineChart } from "lucide-react";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 25;
@@ -319,6 +320,7 @@ export default function KardexProduction() {
       header: "Fecha y hora",
       accessorKey: "fechaHora",
       className: "w-80",
+      headerClassName:"h-11",
       hideable: false,
       sortable: false,
     },
@@ -431,10 +433,9 @@ export default function KardexProduction() {
       <PageTitle title="Kardex de productos terminados" />
 
       <div className="px-6 py-6 space-y-4">
-        <div>
-          <h1 className="text-xl font-semibold">Kardex de productos terminados</h1>
-          <p className="text-sm text-black/60">Auditoría viva de movimientos.</p>
-        </div>
+        <Headed title="Kardex de productos terminados" 
+        subtitle="Auditoría viva de movimientos." 
+        size="lg" />
 
         <section className="rounded-2xl border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
           <SectionHeaderForm icon={Filter} title="Filtros" />
@@ -504,37 +505,34 @@ export default function KardexProduction() {
                 Exportar CSV
               </SystemButton>
             </div>
-
-            <div className="p-5">
-              <DataTable
-                tableId="kardex-production-table"
-                data={kardexRows}
-                columns={columns}
-                rowKey="id"
-                loading={loading}
-                emptyMessage={
-                  !stockItemId
-                    ? "Seleccione un producto para ver el kardex."
-                    : "No hay movimientos para los filtros actuales."
-                }
-                hoverable={false}
-                animated={false}
-                pagination={{
-                  page: pagination.page,
-                  limit: pagination.limit,
-                  total: pagination.total,
-                }}
-                onPageChange={(nextPage) =>
-                  setPagination((prev) => ({ ...prev, page: nextPage }))
-                }
-                onRowClick={(row) => setSelectedRow(row.original)}
-                rowClassName={(row) =>
-                  selectedRow?.id === row.original.id
-                    ? "bg-primary/10 border-l-4 border-l-primary"
-                    : ""
-                }
-              />
-            </div>
+            <DataTable
+              tableId="kardex-production-table"
+              data={kardexRows}
+              columns={columns}
+              rowKey="id"
+              loading={loading}
+              emptyMessage={
+                !stockItemId
+                  ? "Seleccione un producto para ver el kardex."
+                  : "No hay movimientos para los filtros actuales."
+              }
+              hoverable={false}
+              animated={false}
+              pagination={{
+                page: pagination.page,
+                limit: pagination.limit,
+                total: pagination.total,
+              }}
+              onPageChange={(nextPage) =>
+                setPagination((prev) => ({ ...prev, page: nextPage }))
+              }
+              onRowClick={(row) => setSelectedRow(row.original)}
+              rowClassName={(row) =>
+                selectedRow?.id === row.original.id
+                  ? "bg-primary/10 border-l-4 border-l-primary"
+                  : ""
+              }
+            />
           </div>
 
           <div className="space-y-3">
