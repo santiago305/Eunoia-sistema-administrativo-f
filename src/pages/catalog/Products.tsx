@@ -68,10 +68,6 @@ export default function CatalogProducts() {
         return () => clearTimeout(handler);
     }, [searchText]);
 
-    const sortedProducts = useMemo(() => {
-        return [...products].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [products]);
-
     const startCreate = () => {
         setEditingProductId(null);
         setOpenCreate(true);
@@ -364,7 +360,7 @@ export default function CatalogProducts() {
                     <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
                         <DataTable
                             tableId="catalog-products"
-                            data={sortedProducts}
+                            data={products}
                             columns={columns}
                             rowKey="id"
                             loading={loading}

@@ -66,11 +66,6 @@ export default function RowMaterial() {
         return () => clearTimeout(handler);
     }, [searchText]);
 
-    const sortedProducts = useMemo(() => {
-        return [...products].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    }, [products]);
-
-
     const startCreate = () => {
         setEditingProductId(null);
         setOpenCreate(true);
@@ -99,7 +94,7 @@ export default function RowMaterial() {
             {
                 id: "sku",
                 header: "SKU",
-                cell: (row) => <span className="font-medium">{row.sku || "-"}</span>,
+                cell: (row) => <span className="font-medium">{row.customSku || "-"}</span>,
                 headerClassName: "text-left w-[90px] h-11",
                 className: "text-black/70",
             },
@@ -381,7 +376,7 @@ export default function RowMaterial() {
                     <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
                         <DataTable
                             tableId="row-materials"
-                            data={sortedProducts}
+                            data={products}
                             columns={columns}
                             rowKey="id"
                             loading={loading}
