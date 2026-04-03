@@ -21,7 +21,7 @@ import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
 import { ActionsPopover, type ActionItem } from "@/components/ActionsPopover";
-import { Filter, Menu, OctagonAlert, Timer } from "lucide-react";
+import { Calendar, CreditCard, FileText, Filter, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Timer, XCircle } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
@@ -517,21 +517,24 @@ export default function Purchases() {
             header: "",
             cell: (row) => (
                 <ActionsPopover
-                    actions={[
-                        (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                actions={[
+                    (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
                             id: "enter-warehouse",
                             label: "Ingresar Almacen",
+                            icon: <PackageCheck className="h-4 w-4" />,
                             onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
                         },
                         row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                             id: "process",
                             label: "Procesar",
+                            icon: <Play className="h-4 w-4" />,
                             onClick: () => setSent(row.purchase.poId ?? ""),
                         },
                         row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
                         row.purchase.totalPaid != row.purchase.total && {
                             id: "payment",
                             label: "Pago",
+                            icon: <CreditCard className="h-4 w-4" />,
                             onClick: () => {
                                 setModalPayment(true);
                                 setTotalPaid(row.purchase.totalPaid ?? 0);
@@ -542,6 +545,7 @@ export default function Purchases() {
                         row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
                             id: "quotas",
                             label: "Ver cuotas",
+                            icon: <Calendar className="h-4 w-4" />,
                             onClick: () => {
                                 setModalQuotaList(true);
                                 setPoId(row.purchase.poId ?? "");
@@ -550,6 +554,7 @@ export default function Purchases() {
                         {
                             id: "open-pdf",
                             label: "Abrir pdf",
+                            icon: <FileText className="h-4 w-4" />,
                             onClick: () => {
                                 openPurchasePdf(row.purchase.poId ?? "");
                             },
@@ -557,6 +562,7 @@ export default function Purchases() {
                         {
                             id: "list-payments",
                             label: "Listar pagos",
+                            icon: <List className="h-4 w-4" />,
                             onClick: () => {
                                 setModalPaymentList(true);
                                 setPoId(row.purchase.poId ?? "");
@@ -567,12 +573,14 @@ export default function Purchases() {
                         row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                             id: "edit",
                             label: "Editar",
+                            icon: <Pencil className="h-4 w-4" />,
                             onClick: () => navigate(`/compra/${row.purchase.poId}`),
                         },
                         row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                             id: "cancel",
                             label: "Cancelar",
                             className: "text-rose-700 hover:bg-rose-50",
+                            icon: <XCircle className="h-4 w-4" />,
                             onClick: () => cancelOrder(row.purchase.poId ?? ""),
                         },
                     ].filter(Boolean) as ActionItem[]}
@@ -590,10 +598,13 @@ export default function Purchases() {
                                 e.stopPropagation();
                                 helpers.onAction(action);
                             }}
-                            className={`w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04] ${action.className ?? ""}`}
+                            className={`justify-start px-3 py-2 text-[11px] ${action.className ?? ""}`}
                             disabled={action.disabled}
                         >
-                            {action.label}
+                            <span className="inline-flex items-center gap-2">
+                                {action.icon}
+                                <span>{action.label}</span>
+                            </span>
                         </button>
                     )}
                 />

@@ -508,61 +508,70 @@ export function ProductFormModal({
     void loadRecipes(selectedVariantId);
   }, [selectedVariantId, open]);
 
+  const onUpdate = async () => {
+    if (!workingProductId) return;
+
+    await updateProduct(workingProductId, {
+      name: form.name.trim() || undefined,
+      description: form.description.trim() || null,
+      barcode: form.barcode.trim() || null,
+      customSku: form.customSku?.trim() || null,
+      price: Number(form.price) || 0,
+      cost: Number(form.cost) || 0,
+      baseUnitId: form.baseUnitId,
+      attributes: form.attribute,
+    });
+
+    await updateProductActive(workingProductId, { isActive: form.isActive });
+    showFlash(successResponse(`${label} actualizado`));
+    await onSaved?.();
+    onClose();
+  };
+
+  const onSave = async () => {
+    const created = await createProduct({
+      type: productType,
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      isActive: form.isActive,
+      barcode: form.barcode.trim() || null,
+      customSku: form.customSku?.trim() || null,
+      price: Number(form.price) || 0,
+      cost: Number(form.cost) || 0,
+      baseUnitId: form.baseUnitId,
+      attributes: form.attribute,
+    });
+
+    const createdId = created?.id ?? null;
+    const createdName = created?.name ?? form.name.trim();
+    
+    
+    showFlash(successResponse(`${label} creado`));
+    await onSaved?.();
+    
+    if (createdId) {
+      setWorkingProductId(createdId);
+      setWorkingProductName(createdName);
+      setWorkspaceTab("equivalences");
+      const tasks = [loadEquivalences(createdId), loadVariants(createdId)];
+
+      if (!isMateriaPrima) tasks.push(loadPrimaVariants());
+      await Promise.all(tasks);
+    } else {
+      onClose();
+    }
+  };
+
   const saveProduct = async () => {
     if (!canSave || saving) return;
 
     clearFlash();
     setSaving(true);
-
     try {
-      if (mode === "edit" && workingProductId) {
-        await updateProduct(workingProductId, {
-          name: form.name.trim() || undefined,
-          description: form.description.trim() || null,
-          barcode: form.barcode.trim() || null,
-          customSku: form.customSku?.trim() || null,
-          price: Number(form.price) || 0,
-          cost: Number(form.cost) || 0,
-          baseUnitId: form.baseUnitId,
-          attributes: form.attribute,
-        });
-
-        await updateProductActive(workingProductId, { isActive: form.isActive });
-        showFlash(successResponse(`${label} actualizado`));
-        await onSaved?.();
-        onClose();
+      if (workingProductId) {
+        await onUpdate();
       } else {
-        const created = await createProduct({
-          type: productType,
-          name: form.name.trim(),
-          description: form.description.trim() || null,
-          isActive: form.isActive,
-          barcode: form.barcode.trim() || null,
-          customSku: form.customSku?.trim() || null,
-          price: Number(form.price) || 0,
-          cost: Number(form.cost) || 0,
-          baseUnitId: form.baseUnitId,
-          attributes: form.attribute,
-        });
-
-        const createdId = created?.id ?? null;
-
-        const createdName = created?.name ?? form.name.trim();
-
-        showFlash(successResponse(`${label} creado`));
-        await onSaved?.();
-
-        if (createdId) {
-          setWorkingProductId(createdId);
-          setWorkingProductName(createdName);
-          setWorkspaceTab("equivalences");
-          const tasks = [loadEquivalences(createdId), loadVariants(createdId)];
-
-          if (!isMateriaPrima) tasks.push(loadPrimaVariants());
-          await Promise.all(tasks);
-        } else {
-          onClose();
-        }
+        await onSave();
       }
     } catch {
       showFlash(
