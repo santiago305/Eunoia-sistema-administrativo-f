@@ -12,43 +12,29 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
-import { createAdjustment } from "@/services/documentService";
+import { createTransfer } from "@/services/documentService";
 import { getStock } from "@/services/inventoryService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import type { AdjustmentItem, AdjustmentItemRow, CreateAdjustment } from "@/pages/catalog/types/adjustment";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
-import { AdjustmentItemModal } from "@/pages/catalog/components/AdjustmentItemModal";
-import { AdjustmentResultModal } from "@/pages/catalog/components/AdjustmentResultModal";
+import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, CreateTransfer, Stock, TransferItem, TransferItemRow } from "./types/transfer";
+import { TransferItemModal } from "@/pages/catalog/components/TransferItemModal";
+import { TransferResultModal } from "@/pages/catalog/components/TransferResultModal";
 import { Headed } from "@/components/Headed";
 
 const CURRENCY = "PEN";
 
-const buildEmptyForm = (): CreateAdjustment => ({
-    docType: DocType.ADJUSTMENT,
-    serieId: "",
-    fromWarehouseId: "",
-    note: "",
-    items: [],
-});
-
-const buildEmptyItem = (): AdjustmentItem => ({
-    stockItemId: "",
-    quantity: 0,
-});
-
-export default function AdjustmentRowMaterial() {
+export default function TransferProducts() {
     const { showFlash, clearFlash } = useFlashMessage();
     const navigate = useNavigate();
-
     const [loading, setLoading] = useState(false);
-    const [form, setForm] = useState<CreateAdjustment>(() => buildEmptyForm());
-    const [pendingItem, setPendingItem] = useState<AdjustmentItem>(() => buildEmptyItem());
+    const [form, setForm] = useState<CreateTransfer>(() => buildEmptyFormTransfer());
+    const [pendingItem, setPendingItem] = useState<TransferItem>(() => buildEmptyItemTransfer());
     const [openItemModal, setOpenItemModal] = useState(false);
     const [openNavigateModal, setOpenNavigateModal] = useState(false);
-    const [lastSavedAdjustmentId, setLastSavedAdjustmentId] = useState("");
+    const [lastSavedTransferId, setLastSavedTransferId] = useState("");
     const [products, setProducts] = useState<FinishedProducts[]>([]);
     const [searchResults, setSearchResults] = useState<FinishedProducts[]>([]);
     const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
@@ -56,26 +42,16 @@ export default function AdjustmentRowMaterial() {
     const [query, setQuery] = useState("");
     const [stockLoading, setStockLoading] = useState(false);
     const [stockError, setStockError] = useState<string | null>(null);
-    const [stockSummary, setStockSummary] = useState<{
-        itemId: string;
-        name?: string;
-        sku?: string;
-        customSku?: string;
-        attributes?: {
-            presentation?: string;
-            variant?: string;
-            color?: string;
-        };
-        unit?: string;
-        value?: number | null;
-    } | null>(null);
+    const [stockSummaryFrom, setStockSummaryFrom] = useState<Stock | null>(null);
+    const [stockSummaryTo, setStockSummaryTo] = useState<Stock | null>(null);
 
     const resetForm = () => {
-        setForm(buildEmptyForm());
-        setPendingItem(buildEmptyItem());
+        setForm(buildEmptyFormTransfer());
+        setPendingItem(buildEmptyItemTransfer());
         setSerie({ value: "", label: "" });
         setProducts([]);
-        setStockSummary(null);
+        setStockSummaryFrom(null);
+        setStockSummaryTo(null);
         setStockError(null);
     };
 
@@ -99,27 +75,20 @@ export default function AdjustmentRowMaterial() {
         if (!warehouseId) {
             setSerie({ value: "", label: "" });
             setForm((prev) => ({ ...prev, serieId: "" }));
-            setStockSummary(null);
+            setStockSummaryFrom(null);
+            setStockSummaryTo(null);
             setStockError(null);
             return;
         }
-
         try {
-            const res = await listDocumentSeries({
-                warehouseId,
-                docType: DocType.ADJUSTMENT,
-                isActive: true,
-            });
-
+            const res = await listDocumentSeries({ warehouseId, docType: DocType.TRANSFER, isActive: true });
             if (!res?.length) {
                 setSerie({ value: "", label: "" });
                 setForm((prev) => ({ ...prev, serieId: "" }));
                 return;
             }
-
             const nextSerie = res[0];
             const nextNumber = Number(nextSerie.nextNumber ?? 0);
-
             setSerie({
                 value: nextSerie.id,
                 label: `${nextSerie.code}-${nextNumber}`,
@@ -136,95 +105,61 @@ export default function AdjustmentRowMaterial() {
         try {
             const res = await searchProductAndVariant({
                 q: query,
-                raw: true,
+                raw: false,
             });
-
-            const normalized = (res ?? [])
-                .map((row: any) => {
-                    const resolvedItemId = row.itemId ?? row.primaId ?? row.id ?? "";
-                    const resolvedProductId = row.productId ?? (row.type === "PRODUCT" ? resolvedItemId : undefined);
-                    const resolvedVariantId = row.variantId ?? (row.type === "VARIANT" ? resolvedItemId : null);
-
-                    return {
-                        ...row,
-                        id: resolvedItemId,
-                        itemId: resolvedItemId,
-                        productId: resolvedProductId,
-                        variantId: resolvedVariantId,
-                        isActive: row.isActive ?? true,
-                    };
-                })
-                .filter((row: any) => row.itemId);
-
-            setSearchResults(normalized);
+            setSearchResults(res ?? []);
         } catch {
             setSearchResults([]);
-            showFlash(errorResponse("Error al cargar materias primas"));
+            showFlash(errorResponse("Error al cargar productos"));
         }
     };
 
     const productOptions = useMemo(
         () => [
-            { value: "", label: "Seleccionar materia prima" },
+            { value: "", label: "Seleccionar producto" },
             ...(searchResults ?? []).map((v) => ({
                 value: v.itemId ?? v.id ?? "",
-                label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
-                ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,
+                label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}${v.sku ? ` - ${v.sku}` : ""} (${v.customSku ?? "-"})`,
             })),
         ],
-        [searchResults],
+        [searchResults]
     );
 
     const addItem = () => {
-        const { stockItemId, quantity, adjustmentType } = pendingItem;
+        const { stockItemId, quantity } = pendingItem;
         const selected =
             searchResults.find((p) => (p.itemId ?? p.id) === stockItemId) ??
             products.find((p) => (p.itemId ?? p.id) === stockItemId);
 
         if (!stockItemId) {
-            showFlash(errorResponse("Selecciona una materia prima"));
+            showFlash(errorResponse("Selecciona un producto"));
             return;
         }
-
         if (quantity === 0) {
             showFlash(errorResponse("La cantidad no puede ser 0"));
             return;
         }
-
-        if (adjustmentType === "REDUCIR" && quantity >= 0) {
-            showFlash(errorResponse("Para reducir, ingresa una cantidad negativa"));
-            return;
-        }
-
-        if (adjustmentType === "AUMENTAR" && quantity <= 0) {
-            showFlash(errorResponse("Para aumentar, ingresa una cantidad positiva"));
-            return;
-        }
-
         if (!selected) {
-            showFlash(errorResponse("Materia prima no encontrada"));
+            showFlash(errorResponse("Producto no encontrado"));
             return;
         }
-
         const alreadyAdded = (form.items ?? []).some((item) => item.stockItemId === stockItemId);
         if (alreadyAdded) {
-            showFlash(errorResponse("La materia prima ya fue agregada"));
+            showFlash(errorResponse("El producto ya fue agregado"));
             return;
         }
 
         setForm((prev) => ({
             ...prev,
-            items: [...(prev.items ?? []), { stockItemId, quantity, adjustmentType }],
+            items: [...(prev.items ?? []), { stockItemId, quantity }],
         }));
-
         setProducts((prev) => {
             const selectedId = selected.itemId ?? selected.id;
             if (!selectedId) return prev;
             const exists = prev.some((p) => (p.itemId ?? p.id) === selectedId);
             return exists ? prev : [...prev, selected];
         });
-
-        setPendingItem(buildEmptyItem());
+        setPendingItem(buildEmptyItemTransfer());
     };
 
     const removeItem = (index: number) => {
@@ -234,7 +169,7 @@ export default function AdjustmentRowMaterial() {
         }));
     };
 
-    const updateItem = (index: number, patch: Partial<AdjustmentItem>) => {
+    const updateItem = (index: number, patch: Partial<TransferItem>) => {
         setForm((prev) => ({
             ...prev,
             items: (prev.items ?? []).map((item, i) => (i === index ? { ...item, ...patch } : item)),
@@ -245,10 +180,9 @@ export default function AdjustmentRowMaterial() {
         return (form.items ?? []).reduce((acc, item) => acc + item.quantity * (item.unitCost ?? 0), 0);
     }, [form.items]);
 
-    const itemRows = useMemo<AdjustmentItemRow[]>(() => {
+    const itemRows = useMemo<TransferItemRow[]>(() => {
         return (form.items ?? []).map((item, index) => {
             const product = products.find((p) => (p.itemId ?? p.id) === item.stockItemId);
-
             return {
                 ...item,
                 rowIndex: index,
@@ -261,7 +195,7 @@ export default function AdjustmentRowMaterial() {
         });
     }, [form.items, products]);
 
-    const columns = useMemo<DataTableColumn<AdjustmentItemRow>[]>(
+    const columns = useMemo<DataTableColumn<TransferItemRow>[]>(
         () => [
             {
                 id: "sku",
@@ -273,8 +207,11 @@ export default function AdjustmentRowMaterial() {
             {
                 id: "product",
                 header: "Producto",
-                cell: (row) => <span className="text-black/70"> {`${row.productName ? `${row.productName}` : "" } ${row.attributes?.presentation ?? ""}
-                 ${row.attributes?.variant ?? ""}  ${row.attributes?.color ?? ""} ${row.attributes?.color ?? ""} (${row.sku ?? "-"})`}</span>,
+                cell: (row) => (
+                    <span className="text-black/70">
+                        {`${row.productName ?? ""} ${row.attributes?.presentation ?? ""} ${row.attributes?.variant ?? ""} ${row.attributes?.color ?? ""} (${row.sku ?? "-"})`}
+                    </span>
+                ),
                 headerClassName: "text-left w-[170px]",
                 className: "text-black/70",
             },
@@ -283,15 +220,6 @@ export default function AdjustmentRowMaterial() {
                 header: "Unidad",
                 cell: (row) => <span className="text-black/70">{row.unitName ?? "-"}</span>,
                 headerClassName: "text-left w-[110px]",
-                className: "text-black/70",
-            },
-            {
-                id: "type",
-                header: "Tipo de ajuste",
-                cell: (row) => (
-                    <span className="text-black/70">{row.adjustmentType}</span>
-                ),
-                headerClassName: "text-left w-[130px]",
                 className: "text-black/70",
             },
             {
@@ -315,7 +243,13 @@ export default function AdjustmentRowMaterial() {
                 header: "",
                 cell: (row) => (
                     <div className="flex justify-end">
-                        <SystemButton variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => removeItem(row.rowIndex)} title="Eliminar">
+                        <SystemButton
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-rose-600"
+                            onClick={() => removeItem(row.rowIndex)}
+                            title="Eliminar"
+                        >
                             <Trash2 className="h-4 w-4" />
                         </SystemButton>
                     </div>
@@ -324,17 +258,15 @@ export default function AdjustmentRowMaterial() {
                 className: "text-right",
             },
         ],
-        [removeItem, updateItem],
+        [removeItem, updateItem]
     );
 
-    const saveAdjustment = async () => {
+    const saveTransfer = async () => {
         clearFlash();
-
-        if (!form.fromWarehouseId || !form.serieId) {
+        if (!form.fromWarehouseId || !form.toWarehouseId || !form.serieId) {
             showFlash(errorResponse("Completa los datos del documento"));
             return;
         }
-
         if (!form.items?.length) {
             showFlash(errorResponse("Agrega al menos un item"));
             return;
@@ -342,20 +274,18 @@ export default function AdjustmentRowMaterial() {
 
         setLoading(true);
         try {
-            const payload: CreateAdjustment = {
+            const payload: CreateTransfer = {
                 ...form,
                 note: form.note?.trim() || undefined,
                 items: form.items ?? [],
             };
-
-            const res = await createAdjustment(payload);
+            const res = await createTransfer(payload);
             const nextId = res.id ?? (res as { docId?: string }).docId ?? "";
-
-            setLastSavedAdjustmentId(nextId);
-            showFlash(successResponse("Ajuste registrado"));
+            setLastSavedTransferId(nextId);
+            showFlash(successResponse("Transferencia registrada"));
             setOpenNavigateModal(true);
         } catch {
-            showFlash(errorResponse("Error al guardar el ajuste"));
+            showFlash(errorResponse("Error al guardar la transferencia"));
         } finally {
             setLoading(false);
         }
@@ -364,53 +294,39 @@ export default function AdjustmentRowMaterial() {
     const extractStockValue = (data: any) => {
         if (data == null) return null;
         if (typeof data === "number") return data;
-
         const candidates = ["stock", "quantity", "available", "balance", "total", "onHand"];
         for (const key of candidates) {
             const value = data?.[key];
             if (typeof value === "number") return value;
         }
-
         return null;
     };
 
-    const handleRowClick = async (row: AdjustmentItemRow) => {
+    const fetchStockValue = async (warehouseId: string, itemId: string) => {
+        const data = await getStock({ warehouseId, itemId });
+        return extractStockValue(data);
+    };
+
+    const handleRowClick = async (row: TransferItemRow) => {
         if (!form.fromWarehouseId) {
-            showFlash(errorResponse("Selecciona un almacén"));
+            showFlash(errorResponse("Selecciona el almacén de origen"));
             return;
         }
-
         setStockLoading(true);
         setStockError(null);
-
         try {
-            const data = await getStock({
-                warehouseId: form.fromWarehouseId,
-                itemId: row.stockItemId,
-            });
+            const fromPromise = fetchStockValue(form.fromWarehouseId, row.stockItemId);
+            const toPromise = form.toWarehouseId
+                ? fetchStockValue(form.toWarehouseId, row.stockItemId)
+                : Promise.resolve(null);
+            const [fromValue, toValue] = await Promise.all([fromPromise, toPromise]);
 
-            const value = extractStockValue(data);
-
-            setStockSummary({
-                itemId: row.stockItemId,
-                sku: row.sku,
-                customSku: row.customSku,
-                attributes: row.attributes,
-                name: row.productName,
-                unit: row.unitName,
-                value,
-            });
+            setStockSummaryFrom(buildStockSummary(row, fromValue));
+            setStockSummaryTo(form.toWarehouseId ? buildStockSummary(row, toValue) : null);
         } catch {
             setStockError("Error al obtener stock");
-            setStockSummary({
-                itemId: row.stockItemId,
-                sku: row.sku,
-                customSku: row.customSku,
-                attributes: row.attributes,
-                name: row.productName,
-                unit: row.unitName,
-                value: null,
-            });
+            setStockSummaryFrom(buildStockSummary(row, null));
+            setStockSummaryTo(form.toWarehouseId ? buildStockSummary(row, null) : null);
         } finally {
             setStockLoading(false);
         }
@@ -433,23 +349,25 @@ export default function AdjustmentRowMaterial() {
         void loadWarehouses();
     }, []);
 
+    const summaryBase = stockSummaryFrom ?? stockSummaryTo;
+    const selectedRowId = stockSummaryFrom?.itemId ?? stockSummaryTo?.itemId;
+
     return (
         <div className="w-full min-h-screen bg-white">
-            <PageTitle title="Ajuste de materias primas" />
-
+            <PageTitle title="Transferencia de productos" />
             <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
-                <Headed title="Ajuste de materias primas"
-                subtitle="Al reducir stock solo puedes reducir hasta dejarlo en (0)"  
+                <Headed title="Transferencia entre almacenes" 
+                subtitle="El almacén de origen debe tener un stock mayor a (0)." 
                 size="lg" />
 
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
                     <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
                         <div className="border-b border-black/10 p-3 sm:p-4">
-                            <SectionHeaderForm icon={Boxes} title="Materias primas" />
+                            <SectionHeaderForm icon={Boxes} title="Productos" />
                             <div className="mt-3 grid grid-cols-1 gap-2">
                                 <FloatingSelect
-                                    label="Seleccionar materia prima"
-                                    name="adjustment-row-material"
+                                    label="Seleccionar producto"
+                                    name="transfer-product"
                                     value={pendingItem.stockItemId}
                                     options={productOptions}
                                     onChange={(value) => {
@@ -457,7 +375,7 @@ export default function AdjustmentRowMaterial() {
                                         setOpenItemModal(Boolean(value));
                                     }}
                                     searchable
-                                    searchPlaceholder="Buscar materia prima..."
+                                    searchPlaceholder="Buscar producto..."
                                     onSearchChange={(text) => setQuery(text)}
                                     className="h-9 text-xs"
                                 />
@@ -466,17 +384,15 @@ export default function AdjustmentRowMaterial() {
 
                         <div className="flex-1 overflow-auto">
                             <DataTable
-                                tableId="adjustment-row-material-items"
+                                tableId="transfer-products-items"
                                 data={itemRows}
                                 columns={columns}
                                 rowKey="stockItemId"
                                 emptyMessage="Aún no agregas items."
                                 animated={false}
-                                tableClassName="table-fixed text-[10px]"
+                                tableClassName="table-fixed text-[11px]"
                                 onRowClick={handleRowClick}
-                                rowClassName={(row) =>
-                                    row.stockItemId === stockSummary?.itemId ? "bg-primary/5" : undefined
-                                }
+                                rowClassName={(row) => (row.stockItemId === selectedRowId ? "bg-primary/5" : undefined)}
                             />
                         </div>
 
@@ -484,114 +400,132 @@ export default function AdjustmentRowMaterial() {
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="text-[11px] text-black/60">Total costo items</div>
                                 <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-                                    <span className="font-semibold text-black tabular-nums">
-                                        {money(totalCost, CURRENCY)}
-                                    </span>
+                                    <span className="font-semibold text-black tabular-nums">{money(totalCost, CURRENCY)}</span>
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto flex flex-col max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
-                        <div className="border-b border-black/10 px-3 sm:px-4 py-2">
+                        <div className="border-b border-black/10 px-3 sm:px-4 py-2 mt-2">
                             <SectionHeaderForm icon={FileText} title="Datos de documento" />
                         </div>
-
                         <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-3">
                             <div className="grid grid-cols-2 gap-4">
-                                <FloatingSelect
-                                    label="Almacén"
-                                    name="adjustment-warehouse"
-                                    value={form.fromWarehouseId ?? ""}
-                                    options={warehouseOptions}
-                                    onChange={(value) => {
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            fromWarehouseId: value,
-                                            serieId: "",
-                                        }));
-                                        void loadSeries(value);
-                                    }}
-                                    className="h-9 text-xs"
-                                    searchable
-                                />
-
-                                <FloatingInput
-                                    label="Serie"
-                                    name="adjustment-serie"
-                                    value={serie.label}
-                                    disabled
-                                    className="h-9 text-xs text-black/90"
-                                />
+                              <FloatingSelect
+                                  label="Almacén de origen"
+                                  name="transfer-warehouse-from"
+                                  value={form.fromWarehouseId ?? ""}
+                                  options={warehouseOptions}
+                                  onChange={(value) => {
+                                      setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
+                                      setStockSummaryFrom(null);
+                                      setStockSummaryTo(null);
+                                      setStockError(null);
+                                      void loadSeries(value);
+                                  }}
+                                  className="h-9 text-xs"
+                                  searchable
+                              />
+                              <FloatingSelect
+                                  label="Almacén de destino"
+                                  name="transfer-warehouse-to"
+                                  value={form.toWarehouseId ?? ""}
+                                  options={warehouseOptions}
+                                  onChange={(value) => {
+                                      setForm((prev) => ({ ...prev, toWarehouseId: value }));
+                                      setStockSummaryTo(null);
+                                      setStockError(null);
+                                  }}
+                                  className="h-9 text-xs"
+                                  searchable
+                              />
+                              <FloatingInput
+                                  label="Serie"
+                                  name="transfer-serie"
+                                  value={serie.label}
+                                  disabled
+                                  className="h-9 text-xs text-black/90"
+                              />
+                              <FloatingInput
+                                  label="Nota"
+                                  name="transfer-note"
+                                  value={form.note ?? ""}
+                                  onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
+                                  className="h-9 text-xs"
+                              />
                             </div>
-
-                            <FloatingInput
-                                label="Nota"
-                                name="adjustment-note"
-                                value={form.note ?? ""}
-                                onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-                                className="h-9 text-xs text-black/90"
-                            />
-
                             <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
                                 <p className="text-[11px] font-semibold text-black">Resumen</p>
-
                                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
                                     <div className="flex items-center justify-between gap-3">
-                                        <span>Materia prima</span>
-                                        <span className="font-semibold text-right">{stockSummary?.name ?? "-"}</span>
+                                        <span>Producto</span>
+                                        <span className="font-semibold text-right">{summaryBase?.name ?? "-"}</span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
                                         <span>SKU</span>
                                         <span className="font-semibold tabular-nums text-right">
-                                            {stockSummary?.sku ?? "-"}
+                                            {summaryBase?.sku ?? "-"}
                                         </span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
                                         <span>SKU interno</span>
                                         <span className="font-semibold tabular-nums text-right">
-                                            {stockSummary?.customSku ?? "-"}
+                                            {summaryBase?.customSku ?? "-"}
                                         </span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
                                         <span>Presentación</span>
                                         <span className="font-semibold text-right">
-                                            {stockSummary?.attributes?.presentation ?? "-"}
+                                            {summaryBase?.attributes?.presentation ?? "-"}
                                         </span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
                                         <span>Variante</span>
                                         <span className="font-semibold text-right">
-                                            {stockSummary?.attributes?.variant ?? "-"}
+                                            {summaryBase?.attributes?.variant ?? "-"}
                                         </span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
                                         <span>Color</span>
                                         <span className="font-semibold text-right">
-                                            {stockSummary?.attributes?.color ?? "-"}
+                                            {summaryBase?.attributes?.color ?? "-"}
                                         </span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
                                         <span>Unidad</span>
                                         <span className="font-semibold tabular-nums text-right">
-                                            {stockSummary?.unit ?? "-"}
+                                            {summaryBase?.unit ?? "-"}
                                         </span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
-                                        <span>Stock</span>
+                                        <span>Stock origen</span>
                                         <span className="font-semibold tabular-nums text-right">
                                             {stockLoading
                                                 ? "Cargando..."
                                                 : stockError
-                                                  ? "-"
-                                                  : stockSummary?.value ?? "-"}
+                                                    ? "-"
+                                                    : stockSummaryFrom?.value ?? "-"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Stock destino</span>
+                                        <span className="font-semibold tabular-nums text-right">
+                                            {!form.toWarehouseId
+                                                ? "-"
+                                                : stockLoading
+                                                    ? "Cargando..."
+                                                    : stockError
+                                                        ? "-"
+                                                        : stockSummaryTo?.value ?? "-"}
                                         </span>
                                     </div>
                                 </div>
@@ -608,10 +542,11 @@ export default function AdjustmentRowMaterial() {
                                     disabled={
                                         loading ||
                                         !form.fromWarehouseId ||
+                                        !form.toWarehouseId ||
                                         !form.serieId ||
                                         !(form.items ?? []).length
                                     }
-                                    onClick={saveAdjustment}
+                                    onClick={saveTransfer}
                                 >
                                     {loading ? "Guardando..." : "Guardar"}
                                 </SystemButton>
@@ -621,14 +556,13 @@ export default function AdjustmentRowMaterial() {
                 </div>
             </div>
 
-            <AdjustmentItemModal
+            <TransferItemModal
                 open={openItemModal}
                 pendingItem={pendingItem}
-                sectionTitle="Materias primas"
                 onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
                 onClose={() => {
                     setOpenItemModal(false);
-                    setPendingItem(buildEmptyItem());
+                    setPendingItem(buildEmptyItemTransfer());
                 }}
                 onAdd={() => {
                     addItem();
@@ -636,22 +570,22 @@ export default function AdjustmentRowMaterial() {
                 }}
             />
 
-            <AdjustmentResultModal
+            <TransferResultModal
                 open={openNavigateModal}
                 onClose={() => setOpenNavigateModal(false)}
                 onNew={() => {
                     setOpenNavigateModal(false);
                     resetForm();
-                    setLastSavedAdjustmentId("");
-                    navigate(RoutesPaths.rowMaterialAdjustments);
+                    setLastSavedTransferId("");
+                    navigate(RoutesPaths.catalogTransfer);
                 }}
                 onGoToList={() => {
                     setOpenNavigateModal(false);
-                    navigate(RoutesPaths.KardexPrima);
+                    navigate(RoutesPaths.KardexFinished);
                 }}
-                adjustmentId={lastSavedAdjustmentId}
-                title="Ajuste de inventario procesado"
-                goToLabel="Ir a kardex de materias primas"
+                transferId={lastSavedTransferId}
+                title="Transferencia de inventario procesada"
+                goToLabel="Ir a kardex de productos terminados"
             />
         </div>
     );

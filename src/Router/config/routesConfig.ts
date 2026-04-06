@@ -51,7 +51,9 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.catalogSummary, name: "catalogSummary", isProtected: true },
   { path: RoutesPaths.catalogProducts, name: "catalogProducts", isProtected: true },
   { path: RoutesPaths.catalogVariants, name: "catalogVariants", isProtected: true },
+  { path: RoutesPaths.catalogDocuments, name: "catalogDocuments", isProtected: true },
   { path: RoutesPaths.catalogAdjustments, name: "catalogAdjustments", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
+  { path: RoutesPaths.catalogTransfer, name: "catalogTransfer", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
   { path: RoutesPaths.KardexFinished, name: "kardexFinished", isProtected: true, rolesAllowed: ["admin", "moderator"] },
 
   { path: RoutesPaths.warehouses, name: "warehouses", isProtected: true },
@@ -60,7 +62,9 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.rowMaterialSummary, name: "rowMaterialSummary", isProtected: true },
   { path: RoutesPaths.rowVariant, name: "rowVariant", isProtected: true },
   { path: RoutesPaths.rowMaterial, name: "rowMaterial", isProtected: true },
+  { path: RoutesPaths.rowMaterialDocuments, name: "rowMaterialDocuments", isProtected: true },
   { path: RoutesPaths.rowMaterialAdjustments, name: "rowMaterialAdjustments", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
+  { path: RoutesPaths.rowMaterialTransfer, name: "rowMaterialTransfer", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
   { path: RoutesPaths.KardexPrima, name: "kardexPrima", isProtected: true, rolesAllowed: ["admin", "moderator"] },
 
   { path: RoutesPaths.providers, name: "providers", isProtected: true },

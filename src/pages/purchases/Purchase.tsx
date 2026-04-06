@@ -231,7 +231,7 @@ export default function PurchaseCreateLocal() {
   const productOptions = (products ?? []).map((v) => ({
     value: v.itemId!,
     label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
-    ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      }));
+    ${v.sku ? ` - ${v.sku}`: ""} ${v.customSku ? `- (${v.customSku})` : ""}`,      }));
 
   const updateItem = (itemIdToUpdate: string, patch: Partial<PurchaseOrderItem>) => {
     setForm((prev) => ({
@@ -446,7 +446,7 @@ export default function PurchaseCreateLocal() {
         header: "SKU",
         accessorKey: "sku",
         className: "text-black/70",
-        headerClassName: "text-left",
+        headerClassName: "text-left h-11",
         hideable: false,
         sortable: false,
       },
@@ -576,7 +576,7 @@ export default function PurchaseCreateLocal() {
   return (
     <div className="w-full min-h-screen bg-white text-black">
       <div className="h-screen w-full px-3 sm:px-4 lg:px-6 py-0">
-        <div className="mt-4 grid h-[calc(100vh-64px)] grid-cols-1 gap-3 lg:grid-cols-[6fr_2fr]">
+        <div className="mt-4 grid h-[calc(100vh-64px)] grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr]">
           <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="border-b border-black/10 p-3 sm:p-4">
               <SectionHeaderForm icon={Boxes} title="Productos" />
@@ -611,7 +611,7 @@ export default function PurchaseCreateLocal() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-3 sm:p-4">
+            <div className="flex-1 overflow-auto">
               <DataTable
                 tableId="purchase-create-items-table"
                 data={itemRows}
@@ -829,21 +829,11 @@ export default function PurchaseCreateLocal() {
 
             <div className="border-t border-black/10 px-3 sm:px-4 py-3">
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs hover:bg-black/[0.03]"
-                  onClick={resetForm}
-                >
+                <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
                   Limpiar
-                </button>
-
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border px-3 py-2 text-xs text-white disabled:opacity-40"
-                  style={{
-                    backgroundColor: PRIMARY,
-                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                  }}
+                </SystemButton>
+                <SystemButton
+                  className="flex-1"
                   disabled={
                     !form.items?.length ||
                     !form.serie.trim() ||
@@ -880,7 +870,7 @@ export default function PurchaseCreateLocal() {
                   }}
                 >
                   Agregar Pago
-                </button>
+                </SystemButton>
               </div>
             </div>
           </aside>

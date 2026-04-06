@@ -3,7 +3,7 @@ import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import type { ProductOption, VariantForm } from "@/pages/catalog/types/variant";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
-import { Box, Boxes, Package2 } from "lucide-react";
+import { Box, Package2 } from "lucide-react";
 
 export function VariantFormFields({
   form,
@@ -18,8 +18,10 @@ export function VariantFormFields({
 }) {
   const productOptions = (products ?? []).map((u) => ({
     value: u.productId,
-    label: u.sku ? `${u.sku ?? `${u.sku} - ` } ${u.name} ${u.attributes?.presentation??""} ${u.attributes?.variant??""}
-    ${u.attributes?.color??""} ${u.customSku ? `- (${u.customSku})`: ""}` : u.name,
+    label:`${u.name} ${u.attributes?.presentation??""} 
+    ${u.attributes?.variant??""}
+    ${u.attributes?.color??""} ${u.sku ?`-${u.sku}`:""}
+    ${u.customSku ? `(${u.customSku})`: ""}`,
   }));
 
   return (
@@ -27,7 +29,7 @@ export function VariantFormFields({
       <div className=" rounded-2xl border border-black/10 bg-white p-4 sm:p-5
         space-y-4">
           <SectionHeaderForm icon={Package2} title="Datos generales" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <FloatingSelect
               label="Producto"
               name="productId"
@@ -50,7 +52,7 @@ export function VariantFormFields({
       </div>
       <div className=" rounded-2xl border border-black/10 bg-white p-4 sm:p-5
         space-y-4">
-          <SectionHeaderForm icon={Box} title="Datos generales" />
+          <SectionHeaderForm icon={Box} title="Atributos" />
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <FloatingInput
             label="Presentación"

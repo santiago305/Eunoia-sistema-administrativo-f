@@ -25,7 +25,9 @@ export const RoutesPaths = {
   catalogSummary: "/catalago",
   catalogProducts: "/catalago/productos",
   catalogVariants: "/catalago/variantes",
+  catalogDocuments: "/catalago/documentos",
   catalogAdjustments: "/catalago/ajustes",
+  catalogTransfer: "/catalago/transfer",
   KardexFinished:'/catalago/kardex',
 
   //almacenes
@@ -35,7 +37,9 @@ export const RoutesPaths = {
   //materia prima
   rowMaterial:'/materia-prima',
   rowVariant:'/materia-prima/variantes',
+  rowMaterialDocuments: "/materia-prima/documentos",
   rowMaterialAdjustments: "/materia-prima/ajustes",
+  rowMaterialTransfer: "/materia-prima/transfer",
   rowMaterialSummary:'/materia-prima/resumen',
   KardexPrima:'/materia-prima/kardex',
 

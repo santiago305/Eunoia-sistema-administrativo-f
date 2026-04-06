@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
-import { Modal } from "@/components/settings/modal";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { StatusPill } from "@/components/StatusTag";
 import { SystemButton } from "@/components/SystemButton";
@@ -11,32 +10,20 @@ import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useProducts } from "@/hooks/useProducts";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { IconButton } from "@/components/IconBoton";
-import { listProductEquivalences } from "@/services/equivalenceService";
-import { getById, listProducts } from "@/services/productService";
-import { listProductRecipes } from "@/services/productRecipeService";
-import { listUnits } from "@/services/unitService";
-import { getVariantByIdp, listRowMaterials } from "@/services/catalogService";
-import { fadeUp, item, list } from "@/utils/animations";
+import { listProducts } from "@/services/productService";
+import { fadeUp  } from "@/utils/animations";
 import { money } from "@/utils/functionPurchases";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Download, Filter, Menu, Pencil, Plus, Power } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import {  motion, useReducedMotion } from "framer-motion";
+import { Download, Filter, Menu, Plus } from "lucide-react";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
-import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
-import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { ListProductsQuery, Product } from "@/pages/catalog/types/product";
-import type { ProductRecipe } from "@/pages/catalog/types/productRecipe";
-import type { PrimaVariant, VariantListItem } from "@/pages/catalog/types/variant";
-import { Dropdown } from "../../components/Dropdown";
-import { EquivalenceFormFields } from "./components/EquivalenceFormField";
-import { ProductFormModal } from "./components/ProductFormModal";
-import { RecipeFormFields } from "./components/RecipeFormFields";
-import { VariantList } from "./components/VariantList";
+import { Headed } from "@/components/Headed";
 import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
+import { ActionsPopover } from "@/components/ActionsPopover";
+import { ProductFormModal } from "./components/ProductFormModal";
+import { Modal } from "@/components/modales/Modal";
 
 const PRIMARY = "hsl(var(--primary))";
-const PRIMARY_HOVER = "#1aa392";
 const PRODUCT_TYPE = ProductTypes.FINISHED;
 const STATUS_OPTIONS = [
   { value: "active", label: "Activos" },
@@ -46,7 +33,6 @@ const STATUS_OPTIONS = [
 export default function CatalogProducts() {
     const shouldReduceMotion = useReducedMotion();
     const { showFlash, clearFlash } = useFlashMessage();
-    const navigate = useNavigate();
 
     const [searchText, setSearchText] = useState("");
     const [statusFilter, setStatusFilter] = useState("active");
@@ -54,70 +40,12 @@ export default function CatalogProducts() {
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
-    const [units, setUnits] = useState<ListUnitResponse>();
-    const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
-    const [loadingEquivalences, setLoadingEquivalences] = useState(false);
-    const [equivalenceProductId, setEquivalenceProductId] = useState<string | null>(null);
-    const [equivalenceProductName, setEquivalenceProductName] = useState<string | null>(null);
-    const [equivalenceBaseUnitId, setEquivalenceBaseUnitId] = useState("");
-    const [recipeVariantId, setRecipeVariantId] = useState<string | null>(null);
-    const [sku, setSku] = useState<string | null>(null);
-    const [recipes, setRecipes] = useState<ProductRecipe[]>([]);
-    const [loadingRecipes, setLoadingRecipes] = useState(false);
-    const [primaVariants, setPrimaVariants] = useState<PrimaVariant[]>([]);
-    const [variantsProduct, setVariantsProduct] = useState<{ id: string; name: string } | null>(null);
-    const [variants, setVariants] = useState<VariantListItem[]>([]);
-    const [variantsLoading, setVariantsLoading] = useState(false);
-    const [variantsError, setVariantsError] = useState<string | null>(null);
-
     const [page, setPage] = useState(1);
     const [debouncedName, setDebouncedName] = useState("");
-    const limit = 8;
+    const limit = 10;
 
     const [exporting, setExporting] = useState(false);
 
-    const loadRecipes = async (variantId: string) => {
-        setLoadingRecipes(true);
-        try {
-            const res = await listProductRecipes({ variantId });
-            setRecipes(res ?? []);
-        } catch {
-            setRecipes([]);
-            showFlash(errorResponse("Error al cargar recetas"));
-        } finally {
-            setLoadingRecipes(false);
-        }
-    };
-
-    const openRecipes = (id: string, sku: string) => {
-        if (!id) {
-            showFlash(errorResponse("Producto sin variante por defecto"));
-            return;
-        }
-        setRecipeVariantId(id);
-        setSku(sku);
-
-        void loadPrimaVariants();
-        void loadRecipes(id);
-    };
-
-    const loadPrimaVariants = async () => {
-        try {
-            const result = await listRowMaterials();
-            const normalized = (result ?? [])
-                .map((row) => ({
-                    ...row,
-                    id: row.id ?? row.primaId ?? row.itemId,
-                    isActive: row.isActive ?? true,
-                }))
-                .filter((row) => row.id);
-            setPrimaVariants(normalized);
-            console.log("Prima variants loaded:", result);
-        } catch {
-            setPrimaVariants([]);
-            showFlash(errorResponse("Error al cargar variantes PRIMA"));
-        }
-    };
 
     const queryParams = useMemo(
         () => ({
@@ -140,29 +68,6 @@ export default function CatalogProducts() {
         return () => clearTimeout(handler);
     }, [searchText]);
 
-    const loadUnits = async () => {
-        try {
-            const res = await listUnits();
-            setUnits(res);
-        } catch {
-            showFlash(errorResponse("Error al cargar unidades"));
-        }
-    };
-
-    const effectiveLimit = apiLimit ?? limit;
-    const safePage = Math.max(1, apiPage || page);
-    const totalPages = Math.max(1, Math.ceil(total / effectiveLimit));
-    const startIndex = total === 0 ? 0 : (safePage - 1) * effectiveLimit + 1;
-    const endIndex = Math.min(safePage * effectiveLimit, total);
-    const hasPrev = safePage > 1;
-    const hasNext = safePage < totalPages;
-
-    const sortedProducts = useMemo(() => {
-        return [...products].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [products]);
-
-    const listKey = useMemo(() => `${page}|${statusFilter}|${debouncedName}`, [page, statusFilter, debouncedName]);
-
     const startCreate = () => {
         setEditingProductId(null);
         setOpenCreate(true);
@@ -179,7 +84,7 @@ export default function CatalogProducts() {
                 id: "sku",
                 header: "SKU",
                 cell: (row) => <span className="font-medium">{row.customSku || "-"}</span>,
-                headerClassName: "text-left w-[100px]",
+                headerClassName: "text-left w-[100px] h-11",
                 className: "text-black/70",
             },
             {
@@ -262,14 +167,32 @@ export default function CatalogProducts() {
                 header: "",
                 cell: (row) => (
                     <div className="flex justify-end">
-                        <Dropdown
-                            trigger={<Menu className="h-4 w-4" />}
-                            menuClassName="min-w-52 p-2"
-                            itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
-                            items={getDropdownItemProducts(row, {
+                        <ActionsPopover
+                            actions={getDropdownItemProducts(row, {
                                 openEdit,
                                 setDeletingProductId,
                             })}
+                            columns={1}
+                            compact
+                            showLabels
+                            triggerIcon={<Menu className="h-4 w-4" />}
+                            popoverClassName="min-w-52"
+                            popoverBodyClassName="p-2"
+                            renderAction={(action, helpers) => (
+                                <button
+                                    key={action.id}
+                                    type="button"
+                                    onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                                        e.stopPropagation();
+                                        helpers.onAction(action);
+                                    }}
+                                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
+                                    disabled={action.disabled}
+                                >
+                                    {action.icon}
+                                    {action.label}
+                                </button>
+                            )}
                         />
                     </div>
                 ),
@@ -277,7 +200,7 @@ export default function CatalogProducts() {
                 className: "text-right",
             },
         ],
-        [openEdit],
+        [openEdit, setDeletingProductId],
     );
 
     const confirmDelete = async () => {
@@ -291,77 +214,6 @@ export default function CatalogProducts() {
         } catch {
             showFlash(errorResponse("Error al cambiar estado del producto"));
         }
-    };
-
-    const loadEquivalences = async (productId: string) => {
-        setLoadingEquivalences(true);
-        try {
-            const res = await listProductEquivalences({ productId });
-            setEquivalences(res ?? []);
-        } catch {
-            setEquivalences([]);
-            showFlash(errorResponse("Error al cargar equivalencias"));
-        } finally {
-            setLoadingEquivalences(false);
-        }
-    };
-
-    const openEquivalences = async (productId: string) => {
-        const product = products.find((p) => p.id === productId);
-        if (!product) return;
-        loadUnits();
-        try {
-            const fresh = await getById(productId);
-            setEquivalenceProductId(fresh.id);
-            setEquivalenceProductName(fresh.name);
-            setEquivalenceBaseUnitId(fresh.baseUnitId ?? "");
-        } catch {
-            setEquivalenceProductId(product.id);
-            setEquivalenceProductName(product.name);
-            setEquivalenceBaseUnitId(product.baseUnitId ?? "");
-        }
-        void loadEquivalences(product.id);
-    };
-
-    const closeEquivalences = () => {
-        setEquivalenceProductId(null);
-        setEquivalenceProductName(null);
-        setEquivalenceBaseUnitId("");
-        setEquivalences([]);
-    };
-
-    const openVariantsModal = async (productId: string) => {
-        const product = products.find((p) => p.id === productId);
-        if (!product) return;
-        setVariantsProduct({ id: product.id, name: product.name });
-        setVariantsLoading(true);
-        setVariantsError(null);
-        try {
-            const res = await getVariantByIdp(productId);
-            setVariants(res ?? []);
-        } catch {
-            setVariants([]);
-            setVariantsError("Error al cargar variantes");
-        } finally {
-            setVariantsLoading(false);
-        }
-    };
-
-    const closeVariantsModal = () => {
-        setVariantsProduct(null);
-        setVariants([]);
-        setVariantsLoading(false);
-        setVariantsError(null);
-    };
-
-    const goToCreateVariant = () => {
-        if (!variantsProduct) return;
-        const params = new URLSearchParams({
-            productId: variantsProduct.id,
-            productName: variantsProduct.name,
-            create: "1",
-        });
-        navigate(`/catalago/variantes?${params.toString()}`);
     };
 
     const buildCsv = (
@@ -432,18 +284,15 @@ export default function CatalogProducts() {
     return (
         <div className="w-full min-h-screen bg-white text-black">
             <PageTitle title="Catalogo - Productos" />
-            <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-                {/* Header */}
+            <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 
+            sm:px-6 lg:px-8 py-6 space-y-4">
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
                     animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
                     transition={{ duration: 0.18 }}
                     className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
                 >
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-semibold tracking-tight">Productos</h1>
-                    </div>
-
+                    <Headed title="Productos" size="lg" />
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-[11px]">
                             Total: <span className="font-semibold text-black">{total}</span>
@@ -506,148 +355,34 @@ export default function CatalogProducts() {
                         />
                     </div>
                 </motion.section>
-                <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} variants={fadeUp} className="bg-white shadow-sm overflow-hidden">
-                    <div className="hidden lg:block">
-                        <div>
-                            <DataTable
-                                tableId="catalog-products"
-                                data={sortedProducts}
-                                columns={columns}
-                                rowKey="id"
-                                loading={loading}
-                                emptyMessage="No hay productos con los filtros actuales."
-                                animated={!shouldReduceMotion}
-                                tableClassName="table-fixed text-[10px] "
-                            />
+                <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} 
+                variants={fadeUp} className="bg-white shadow-sm overflow-hidden">
+                    <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+                        <DataTable
+                            tableId="catalog-products"
+                            data={products}
+                            columns={columns}
+                            rowKey="id"
+                            loading={loading}
+                            emptyMessage="No hay productos con los filtros actuales."
+                            animated={!shouldReduceMotion}
+                            tableClassName="table-fixed text-[11px]"
+                            pagination={{
+                                page: apiPage ?? page,
+                                limit: apiLimit ?? limit,
+                                total
+                            }}
+                            onPageChange={(nextPage) => setPage(nextPage)}
+                        />
 
-                            {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
-                        </div>
-                    </div>
-
-                    {/* MOBILE/TABLET: cards */}
-                    <div className="lg:hidden">
-                        <AnimatePresence mode="wait" initial={false}>
-                            <motion.div
-                                key={listKey}
-                                variants={shouldReduceMotion ? undefined : list}
-                                initial={shouldReduceMotion ? false : "hidden"}
-                                animate={shouldReduceMotion ? false : "show"}
-                                exit={shouldReduceMotion ? undefined : "exit"}
-                                className="max-h-[calc(100vh-360px)] overflow-auto p-4 sm:p-5 space-y-3"
-                            >
-                                {sortedProducts.map((product) => {
-                                    return (
-                                        <motion.div key={product.id} variants={shouldReduceMotion ? undefined : item} layout className="rounded-lg border border-black/10 bg-white p-4 shadow-sm">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0">
-                                                    <p className="mt-1 font-semibold truncate">{product.name}</p>
-                                                    <p className="mt-1 text-sm text-black/70 line-clamp-2">{product.description || "-"}</p>
-                                                    <div className="mt-3">
-                                                        <StatusPill active={product.isActive} PRIMARY={PRIMARY} />
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-col gap-2">
-                                                    <SystemButton
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="text-[11px] h-8"
-                                                        onClick={() => void openEquivalences(product.id)}
-                                                    >
-                                                        Equivalencias
-                                                    </SystemButton>
-                                                    <SystemButton
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="text-[11px] h-8"
-                                                        onClick={() => openRecipes(product.id, product.sku ?? "-")}
-                                                    >
-                                                        Recetas
-                                                    </SystemButton>
-
-                                                    <IconButton
-                                                        title="Editar"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            void openEdit(product.id);
-                                                        }}
-                                                        PRIMARY={PRIMARY}
-                                                        PRIMARY_HOVER={PRIMARY_HOVER}
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </IconButton>
-
-                                                    <IconButton
-                                                        title={product.isActive ? "Eliminar" : "Restaurar"}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setDeletingProductId(product.id);
-                                                        }}
-                                                        tone={product.isActive ? "danger" : "primary"}
-                                                        PRIMARY={PRIMARY}
-                                                        PRIMARY_HOVER={PRIMARY_HOVER}
-                                                    >
-                                                        <Power className="h-4 w-4" />
-                                                    </IconButton>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-3 text-[11px] text-black/50 truncate">UUID: {product.id}</div>
-                                        </motion.div>
-                                    );
-                                })}
-
-                                {products.length === 0 && !loading && (
-                                    <div className="rounded-lg border border-black/10 bg-white p-4 text-sm text-black/60">No hay productos con los filtros actuales.</div>
-                                )}
-                                {error && <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
-                            </motion.div>
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Footer paginaci�n */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-[11px] text-black/60">
-                        <span className="hidden sm:inline">
-                            Mostrando {startIndex}-{endIndex} de {total}
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                            <SystemButton
-                                variant="outline"
-                                size="sm"
-                                className="text-[11px] h-8"
-                                disabled={!hasPrev || loading}
-                                onClick={() => setPage(Math.max(1, safePage - 1))}
-                                type="button"
-                            >
-                                Anterior
-                            </SystemButton>
-
-                            <span className="tabular-nums">
-                                Pagina {safePage} de {totalPages}
-                            </span>
-
-                            <SystemButton
-                                variant="outline"
-                                size="sm"
-                                className="text-[11px] h-8"
-                                disabled={!hasNext || loading}
-                                onClick={() => setPage(safePage + 1)}
-                                type="button"
-                            >
-                                Siguiente
-                            </SystemButton>
-                        </div>
+                        {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
                     </div>
                 </motion.section>
             </div>
-
-            {/* MODALES */}
             <ProductFormModal
                 open={openCreate}
                 mode="create"
                 productType={PRODUCT_TYPE}
-                units={units}
                 primaryColor={PRIMARY}
                 entityLabel="producto"
                 onClose={() => setOpenCreate(false)}
@@ -661,7 +396,6 @@ export default function CatalogProducts() {
                 mode="edit"
                 productId={editingProductId}
                 productType={PRODUCT_TYPE}
-                units={units}
                 primaryColor={PRIMARY}
                 entityLabel="producto"
                 onClose={() => setEditingProductId(null)}
@@ -670,89 +404,37 @@ export default function CatalogProducts() {
                 }}
             />
 
-            {deletingProductId && (
-                <Modal title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">
-                    <motion.div
-                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.16 }}
-                    >
-                        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                            <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto. Hazlo solo si estas seguro.
-                        </div>
-
-                        <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catalogo visible y procesos internos.</p>
-
-                        <div className="mt-4 flex justify-end gap-2">
-                            <SystemButton
-                                variant="outline"
-                                size="sm"
-                                className="text-[11px]"
-                                onClick={() => setDeletingProductId(null)}
-                            >
-                                Cancelar
-                            </SystemButton>
-                            <SystemButton
-                                variant="danger"
-                                size="sm"
-                                className="text-[11px]"
-                                onClick={confirmDelete}
-                            >
-                                Confirmar
-                            </SystemButton>
-                        </div>
-                    </motion.div>
-                </Modal>
-            )}
-            {variantsProduct && (
-                <Modal title={`Variantes · ${variantsProduct.name}`} onClose={closeVariantsModal} className="max-w-xl">
-                    <motion.div
-                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.16 }}
-                        className="space-y-3"
-                    >
-                        <VariantList
-                            variantsLoading={variantsLoading}
-                            variantsError={variantsError}
-                            variants={variants}
-                            primary={PRIMARY}
-                            primaryHover={PRIMARY_HOVER}
-                            onCreateVariant={goToCreateVariant}
-                        />
-                    </motion.div>
-                </Modal>
-            )}
-
-            {equivalenceProductId && (
-                <Modal title={`Equivalencias - ${equivalenceProductName ?? "-"}`} onClose={closeEquivalences} className="max-w-2xl">
-                    <EquivalenceFormFields
-                        productId={equivalenceProductId}
-                        baseUnitId={equivalenceBaseUnitId}
-                        units={units}
-                        equivalences={equivalences}
-                        loading={loadingEquivalences}
-                        onCreated={async () => {
-                            await loadEquivalences(equivalenceProductId);
-                        }}
-                        PRIMARY={PRIMARY}
-                    />
-                </Modal>
-            )}
-            {recipeVariantId && (
-                <Modal title={`Recetas de variante (${sku})`} onClose={() => setRecipeVariantId(null)} className="max-w-2xl">
-                    <RecipeFormFields
-                        finishedVariantId={recipeVariantId}
-                        units={units}
-                        primaVariants={primaVariants}
-                        recipes={recipes}
-                        loading={loadingRecipes}
-                        onCreated={async () => {
-                            await loadRecipes(recipeVariantId);
-                        }}
-                    />
-                </Modal>
-            )}
+            <Modal open={deletingProductId ? true : false}
+            title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">
+                <motion.div
+                    initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
+                    animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.16 }}
+                >
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                        <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto. Hazlo solo si estas seguro.
+                    </div>
+                    <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catalogo visible y procesos internos.</p>
+                    <div className="mt-4 flex justify-end gap-2">
+                        <SystemButton
+                            variant="outline"
+                            size="sm"
+                            className="text-[11px]"
+                            onClick={() => setDeletingProductId(null)}
+                        >
+                            Cancelar
+                        </SystemButton>
+                        <SystemButton
+                            variant="danger"
+                            size="sm"
+                            className="text-[11px]"
+                            onClick={confirmDelete}
+                        >
+                            Confirmar
+                        </SystemButton>
+                    </div>
+                </motion.div>
+            </Modal>
         </div>
     );
 }

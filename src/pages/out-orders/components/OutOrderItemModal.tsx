@@ -65,7 +65,7 @@ export function OutOrderItemModal({
         </div>
 
         <div className="flex justify-end gap-2">
-          <SystemButton variant="danger" className=" bg-gray-500" onClick={onClose}>
+          <SystemButton variant="outline"  onClick={onClose}>
             Cancelar
           </SystemButton>
 

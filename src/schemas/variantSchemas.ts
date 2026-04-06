@@ -21,6 +21,7 @@ export const createVariantSchema = z.object({
   price: z.number().min(0),
   cost: z.number().min(0),
   isActive: z.boolean().optional(),
+  customSku: z.string().optional(),
 });
 
 export const updateVariantSchema = z.object({
@@ -29,6 +30,7 @@ export const updateVariantSchema = z.object({
   price: z.number().min(0).optional(),
   cost: z.number().min(0).optional(),
   baseUnitId: z.string().uuid().optional(),
+  customSku: z.string().optional(),
 });
 
 export const setVariantActiveSchema = z.object({

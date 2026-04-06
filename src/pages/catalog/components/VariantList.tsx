@@ -19,7 +19,8 @@ export function VariantList({
     return (
         <div>
             <div className="flex items-center justify-between">
-                <p className="text-sm text-black/70">{variantsLoading ? "Cargando variantes..." : `Total: ${variants.length}`}</p>
+                <p className="text-sm text-black/70">
+                {variantsLoading ? "Cargando variantes..." : `Total: ${variants.length}`}</p>
                 {onCreateVariant && (
                     <button
                         className="rounded-2xl border px-3 py-2 text-xs text-white 

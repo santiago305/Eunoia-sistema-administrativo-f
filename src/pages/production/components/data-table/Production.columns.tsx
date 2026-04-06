@@ -1,6 +1,6 @@
-﻿import { ChevronDown, ChevronRight, Menu, OctagonAlert, Timer } from "lucide-react";
+﻿import { Ban, ChevronDown, ChevronRight, FileText, Menu, OctagonAlert, PackageCheck, Pencil, Play, Timer } from "lucide-react";
 import { createColumnHelper, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
-import { Dropdown } from "@/components/Dropdown";
+import { ActionsPopover } from "@/components/ActionsPopover";
 import type { ProductionOrder, ProductionStatus } from "@/pages/production/types/production";
 import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
 import { productionExpandedFields } from "./productionExpandedFields";
@@ -165,8 +165,51 @@ export function getProductionColumns({ columnVisibility, nowIso, statusLabels, o
             cell: ({ row }) => {
                 const order = row.original;
                 return (
-                    <Dropdown
-                        trigger={<Menu className="h-4 w-4" />}
+                    <ActionsPopover
+                        actions={[
+                            {
+                                id: "start",
+                                label: "Procesar",
+                                icon: <Play className="h-4 w-4" />,
+                                hidden: order.status !== "DRAFT",
+                                onClick: () => onStart(order.productionId ?? ""),
+                            },
+                            {
+                                id: "edit",
+                                label: "Editar",
+                                icon: <Pencil className="h-4 w-4" />,
+                                hidden: order.status !== "DRAFT",
+                                onClick: () => onEdit(order.productionId ?? ""),
+                            },
+                            {
+                                id: "pdf",
+                                label: "Abrir pdf",
+                                icon: <FileText className="h-4 w-4" />,
+                                onClick: () => onPdf(order.productionId ?? ""),
+                            },
+                            {
+                                id: "cancel",
+                                label: "Cancelar",
+                                icon: <Ban className="h-4 w-4" />,
+                                danger: true,
+                                hidden: order.status !== "DRAFT",
+                                onClick: () => onCancel(order.productionId ?? ""),
+                            },
+                            {
+                                id: "close",
+                                label: "Ingresar a elmacen",
+                                icon: <PackageCheck className="h-4 w-4" />,
+                                hidden: !(order.status === "IN_PROGRESS" || order.status === "PARTIAL"),
+                                onClick: () => onClose(order.productionId ?? ""),
+                            },
+                        ]}
+                        columns={1}
+                        triggerIcon={<Menu className="h-4 w-4" />}
+                        triggerVariant="ghost"
+                        compact
+                        popoverClassName="min-w-52 p-2"
+                        itemClassName="justify-start px-3 py-2 text-[11px]"
+                    />}
                         itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-black/70 hover:bg-black/[0.04]"
                         items={[
                             order.status === "DRAFT" && {

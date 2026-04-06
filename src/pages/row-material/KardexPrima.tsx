@@ -28,6 +28,7 @@ import {
   getDocumentInventoryPdf,
 } from "@/services/pdfServices";
 import { Boxes, FileText, Filter, LineChart } from "lucide-react";
+import { Headed } from "@/components/Headed";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 25;
@@ -321,6 +322,7 @@ export default function KardexProduction() {
       className: "w-80",
       hideable: false,
       sortable: false,
+      headerClassName:"h-11"
     },
     {
       id: "tercero",
@@ -431,10 +433,9 @@ export default function KardexProduction() {
       <PageTitle title="Kardex de materia prima y materiales" />
 
       <div className="px-6 py-6 space-y-4">
-        <div>
-          <h1 className="text-xl font-semibold">Kardex de materia prima y materiales</h1>
-          <p className="text-sm text-black/60">Auditoría viva de movimientos.</p>
-        </div>
+        <Headed title="Kardex de materia prima y materiales" 
+        subtitle="Auditoría viva de movimientos." 
+        size="lg" />
 
         <section className="rounded-2xl border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
           <SectionHeaderForm icon={Filter} title="Filtros" />
@@ -497,15 +498,14 @@ export default function KardexProduction() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-black/10 flex items-center justify-between">
+          <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white 
+          shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-black/10 flex items-center justify-between">
               <SectionHeaderForm icon={Boxes} title="Registros" />
               <SystemButton variant="success" type="button">
                 Exportar CSV
               </SystemButton>
             </div>
-
-            <div className="p-5">
               <DataTable
                 tableId="kardex-raw-material-table"
                 data={kardexRows}
@@ -534,7 +534,6 @@ export default function KardexProduction() {
                     : ""
                 }
               />
-            </div>
           </div>
 
           <div className="space-y-3">
@@ -558,7 +557,9 @@ export default function KardexProduction() {
 
                 <p>
                   <span className="font-semibold">Responsable:</span>&nbsp;
-                  {selectedRow?.referenceDoc?.createdBy?.name ?? "-"}
+                  {selectedRow?.referenceDoc?.createdBy?.name ??
+                    selectedRow?.document?.createdBy?.name ??
+                    "-"}
                 </p>
               </div>
 

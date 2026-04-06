@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -21,10 +20,16 @@ import { Warehouse } from "../warehouse/types/warehouse";
 import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
+<<<<<<< HEAD
 import { Dropdown } from "../../components/Dropdown";
 import { Filter, Menu, OctagonAlert, Timer } from "lucide-react";
+=======
+import { ActionsPopover, type ActionItem } from "@/components/ActionsPopover";
+import { Calendar, CreditCard, FileText, Filter, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Timer, XCircle } from "lucide-react";
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
+import { Headed } from "@/components/Headed";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
@@ -97,7 +102,6 @@ export default function Purchases() {
     const [paymentForm, setPaymentForm] = useState("");
     const [openPdfModal, setOpenPdfModal] = useState(false);
     const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
-
 
     const docTypeOptions = [
         { value: "", label: "todos" },
@@ -273,11 +277,6 @@ export default function Purchases() {
 
     const now = new Date().toISOString();
 
-    const safePage = Math.max(1, pagination.page || page);
-    const totalPages = Math.max(1, pagination.totalPages);
-    const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
-    const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
-
     const supplierMetaById = useMemo(() => {
         const map = new Map<string, { label: string; doc?: string }>();
         supplierOptions.forEach((opt) => {
@@ -309,10 +308,9 @@ export default function Purchases() {
     const warehouseSelectOptions = useMemo(
         () =>
             warehouseOptions.map((opt) => {
-                const address = opt.address ? ` - ${opt.address}` : "";
                 return {
                     value: opt.value,
-                    label: `${opt.label}${address}`.trim(),
+                    label: `${opt.label}`.trim(),
                 };
             }),
         [warehouseOptions],
@@ -321,9 +319,7 @@ export default function Purchases() {
     const purchaseRows = useMemo<PurchaseRow[]>(
         () =>
             purchases.map((purchase) => {
-                const numero = [purchase.serie, purchase.correlative]
-                    .filter((v) => v !== null && v !== undefined && String(v).length > 0)
-                    .join("-");
+                const numero = [purchase.serie, purchase.correlative].filter((v) => v !== null && v !== undefined && String(v).length > 0).join("-");
                 const supplierMeta = purchase.supplierId ? supplierMetaById.get(purchase.supplierId) : undefined;
                 const warehouseMeta = purchase.warehouseId ? warehouseMetaById.get(purchase.warehouseId) : undefined;
                 const statusLabel = purchase.status ? (statusLabels[purchase.status] ?? purchase.status) : "-";
@@ -359,7 +355,7 @@ export default function Purchases() {
                     dateEnter,
                     timeEnter,
                 };
-        }),
+            }),
         [purchases, supplierMetaById, warehouseMetaById],
     );
 
@@ -407,9 +403,7 @@ export default function Purchases() {
             cell: (row) => (
                 <div className="text-black/70">
                     <div>{row.supplierLabel}</div>
-                    {row.supplierDoc ? (
-                        <div className="text-[10px] text-black/50">{row.supplierDoc}</div>
-                    ) : null}
+                    {row.supplierDoc ? <div className="text-[10px] text-black/50">{row.supplierDoc}</div> : null}
                 </div>
             ),
             headerClassName: "text-left w-[80px]",
@@ -426,23 +420,19 @@ export default function Purchases() {
             hideable: true,
             sortable: false,
         },
-        // {
-        //     id: "paymentForm",
-        //     header: "Forma",
-        //     cell: (row) => <span className="text-black/70">{row.purchase.paymentForm}</span>,
-        //     headerClassName: "text-left w-[50px]",
-        //     className: "text-black/70",
-        //     hideable: true,
-        //     sortable: false,
-        // },
+        {
+            id: "paymentForm",
+            header: "Forma",
+            cell: (row) => <span className="text-black/70">{row.purchase.paymentForm}</span>,
+            headerClassName: "text-left w-[50px]",
+            className: "text-black/70",
+            hideable: true,
+            sortable: false,
+        },
         {
             id: "total",
             header: "Total",
-            cell: (row) => (
-                <span className="text-black/70 tabular-nums">
-                    {money(row.purchase.total ?? 0, row.purchase.currency)}
-                </span>
-            ),
+            cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.total ?? 0, row.purchase.currency)}</span>,
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
@@ -450,12 +440,8 @@ export default function Purchases() {
         },
         {
             id: "totalPaid",
-            header: "Pagado",
-            cell: (row) => (
-                <span className="text-black/70 tabular-nums">
-                    {money(row.purchase.totalPaid ?? 0, row.purchase.currency)}
-                </span>
-            ),
+            header: "Pag.",
+            cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.totalPaid ?? 0, row.purchase.currency)}</span>,
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
@@ -463,30 +449,26 @@ export default function Purchases() {
         },
         {
             id: "totalToPay",
-            header: "Pendiente",
-            cell: (row) => (
-                <span className="text-black/70 tabular-nums">
-                    {money(row.purchase.totalToPay ?? 0, row.purchase.currency)}
-                </span>
-            ),
+            header: "Pend.",
+            cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.totalToPay ?? 0, row.purchase.currency)}</span>,
             headerClassName: "text-left w-[60px]",
             className: "text-left",
             hideable: true,
             sortable: false,
         },
-        // {
-        //     id: "status",
-        //     header: "Estado",
-        //     cell: (row) => (
-        //         <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-        //             {row.statusLabel}
-        //         </span>
-        //     ),
-        //     headerClassName: "text-left w-[60px]",
-        //     className: "text-black/70",
-        //     hideable: true,
-        //     sortable: false,
-        // },
+        {
+            id: "status",
+            header: "Estado",
+            cell: (row) => (
+                <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                    {row.statusLabel}
+                </span>
+            ),
+            headerClassName: "text-left w-[60px]",
+            className: "text-black/70",
+            hideable: true,
+            sortable: false,
+        },
         {
             id: "waitTime",
             header: "T. Espera",
@@ -511,7 +493,7 @@ export default function Purchases() {
                     )}
                 </div>
             ),
-            headerClassName: "text-center w-[70px]",
+            headerClassName: "text-center w-[60px]",
             className: "text-center",
             hideable: true,
             sortable: false,
@@ -539,25 +521,53 @@ export default function Purchases() {
             id: "actions",
             header: "",
             cell: (row) => (
-                <Dropdown
-                    trigger={<Menu className="h-4 w-4" />}
-                    itemClassName="w-full rounded-lg px-3 py-2 text-left text-[10px] text-black/70 hover:bg-black/[0.04]"
-                    items={[
-                        (row.purchase.status === PurchaseOrderStatuses.SENT ||
-                            row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                <ActionsPopover
+                actions={[
+                    (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                            id: "enter-warehouse",
                             label: "Ingresar Almacen",
+                            icon: <PackageCheck className="h-4 w-4" />,
                             onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
                         },
                         row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            id: "process",
                             label: "Procesar",
+                            icon: <Play className="h-4 w-4" />,
                             onClick: () => setSent(row.purchase.poId ?? ""),
                         },
-                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
-                            label: "Editar",
-                            onClick: () => navigate(`/compra/${row.purchase.poId}`),
+                        row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
+                        row.purchase.totalPaid != row.purchase.total && {
+                            id: "payment",
+                            label: "Pago",
+                            icon: <CreditCard className="h-4 w-4" />,
+                            onClick: () => {
+                                setModalPayment(true);
+                                setTotalPaid(row.purchase.totalPaid ?? 0);
+                                setTotalToPay(row.purchase.totalToPay ?? 0);
+                                setPoId(row.purchase.poId ?? "");
+                            },
+                        },
+                        row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
+                            id: "quotas",
+                            label: "Ver cuotas",
+                            icon: <Calendar className="h-4 w-4" />,
+                            onClick: () => {
+                                setModalQuotaList(true);
+                                setPoId(row.purchase.poId ?? "");
+                            },
                         },
                         {
+                            id: "open-pdf",
+                            label: "Abrir pdf",
+                            icon: <FileText className="h-4 w-4" />,
+                            onClick: () => {
+                                openPurchasePdf(row.purchase.poId ?? "");
+                            },
+                        },
+                        {
+                            id: "list-payments",
                             label: "Listar pagos",
+                            icon: <List className="h-4 w-4" />,
                             onClick: () => {
                                 setModalPaymentList(true);
                                 setPoId(row.purchase.poId ?? "");
@@ -565,36 +575,43 @@ export default function Purchases() {
                                 setPaymentForm(row.purchase.paymentForm);
                             },
                         },
-                        row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
-                            row.purchase.totalPaid != row.purchase.total && {
-                                label: "Pago",
-                                onClick: () => {
-                                    setModalPayment(true);
-                                    setTotalPaid(row.purchase.totalPaid ?? 0);
-                                    setTotalToPay(row.purchase.totalToPay ?? 0);
-                                    setPoId(row.purchase.poId ?? "");
-                                },
-                            },
-                        row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
-                            label: "Ver cuotas",
-                            onClick: () => {
-                                setModalQuotaList(true);
-                                setPoId(row.purchase.poId ?? "");
-                            },
-                        },
-                        {
-                            label: "Abrir pdf",
-                            onClick: () => {
-                                openPurchasePdf(row.purchase.poId ?? "");
-                            },
+                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            id: "edit",
+                            label: "Editar",
+                            icon: <Pencil className="h-4 w-4" />,
+                            onClick: () => navigate(`/compra/${row.purchase.poId}`),
                         },
                         row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            id: "cancel",
                             label: "Cancelar",
-                            className: `flex w-full items-center gap-2 rounded-lg px-3 py-2 
-                                                            text-left text-[11px] text-rose-700 hover:bg-rose-50`,
+                            className: "text-rose-700 hover:bg-rose-50",
+                            icon: <XCircle className="h-4 w-4" />,
                             onClick: () => cancelOrder(row.purchase.poId ?? ""),
                         },
-                    ].filter(Boolean)}
+                    ].filter(Boolean) as ActionItem[]}
+                    columns={1}
+                    compact
+                    showLabels
+                    triggerIcon={<Menu className="h-4 w-4" />}
+                    popoverClassName="min-w-52"
+                    popoverBodyClassName="p-2"
+                    renderAction={(action, helpers) => (
+                        <button
+                            key={action.id}
+                            type="button"
+                            onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                                e.stopPropagation();
+                                helpers.onAction(action);
+                            }}
+                            className={`justify-start px-3 py-2 text-[11px] ${action.className ?? ""}`}
+                            disabled={action.disabled}
+                        >
+                            <span className="inline-flex items-center gap-2">
+                                {action.icon}
+                                <span>{action.label}</span>
+                            </span>
+                        </button>
+                    )}
                 />
             ),
             headerClassName: "text-left w-[20px]",
@@ -609,9 +626,8 @@ export default function Purchases() {
             <PageTitle title="Compras" />
             <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 pt-2 space-y-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-semibold tracking-tight">Compras</h1>
-                    </div>
+                    <Headed title="Compras" 
+                    size="lg" />
 
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-0 text-[10px]">
@@ -648,13 +664,7 @@ export default function Purchases() {
                             }}
                             className="h-9 text-xs"
                         />
-                        <FloatingInput
-                            label="N. documento"
-                            name="document-number"
-                            value={numeroInput}
-                            onChange={(e) => setNumeroInput(e.target.value)}
-                            className="h-9 text-xs"
-                        />
+                        <FloatingInput label="N. documento" name="document-number" value={numeroInput} onChange={(e) => setNumeroInput(e.target.value)} className="h-9 text-xs" />
 
                         <FloatingSelect
                             label="Proveedor"
@@ -710,7 +720,7 @@ export default function Purchases() {
                     </div>
                 </section>
 
-                <section className=" bg-white shadow-sm ">
+                <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden">
                     <DataTable
                         tableId="purchase-list"
                         data={purchaseRows}
@@ -720,55 +730,53 @@ export default function Purchases() {
                         emptyMessage="No hay compras con los filtros actuales."
                         hoverable={false}
                         animated={false}
+                        selectableColumns
                         pagination={{
                             page,
                             limit,
                             total: pagination.total,
                         }}
                         onPageChange={setPage}
-                        tableClassName="table-fixed text-[10px]"
+                        tableClassName="text-[10px]"
                     />
 
                     {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
                 </section>
             </div>
-            {modalPayment && (
-                <PaymentModal
-                    title="Formulario de Pago"
-                    close={() => {
-                        setModalPayment(false);
-                    }}
-                    className="max-w-[800px]"
-                    totalPaid={totalPaid}
-                    totalToPay={totalToPay}
-                    poId={poId}
-                    loadPurchases={loadPurchases}
-                />
-            )}
-            {modalPaymentList && (
-                <PaymentListModal
-                    title="Pagos"
-                    close={() => {
-                        setModalPaymentList(false);
-                    }}
-                    poId={poId}
-                    total={totalPo}
-                    className="max-w-[800px]"
-                    loadPurchases={loadPurchases}
-                    credit={paymentForm === PaymentFormTypes.CONTADO ? false : true}
-                />
-            )}
-            {modalQuotaList && (
-                <QuotaListModal
-                    title="Cuotas"
-                    close={() => {
-                        setModalQuotaList(false);
-                    }}
-                    poId={poId}
-                    className="max-w-[800px]"
-                    loadPurchases={loadPurchases}
-                />
-            )}
+            <PaymentModal
+                title="Formulario de Pago"
+                close={() => {
+                    setModalPayment(false);
+                }}
+                open={modalPayment}
+                className="w-[800px]"
+                totalPaid={totalPaid}
+                totalToPay={totalToPay}
+                poId={poId}
+                loadPurchases={loadPurchases}
+            />
+            <PaymentListModal
+                title="Pagos"
+                close={() => {
+                    setModalPaymentList(false);
+                }}
+                poId={poId}
+                open={modalPaymentList}
+                total={totalPo}
+                className="w-[800px]"
+                loadPurchases={loadPurchases}
+                credit={paymentForm === PaymentFormTypes.CONTADO ? false : true}
+            />
+            <QuotaListModal
+                title="Cuotas"
+                close={() => {
+                    setModalQuotaList(false);
+                }}
+                open={modalQuotaList}
+                poId={poId}
+                className="w-[800px]"
+                loadPurchases={loadPurchases}
+            />
             <PdfViewerModal
                 open={openPdfModal}
                 onClose={() => {

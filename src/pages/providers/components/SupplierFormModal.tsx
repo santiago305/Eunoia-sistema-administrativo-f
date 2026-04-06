@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Modal } from "@/components/settings/modal";
+import { useEffect, useMemo, useState } from "react";
+import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import {
@@ -11,6 +11,7 @@ import {
 import type { SupplierDniLookupData, SupplierForm, SupplierRucLookupData } from "@/pages/providers/types/supplier";
 import { DocumentType } from "@/pages/providers/types/DocumentType";
 import { SupplierFormFields } from "./FormProviders";
+import { SystemButton } from "@/components/SystemButton";
 
 type SupplierFormModalProps = {
   open: boolean;
@@ -185,9 +186,10 @@ export function SupplierFormModal({
 
   return (
     <Modal
+      open={open}
       title={mode === "edit" ? "Editar proveedor" : "Nuevo proveedor"}
       onClose={onClose}
-      className="max-w-[700px] max-h-[600px]"
+      className="w-[600px] max-h-[600px]"
     >
       {loading ? (
         <div className="px-1 py-6 text-sm text-black/60">Cargando proveedor...</div>
@@ -201,17 +203,21 @@ export function SupplierFormModal({
         />
       )}
       <div className="mt-4 flex justify-end gap-2">
-        <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={onClose}>
+        <SystemButton variant="outline" size="sm" onClick={onClose}>
           Cancelar
-        </button>
-        <button
-          className="rounded-2xl border px-4 py-2 text-sm text-white disabled:opacity-50"
-          style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties}
+        </SystemButton>
+        <SystemButton
+          size="sm"
           onClick={saveSupplier}
           disabled={!canSave || saving || loading}
+          loading={saving}
+          style={{
+            backgroundColor: primaryColor,
+            borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+          }}
         >
           {mode === "edit" ? "Guardar cambios" : "Guardar"}
-        </button>
+        </SystemButton>
       </div>
     </Modal>
   );

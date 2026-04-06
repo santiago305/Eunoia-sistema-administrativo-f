@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Power, ReceiptText } from "lucide-react";
-import { Modal } from "@/components/settings/modal";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SystemButton } from "@/components/SystemButton";
@@ -12,6 +11,7 @@ import { money } from "@/utils/functionPurchases";
 import { PaymentModal } from "./PaymentModal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
+import { Modal } from "@/components/modales/Modal";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -24,6 +24,7 @@ export type PaymentListModalProps = {
   total?: number;
   loadPurchases: () => void;
   credit?: boolean;
+  open: boolean;
 };
 
 type PaymentRow = Payment & {
@@ -39,6 +40,7 @@ export function PaymentListModal({
   total,
   loadPurchases,
   credit,
+  open
 }: PaymentListModalProps) {
   const [rows, setRows] = useState<Payment[]>(payments ?? []);
   const [loading, setLoading] = useState(false);
@@ -190,7 +192,7 @@ export function PaymentListModal({
   );
 
   return (
-    <Modal onClose={close} title={title} className={className}>
+    <Modal open={open} onClose={close} title={title} className={className}>
       <div className="space-y-4">
         <div className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between gap-3">
@@ -245,21 +247,19 @@ export function PaymentListModal({
           />
         </div>
       </div>
-
-      {modalPayment && (
-        <PaymentModal
-          title="Formulario de Pago"
-          close={() => {
-            setModalPayment(false);
-          }}
-          className="max-w-[800px]"
-          totalPaid={totalPaid}
-          totalToPay={totalToPay}
-          poId={poId}
-          onSaved={() => reloadPayments({ silent: true })}
-          loadPurchases={loadPurchases}
-        />
-      )}
+      <PaymentModal
+        title="Formulario de Pago"
+        close={() => {
+          setModalPayment(false);
+        }}
+        open={modalPayment}
+        className="max-w-[800px]"
+        totalPaid={totalPaid}
+        totalToPay={totalToPay}
+        poId={poId}
+        onSaved={() => reloadPayments({ silent: true })}
+        loadPurchases={loadPurchases}
+      />
     </Modal>
   );
 }

@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import { AnimatePresence, motion } from "framer-motion";
+=======
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
 import {
   type ReactNode,
   type RefObject,
@@ -8,6 +11,10 @@ import {
   useRef,
   useState,
 } from "react";
+<<<<<<< HEAD
+=======
+import { AnimatePresence, motion } from "framer-motion";
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
 import { cn } from "@/lib/utils";
 
 type PopoverPlacement =
@@ -25,18 +32,36 @@ type PopoverProps = {
   onClose: () => void;
   anchorRef: RefObject<HTMLElement | null>;
   children: ReactNode;
+<<<<<<< HEAD
   title?: string;
   description?: string;
   footer?: ReactNode;
   placement?: PopoverPlacement;
   offset?: number;
+=======
+
+  title?: string;
+  description?: string;
+  footer?: ReactNode;
+
+  placement?: PopoverPlacement;
+  offset?: number;
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
   closeOnOutsideClick?: boolean;
   closeOnEscape?: boolean;
   preventClose?: boolean;
   hideHeader?: boolean;
   showCloseButton?: boolean;
+<<<<<<< HEAD
   initialFocusRef?: RefObject<HTMLElement | null>;
   animation?: PopoverAnimation;
+=======
+
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  animation?: PopoverAnimation;
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
   className?: string;
   headerClassName?: string;
   bodyClassName?: string;
@@ -67,39 +92,85 @@ function getCoords(
   selectedPlacement: PopoverPlacement,
   anchorRect: DOMRect,
   popRect: DOMRect,
+<<<<<<< HEAD
   offset: number,
 ) {
   switch (selectedPlacement) {
     case "bottom-start":
       return { top: anchorRect.bottom + offset, left: anchorRect.left };
+=======
+  offset: number
+) {
+  switch (selectedPlacement) {
+    case "bottom-start":
+      return {
+        top: anchorRect.bottom + offset,
+        left: anchorRect.left,
+      };
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     case "bottom-end":
       return {
         top: anchorRect.bottom + offset,
         left: anchorRect.right - popRect.width,
       };
+<<<<<<< HEAD
+=======
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     case "top-start":
       return {
         top: anchorRect.top - popRect.height - offset,
         left: anchorRect.left,
       };
+<<<<<<< HEAD
+=======
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     case "top-end":
       return {
         top: anchorRect.top - popRect.height - offset,
         left: anchorRect.right - popRect.width,
       };
+<<<<<<< HEAD
     case "right-start":
       return { top: anchorRect.top, left: anchorRect.right + offset };
+=======
+
+    case "right-start":
+      return {
+        top: anchorRect.top,
+        left: anchorRect.right + offset,
+      };
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     case "left-start":
       return {
         top: anchorRect.top,
         left: anchorRect.left - popRect.width - offset,
       };
+<<<<<<< HEAD
     default:
       return { top: anchorRect.bottom + offset, left: anchorRect.left };
   }
 }
 
 function fitsInViewport(coords: { top: number; left: number }, popRect: DOMRect) {
+=======
+
+    default:
+      return {
+        top: anchorRect.bottom + offset,
+        left: anchorRect.left,
+      };
+  }
+}
+
+function fitsInViewport(
+  coords: { top: number; left: number },
+  popRect: DOMRect
+) {
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
   return {
     vertically:
       coords.top >= VIEWPORT_PADDING &&
@@ -112,6 +183,7 @@ function fitsInViewport(coords: { top: number; left: number }, popRect: DOMRect)
 
 function clampToViewport(
   coords: { top: number; left: number },
+<<<<<<< HEAD
   popRect: DOMRect,
 ) {
   const maxLeft = Math.max(
@@ -121,6 +193,17 @@ function clampToViewport(
   const maxTop = Math.max(
     VIEWPORT_PADDING,
     window.innerHeight - popRect.height - VIEWPORT_PADDING,
+=======
+  popRect: DOMRect
+) {
+  const maxLeft = Math.max(
+    VIEWPORT_PADDING,
+    window.innerWidth - popRect.width - VIEWPORT_PADDING
+  );
+  const maxTop = Math.max(
+    VIEWPORT_PADDING,
+    window.innerHeight - popRect.height - VIEWPORT_PADDING
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
   );
 
   return {
@@ -133,7 +216,11 @@ function resolvePlacement(
   preferredPlacement: PopoverPlacement,
   anchorRect: DOMRect,
   popRect: DOMRect,
+<<<<<<< HEAD
   offset: number,
+=======
+  offset: number
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
 ) {
   const candidates: PopoverPlacement[] = [preferredPlacement];
 
@@ -176,7 +263,11 @@ function resolvePlacement(
     preferredPlacement,
     anchorRect,
     popRect,
+<<<<<<< HEAD
     offset,
+=======
+    offset
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
   );
 
   return {
@@ -235,6 +326,7 @@ export function Popover({
 
     const next = resolvePlacement(placement, anchorRect, popRect, offset);
 
+<<<<<<< HEAD
     setPosition((previous) => {
       const sameTop = isCloseEnough(previous.top, next.coords.top, POSITION_EPSILON);
       const sameLeft = isCloseEnough(
@@ -252,13 +344,36 @@ export function Popover({
 
       if (
         previous.ready &&
+=======
+    setPosition((prev) => {
+      const sameTop = isCloseEnough(prev.top, next.coords.top, POSITION_EPSILON);
+      const sameLeft = isCloseEnough(
+        prev.left,
+        next.coords.left,
+        POSITION_EPSILON
+      );
+      const sameWidth = isCloseEnough(prev.width, popRect.width, SIZE_EPSILON);
+      const sameHeight = isCloseEnough(
+        prev.height,
+        popRect.height,
+        SIZE_EPSILON
+      );
+      const samePlacement = prev.resolvedPlacement === next.placement;
+
+      if (
+        prev.ready &&
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
         sameTop &&
         sameLeft &&
         sameWidth &&
         sameHeight &&
         samePlacement
       ) {
+<<<<<<< HEAD
         return previous;
+=======
+        return prev;
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
       }
 
       return {
@@ -270,7 +385,11 @@ export function Popover({
         height: popRect.height,
       };
     });
+<<<<<<< HEAD
   }, [anchorRef, offset, placement]);
+=======
+  }, [anchorRef, placement, offset]);
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -282,6 +401,10 @@ export function Popover({
 
     raf1 = requestAnimationFrame(() => {
       updatePosition();
+<<<<<<< HEAD
+=======
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
       raf2 = requestAnimationFrame(() => {
         updatePosition();
       });
@@ -322,6 +445,13 @@ export function Popover({
       }
     };
 
+<<<<<<< HEAD
+=======
+    const handleResize = () => {
+      updatePosition();
+    };
+
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     const resizeObserver = new ResizeObserver(() => {
       updatePosition();
     });
@@ -329,8 +459,11 @@ export function Popover({
     resizeObserver.observe(anchor);
     resizeObserver.observe(popover);
 
+<<<<<<< HEAD
     const handleResize = () => updatePosition();
 
+=======
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", updatePosition);
     document.addEventListener("keydown", handleKeyDown);
@@ -350,6 +483,7 @@ export function Popover({
       document.removeEventListener("mousedown", handlePointerDown);
     };
   }, [
+<<<<<<< HEAD
     anchorRef,
     canClose,
     closeOnEscape,
@@ -357,6 +491,15 @@ export function Popover({
     initialFocusRef,
     onClose,
     open,
+=======
+    open,
+    anchorRef,
+    closeOnEscape,
+    closeOnOutsideClick,
+    canClose,
+    onClose,
+    initialFocusRef,
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     updatePosition,
   ]);
 
@@ -401,15 +544,27 @@ export function Popover({
 
   return (
     <AnimatePresence>
+<<<<<<< HEAD
       {open ? (
+=======
+      {open && (
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
         <motion.div
           ref={popoverRef}
           role="dialog"
           aria-modal="false"
           className={cn(
+<<<<<<< HEAD
             "fixed z-50 flex max-h-[calc(100vh-1rem)] min-w-88 max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-[0_16px_40px_-16px_rgba(0,0,0,0.22)]",
             transformOriginClass,
             className,
+=======
+            "fixed z-50 flex max-h-[calc(100vh-1rem)] min-w-88 max-w-[calc(100vw-1rem)] flex-col overflow-hidden",
+            "rounded-2xl border border-border bg-popover text-popover-foreground",
+            "shadow-[0_16px_40px_-16px_rgba(0,0,0,0.22)] dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.65)]",
+            transformOriginClass,
+            className
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
           )}
           style={{
             top: position.top,
@@ -419,6 +574,7 @@ export function Popover({
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           {...animationProps}
         >
+<<<<<<< HEAD
           {!hideHeader && (title || description || showCloseButton) ? (
             <div
               className={cn(
@@ -432,10 +588,26 @@ export function Popover({
                     className={cn(
                       "text-sm font-semibold tracking-tight text-foreground",
                       titleClassName,
+=======
+          {!hideHeader && (title || description || showCloseButton) && (
+            <div
+              className={cn(
+                "flex items-start justify-between gap-3 px-3 py-2",
+                headerClassName
+              )}
+            >
+              <div className="min-w-0">
+                {title && (
+                  <h3
+                    className={cn(
+                      "text-[10px] tracking-tight text-popover-foreground",
+                      titleClassName
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
                     )}
                   >
                     {title}
                   </h3>
+<<<<<<< HEAD
                 ) : null}
 
                 {description ? (
@@ -443,18 +615,35 @@ export function Popover({
                     className={cn(
                       "mt-1 text-xs leading-5 text-muted-foreground",
                       descriptionClassName,
+=======
+                )}
+
+                {description && (
+                  <p
+                    className={cn(
+                      "mt-1 text-xs leading-5 text-muted-foreground",
+                      descriptionClassName
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
                     )}
                   >
                     {description}
                   </p>
+<<<<<<< HEAD
                 ) : null}
               </div>
 
               {showCloseButton && canClose ? (
+=======
+                )}
+              </div>
+
+              {showCloseButton && canClose && (
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
                 <button
                   type="button"
                   onClick={onClose}
                   className={cn(
+<<<<<<< HEAD
                     "inline-flex h-7 w-7 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground",
                     closeButtonClassName,
                   )}
@@ -475,13 +664,46 @@ export function Popover({
               className={cn(
                 "border-t border-border/70 bg-muted/35 px-4 py-3",
                 footerClassName,
+=======
+                    "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground",
+                    closeButtonClassName
+                  )}
+                  aria-label="Cerrar popover"
+                >
+                  x
+                </button>
+              )}
+            </div>
+          )}
+
+          <div
+            className={cn(
+              "scroll-y-stable overflow-y-auto px-2 pb-2",
+              bodyClassName
+            )}
+          >
+            {children}
+          </div>
+
+          {footer && (
+            <div
+              className={cn(
+                "border-t border-border bg-muted/40 px-4 py-3",
+                footerClassName
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
               )}
             >
               {footer}
             </div>
+<<<<<<< HEAD
           ) : null}
         </motion.div>
       ) : null}
+=======
+          )}
+        </motion.div>
+      )}
+>>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
     </AnimatePresence>
   );
 }

@@ -1,18 +1,30 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { Modal } from "@/components/settings/modal";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Pencil, Plus, Power } from "lucide-react";
+import { Modal } from "@/components/modales/Modal";
+import { motion, useReducedMotion } from "framer-motion";
+import { MapPin, Pencil, Plus, Power } from "lucide-react";
 
 import { createLocation, getLocationById, listLocations, updateLocation, updateLocationActive } from "@/services/locationServices";
 import type { Location, LocationForm } from "@/pages/warehouse/types/location";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { IconButton } from "@/components/IconBoton";
+import { FloatingInput } from "@/components/FloatingInput";
+import { FloatingSelect } from "@/components/FloatingSelect";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { SystemButton } from "@/components/SystemButton";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 
 type WarehouseRef = { warehouseId: string; name: string } | null;
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
+
+const statusFilterOptions = [
+    { value: "all", label: "Todos" },
+    { value: "active", label: "Activos" },
+    { value: "inactive", label: "Eliminados" },
+];
 
 export type WarehouseLocationsModalProps = {
     open: boolean;
@@ -59,10 +71,13 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
         setLoading(true);
         setError(null);
         try {
+            const isActiveParam =
+                statusFilter === "active" ? "true" : statusFilter === "inactive" ? "false" : undefined;
+
             const res = await listLocations({
                 page,
                 limit,
-                isActive:statusFilter === "active" ? "true" : "false",
+                isActive: isActiveParam,
                 warehouseId: warehouse.warehouseId,
             });
 
@@ -181,223 +196,223 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
         }
     };
 
-    const safePage = Math.max(1, pagination.page || page);
-    const totalPages = Math.max(1, pagination.totalPages);
-    const startIndex = pagination.total === 0 ? 0 : (safePage - 1) * (pagination.limit || limit) + 1;
-    const endIndex = Math.min(safePage * (pagination.limit || limit), pagination.total);
+    const columns = useMemo<DataTableColumn<Location>[]>(
+        () => [
+            {
+                id: "code",
+                header: "Código",
+                accessorKey: "code",
+                className: "font-medium",
+                cardTitle: true,
+            },
+            {
+                id: "description",
+                header: "Descripción",
+                cell: (row) => <span className="text-black/70">{row.description ?? "-"}</span>,
+            },
+            {
+                id: "status",
+                header: "Estado",
+                cell: (row) => (
+                    <span
+                        className={[
+                            "inline-flex rounded-full px-2 py-1 text-[11px] font-medium",
+                            row.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                        ].join(" ")}
+                    >
+                        {row.isActive ? "Activo" : "Inactivo"}
+                    </span>
+                ),
+            },
+            {
+                id: "actions",
+                header: "Acciones",
+                cell: (row) => (
+                    <div className="flex items-center justify-end gap-2">
+                        <IconButton
+                            title="Editar"
+                            onClick={() => void openEdit(row.locationId)}
+                            PRIMARY={PRIMARY}
+                            PRIMARY_HOVER={PRIMARY_HOVER}
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </IconButton>
+                        <IconButton
+                            title={row.isActive ? "Desactivar" : "Activar"}
+                            onClick={() => {
+                                setDeletingLocationId(row.locationId);
+                                setNextActiveState(!row.isActive);
+                            }}
+                            tone={row.isActive ? "danger" : "primary"}
+                            PRIMARY={PRIMARY}
+                            PRIMARY_HOVER={PRIMARY_HOVER}
+                        >
+                            <Power className="h-4 w-4" />
+                        </IconButton>
+                    </div>
+                ),
+                className: "text-right",
+                headerClassName: "text-right",
+                hideable: false,
+            },
+        ],
+        [openEdit],
+    );
 
-    const listKey = useMemo(() => `${page}|${statusFilter}|${warehouse?.warehouseId ?? ""}`, [page, statusFilter, warehouse?.warehouseId]);
+    const safePage = Math.max(1, pagination.page || page);
 
     if (!open || !warehouse) return null;
 
     return (
         <>
-            <Modal title={`Ubicaciones del almacén - ${warehouse.name}`} onClose={onClose} className="max-w-4xl">
+            <Modal
+                open={open}
+                title={`Ubicaciones del almacén - ${warehouse.name}`}
+                onClose={onClose}
+                className="w-[500px] max-h-[500px]"
+            >
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
                     animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
                     transition={{ duration: 0.16 }}
                 >
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-sm">
-                                Total: <span className="font-semibold text-black">{pagination.total}</span>
+                    <div className="mb-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3
+                        border-b border-black/10 px-3 sm:px-4 py-1">
+                            <SectionHeaderForm icon={MapPin} title="Ubicaciones" />
+                            <div className="text-xs text-black/60">
+                                {loading ? "Cargando..." : `${pagination.total} registros`}
                             </div>
-                            <select
-                                className="h-9 rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:ring-2"
-                                style={{ "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as React.CSSProperties}
-                                value={statusFilter}
-                                onChange={(e) => {
-                                    setStatusFilter(e.target.value);
-                                    setPage(1);
-                                }}
-                            >
-                                <option value="active">Activos</option>
-                                <option value="inactive">Eliminados</option>
-                            </select>
                         </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="grid grid-cols-2 items-center gap-2 mt-2">
+                                <FloatingSelect
+                                    label="Estado"
+                                    name="location-status-filter"
+                                    value={statusFilter}
+                                    options={statusFilterOptions}
+                                    onChange={(value) => {
+                                        setStatusFilter(value);
+                                        setPage(1);
+                                    }}
+                                    placeholder="Estado"
+                                    className="h-9 text-sm"
+                                    containerClassName="min-w-[180px]"
+                                />
+                                <SystemButton
+                                    size="sm"
+                                    className="text-sm"
+                                    leftIcon={<Plus className="h-4 w-4" />}
+                                    style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
+                                    onClick={openNew}
+                                    onMouseEnter={(e) => {
+                                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryColor;
+                                    }}
+                                >
+                                    Nueva ubicación
+                                </SystemButton>
+                            </div>
 
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10"
-                                onClick={() => void loadLocations()}
-                                disabled={loading}
-                            >
-                                {loading ? "Cargando..." : "Refrescar"}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={openNew}
-                                className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm text-white focus:outline-none focus:ring-2"
-                                style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
-                                onMouseEnter={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
-                                }}
-                                onMouseLeave={(e) => {
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryColor;
-                                }}
-                            >
-                                <Plus className="h-4 w-4" /> Nueva ubicación
-                            </button>
+                            <div className="flex items-center gap-2">
+                            </div>
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden">
-                        <div className="max-h-[60vh] overflow-auto">
-                            <table className="w-full text-sm">
-                                <thead className="sticky top-0 z-10 bg-white">
-                                    <tr className="border-b border-black/10 text-xs text-black/60">
-                                        <th className="py-3 px-4 text-left">Código</th>
-                                        <th className="py-3 px-4 text-left">Descripción</th>
-                                        <th className="py-3 px-4 text-left">Estado</th>
-                                        <th className="py-3 px-4 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
+                    <DataTable
+                        tableId={`warehouse-locations-${warehouse.warehouseId}`}
+                        data={locations}
+                        columns={columns}
+                        rowKey="locationId"
+                        loading={loading}
+                        emptyMessage="No hay ubicaciones con los filtros actuales."
+                        animated={!shouldReduceMotion}
+                        tableClassName="text-sm"
+                        pagination={{
+                            page: safePage,
+                            limit: pagination.limit || limit,
+                            total: pagination.total,
+                        }}
+                        onPageChange={(nextPage) => setPage(Math.max(1, nextPage))}
+                    />
 
-                                <AnimatePresence mode="wait" initial={false}>
-                                    <motion.tbody
-                                        key={listKey}
-                                        initial={shouldReduceMotion ? false : { opacity: 0 }}
-                                        animate={shouldReduceMotion ? false : { opacity: 1 }}
-                                        exit={shouldReduceMotion ? undefined : { opacity: 0 }}
-                                    >
-                                        {locations.map((loc) => (
-                                            <tr key={loc.locationId} className="border-b border-black/5 hover:bg-black/[0.02]">
-                                                <td className="py-3 px-4 font-medium">{loc.code}</td>
-                                                <td className="py-3 px-4 text-black/70">{loc.description ?? "-"}</td>
-                                                <td className="py-3 px-4">
-                                                    <span
-                                                        className={[
-                                                            "inline-flex rounded-full px-2 py-1 text-[11px] font-medium",
-                                                            loc.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
-                                                        ].join(" ")}
-                                                    >
-                                                        {loc.isActive ? "Activo" : "Inactivo"}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <IconButton
-                                                            title="Editar"
-                                                            onClick={() => void openEdit(loc.locationId)}
-                                                            PRIMARY={PRIMARY}
-                                                            PRIMARY_HOVER={PRIMARY_HOVER}
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </IconButton>
-                                                        <IconButton
-                                                            title={loc.isActive ? "Desactivar" : "Activar"}
-                                                            onClick={() => {
-                                                                setDeletingLocationId(loc.locationId);
-                                                                setNextActiveState(!loc.isActive);
-                                                            }}
-                                                            tone={loc.isActive ? "danger" : "primary"}
-                                                            PRIMARY={PRIMARY}
-                                                            PRIMARY_HOVER={PRIMARY_HOVER}
-                                                        >
-                                                            <Power className="h-4 w-4" />
-                                                        </IconButton>                                                    
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </motion.tbody>
-                                </AnimatePresence>
-                            </table>
-
-                            {!loading && locations.length === 0 && (
-                                <div className="px-5 py-8 text-sm text-black/60">No hay ubicaciones con los filtros actuales.</div>
-                            )}
-                            {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-black/10 text-sm text-black/60">
-                        <span className="hidden sm:inline">
-                            Mostrando {startIndex}-{endIndex} de {pagination.total}
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                            <button
-                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.03] disabled:opacity-40"
-                                disabled={!pagination.hasPrev || loading}
-                                onClick={() => setPage(Math.max(1, safePage - 1))}
-                                type="button"
-                            >
-                                Anterior
-                            </button>
-
-                            <span className="tabular-nums">
-                                Pagina {safePage} de {totalPages}
-                            </span>
-
-                            <button
-                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.03] disabled:opacity-40"
-                                disabled={!pagination.hasNext || loading}
-                                onClick={() => setPage(safePage + 1)}
-                                type="button"
-                            >
-                                Siguiente
-                            </button>
-                        </div>
-                    </div>
+                    {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
                 </motion.div>
             </Modal>
 
             {openCreate && (
-                <Modal title="Nueva ubicación" onClose={() => setOpenCreate(false)} className="max-w-lg">
+                <Modal
+                    open={openCreate}
+                    title="Nueva ubicación"
+                    onClose={() => setOpenCreate(false)}
+                    className="w-[300px] max-h-[300px]"
+                >
                     <LocationFormFields form={form} setForm={setForm} />
                     <div className="mt-4 flex justify-end gap-2">
-                        <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setOpenCreate(false)}>
+                        <SystemButton variant="outline" size="md" className="rounded-2xl" onClick={() => setOpenCreate(false)}>
                             Cancelar
-                        </button>
-                        <button
-                            className="rounded-2xl border px-4 py-2 text-sm text-white"
+                        </SystemButton>
+                        <SystemButton
+                            size="md"
+                            className="rounded-2xl"
                             style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
                             onClick={() => void saveCreate()}
                             disabled={!form.warehouseId || !form.code.trim()}
                         >
                             Guardar
-                        </button>
+                        </SystemButton>
                     </div>
                 </Modal>
             )}
 
             {editingLocationId && (
-                <Modal title="Editar ubicación" onClose={() => setEditingLocationId(null)} className="max-w-lg">
+                <Modal
+                    open={Boolean(editingLocationId)}
+                    title="Editar ubicación"
+                    onClose={() => setEditingLocationId(null)}
+                    className="w-[300px] max-h-[300px]"
+                >
                     <LocationFormFields form={form} setForm={setForm} />
                     <div className="mt-4 flex justify-end gap-2">
-                        <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setEditingLocationId(null)}>
+                        <SystemButton variant="outline" size="md" className="rounded-2xl" onClick={() => setEditingLocationId(null)}>
                             Cancelar
-                        </button>
-                        <button
-                            className="rounded-2xl border px-4 py-2 text-sm text-white"
+                        </SystemButton>
+                        <SystemButton
+                            size="md"
+                            className="rounded-2xl"
                             style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
                             onClick={() => void saveEdit()}
                         >
                             Guardar cambios
-                        </button>
+                        </SystemButton>
                     </div>
                 </Modal>
             )}
 
             {deletingLocationId && (
-                <Modal title={nextActiveState ? "Restaurar ubicación" : "Desactivar ubicación"} onClose={() => setDeletingLocationId(null)} className="max-w-md">
+                <Modal
+                    open={Boolean(deletingLocationId)}
+                    title={nextActiveState ? "Restaurar ubicación" : "Desactivar ubicación"}
+                    onClose={() => setDeletingLocationId(null)}
+                    className="w-[300px] max-h-[300px]"
+                >
                     <p className="text-sm text-black/70">
                         {nextActiveState ? "Se activará la ubicación nuevamente." : "Se desactivará la ubicación seleccionada."}
                     </p>
                     <div className="mt-4 flex justify-end gap-2">
-                        <button className="rounded-2xl border border-black/10 px-4 py-2 text-sm" onClick={() => setDeletingLocationId(null)}>
+                        <SystemButton variant="outline" size="md" className="rounded-2xl" onClick={() => setDeletingLocationId(null)}>
                             Cancelar
-                        </button>
-                        <button
-                            className="rounded-2xl border px-4 py-2 text-sm text-white"
-                            style={{ backgroundColor: primaryColor, borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)` }}
+                        </SystemButton>
+                        <SystemButton
+                            size="md"
+                            variant="danger"
+                            className="rounded-2xl"
                             onClick={() => void confirmToggleActive()}
                         >
                             Confirmar
-                        </button>
+                        </SystemButton>
                     </div>
                 </Modal>
             )}
@@ -407,38 +422,21 @@ export function WarehouseLocationsModal({ open, warehouse, onClose, primaryColor
 
 function LocationFormFields({ form, setForm }: { form: LocationForm; setForm: Dispatch<SetStateAction<LocationForm>> }) {
     return (
-        <div className="space-y-3">
-            <label className="text-sm">
-                Código
-                <input
-                    className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                    value={form.code}
-                    onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-                    placeholder=""
-                />
-            </label>
+        <div className="space-y-4">
+            <SectionHeaderForm icon={MapPin} title="Datos de ubicación" />
+            <FloatingInput
+                label="Código"
+                name="location-code"
+                value={form.code}
+                onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
+            />
 
-            <label className="text-sm">
-                Descripción (opcional)
-                <input
-                    className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
-                    value={form.description}
-                    onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder=""
-                />
-            </label>
-
-            <label className="text-sm">
-                Estado
-                <select
-                    className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm bg-white"
-                    value={form.isActive ? "active" : "inactive"}
-                    onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.value === "active" }))}
-                >
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                </select>
-            </label>
+            <FloatingInput
+                label="Descripción (opcional)"
+                name="location-description"
+                value={form.description}
+                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+            />
         </div>
     );
 }

@@ -1,7 +1,7 @@
-import { Modal } from "@/components/settings/modal";
 import { SystemButton } from "@/components/SystemButton";
 import { List } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Modal } from "./modales/Modal";
 
 type PdfViewerModalProps = {
   open: boolean;
@@ -64,7 +64,7 @@ export function PdfViewerModal({
   if (!open) return null;
 
   return (
-    <Modal title={title} className="max-w-5xl h-[95vh]">
+    <Modal title={title} className="w-[800px] h-[95vh]" open={open} onClose={onClose}>
       <div className="space-y-3">
         <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
           {loading && (

@@ -1,20 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import { Boxes, PackageCheck, Scale, FlaskConical, Save, Plus } from "lucide-react";
-import { Modal } from "@/components/settings/modal";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Boxes, PackageCheck, Scale, FlaskConical, Save, Plus, Pencil, Power } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { createProduct, getById, updateProduct, updateProductActive } from "@/services/productService";
 import { listUnits } from "@/services/unitService";
 import { listProductEquivalences } from "@/services/equivalenceService";
 import { listProductRecipes } from "@/services/productRecipeService";
-import { createVariant, getVariantByIdp, listRowMaterials } from "@/services/catalogService";
+import {
+  createVariant,
+  getVariantById,
+  getVariantByIdp,
+  listRowMaterials,
+  updateVariant,
+  updateVariantActive,
+} from "@/services/catalogService";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { ProductType } from "@/pages/catalog/types/ProductTypes";
 import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { ProductForm } from "@/pages/catalog/types/product";
 import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import type { ProductRecipe } from "@/pages/catalog/types/productRecipe";
-import type { PrimaVariant, ProductOption, Variant, VariantForm } from "@/pages/catalog/types/variant";
+import type { PrimaVariant, ProductOption, Variant, VariantForm, VariantRow } from "@/pages/catalog/types/variant";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
@@ -24,6 +30,8 @@ import { EquivalenceFormFields } from "./EquivalenceFormField";
 import { RecipeFormFields } from "./RecipeFormFields";
 import { ProductFormFields } from "./ProductFormField";
 import { VariantFormFields } from "./VariantFormFields";
+import { money, parseDecimalInput } from "@/utils/functionPurchases";
+import { Modal } from "@/components/modales/Modal";
 
 type ProductFormModalProps = {
   open: boolean;
@@ -85,6 +93,11 @@ export function ProductFormModal({
   const [recipes, setRecipes] = useState<ProductRecipe[]>([]);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
+  const [variantModalMode, setVariantModalMode] = useState<"create" | "edit">("create");
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [togglingVariantId, setTogglingVariantId] = useState<string | null>(null);
+  const [nextVariantActiveState, setNextVariantActiveState] = useState(false);
+  const [variantToggleSaving, setVariantToggleSaving] = useState(false);
   const [variantSaving, setVariantSaving] = useState(false);
   const [variantForm, setVariantForm] = useState<VariantForm>({
     productId: "",
@@ -93,6 +106,7 @@ export function ProductFormModal({
     cost: "",
     attributes: {},
     isActive: true,
+    customSku: "",
   });
 
   const label = entityLabel ?? (productType === ProductTypes.PRIMA ? "materia prima" : "producto");
@@ -104,23 +118,12 @@ export function ProductFormModal({
 
   const formatAmount = (value?: number) => (Number.isFinite(value) ? Number(value).toFixed(2) : "0.00");
 
-  type VariantRow = {
-    id: string;
-    sku: string;
-    presentation: string;
-    variant: string;
-    color: string;
-    unit: string;
-    price: string;
-    cost: string;
-    status: string;
-  };
-
+ 
   const variantRows = useMemo<VariantRow[]>(
     () =>
       (variants ?? []).map((variant) => ({
         id: variant.id,
-        sku: variant.sku || variant.id,
+        sku: variant.sku,
         presentation: variant.attributes?.presentation ?? "-",
         variant: variant.attributes?.variant ?? "-",
         color: variant.attributes?.color ?? "-",
@@ -131,29 +134,10 @@ export function ProductFormModal({
         price: formatAmount(variant.price),
         cost: formatAmount(variant.cost),
         status: variant.isActive ? "Activo" : "Inactivo",
+        isActive: variant.isActive,
+        customSku:variant.customSku,
       })),
     [variants],
-  );
-
-  const variantColumns = useMemo<DataTableColumn<VariantRow>[]>(
-    () => [
-      { id: "sku", header: "SKU", accessorKey: "sku", className: "text-black/70", hideable: false, sortable: false, },
-      {
-        id: "presentation",
-        header: "Presentación",
-        accessorKey: "presentation",
-        className: "text-black/70",
-        hideable: false,
-        sortable: false,
-      },
-      { id: "variant", header: "Variante", accessorKey: "variant", className: "text-black/70", hideable: false, sortable: false, },
-      { id: "color", header: "Color", accessorKey: "color", className: "text-black/70", hideable: false, sortable: false, },
-      { id: "unit", header: "Unidad", accessorKey: "unit", className: "text-black/70", hideable: false, sortable: false, },
-      { id: "price", header: "Precio", accessorKey: "price", className: "text-black/70", hideable: false, sortable: false, },
-      { id: "cost", header: "Costo", accessorKey: "cost", className: "text-black/70", hideable: false, sortable: false, },
-      { id: "status", header: "Estado", accessorKey: "status", className: "text-black/70", hideable: false, sortable: false, },
-    ],
-    [],
   );
 
   const variantOptions = useMemo(
@@ -161,7 +145,8 @@ export function ProductFormModal({
       (variants ?? []).map((variant) => ({
         value: variant.id,
         label: `${form.name ?? ""} ${variant.attributes?.presentation ?? ""} ${variant.attributes?.variant ?? ""} 
-        ${variant.attributes?.color ?? ""} ${form.customSku ? `- (${form.customSku})`: ""}`,
+        ${variant.attributes?.color ?? ""}${variant.sku ? ` - ${variant.sku}`:""} ${variant.customSku ? 
+          `(${variant.customSku})`: ""}`,
       })),
     [variants],
   );
@@ -170,12 +155,17 @@ export function ProductFormModal({
     if (!workingProductId) return variantOptions;
     const name = (workingProductName || form.name || "Producto").trim();
     return [{ value: workingProductId, label: `${name} ${form.attribute.presentation??""}
-      ${form.attribute.variant??""} ${form.attribute.color??""}  ${form.customSku ? `- (${form.customSku})`: ""}` }, ...variantOptions];
+      ${form.attribute.variant??""} ${form.attribute.color??""}  
+      ${form.sku ? ` - ${form.sku}`:""} ${form.customSku ? 
+      `(${form.customSku})`: ""}` }, ...variantOptions];
   }, [workingProductId, workingProductName, form.name, variantOptions]);
 
   const variantProductOptions = useMemo<ProductOption[]>(() => {
     if (!workingProductId) return [];
-    const name = (workingProductName || form.name || "Producto").trim();
+    const name = `${form.name} ${form.attribute?.presentation??""} 
+    ${form.attribute?.variant??""}
+    ${form.attribute?.color??""} ${form.sku ?`-${form.sku}`:""}
+    ${form.customSku ? `(${form.customSku})`: ""}`;
     return [{ productId: workingProductId, name }];
   }, [workingProductId, workingProductName, form.name]);
 
@@ -268,13 +258,120 @@ export function ProductFormModal({
       cost: "",
       attributes: {},
       isActive: true,
+      customSku: "",
     });
   };
 
   const openVariantModal = () => {
+    setVariantModalMode("create");
+    setEditingVariantId(null);
     resetVariantForm();
     setVariantModalOpen(true);
   };
+
+  const closeVariantModal = () => {
+    setVariantModalOpen(false);
+    setVariantModalMode("create");
+    setEditingVariantId(null);
+  };
+
+  const openEditVariant = useCallback(async (variantId: string) => {
+    clearFlash();
+    try {
+      const variant = await getVariantById(variantId);
+      setVariantForm({
+        productId: variant.productId ?? workingProductId ?? "",
+        barcode: variant.barcode ?? "",
+        price: String(variant.price ?? ""),
+        cost: String(variant.cost ?? ""),
+        attributes: {
+          presentation: variant.attributes?.presentation,
+          variant: variant.attributes?.variant,
+          color: variant.attributes?.color,
+        },
+        isActive: variant.isActive ?? true,
+        customSku: variant.customSku,
+      });
+      setEditingVariantId(variantId);
+      setVariantModalMode("edit");
+      setVariantModalOpen(true);
+    } catch {
+      showFlash(errorResponse("No se pudo cargar la variante"));
+    }
+  }, [clearFlash, showFlash, workingProductId]);
+
+  const variantColumns = useMemo<DataTableColumn<VariantRow>[]>(
+    () => [
+      { id: "sku", 
+        header: "SKU PERSONALIZADO", 
+        cell: (row) => <span className="line-clamp-2 text-black/70">{row.customSku || "-"}</span>,
+        className: "text-black/70", 
+        hideable: false, 
+        sortable: false, 
+      },
+      {
+        id: "presentation",
+        header: "Presentación",
+        cell: (row) => <span className="line-clamp-2 text-black/70">{row.presentation || "-"}</span>,
+        className: "text-black/70",
+        hideable: false,
+        sortable: false,
+      },
+      { id: "variant", header: "Variante",
+        cell: (row) => <span className="line-clamp-2 text-black/70">{row.variant || "-"}</span>,
+        className: "text-black/70", hideable: false, sortable: false, },
+      { id: "color", header: "Color",
+        cell: (row) => <span className="line-clamp-2 text-black/70">{row.color || "-"}</span>,
+        className: "text-black/70", hideable: false, sortable: false, },
+      { id: "price", header: "Precio",
+        cell: (row) => <span className="line-clamp-2 text-black/70">{money(Number(row.price), "PEN" ) || "-"}</span>,
+        className: "text-black/70", hideable: false, sortable: false, },
+      { id: "cost", header: "Costo",
+        cell: (row) => <span className="line-clamp-2 text-black/70">{money(Number(row.cost), "PEN" )|| "-"}</span>,
+        className: "text-black/70", hideable: false, sortable: false, },
+      { id: "status", header: "Estado",
+        cell: (row) => <span className="line-clamp-2 text-black/70">{row.status || "-"}</span>,
+        className: "text-black/70", hideable: false, sortable: false, },
+      {
+        id: "actions",
+        header: "",
+        cell: (row) => (
+          <div className="flex justify-end gap-1">
+            <SystemButton
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={(event) => {
+                event.stopPropagation();
+                void openEditVariant(row.id);
+              }}
+              title="Editar variante"
+            >
+              <Pencil className="h-4 w-4" />
+            </SystemButton>
+            <SystemButton
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 ${row.isActive ? "text-rose-600 hover:bg-rose-50" : "text-teal-600 hover:bg-teal-50"}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setTogglingVariantId(row.id);
+                setNextVariantActiveState(!row.isActive);
+              }}
+              title={row.isActive ? "Desactivar variante" : "Restaurar variante"}
+            >
+              <Power className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        ),
+        headerClassName: "text-right w-[64px]",
+        className: "text-right",
+        hideable: false,
+        sortable: false,
+      },
+    ],
+    [openEditVariant],
+  );
 
   const saveVariant = async () => {
     if (!variantForm.productId || variantSaving) return;
@@ -282,21 +379,59 @@ export function ProductFormModal({
     clearFlash();
     setVariantSaving(true);
     try {
-      await createVariant({
-        productId: variantForm.productId,
-        barcode: variantForm.barcode.trim() || undefined,
-        attributes: variantForm.attributes,
-        price: Number(variantForm.price) || 0,
-        cost: Number(variantForm.cost) || 0,
-        isActive: variantForm.isActive,
-      });
-      setVariantModalOpen(false);
-      await loadVariants(variantForm.productId);
-      showFlash(successResponse("Variante creada"));
+      if (variantModalMode === "edit" && editingVariantId) {
+        await updateVariant(editingVariantId, {
+          barcode: variantForm.barcode.trim() || null,
+          attributes: variantForm.attributes,
+          price: parseDecimalInput(variantForm.price) || 0,
+          cost: parseDecimalInput(variantForm.cost) || 0,
+          customSku: variantForm.customSku
+        });
+        closeVariantModal();
+        await loadVariants(variantForm.productId);
+        showFlash(successResponse("Variante actualizada"));
+      } else {
+        await createVariant({
+          productId: variantForm.productId,
+          barcode: variantForm.barcode.trim() || undefined,
+          attributes: variantForm.attributes,
+          price: parseDecimalInput(variantForm.price) || 0,
+          cost: parseDecimalInput(variantForm.cost) || 0,
+          isActive: variantForm.isActive,
+          customSku: variantForm.customSku
+        });
+        closeVariantModal();
+        await loadVariants(variantForm.productId);
+        showFlash(successResponse("Variante creada"));
+      }
     } catch {
-      showFlash(errorResponse("Error al crear variante"));
+      showFlash(
+        errorResponse(
+          variantModalMode === "edit" ? "Error al actualizar variante" : "Error al crear variante",
+        ),
+      );
     } finally {
       setVariantSaving(false);
+    }
+  };
+
+  const confirmToggleVariant = async () => {
+    if (!togglingVariantId) return;
+    clearFlash();
+    setVariantToggleSaving(true);
+    try {
+      await updateVariantActive(togglingVariantId, { isActive: nextVariantActiveState });
+      setTogglingVariantId(null);
+      if (workingProductId) {
+        await loadVariants(workingProductId);
+      }
+      showFlash(
+        successResponse(nextVariantActiveState ? "Variante restaurada" : "Variante desactivada"),
+      );
+    } catch {
+      showFlash(errorResponse("Error al cambiar estado"));
+    } finally {
+      setVariantToggleSaving(false);
     }
   };
 
@@ -340,6 +475,7 @@ export function ProductFormModal({
           isActive: product.isActive ?? true,
           barcode: product.barcode ?? "",
           customSku: product.customSku ?? "",
+          sku: product.sku ?? "",
           price: product.price ? String(product.price) : "",
           cost: product.cost ? String(product.cost) : "",
           attribute: {
@@ -372,61 +508,70 @@ export function ProductFormModal({
     void loadRecipes(selectedVariantId);
   }, [selectedVariantId, open]);
 
+  const onUpdate = async () => {
+    if (!workingProductId) return;
+
+    await updateProduct(workingProductId, {
+      name: form.name.trim() || undefined,
+      description: form.description.trim() || null,
+      barcode: form.barcode.trim() || null,
+      customSku: form.customSku?.trim() || null,
+      price: Number(form.price) || 0,
+      cost: Number(form.cost) || 0,
+      baseUnitId: form.baseUnitId,
+      attributes: form.attribute,
+    });
+
+    await updateProductActive(workingProductId, { isActive: form.isActive });
+    showFlash(successResponse(`${label} actualizado`));
+    await onSaved?.();
+    onClose();
+  };
+
+  const onSave = async () => {
+    const created = await createProduct({
+      type: productType,
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      isActive: form.isActive,
+      barcode: form.barcode.trim() || null,
+      customSku: form.customSku?.trim() || null,
+      price: Number(form.price) || 0,
+      cost: Number(form.cost) || 0,
+      baseUnitId: form.baseUnitId,
+      attributes: form.attribute,
+    });
+
+    const createdId = created?.id ?? null;
+    const createdName = created?.name ?? form.name.trim();
+    
+    
+    showFlash(successResponse(`${label} creado`));
+    await onSaved?.();
+    
+    if (createdId) {
+      setWorkingProductId(createdId);
+      setWorkingProductName(createdName);
+      setWorkspaceTab("equivalences");
+      const tasks = [loadEquivalences(createdId), loadVariants(createdId)];
+
+      if (!isMateriaPrima) tasks.push(loadPrimaVariants());
+      await Promise.all(tasks);
+    } else {
+      onClose();
+    }
+  };
+
   const saveProduct = async () => {
     if (!canSave || saving) return;
 
     clearFlash();
     setSaving(true);
-
     try {
-      if (mode === "edit" && workingProductId) {
-        await updateProduct(workingProductId, {
-          name: form.name.trim() || undefined,
-          description: form.description.trim() || null,
-          barcode: form.barcode.trim() || null,
-          customSku: form.customSku?.trim() || null,
-          price: Number(form.price) || 0,
-          cost: Number(form.cost) || 0,
-          baseUnitId: form.baseUnitId,
-          attributes: form.attribute,
-        });
-
-        await updateProductActive(workingProductId, { isActive: form.isActive });
-        showFlash(successResponse(`${label} actualizado`));
-        await onSaved?.();
-        onClose();
+      if (workingProductId) {
+        await onUpdate();
       } else {
-        const created = await createProduct({
-          type: productType,
-          name: form.name.trim(),
-          description: form.description.trim() || null,
-          isActive: form.isActive,
-          barcode: form.barcode.trim() || null,
-          customSku: form.customSku?.trim() || null,
-          price: Number(form.price) || 0,
-          cost: Number(form.cost) || 0,
-          baseUnitId: form.baseUnitId,
-          attributes: form.attribute,
-        });
-
-        const createdId = created?.id ?? null;
-
-        const createdName = created?.name ?? form.name.trim();
-
-        showFlash(successResponse(`${label} creado`));
-        await onSaved?.();
-
-        if (createdId) {
-          setWorkingProductId(createdId);
-          setWorkingProductName(createdName);
-          setWorkspaceTab("equivalences");
-          const tasks = [loadEquivalences(createdId), loadVariants(createdId)];
-
-          if (!isMateriaPrima) tasks.push(loadPrimaVariants());
-          await Promise.all(tasks);
-        } else {
-          onClose();
-        }
+        await onSave();
       }
     } catch {
       showFlash(
@@ -444,11 +589,9 @@ export function ProductFormModal({
   const tabs = [
     { id: "details" as WorkspaceTab, label: "Producto", icon: PackageCheck, disabled: false },
     { id: "equivalences" as WorkspaceTab, label: "Equivalencias", icon: Scale, disabled: !canManageExtras },
+    { id: "variantCreated" as WorkspaceTab, label: "Variantes", icon: Plus, disabled: !canManageExtras  },
     ...(!isMateriaPrima
       ? [{ id: "recipes" as WorkspaceTab, label: "Recetas", icon: FlaskConical, disabled: !canManageExtras }]
-      : []),
-    ...(isMateriaPrima
-      ? [{ id: "variantCreated" as WorkspaceTab, label: "Variantes", icon: Plus, disabled: !canManageExtras }]
       : []),
   ];
 
@@ -456,7 +599,8 @@ export function ProductFormModal({
     <Modal
       title={mode === "edit" ? `Editar ${label}` : `Nuevo ${label}`}
       onClose={onClose}
-      className="max-w-[800px] max-h-[600px]"
+      open={open}
+      className="w-[800px] max-h-[600px]"
     >
       <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 bg-white p-3 sm:p-4">
@@ -585,9 +729,11 @@ export function ProductFormModal({
             <div className="flex items-center justify-between gap-3">
               <SectionHeaderForm
                 icon={Boxes}
-                title={`Variantes del producto - ${form.name} ${form.attribute.presentation ?? ""}
-                ${form.attribute.variant ?? ""} ${form.attribute.color??""}
-                ${form.sku ? ` - ${form.sku}` : ""}${form.customSku ? `(${form.customSku})` : ""}`}
+                title={`Variantes del producto: ${form.name}
+                ${form.attribute.presentation ?? ""}
+                ${form.attribute.variant ?? ""}
+                ${form.attribute.color??""}${form.sku ?`- ${form.sku}` : ""} 
+                ${form.customSku ? `(${form.customSku})` : ""}`}
               />
               <SystemButton
                 variant="outline"
@@ -609,7 +755,8 @@ export function ProductFormModal({
                 emptyMessage="No hay variantes registradas."
                 hoverable={false}
                 animated={false}
-                className="max-h-56 overflow-y-auto text-xs [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none"
+                className="max-h-56 overflow-y-auto 
+                text-xs [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none"
                 tableClassName="text-xs"
               />
             </div>
@@ -641,28 +788,68 @@ export function ProductFormModal({
           </SystemButton>
         </div>
       </div>
-      {variantModalOpen && (
-        <Modal title="Nueva variante" onClose={() => setVariantModalOpen(false)} className="max-w-lg">
-          <VariantFormFields form={variantForm} setForm={setVariantForm} products={variantProductOptions} lockProduct />
-          <div className="mt-4 flex justify-end gap-2">
-            <SystemButton variant="outline" onClick={() => setVariantModalOpen(false)}>
-              Cancelar
-            </SystemButton>
-            <SystemButton
-              leftIcon={<Save className="h-4 w-4" />}
-              style={{
-                backgroundColor: primaryColor,
-                borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-              }}
-              onClick={() => void saveVariant()}
-              disabled={!variantForm.productId || variantSaving}
-              loading={variantSaving}
+      <Modal
+        open={variantModalOpen}
+        title={variantModalMode === "edit" ? "Editar variante" : "Nueva variante"}
+        onClose={closeVariantModal}
+        className="max-w-lg"
+      >
+        <VariantFormFields form={variantForm} setForm={setVariantForm} 
+        products={variantProductOptions} lockProduct />
+        <div className="mt-4 flex justify-end gap-2">
+          <SystemButton variant="outline" onClick={closeVariantModal}>
+            Cancelar
+          </SystemButton>
+          <SystemButton
+            leftIcon={<Save className="h-4 w-4" />}
+            style={{
+              backgroundColor: primaryColor,
+              borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+            }}
+            onClick={() => void saveVariant()}
+            disabled={!variantForm.productId || variantSaving}
+            loading={variantSaving}
+          >
+            {variantModalMode === "edit" ? "Guardar cambios" : "Guardar"}
+          </SystemButton>
+        </div>
+      </Modal>
+      <Modal
+        open={togglingVariantId ? true : false}
+        title={nextVariantActiveState ? "Restaurar variante" : "Desactivar variante"}
+        onClose={() => setTogglingVariantId(null)}
+        className="max-w-md"
+        >
+          <div className="space-y-4">
+            <div
+              className={`rounded-lg border px-3 py-2 ${
+                nextVariantActiveState ? "border-teal-200 bg-teal-50" : "border-rose-200 bg-rose-50"
+              }`}
             >
-              Guardar
-            </SystemButton>
+              <p
+                className={`text-sm ${
+                  nextVariantActiveState ? "text-teal-800" : "text-rose-800"
+                }`}
+              >
+                {nextVariantActiveState
+                  ? "Se activará la variante nuevamente."
+                  : "Se desactivará la variante seleccionada."}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <SystemButton variant="outline" onClick={() => setTogglingVariantId(null)}>
+                Cancelar
+              </SystemButton>
+              <SystemButton
+                variant={nextVariantActiveState ? "primary" : "danger"}
+                onClick={() => void confirmToggleVariant()}
+                loading={variantToggleSaving}
+              >
+                Confirmar
+              </SystemButton>
+            </div>
           </div>
         </Modal>
-      )}
     </Modal>
   );
 }
