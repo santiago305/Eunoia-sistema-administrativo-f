@@ -35,7 +35,7 @@ import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
-import TimerToEnd from "@/component/TimerToEnd";
+import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 
 const PRIMARY = "hsl(var(--primary))";

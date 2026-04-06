@@ -47,7 +47,7 @@ export function FloatingSelect({
 
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value),
-    [options, value]
+    [options, value],
   );
 
   const filteredOptions = useMemo(() => {
@@ -57,7 +57,7 @@ export function FloatingSelect({
     if (!normalizedQuery) return options;
 
     return options.filter((option) =>
-      option.label.toLowerCase().includes(normalizedQuery)
+      option.label.toLowerCase().includes(normalizedQuery),
     );
   }, [options, query, searchable]);
 
@@ -116,19 +116,19 @@ export function FloatingSelect({
             }
           }}
           className={[
-            "relative flex h-10 w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-left text-sm outline-none transition-all",
+            "relative flex h-10 w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-left text-xs text-foreground outline-none transition-all",
             error
               ? "border-red-500 ring-0"
               : open
-              ? "border-primary ring-2 ring-primary/30"
-              : "border-black/20",
-            disabled ? "cursor-not-allowed bg-black/5 text-black/50" : "",
+                ? "border-primary ring-2 ring-primary/30"
+                : "border-border",
+            disabled ? "cursor-not-allowed bg-muted text-muted-foreground" : "",
             className,
           ].join(" ")}
           aria-expanded={open}
           aria-haspopup="listbox"
         >
-          <span className={selectedOption ? "text-black" : "text-black/40"}>
+          <span className={selectedOption ? "text-foreground" : "text-muted-foreground"}>
             {selectedOption?.label ?? placeholder}
           </span>
 
@@ -136,11 +136,7 @@ export function FloatingSelect({
             className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
               open ? "rotate-180" : ""
             } ${
-              error
-                ? "text-red-500"
-                : open
-                ? "text-primary"
-                : "text-black/50"
+              error ? "text-red-500" : open ? "text-primary" : "text-muted-foreground"
             }`}
           />
         </button>
@@ -148,48 +144,44 @@ export function FloatingSelect({
         <label
           htmlFor={name}
           className={[
-            "pointer-events-none absolute left-3 bg-white px-1 transition-all duration-200",
+            "pointer-events-none absolute left-3 bg-background px-1 transition-all duration-200",
             hasValue || open
               ? "top-0 -translate-y-1/2 text-[11px]"
-              : "top-1/2 -translate-y-1/2 text-sm",
-            error
-              ? "text-red-500"
-              : open
-              ? "text-primary"
-              : "text-black/50",
+              : "top-1/2 -translate-y-1/2 text-xs",
+            error ? "text-red-500" : open ? "text-primary" : "text-muted-foreground",
           ].join(" ")}
         >
           {label}
         </label>
 
         <AnimatePresence>
-          {open && !disabled && (
+          {open && !disabled ? (
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18 }}
-              className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border border-black/10 bg-white shadow-lg"
+              className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
             >
-              {searchable && (
-                <div className="border-b border-black/5 p-2">
+              {searchable ? (
+                <div className="border-b border-border p-2">
                   <input
                     ref={searchInputRef}
                     value={query}
-                    onChange={(e) => {
-                      const next = e.target.value;
+                    onChange={(event) => {
+                      const next = event.target.value;
                       setQuery(next);
                       onSearchChange?.(next);
                     }}
                     placeholder={searchPlaceholder}
-                    className="h-9 w-full rounded-md border border-black/10 px-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30"
+                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
-              )}
+              ) : null}
 
-              <div className="max-h-64 overflow-y-auto py-1">
+              <div className="scrollbar-panel max-h-64 overflow-y-auto py-1">
                 {filteredOptions.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-black/40">
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
                     {emptyMessage}
                   </div>
                 ) : (
@@ -207,27 +199,27 @@ export function FloatingSelect({
                           setQuery("");
                         }}
                         className={[
-                          "flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors",
+                          "flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors",
                           isSelected
                             ? "bg-primary/10 text-primary"
-                            : "text-black/90 hover:bg-black/5",
+                            : "text-foreground hover:bg-muted",
                         ].join(" ")}
                         role="option"
                         aria-selected={isSelected}
                       >
                         <span>{option.label}</span>
-                        {isSelected && <Check className="h-4 w-4" />}
+                        {isSelected ? <Check className="h-4 w-4" /> : null}
                       </button>
                     );
                   })
                 )}
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
 
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }

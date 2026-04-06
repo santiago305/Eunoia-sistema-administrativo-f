@@ -85,6 +85,25 @@ export const getSecurityTopIps = async (params?: SecurityTopIpsParams) => {
   }));
 };
 
+export const getSecuritySummary = async (params?: SecurityHoursAndReasonParams) => {
+  const query = securityHoursAndReasonQuerySchema.parse(params ?? {});
+  const response = await axiosInstance.get<{
+    from: string;
+    to: string;
+    generatedAt: string;
+    timeZone?: string;
+    data: {
+      topViolations: number;
+      activeBans: number;
+      temporaryBans: number;
+      permanentBans: number;
+    };
+  }>(API_SECURITY_GROUP.summary, {
+    params: query,
+  });
+  return response.data;
+};
+
 export const getSecurityActiveBans = async (
   params?: SecurityActiveBansParams,
 ): Promise<SecurityListResponse<SecurityActiveBanItem>> => {

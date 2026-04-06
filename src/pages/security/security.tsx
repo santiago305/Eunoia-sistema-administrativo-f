@@ -10,6 +10,7 @@ import {
   getSecurityMethodDistribution,
   getSecurityReasonDistribution,
   getSecurityRiskScore,
+  getSecuritySummary,
   getSecurityTopRoutes,
   getSecurityTopIps,
   blacklistSecurityIp,
@@ -42,6 +43,7 @@ import { buildIpDetailPath } from "./components/security.utils";
 export default function SecurityPage() {
   const navigate = useNavigate();
   const { showFlash } = useFlashMessage();
+  type SecuritySummary = Awaited<ReturnType<typeof getSecuritySummary>>;
 
   const [topIps, setTopIps] = useState<SecurityTopIpItem[]>([]);
   const [activeBans, setActiveBans] = useState<SecurityActiveBanItem[]>([]);
@@ -54,6 +56,7 @@ export default function SecurityPage() {
   const [topRoutes, setTopRoutes] = useState<SecurityTopRouteItem[]>([]);
   const [reasonCatalog, setReasonCatalog] = useState<SecurityReasonCatalogItem[]>([]);
   const [riskScore, setRiskScore] = useState<SecurityRiskScoreResponse | null>(null);
+  const [summary, setSummary] = useState<SecuritySummary | null>(null);
   const [hours, setHours] = useState(24);
   const [topLimit, setTopLimit] = useState(20);
   const [loading, setLoading] = useState(true);
@@ -71,7 +74,8 @@ export default function SecurityPage() {
       setError(null);
       setLoading(true);
 
-      const [ips, bans, activity, reasons, methods, routes, risk, catalog] = await Promise.all([
+      const [summaryData, ips, bans, activity, reasons, methods, routes, risk, catalog] = await Promise.all([
+        getSecuritySummary({ hours, reason: reasonFilter || undefined }),
         getSecurityTopIps({ hours, limit: topLimit, reason: reasonFilter || undefined }),
         getSecurityActiveBans({ page: activeBansPage, limit: activeBansLimit }),
         getSecurityActivitySeries({ hours, reason: reasonFilter || undefined }),
@@ -82,6 +86,7 @@ export default function SecurityPage() {
         getSecurityReasons({ hours, activeOnly: true }).catch(() => []),
       ]);
 
+      setSummary(summaryData);
       setTopIps(ips);
       setActiveBans(bans.data);
       setActiveBansPage(bans.pagination?.page ?? 1);
@@ -235,10 +240,33 @@ export default function SecurityPage() {
       ) : null}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Bans activos" value={1} subtitle="IPs bloqueadas actualmente" icon={Ban} variant="primary" />
-        <StatCard label="Temporales" value={0} subtitle="Baneos con vencimiento" icon={Clock} />
-        <StatCard label="Permanentes" value={1} subtitle="Bloqueos manuales o permanentes" icon={AlertTriangle} variant="warning" />
-        <StatCard label="Violaciones top" value="2,880" subtitle="Suma visible del ranking actual" icon={Activity} variant="destructive" />
+        <StatCard
+          label="Bans activos"
+          value={summary?.data.activeBans ?? 0}
+          subtitle="IPs bloqueadas actualmente"
+          icon={Ban}
+          variant="primary"
+        />
+        <StatCard
+          label="Temporales"
+          value={summary?.data.temporaryBans ?? 0}
+          subtitle="Baneos con vencimiento"
+          icon={Clock}
+        />
+        <StatCard
+          label="Permanentes"
+          value={summary?.data.permanentBans ?? 0}
+          subtitle="Bloqueos manuales o permanentes"
+          icon={AlertTriangle}
+          variant="warning"
+        />
+        <StatCard
+          label="Violaciones top"
+          value={summary?.data.topViolations ?? 0}
+          subtitle="Suma visible del ranking actual"
+          icon={Activity}
+          variant="destructive"
+        />
       </div>
 
       <AnalyticsSection

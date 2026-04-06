@@ -20,7 +20,7 @@ import { SupplierOption } from "../providers/types/supplier";
 import { Warehouse } from "../warehouse/types/warehouse";
 import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
-import TimerToEnd, { formatDate } from "@/component/TimerToEnd";
+import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
 import { Dropdown } from "../../components/Dropdown";
 import { Filter, Menu, OctagonAlert, Timer } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";

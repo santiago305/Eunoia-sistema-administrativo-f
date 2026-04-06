@@ -11,7 +11,6 @@ import {
   PurchaseOrderStatuses,
 } from "@/pages/purchases/types/purchaseEnums";
 
-const IGV = new Big("0.18");
 const IGV_FACTOR = new Big("1.18");
 
 const MONEY_SCALE = 2;

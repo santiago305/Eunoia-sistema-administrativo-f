@@ -1,5 +1,12 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, CheckSquare, MinusSquare, Square } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CheckSquare,
+  MinusSquare,
+  Square,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DataTableColumnManager } from "./DataTableColumnManager";
 import { DataTablePagination } from "./DataTablePagination";
@@ -28,7 +35,7 @@ function getCellValue<T extends Record<string, unknown>>(
 function normalizeSearchText(value: unknown) {
   if (value == null) return "";
   if (value instanceof Date) return value.toISOString();
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "object") return JSON.stringify(value).toLowerCase();
   return String(value).toLowerCase();
 }
 
@@ -36,18 +43,9 @@ function compareValues(a: unknown, b: unknown) {
   if (a == null && b == null) return 0;
   if (a == null) return -1;
   if (b == null) return 1;
-
-  if (a instanceof Date && b instanceof Date) {
-    return a.getTime() - b.getTime();
-  }
-
-  if (typeof a === "number" && typeof b === "number") {
-    return a - b;
-  }
-
-  if (typeof a === "boolean" && typeof b === "boolean") {
-    return Number(a) - Number(b);
-  }
+  if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
 
   return String(a).localeCompare(String(b), "es", {
     numeric: true,
@@ -93,16 +91,18 @@ export function DataTable<T extends Record<string, unknown>>({
   const [internalSearch, setInternalSearch] = useState("");
   const activeSearch = controlledSearch ? searchValue : internalSearch;
 
-  const [columnPreferences, setColumnPreferences] = useLocalStorage<DataTableColumnPreference>(
-    preferenceStorageKey,
-    {
-      visibleColumnIds: columns.filter((column) => column.visible !== false).map((column) => column.id),
+  const [columnPreferences, setColumnPreferences] =
+    useLocalStorage<DataTableColumnPreference>(preferenceStorageKey, {
+      visibleColumnIds: columns
+        .filter((column) => column.visible !== false)
+        .map((column) => column.id),
       orderedColumnIds: columns.map((column) => column.id),
-    },
-  );
+    });
 
-  const [internalSelectedRowKeys, setInternalSelectedRowKeys] = useState<string[]>(defaultSelectedRowKeys);
-  const [internalSort, setInternalSort] = useState<DataTableSortState>(initialSort);
+  const [internalSelectedRowKeys, setInternalSelectedRowKeys] =
+    useState<string[]>(defaultSelectedRowKeys);
+  const [internalSort, setInternalSort] =
+    useState<DataTableSortState>(initialSort);
 
   const sort = controlledSort !== undefined ? controlledSort : internalSort;
   const activeSelectedRowKeys = selectedRowKeys ?? internalSelectedRowKeys;
@@ -115,23 +115,33 @@ export function DataTable<T extends Record<string, unknown>>({
 
   useEffect(() => {
     const validIds = columns.map((column) => column.id);
-    const defaultVisibleIds = columns.filter((column) => column.visible !== false).map((column) => column.id);
+    const defaultVisibleIds = columns
+      .filter((column) => column.visible !== false)
+      .map((column) => column.id);
     const defaultOrderedIds = columns.map((column) => column.id);
+    const requiredVisibleIds = columns
+      .filter((column) => column.hideable === false)
+      .map((column) => column.id);
 
     setColumnPreferences((previous) => {
       const previousVisible = previous?.visibleColumnIds ?? [];
       const previousOrdered = previous?.orderedColumnIds ?? [];
-
-      const visibleColumnIds = previousVisible.filter((id) => validIds.includes(id));
-      const missingVisible = defaultVisibleIds.filter((id) => !visibleColumnIds.includes(id));
-
+      const visibleColumnIds = previousVisible.filter((id) =>
+        validIds.includes(id),
+      );
+      const missingRequired = requiredVisibleIds.filter(
+        (id) => !visibleColumnIds.includes(id),
+      );
       const orderedColumnIds = [
         ...previousOrdered.filter((id) => validIds.includes(id)),
         ...defaultOrderedIds.filter((id) => !previousOrdered.includes(id)),
       ];
 
       return {
-        visibleColumnIds: visibleColumnIds.length > 0 ? [...visibleColumnIds, ...missingVisible] : defaultVisibleIds,
+        visibleColumnIds:
+          visibleColumnIds.length > 0
+            ? [...visibleColumnIds, ...missingRequired]
+            : defaultVisibleIds,
         orderedColumnIds,
       };
     });
@@ -153,20 +163,39 @@ export function DataTable<T extends Record<string, unknown>>({
   const visibleColumns = useMemo(() => {
     const ids = selectableColumns
       ? columnPreferences.visibleColumnIds
-      : columns.filter((column) => column.visible !== false).map((column) => column.id);
+      : columns
+          .filter((column) => column.visible !== false)
+          .map((column) => column.id);
 
     return orderedColumns.filter((column) => ids.includes(column.id));
-  }, [columnPreferences.visibleColumnIds, columns, orderedColumns, selectableColumns]);
+  }, [
+    columnPreferences.visibleColumnIds,
+    columns,
+    orderedColumns,
+    selectableColumns,
+  ]);
+
+  const canManageColumns =
+    selectableColumns &&
+    columns.some((column) => column.hideable !== false || !column.lockPosition);
 
   const toggleColumn = (columnId: string) => {
+    const selectedColumn = columns.find((column) => column.id === columnId);
+    if (selectedColumn?.hideable === false) return;
+
     setColumnPreferences((previous) => {
       const exists = previous.visibleColumnIds.includes(columnId);
 
       if (exists) {
-        const nextVisible = previous.visibleColumnIds.filter((id) => id !== columnId);
+        const nextVisible = previous.visibleColumnIds.filter(
+          (id) => id !== columnId,
+        );
         return {
           ...previous,
-          visibleColumnIds: nextVisible.length > 0 ? nextVisible : previous.visibleColumnIds,
+          visibleColumnIds:
+            nextVisible.length > 0
+              ? nextVisible
+              : previous.visibleColumnIds,
         };
       }
 
@@ -195,16 +224,15 @@ export function DataTable<T extends Record<string, unknown>>({
       nextOrder.splice(sourceIndex, 1);
       nextOrder.splice(targetIndex, 0, columnId);
 
-      return {
-        ...previous,
-        orderedColumnIds: nextOrder,
-      };
+      return { ...previous, orderedColumnIds: nextOrder };
     });
   };
 
   const resetColumns = () => {
     setColumnPreferences({
-      visibleColumnIds: columns.filter((column) => column.visible !== false).map((column) => column.id),
+      visibleColumnIds: columns
+        .filter((column) => column.visible !== false)
+        .map((column) => column.id),
       orderedColumnIds: columns.map((column) => column.id),
     });
   };
@@ -236,7 +264,7 @@ export function DataTable<T extends Record<string, unknown>>({
     const selectedColumn = columns.find((column) => column.id === sort.columnId);
     if (!selectedColumn || selectedColumn.sortable === false) return filteredData;
 
-    const sorted = [...filteredData].sort((rowA, rowB) => {
+    return [...filteredData].sort((rowA, rowB) => {
       const valueA =
         typeof selectedColumn.sortAccessor === "function"
           ? selectedColumn.sortAccessor(rowA)
@@ -258,8 +286,6 @@ export function DataTable<T extends Record<string, unknown>>({
       const result = compareValues(valueA, valueB);
       return sort.direction === "asc" ? result : result * -1;
     });
-
-    return sorted;
   }, [columns, filteredData, sort]);
 
   const setSortValue = (nextSort: DataTableSortState) => {
@@ -274,13 +300,11 @@ export function DataTable<T extends Record<string, unknown>>({
     if (!selectedColumn || selectedColumn.sortable === false) return;
 
     if (!sort || sort.columnId !== columnId) {
-      setSortValue({ columnId, direction: "asc" });
-      return;
+      return setSortValue({ columnId, direction: "asc" });
     }
 
     if (sort.direction === "asc") {
-      setSortValue({ columnId, direction: "desc" });
-      return;
+      return setSortValue({ columnId, direction: "desc" });
     }
 
     setSortValue(null);
@@ -313,15 +337,23 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const allVisibleKeys = sortedData.map((row, index) => resolveRowKey(row, index));
-  const allSelected = selectableRows && allVisibleKeys.length > 0 && allVisibleKeys.every((key) => activeSelectedRowKeys.includes(key));
-  const someSelected = selectableRows && !allSelected && allVisibleKeys.some((key) => activeSelectedRowKeys.includes(key));
+  const allSelected =
+    selectableRows &&
+    allVisibleKeys.length > 0 &&
+    allVisibleKeys.every((key) => activeSelectedRowKeys.includes(key));
+
+  const someSelected =
+    selectableRows &&
+    !allSelected &&
+    allVisibleKeys.some((key) => activeSelectedRowKeys.includes(key));
 
   const handleToggleAllRows = () => {
     if (!selectableRows) return;
 
     if (allSelected) {
-      updateSelectedRows(activeSelectedRowKeys.filter((key) => !allVisibleKeys.includes(key)));
-      return;
+      return updateSelectedRows(
+        activeSelectedRowKeys.filter((key) => !allVisibleKeys.includes(key)),
+      );
     }
 
     updateSelectedRows(Array.from(new Set([...activeSelectedRowKeys, ...allVisibleKeys])));
@@ -336,22 +368,19 @@ export function DataTable<T extends Record<string, unknown>>({
         searchValue={activeSearch}
         searchPlaceholder={searchPlaceholder}
         onSearchChange={(value) => {
-          if (controlledSearch) {
-            onSearchChange?.(value);
-            return;
-          }
+          if (controlledSearch) return onSearchChange?.(value);
           setInternalSearch(value);
         }}
         selectionInfo={
           selectableRows ? (
-            <div className="inline-flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+            <div className="inline-flex items-center gap-2 rounded-sm border border-border/70 bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
               <CheckSquare className="h-4 w-4" />
               {activeSelectedRowKeys.length} fila(s) seleccionada(s)
             </div>
           ) : null
         }
         rightContent={
-          selectableColumns ? (
+          canManageColumns ? (
             <DataTableColumnManager
               columns={orderedColumns.map((column) => ({
                 id: column.id,
@@ -384,17 +413,21 @@ export function DataTable<T extends Record<string, unknown>>({
         />
       ) : null}
 
-      <div className="hidden overflow-hidden rounded-2xl border border-border bg-background shadow-sm md:block">
-        <div className="max-h-[90vh] overflow-auto">
-          <table className={cn("w-full min-w-full text-sm", tableClassName)}>
-            <thead className={cn(stickyHeader && "sticky top-0 z-10") }>
-              <tr className="border-b border-border bg-muted/95 backdrop-blur">
+      <div className="relative hidden rounded-sm border border-border/70 bg-background shadow-sm md:block">
+        <div className="scrollbar-panel max-h-[90vh] overflow-auto rounded-sm">
+          <table className={cn("w-full min-w-full text-xs", tableClassName)}>
+            <thead
+              className={cn(
+                stickyHeader && "sticky top-0 z-10 bg-background/95 backdrop-blur",
+              )}
+            >
+              <tr className="border-b border-border/70 bg-muted/40">
                 {selectableRows ? (
                   <th className="w-12 px-4 py-3 text-left">
                     <button
                       type="button"
                       onClick={handleToggleAllRows}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border transition hover:bg-background"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
                     >
                       {allSelected ? (
                         <CheckSquare className="h-4 w-4" />
@@ -409,14 +442,16 @@ export function DataTable<T extends Record<string, unknown>>({
 
                 {visibleColumns.map((column) => {
                   const isSorted = sort?.columnId === column.id;
-                  const canSort = column.sortable !== false && (!!column.accessorKey || !!column.sortAccessor);
+                  const canSort =
+                    column.sortable !== false &&
+                    (!!column.accessorKey || !!column.sortAccessor);
 
                   return (
                     <th
                       key={column.id}
                       style={column.width ? { width: column.width } : undefined}
                       className={cn(
-                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+                        "px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                         column.headerClassName,
                       )}
                     >
@@ -427,7 +462,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           <button
                             type="button"
                             onClick={() => handleToggleSort(column.id)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-background hover:text-foreground"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground"
                           >
                             {isSorted ? (
                               sort?.direction === "asc" ? (
@@ -450,8 +485,13 @@ export function DataTable<T extends Record<string, unknown>>({
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, rowIndex) => (
-                  <tr key={rowIndex} className="border-b border-border/60">
-                    {selectableRows ? <td className="px-4 py-4"><div className="h-4 w-4 animate-pulse rounded bg-muted" /></td> : null}
+                  <tr key={rowIndex} className="border-b border-border/50">
+                    {selectableRows ? (
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                      </td>
+                    ) : null}
+
                     {visibleColumns.map((column) => (
                       <td key={column.id} className="px-4 py-4">
                         <div className="h-4 w-full animate-pulse rounded bg-muted" />
@@ -463,7 +503,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 <tr>
                   <td
                     colSpan={visibleColumns.length + (selectableRows ? 1 : 0) || 1}
-                    className="px-4 py-10 text-center text-sm text-muted-foreground"
+                    className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     {emptyMessage}
                   </td>
@@ -471,9 +511,9 @@ export function DataTable<T extends Record<string, unknown>>({
               ) : (
                 sortedData.map((row, index) => {
                   const rowClasses = cn(
-                    "border-b border-border/60 transition-colors",
-                    hoverable && "hover:bg-muted/40",
-                    striped && index % 2 !== 0 && "bg-muted/[0.18]",
+                    "border-b border-border/50 transition-colors",
+                    hoverable && "hover:bg-muted/30",
+                    striped && index % 2 !== 0 && "bg-muted/[0.16]",
                     isRowClickable && "cursor-pointer",
                     rowClassName?.(row, index),
                   );
@@ -492,19 +532,27 @@ export function DataTable<T extends Record<string, unknown>>({
                   const rowCells = (
                     <>
                       {selectableRows ? (
-                        <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                        <td
+                          className="px-2.5 py-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <button
                             type="button"
                             onClick={() => handleToggleRow(row, index)}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border transition hover:bg-muted"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
                           >
-                            {isSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                            {isSelected ? (
+                              <CheckSquare className="h-4 w-4" />
+                            ) : (
+                              <Square className="h-4 w-4" />
+                            )}
                           </button>
                         </td>
                       ) : null}
 
                       {visibleColumns.map((column) => {
-                        const isCellClickable = !!column.onCellClick && column.clickable !== false;
+                        const isCellClickable =
+                          !!column.onCellClick && column.clickable !== false;
 
                         return (
                           <td
@@ -518,7 +566,7 @@ export function DataTable<T extends Record<string, unknown>>({
                                 : undefined
                             }
                             className={cn(
-                              "px-4 py-3 text-foreground",
+                              "px-2.5 py-2 align-middle text-foreground",
                               column.className,
                               isCellClickable && "cursor-pointer hover:underline",
                             )}
@@ -539,7 +587,9 @@ export function DataTable<T extends Record<string, unknown>>({
                       <motion.tr
                         key={rowKeyValue}
                         {...motionProps}
-                        onClick={isRowClickable ? () => onRowClick?.(row, index) : undefined}
+                        onClick={
+                          isRowClickable ? () => onRowClick?.(row, index) : undefined
+                        }
                         className={cn(rowClasses, isSelected && "bg-primary/5")}
                       >
                         {rowCells}
@@ -550,7 +600,9 @@ export function DataTable<T extends Record<string, unknown>>({
                   return (
                     <tr
                       key={rowKeyValue}
-                      onClick={isRowClickable ? () => onRowClick?.(row, index) : undefined}
+                      onClick={
+                        isRowClickable ? () => onRowClick?.(row, index) : undefined
+                      }
                       className={cn(rowClasses, isSelected && "bg-primary/5")}
                     >
                       {rowCells}
@@ -563,13 +615,15 @@ export function DataTable<T extends Record<string, unknown>>({
         </div>
       </div>
 
-      {pagination && onPageChange ? (
-        <DataTablePagination
-          page={pagination.page}
-          limit={pagination.limit}
-          total={pagination.total}
-          onPageChange={onPageChange}
-        />
+      {pagination && onPageChange && pagination.total > pagination.limit ? (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-background px-4 py-3 sm:items-end sm:justify-between">
+          <DataTablePagination
+            page={pagination.page}
+            limit={pagination.limit}
+            total={pagination.total}
+            onPageChange={onPageChange}
+          />
+        </div>
       ) : null}
     </div>
   );

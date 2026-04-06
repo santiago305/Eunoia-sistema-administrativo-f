@@ -29,9 +29,7 @@ export function FloatingRadioGroup<T extends string | boolean | number>({
 }: FloatingRadioGroupProps<T>) {
   return (
     <div className={`w-full ${className}`}>
-      {label && (
-        <p className="mb-2 text-sm font-medium text-black/70">{label}</p>
-      )}
+      {label ? <p className="mb-2 text-sm font-medium text-foreground/70">{label}</p> : null}
 
       <div className="flex flex-wrap gap-3">
         {options.map((option) => {
@@ -44,7 +42,7 @@ export function FloatingRadioGroup<T extends string | boolean | number>({
                 "flex min-w-[140px] cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-all",
                 checked
                   ? "border-primary bg-primary/10"
-                  : "border-black/10 bg-white hover:border-black/20",
+                  : "border-border bg-background hover:border-border/80",
                 disabled ? "cursor-not-allowed opacity-60" : "",
                 optionClassName,
               ].join(" ")}
@@ -61,7 +59,7 @@ export function FloatingRadioGroup<T extends string | boolean | number>({
               <span
                 className={[
                   "flex h-4 w-4 items-center justify-center rounded-full border transition-all",
-                  checked ? "border-primary" : "border-black/30",
+                  checked ? "border-primary" : "border-border",
                 ].join(" ")}
               >
                 <span
@@ -75,24 +73,24 @@ export function FloatingRadioGroup<T extends string | boolean | number>({
               <div className="flex flex-col">
                 <span
                   className={`text-sm font-medium ${
-                    checked ? "text-primary" : "text-black/80"
+                    checked ? "text-primary" : "text-foreground/80"
                   }`}
                 >
                   {option.label}
                 </span>
 
-                {option.description && (
-                  <span className="text-xs text-black/50">
+                {option.description ? (
+                  <span className="text-xs text-muted-foreground">
                     {option.description}
                   </span>
-                )}
+                ) : null}
               </div>
             </label>
           );
         })}
       </div>
 
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }

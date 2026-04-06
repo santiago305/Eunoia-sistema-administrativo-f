@@ -1,13 +1,13 @@
+import type { ReactNode } from "react";
+import { Modal as BaseModal } from "@/components/modales/Modal";
 
-import { ReactNode } from "react";
-
-interface ModalDeleteSessionsProps {
+type LegacyModalProps = {
   title: string;
   children: ReactNode;
   onClose?: () => void;
-  className?: string
+  className?: string;
   closeOnBackdrop?: boolean;
-}
+};
 
 export function Modal({
   title,
@@ -15,38 +15,18 @@ export function Modal({
   onClose,
   className,
   closeOnBackdrop = true,
-}: ModalDeleteSessionsProps) {
+}: LegacyModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={closeOnBackdrop ? onClose : undefined}
-      />
-      <div className={`relative w-full rounded-2xl bg-white shadow-xl ${className ? className : "max-w-md"}`}>
-        <div className="flex items-center justify-between bg-gray-100 rounded-t-2xl px-5 py-4">
-          <h2 className="text-xl font-semibold text-slate-800">
-            {title}
-          </h2>
-          {
-            onClose && (
-              <button
-                onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                ✕
-              </button>
-            )
-          }
-        </div>
-
-        {/* Content */}
-        <div className="px-5 py-4 text-sm text-slate-600">
-          {children}
-        </div>
-      </div>
-    </div>
+    <BaseModal
+      open
+      title={title}
+      onClose={onClose ?? (() => undefined)}
+      className={className}
+      closeOnOverlayClick={closeOnBackdrop}
+      closeOnEscape={!!onClose}
+      showCloseButton={!!onClose}
+    >
+      {children}
+    </BaseModal>
   );
 }
-
-
-

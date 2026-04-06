@@ -57,6 +57,7 @@ export const API_SESSIONS_GROUP = {
 };
 
 export const API_SECURITY_GROUP = {
+  summary: "/security/summary",
   topIps: "/security/top-ips",
   activeBans: "/security/active-bans",
   historyByIp: (ip: string) => `/security/history/${encodeURIComponent(ip)}`,
