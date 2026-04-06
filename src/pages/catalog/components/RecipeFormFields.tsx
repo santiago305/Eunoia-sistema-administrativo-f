@@ -34,7 +34,7 @@ export function RecipeFormFields({
     const primaVariantOptions = (activePrimaVariants ?? []).map((v) => ({
         value: v.id ?? "",
         label: `${v.productName ?? "Producto"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
-        ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      })); 
+        ${v.sku ? ` - ${v.sku}`: ""} ${v.customSku ? `(${v.customSku})`: ""}`,      })); 
 
     const selectedPrimaVariant = (activePrimaVariants ?? []).find((v) => v.id === primaVariantId);
     const baseUnitLabel =
@@ -65,7 +65,8 @@ export function RecipeFormFields({
                     prima?.unitName && prima?.unitCode
                         ? `${prima.unitName} (${prima.unitCode})`
                         : ((units ?? []).find((u) => u.id === prima?.baseUnitId)?.name ?? (prima?.baseUnitId ? prima.baseUnitId : recipe.primaVariantId));
-                const primaLabel = prima ? `${prima.productName ?? "Producto"} (${prima.sku ?? "-"})` : recipe.primaVariantId;
+                const primaLabel = prima ? `${prima.productName ?? "Producto"}
+                ${prima.sku ? ` - ${prima.sku}`: ""} ${prima.customSku ? `(${prima.customSku})`: ""}` : recipe.primaVariantId;
 
                 return {
                     id: recipe.id,
