@@ -20,13 +20,8 @@ import { Warehouse } from "../warehouse/types/warehouse";
 import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
-<<<<<<< HEAD
-import { Dropdown } from "../../components/Dropdown";
-import { Filter, Menu, OctagonAlert, Timer } from "lucide-react";
-=======
 import { ActionsPopover, type ActionItem } from "@/components/ActionsPopover";
 import { Calendar, CreditCard, FileText, Filter, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Timer, XCircle } from "lucide-react";
->>>>>>> 37e743728e21ebee97534fe8f2eed35587fbf7f7
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";

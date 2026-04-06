@@ -1,5 +1,9 @@
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { type ReactNode, type RefObject, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 type ModalAnimation = "scale" | "slide";
@@ -8,19 +12,24 @@ type ModalProps = {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+
   title?: string;
   description?: string;
   footer?: ReactNode;
+
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
   lockScroll?: boolean;
   preventClose?: boolean;
+
   showOverlay?: boolean;
   overlayBlur?: boolean;
   showCloseButton?: boolean;
   hideHeader?: boolean;
+
   initialFocusRef?: RefObject<HTMLElement | null>;
   animation?: ModalAnimation;
+
   className?: string;
   overlayClassName?: string;
   containerClassName?: string;
@@ -79,13 +88,15 @@ export function Modal({
       const scrollbarWidth =
         window.innerWidth - document.documentElement.clientWidth;
       const computedPaddingRight = Number.parseFloat(
-        window.getComputedStyle(document.body).paddingRight,
+        window.getComputedStyle(document.body).paddingRight
       );
 
       document.body.style.overflow = "hidden";
 
       if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${computedPaddingRight + scrollbarWidth}px`;
+        document.body.style.paddingRight = `${
+          computedPaddingRight + scrollbarWidth
+        }px`;
       }
     }
 
@@ -100,7 +111,7 @@ export function Modal({
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPaddingRight;
     };
-  }, [canClose, closeOnEscape, initialFocusRef, lockScroll, onClose, open]);
+  }, [open, closeOnEscape, canClose, onClose, lockScroll, initialFocusRef]);
 
   const animationProps =
     animation === "slide"
@@ -125,23 +136,23 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50">
-          {showOverlay ? (
+          {showOverlay && (
             <motion.div
               className={cn(
-                "absolute inset-0 bg-black/40",
+                "absolute inset-0 bg-black/40 dark:bg-black/60",
                 overlayBlur && "backdrop-blur-[2px]",
-                overlayClassName,
+                overlayClassName
               )}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             />
-          ) : null}
+          )}
 
           <div
             className={cn(
               "relative flex min-h-full w-full items-center justify-center p-4 sm:p-6",
-              containerClassName,
+              containerClassName
             )}
             onClick={handleBackdropClick}
           >
@@ -149,75 +160,78 @@ export function Modal({
               role="dialog"
               aria-modal="true"
               aria-label={title || "Modal"}
-              onClick={(event) => event.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                "relative flex h-auto max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[0_20px_50px_-18px_rgba(0,0,0,0.22)]",
-                className,
+                "relative flex h-auto max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden",
+                "rounded-xl border border-border bg-background",
+                "shadow-[0_20px_50px_-18px_rgba(0,0,0,0.22)] dark:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.7)]",
+                className
               )}
               {...animationProps}
             >
-              {!hideHeader && (title || description || showCloseButton) ? (
+              {!hideHeader && (title || description || showCloseButton) && (
                 <div
                   className={cn(
                     "flex items-start justify-between gap-4 border-b border-border bg-muted/40 px-3 py-3",
-                    headerClassName,
+                    headerClassName
                   )}
                 >
                   <div className="min-w-0">
-                    {title ? (
+                    {title && (
                       <h2
                         className={cn(
                           "text-sm font-semibold tracking-tight text-foreground",
-                          titleClassName,
+                          titleClassName
                         )}
                       >
                         {title}
                       </h2>
-                    ) : null}
+                    )}
 
-                    {description ? (
+                    {description && (
                       <p
                         className={cn(
                           "mt-1 text-sm leading-5 text-muted-foreground",
-                          descriptionClassName,
+                          descriptionClassName
                         )}
                       >
                         {description}
                       </p>
-                    ) : null}
+                    )}
                   </div>
 
-                  {showCloseButton && canClose ? (
+                  {showCloseButton && canClose && (
                     <button
                       type="button"
                       onClick={onClose}
                       className={cn(
-                        "inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                        closeButtonClassName,
+                        "inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-background text-muted-foreground transition-colors",
+                        "hover:bg-muted hover:text-foreground",
+                        closeButtonClassName
                       )}
                       aria-label="Cerrar modal"
                     >
                       <span className="text-base leading-none">x</span>
                     </button>
-                  ) : null}
+                  )}
                 </div>
-              ) : null}
+              )}
 
               <div className="scrollbar-panel min-h-0 flex-1 overflow-y-auto">
                 <div className={cn("px-4 py-4", bodyClassName)}>{children}</div>
               </div>
 
-              {footer ? (
+              {footer && (
                 <div
                   className={cn(
                     "border-t border-border bg-muted/40 px-5 py-4",
-                    footerClassName,
+                    footerClassName
                   )}
                 >
                   {footer}
                 </div>
-              ) : null}
+              )}
             </motion.div>
           </div>
         </div>

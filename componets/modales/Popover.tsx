@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import {
   type ReactNode,
   type RefObject,
@@ -8,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type PopoverPlacement =
@@ -25,18 +25,23 @@ type PopoverProps = {
   onClose: () => void;
   anchorRef: RefObject<HTMLElement | null>;
   children: ReactNode;
+
   title?: string;
   description?: string;
   footer?: ReactNode;
+
   placement?: PopoverPlacement;
   offset?: number;
+
   closeOnOutsideClick?: boolean;
   closeOnEscape?: boolean;
   preventClose?: boolean;
   hideHeader?: boolean;
   showCloseButton?: boolean;
+
   initialFocusRef?: RefObject<HTMLElement | null>;
   animation?: PopoverAnimation;
+
   className?: string;
   headerClassName?: string;
   bodyClassName?: string;
@@ -67,39 +72,57 @@ function getCoords(
   selectedPlacement: PopoverPlacement,
   anchorRect: DOMRect,
   popRect: DOMRect,
-  offset: number,
+  offset: number
 ) {
   switch (selectedPlacement) {
     case "bottom-start":
-      return { top: anchorRect.bottom + offset, left: anchorRect.left };
+      return {
+        top: anchorRect.bottom + offset,
+        left: anchorRect.left,
+      };
+
     case "bottom-end":
       return {
         top: anchorRect.bottom + offset,
         left: anchorRect.right - popRect.width,
       };
+
     case "top-start":
       return {
         top: anchorRect.top - popRect.height - offset,
         left: anchorRect.left,
       };
+
     case "top-end":
       return {
         top: anchorRect.top - popRect.height - offset,
         left: anchorRect.right - popRect.width,
       };
+
     case "right-start":
-      return { top: anchorRect.top, left: anchorRect.right + offset };
+      return {
+        top: anchorRect.top,
+        left: anchorRect.right + offset,
+      };
+
     case "left-start":
       return {
         top: anchorRect.top,
         left: anchorRect.left - popRect.width - offset,
       };
+
     default:
-      return { top: anchorRect.bottom + offset, left: anchorRect.left };
+      return {
+        top: anchorRect.bottom + offset,
+        left: anchorRect.left,
+      };
   }
 }
 
-function fitsInViewport(coords: { top: number; left: number }, popRect: DOMRect) {
+function fitsInViewport(
+  coords: { top: number; left: number },
+  popRect: DOMRect
+) {
   return {
     vertically:
       coords.top >= VIEWPORT_PADDING &&
@@ -112,15 +135,15 @@ function fitsInViewport(coords: { top: number; left: number }, popRect: DOMRect)
 
 function clampToViewport(
   coords: { top: number; left: number },
-  popRect: DOMRect,
+  popRect: DOMRect
 ) {
   const maxLeft = Math.max(
     VIEWPORT_PADDING,
-    window.innerWidth - popRect.width - VIEWPORT_PADDING,
+    window.innerWidth - popRect.width - VIEWPORT_PADDING
   );
   const maxTop = Math.max(
     VIEWPORT_PADDING,
-    window.innerHeight - popRect.height - VIEWPORT_PADDING,
+    window.innerHeight - popRect.height - VIEWPORT_PADDING
   );
 
   return {
@@ -133,7 +156,7 @@ function resolvePlacement(
   preferredPlacement: PopoverPlacement,
   anchorRect: DOMRect,
   popRect: DOMRect,
-  offset: number,
+  offset: number
 ) {
   const candidates: PopoverPlacement[] = [preferredPlacement];
 
@@ -176,7 +199,7 @@ function resolvePlacement(
     preferredPlacement,
     anchorRect,
     popRect,
-    offset,
+    offset
   );
 
   return {
@@ -235,30 +258,30 @@ export function Popover({
 
     const next = resolvePlacement(placement, anchorRect, popRect, offset);
 
-    setPosition((previous) => {
-      const sameTop = isCloseEnough(previous.top, next.coords.top, POSITION_EPSILON);
+    setPosition((prev) => {
+      const sameTop = isCloseEnough(prev.top, next.coords.top, POSITION_EPSILON);
       const sameLeft = isCloseEnough(
-        previous.left,
+        prev.left,
         next.coords.left,
-        POSITION_EPSILON,
+        POSITION_EPSILON
       );
-      const sameWidth = isCloseEnough(previous.width, popRect.width, SIZE_EPSILON);
+      const sameWidth = isCloseEnough(prev.width, popRect.width, SIZE_EPSILON);
       const sameHeight = isCloseEnough(
-        previous.height,
+        prev.height,
         popRect.height,
-        SIZE_EPSILON,
+        SIZE_EPSILON
       );
-      const samePlacement = previous.resolvedPlacement === next.placement;
+      const samePlacement = prev.resolvedPlacement === next.placement;
 
       if (
-        previous.ready &&
+        prev.ready &&
         sameTop &&
         sameLeft &&
         sameWidth &&
         sameHeight &&
         samePlacement
       ) {
-        return previous;
+        return prev;
       }
 
       return {
@@ -270,7 +293,7 @@ export function Popover({
         height: popRect.height,
       };
     });
-  }, [anchorRef, offset, placement]);
+  }, [anchorRef, placement, offset]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -282,6 +305,7 @@ export function Popover({
 
     raf1 = requestAnimationFrame(() => {
       updatePosition();
+
       raf2 = requestAnimationFrame(() => {
         updatePosition();
       });
@@ -322,14 +346,16 @@ export function Popover({
       }
     };
 
+    const handleResize = () => {
+      updatePosition();
+    };
+
     const resizeObserver = new ResizeObserver(() => {
       updatePosition();
     });
 
     resizeObserver.observe(anchor);
     resizeObserver.observe(popover);
-
-    const handleResize = () => updatePosition();
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", updatePosition);
@@ -350,13 +376,13 @@ export function Popover({
       document.removeEventListener("mousedown", handlePointerDown);
     };
   }, [
+    open,
     anchorRef,
-    canClose,
     closeOnEscape,
     closeOnOutsideClick,
-    initialFocusRef,
+    canClose,
     onClose,
-    open,
+    initialFocusRef,
     updatePosition,
   ]);
 
@@ -401,15 +427,17 @@ export function Popover({
 
   return (
     <AnimatePresence>
-      {open ? (
+      {open && (
         <motion.div
           ref={popoverRef}
           role="dialog"
           aria-modal="false"
           className={cn(
-            "fixed z-50 flex max-h-[calc(100vh-1rem)] min-w-88 max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-[0_16px_40px_-16px_rgba(0,0,0,0.22)]",
+            "fixed z-50 flex max-h-[calc(100vh-1rem)] min-w-88 max-w-[calc(100vw-1rem)] flex-col overflow-hidden",
+            "rounded-2xl border border-border bg-popover text-popover-foreground",
+            "shadow-[0_16px_40px_-16px_rgba(0,0,0,0.22)] dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.65)]",
             transformOriginClass,
-            className,
+            className
           )}
           style={{
             top: position.top,
@@ -419,69 +447,74 @@ export function Popover({
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           {...animationProps}
         >
-          {!hideHeader && (title || description || showCloseButton) ? (
+          {!hideHeader && (title || description || showCloseButton) && (
             <div
               className={cn(
-                "flex items-start justify-between gap-4 border-b border-border/70 bg-muted/35 px-4 py-3",
-                headerClassName,
+                "flex items-start justify-between gap-3 px-3 py-2",
+                headerClassName
               )}
             >
               <div className="min-w-0">
-                {title ? (
+                {title && (
                   <h3
                     className={cn(
-                      "text-sm font-semibold tracking-tight text-foreground",
-                      titleClassName,
+                      "text-[10px] tracking-tight text-popover-foreground",
+                      titleClassName
                     )}
                   >
                     {title}
                   </h3>
-                ) : null}
+                )}
 
-                {description ? (
+                {description && (
                   <p
                     className={cn(
                       "mt-1 text-xs leading-5 text-muted-foreground",
-                      descriptionClassName,
+                      descriptionClassName
                     )}
                   >
                     {description}
                   </p>
-                ) : null}
+                )}
               </div>
 
-              {showCloseButton && canClose ? (
+              {showCloseButton && canClose && (
                 <button
                   type="button"
                   onClick={onClose}
                   className={cn(
-                    "inline-flex h-7 w-7 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground",
-                    closeButtonClassName,
+                    "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground",
+                    closeButtonClassName
                   )}
-                  aria-label="Cerrar"
+                  aria-label="Cerrar popover"
                 >
-                  <span className="text-base leading-none">x</span>
+                  x
                 </button>
-              ) : null}
+              )}
             </div>
-          ) : null}
+          )}
 
-          <div className={cn("scrollbar-panel min-h-0 overflow-y-auto p-4", bodyClassName)}>
+          <div
+            className={cn(
+              "scrollbar-panel overflow-y-auto px-2 pb-2",
+              bodyClassName
+            )}
+          >
             {children}
           </div>
 
-          {footer ? (
+          {footer && (
             <div
               className={cn(
-                "border-t border-border/70 bg-muted/35 px-4 py-3",
-                footerClassName,
+                "border-t border-border bg-muted/40 px-4 py-3",
+                footerClassName
               )}
             >
               {footer}
             </div>
-          ) : null}
+          )}
         </motion.div>
-      ) : null}
+      )}
     </AnimatePresence>
   );
 }
