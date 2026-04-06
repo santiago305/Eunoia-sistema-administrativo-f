@@ -1,33 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
-
 import {
-  getSecurityHistoryByIp,
+  Activity,
+  ArrowLeft,
+  Ban,
+  Clock3,
+  Shield,
+  ShieldAlert,
+} from "lucide-react";
+
+import { FloatingTextarea } from "@/components/FloatingTextarea";
+import { SystemButton } from "@/components/SystemButton";
+import {
   blacklistSecurityIp,
+  getSecurityHistoryByIp,
   removeSecurityBlacklistIp,
 } from "@/services/securityService";
+import { RoutesPaths } from "@/Router/config/routesPaths";
 
 import type {
   SecurityHistoryByIpResponse,
   SecurityViolationItem,
 } from "./types/security.api";
-import { RoutesPaths } from "@/Router/config/routesPaths";
-
-const BRAND = "hsl(var(--primary))";
-
-const cn = (...classes: Array<string | false | null | undefined>) =>
-  classes.filter(Boolean).join(" ");
-
-const formatDate = (value?: string | null) => {
-  if (!value) return "Sin fecha";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("es-PE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-};
+import { DashboardShell } from "./components/DashboardShell";
+import { SectionCard } from "./components/SectionCard";
+import { StatCard } from "./components/StatCard";
+import { cn, formatDate, getBanBadgeStyles } from "./components/security.utils";
 
 const methodStyles: Record<string, string> = {
   GET: "border-sky-200 bg-sky-50 text-sky-700",
@@ -37,35 +35,10 @@ const methodStyles: Record<string, string> = {
   DELETE: "border-red-200 bg-red-50 text-red-700",
 };
 
-function DetailCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,.04)]">
-      <h2 className="text-lg font-semibold text-zinc-900">{title}</h2>
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
-function MiniStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-zinc-900">{value}</p>
-    </div>
-  );
-}
+const toMethodLabel = (method?: string | null) => {
+  const value = method?.trim();
+  return value ? value.toUpperCase() : "N/A";
+};
 
 export default function IpDetailPage() {
   const navigate = useNavigate();
@@ -81,6 +54,7 @@ export default function IpDetailPage() {
 
   const fetchData = async () => {
     if (!ip) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -95,12 +69,12 @@ export default function IpDetailPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [ip, limit]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      fetchData();
+      void fetchData();
     }, 10000);
 
     return () => window.clearInterval(interval);
@@ -110,16 +84,21 @@ export default function IpDetailPage() {
     const violations = data?.violations ?? [];
 
     const byMethod = violations.reduce<Record<string, number>>((acc, item) => {
-      acc[item.method] = (acc[item.method] ?? 0) + 1;
+      const method = toMethodLabel(item.method);
+      acc[method] = (acc[method] ?? 0) + 1;
       return acc;
     }, {});
 
     const lastViolation = violations[0]?.createdAt ?? null;
+    const uniqueReasons = new Set(
+      violations.map((item) => item.reason?.trim()).filter(Boolean),
+    ).size;
 
     return {
       totalViolations: violations.length,
       lastViolation,
       byMethod,
+      uniqueReasons,
     };
   }, [data]);
 
@@ -152,234 +131,295 @@ export default function IpDetailPage() {
 
   const ban = data?.ban;
   const violations = data?.violations ?? [];
+  const topMethods = Object.entries(summary.byMethod).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="min-h-full bg-[#f8faf9]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6">
-        <header className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,.04)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <button
-                onClick={() => navigate(RoutesPaths.security)}
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100"
-              >
-                ← Volver al dashboard
-              </button>
+    <DashboardShell>
+      <div className="space-y-4">
+        <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <div className="border-b border-border bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.16),_transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.98))] px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate(RoutesPaths.security)}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Volver a seguridad
+                </button>
 
-              <div
-                className="mt-4 inline-flex rounded-full border px-3 py-1 text-xs font-semibold"
-                style={{
-                  borderColor: "rgba(33,184,166,.20)",
-                  backgroundColor: "rgba(33,184,166,.07)",
-                  color: BRAND,
-                }}
-              >
-                Forense por IP
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
+                  <Shield className="h-3.5 w-3.5" />
+                  Detalle Forense
+                </div>
+
+                <div>
+                  <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                    {ip || "IP no encontrada"}
+                  </h1>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                    Estado operativo, historial de violaciones y contexto tecnico consolidado para esta IP.
+                  </p>
+                </div>
               </div>
 
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-950 md:text-4xl">
-                {ip || "IP no encontrada"}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+                  <span>Eventos</span>
+                  <select
+                    value={limit}
+                    onChange={(event) => setLimit(Number(event.target.value))}
+                    className="bg-transparent font-medium text-foreground outline-none"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                    <option value={500}>500</option>
+                  </select>
+                </label>
 
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
-                Revisa estado del ban, historial de violaciones y comportamiento técnico de esta IP.
-                Porque claramente alguien decidió ponerse creativo con tu sistema.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-                className="h-11 rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-700 outline-none focus:border-[rgba(33,184,166,.6)]"
-              >
-                <option value={25}>25 eventos</option>
-                <option value={50}>50 eventos</option>
-                <option value={100}>100 eventos</option>
-                <option value={200}>200 eventos</option>
-                <option value={500}>500 eventos</option>
-              </select>
-
-              <button
-                onClick={fetchData}
-                className="h-11 rounded-2xl bg-zinc-900 px-5 text-sm font-semibold text-white transition hover:opacity-90"
-              >
-                Refrescar
-              </button>
+                <SystemButton
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void fetchData()}
+                  className="rounded-full"
+                >
+                  Refrescar
+                </SystemButton>
+              </div>
             </div>
           </div>
-        </header>
+        </section>
 
         {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         ) : null}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MiniStat label="Estado" value={ban ? "Baneada" : "Sin ban activo"} />
-          <MiniStat label="Nivel" value={ban?.manualPermanentBan ? "PERMANENTE" : ban?.banLevel || "Ninguno"} />
-          <MiniStat label="Violaciones" value={summary.totalViolations} />
-          <MiniStat label="Última actividad" value={summary.lastViolation ? formatDate(summary.lastViolation) : "Sin registros"} />
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <StatCard
+            label="Estado"
+            value={ban ? "Baneada" : "Sin ban"}
+            subtitle={ban ? "La IP tiene un bloqueo activo" : "No hay bloqueo vigente"}
+            icon={ban ? ShieldAlert : Shield}
+            variant={ban ? "warning" : "default"}
+          />
+          <StatCard
+            label="Nivel"
+            value={ban?.manualPermanentBan ? "PERMANENTE" : ban?.banLevel || "NINGUNO"}
+            subtitle={ban?.manualPermanentBan ? "Ban manual sin vencimiento" : "Clasificacion aplicada"}
+            icon={Ban}
+            variant={ban ? "destructive" : "default"}
+          />
+          <StatCard
+            label="Violaciones"
+            value={summary.totalViolations}
+            subtitle="Eventos encontrados para esta IP"
+            icon={Activity}
+            variant="primary"
+          />
+          <StatCard
+            label="Ultima actividad"
+            value={summary.lastViolation ? formatDate(summary.lastViolation) : "Sin registros"}
+            subtitle="Marca temporal del ultimo evento"
+            icon={Clock3}
+          />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_1.4fr]">
-          <div className="flex flex-col gap-6">
-            <DetailCard title="Estado actual del ban">
+        <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+          <div className="space-y-4">
+            <SectionCard
+              title="Estado del ban"
+              subtitle="Situacion actual y acciones de respuesta inmediata."
+            >
               {loading ? (
-                <div className="h-40 animate-pulse rounded-2xl bg-zinc-100" />
+                <div className="h-40 animate-pulse rounded-lg bg-muted" />
               ) : ban ? (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={cn(
                         "inline-flex rounded-full border px-3 py-1 text-xs font-semibold",
-                        ban.manualPermanentBan || ban.banLevel === "PERMANENT"
-                          ? "border-red-200 bg-red-50 text-red-700"
-                          : "border-amber-200 bg-amber-50 text-amber-700"
+                        getBanBadgeStyles(String(ban.banLevel), ban.manualPermanentBan),
                       )}
                     >
                       {ban.manualPermanentBan ? "PERMANENTE" : ban.banLevel}
                     </span>
-
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-xs text-muted-foreground">
                       {ban.manualPermanentBan
                         ? "Sin vencimiento"
                         : `Vence: ${formatDate(ban.bannedUntil)}`}
                     </span>
                   </div>
 
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-                    <p className="font-medium text-zinc-900">Notas</p>
-                    <p className="mt-1">{ban.notes?.trim() || "Sin notas registradas"}</p>
+                  <div className="rounded-lg border border-border bg-muted/40 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Notas
+                    </p>
+                    <p className="mt-2 text-sm text-foreground">
+                      {ban.notes?.trim() || "Sin notas registradas para este ban."}
+                    </p>
                   </div>
 
-                  <button
-                    onClick={handleUnban}
-                    disabled={mutating}
-                    className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  <SystemButton
+                    variant="danger"
+                    onClick={() => void handleUnban()}
+                    loading={mutating}
+                    className="w-full"
                   >
-                    {mutating ? "Procesando..." : "Quitar ban"}
-                  </button>
+                    Quitar ban
+                  </SystemButton>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500">
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground">
                     Esta IP no tiene un ban activo actualmente.
                   </div>
 
-                  <textarea
+                  <FloatingTextarea
+                    label="Notas del blacklist"
+                    name="security-ip-blacklist-notes"
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={(event) => setNotes(event.target.value)}
                     rows={4}
-                    placeholder="Motivo opcional del bloqueo manual"
-                    className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800 outline-none transition focus:border-[rgba(33,184,166,.6)] focus:ring-4 focus:ring-[rgba(33,184,166,.12)]"
                   />
 
-                  <button
-                    onClick={handleBlacklist}
-                    disabled={mutating}
-                    className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  <SystemButton
+                    variant="danger"
+                    onClick={() => void handleBlacklist()}
+                    loading={mutating}
+                    disabled={!ip}
+                    className="w-full"
                   >
-                    {mutating ? "Procesando..." : "Aplicar blacklist manual"}
-                  </button>
+                    Aplicar blacklist manual
+                  </SystemButton>
                 </div>
               )}
-            </DetailCard>
+            </SectionCard>
 
-            <DetailCard title="Resumen técnico">
+            <SectionCard
+              title="Resumen tecnico"
+              subtitle="Distribución de metodos y señales basicas observadas."
+            >
               {loading ? (
-                <div className="h-44 animate-pulse rounded-2xl bg-zinc-100" />
+                <div className="space-y-3">
+                  <div className="h-16 animate-pulse rounded-lg bg-muted" />
+                  <div className="h-16 animate-pulse rounded-lg bg-muted" />
+                </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {Object.entries(summary.byMethod).length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500">
-                        Sin métodos registrados aún.
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-border bg-muted/40 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Rutas distintas
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-foreground">
+                        {new Set(violations.map((item) => item.path?.trim()).filter(Boolean)).size}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-muted/40 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Razones distintas
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-foreground">
+                        {summary.uniqueReasons}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {topMethods.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                        Sin metodos registrados aun.
                       </div>
                     ) : (
-                      Object.entries(summary.byMethod).map(([method, count]) => (
+                      topMethods.map(([method, count]) => (
                         <div
                           key={method}
-                          className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                          className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
                         >
-                          <p className="text-xs uppercase tracking-wide text-zinc-500">{method}</p>
-                          <p className="mt-2 text-2xl font-semibold text-zinc-900">{count}</p>
+                          <span className="text-sm font-medium text-foreground">{method}</span>
+                          <span className="font-mono text-sm text-muted-foreground">{count}</span>
                         </div>
                       ))
                     )}
                   </div>
-
-                  <div className="rounded-2xl border border-[rgba(33,184,166,.18)] bg-[rgba(33,184,166,.06)] p-4 text-sm text-zinc-700">
-                    <p className="font-medium text-zinc-900">Espacio recomendado</p>
-                    <p className="mt-1">
-                      Aquí puedes añadir geolocalización aproximada por IP, score de riesgo, ASN,
-                      reputación externa y correlación con sesiones o usuarios si luego lo integras.
-                    </p>
-                  </div>
                 </div>
               )}
-            </DetailCard>
+            </SectionCard>
           </div>
 
-          <DetailCard title="Timeline de violaciones">
+          <SectionCard
+            title="Historial de violaciones"
+            subtitle="Eventos mas recientes asociados a esta direccion IP."
+          >
             {loading ? (
-              <div className="grid gap-3">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-24 animate-pulse rounded-2xl bg-zinc-100" />
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="h-24 animate-pulse rounded-lg bg-muted" />
                 ))}
               </div>
             ) : violations.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center text-sm text-zinc-500">
+              <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
                 No hay violaciones registradas para esta IP.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {violations.map((item: SecurityViolationItem, index: number) => (
-                  <div
+                  <article
                     key={`${item.createdAt}-${index}`}
-                    className="rounded-2xl border border-zinc-200 bg-white p-4"
+                    className="rounded-lg border border-border bg-background p-4 transition hover:border-primary/20 hover:shadow-sm"
                   >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="min-w-0">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span
                             className={cn(
-                              "inline-flex rounded-full border px-3 py-1 text-xs font-semibold",
-                              methodStyles[item.method] || "border-zinc-200 bg-zinc-50 text-zinc-700"
+                              "inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                              methodStyles[toMethodLabel(item.method)] || "border-zinc-200 bg-zinc-50 text-zinc-700",
                             )}
                           >
-                            {item.method}
+                            {toMethodLabel(item.method)}
                           </span>
-
-                          <span className="text-xs text-zinc-500">
+                          <span className="text-xs text-muted-foreground">
                             {formatDate(item.createdAt)}
                           </span>
                         </div>
 
-                        <p className="mt-3 text-sm font-semibold text-zinc-900">
-                          {item.reason || "Sin reason"}
-                        </p>
+                        <h3 className="mt-3 text-sm font-semibold text-foreground">
+                          {item.reason?.trim() || "Sin motivo registrado"}
+                        </h3>
 
-                        <p className="mt-2 break-all text-sm text-zinc-600">
-                          Ruta: <span className="font-medium text-zinc-800">{item.path || "Sin ruta"}</span>
-                        </p>
+                        <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+                          <div className="rounded-lg border border-border bg-muted/35 px-3 py-2 text-sm text-foreground">
+                            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                              Ruta
+                            </span>
+                            <p className="mt-1 break-all font-mono text-xs text-foreground">
+                              {item.path?.trim() || "Sin ruta"}
+                            </p>
+                          </div>
 
-                        <p className="mt-2 text-sm text-zinc-600">
-                          User-Agent:
-                        </p>
-                        <div className="mt-1 rounded-xl bg-zinc-50 p-3 text-xs leading-5 text-zinc-500">
-                          {item.userAgent?.trim() || "No disponible"}
+                          <div className="rounded-lg border border-border bg-muted/35 px-3 py-2 text-sm text-foreground">
+                            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                              User-Agent
+                            </span>
+                            <p className="mt-1 line-clamp-3 text-xs leading-5 text-muted-foreground">
+                              {item.userAgent?.trim() || "No disponible"}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
-          </DetailCard>
+          </SectionCard>
         </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }
