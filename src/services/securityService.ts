@@ -76,10 +76,15 @@ export type SecurityReasonsParams = {
 
 export const getSecurityTopIps = async (params?: SecurityTopIpsParams) => {
   const query = securityTopIpsQuerySchema.parse(params ?? {});
-  const response = await axiosInstance.get<SecurityTopIpItem[]>(API_SECURITY_GROUP.topIps, {
+  const response = await axiosInstance.get<
+    SecurityTopIpItem[] | SecurityPaginatedResponse<SecurityTopIpItem>
+  >(API_SECURITY_GROUP.topIps, {
     params: query,
   });
-  return response.data.map((item) => ({
+
+  const items = Array.isArray(response.data) ? response.data : response.data.data ?? [];
+
+  return items.map((item) => ({
     ...item,
     violations: Number(item.violations) || 0,
   }));

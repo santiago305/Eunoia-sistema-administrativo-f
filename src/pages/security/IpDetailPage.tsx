@@ -218,7 +218,7 @@ export default function IpDetailPage() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MiniStat label="Estado" value={ban ? "Baneada" : "Sin ban activo"} />
-          <MiniStat label="Nivel" value={ban?.manualPermanentBan ? "MANUAL PERMANENTE" : ban?.banLevel || "Ninguno"} />
+          <MiniStat label="Nivel" value={ban?.manualPermanentBan ? "PERMANENTE" : ban?.banLevel || "Ninguno"} />
           <MiniStat label="Violaciones" value={summary.totalViolations} />
           <MiniStat label="Última actividad" value={summary.lastViolation ? formatDate(summary.lastViolation) : "Sin registros"} />
         </div>
@@ -239,7 +239,7 @@ export default function IpDetailPage() {
                           : "border-amber-200 bg-amber-50 text-amber-700"
                       )}
                     >
-                      {ban.manualPermanentBan ? "MANUAL PERMANENTE" : ban.banLevel}
+                      {ban.manualPermanentBan ? "PERMANENTE" : ban.banLevel}
                     </span>
 
                     <span className="text-sm text-zinc-500">

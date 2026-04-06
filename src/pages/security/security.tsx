@@ -38,7 +38,6 @@ import { ActiveBansSection } from "./components/sections/ActiveBansSection";
 import { AnalyticsSection } from "./components/sections/AnalyticsSection";
 import { QuickActionPanel } from "./components/sections/QuickActionPanel";
 import { TopIpsSection } from "./components/sections/TopIpsSection";
-import { buildIpDetailPath } from "./components/security.utils";
 
 export default function SecurityPage() {
   const navigate = useNavigate();
@@ -296,16 +295,13 @@ export default function SecurityPage() {
         <TopIpsSection
           loading={loading}
           topIps={topIps}
-          onSelectIp={(ip) => navigate(buildIpDetailPath(ip))}
         />
 
         <ActiveBansSection
           loading={loading}
           activeBans={activeBans}
           pagination={{ page: activeBansPage, limit: activeBansLimit, total: activeBansTotal }}
-          mutating={mutating}
           onNavigate={navigate}
-          onUnban={handleUnban}
           onPageChange={setActiveBansPage}
         />
       </div>

@@ -2,6 +2,8 @@ export type SecurityTopIpItem = {
   ip: string;
   violations: number;
   lastViolationAt: string | null;
+  lastViolationAtLocal?: string | null;
+  timeZone?: string;
 };
 
 export type SecurityBanLevel = "TEMPORARY" | "PERMANENT" | number | string;
