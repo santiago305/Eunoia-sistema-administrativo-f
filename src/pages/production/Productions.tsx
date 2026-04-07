@@ -43,6 +43,7 @@ import { useNavigate } from "react-router-dom";
 import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -424,10 +425,10 @@ export default function Production() {
   }, [nowIso, orders]);
 
   return (
-    <div className="min-h-screen w-full bg-white">
+    <PageShell className="bg-white">
       <PageTitle title="Produccion" />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
+      <div className="space-y-4">
         <div className="my-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <Headed title="Ordenes de Produccion" size="lg" />
 
@@ -537,7 +538,7 @@ export default function Production() {
           primaryColor={PRIMARY}
         />
       </div>
-    </div>
+    </PageShell>
   );
 }
 

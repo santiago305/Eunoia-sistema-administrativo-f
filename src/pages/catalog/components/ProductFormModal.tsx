@@ -37,6 +37,8 @@ type ProductFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   productId?: string | null;
+  initialWorkspaceTab?: WorkspaceTab;
+  initialVariantId?: string | null;
   productType: ProductType;
   units?: ListUnitResponse;
   primaryColor?: string;
@@ -66,6 +68,8 @@ export function ProductFormModal({
   open,
   mode,
   productId,
+  initialWorkspaceTab,
+  initialVariantId,
   productType,
   units,
   primaryColor = DEFAULT_PRIMARY,
@@ -99,6 +103,7 @@ export function ProductFormModal({
   const [nextVariantActiveState, setNextVariantActiveState] = useState(false);
   const [variantToggleSaving, setVariantToggleSaving] = useState(false);
   const [variantSaving, setVariantSaving] = useState(false);
+  const [pendingVariantEditId, setPendingVariantEditId] = useState<string | null>(null);
   const [variantForm, setVariantForm] = useState<VariantForm>({
     productId: "",
     barcode: "",
@@ -436,13 +441,14 @@ export function ProductFormModal({
   };
 
   const resetWorkspace = () => {
-    setWorkspaceTab("details");
+    setWorkspaceTab(initialWorkspaceTab ?? "details");
     setWorkingProductId(null);
     setWorkingProductName("");
     setEquivalences([]);
     setVariants([]);
     setSelectedVariantId("");
     setRecipes([]);
+    setPendingVariantEditId(initialVariantId ?? null);
   };
 
   useEffect(() => {
@@ -497,7 +503,16 @@ export function ProductFormModal({
       .finally(() => {
         setLoading(false);
       });
-  }, [open, mode, productId, label]);
+  }, [open, mode, productId, label, initialWorkspaceTab, initialVariantId]);
+
+  useEffect(() => {
+    if (!open || !pendingVariantEditId || !workingProductId) return;
+    if (!variants.some((variant) => variant.id === pendingVariantEditId)) return;
+
+    setWorkspaceTab("variantCreated");
+    void openEditVariant(pendingVariantEditId);
+    setPendingVariantEditId(null);
+  }, [open, pendingVariantEditId, workingProductId, variants, openEditVariant]);
 
   useEffect(() => {
     if (!open) return;

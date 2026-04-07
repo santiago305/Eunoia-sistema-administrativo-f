@@ -19,6 +19,7 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
@@ -342,10 +343,10 @@ export default function Warehouses() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Almacenes" />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2 sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1900px]">
+      <div className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
           <Headed
             title="Almacenes"
@@ -491,7 +492,7 @@ export default function Warehouses() {
         primaryColor={PRIMARY}
         primaryHover={PRIMARY_HOVER}
       />
-    </div>
+    </PageShell>
   );
 }
 

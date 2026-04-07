@@ -34,6 +34,11 @@ export const listProducts = async (params: ListProductsQuery): Promise<ProductLi
   return response.data;
 };
 
+export const listProductsFlat = async (params: ListProductsQuery): Promise<ProductListResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.flat, { params });
+  return response.data;
+};
+
 export const getProductVariants = async (id: string): Promise<ProductVariant[]> => {
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.variants(id));
   return response.data;

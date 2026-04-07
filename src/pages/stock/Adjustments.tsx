@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
+import { PageShell } from "@/components/layout/PageShell";
 import { usePagination } from "@/hooks/usePagination";
 import { applyAdjustment, getStockMock } from "@/data/stockService";
 
@@ -128,9 +129,9 @@ export default function Adjustments() {
   const ref = useEChart(reasonChart);
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Ajustes" />
-      <div className="px-6 py-6 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Ajustes</h1>
           <p className="text-sm text-black/60">Controla conteos, mermas y correcciones.</p>
@@ -210,7 +211,7 @@ export default function Adjustments() {
                 >
                   Anterior
                 </button>
-                <span>Página {page} de {totalPages}</span>
+                <span>PÃ¡gina {page} de {totalPages}</span>
                 <button
                   className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
                   disabled={page === totalPages || totalPages === 0}
@@ -244,7 +245,7 @@ export default function Adjustments() {
                   value={adjWarehouse}
                   onChange={(event) => setAdjWarehouse(event.target.value)}
                 >
-                  <option value="">Seleccionar almacén</option>
+                  <option value="">Seleccionar almacÃ©n</option>
                   {stockMock.warehouses.map((wh) => (
                     <option key={wh.warehouse_id} value={wh.warehouse_id}>
                       {wh.name}
@@ -279,7 +280,7 @@ export default function Adjustments() {
           </div>
         </section>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

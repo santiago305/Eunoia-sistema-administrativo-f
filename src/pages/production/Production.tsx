@@ -26,6 +26,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -434,10 +435,10 @@ export default function ProductionCreate() {
   }, []);
 
   return (
-    <div className="w-full min-h-screen bg-white">
+    <PageShell className="bg-white">
       <PageTitle title="Orden de produccion" />
 
-      <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
+      <div className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
           <Headed
             title="Orden de Producción"
@@ -611,6 +612,6 @@ export default function ProductionCreate() {
         productionId={lastSavedProductionId || productionId}
         primaryColor={PRIMARY}
       />
-    </div>
+    </PageShell>
   );
 }

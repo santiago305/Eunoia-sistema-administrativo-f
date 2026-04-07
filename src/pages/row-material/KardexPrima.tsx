@@ -29,6 +29,7 @@ import {
 } from "@/services/pdfServices";
 import { Boxes, FileText, Filter, LineChart } from "lucide-react";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 25;
@@ -429,10 +430,10 @@ export default function KardexProduction() {
   const ref = useEChart(movementsChart);
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Kardex de materia prima y materiales" />
 
-      <div className="px-6 py-6 space-y-4">
+      <div className="space-y-4">
         <Headed title="Kardex de materia prima y materiales" 
         subtitle="Auditoría viva de movimientos." 
         size="lg" />
@@ -624,6 +625,6 @@ export default function KardexProduction() {
           primaryColor={PRIMARY}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

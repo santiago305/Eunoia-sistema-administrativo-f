@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { AdjustmentItemModal } from "@/pages/catalog/components/AdjustmentItemModal";
 import { AdjustmentResultModal } from "@/pages/catalog/components/AdjustmentResultModal";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const CURRENCY = "PEN";
 
@@ -434,10 +435,10 @@ export default function AdjustmentRowMaterial() {
     }, []);
 
     return (
-        <div className="w-full min-h-screen bg-white">
+        <PageShell className="bg-white">
             <PageTitle title="Ajuste de materias primas" />
 
-            <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
+            <div className="space-y-4">
                 <Headed title="Ajuste de materias primas"
                 subtitle="Al reducir stock solo puedes reducir hasta dejarlo en (0)"  
                 size="lg" />
@@ -653,6 +654,6 @@ export default function AdjustmentRowMaterial() {
                 title="Ajuste de inventario procesado"
                 goToLabel="Ir a kardex de materias primas"
             />
-        </div>
+        </PageShell>
     );
 }

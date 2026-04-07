@@ -77,6 +77,7 @@ export const API_PRODUCTS_GROUP = {
   base: "/catalog/products",
   create: "/catalog/products",
   list: "/catalog/products",
+  flat: "/catalog/products/flat",
   productFinisheds: "/catalog/products/variants/finished",
   productFinishedsActive: "/catalog/products/finished/active",
   productPrimasActive: "/catalog/products/prima/active",

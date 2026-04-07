@@ -185,5 +185,9 @@ textarea {
   background: rgba(120, 120, 120, 0.8);
 }
 
-
+.scrollbar-panel {
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) hsl(var(--surface));
+}
 

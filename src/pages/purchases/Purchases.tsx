@@ -25,6 +25,7 @@ import { Calendar, CreditCard, FileText, Filter, List, Menu, OctagonAlert, Packa
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
@@ -617,9 +618,9 @@ export default function Purchases() {
     ];
 
     return (
-        <div className="w-full min-h-screen bg-white">
+        <PageShell className="bg-white">
             <PageTitle title="Compras" />
-            <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 pt-2 space-y-4">
+            <div className="space-y-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <Headed title="Compras" 
                     size="lg" />
@@ -781,6 +782,6 @@ export default function Purchases() {
                 title="Orden de producción"
                 getPdf={() => getPurchaseOrderPdf(selectedProductionId!)}
             />
-        </div>
+        </PageShell>
     );
 }

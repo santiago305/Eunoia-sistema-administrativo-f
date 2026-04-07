@@ -20,6 +20,7 @@ import { StatusPill } from "@/components/StatusTag";
 import { money } from "@/utils/functionPurchases";
 import { fadeUp, item, list } from "@/utils/animations";
 import { Dropdown } from "../../components/Dropdown";
+import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
@@ -303,10 +304,10 @@ export default function RowVariant() {
     const attributeLabel = (v: Variant) => v.attributes?.presentation ?? v.attributes?.variant ?? v.attributes?.color ?? "-";
 
     return (
-        <div className="w-full min-h-screen bg-white text-black">
+        <PageShell>
             <PageTitle title="Catalogo · Variantes MP" />
 
-            <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <div className="space-y-6">
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
                     animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
@@ -679,6 +680,6 @@ export default function RowVariant() {
                     </motion.div>
                 </Modal>
             )}
-        </div>
+        </PageShell>
     );
 }

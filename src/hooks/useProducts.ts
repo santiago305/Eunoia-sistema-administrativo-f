@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CreateProductDto, ListProductsQuery, Product, UpdateProductDto } from "@/pages/catalog/types/product";
 import {
   createProduct,
+  listProductsFlat,
   listProducts,
   updateProduct,
   updateProductActive,
@@ -30,7 +31,14 @@ const buildQuery = (params: ListProductsQuery & { name?: string }) => {
 };
 
 
-export function useProducts(params: ListProductsQuery & { name?: string }) {
+type UseProductsOptions = {
+  flat?: boolean;
+};
+
+export function useProducts(
+  params: ListProductsQuery & { name?: string },
+  options?: UseProductsOptions
+) {
   const [state, setState] = useState<ProductsState>({
     items: [],
     total: 0,
@@ -39,6 +47,7 @@ export function useProducts(params: ListProductsQuery & { name?: string }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const useFlatList = options?.flat ?? false;
 
   const query = useMemo(() => buildQuery(params), [params]);
 
@@ -46,7 +55,7 @@ export function useProducts(params: ListProductsQuery & { name?: string }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await listProducts(query);
+      const res = useFlatList ? await listProductsFlat(query) : await listProducts(query);
       setState({
         items: res.items ?? [],
         total: res.total ?? 0,
@@ -59,7 +68,7 @@ export function useProducts(params: ListProductsQuery & { name?: string }) {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, useFlatList]);
 
   useEffect(() => {
     void fetchProducts();
@@ -72,7 +81,9 @@ export function useProducts(params: ListProductsQuery & { name?: string }) {
       setLoading(true);
       setError(null);
       try {
-        const res = await listProducts({ ...query, page: 1 });
+        const res = useFlatList
+          ? await listProductsFlat({ ...query, page: 1 })
+          : await listProducts({ ...query, page: 1 });
         setState({
           items: res.items ?? [],
           total: res.total ?? 0,
@@ -86,7 +97,7 @@ export function useProducts(params: ListProductsQuery & { name?: string }) {
         setLoading(false);
       }
     },
-    [query]
+    [query, useFlatList]
   );
 
   const update = useCallback(

@@ -1,8 +1,5 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback,  useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingInput } from "@/components/FloatingInput";
-import { FloatingSelect } from "@/components/FloatingSelect";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { StatusPill } from "@/components/StatusTag";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
@@ -10,38 +7,32 @@ import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useProducts } from "@/hooks/useProducts";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listProducts } from "@/services/productService";
-import { fadeUp  } from "@/utils/animations";
+import { listProductsFlat } from "@/services/productService";
 import { money } from "@/utils/functionPurchases";
 import {  motion, useReducedMotion } from "framer-motion";
-import { Download, Filter, Menu, Plus } from "lucide-react";
+import { Download, Menu, Plus } from "lucide-react";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
-import type { ListProductsQuery, Product } from "@/pages/catalog/types/product";
+import type { Product } from "@/pages/catalog/types/product";
 import { Headed } from "@/components/Headed";
 import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { ProductFormModal } from "./components/ProductFormModal";
 import { Modal } from "@/components/modales/Modal";
+import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.FINISHED;
-const STATUS_OPTIONS = [
-  { value: "active", label: "Activos" },
-  { value: "inactive", label: "Eliminados" },
-];
-
 export default function CatalogProducts() {
     const shouldReduceMotion = useReducedMotion();
     const { showFlash, clearFlash } = useFlashMessage();
 
-    const [searchText, setSearchText] = useState("");
-    const [statusFilter, setStatusFilter] = useState("active");
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
+    const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+    const [editingWorkspaceTab, setEditingWorkspaceTab] = useState<"details" | "variantCreated">("details");
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
     const [page, setPage] = useState(1);
-    const [debouncedName, setDebouncedName] = useState("");
     const limit = 10;
 
     const [exporting, setExporting] = useState(false);
@@ -51,41 +42,40 @@ export default function CatalogProducts() {
         () => ({
             page,
             limit,
-            isActive: (statusFilter === "all" ? undefined : statusFilter === "active" ? "true" : "false") as ListProductsQuery["isActive"],
-            q: debouncedName.trim() || undefined,
             type: PRODUCT_TYPE,
         }),
-        [page, limit, statusFilter, debouncedName],
+        [page, limit],
     );
 
-    const { items: products, total, page: apiPage, limit: apiLimit, loading, error, refresh, setActive } = useProducts(queryParams);
-
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedName(searchText.trim());
-            setPage(1);
-        }, 450);
-        return () => clearTimeout(handler);
-    }, [searchText]);
+    const { items: products, total, page: apiPage, limit: apiLimit, loading, error, refresh, setActive } = useProducts(queryParams, { flat: true });
 
     const startCreate = () => {
         setEditingProductId(null);
+        setEditingVariantId(null);
+        setEditingWorkspaceTab("details");
         setOpenCreate(true);
     };
 
-    const openEdit = (productId: string) => {
+    const openEdit = useCallback((product: Product) => {
         setOpenCreate(false);
-        setEditingProductId(productId);
-    };
+        if (product.sourceType === "VARIANT" && product.productId) {
+            setEditingProductId(product.productId);
+            setEditingVariantId(product.id);
+            setEditingWorkspaceTab("variantCreated");
+            return;
+        }
+
+        setEditingProductId(product.id);
+        setEditingVariantId(null);
+        setEditingWorkspaceTab("details");
+    }, []);
 
     const columns = useMemo<DataTableColumn<Product>[]>(
         () => [
             {
                 id: "sku",
-                header: "SKU",
+                header: "ID",
                 cell: (row) => <span className="font-medium">{row.customSku || "-"}</span>,
-                headerClassName: "text-left w-[100px] h-11",
-                className: "text-black/70",
             },
             {
                 id: "name",
@@ -96,15 +86,12 @@ export default function CatalogProducts() {
                          {row.sku ? ` - ${row.sku}` : ""}</p>
                     </div>
                 ),
-                headerClassName: "text-left w-[120px]",
-                className: "text-black/70",
             },
             {
                 id: "description",
                 header: "Descripción",
                 cell: (row) => <p className="line-clamp-2 text-black/70">{row.description || "-"}</p>,
-                headerClassName: "text-left w-[120px]",
-                className: "text-black/70",
+                visible: false,
             },
             {
                 id: "unit",
@@ -117,55 +104,51 @@ export default function CatalogProducts() {
                         </span>
                     );
                 },
-                headerClassName: "text-left w-[120px]",
-                className: "text-black/70",
+                visible: false,
             },
             {
                 id: "presentation",
                 header: "Presentación",
                 cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.presentation || "-"}</span>,
-                headerClassName: "text-left w-[110px]",
-                className: "text-black/70",
             },
             {
                 id: "variant",
                 header: "Variante",
                 cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.variant || "-"}</span>,
-                headerClassName: "text-left w-[110px]",
-                className: "text-black/70",
             },
             {
                 id: "color",
                 header: "Color",
                 cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.color || "-"}</span>,
-                headerClassName: "text-left w-[100px]",
-                className: "text-black/70",
             },
             {
                 id: "price",
                 header: "Precio",
                 cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{money(Number(row.price), "PEN")}</span>,
-                headerClassName: "text-left w-[90px]",
-                className: "text-black/70",
             },
             {
                 id: "cost",
                 header: "Costo",
                 cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{money(Number(row.cost), "PEN")}</span>,
-                headerClassName: "text-left w-[90px]",
-                className: "text-black/70",
+            },
+            {
+                id: "sourceType",
+                header: "Origen",
+                cell: (row) => (
+                    <span className="line-clamp-2 text-black/70">
+                        {row.sourceType === "VARIANT" ? "Variante" : "Producto"}
+                    </span>
+                ),
             },
             {
                 id: "status",
                 header: "Estado",
                 cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
-                headerClassName: "text-left w-[80px]",
-                className: "text-black/70",
             },
             {
                 id: "actions",
                 header: "ACCIONES",
-                headerClassName: "text-right w-[70px]",
+                headerClassName: "text-center flex justify-center",
                 cell: (row) => (
                     <div className="flex justify-center">
                         <ActionsPopover
@@ -197,7 +180,6 @@ export default function CatalogProducts() {
                         />
                     </div>
                 ),
-                className: "text-right",
             },
         ],
         [openEdit, setDeletingProductId],
@@ -255,12 +237,13 @@ export default function CatalogProducts() {
         setExporting(true);
         try {
             const pageSize = 100;
-            const first = await listProducts({ page: 1, limit: pageSize });
+            const baseParams = { type: queryParams.type };
+            const first = await listProductsFlat({ page: 1, limit: pageSize, ...baseParams });
             const allItems = [...(first.items ?? [])];
             const pages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));
 
             for (let p = 2; p <= pages; p += 1) {
-                const res = await listProducts({ page: p, limit: pageSize });
+                const res = await listProductsFlat({ page: p, limit: pageSize, ...baseParams });
                 if (res.items?.length) allItems.push(...res.items);
             }
 
@@ -282,10 +265,9 @@ export default function CatalogProducts() {
     };
 
     return (
-        <div className="w-full min-h-screen bg-white text-black">
+        <PageShell>
             <PageTitle title="Catalogo - Productos" />
-            <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 
-            sm:px-6 lg:px-8 py-6 space-y-4">
+            <div className="space-y-4">
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
                     animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
@@ -322,63 +304,29 @@ export default function CatalogProducts() {
                     </div>
                 </motion.div>
 
-                <motion.section
-                    initial={shouldReduceMotion ? false : "hidden"}
-                    animate={shouldReduceMotion ? false : "show"}
-                    variants={fadeUp}
-                    className="bg-gray-50 p-4 sm:p-5 shadow-sm rounded-2xl border border-black/10"
-                >
-                    <SectionHeaderForm icon={Filter} title="Filtros" />
+               
+                <DataTable
+                    tableId="catalog-products"
+                    data={products}
+                    columns={columns}
+                    rowKey="id"
+                    loading={loading}
+                    emptyMessage="No hay productos con los filtros actuales."
+                    showSearch
+                    searchPlaceholder="Buscar en la tabla..."
+                    animated={!shouldReduceMotion}
+                    tableClassName="table-fixed text-[11px]"
+                    selectableColumns
+                    pagination={{
+                        page: apiPage ?? page,
+                        limit: apiLimit ?? limit,
+                        total
+                    }}
+                    onPageChange={(nextPage) => setPage(nextPage)}
+                />
 
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_280px] gap-3">
-                        <FloatingInput
-                            label="Buscar por nombre (exacto)"
-                            name="product-search"
-                            value={searchText}
-                            onChange={(event) => {
-                                setSearchText(event.target.value);
-                                setPage(1);
-                            }}
-                            className="h-9 text-xs"
-                        />
+                {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
 
-                        <FloatingSelect
-                            label="Estado"
-                            name="status-filter"
-                            value={statusFilter}
-                            options={STATUS_OPTIONS}
-                            onChange={(value) => {
-                                setStatusFilter(value);
-                                setPage(1);
-                            }}
-                            className="h-9 text-xs"
-                        />
-                    </div>
-                </motion.section>
-                <motion.section initial={shouldReduceMotion ? false : "hidden"} animate={shouldReduceMotion ? false : "show"} 
-                variants={fadeUp} className="bg-white shadow-sm overflow-hidden">
-                    <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-                        <DataTable
-                            tableId="catalog-products"
-                            data={products}
-                            columns={columns}
-                            rowKey="id"
-                            loading={loading}
-                            emptyMessage="No hay productos con los filtros actuales."
-                            animated={!shouldReduceMotion}
-                            tableClassName="table-fixed text-[11px]"
-                            selectableColumns
-                            pagination={{
-                                page: apiPage ?? page,
-                                limit: apiLimit ?? limit,
-                                total
-                            }}
-                            onPageChange={(nextPage) => setPage(nextPage)}
-                        />
-
-                        {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
-                    </div>
-                </motion.section>
             </div>
             <ProductFormModal
                 open={openCreate}
@@ -396,10 +344,16 @@ export default function CatalogProducts() {
                 open={Boolean(editingProductId)}
                 mode="edit"
                 productId={editingProductId}
+                initialWorkspaceTab={editingWorkspaceTab}
+                initialVariantId={editingVariantId}
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
                 entityLabel="producto"
-                onClose={() => setEditingProductId(null)}
+                onClose={() => {
+                    setEditingProductId(null);
+                    setEditingVariantId(null);
+                    setEditingWorkspaceTab("details");
+                }}
                 onSaved={() => {
                     void refresh();
                 }}
@@ -435,6 +389,6 @@ export default function CatalogProducts() {
                     </div>
                 </motion.div>
             </Modal>
-        </div>
+        </PageShell>
     );
 }

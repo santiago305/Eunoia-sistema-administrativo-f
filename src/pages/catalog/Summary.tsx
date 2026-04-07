@@ -15,6 +15,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 // Si tu proyecto usa otro wrapper de ECharts, cambia este import.
 // El más común es: npm i echarts echarts-for-react
 import ReactECharts from "echarts-for-react";
+import { PageShell } from "@/components/layout/PageShell";
 
 type Product = {
   id: string;
@@ -278,10 +279,10 @@ export default function CatalogSummary() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Catálogo · Resumen" />
 
-      <div className="mx-auto w-full max-w-[1500px] 2xl:max-w-[1700px] 3xl:max-w-[1900px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <motion.div
           initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
@@ -598,7 +599,7 @@ export default function CatalogSummary() {
           </div>
         </motion.section>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

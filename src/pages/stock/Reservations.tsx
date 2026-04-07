@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
+import { PageShell } from "@/components/layout/PageShell";
 import { usePagination } from "@/hooks/usePagination";
 import { getStockMock } from "@/data/stockService";
 
@@ -63,9 +64,9 @@ export default function Reservations() {  const stockMock = getStockMock();
   const ref = useEChart(reservationsChart);
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Reservas" />
-      <div className="px-6 py-6 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Reservas</h1>
           <p className="text-sm text-black/60">Stock comprometido por pedidos o preventas.</p>
@@ -122,7 +123,7 @@ export default function Reservations() {  const stockMock = getStockMock();
                 >
                   Anterior
                 </button>
-                <span>Página {page} de {totalPages}</span>
+                <span>PÃ¡gina {page} de {totalPages}</span>
                 <button
                   className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
                   disabled={page === totalPages || totalPages === 0}
@@ -153,7 +154,7 @@ export default function Reservations() {  const stockMock = getStockMock();
           </div>
         </section>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

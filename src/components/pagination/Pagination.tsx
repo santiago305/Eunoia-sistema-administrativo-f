@@ -35,7 +35,7 @@ export function Pagination({ page, limit, total, onPageChange }: Props) {
   const pages = buildVisiblePages(page, totalPages);
 
   return (
-    <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-sm border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
         Mostrando <span className="font-medium text-foreground">{from}</span> a{" "}
         <span className="font-medium text-foreground">{to}</span> de{" "}
@@ -50,7 +50,6 @@ export function Pagination({ page, limit, total, onPageChange }: Props) {
           className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronLeft className="h-4 w-4" />
-          Anterior
         </button>
 
         {pages.map((pageNumber, index) => {
@@ -85,7 +84,6 @@ export function Pagination({ page, limit, total, onPageChange }: Props) {
           disabled={page >= totalPages}
           className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Siguiente
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
+import { PageShell } from "@/components/layout/PageShell";
 import { getStockMock } from "@/data/stockService";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 
@@ -186,9 +187,9 @@ export default function Inventory() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Inventario" />
-      <div className="px-6 py-6 space-y-6">
+      <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -534,7 +535,7 @@ export default function Inventory() {
           </div>
         </section>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

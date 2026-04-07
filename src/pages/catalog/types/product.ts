@@ -15,6 +15,8 @@ export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 
 export type Product = {
   id: string;
+  sourceType?: "PRODUCT" | "VARIANT";
+  productId?: string;
   type:ProductType;
   name: string;
   description: string | null;
@@ -32,7 +34,7 @@ export type Product = {
     color:string
   };
   createdAt: string;
-  updatedAt: string;
+  updatedAt: string | null;
   customSku?:string;
 };
 

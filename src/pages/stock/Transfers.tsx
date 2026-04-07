@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
+import { PageShell } from "@/components/layout/PageShell";
 import { usePagination } from "@/hooks/usePagination";
 import { applyTransfer, getStockMock } from "@/data/stockService";
 
@@ -138,9 +139,9 @@ export default function Transfers() {
   const ref = useEChart(flowChart);
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Transferencias" />
-      <div className="px-6 py-6 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Transferencias</h1>
           <p className="text-sm text-black/60">Operacion principal de movimiento entre almacenes.</p>
@@ -224,7 +225,7 @@ export default function Transfers() {
                 >
                   Anterior
                 </button>
-                <span>Página {page} de {totalPages}</span>
+                <span>PÃ¡gina {page} de {totalPages}</span>
                 <button
                   className="rounded-md border border-black/10 px-2 py-1 text-xs disabled:opacity-40"
                   disabled={page === totalPages || totalPages === 0}
@@ -258,7 +259,7 @@ export default function Transfers() {
                   value={fromWarehouse}
                   onChange={(event) => setFromWarehouse(event.target.value)}
                 >
-                  <option value="">Desde almacén</option>
+                  <option value="">Desde almacÃ©n</option>
                   {stockMock.warehouses.map((wh) => (
                     <option key={wh.warehouse_id} value={wh.warehouse_id}>
                       {wh.name}
@@ -270,7 +271,7 @@ export default function Transfers() {
                   value={toWarehouse}
                   onChange={(event) => setToWarehouse(event.target.value)}
                 >
-                  <option value="">Hacia almacén</option>
+                  <option value="">Hacia almacÃ©n</option>
                   {stockMock.warehouses.map((wh) => (
                     <option key={wh.warehouse_id} value={wh.warehouse_id}>
                       {wh.name}
@@ -299,7 +300,7 @@ export default function Transfers() {
           </div>
         </section>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

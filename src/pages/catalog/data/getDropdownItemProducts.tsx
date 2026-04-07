@@ -3,6 +3,8 @@ import { Pencil, Power } from "lucide-react";
 
 type ProductLite = {
   id: string;
+  productId?: string;
+  sourceType?: "PRODUCT" | "VARIANT";
   sku?: string | null;
   isActive: boolean;
 };
@@ -11,7 +13,7 @@ type Handlers = {
   openEquivalences?: (productId: string) => void | Promise<void>;
   openRecipes?: (productId: string, sku: string) => void;
   openVariantsModal?: (productId: string) => void | Promise<void>;
-  openEdit?: (productId: string) => void | Promise<void>;
+  openEdit?: (product: ProductLite) => void | Promise<void>;
   setDeletingProductId?: (productId: string) => void;
 };
 
@@ -22,7 +24,7 @@ export function getDropdownItemProducts(product: ProductLite, handlers: Handlers
       label: "Editar",
       icon: <Pencil className="h-4 w-4 text-black/60" />,
       onClick: () => {
-        void handlers.openEdit?.(product.id);
+        void handlers.openEdit?.(product);
       },
     },
     {

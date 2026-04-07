@@ -8,6 +8,7 @@ import {
   Square,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { DataTableColumnManager } from "./DataTableColumnManager";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableResponsiveCards } from "./DataTableResponsiveCards";
@@ -19,10 +20,6 @@ import type {
   DataTableSortState,
 } from "./types";
 import { useLocalStorage } from "./use-local-storage";
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 function getCellValue<T extends Record<string, unknown>>(
   row: T,
@@ -616,7 +613,7 @@ export function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {pagination && onPageChange && pagination.total > pagination.limit ? (
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-background px-4 py-3 sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 py-3 sm:items-end sm:justify-between">
           <DataTablePagination
             page={pagination.page}
             limit={pagination.limit}

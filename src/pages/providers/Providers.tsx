@@ -18,6 +18,7 @@ import { IconPaymentMethod } from "@/components/dashboard/icons";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -278,11 +279,10 @@ export default function Providers() {
   const effectiveLimit = serverPagination.limit;
 
   return (
-    <div className="min-h-screen w-full bg-white text-black">
+    <PageShell>
       <PageTitle title="Proveedores" />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pt-2
-       sm:px-6 lg:px-8 2xl:max-w-[1700px] 3xl:max-w-[1700px]">
+      <div className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
           <Headed
             title="Proveedores"
@@ -420,7 +420,7 @@ export default function Providers() {
           className="w-[600px] max-h-[600px]"
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

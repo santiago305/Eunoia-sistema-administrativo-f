@@ -102,7 +102,7 @@ export function ActionsPopover({
   actions,
   open,
   onOpenChange,
-  title = "Acciones",
+  title,
   description,
   footer,
   placement = "bottom-end",

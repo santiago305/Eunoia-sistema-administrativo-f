@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
+import { PageShell } from "@/components/layout/PageShell";
 
 // PROVISIONAL: series configuration mocked while backend is under construction.
 const seriesRows = [
@@ -49,9 +50,9 @@ export default function SeriesTypes() {
   const ref = useEChart(usageChart);
 
   return (
-    <div className="w-full min-h-screen bg-white text-black">
+    <PageShell>
       <PageTitle title="Series y Tipos" />
-      <div className="px-6 py-6 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Series y Tipos</h1>
           <p className="text-sm text-black/60">Configuracion documental y permisos.</p>
@@ -118,7 +119,7 @@ export default function SeriesTypes() {
           </div>
         </section>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

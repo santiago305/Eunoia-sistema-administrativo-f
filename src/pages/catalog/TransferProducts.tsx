@@ -23,6 +23,7 @@ import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, Crea
 import { TransferItemModal } from "@/pages/catalog/components/TransferItemModal";
 import { TransferResultModal } from "@/pages/catalog/components/TransferResultModal";
 import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
 
 const CURRENCY = "PEN";
 
@@ -353,9 +354,9 @@ export default function TransferProducts() {
     const selectedRowId = stockSummaryFrom?.itemId ?? stockSummaryTo?.itemId;
 
     return (
-        <div className="w-full min-h-screen bg-white">
+        <PageShell className="bg-white">
             <PageTitle title="Transferencia de productos" />
-            <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
+            <div className="space-y-4">
                 <Headed title="Transferencia entre almacenes" 
                 subtitle="El almacén de origen debe tener un stock mayor a (0)." 
                 size="lg" />
@@ -587,6 +588,6 @@ export default function TransferProducts() {
                 title="Transferencia de inventario procesada"
                 goToLabel="Ir a kardex de productos terminados"
             />
-        </div>
+        </PageShell>
     );
 }
