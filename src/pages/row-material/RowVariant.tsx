@@ -294,7 +294,7 @@ export default function RowVariant() {
             await updateVariantActive(deletingVariantId, { isActive: nextActiveState });
             setDeletingVariantId(null);
             await loadVariants();
-            showFlash(successResponse(nextActiveState ? "Variante restaurada" : "Variante desactivada"));
+            showFlash(successResponse(nextActiveState ? "Variante restaurada" : "Variante eliminada"));
         } catch {
             showFlash(errorResponse("Error al cambiar estado"));
         }

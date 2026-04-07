@@ -358,7 +358,7 @@ export function ProductFormModal({
                 setTogglingVariantId(row.id);
                 setNextVariantActiveState(!row.isActive);
               }}
-              title={row.isActive ? "Desactivar variante" : "Restaurar variante"}
+              title={row.isActive ? "Eliminar variante" : "Restaurar variante"}
             >
               <Power className="h-4 w-4" />
             </SystemButton>
@@ -426,7 +426,7 @@ export function ProductFormModal({
         await loadVariants(workingProductId);
       }
       showFlash(
-        successResponse(nextVariantActiveState ? "Variante restaurada" : "Variante desactivada"),
+        successResponse(nextVariantActiveState ? "Variante restaurada" : "Variante eliminada"),
       );
     } catch {
       showFlash(errorResponse("Error al cambiar estado"));
@@ -602,7 +602,7 @@ export function ProductFormModal({
       open={open}
       className="w-[800px] max-h-[600px]"
     >
-      <div className="space-y-4">
+      <div className="space-y-4 scroll-area">
         <div className="rounded-2xl border border-black/10 bg-white p-3 sm:p-4">
           <div className="flex flex-wrap items-center gap-2">
             {tabs.map((tab) => {
@@ -816,7 +816,7 @@ export function ProductFormModal({
       </Modal>
       <Modal
         open={togglingVariantId ? true : false}
-        title={nextVariantActiveState ? "Restaurar variante" : "Desactivar variante"}
+        title={nextVariantActiveState ? "Restaurar variante" : "Eliminar variante"}
         onClose={() => setTogglingVariantId(null)}
         className="max-w-md"
         >
@@ -833,7 +833,7 @@ export function ProductFormModal({
               >
                 {nextVariantActiveState
                   ? "Se activará la variante nuevamente."
-                  : "Se desactivará la variante seleccionada."}
+                  : "Se eliminará la variante seleccionada."}
               </p>
             </div>
             <div className="flex justify-end gap-2">

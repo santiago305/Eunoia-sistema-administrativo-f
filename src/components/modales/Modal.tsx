@@ -204,7 +204,7 @@ export function Modal({
                 </div>
               ) : null}
 
-              <div className="scrollbar-panel min-h-0 flex-1 overflow-y-auto">
+              <div className="scroll-area scrollbar-panel min-h-0 flex-1 overflow-y-auto">
                 <div className={cn("px-4 py-4", bodyClassName)}>{children}</div>
               </div>
 

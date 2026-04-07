@@ -514,76 +514,78 @@ export default function Purchases() {
         },
         {
             id: "actions",
-            header: "",
+            header: "ACCIONES",
+            headerClassName: "text-center w-[50px]",
             cell: (row) => (
-                <ActionsPopover
-                actions={[
-                    (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
-                            id: "enter-warehouse",
-                            label: "Ingresar Almacen",
-                            icon: <PackageCheck className="h-4 w-4" />,
-                            onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
-                        },
-                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
-                            id: "process",
-                            label: "Procesar",
-                            icon: <Play className="h-4 w-4" />,
-                            onClick: () => setSent(row.purchase.poId ?? ""),
-                        },
-                        row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
-                        row.purchase.totalPaid != row.purchase.total && {
-                            id: "payment",
-                            label: "Pago",
-                            icon: <CreditCard className="h-4 w-4" />,
-                            onClick: () => {
-                                setModalPayment(true);
-                                setTotalPaid(row.purchase.totalPaid ?? 0);
-                                setTotalToPay(row.purchase.totalToPay ?? 0);
-                                setPoId(row.purchase.poId ?? "");
+                <div className="flex justify-center">
+                    <ActionsPopover
+                    actions={[
+                        (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                                id: "enter-warehouse",
+                                label: "Ingresar Almacen",
+                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                                onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
                             },
-                        },
-                        row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
-                            id: "quotas",
-                            label: "Ver cuotas",
-                            icon: <Calendar className="h-4 w-4" />,
-                            onClick: () => {
-                                setModalQuotaList(true);
-                                setPoId(row.purchase.poId ?? "");
+                            row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                                id: "process",
+                                label: "Procesar",
+                                icon: <Play className="h-4 w-4 text-black/60" />,
+                                onClick: () => setSent(row.purchase.poId ?? ""),
                             },
-                        },
-                        {
-                            id: "open-pdf",
-                            label: "Abrir pdf",
-                            icon: <FileText className="h-4 w-4" />,
-                            onClick: () => {
-                                openPurchasePdf(row.purchase.poId ?? "");
+                            row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
+                            row.purchase.totalPaid != row.purchase.total && {
+                                id: "payment",
+                                label: "Pago",
+                                icon: <CreditCard className="h-4 w-4 text-black/60" />,
+                                onClick: () => {
+                                    setModalPayment(true);
+                                    setTotalPaid(row.purchase.totalPaid ?? 0);
+                                    setTotalToPay(row.purchase.totalToPay ?? 0);
+                                    setPoId(row.purchase.poId ?? "");
+                                },
                             },
-                        },
-                        {
-                            id: "list-payments",
-                            label: "Listar pagos",
-                            icon: <List className="h-4 w-4" />,
-                            onClick: () => {
-                                setModalPaymentList(true);
-                                setPoId(row.purchase.poId ?? "");
-                                setTotalPo(row.purchase.total);
-                                setPaymentForm(row.purchase.paymentForm);
+                            row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
+                                id: "quotas",
+                                label: "Ver cuotas",
+                                icon: <Calendar className="h-4 w-4 text-black/60" />,
+                                onClick: () => {
+                                    setModalQuotaList(true);
+                                    setPoId(row.purchase.poId ?? "");
+                                },
                             },
-                        },
-                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
-                            id: "edit",
-                            label: "Editar",
-                            icon: <Pencil className="h-4 w-4" />,
-                            onClick: () => navigate(`/compra/${row.purchase.poId}`),
-                        },
-                        row.purchase.status === PurchaseOrderStatuses.DRAFT && {
-                            id: "cancel",
-                            label: "Cancelar",
-                            className: "text-rose-700 hover:bg-rose-50",
-                            icon: <XCircle className="h-4 w-4" />,
-                            onClick: () => cancelOrder(row.purchase.poId ?? ""),
-                        },
-                    ].filter(Boolean) as ActionItem[]}
+                            {
+                                id: "open-pdf",
+                                label: "Abrir pdf",
+                                icon: <FileText className="h-4 w-4 text-black/60" />,
+                                onClick: () => {
+                                    openPurchasePdf(row.purchase.poId ?? "");
+                                },
+                            },
+                            {
+                                id: "list-payments",
+                                label: "Listar pagos",
+                                icon: <List className="h-4 w-4 text-black/60" />,
+                                onClick: () => {
+                                    setModalPaymentList(true);
+                                    setPoId(row.purchase.poId ?? "");
+                                    setTotalPo(row.purchase.total);
+                                    setPaymentForm(row.purchase.paymentForm);
+                                },
+                            },
+                            row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                                id: "edit",
+                                label: "Editar",
+                                icon: <Pencil className="h-4 w-4 text-black/60" />,
+                                onClick: () => navigate(`/compra/${row.purchase.poId}`),
+                            },
+                            row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                                id: "cancel",
+                                label: "Cancelar",
+                                className: "text-rose-700 hover:bg-rose-50",
+                                icon: <XCircle className="h-4 w-4" />,
+                                onClick: () => cancelOrder(row.purchase.poId ?? ""),
+                            },
+                        ].filter(Boolean) as ActionItem[]}
                     columns={1}
                     compact
                     showLabels
@@ -598,18 +600,16 @@ export default function Purchases() {
                                 e.stopPropagation();
                                 helpers.onAction(action);
                             }}
-                            className={`justify-start px-3 py-2 text-[11px] ${action.className ?? ""}`}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
                             disabled={action.disabled}
                         >
-                            <span className="inline-flex items-center gap-2">
-                                {action.icon}
-                                <span>{action.label}</span>
-                            </span>
+                            {action.icon}
+                            {action.label}
                         </button>
                     )}
                 />
+                </div>
             ),
-            headerClassName: "text-left w-[20px]",
             className: "text-left",
             hideable: true,
             sortable: false,

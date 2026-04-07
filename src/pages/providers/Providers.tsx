@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -211,15 +211,15 @@ export default function Providers() {
       },
       {
         id: "actions",
-        header: "",
+        header: "ACCIONES",
         cell: (row) => (
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-center">
             <ActionsPopover
               actions={[
                 {
                   id: "edit",
                   label: "Editar",
-                  icon: <Pencil className="h-4 w-4" />,
+                  icon: <Pencil className="h-4 w-4 text-black/60" />,
                   onClick: () => openEdit(row.supplierId),
                 },
                 {
@@ -233,6 +233,9 @@ export default function Providers() {
                   label: row.isActive ? "Eliminar" : "Restaurar",
                   icon: <Power className="h-4 w-4" />,
                   danger: row.isActive,
+                  className: row.isActive
+                    ? "text-rose-700 hover:bg-rose-50"
+                    : "text-cyan-700 hover:bg-cyan-50",
                   onClick: () => {
                     setToggleSupplierId(row.supplierId);
                     setNextActiveState(!row.isActive);
@@ -240,11 +243,26 @@ export default function Providers() {
                 },
               ]}
               columns={1}
-              triggerIcon={<Menu className="h-4 w-4" />}
-              triggerVariant="ghost"
               compact
-              popoverClassName="min-w-52 p-2"
-              itemClassName="justify-start px-3 py-2 text-[11px]"
+              showLabels
+              triggerIcon={<Menu className="h-4 w-4" />}
+              popoverClassName="min-w-52"
+              popoverBodyClassName="p-2"
+              renderAction={(action, helpers) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    helpers.onAction(action);
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
+                  disabled={action.disabled}
+                >
+                  {action.icon}
+                  {action.label}
+                </button>
+              )}
             />
           </div>
         ),
@@ -327,6 +345,7 @@ export default function Providers() {
               emptyMessage="No hay proveedores con los filtros actuales."
               hoverable={false}
               animated={false}
+              selectableColumns
               pagination={{
                 page: safePage,
                 limit: effectiveLimit,
@@ -404,3 +423,4 @@ export default function Providers() {
     </div>
   );
 }
+

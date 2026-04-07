@@ -48,7 +48,7 @@ export function AdjustmentItemModal({
     const zeroQuantityMessage = messages?.zeroQuantity ?? "La cantidad no puede ser cero";
 
     return (
-        <Modal open={open} title={title} onClose={onClose} className="w-[400px] space-y-3">
+        <Modal open={open} title={title} onClose={onClose} className="w-[400px] max-h-90 space-y-3">
             <div className="grid grid-cols-1 gap-3">
                 <SectionHeaderForm icon={Boxes} title={sectionTitle} />
 
@@ -88,13 +88,12 @@ export function AdjustmentItemModal({
                     value={pendingItem.adjustmentType ?? ""}
                     onChange={(value) => onChange({ adjustmentType: value })}
                     options={ADJUSTMENT_TYPE_OPTIONS}
-                    placeholder="Seleccionar tipo"
                     emptyMessage="Sin tipos"
                     className="h-9 text-xs"
                 />
             </div>
 
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-15 flex justify-end gap-2">
                 <SystemButton variant="outline" size="sm" onClick={onClose}>
                     Cancelar
                 </SystemButton>
