@@ -175,10 +175,10 @@ export default function RowMaterial() {
             },
             {
                 id: "actions",
-                header: "",
+                headerClassName: "text-center w-[70px]",
+                header: "ACCIONES",
                 cell: (row) => (
-                    
-                    <div className="flex justify-end">
+                    <div className="flex justify-center">
                         <ActionsPopover
                             actions={[
                                 {
@@ -224,7 +224,6 @@ export default function RowMaterial() {
                         />
                     </div>
                 ),
-                headerClassName: "text-right w-[40px]",
                 className: "text-right",
             },
         ],
@@ -388,6 +387,7 @@ export default function RowMaterial() {
                                 limit: apiLimit ?? limit,
                                 total
                             }}
+                            selectableColumns
                             onPageChange={(nextPage) => setPage(nextPage)}
                         />
                         {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
@@ -431,9 +431,6 @@ export default function RowMaterial() {
                     <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
                         <span className="font-semibold">Ojo:</span> estás por cambiar el estado de una materia prima. Hazlo solo si estás seguro.
                     </div>
-
-                    <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catálogo visible y procesos internos.</p>
-
                     <div className="mt-4 flex justify-end gap-2">
                         <SystemButton
                             variant="outline"

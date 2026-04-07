@@ -164,9 +164,10 @@ export default function CatalogProducts() {
             },
             {
                 id: "actions",
-                header: "",
+                header: "ACCIONES",
+                headerClassName: "text-right w-[70px]",
                 cell: (row) => (
-                    <div className="flex justify-end">
+                    <div className="flex justify-center">
                         <ActionsPopover
                             actions={getDropdownItemProducts(row, {
                                 openEdit,
@@ -196,7 +197,6 @@ export default function CatalogProducts() {
                         />
                     </div>
                 ),
-                headerClassName: "text-right w-[40px]",
                 className: "text-right",
             },
         ],
@@ -367,6 +367,7 @@ export default function CatalogProducts() {
                             emptyMessage="No hay productos con los filtros actuales."
                             animated={!shouldReduceMotion}
                             tableClassName="table-fixed text-[11px]"
+                            selectableColumns
                             pagination={{
                                 page: apiPage ?? page,
                                 limit: apiLimit ?? limit,
@@ -414,7 +415,6 @@ export default function CatalogProducts() {
                     <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
                         <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto. Hazlo solo si estas seguro.
                     </div>
-                    <p className="mt-3 text-sm text-black/70">¿Confirmas esta acción? Puede afectar reportes, catalogo visible y procesos internos.</p>
                     <div className="mt-4 flex justify-end gap-2">
                         <SystemButton
                             variant="outline"
