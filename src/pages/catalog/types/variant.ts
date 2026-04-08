@@ -23,6 +23,7 @@ export type Variant = {
   };
   price: number;
   cost: number;
+  minStock?: number | null;
   baseUnitId:string;
   isActive: boolean;
   createdAt?: string;
@@ -129,6 +130,7 @@ export type VariantForm = {
   barcode: string;
   price: string;
   cost: string;
+  minStock?: string;
   attributes?: {
     presentation?: string,
     variant?:string,

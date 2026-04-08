@@ -9,6 +9,7 @@ export const createProductSchema = z.object({
   customSku: z.string().optional().nullable(),
   price: z.number().optional(),
   cost: z.number().optional(),
+  minStock: z.number().optional().nullable(),
   baseUnitId: z.string().optional(),
   attributes: z.record(z.string()).optional(),
 });
@@ -21,6 +22,7 @@ export const updateProductSchema = z.object({
   customSku: z.string().optional().nullable(),
   price: z.number().optional(),
   cost: z.number().optional(),
+  minStock: z.number().optional().nullable(),
   baseUnitId: z.string().optional(),
   attributes: z.record(z.string()).optional(),
 });

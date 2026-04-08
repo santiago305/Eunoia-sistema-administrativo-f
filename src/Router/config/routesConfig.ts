@@ -53,7 +53,11 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.catalogVariants, name: "catalogVariants", isProtected: true },
   { path: RoutesPaths.catalogDocuments, name: "catalogDocuments", isProtected: true },
   { path: RoutesPaths.catalogAdjustments, name: "catalogAdjustments", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
-  { path: RoutesPaths.catalogTransfer, name: "catalogTransfer", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
+  { path: RoutesPaths.catalogTransfer, name: "catalogTransfer", isProtected: true, 
+    rolesAllowed: ["admin", "supervisor"] },
+  { path: RoutesPaths.catalogInventory, name: "catalogInventory", isProtected: true, 
+    rolesAllowed: ["admin", "moderator", "supervisor"] },
+    
   { path: RoutesPaths.KardexFinished, name: "kardexFinished", isProtected: true, rolesAllowed: ["admin", "moderator"] },
 
   { path: RoutesPaths.warehouses, name: "warehouses", isProtected: true },

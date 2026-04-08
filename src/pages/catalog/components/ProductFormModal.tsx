@@ -58,6 +58,7 @@ const DEFAULT_FORM: ProductForm = {
   customSku: "",
   price: "",
   cost: "",
+  minStock: "",
   attribute: {},
   baseUnitId: "",
 };
@@ -109,6 +110,7 @@ export function ProductFormModal({
     barcode: "",
     price: "",
     cost: "",
+    minStock: "",
     attributes: {},
     isActive: true,
     customSku: "",
@@ -262,6 +264,7 @@ export function ProductFormModal({
       barcode: "",
       price: "",
       cost: "",
+      minStock: "",
       attributes: {},
       isActive: true,
       customSku: "",
@@ -290,6 +293,7 @@ export function ProductFormModal({
         barcode: variant.barcode ?? "",
         price: String(variant.price ?? ""),
         cost: String(variant.cost ?? ""),
+        minStock: variant.minStock !== undefined && variant.minStock !== null ? String(variant.minStock) : "",
         attributes: {
           presentation: variant.attributes?.presentation,
           variant: variant.attributes?.variant,
@@ -391,6 +395,7 @@ export function ProductFormModal({
           attributes: variantForm.attributes,
           price: parseDecimalInput(variantForm.price) || 0,
           cost: parseDecimalInput(variantForm.cost) || 0,
+          minStock: variantForm.minStock ? Number(variantForm.minStock) : null,
           customSku: variantForm.customSku
         });
         closeVariantModal();
@@ -403,6 +408,7 @@ export function ProductFormModal({
           attributes: variantForm.attributes,
           price: parseDecimalInput(variantForm.price) || 0,
           cost: parseDecimalInput(variantForm.cost) || 0,
+          minStock: variantForm.minStock ? Number(variantForm.minStock) : null,
           isActive: variantForm.isActive,
           customSku: variantForm.customSku
         });
@@ -485,6 +491,7 @@ export function ProductFormModal({
           sku: product.sku ?? "",
           price: product.price ? String(product.price) : "",
           cost: product.cost ? String(product.cost) : "",
+          minStock: product.minStock !== undefined && product.minStock !== null ? String(product.minStock) : "",
           attribute: {
             presentation: product.attributes?.presentation,
             color: product.attributes?.color,
@@ -534,6 +541,7 @@ export function ProductFormModal({
       customSku: form.customSku?.trim() || null,
       price: Number(form.price) || 0,
       cost: Number(form.cost) || 0,
+      minStock: form.minStock ? Number(form.minStock) : null,
       baseUnitId: form.baseUnitId,
       attributes: form.attribute,
     });
@@ -554,6 +562,7 @@ export function ProductFormModal({
       customSku: form.customSku?.trim() || null,
       price: Number(form.price) || 0,
       cost: Number(form.cost) || 0,
+      minStock: form.minStock ? Number(form.minStock) : null,
       baseUnitId: form.baseUnitId,
       attributes: form.attribute,
     });

@@ -41,12 +41,23 @@ export function VariantFormFields({
               emptyMessage="Sin productos"
               disabled={lockProduct}
             />
-
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <FloatingInput
               label="Sku personalizado"
               name="customSku"
               value={form.customSku}
               onChange={(e) => setForm((prev) => ({ ...prev, customSku: e.target.value }))}
+            />
+            <FloatingInput
+              label="Stock mínimo"
+              name="minStock"
+              type="number"
+              min="0"
+              value={form.minStock}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, minStock: event.target.value }))
+              }
             />
           </div>
       </div>

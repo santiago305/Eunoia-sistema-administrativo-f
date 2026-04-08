@@ -1,3 +1,4 @@
+
 /**
  * Central route paths for the app.
  */
@@ -29,6 +30,7 @@ export const RoutesPaths = {
   catalogAdjustments: "/catalago/ajustes",
   catalogTransfer: "/catalago/transfer",
   KardexFinished:'/catalago/kardex',
+  catalogInventory:'/catalago/inventario',
 
   //almacenes
   warehouses:'/almacen',

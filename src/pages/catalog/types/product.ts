@@ -32,6 +32,7 @@ export type Product = {
   sku?: string | null;
   price?: number;
   cost?: number;
+  minStock?: number | null;
   baseUnitName?: string;
   baseUnitCode?: string;
   baseUnitId?: string;
@@ -65,6 +66,7 @@ export type ProductForm = {
     baseUnitId: string;
     customSku?:string;
     sku?: string | null;
+    minStock?: string;
 };
 
 export type ProductListResponse = {

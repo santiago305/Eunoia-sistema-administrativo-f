@@ -64,7 +64,8 @@ export type PurchaseOrderItem = {
   amountIgv: number,
   unitValue:number,
   unitPrice: number,
-  purchaseValue: number
+  purchaseValue: number,
+  name?:string;
 };
 
 export type PurchaseOrder = {

@@ -98,6 +98,7 @@ export const recalcItem = (item: PurchaseOrderItem): PurchaseOrderItem => {
       amountIgv: toNumber(amountIgv),
       porcentageIgv: 18,
       purchaseValue: toNumber(purchaseValue),
+      name:item.name
     };
   }
 
@@ -148,6 +149,13 @@ export const addDaysToIsoDate = (days?: number | null) => {
 export const buildMonthStartIso = () => {
   const date = new Date();
   date.setDate(1);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString().slice(0, 10);
+};
+
+export const buildMonthEndIso = () => {
+  const now = new Date();
+  const date = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   date.setHours(0, 0, 0, 0);
   return date.toISOString().slice(0, 10);
 };

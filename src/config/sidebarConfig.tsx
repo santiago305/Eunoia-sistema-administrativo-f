@@ -100,8 +100,12 @@ export const getSidebarItems = (): SidebarItem[] => [
             //     href: RoutesPaths.catalogVariants,
             // },
             {
-                label: "Kardex",
+                label: "Movimientos",
                 href: RoutesPaths.KardexFinished,
+            },
+            {
+                label: "Inventario",
+                href: RoutesPaths.catalogInventory,
             },
         ],
     },
@@ -131,7 +135,7 @@ export const getSidebarItems = (): SidebarItem[] => [
             //     href: RoutesPaths.rowVariant,
             // },
             {
-                label: "Kardex",
+                label: "Movimientos",
                 href: RoutesPaths.KardexPrima,
             },
         ],

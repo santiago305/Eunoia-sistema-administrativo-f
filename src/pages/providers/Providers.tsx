@@ -334,31 +334,27 @@ export default function Providers() {
             />
           </div>
         </section>
+        <DataTable
+          tableId="providers-table"
+          data={suppliers}
+          columns={columns}
+          rowKey="supplierId"
+          loading={loading}
+          emptyMessage="No hay proveedores con los filtros actuales."
+          hoverable={false}
+          animated={false}
+          pagination={{
+            page: safePage,
+            limit: effectiveLimit,
+            total: serverPagination.total,
+          }}
+          onPageChange={(nextPage) => {
+            setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+          }}
+          tableClassName="text-[10px]"
+        />
 
-        <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-            <DataTable
-              tableId="providers-table"
-              data={suppliers}
-              columns={columns}
-              rowKey="supplierId"
-              loading={loading}
-              emptyMessage="No hay proveedores con los filtros actuales."
-              hoverable={false}
-              animated={false}
-              selectableColumns
-              pagination={{
-                page: safePage,
-                limit: effectiveLimit,
-                total: serverPagination.total,
-              }}
-              onPageChange={(nextPage) => {
-                setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
-              }}
-              tableClassName="text-[10px]"
-            />
-
-            {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
-        </section>
+        {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
       </div>
 
       <SupplierFormModal

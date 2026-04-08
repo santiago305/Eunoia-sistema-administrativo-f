@@ -495,7 +495,6 @@ export default function Production() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
           <DataTable
             tableId="production-orders-table"
             data={rows}
@@ -513,7 +512,6 @@ export default function Production() {
             }}
             onPageChange={setPage}
           />
-        </section>
 
         <PdfViewerModal
           open={openPdfModal}

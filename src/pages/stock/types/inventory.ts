@@ -1,7 +1,1 @@
-﻿export type GetStockQuery = {
-  warehouseId: string;
-  itemId: string;
-  locationId?: string;
-};
-
-export type GetStockResponse = Record<string, unknown>;
+export type { GetStockQuery, GetStockResponse } from "@/pages/catalog/types/inventory";

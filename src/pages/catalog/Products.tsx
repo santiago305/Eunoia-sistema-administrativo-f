@@ -133,6 +133,11 @@ export default function CatalogProducts() {
                 cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{money(Number(row.cost), "PEN")}</span>,
             },
             {
+                id: "minStock",
+                header: "Stock Mínimo",
+                cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{row.minStock || "0"}</span>,
+            },
+            {
                 id: "sourceType",
                 header: "Origen",
                 cell: (row) => (

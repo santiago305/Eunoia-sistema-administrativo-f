@@ -260,10 +260,25 @@ export default function KardexProduction() {
   }, [productQuery]);
 
   useEffect(() => {
+    if (!warehouseId || !stockItemId) {
+      setRows([]);
+      setPagination((prev) => ({
+        ...prev,
+        total: 0,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      }));
+      return;
+    }
     void loadLedger();
   }, [pagination.page, pagination.limit, warehouseId, fromDate, toDate, stockItemId]);
 
   useEffect(() => {
+    if (!warehouseId || !stockItemId) {
+      setDailyTotals([]);
+      return;
+    }
     void loadDailyTotals();
   }, [warehouseId, fromDate, toDate, stockItemId]);
 
@@ -320,7 +335,7 @@ export default function KardexProduction() {
       id: "fechaHora",
       header: "Fecha y hora",
       accessorKey: "fechaHora",
-      className: "w-80",
+      className: "w-40",
       headerClassName:"h-11",
       hideable: false,
       sortable: false,
@@ -328,7 +343,7 @@ export default function KardexProduction() {
     {
       id: "tercero",
       header: "Proveedor / Cliente",
-      className: "w-120",
+      className: "w-70",
       accessorKey: "tercero",
       sortable: false,
     },
@@ -336,7 +351,7 @@ export default function KardexProduction() {
       id: "documento",
       header: "Documento",
       accessorKey: "documento",
-      className: "w-40",
+      className: "w-30",
       sortable: false,
     },
     {
@@ -351,91 +366,111 @@ export default function KardexProduction() {
       sortable: false,
     },
     {
-      id: "entrada",
-      header: "Entrada",
-      accessorKey: "entrada",
-      className: "text-right tabular-nums",
-      headerClassName: "text-right",
+      id: "entrada_salida",
+      header: "Entradas / Salidas",
+      className: "text-center tabular-nums",
+      headerClassName: "text-center",
       sortable: false,
+      cell: (row) => (
+        <div className="flex items-center justify-center">
+          <p>{row.entrada ? row.entrada : ""}{row.salida ? ` ${row.salida}` : ""}</p>
+        </div>
+      )
     },
-    {
-      id: "salida",
-      header: "Salida",
-      accessorKey: "salida",
-      className: "text-right tabular-nums",
-      headerClassName: "text-right",
-      sortable: false,
-    },
-    {
-      id: "saldo",
-      header: "Saldo",
-      accessorKey: "saldo",
-      className: "text-right tabular-nums",
-      headerClassName: "text-right",
-      sortable: false,
-    },
+
+    // {
+    //   id: "saldo",
+    //   header: "Saldo",
+    //   accessorKey: "saldo",
+    //   className: "text-right tabular-nums",
+    //   headerClassName: "text-right",
+    //   sortable: false,
+    // },
   ];
 
   const movementsChart = useMemo<echarts.EChartsOption>(() => {
-    const endValue = toDateInputValue(toDate) || toDateInputValue(todayIso());
-    const endDate = endValue ? new Date(`${endValue}T23:59:59`) : new Date();
-    const startDate = new Date(endDate);
-    startDate.setDate(endDate.getDate() - 6);
-    startDate.setHours(0, 0, 0, 0);
+  const endValue = toDateInputValue(toDate) || toDateInputValue(todayIso());
+  const endDate = endValue ? new Date(`${endValue}T23:59:59`) : new Date();
+  const startDate = new Date(endDate);
+  startDate.setDate(endDate.getDate() - 6);
+  startDate.setHours(0, 0, 0, 0);
 
-    const days: { key: string; label: string }[] = [];
-    const cursor = new Date(startDate);
-    while (cursor <= endDate) {
-      const iso = toLocalDateKey(cursor);
-      const label = cursor.toLocaleDateString("es-PE", { weekday: "short" });
-      days.push({ key: iso, label });
-      cursor.setDate(cursor.getDate() + 1);
-    }
+  const days: { key: string; label: string }[] = [];
+  const cursor = new Date(startDate);
+  while (cursor <= endDate) {
+    const iso = toLocalDateKey(cursor);
+    const label = cursor.toLocaleDateString("es-PE", { weekday: "short" });
+    days.push({ key: iso, label });
+    cursor.setDate(cursor.getDate() + 1);
+  }
 
-    const totals = new Map<string, number>();
-    for (const day of days) totals.set(day.key, 0);
+  const totalsEntrada = new Map<string, number>();
+  const totalsSalida = new Map<string, number>();
+  for (const day of days) {
+    totalsEntrada.set(day.key, 0);
+    totalsSalida.set(day.key, 0);
+  }
 
-    for (const total of dailyTotals) {
-      if (!total?.day) continue;
-      const key = String(total.day).slice(0, 10);
-      if (!totals.has(key)) continue;
-      totals.set(key, Number(total.balance ?? 0));
-    }
+  for (const total of dailyTotals) {
+    if (!total?.day) continue;
+    const key = String(total.day).slice(0, 10);
+    if (!totalsEntrada.has(key)) continue;
 
-    const labels = days.map((d) => d.label);
-    const data = days.map((d) => totals.get(d.key) ?? 0);
+    totalsEntrada.set(key, Number(total.entrada ?? 0));
+    totalsSalida.set(key, Number(total.salida ?? 0));
+  }
 
-    return {
-      grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
-      xAxis: {
-        type: "category",
-        data: labels,
-        axisLabel: { color: "#111" },
+  const labels = days.map((d) => d.label);
+  const dataEntrada = days.map((d) => totalsEntrada.get(d.key) ?? 0);
+  const dataSalida = days.map((d) => totalsSalida.get(d.key) ?? 0);
+
+  return {
+    grid: { left: 20, right: 16, top: 32, bottom: 20, containLabel: true },
+    tooltip: { trigger: "axis" },
+    legend: { 
+      data: ["Entradas", "Salidas"],
+      left:"center",
+      top:0 
+    },
+    xAxis: {
+      type: "category",
+      data: labels,
+      axisLabel: { color: "#111" },
+    },
+    yAxis: { type: "value", axisLabel: { color: "#111" } },
+    series: [
+      {
+        name: "Entradas",
+        type: "line",
+        data: dataEntrada,
+        smooth: true,
+        lineStyle: { color: "#0f766e" },
+        itemStyle: { color: "#0f766e" },
+        areaStyle: { color: "rgba(15, 118, 110, 0.12)" },
       },
-      yAxis: { type: "value", axisLabel: { color: "#111" } },
-      tooltip: { trigger: "axis" },
-      series: [
-        {
-          type: "line",
-          data,
-          smooth: true,
-          lineStyle: { color: "#0f766e" },
-          itemStyle: { color: "#0f766e" },
-          areaStyle: { color: "rgba(15, 118, 110, 0.12)" },
-        },
-      ],
-    };
-  }, [dailyTotals, toDate]);
+      {
+        name: "Salidas",
+        type: "line",
+        data: dataSalida,
+        smooth: true,
+        lineStyle: { color: "#ef4444" },
+        itemStyle: { color: "#ef4444" },
+        areaStyle: { color: "rgba(239, 68, 68, 0.10)" },
+      },
+    ],
+  };
+}, [dailyTotals, toDate]);
+
 
   const ref = useEChart(movementsChart);
 
   return (
     <PageShell>
-      <PageTitle title="Kardex de productos terminados" />
+      <PageTitle title="Movimientos de productos terminados" />
 
       <div className="space-y-4">
-        <Headed title="Kardex de productos terminados" 
-        subtitle="Auditoría viva de movimientos." 
+        <Headed title="Movimientos de productos terminados" 
+        subtitle="Auditoría interna del inventario." 
         size="lg" />
 
         <section className="rounded-2xl border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
