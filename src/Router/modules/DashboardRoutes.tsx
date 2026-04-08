@@ -53,6 +53,7 @@ const TransferProduct= lazy(() => import("@/pages/catalog/TransferProducts"));
 const TransferRowMaterial = lazy(() => import("@/pages/row-material/TransferRowMaterial"));
 const ProductionCreate = lazy(() => import("@/pages/production/Production"));
 const OutOrder = lazy(() => import("@/pages/out-orders/OutOrder"));
+const CatalogInventory = lazy(() => import("@/pages/catalog/Inventory"));
 
 const withRouteGuard = (path: string, element: ReactElement) => {
     const routeMeta = getRouteMetaByPath(path);
@@ -219,6 +220,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.catalogTransfer,
                 element: withRouteGuard(RoutesPaths.catalogTransfer, <TransferProduct />),
+            },
+            {
+                path: RoutesPaths.catalogInventory,
+                element: withRouteGuard(RoutesPaths.catalogInventory, <CatalogInventory />),
             },
             {
                 path: RoutesPaths.rowMaterialTransfer,

@@ -139,6 +139,7 @@ export function EquivalenceModal({
       equivalence?: string | null;
       factor?: number;
       unitBase?: string | null;
+      name?:string;
     },
   ) => {
     const finalItemId = selectedItemId ?? itemId;
@@ -185,6 +186,7 @@ export function EquivalenceModal({
         unitValue: 0,
         unitPrice,
         purchaseValue: 0,
+        name: opts?.name,
       });
 
       return { ...prev, items: [...items, newItem] };
@@ -241,6 +243,10 @@ export function EquivalenceModal({
     { value: AfectType.TAXED, label: "GRAVADA - OPERACION ONEROSA" },
     { value: AfectType.EXEMPT, label: "EXONERADA - OPERACION ONEROSA" },
   ];
+  const buildProductLabel = (product?: FinishedProducts) =>
+  `${product?.productName ?? "Materia prima"} ${product?.attributes?.presentation ?? ""} ${product?.attributes?.variant ?? ""} ${product?.attributes?.color ?? ""}
+  ${product?.sku ? ` - ${product?.sku}` : ""} ${product?.customSku ? `(${product?.customSku})` : ""}`.trim();
+
 
   const equivalenceRows = useMemo<EquivalenceRow[]>(() => {
     return equivalences.map((eq) => {
@@ -256,8 +262,8 @@ export function EquivalenceModal({
         fromName,
         toName,
         factor,
-        unitLabel: fromLabel ? `${fromName} (${factor})` : eq.toUnitId,
-        equivalenceLabel: `Equivale a ${factor} - ${safeToName}`,
+        unitLabel: fromLabel ? `${toName} (${factor})` : eq.toUnitId,
+        equivalenceLabel: `Equivale a ${factor} - ${fromName}`,
       };
     });
   }, [equivalences, units]);
@@ -407,9 +413,10 @@ export function EquivalenceModal({
                   documentType === VoucherDocTypes.NOTA_VENTA
                     ? AfectType.EXEMPT
                     : pendingItemAfectType,
-                equivalence: pendingEquivalence,
+                equivalence: pendingUnitBase,
                 factor: pendingFactor,
-                unitBase: pendingUnitBase,
+                unitBase:pendingEquivalence,
+                name: buildProductLabel(products.find((p) => p.itemId === itemId)),
               });
 
               handleClose();

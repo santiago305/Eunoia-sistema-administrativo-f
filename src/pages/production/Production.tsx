@@ -21,12 +21,12 @@ import type {
 } from "@/pages/production/types/production";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
-import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { RoutesPaths } from "@/Router/config/routesPaths";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -363,12 +363,20 @@ export default function ProductionCreate() {
       if (isEdit && productionId) {
         const res = await updateProductionOrder(productionId, payload);
         showFlash(successResponse("Orden de produccion actualizada"));
-        const nextId = res.productionId;
+        const nextId =
+          res.productionId ??
+          (res as { id?: string }).id ??
+          (res as { order?: { id?: string } }).order?.id ??
+          productionId;
         if (nextId) setLastSavedProductionId(nextId);
       } else {
         const res = await createProductionOrder(payload);
         showFlash(successResponse("Orden de produccion creada"));
-        const nextId = res.productionId;
+        const nextId =
+          res.productionId ??
+          (res as { id?: string }).id ??
+          (res as { order?: { id?: string } }).order?.id ??
+          "";
         if (nextId) setLastSavedProductionId(nextId);
       }
 

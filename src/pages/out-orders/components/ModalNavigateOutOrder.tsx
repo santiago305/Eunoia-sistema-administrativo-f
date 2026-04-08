@@ -65,7 +65,7 @@ export function ModalNavigateOutOrder({
   if (!open) return null;
 
   return (
-    <Modal title="Documento de inventario procesado" className="max-w-5xl h-[95vh]">
+    <Modal title="Documento de inventario procesado" className="w-300 [95vh]">
       <div className="space-y-6">
         <div className="space-y-2">
           <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
@@ -95,7 +95,7 @@ export function ModalNavigateOutOrder({
               className="flex-1 bg-gray-200"
               onClick={onNewOutOrder}
             >
-              Ingresar nueva salida
+             Ingresar nueva orden
             </SystemButton>
 
             <SystemButton
@@ -107,7 +107,7 @@ export function ModalNavigateOutOrder({
               }}
               onClick={onGoToList}
             >
-              Ir a listado de salidas
+               Ir a listado 
             </SystemButton>
           </div>
         </div>

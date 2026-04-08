@@ -292,7 +292,7 @@ export default function PurchaseCreateLocal() {
         id: item.stockItemId,
         stockItemId: item.stockItemId,
         sku: product?.sku ?? "-",
-        name: product?.productName ?? "Producto",
+        name: item.name ?? "-",
         unit: item.unitBase ?? "-",
         equivalence: item.equivalence,
         factor: Number(item.factor ?? 1),
@@ -443,21 +443,14 @@ export default function PurchaseCreateLocal() {
   const itemColumns = useMemo<DataTableColumn<PurchaseItemRow>[]>(() => {
     return [
       {
-        id: "sku",
-        header: "SKU",
-        accessorKey: "sku",
-        className: "text-black/70",
-        headerClassName: "text-left h-11",
-        hideable: false,
-        sortable: false,
-      },
-      {
         id: "name",
         header: "Producto",
-        accessorKey: "name",
-        className: "text-black/70",
+        cell: (row) => (
+          <span className="text-black/70">
+            {row.name}
+          </span>
+        ),
         headerClassName: "text-left",
-        hideable: false,
         sortable: false,
       },
       {

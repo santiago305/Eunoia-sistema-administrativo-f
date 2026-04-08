@@ -27,7 +27,7 @@ export function ProductFormFields({
       <div className="rounded-2xl border border-black/10 bg-white p-4 sm:p-5">
         <SectionHeaderForm icon={Package2} title="Datos generales" />
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
           <FloatingInput
             label="Nombre"
             name="name"
@@ -42,6 +42,16 @@ export function ProductFormFields({
             value={form.customSku}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, customSku: event.target.value }))
+            }
+          />
+          <FloatingInput
+            label="Stock mínimo"
+            name="minStock"
+            type="number"
+            min="0"
+            value={form.minStock}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, minStock: event.target.value }))
             }
           />
 

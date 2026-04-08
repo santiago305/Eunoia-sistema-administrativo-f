@@ -180,7 +180,7 @@ export function PaymentModal({
                   borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                 }}
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || totalToPay === 0}
               >
                 {saving ? "Guardando..." : "Agregar pago"}
               </SystemButton>

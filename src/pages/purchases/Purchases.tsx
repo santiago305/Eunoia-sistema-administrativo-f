@@ -716,7 +716,6 @@ export default function Purchases() {
                     </div>
                 </section>
 
-                <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden">
                     <DataTable
                         tableId="purchase-list"
                         data={purchaseRows}
@@ -737,7 +736,6 @@ export default function Purchases() {
                     />
 
                     {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
-                </section>
             </div>
             <PaymentModal
                 title="Formulario de Pago"
