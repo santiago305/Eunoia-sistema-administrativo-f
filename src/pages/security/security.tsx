@@ -15,7 +15,6 @@ import {
   getSecurityTopIps,
   blacklistSecurityIp,
   exportSecurityAudit,
-  removeSecurityBlacklistIp,
 } from "@/services/securityService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, infoResponse, successResponse } from "@/common/utils/response";
@@ -128,19 +127,6 @@ export default function SecurityPage() {
     } catch (err) {
       console.error(err);
       setError("No se pudo bloquear la IP manualmente.");
-    } finally {
-      setMutating(false);
-    }
-  };
-
-  const handleUnban = async (ip: string) => {
-    try {
-      setMutating(true);
-      await removeSecurityBlacklistIp(ip);
-      await fetchAll();
-    } catch (err) {
-      console.error(err);
-      setError("No se pudo quitar el bloqueo de la IP.");
     } finally {
       setMutating(false);
     }

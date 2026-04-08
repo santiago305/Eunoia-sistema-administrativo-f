@@ -8,7 +8,7 @@ import {
     IconWarehouse 
 } from "@/components/dashboard/icons";
 import type { SidebarItem } from "@/components/dashboard/types";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 
 export const getSidebarItems = (): SidebarItem[] => [
     {

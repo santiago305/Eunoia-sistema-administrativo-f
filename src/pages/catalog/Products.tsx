@@ -58,8 +58,9 @@ export default function CatalogProducts() {
 
     const openEdit = useCallback((product: Product) => {
         setOpenCreate(false);
-        if (product.sourceType === "VARIANT" && product.productId) {
-            setEditingProductId(product.productId);
+        const parentId = product.parentProductId ?? product.productId ?? null;
+        if (product.sourceType === "VARIANT" && parentId) {
+            setEditingProductId(parentId);
             setEditingVariantId(product.id);
             setEditingWorkspaceTab("variantCreated");
             return;
@@ -160,7 +161,7 @@ export default function CatalogProducts() {
                             compact
                             showLabels
                             triggerIcon={<Menu className="h-4 w-4" />}
-                            popoverClassName="min-w-52"
+                            popoverClassName="min-w-35"
                             popoverBodyClassName="p-2"
                             renderAction={(action, helpers) => (
                                 <button
@@ -205,7 +206,7 @@ export default function CatalogProducts() {
             description: string | null;
             isActive: boolean;
             createdAt: string;
-            updatedAt: string;
+            updatedAt: string | null;
         }>,
     ) => {
         const header = ["id", "name", "description", "isActive", "createdAt", "updatedAt"];
@@ -213,7 +214,8 @@ export default function CatalogProducts() {
             if (value.includes('"') || value.includes(",") || value.includes("\n")) return `"${value.replace(/"/g, '""')}"`;
             return value;
         };
-        const formatDate = (value: string) => {
+        const formatDate = (value: string | null) => {
+            if (!value) return "-";
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return value;
             return date.toLocaleString("es-PE", {

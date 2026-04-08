@@ -16,8 +16,15 @@ export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 export type Product = {
   id: string;
   sourceType?: "PRODUCT" | "VARIANT";
+  displayName?: string | null;
+  familyProductId?: string | null;
+  parentProductId?: string | null;
   productId?: string;
-  type:ProductType;
+  isGroupRoot?: boolean;
+  isOperationalItem?: boolean;
+  hasVariants?: boolean;
+  variantsCount?: number;
+  type: ProductType;
   name: string;
   description: string | null;
   isActive: boolean;
@@ -35,7 +42,7 @@ export type Product = {
   };
   createdAt: string;
   updatedAt: string | null;
-  customSku?:string;
+  customSku?: string;
 };
 
 export type ProductForm = {

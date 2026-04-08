@@ -21,7 +21,7 @@ import type {
 } from "@/pages/production/types/production";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModalNavigateProduction } from "@/pages/production/components/ModalNavigateProduction";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
@@ -123,12 +123,15 @@ export default function ProductionCreate() {
     items.forEach((item) => {
       const product = item.finishedItem?.product;
       const variant = item.finishedItem?.variant;
-      const id = variant?.id ?? product?.id ?? item.finishedItemId;
-      if (!id || map.has(id)) return;
+      const stockItemId = item.finishedItemId;
+      const entityId = variant?.id ?? product?.id ?? stockItemId;
+      if (!stockItemId || map.has(stockItemId)) return;
 
-      map.set(id, {
-        id,
-        itemId: id,
+      map.set(stockItemId, {
+        id: entityId,
+        itemId: stockItemId,
+        productId: item.finishedItem?.productId ?? variant?.productId ?? product?.id ?? undefined,
+        variantId: item.finishedItem?.variantId ?? variant?.id ?? null,
         sku: variant?.sku ?? product?.sku ?? undefined,
         productName: variant?.productName ?? product?.name ?? undefined,
         productDescription: variant?.productDescription ?? product?.description ?? undefined,

@@ -25,8 +25,11 @@ export enum ProductionStatus {
 export type ProductionOrderItem = {
   itemId?: string;
   finishedItemId: string;
+  finishedItemType?: "PRODUCT" | "VARIANT" | null;
   finishedItem?: {
     type?: string | null;
+    productId?: string | null;
+    variantId?: string | null;
     product?: {
       id: string;
       name?: string | null;

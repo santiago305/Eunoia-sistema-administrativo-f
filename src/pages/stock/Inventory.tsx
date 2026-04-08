@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { getStockMock } from "@/data/stockService";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 
 const statusBadges = [
   { label: "Disponible", value: "78%" },

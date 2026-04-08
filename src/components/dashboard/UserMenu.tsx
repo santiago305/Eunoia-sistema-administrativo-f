@@ -10,7 +10,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { IconLogout, IconUser, IconMonitor, IconCompany } from "./icons";
 import { useSidebarContext } from "./SidebarContext";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import type { User } from "./types";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/utils/getInitials";

@@ -1,4 +1,4 @@
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 
 export const BRAND = "hsl(var(--primary))";
 

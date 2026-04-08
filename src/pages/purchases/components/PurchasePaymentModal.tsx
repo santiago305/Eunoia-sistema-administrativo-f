@@ -55,7 +55,6 @@ export function PurchasePaymentModal({
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
   const pendingAmount = Math.max(0, totalPrice - totalPaid);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodPivot[]>([]);;
-  const [loading, setLoading] = useState(false);
   const { showFlash, clearFlash } = useFlashMessage();
 
 
@@ -78,7 +77,6 @@ export function PurchasePaymentModal({
 
   const loadSupplierMethods = async (id:string) => {
     clearFlash()
-    setLoading(true);
     try {
       const data = await getPaymentMethodsBySupplier(id);
       const normalized = (data ?? []).map((m) => ({
@@ -95,10 +93,8 @@ export function PurchasePaymentModal({
       });
 
       setPaymentMethods(normalized ?? []);
-      setLoading(false);
     } catch {
       showFlash(errorResponse("No se pudieron cargar los metodos de pago."));
-      setLoading(false);
     }
   };
 

@@ -41,7 +41,7 @@ export default function Documents() {
   // PROVISIONAL: documents list derived from ledger while backend is under construction.
   const documents = useMemo(() => {
     const ids = Array.from(new Set(stockMock.ledger.map((l) => l.doc_id)));
-    return ids.map((id, index) => ({
+    return ids.map((_, index) => ({
       id: `DOC-${String(index + 1).padStart(6, "0")}`,
       type: "Movimiento",
       status: index % 2 === 0 ? "Posted" : "Draft",

@@ -207,33 +207,8 @@ export function getProductionColumns({ columnVisibility, nowIso, statusLabels, o
                         triggerIcon={<Menu className="h-4 w-4" />}
                         triggerVariant="ghost"
                         compact
-                        popoverClassName="min-w-52 p-2"
+                        popoverClassName="min-w-35 p-2"
                         itemClassName="justify-start px-3 py-2 text-[11px]"
-                    />}
-                        itemClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-black/70 hover:bg-black/[0.04]"
-                        items={[
-                            order.status === "DRAFT" && {
-                                label: "Procesar",
-                                onClick: () => onStart(order.productionId ?? ""),
-                            },
-                            order.status === "DRAFT" && {
-                                label: "Editar",
-                                onClick: () => onEdit(order.productionId ?? ""),
-                            },
-                            {
-                                label: "Abrir pdf",
-                                onClick: () => onPdf(order.productionId ?? ""),
-                            },
-                            order.status === "DRAFT" && {
-                                label: "Cancelar",
-                                className: "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-rose-700 hover:bg-rose-50",
-                                onClick: () => onCancel(order.productionId ?? ""),
-                            },
-                            (order.status === "IN_PROGRESS" || order.status === "PARTIAL") && {
-                                label: "Ingresar a elmacen",
-                                onClick: () => onClose(order.productionId ?? ""),
-                            },
-                        ].filter(Boolean)}
                     />
                 );
             },

@@ -11,14 +11,16 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 
 export function RecipeFormFields({
-    finishedVariantId,
+    finishedType,
+    finishedItemId,
     units,
     primaVariants,
     recipes,
     loading,
     onCreated,
 }: {
-    finishedVariantId: string;
+    finishedType: "PRODUCT" | "VARIANT";
+    finishedItemId: string;
     units?: ListUnitResponse;
     primaVariants: PrimaVariant[];
     recipes: ProductRecipe[];
@@ -122,9 +124,10 @@ export function RecipeFormFields({
     );
 
     const handleCreate = async () => {
-        if (!finishedVariantId || !primaVariantId || !quantity) return;
+        if (!finishedItemId || !primaVariantId || !quantity) return;
         await createProductRecipe({
-            finishedVariantId,
+            finishedType,
+            finishedItemId,
             primaVariantId,
             quantity: Number(quantity),
         });
@@ -170,13 +173,13 @@ export function RecipeFormFields({
                     className="h-10"
                     style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
                     onClick={() => void handleCreate()}
-                    disabled={!finishedVariantId || !primaVariantId || !quantity}
+                    disabled={!finishedItemId || !primaVariantId || !quantity}
                 />
             </div>
 
             <div className="rounded-2xl border border-black/10 overflow-hidden">
                 <DataTable
-                    tableId={`recipe-list-${finishedVariantId}`}
+                    tableId={`recipe-list-${finishedType}-${finishedItemId}`}
                     data={recipeRows}
                     columns={columns}
                     rowKey="id"

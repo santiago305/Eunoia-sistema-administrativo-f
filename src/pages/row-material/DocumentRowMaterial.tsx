@@ -17,7 +17,7 @@ import { listActive } from "@/services/warehouseServices";
 import { getDocuments } from "@/services/documentService";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import { buildMonthStartIso, todayIso, toDateInputValue, tryShowPicker } from "@/utils/functionPurchases";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { DocumentInventory } from "@/pages/catalog/types/documentInventory";
 import { DocStatus, DocType, type Warehouse } from "@/pages/warehouse/types/warehouse";

@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { PrivateRouteProps } from "@/Router/guards/typeGuards";
+import { PrivateRouteProps } from "@/router/guards/typeGuards";
 import { RoutesPaths } from "../config/routesPaths";
 import ErrorPage from "@/pages/Error404";
 

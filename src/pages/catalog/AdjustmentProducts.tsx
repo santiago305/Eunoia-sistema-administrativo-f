@@ -18,7 +18,7 @@ import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import type { AdjustmentItem, AdjustmentItemRow, CreateAdjustment } from "@/pages/catalog/types/adjustment";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import { AdjustmentItemModal } from "@/pages/catalog/components/AdjustmentItemModal";
 import { AdjustmentResultModal } from "@/pages/catalog/components/AdjustmentResultModal";

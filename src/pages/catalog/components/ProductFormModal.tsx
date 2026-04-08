@@ -245,7 +245,8 @@ export function ProductFormModal({
 
     setLoadingRecipes(true);
     try {
-      const res = await listProductRecipes({ variantId });
+      const finishedType = variantId === workingProductId ? "PRODUCT" : "VARIANT";
+      const res = await listProductRecipes({ finishedType, finishedItemId: variantId });
       setRecipes(res ?? []);
     } catch {
       setRecipes([]);
@@ -716,14 +717,20 @@ export function ProductFormModal({
 
                   <hr className="my-6" />
 
-                   {!selectedVariantId ? (
+                  {!selectedVariantId ? (
                   <div className="rounded-2xl border border-black/10 bg-white px-4 py-8 text-sm text-black/60">
                     Primero crea o selecciona un producto o variante para gestionar recetas.
                   </div>
                    ) : (
+                    (() => {
+                      const selectedRecipeType =
+                        selectedVariantId === workingProductId ? "PRODUCT" : "VARIANT";
+
+                      return (
 
                       <RecipeFormFields
-                        finishedVariantId={selectedVariantId}
+                        finishedType={selectedRecipeType}
+                        finishedItemId={selectedVariantId}
                         units={effectiveUnits}
                         primaVariants={primaVariants}
                         recipes={recipes}
@@ -732,6 +739,8 @@ export function ProductFormModal({
                           await loadRecipes(selectedVariantId);
                         }}
                       />
+                      );
+                    })()
                   )}
                 </div>
               </div>

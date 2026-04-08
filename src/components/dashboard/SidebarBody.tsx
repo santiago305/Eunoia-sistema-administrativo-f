@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { getSidebarItems } from "@/config/sidebarConfig";
 import SidebarItemComponent from "./SidebarItem";
-import { getRouteMetaByUrl } from "@/Router/config/routesConfig";
+import { getRouteMetaByUrl } from "@/router/config/routesConfig";
 import { useAuth } from "@/hooks/useAuth";
 import type { SidebarItem } from "./types";
 

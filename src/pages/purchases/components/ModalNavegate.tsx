@@ -22,7 +22,6 @@ export function ModalNavegate({
   onGoToList,
   poId,
   primaryColor,
-  isEdit,
 }: ModalNavegateProps) {
   const accent = primaryColor ?? DEFAULT_PRIMARY;
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);

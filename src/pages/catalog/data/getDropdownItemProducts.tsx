@@ -1,23 +1,16 @@
 import type { ActionItem } from "@/components/ActionsPopover";
+import type { Product } from "@/pages/catalog/types/product";
 import { Pencil, Power } from "lucide-react";
-
-type ProductLite = {
-  id: string;
-  productId?: string;
-  sourceType?: "PRODUCT" | "VARIANT";
-  sku?: string | null;
-  isActive: boolean;
-};
 
 type Handlers = {
   openEquivalences?: (productId: string) => void | Promise<void>;
   openRecipes?: (productId: string, sku: string) => void;
   openVariantsModal?: (productId: string) => void | Promise<void>;
-  openEdit?: (product: ProductLite) => void | Promise<void>;
+  openEdit?: (product: Product) => void | Promise<void>;
   setDeletingProductId?: (productId: string) => void;
 };
 
-export function getDropdownItemProducts(product: ProductLite, handlers: Handlers): ActionItem[] {
+export function getDropdownItemProducts(product: Product, handlers: Handlers): ActionItem[] {
   return [
     {
       id: "edit",

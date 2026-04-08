@@ -19,7 +19,7 @@ import { OutOrderItemModal } from "@/pages/out-orders/components/OutOrderItemMod
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import type { AddOutOrderItemDto, CreateOutOrder } from "@/pages/out-orders/type/outOrder";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 
 const PRIMARY = "hsl(var(--primary))";

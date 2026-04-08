@@ -36,7 +36,7 @@ const resolveDefaultLocation = (warehouseId: string) => {
   return stockState.locations.find((l) => l.warehouse_id === warehouseId)?.location_id ?? null;
 };
 
-const ensureInventoryRow = (warehouseId: string, variantId: string, locationId: string | null) => {
+const ensureInventoryRow = (warehouseId: string, variantId: string, locationId: string) => {
   let row = stockState.inventory.find(
     (item) => item.warehouse_id === warehouseId && item.variant_id === variantId && item.location_id === locationId
   );
@@ -74,6 +74,7 @@ export const applyAdjustment = (input: AdjustmentInput) => {
   if (!warehouseId || !variantId || !input.quantity) return false;
 
   const locationId = resolveDefaultLocation(warehouseId);
+  if (!locationId) return false;
   const row = ensureInventoryRow(warehouseId, variantId, locationId);
   const direction = input.quantity >= 0 ? "IN" : "OUT";
   const qty = Math.abs(input.quantity);
@@ -105,6 +106,7 @@ export const applyTransfer = (input: TransferInput) => {
   const qty = Math.abs(input.quantity);
   const fromLocationId = resolveDefaultLocation(fromWarehouseId);
   const toLocationId = resolveDefaultLocation(toWarehouseId);
+  if (!fromLocationId || !toLocationId) return false;
   const fromRow = ensureInventoryRow(fromWarehouseId, variantId, fromLocationId);
   const toRow = ensureInventoryRow(toWarehouseId, variantId, toLocationId);
 

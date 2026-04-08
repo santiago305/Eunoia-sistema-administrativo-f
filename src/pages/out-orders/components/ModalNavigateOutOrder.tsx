@@ -17,7 +17,6 @@ const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
 export function ModalNavigateOutOrder({
   open,
-  onClose,
   onNewOutOrder,
   onGoToList,
   outOrderId,
@@ -96,7 +95,7 @@ export function ModalNavigateOutOrder({
               className="flex-1 bg-gray-200"
               onClick={onNewOutOrder}
             >
-              Ir a listado de compras
+              Ingresar nueva salida
             </SystemButton>
 
             <SystemButton
@@ -108,6 +107,7 @@ export function ModalNavigateOutOrder({
               }}
               onClick={onGoToList}
             >
+              Ir a listado de salidas
             </SystemButton>
           </div>
         </div>

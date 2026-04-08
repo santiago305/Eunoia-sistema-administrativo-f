@@ -591,7 +591,7 @@ export default function Purchases() {
                     compact
                     showLabels
                     triggerIcon={<Menu className="h-4 w-4" />}
-                    popoverClassName="min-w-52"
+                    popoverClassName="min-w-35"
                     popoverBodyClassName="p-2"
                     renderAction={(action, helpers) => (
                         <button

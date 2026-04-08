@@ -16,7 +16,7 @@ import {
   getSecurityHistoryByIp,
   removeSecurityBlacklistIp,
 } from "@/services/securityService";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 
 import type {
   SecurityHistoryByIpResponse,

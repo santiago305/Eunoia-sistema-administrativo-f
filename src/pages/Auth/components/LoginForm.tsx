@@ -9,7 +9,7 @@ import { LoginCredentials } from "@/pages/Auth/types/auth";
 import { LoginSchema } from "@/schemas/authSchemas";
 import { useAuth } from "@/hooks/useAuth";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import { errorResponse, successResponse } from "@/common/utils/response";
 
 function LoginForm({ className, ...props }: React.ComponentProps<"div">) {

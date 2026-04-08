@@ -3,7 +3,7 @@ import { RoleSelect } from "./selectRoles";
 import { UserRoundPlus, UserRoundCheck, UserRoundX } from "lucide-react";
 import type { NavbarProps } from "../types/components.types";
 
-export default function Navbar({ query, setQuery, role, setRole, page, setPage, check, setCheck, toggleActive, setOpenModal, loading, error }: NavbarProps) {
+export default function Navbar({ query, setQuery, role, setRole, setPage, check, setCheck, toggleActive, setOpenModal, loading, error }: NavbarProps) {
     return (
         <div>
             <div className="md:flex block gap-2 mt-1 shrink-0 mb-1">

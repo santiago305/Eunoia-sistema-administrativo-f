@@ -1,17 +1,5 @@
 ﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import {
-  Factory,
-  Menu,
-  Plus,
-  Timer,
-  OctagonAlert,
-  FileText,
-  Pencil,
-  Play,
-  Ban,
-  PackageCheck,
-  Filter,
-} from "lucide-react";
+import { Menu, Plus, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Filter } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -38,7 +26,7 @@ import {
 } from "@/utils/functionPurchases";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
@@ -397,7 +385,7 @@ export default function Production() {
                 triggerIcon={<Menu className="h-4 w-4" />}
                 compact
                 showLabels
-                popoverClassName="min-w-52"
+                popoverClassName="min-w-35"
                 popoverBodyClassName="p-2"
                 renderAction={(action, helpers) => (
                   <button

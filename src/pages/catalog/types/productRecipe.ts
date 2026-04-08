@@ -9,7 +9,8 @@ export type CreateProductRecipeDto = z.infer<typeof createProductRecipeSchema>;
 
 export type ProductRecipe = {
   id: string;
-  finishedVariantId: string;
+  finishedType: "PRODUCT" | "VARIANT";
+  finishedItemId: string;
   primaVariantId: string;
   quantity: number;
   waste?: number | null;

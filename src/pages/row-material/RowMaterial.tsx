@@ -47,7 +47,7 @@ export default function RowMaterial() {
         [page, limit],
     );
 
-    const { items: products, total, page: apiPage, limit: apiLimit, loading, error, refresh, setActive } = useProducts(queryParams, { flat: true });
+    const { items: products, total, page: apiPage, limit: apiLimit, loading, refresh, setActive } = useProducts(queryParams, { flat: true });
 
     const startCreate = () => {
         setEditingProductId(null);
@@ -58,8 +58,9 @@ export default function RowMaterial() {
 
     const openEdit = useCallback((product: Product) => {
         setOpenCreate(false);
-        if (product.sourceType === "VARIANT" && product.productId) {
-            setEditingProductId(product.productId);
+        const parentId = product.parentProductId ?? product.productId ?? null;
+        if (product.sourceType === "VARIANT" && parentId) {
+            setEditingProductId(parentId);
             setEditingVariantId(product.id);
             setEditingWorkspaceTab("variantCreated");
             return;
@@ -195,7 +196,7 @@ export default function RowMaterial() {
                             compact
                             showLabels
                             triggerIcon={<Menu className="h-4 w-4" />}
-                            popoverClassName="min-w-52"
+                            popoverClassName="min-w-35"
                             popoverBodyClassName="p-2"
                             renderAction={(action, helpers) => (
                                 <button
@@ -228,7 +229,7 @@ export default function RowMaterial() {
             description: string | null;
             isActive: boolean;
             createdAt: string;
-            updatedAt: string;
+            updatedAt: string | null;
         }>,
     ) => {
         const header = ["id", "name", "description", "isActive", "createdAt", "updatedAt"];
@@ -236,7 +237,8 @@ export default function RowMaterial() {
             if (value.includes('"') || value.includes(",") || value.includes("\n")) return `"${value.replace(/"/g, '""')}"`;
             return value;
         };
-        const formatDate = (value: string) => {
+        const formatDate = (value: string | null) => {
+            if (!value) return "-";
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return value;
             return date.toLocaleString("es-PE", {
@@ -260,7 +262,7 @@ export default function RowMaterial() {
         setExporting(true);
         try {
             const pageSize = 100;
-            const baseParams = { isActive: queryParams.isActive, q: queryParams.q, type: queryParams.type };
+            const baseParams = { type: queryParams.type };
             const first = await listProductsFlat({ page: 1, limit: pageSize, ...baseParams });
             const allItems = [...(first.items ?? [])];
             const pages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));

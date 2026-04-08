@@ -17,7 +17,7 @@ import { getStock } from "@/services/inventoryService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, CreateTransfer, Stock, TransferItem, TransferItemRow } from "../catalog/types/transfer";
 import { Headed } from "@/components/Headed";
