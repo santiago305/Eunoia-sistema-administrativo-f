@@ -137,6 +137,7 @@ export type SalesTotalsQuery = {
   locationId?: string;
   from?: string;
   to?: string;
+  month?: string;
 };
 
 export type SalesDailyTotal = {
@@ -163,6 +164,21 @@ export type SalesWeekdayTotal = {
 export type SalesMonthlyTotal = {
   month: string;
   salida: number;
+};
+
+export type MonthlyProjectionMonth = {
+  month: string;
+  salida: number;
+};
+
+export type MonthlyProjectionOutput = {
+  months: MonthlyProjectionMonth[];
+  xo: MonthlyProjectionMonth | null;
+  xu: MonthlyProjectionMonth | null;
+  salesActual: MonthlyProjectionMonth | null;
+  growthRate: number;
+  projectedNextMonth: number;
+  monthsCount: number;
 };
 
 export type DemandSummaryOutput = {

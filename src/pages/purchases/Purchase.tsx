@@ -1,4 +1,3 @@
-// PurchaseCreateLocal.tsx
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Newspaper, Boxes, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/table/DataTable";

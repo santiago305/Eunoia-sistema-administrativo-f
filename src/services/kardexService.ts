@@ -4,6 +4,7 @@ import type { KardexDailyTotal, KardexListQuery, KardexListResponse, KardexTotal
 import type {
   DemandSummaryOutput,
   DemandSummaryQuery,
+  MonthlyProjectionOutput,
   SalesDailyTotal,
   SalesMonthlyTotal,
   SalesTotalsQuery,
@@ -37,5 +38,12 @@ export const getSalesMonthlyTotals = async (params: SalesTotalsQuery): Promise<S
 
 export const getDemandSummary = async (params: DemandSummaryQuery): Promise<DemandSummaryOutput> => {
   const response = await axiosInstance.get(API_KARDEX_GROUP.demand, { params });
+  return response.data;
+};
+
+export const getMonthlyProjection = async (
+  params: SalesTotalsQuery & { months?: number },
+): Promise<MonthlyProjectionOutput> => {
+  const response = await axiosInstance.get(API_KARDEX_GROUP.monthlyProjection, { params });
   return response.data;
 };
