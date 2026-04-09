@@ -30,12 +30,36 @@ export const updateProductActive = async (
 };
 
 export const listProducts = async (params: ListProductsQuery): Promise<ProductListResponse> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.list, { params });
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.base, { params });
   return response.data;
 };
 
 export const listProductsFlat = async (params: ListProductsQuery): Promise<ProductListResponse> => {
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.flat, { params });
+  return response.data;
+};
+
+export const listCatalogProducts = async (
+  params: Omit<ListProductsQuery, "type">,
+): Promise<ProductListResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.items, {
+    params: {
+      ...params,
+      type: "PRODUCT",
+    },
+  });
+  return response.data;
+};
+
+export const listCatalogMaterials = async (
+  params: Omit<ListProductsQuery, "type">,
+): Promise<ProductListResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.items, {
+    params: {
+      ...params,
+      type: "MATERIAL",
+    },
+  });
   return response.data;
 };
 

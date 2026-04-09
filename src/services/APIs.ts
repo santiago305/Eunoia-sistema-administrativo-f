@@ -75,8 +75,8 @@ export const API_SECURITY_GROUP = {
 
 export const API_PRODUCTS_GROUP = {
   base: "/catalog/products",
+  items: "/products",
   create: "/catalog/products",
-  list: "/catalog/products",
   flat: "/catalog/products/flat",
   productFinisheds: "/catalog/products/variants/finished",
   productFinishedsActive: "/catalog/products/finished/active",

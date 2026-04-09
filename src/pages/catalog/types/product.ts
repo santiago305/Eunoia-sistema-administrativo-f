@@ -24,9 +24,12 @@ export type Product = {
   isOperationalItem?: boolean;
   hasVariants?: boolean;
   variantsCount?: number;
-  type: ProductType;
+  type: ProductType | string;
   name: string;
   description: string | null;
+  brand?: string | null;
+  skuCount?: number | null;
+  inventoryTotal?: number | null;
   isActive: boolean;
   barcode?: string | null;
   sku?: string | null;

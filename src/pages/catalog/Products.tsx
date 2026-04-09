@@ -1,4 +1,6 @@
-import { useCallback,  useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useMemo, useState, type MouseEvent } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Download, Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusPill } from "@/components/StatusTag";
 import { SystemButton } from "@/components/SystemButton";
@@ -7,10 +9,7 @@ import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useProducts } from "@/hooks/useProducts";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listProductsFlat } from "@/services/productService";
-import { money } from "@/utils/functionPurchases";
-import {  motion, useReducedMotion } from "framer-motion";
-import { Download, Menu, Plus } from "lucide-react";
+import { listCatalogProducts } from "@/services/productService";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { Product } from "@/pages/catalog/types/product";
 import { Headed } from "@/components/Headed";
@@ -21,7 +20,8 @@ import { Modal } from "@/components/modales/Modal";
 import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
-const PRODUCT_TYPE = ProductTypes.FINISHED;
+const PRODUCT_TYPE = ProductTypes.PRODUCT;
+
 export default function CatalogProducts() {
     const shouldReduceMotion = useReducedMotion();
     const { showFlash, clearFlash } = useFlashMessage();
@@ -31,23 +31,29 @@ export default function CatalogProducts() {
     const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
     const [editingWorkspaceTab, setEditingWorkspaceTab] = useState<"details" | "variantCreated">("details");
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
-
     const [page, setPage] = useState(1);
-    const limit = 10;
-
     const [exporting, setExporting] = useState(false);
 
+    const limit = 30;
 
     const queryParams = useMemo(
         () => ({
             page,
             limit,
-            type: PRODUCT_TYPE,
         }),
-        [page, limit],
+        [page],
     );
 
-    const { items: products, total, page: apiPage, limit: apiLimit, loading, error, refresh, setActive } = useProducts(queryParams, { flat: true });
+    const {
+        items: products,
+        total,
+        page: apiPage,
+        limit: apiLimit,
+        loading,
+        error,
+        refresh,
+        setActive,
+    } = useProducts(queryParams, { mode: "product" });
 
     const startCreate = () => {
         setEditingProductId(null);
@@ -74,77 +80,34 @@ export default function CatalogProducts() {
     const columns = useMemo<DataTableColumn<Product>[]>(
         () => [
             {
-                id: "sku",
-                header: "ID",
-                cell: (row) => <span className="font-medium">{row.customSku || "-"}</span>,
-            },
-            {
                 id: "name",
-                header: "Producto",
-                cell: (row) => (
-                    <div className="min-w-0">
-                        <p className="font-medium leading-5">{row.name}
-                         {row.sku ? ` - ${row.sku}` : ""}</p>
-                    </div>
-                ),
+                header: "Nombre",
+                cell: (row) => <span className="font-medium">{row.name}</span>,
             },
             {
                 id: "description",
-                header: "Descripción",
+                header: "Descripcion",
                 cell: (row) => <p className="line-clamp-2 text-black/70">{row.description || "-"}</p>,
-                visible: false,
             },
             {
-                id: "unit",
-                header: "Unidad",
-                cell: (row) => {
-                    if (!row.baseUnitName) return <span className="text-black/70">-</span>;
-                    return (
-                        <span className="line-clamp-2 text-black/70">
-                            {row.baseUnitName} {row.baseUnitCode ? `(${row.baseUnitCode})` : ""}
-                        </span>
-                    );
-                },
-                visible: false,
+                id: "type",
+                header: "Tipo",
+                cell: (row) => <span className="text-black/70">{row.type || "-"}</span>,
             },
             {
-                id: "presentation",
-                header: "Presentación",
-                cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.presentation || "-"}</span>,
+                id: "brand",
+                header: "Marca",
+                cell: (row) => <span className="text-black/70">{row.brand || "-"}</span>,
             },
             {
-                id: "variant",
-                header: "Variante",
-                cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.variant || "-"}</span>,
+                id: "skuCount",
+                header: "Variantes",
+                cell: (row) => <span className="text-black/70">{row.skuCount ?? 0}</span>,
             },
             {
-                id: "color",
-                header: "Color",
-                cell: (row) => <span className="line-clamp-2 text-black/70">{row.attributes?.color || "-"}</span>,
-            },
-            {
-                id: "price",
-                header: "Precio",
-                cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{money(Number(row.price), "PEN")}</span>,
-            },
-            {
-                id: "cost",
-                header: "Costo",
-                cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{money(Number(row.cost), "PEN")}</span>,
-            },
-            {
-                id: "minStock",
-                header: "Stock Mínimo",
-                cell: (row) => <span className="line-clamp-2 text-black/70 tabular-nums">{row.minStock || "0"}</span>,
-            },
-            {
-                id: "sourceType",
-                header: "Origen",
-                cell: (row) => (
-                    <span className="line-clamp-2 text-black/70">
-                        {row.sourceType === "VARIANT" ? "Variante" : "Producto"}
-                    </span>
-                ),
+                id: "inventoryTotal",
+                header: "Stock",
+                cell: (row) => <span className="text-black/70">{row.inventoryTotal ?? 0}</span>,
             },
             {
                 id: "status",
@@ -188,7 +151,7 @@ export default function CatalogProducts() {
                 ),
             },
         ],
-        [openEdit, setDeletingProductId],
+        [openEdit],
     );
 
     const confirmDelete = async () => {
@@ -209,12 +172,14 @@ export default function CatalogProducts() {
             id: string;
             name: string;
             description: string | null;
+            brand?: string | null;
+            type: string;
             isActive: boolean;
             createdAt: string;
             updatedAt: string | null;
         }>,
     ) => {
-        const header = ["id", "name", "description", "isActive", "createdAt", "updatedAt"];
+        const header = ["id", "name", "description", "type", "brand", "isActive", "createdAt", "updatedAt"];
         const escape = (value: string) => {
             if (value.includes('"') || value.includes(",") || value.includes("\n")) return `"${value.replace(/"/g, '""')}"`;
             return value;
@@ -234,7 +199,16 @@ export default function CatalogProducts() {
         };
         const lines = rows.map((row, index) => {
             const csvId = String(index + 1).padStart(5, "0");
-            return [csvId, row.name, row.description ?? "", String(row.isActive), formatDate(row.createdAt), formatDate(row.updatedAt)].map((v) => escape(String(v))).join(",");
+            return [
+                csvId,
+                row.name,
+                row.description ?? "",
+                row.type ?? "",
+                row.brand ?? "",
+                String(row.isActive),
+                formatDate(row.createdAt),
+                formatDate(row.updatedAt),
+            ].map((value) => escape(String(value))).join(",");
         });
         return [header.join(","), ...lines].join("\n");
     };
@@ -244,19 +218,17 @@ export default function CatalogProducts() {
         setExporting(true);
         try {
             const pageSize = 100;
-            const baseParams = { type: queryParams.type };
-            const first = await listProductsFlat({ page: 1, limit: pageSize, ...baseParams });
+            const first = await listCatalogProducts({ page: 1, limit: pageSize });
             const allItems = [...(first.items ?? [])];
             const pages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));
 
-            for (let p = 2; p <= pages; p += 1) {
-                const res = await listProductsFlat({ page: p, limit: pageSize, ...baseParams });
-                if (res.items?.length) allItems.push(...res.items);
+            for (let currentPage = 2; currentPage <= pages; currentPage += 1) {
+                const response = await listCatalogProducts({ page: currentPage, limit: pageSize });
+                if (response.items?.length) allItems.push(...response.items);
             }
 
-            const sorted = [...allItems].filter((row) => row.type === PRODUCT_TYPE).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            const sorted = [...allItems].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
             const csv = `\uFEFF${buildCsv(sorted)}`;
-
             const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -311,30 +283,29 @@ export default function CatalogProducts() {
                     </div>
                 </motion.div>
 
-               
                 <DataTable
                     tableId="catalog-products"
                     data={products}
                     columns={columns}
                     rowKey="id"
                     loading={loading}
-                    emptyMessage="No hay productos con los filtros actuales."
+                    emptyMessage="No hay productos disponibles."
                     showSearch
-                    searchPlaceholder="Buscar en la tabla..."
+                    searchPlaceholder="Buscar productos..."
                     animated={!shouldReduceMotion}
-                    tableClassName="table-fixed text-[11px]"
-                    selectableColumns
+                    tableClassName="text-[11px]"
                     pagination={{
                         page: apiPage ?? page,
                         limit: apiLimit ?? limit,
-                        total
+                        total,
                     }}
+                    selectableColumns
                     onPageChange={(nextPage) => setPage(nextPage)}
                 />
 
                 {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
-
             </div>
+
             <ProductFormModal
                 open={openCreate}
                 mode="create"
@@ -366,8 +337,12 @@ export default function CatalogProducts() {
                 }}
             />
 
-            <Modal open={deletingProductId ? true : false}
-            title="Confirmar acción" onClose={() => setDeletingProductId(null)} className="max-w-md">
+            <Modal
+                open={deletingProductId ? true : false}
+                title="Confirmar accion"
+                onClose={() => setDeletingProductId(null)}
+                className="max-w-md"
+            >
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
                     animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CreateProductDto, ListProductsQuery, Product, UpdateProductDto } from "@/pages/catalog/types/product";
 import {
   createProduct,
+  listCatalogMaterials,
+  listCatalogProducts,
   listProductsFlat,
   listProducts,
   updateProduct,
@@ -33,6 +35,7 @@ const buildQuery = (params: ListProductsQuery & { name?: string }) => {
 
 type UseProductsOptions = {
   flat?: boolean;
+  mode?: "default" | "product" | "material";
 };
 
 export function useProducts(
@@ -48,6 +51,7 @@ export function useProducts(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const useFlatList = options?.flat ?? false;
+  const mode = options?.mode ?? "default";
 
   const query = useMemo(() => buildQuery(params), [params]);
 
@@ -55,7 +59,14 @@ export function useProducts(
     setLoading(true);
     setError(null);
     try {
-      const res = useFlatList ? await listProductsFlat(query) : await listProducts(query);
+      const res =
+        mode === "product"
+          ? await listCatalogProducts(query)
+          : mode === "material"
+            ? await listCatalogMaterials(query)
+            : useFlatList
+              ? await listProductsFlat(query)
+              : await listProducts(query);
       setState({
         items: res.items ?? [],
         total: res.total ?? 0,
@@ -68,7 +79,7 @@ export function useProducts(
     } finally {
       setLoading(false);
     }
-  }, [query, useFlatList]);
+  }, [mode, query, useFlatList]);
 
   useEffect(() => {
     void fetchProducts();
@@ -81,9 +92,14 @@ export function useProducts(
       setLoading(true);
       setError(null);
       try {
-        const res = useFlatList
-          ? await listProductsFlat({ ...query, page: 1 })
-          : await listProducts({ ...query, page: 1 });
+        const res =
+          mode === "product"
+            ? await listCatalogProducts({ ...query, page: 1 })
+            : mode === "material"
+              ? await listCatalogMaterials({ ...query, page: 1 })
+              : useFlatList
+                ? await listProductsFlat({ ...query, page: 1 })
+                : await listProducts({ ...query, page: 1 });
         setState({
           items: res.items ?? [],
           total: res.total ?? 0,
@@ -97,7 +113,7 @@ export function useProducts(
         setLoading(false);
       }
     },
-    [query, useFlatList]
+    [mode, query, useFlatList]
   );
 
   const update = useCallback(
