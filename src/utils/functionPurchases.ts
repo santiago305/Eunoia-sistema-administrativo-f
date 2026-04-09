@@ -1,4 +1,3 @@
-// @/utils/functionPurchases.ts
 import Big from "big.js";
 import { PurchaseOrderItem, CreditQuota, PurchaseOrder } from "@/pages/purchases/types/purchase";
 import {

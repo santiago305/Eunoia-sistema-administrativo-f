@@ -214,6 +214,7 @@ export const API_KARDEX_GROUP = {
   totalsWeekday: "/inventory/ledger/totals/weekday",
   totalsMonthly: "/inventory/ledger/totals/monthly",
   demand: "/inventory/ledger/analytics/demand",
+  monthlyProjection: "/inventory/ledger/analytics/monthly-projection",
 };
 
 export const API_INVENTORY_GROUP = {
