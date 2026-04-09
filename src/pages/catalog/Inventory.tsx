@@ -1,36 +1,38 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import * as echarts from "echarts";
+import Big from "big.js";
 import { motion, useReducedMotion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { Headed } from "@/components/Headed";
+import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
-import { SystemButton } from "@/components/SystemButton";
 import { ActionsPopover, type ActionItem } from "@/components/ActionsPopover";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { FloatingInput } from "@/components/FloatingInput";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useInventoryAnalytics } from "@/hooks/useInventoryAnalytics";
 import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
-import { getAvailability, listInventory } from "@/services/inventoryService";
+import { listInventory } from "@/services/inventoryService";
 import { RoutesPaths } from "@/Router/config/routesPaths";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import type { InventoryRow } from "@/pages/catalog/types/inventory";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { Boxes, FileText, Filter, LineChart, Menu, Wrench, ArrowLeftRight } from "lucide-react";
-import { buildMonthEndIso, buildMonthStartIso, toDateInputValue, tryShowPicker } from "@/utils/functionPurchases";
+import { normalizeQuantity } from "@/utils/functionPurchases";
 import { aggregateByWarehouse, mapSnapshotToRow, useEChart } from "./data/inventoryUtils";
-
 
 const DEFAULT_LIMIT = 10;
 
-
+const formatIsoDate = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
 
 export default function CatalogInventory() {
   const shouldReduceMotion = useReducedMotion();
@@ -66,15 +68,15 @@ export default function CatalogInventory() {
   const [tableSearch, setTableSearch] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [fromDate, setFromDate] = useState(buildMonthStartIso());
-  const [toDate, setToDate] = useState(buildMonthEndIso());
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [page, setPage] = useState(1);
-  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [inventoryRows, setInventoryRows] = useState<InventoryRow[]>([]);
   const [inventoryTotal, setInventoryTotal] = useState(0);
-  const [availabilityRows, setAvailabilityRows] = useState<InventoryRow[]>([]);
   const [productResults, setProductResults] = useState<FinishedProducts[]>([]);
 
   const summary = useMemo(() => {
@@ -88,23 +90,58 @@ export default function CatalogInventory() {
     };
   }, [inventoryRows, inventoryTotal]);
 
+  const monthRange = useMemo(() => {
+    const match = selectedMonth.match(/^(\d{4})-(\d{2})$/);
+    if (!match) {
+      return { from: "", to: "" };
+    }
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    if (!Number.isFinite(year) || !Number.isFinite(monthIndex)) {
+      return { from: "", to: "" };
+    }
+    const start = new Date(year, monthIndex, 1);
+    const endOfMonth = new Date(year, monthIndex + 1, 0);
+    const today = new Date();
+    const end =
+      year === today.getFullYear() && monthIndex === today.getMonth()
+        ? today
+        : endOfMonth;
+    return {
+      from: formatIsoDate(start),
+      to: formatIsoDate(end),
+    };
+  }, [selectedMonth]);
+
+  const currentMonthRange = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return {
+      from: formatIsoDate(start),
+      to: formatIsoDate(now),
+    };
+  }, []);
+
   const activeItemId = selectedItemId ?? "";
   const isActiveRow = (row: InventoryRow) =>
     selectedItemId === row.stockItemId && selectedWarehouseId === row.warehouseId;
 
   const warehouseFilter = warehouseId === "all" ? undefined : warehouseId || undefined;
   const analyticsEnabled = true;
+  const demandEnabled = Boolean(selectedItemId);
   const {
     dailySales,
-    demand,
+    monthlyProjection,
     loading: analyticsLoading,
     error: analyticsError,
   } = useInventoryAnalytics({
     warehouseId: warehouseFilter,
     stockItemId: activeItemId || undefined,
-    from: fromDate || undefined,
-    to: toDate || undefined,
+    from: currentMonthRange.from || undefined,
+    to: currentMonthRange.to || undefined,
+    month: selectedMonth || undefined,
     enabled: analyticsEnabled,
+    demandEnabled,
   });
 
 
@@ -134,11 +171,9 @@ export default function CatalogInventory() {
 
   const availabilityBase = useMemo(() => {
     if (!selectedItemId) return [];
-    const rows = availabilityRows.length
-      ? availabilityRows
-      : inventoryRows.filter((row) => row.stockItemId === selectedItemId);
+    const rows = inventoryRows.filter((row) => row.stockItemId === selectedItemId);
     return aggregateByWarehouse(rows);
-  }, [availabilityRows, inventoryRows, selectedItemId]);
+  }, [inventoryRows, selectedItemId]);
 
   const availabilityChart = useMemo<echarts.EChartsOption>(() => {
     const availabilityMap = new Map<string, number>();
@@ -255,28 +290,160 @@ export default function CatalogInventory() {
 
   const refWeekly = useEChart(weeklyChart);
 
-  const coverageText =
-    demand?.coverageDays === null || demand?.coverageDays === undefined
-      ? "N/A"
-      : demand.coverageDays.toFixed(1);
-  const rangeDays = useMemo(() => {
-    const parseDateOnly = (value?: string | null) => {
-      if (!value) return null;
-      const match = value.match(/^\d{4}-\d{2}-\d{2}/);
-      if (!match) return null;
-      const date = new Date(`${match[0]}T00:00:00`);
-      if (Number.isNaN(date.getTime())) return null;
-      return date;
-    };
+  const projectionMonths = monthlyProjection?.months ?? [];
+  const projectedNextMonth = monthlyProjection?.projectedNextMonth ?? 0;
+  const salesActual = monthlyProjection?.salesActual ?? null;
+  const growthRate = monthlyProjection?.growthRate ?? 0;
+  const growthRateText = normalizeQuantity(growthRate)
 
-    const start = parseDateOnly(fromDate);
-    const end = parseDateOnly(toDate);
-    if (!start || !end) return 0;
-    return Math.max(
-      0,
-      Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1,
-    );
-  }, [fromDate, toDate]);
+  const projectedMonthKey = useMemo(() => {
+    const lastKey = projectionMonths[projectionMonths.length - 1]?.month;
+    if (!lastKey) return "";
+    const match = lastKey.match(/^(\d{4})-(\d{2})$/);
+    if (!match) return "";
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    return `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+  }, [projectionMonths]);
+
+  const projectedDaysInMonth = useMemo(() => {
+    if (!projectedMonthKey) return 0;
+    const match = projectedMonthKey.match(/^(\d{4})-(\d{2})$/);
+    if (!match) return 0;
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    if (!Number.isFinite(year) || !Number.isFinite(monthIndex)) return 0;
+    return new Date(year, monthIndex + 1, 0).getDate();
+  }, [projectedMonthKey]);
+  const projectedAvgDaily = useMemo(() => {
+    if (!projectedDaysInMonth || !Number.isFinite(projectedNextMonth)) return 0;
+    try {
+      const value = new Big(projectedNextMonth).div(projectedDaysInMonth);
+      return normalizeQuantity(value.toString());
+    } catch {
+      return 0;
+    }
+  }, [projectedNextMonth, projectedDaysInMonth]);
+
+  const availableStock = useMemo(() => {
+    if (!selectedItemId) return 0;
+    if (selectedWarehouseId) {
+      const row =
+        availabilityBase.find((item) => item.warehouseId === selectedWarehouseId) ??
+        inventoryRows.find(
+          (item) =>
+            item.stockItemId === selectedItemId &&
+            item.warehouseId === selectedWarehouseId,
+        );
+      return row?.available ?? 0;
+    }
+    if (availabilityBase.length) {
+      return availabilityBase.reduce((sum, item) => sum + (item.available ?? 0), 0);
+    }
+    return inventoryRows
+      .filter((item) => item.stockItemId === selectedItemId)
+      .reduce((sum, item) => sum + (item.available ?? 0), 0);
+  }, [selectedItemId, selectedWarehouseId, availabilityBase, inventoryRows]);
+
+  const monthlyProjectionChart = useMemo<echarts.EChartsOption>(() => {
+    const labels = projectionMonths.map((entry) => entry.month);
+    const values = projectionMonths.map((entry) => entry.salida ?? 0);
+    const lastKey = labels[labels.length - 1];
+    let projectedLabel = "";
+    if (lastKey) {
+      const match = lastKey.match(/^(\d{4})-(\d{2})$/);
+      if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const nextMonth = month === 12 ? 1 : month + 1;
+        const nextYear = month === 12 ? year + 1 : year;
+        projectedLabel = `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+      }
+    }
+    const axisLabels = projectedLabel ? [...labels, projectedLabel] : labels;
+    const actualSeries = projectedLabel ? [...values, null] : values;
+    const projectedValue = normalizeQuantity(projectedNextMonth);
+    const projectedSeries =
+      projectedLabel && values.length
+        ? axisLabels.map((_, index) => {
+            if (index === axisLabels.length - 2) return values[values.length - 1] ?? 0;
+            if (index === axisLabels.length - 1) return projectedValue;
+            return null;
+          })
+        : [];
+
+    const ventasSeries: echarts.LineSeriesOption = {
+      name: "Ventas",
+      type: "line",
+      smooth: true,
+      data: actualSeries,
+      areaStyle: { opacity: 0.08 },
+      lineStyle: { color: "#0f766e" },
+      itemStyle: { color: "#0f766e" },
+      symbol: "circle",
+      symbolSize: 6,
+    };
+    const projectionSeries: echarts.LineSeriesOption = {
+      name: "Proyección",
+      type: "line",
+      data: projectedSeries,
+      symbol: "circle",
+      symbolSize: 7,
+      lineStyle: { color: "#2563eb", type: "dashed", width: 2 },
+      itemStyle: { color: "#2563eb" },
+    };
+    const series: echarts.SeriesOption[] = projectedSeries.length
+      ? [ventasSeries, projectionSeries]
+      : [ventasSeries];
+
+    return {
+      ...animationConfig,
+      tooltip: { trigger: "axis" },
+      grid: { left: 10, right: 10, top: 10, bottom: 20, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: axisLabels,
+        axisLabel: { color: "#111", fontSize: 10 },
+        axisLine: { lineStyle: { color: "rgba(0,0,0,0.1)" } },
+      },
+      yAxis: {
+        type: "value",
+        axisLabel: { color: "#111", fontSize: 10 },
+        splitLine: { lineStyle: { color: "rgba(0,0,0,0.06)" } },
+      },
+      series,
+    };
+  }, [projectionMonths, projectedNextMonth, animationConfig]);
+
+  const refProjection = useEChart(monthlyProjectionChart);
+
+  const coverageDays = useMemo(() => {
+    if (!projectedDaysInMonth || !Number.isFinite(projectedNextMonth) || projectedNextMonth === 0) {
+      return null;
+    }
+    try {
+      const value = new Big(availableStock)
+        .times(projectedDaysInMonth)
+        .div(projectedNextMonth);
+      return normalizeQuantity(value.toString());
+    } catch {
+      return null;
+    }
+  }, [availableStock, projectedDaysInMonth, projectedNextMonth]);
+  const coverageText =
+    coverageDays === null || coverageDays === undefined
+      ? "N/A"
+      : coverageDays.toFixed(1);
+  const rangeDays = useMemo(() => {
+    const match = selectedMonth.match(/^(\d{4})-(\d{2})$/);
+    if (!match) return 0;
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    if (!Number.isFinite(year) || !Number.isFinite(monthIndex)) return 0;
+    return new Date(year, monthIndex + 1, 0).getDate();
+  }, [selectedMonth]);
 
   const searchFinishedProducts = async () => {
     if (!productQuery.trim()) {
@@ -358,23 +525,6 @@ export default function CatalogInventory() {
     }
   };
 
-  const loadAvailability = async () => {
-    if (!selectedItemId) {
-      setAvailabilityRows([]);
-      return;
-    }
-
-    try {
-      const res = await getAvailability({
-        itemId: selectedItemId,
-        stockItemId: selectedItemId,
-      });
-      const rows = (res ?? []).map(mapSnapshotToRow);
-      setAvailabilityRows(rows);
-    } catch {
-      setAvailabilityRows([]);
-    }
-  };
 
   const buildInventoryActions = (row: InventoryRow): ActionItem[] => [
     {
@@ -410,10 +560,6 @@ export default function CatalogInventory() {
   useEffect(() => {
     void loadInventory();
   }, [page, warehouseId, searchTerm]);
-
-  useEffect(() => {
-    void loadAvailability();
-  }, [selectedItemId]);
 
   const columns = useMemo<DataTableColumn<InventoryRow>[]>(
     () => [
@@ -493,60 +639,6 @@ export default function CatalogInventory() {
     [navigate],
   );
 
-  const buildCsv = (rows: InventoryRow[]) => {
-    const header = [
-      "sku",
-      "producto",
-      "almacen",
-      "stock_fisico",
-      "reservado",
-      "disponible",
-      "minimo",
-      "ideal",
-      "dias_restantes",
-    ];
-    const escape = (value: string) => {
-      if (value.includes('"') || value.includes(",") || value.includes("\n")) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    };
-    const lines = rows.map((row) =>
-      [
-        row.sku,
-        row.name,
-        row.warehouse,
-        String(row.onHand),
-        String(row.reserved),
-        String(row.available),
-        String(row.min),
-        String(row.ideal),
-        row.daysRemaining === null ? "N/A" : String(row.daysRemaining),
-      ]
-        .map((value) => escape(String(value)))
-        .join(","),
-    );
-    return [header.join(","), ...lines].join("\n");
-  };
-
-  const downloadCsv = async () => {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      const csv = `\uFEFF${buildCsv(inventoryRows)}`;
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "inventario.csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } finally {
-      setExporting(false);
-    }
-  };
 
   return (
     <PageShell>
@@ -568,40 +660,19 @@ export default function CatalogInventory() {
               Total:{" "}
               <span className="font-semibold text-black">{summary.total}</span>
             </div>
-            <SystemButton
-              variant="outline"
-              size="sm"
-              className="text-[11px]"
-              onClick={downloadCsv}
-              loading={exporting}
-            >
-              {exporting ? "Exportando..." : "Exportar CSV"}
-            </SystemButton>
           </div>
         </motion.div>
 
         <section className="rounded-2xl border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
           <SectionHeaderForm icon={Filter} title="Filtros" />
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.5fr_0.5fr_0.6fr_1fr_1fr]">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.6fr_0.6fr_1fr]">
             <FloatingInput
-              label="Fecha inicio"
-              name="fromDate"
-              type="date"
-              value={toDateInputValue(fromDate)}
-              onClick={(e) => tryShowPicker(e.currentTarget)}
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                setPage(1);
-              }}
-            />
-            <FloatingInput
-              label="Fecha fin"
-              name="toDate"
-              type="date"
-              value={toDateInputValue(toDate)}
-              onClick={(e) => tryShowPicker(e.currentTarget)}
-              onChange={(e) => {
-                setToDate(e.target.value);
+              label="Mes"
+              name="month"
+              type="month"
+              value={selectedMonth}
+              onChange={(event) => {
+                setSelectedMonth(event.target.value);
                 setPage(1);
               }}
             />
@@ -668,7 +739,7 @@ export default function CatalogInventory() {
             </div>
 
              <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden
-             p-3">
+             p-4">
                 <div className="p-2 flex items-center justify-between">
                   <SectionHeaderForm icon={Boxes} title="Tabla de stock" />
                   <div className="text-xs text-black/60">
@@ -732,37 +803,55 @@ export default function CatalogInventory() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm space-y-3 max-h-70 min-h-25">
+              <div className="rounded-2xl border border-black/10 bg-white px-5 p-4
+               shadow-sm space-y-3 max-h-125 min-h-25">
                 <SectionHeaderForm icon={LineChart} title="Demanda estimada" />
-                {!analyticsEnabled ? (
+                {!demandEnabled ? (
                   <div className="text-sm text-black/60">
                     Selecciona un SKU y un almacén para ver proyecciones.
                   </div>
                 ) : analyticsLoading ? (
-                  <div className="text-sm text-black/60">Cargando demanda…</div>
+                  <div className="text-sm text-black/60">Cargando proyección…</div>
                 ) : analyticsError ? (
                   <div className="text-sm text-rose-600">{analyticsError}</div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-2 text-sm">
-                    <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
-                      <span className="text-black/60">Días en rango</span>
-                      <span className="font-semibold">{rangeDays}</span>
+                  <>
+                    {projectionMonths.length ? (
+                      <div ref={refProjection} className="mt-1" style={{ height: 130 }} />
+                    ) : (
+                      <div className="text-sm text-black/60">
+                        Sin datos de tendencia para este rango.
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 gap-2 text-sm">
+                      {salesActual ? (
+                        <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
+                          <span className="text-black/60">Ventas actuales del mes</span>
+                          <span className="font-semibold">{normalizeQuantity(salesActual.salida)}</span>
+                        </div>
+                      ) : null}
+                      <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
+                        <span className="text-black/60">Promedio diario</span>
+                        <span className="font-semibold">
+                          {projectedAvgDaily}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
+                        <span className="text-black/60">Proyección</span>
+                        <span className="font-semibold">{normalizeQuantity(projectedNextMonth)}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
+                        <span className="text-black/60">Tasa de crecimiento</span>
+                        <span className="font-semibold">{growthRateText}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
+                        <span className="text-black/60">Cobertura (días)</span>
+                        <span className="font-semibold">{coverageText}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
-                      <span className="text-black/60">Promedio diario</span>
-                      <span className="font-semibold">{demand?.avgDaily ?? 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
-                      <span className="text-black/60">Proyección</span>
-                      <span className="font-semibold">{demand?.projection ?? 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2">
-                      <span className="text-black/60">Cobertura (días)</span>
-                      <span className="font-semibold">{coverageText}</span>
-                    </div>
-                  </div>
+                  </>
                 )}
-            </div>
+              </div>
             
           </div>
 

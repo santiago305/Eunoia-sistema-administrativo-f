@@ -1,18 +1,27 @@
 import { useCallback, useEffect, useState } from "react";
 import type {
-  DemandSummaryOutput,
-  DemandSummaryQuery,
+  MonthlyProjectionOutput,
   SalesDailyTotal,
-  SalesMonthlyTotal,
   SalesTotalsQuery,
-  SalesWeekdayTotal,
 } from "@/pages/catalog/types/inventory";
 import {
   getDailySalesTotals,
-  getDemandSummary,
-  getSalesMonthlyTotals,
-  getSalesWeekdayTotals,
+  getMonthlyProjection,
 } from "@/services/kardexService";
+
+const parseDateOnly = (value?: string) => {
+  if (!value) return null;
+  const match = value.match(/^\d{4}-\d{2}-\d{2}/);
+  if (!match) return null;
+  const date = new Date(`${match[0]}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const formatDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
 
 type InventoryAnalyticsParams = {
   warehouseId?: string;
@@ -20,9 +29,10 @@ type InventoryAnalyticsParams = {
   locationId?: string;
   from?: string;
   to?: string;
-  windowDays?: number;
-  horizonDays?: number;
+  month?: string;
   enabled?: boolean;
+  demandEnabled?: boolean;
+  projectionMonths?: number;
 };
 
 export function useInventoryAnalytics({
@@ -31,59 +41,72 @@ export function useInventoryAnalytics({
   locationId,
   from,
   to,
-  windowDays = 7,
-  horizonDays = 7,
+  month,
   enabled = true,
+  demandEnabled = true,
+  projectionMonths = 5,
 }: InventoryAnalyticsParams) {
   const [dailySales, setDailySales] = useState<SalesDailyTotal[]>([]);
-  const [weeklySales, setWeeklySales] = useState<SalesWeekdayTotal[]>([]);
-  const [monthlySales, setMonthlySales] = useState<SalesMonthlyTotal[]>([]);
-  const [demand, setDemand] = useState<DemandSummaryOutput | null>(null);
+  const [monthlyProjection, setMonthlyProjection] = useState<MonthlyProjectionOutput | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
     if (!enabled) {
       setDailySales([]);
-      setWeeklySales([]);
-      setMonthlySales([]);
-      setDemand(null);
+      setMonthlyProjection(null);
       return;
     }
 
-    const common: SalesTotalsQuery = {
+    if (!demandEnabled) {
+      setMonthlyProjection(null);
+    }
+
+    const projectionTo = (() => {
+      if (!to) return undefined;
+      const parsed = parseDateOnly(to);
+      if (!parsed) return to;
+      const now = new Date();
+      if (
+        parsed.getFullYear() === now.getFullYear() &&
+        parsed.getMonth() === now.getMonth()
+      ) {
+        const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+        return formatDate(prevMonthEnd);
+      }
+      return to;
+    })();
+
+    const monthlyQuery: SalesTotalsQuery & { months?: number } = {
       ...(warehouseId ? { warehouseId } : {}),
       ...(stockItemId ? { stockItemId } : {}),
       ...(locationId ? { locationId } : {}),
-      ...(from ? { from } : {}),
-      ...(to ? { to } : {}),
-    };
-
-    const demandQuery: DemandSummaryQuery = {
-      ...common,
-      windowDays,
-      horizonDays,
+      ...(projectionTo ? { to: projectionTo } : {}),
+      months: projectionMonths,
     };
 
     setLoading(true);
     setError(null);
     try {
-      const [daily, week, month, demandResult] = await Promise.all([
-        getDailySalesTotals(common),
-        getSalesWeekdayTotals(common),
-        getSalesMonthlyTotals(common),
-        getDemandSummary(demandQuery),
+      const dailyQuery: SalesTotalsQuery = {
+        ...(warehouseId ? { warehouseId } : {}),
+        ...(stockItemId ? { stockItemId } : {}),
+        ...(locationId ? { locationId } : {}),
+        ...(!month && from ? { from } : {}),
+        ...(!month && to ? { to } : {}),
+        ...(month ? { month } : {}),
+      };
+
+      const [daily, projectionResult] = await Promise.all([
+        getDailySalesTotals(dailyQuery),
+        demandEnabled ? getMonthlyProjection(monthlyQuery) : Promise.resolve(null),
       ]);
 
       setDailySales(daily ?? []);
-      setWeeklySales(week ?? []);
-      setMonthlySales(month ?? []);
-      setDemand(demandResult ?? null);
+      setMonthlyProjection(projectionResult ?? null);
     } catch (err: any) {
       setDailySales([]);
-      setWeeklySales([]);
-      setMonthlySales([]);
-      setDemand(null);
+      setMonthlyProjection(null);
       setError(err?.response?.data?.message ?? "Error al cargar analítica.");
     } finally {
       setLoading(false);
@@ -95,8 +118,9 @@ export function useInventoryAnalytics({
     locationId,
     from,
     to,
-    windowDays,
-    horizonDays,
+    month,
+    demandEnabled,
+    projectionMonths,
   ]);
 
   useEffect(() => {
@@ -105,9 +129,7 @@ export function useInventoryAnalytics({
 
   return {
     dailySales,
-    weeklySales,
-    monthlySales,
-    demand,
+    monthlyProjection,
     loading,
     error,
     refetch: fetchAnalytics,
