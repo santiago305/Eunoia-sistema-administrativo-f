@@ -5,12 +5,9 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
-import { Filter, Menu, Pencil, Plus, Power, Timer } from "lucide-react";
+import { Menu, Pencil, Plus, Power, Timer } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
-import { FloatingInput } from "@/components/FloatingInput";
-import { FloatingSelect } from "@/components/FloatingSelect";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { StatusPill } from "@/components/StatusTag";
@@ -23,21 +20,11 @@ import { PageShell } from "@/components/layout/PageShell";
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
 
-const statusOptions = [
-  { value: "active", label: "Activos" },
-  { value: "inactive", label: "Eliminados" },
-];
-
 export default function Providers() {
   const { showFlash, clearFlash } = useFlashMessage();
 
-  const [searchText, setSearchText] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("active");
-
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [serverPagination, setServerPagination] = useState({
     total: 0,
@@ -61,18 +48,6 @@ export default function Providers() {
 
   const page = paginationState.pageIndex + 1;
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearch(searchText.trim());
-      setPaginationState((prev) => ({
-        ...prev,
-        pageIndex: 0,
-      }));
-    }, 400);
-
-    return () => clearTimeout(timeout);
-  }, [searchText]);
-
   const getSupplierDisplayName = (supplier: Supplier) => {
     const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
     return fullName || supplier.tradeName || "-";
@@ -81,14 +56,11 @@ export default function Providers() {
   const loadSuppliers = async () => {
     clearFlash();
     setLoading(true);
-    setError(null);
 
     try {
       const res = await listSuppliers({
         page,
         limit: paginationState.pageSize,
-        q: debouncedSearch || undefined,
-        isActive: statusFilter === "active" ? "true" : "false",
       });
 
       const items = res.items ?? [];
@@ -116,7 +88,6 @@ export default function Providers() {
         hasPrev: false,
         hasNext: false,
       });
-      setError("Error al listar proveedores");
       showFlash(errorResponse("Error al listar proveedores"));
     } finally {
       setLoading(false);
@@ -125,7 +96,7 @@ export default function Providers() {
 
   useEffect(() => {
     void loadSuppliers();
-  }, [page, paginationState.pageSize, debouncedSearch, statusFilter]);
+  }, [page, paginationState.pageSize]);
 
   const startCreate = () => {
     setEditingSupplierId(null);
@@ -197,18 +168,12 @@ export default function Providers() {
         className: "text-center text-black/70",
         showInCards: false,
       },
-      // {
-      //   id: "note",
-      //   header: "Nota",
-      //   cell: (row) => <span className="text-black/70">{row.note ?? "-"}</span>,
-      //   className: "text-black/70",
-      //   showInCards: false,
-      // },
       {
         id: "status",
         header: "Estado",
         cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
         headerClassName: "text-left",
+        sortAccessor: (row) => row.isActive,
       },
       {
         id: "actions",
@@ -270,6 +235,8 @@ export default function Providers() {
         className: "text-right",
         headerClassName: "text-right",
         showInCards: false,
+        sortable: false,
+        hideable: false,
       },
     ],
     [getSupplierDisplayName, openEdit, setMethodSupplierId, setNextActiveState, setToggleSupplierId]
@@ -281,59 +248,25 @@ export default function Providers() {
   return (
     <PageShell>
       <PageTitle title="Proveedores" />
-
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
+        <div className="flex items-center justify-between">
           <Headed
             title="Proveedores"
             size="lg"
           />
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
-              Total: <span className="font-semibold text-black">{serverPagination.total}</span>
-            </div>
-
-            <SystemButton
-              size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={startCreate}
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-              }}
-            >
-              Nuevo proveedor
-            </SystemButton>
-          </div>
+          <SystemButton
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={startCreate}
+            style={{
+              backgroundColor: PRIMARY,
+              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+            }}
+          >
+            Crear proveedor
+          </SystemButton>
         </div>
-
-        <section className="rounded-2xl border border-black/10 bg-gray-50 p-4 shadow-sm space-y-4">
-          <SectionHeaderForm icon={Filter} title="Filtros" />
-
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.45fr_0.25fr_0.2fr]">
-            <FloatingInput
-              label="Buscar"
-              name="provider-search"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              className="h-10 text-sm"
-            />
-
-            <FloatingSelect
-              label="Estado"
-              name="provider-status"
-              value={statusFilter}
-              options={statusOptions}
-              onChange={(value) => {
-                setStatusFilter(value);
-                setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-              }}
-              className="h-10 text-sm"
-            />
-          </div>
-        </section>
+        
         <DataTable
           tableId="providers-table"
           data={suppliers}
@@ -341,6 +274,9 @@ export default function Providers() {
           rowKey="supplierId"
           loading={loading}
           emptyMessage="No hay proveedores con los filtros actuales."
+          showSearch
+          searchPlaceholder="Buscar proveedores..."
+          selectableColumns
           hoverable={false}
           animated={false}
           pagination={{
@@ -353,9 +289,6 @@ export default function Providers() {
           }}
           tableClassName="text-[10px]"
         />
-
-        {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
-      </div>
 
       <SupplierFormModal
         open={openCreate}

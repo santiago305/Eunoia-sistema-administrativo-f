@@ -51,7 +51,6 @@ export default function CatalogProducts() {
         page: apiPage,
         limit: apiLimit,
         loading,
-        error,
         refresh,
         setActive,
     } = useProducts(queryParams, { mode: "product" });
@@ -248,65 +247,52 @@ export default function CatalogProducts() {
     return (
         <PageShell>
             <PageTitle title="Catalogo - Productos" />
-            <div className="space-y-4">
-                <motion.div
-                    initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
-                    animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
-                    transition={{ duration: 0.18 }}
-                    className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
-                >
-                    <Headed title="Productos" size="lg" />
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-[11px]">
-                            Total: <span className="font-semibold text-black">{total}</span>
-                        </div>
+            <div className="flex items-center justify-between">
+                <Headed title="Productos" size="lg" />
+                <div className="flex flex-wrap items-center gap-2">
+                    <SystemButton
+                        variant="outline"
+                        size="sm"
+                        className="text-[11px]"
+                        onClick={downloadCsv}
+                        loading={exporting}
+                        leftIcon={<Download className="h-4 w-4" />}
+                        title="Exportar CSV"
+                    >
+                        {exporting ? "Exportando..." : "Exportar CSV"}
+                    </SystemButton>
 
-                        <SystemButton
-                            variant="outline"
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={downloadCsv}
-                            loading={exporting}
-                            leftIcon={<Download className="h-4 w-4" />}
-                            title="Exportar CSV"
-                        >
-                            {exporting ? "Exportando..." : "Exportar CSV"}
-                        </SystemButton>
-
-                        <SystemButton
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={startCreate}
-                            leftIcon={<Plus className="h-4 w-4" />}
-                            title="Nuevo producto"
-                        >
-                            Nuevo producto
-                        </SystemButton>
-                    </div>
-                </motion.div>
-
-                <DataTable
-                    tableId="catalog-products"
-                    data={products}
-                    columns={columns}
-                    rowKey="id"
-                    loading={loading}
-                    emptyMessage="No hay productos disponibles."
-                    showSearch
-                    searchPlaceholder="Buscar productos..."
-                    animated={!shouldReduceMotion}
-                    tableClassName="text-[11px]"
-                    pagination={{
-                        page: apiPage ?? page,
-                        limit: apiLimit ?? limit,
-                        total,
-                    }}
-                    selectableColumns
-                    onPageChange={(nextPage) => setPage(nextPage)}
-                />
-
-                {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
+                    <SystemButton
+                        size="sm"
+                        className="text-[11px]"
+                        onClick={startCreate}
+                        leftIcon={<Plus className="h-4 w-4" />}
+                        title="Nuevo producto"
+                    >
+                        Nuevo producto
+                    </SystemButton>
+                </div>
             </div>
+
+            <DataTable
+                tableId="catalog-products"
+                data={products}
+                columns={columns}
+                rowKey="id"
+                loading={loading}
+                emptyMessage="No hay productos disponibles."
+                showSearch
+                searchPlaceholder="Buscar productos..."
+                animated={!shouldReduceMotion}
+                tableClassName="text-[11px]"
+                pagination={{
+                    page: apiPage ?? page,
+                    limit: apiLimit ?? limit,
+                    total,
+                }}
+                selectableColumns
+                onPageChange={(nextPage) => setPage(nextPage)}
+            />
 
             <ProductCreateModal
                 open={openCreate}

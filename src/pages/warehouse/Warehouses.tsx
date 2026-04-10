@@ -2,19 +2,16 @@
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/modales/Modal";
 import { motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Filter, Menu, Pencil, Plus, Power } from "lucide-react";
+import { Boxes, Download, Menu, Pencil, Plus, Power } from "lucide-react";
 
 import { useWarehouses } from "@/hooks/useWarehouse";
 import { listWarehouses } from "@/services/warehouseServices";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
-import { FloatingInput } from "@/components/FloatingInput";
-import { FloatingSelect } from "@/components/FloatingSelect";
 import { SystemButton } from "@/components/SystemButton";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { StatusPill } from "@/components/StatusTag";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
@@ -25,22 +22,14 @@ const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
 
-const statusOptions = [
-  { value: "active", label: "Activos" },
-  { value: "inactive", label: "Eliminados" },
-];
-
 export default function Warehouses() {
   const shouldReduceMotion = useReducedMotion();
-  const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState("active");
   const [openCreate, setOpenCreate] = useState(false);
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
   const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
   const [openLocationsWarehouseId, setOpenLocationsWarehouseId] = useState<string | null>(null);
   const [warehouse, setWarehouse] = useState<{ warehouseId: string; name: string } | null>(null);
 
-  const [debouncedQ, setDebouncedQ] = useState("");
   const [exporting, setExporting] = useState(false);
 
   const [paginationState, setPaginationState] = useState({
@@ -54,10 +43,8 @@ export default function Warehouses() {
     () => ({
       page,
       limit,
-      isActive: statusFilter === "active" ? ("true" as const) : ("false" as const),
-      q: debouncedQ.trim() || undefined,
     }),
-    [page, limit, statusFilter, debouncedQ]
+    [page, limit]
   );
 
   const {
@@ -66,18 +53,9 @@ export default function Warehouses() {
     page: apiPage,
     limit: apiLimit,
     loading,
-    error,
     setActive,
     refetch,
   } = useWarehouses(queryParams);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedQ(searchText.trim());
-      setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-    }, 450);
-    return () => clearTimeout(handler);
-  }, [searchText]);
 
   useEffect(() => {
     if (apiPage && apiPage - 1 !== paginationState.pageIndex) {
@@ -186,7 +164,7 @@ export default function Warehouses() {
         header: "Estado",
         cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
         headerClassName: "text-left",
-        sortable:false
+        sortAccessor: (row) => row.isActive,
       },
       {
         id: "createdAt",
@@ -252,6 +230,7 @@ export default function Warehouses() {
         ),
         headerClassName: "text-center",
         hideable: false,
+        sortable: false,
       },
     ],
     [formatDate, openLocationsModal, startEdit]
@@ -345,77 +324,29 @@ export default function Warehouses() {
   return (
     <PageShell>
       <PageTitle title="Almacenes" />
-
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between my-4">
-          <Headed
-            title="Almacenes"
-            size="lg"
-          />
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
-              Total: <span className="font-semibold text-black">{total}</span>
-            </div>
-
-            <SystemButton
-              variant="outline"
-              size="sm"
-              leftIcon={<Download className="h-4 w-4" />}
-              onClick={downloadCsv}
-              disabled={exporting}
-              title="Exportar CSV"
-            >
-              {exporting ? "Exportando..." : "Exportar CSV"}
-            </SystemButton>
-
-            <SystemButton
-              size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={startCreate}
-              title="Nuevo almacén"
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-              }}
-            >
-              Nuevo almacén
-            </SystemButton>
-          </div>
+        <div className="flex items-center justify-between">
+          <Headed title="Almacenes"  size="lg" />
+          <SystemButton
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={startCreate}
+            title="Nuevo almacén"
+            style={{
+              backgroundColor: PRIMARY,
+              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
+            }}
+          >
+            Crear almacén
+          </SystemButton>
         </div>
 
-        <section className="rounded-2xl border border-black/10 bg-gray-50 p-4 shadow-sm space-y-4">
-          <SectionHeaderForm icon={Filter} title="Filtros" />
-
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.45fr_0.25fr_0.2fr]">
-            <FloatingInput
-              label="Buscar"
-              name="warehouse-search"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              className="h-10 text-sm"
-            />
-
-            <FloatingSelect
-              label="Estado"
-              name="warehouse-status"
-              value={statusFilter}
-              options={statusOptions}
-              onChange={(value) => {
-                setStatusFilter(value);
-                setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-              }}
-              className="h-10 text-sm"
-            />
-          </div>
-        </section>
         <DataTable
           tableId="warehouses-table"
           data={sortedWarehouses}
@@ -423,6 +354,9 @@ export default function Warehouses() {
           rowKey="warehouseId"
           loading={loading}
           emptyMessage="No hay almacenes con los filtros actuales."
+          showSearch
+          searchPlaceholder="Buscar almacenes..."
+          selectableColumns
           hoverable={false}
           animated={false}
           pagination={{
@@ -434,8 +368,6 @@ export default function Warehouses() {
             setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
           }}
         />
-        {error && <div className="px-4 py-3 text-sm text-rose-600">{String(error)}</div>}
-      </div>
 
       <WarehouseFormModal
         open={openCreate || Boolean(editingWarehouseId)}
