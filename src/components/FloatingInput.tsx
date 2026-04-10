@@ -46,6 +46,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 
     const hasValue = resolvedValue.trim().length > 0;
     const isPassword = type === "password";
+    const isNumber = type === "number";
 
     return (
       <div className="w-full">
@@ -68,6 +69,9 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
             className={[
               "peer h-10 w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground outline-none transition-all",
               isPassword ? "pr-10" : "",
+              isNumber
+                ? "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0"
+                : "",
               error
                 ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200/40"
                 : "border-border focus:border-primary focus:ring-2 focus:ring-primary/30",

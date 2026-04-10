@@ -2,6 +2,8 @@ import axiosInstance from "@/common/utils/axios";
 import { API_PRODUCTS_GROUP } from "@/services/APIs";
 import type {
   CreateProductDto,
+  CreateBaseProductDto,
+  CreateProductSkuDto,
   UpdateProductDto,
   UpdateProductActiveDto,
   ListProductsQuery,
@@ -13,6 +15,19 @@ import type {
 
 export const createProduct = async (payload: CreateProductDto): Promise<Product> => {
   const response = await axiosInstance.post(API_PRODUCTS_GROUP.create, payload);
+  return response.data;
+};
+
+export const createBaseProduct = async (payload: CreateBaseProductDto): Promise<Product> => {
+  const response = await axiosInstance.post(API_PRODUCTS_GROUP.createBase, payload);
+  return response.data;
+};
+
+export const createProductSku = async (
+  productId: string,
+  payload: CreateProductSkuDto,
+): Promise<Record<string, unknown>> => {
+  const response = await axiosInstance.post(API_PRODUCTS_GROUP.createSku(productId), payload);
   return response.data;
 };
 

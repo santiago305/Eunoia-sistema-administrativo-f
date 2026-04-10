@@ -77,6 +77,7 @@ export const API_PRODUCTS_GROUP = {
   base: "/catalog/products",
   items: "/products",
   create: "/catalog/products",
+  createBase: "/products",
   flat: "/catalog/products/flat",
   productFinisheds: "/catalog/products/variants/finished",
   productFinishedsActive: "/catalog/products/finished/active",
@@ -87,6 +88,7 @@ export const API_PRODUCTS_GROUP = {
   byName: (name: string) => `/catalog/products/by-name/${encodeURIComponent(name)}`,
   update: (id: string) => `/catalog/products/${id}`,
   updateActive: (id: string) => `/catalog/products/${id}/active`,
+  createSku: (id: string) => `/products/${id}/skus`,
   variants: (id: string) => `/catalog/products/${id}/variants`,
   withVariants: (id: string) => `/catalog/products/${id}/with-variants`,
 };

@@ -72,6 +72,35 @@ export type ProductForm = {
     minStock?: string;
 };
 
+export type CreateBaseProductDto = {
+  name: string;
+  description?: string | null;
+  type: string;
+  brand?: string | null;
+  baseUnitId?: string;
+  isActive?: boolean;
+};
+
+export type CreateProductSkuAttributeDto = {
+  code: string;
+  name?: string;
+  value: string;
+};
+
+export type CreateProductSkuDto = {
+  name: string;
+  customSku?: string | null;
+  barcode?: string | null;
+  price?: number;
+  cost?: number;
+  isSellable?: boolean;
+  isPurchasable?: boolean;
+  isManufacturable?: boolean;
+  isStockTracked?: boolean;
+  isActive?: boolean;
+  attributes?: CreateProductSkuAttributeDto[];
+};
+
 export type ProductListResponse = {
   items: Product[];
   total: number;

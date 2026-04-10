@@ -16,6 +16,7 @@ import { Headed } from "@/components/Headed";
 import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { ProductFormModal } from "./components/ProductFormModal";
+import { ProductCreateModal } from "./components/ProductCreateModal";
 import { Modal } from "@/components/modales/Modal";
 import { PageShell } from "@/components/layout/PageShell";
 
@@ -92,6 +93,7 @@ export default function CatalogProducts() {
             {
                 id: "type",
                 header: "Tipo",
+                visible: false,
                 cell: (row) => <span className="text-black/70">{row.type || "-"}</span>,
             },
             {
@@ -306,9 +308,8 @@ export default function CatalogProducts() {
                 {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
             </div>
 
-            <ProductFormModal
+            <ProductCreateModal
                 open={openCreate}
-                mode="create"
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
                 entityLabel="producto"
