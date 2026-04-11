@@ -1,11 +1,10 @@
-﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/modales/Modal";
 import { motion, useReducedMotion } from "framer-motion";
-import { Boxes, Download, Menu, Pencil, Plus, Power } from "lucide-react";
+import { Boxes, Menu, Pencil, Plus, Power } from "lucide-react";
 
 import { useWarehouses } from "@/hooks/useWarehouse";
-import { listWarehouses } from "@/services/warehouseServices";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
@@ -28,14 +27,16 @@ export default function Warehouses() {
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
   const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
   const [openLocationsWarehouseId, setOpenLocationsWarehouseId] = useState<string | null>(null);
-  const [warehouse, setWarehouse] = useState<{ warehouseId: string; name: string } | null>(null);
-
-  const [exporting, setExporting] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<{
+    warehouseId: string;
+    name: string;
+  } | null>(null);
 
   const [paginationState, setPaginationState] = useState({
     pageIndex: 0,
     pageSize: DEFAULT_LIMIT,
   });
+
   const page = paginationState.pageIndex + 1;
   const limit = paginationState.pageSize;
 
@@ -58,58 +59,78 @@ export default function Warehouses() {
   } = useWarehouses(queryParams);
 
   useEffect(() => {
-    if (apiPage && apiPage - 1 !== paginationState.pageIndex) {
-      setPaginationState((prev) => ({ ...prev, pageIndex: apiPage - 1 }));
-    }
-    if (apiLimit && apiLimit !== paginationState.pageSize) {
-      setPaginationState((prev) => ({ ...prev, pageSize: apiLimit }));
-    }
-  }, [apiPage, apiLimit, paginationState.pageIndex, paginationState.pageSize]);
+    setPaginationState((prev) => {
+      const nextPageIndex = apiPage ? apiPage - 1 : prev.pageIndex;
+      const nextPageSize = apiLimit ?? prev.pageSize;
+
+      if (nextPageIndex === prev.pageIndex && nextPageSize === prev.pageSize) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        pageIndex: nextPageIndex,
+        pageSize: nextPageSize,
+      };
+    });
+  }, [apiLimit, apiPage]);
 
   const effectiveLimit = apiLimit ?? limit;
   const safePage = apiPage ?? page;
 
-  const sortedWarehouses = useMemo(() => {
-    return [...warehouses].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-  }, [warehouses]);
+  const sortedWarehouses = useMemo(
+    () =>
+      [...warehouses].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      ),
+    [warehouses]
+  );
 
-  const startCreate = () => {
+  const startCreate = useCallback(() => {
     setEditingWarehouseId(null);
     setOpenCreate(true);
-  };
+  }, []);
 
-  const openLocationsModal = (currentWarehouse: { warehouseId: string; name: string }) => {
-    setWarehouse(currentWarehouse);
-    setOpenLocationsWarehouseId(currentWarehouse.warehouseId);
-  };
+  const openLocationsModal = useCallback((warehouse: { warehouseId: string; name: string }) => {
+    setSelectedWarehouse(warehouse);
+    setOpenLocationsWarehouseId(warehouse.warehouseId);
+  }, []);
 
-  const closeLocationsModal = () => {
+  const closeLocationsModal = useCallback(() => {
     setOpenLocationsWarehouseId(null);
-    setWarehouse(null);
-  };
+    setSelectedWarehouse(null);
+  }, []);
 
-  const startEdit = (warehouseId: string) => {
+  const startEdit = useCallback((warehouseId: string) => {
     setOpenCreate(false);
     setEditingWarehouseId(warehouseId);
-  };
+  }, []);
 
-  const closeFormModal = () => {
+  const closeFormModal = useCallback(() => {
     setOpenCreate(false);
     setEditingWarehouseId(null);
-  };
+  }, []);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (!deletingWarehouseId) return;
-    const w = warehouses.find((x) => x.warehouseId === deletingWarehouseId);
-    if (w) await setActive(deletingWarehouseId, !w.isActive);
-    setDeletingWarehouseId(null);
-  };
 
-  const formatDate = (value: string) => {
+    const warehouseToToggle = warehouses.find(
+      ({ warehouseId }) => warehouseId === deletingWarehouseId
+    );
+
+    if (!warehouseToToggle) {
+      setDeletingWarehouseId(null);
+      return;
+    }
+
+    await setActive(deletingWarehouseId, !warehouseToToggle.isActive);
+    setDeletingWarehouseId(null);
+  }, [deletingWarehouseId, setActive, warehouses]);
+
+  const formatDate = useCallback((value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
+
     return date.toLocaleString("es-PE", {
       day: "2-digit",
       month: "2-digit",
@@ -118,13 +139,13 @@ export default function Warehouses() {
       minute: "2-digit",
       hour12: false,
     });
-  };
+  }, []);
 
   const columns = useMemo<DataTableColumn<Warehouse>[]>(
     () => [
       {
         id: "name",
-        header: "Almacén",
+        header: "Almacen",
         accessorKey: "name",
         className: "text-black/70",
         cardTitle: true,
@@ -134,36 +155,35 @@ export default function Warehouses() {
         header: "Departamento",
         accessorKey: "department",
         className: "text-black/70",
-        sortable:false
+        sortable: false,
       },
       {
         id: "province",
         header: "Provincia",
         accessorKey: "province",
         className: "text-black/70",
-        sortable:false
+        sortable: false,
       },
       {
         id: "district",
         header: "Distrito",
         accessorKey: "district",
         className: "text-black/70",
-        sortable:false
+        sortable: false,
       },
       {
         id: "address",
-        header: "Dirección",
+        header: "Direccion",
         cell: (row) => <span className="text-black/70">{row.address ?? "-"}</span>,
         className: "text-black/70",
         visible: false,
         hideable: true,
-        sortable:false
+        sortable: false,
       },
       {
         id: "status",
         header: "Estado",
         cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
-        headerClassName: "text-left",
         sortAccessor: (row) => row.isActive,
       },
       {
@@ -172,63 +192,66 @@ export default function Warehouses() {
         cell: (row) => <span className="text-black/60 text-xs">{formatDate(row.createdAt)}</span>,
         visible: false,
         hideable: true,
-        sortable:false
+        sortable: false,
       },
       {
         id: "actions",
         header: "ACCIONES",
         cell: (row) => (
-          <div className="flex justify-center">
-            <ActionsPopover
-              actions={[
-                {
-                  id: "locations",
-                  label: "Ver ubicaciones",
-                  icon: <Boxes className="h-4 w-4 text-black/60" />,
-                  onClick: () => openLocationsModal({ warehouseId: row.warehouseId, name: row.name }),
-                },
-                {
-                  id: "edit",
-                  label: "Editar",
-                  icon: <Pencil className="h-4 w-4 text-black/60" />,
-                  onClick: () => startEdit(row.warehouseId),
-                },
-                {
-                  id: "toggle",
-                  label: row.isActive ? "Eliminar" : "Restaurar",
-                  icon: <Power className="h-4 w-4" />,
-                  danger: row.isActive,
-                  className: row.isActive
-                    ? "text-rose-700 hover:bg-rose-50"
-                    : "text-cyan-700 hover:bg-cyan-50",
-                  onClick: () => setDeletingWarehouseId(row.warehouseId),
-                },
-              ]}
-              columns={1}
-              compact
-              showLabels
-              triggerIcon={<Menu className="h-4 w-4" />}
-              popoverClassName="min-w-35"
-              popoverBodyClassName="p-2"
-              renderAction={(action, helpers) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    helpers.onAction(action);
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
-                  disabled={action.disabled}
-                >
-                  {action.icon}
-                  {action.label}
-                </button>
-              )}
-            />
-          </div>
+          <ActionsPopover
+            actions={[
+              {
+                id: "locations",
+                label: "Ver ubicaciones",
+                icon: <Boxes className="h-4 w-4 text-black/60" />,
+                onClick: () =>
+                  openLocationsModal({
+                    warehouseId: row.warehouseId,
+                    name: row.name,
+                  }),
+              },
+              {
+                id: "edit",
+                label: "Editar",
+                icon: <Pencil className="h-4 w-4 text-black/60" />,
+                onClick: () => startEdit(row.warehouseId),
+              },
+              {
+                id: "toggle",
+                label: row.isActive ? "Eliminar" : "Restaurar",
+                icon: <Power className="h-4 w-4" />,
+                danger: row.isActive,
+                className: row.isActive
+                  ? "text-rose-700 hover:bg-rose-50"
+                  : "text-cyan-700 hover:bg-cyan-50",
+                onClick: () => setDeletingWarehouseId(row.warehouseId),
+              },
+            ]}
+            columns={1}
+            compact
+            showLabels
+            triggerIcon={<Menu className="h-4 w-4" />}
+            popoverClassName="min-w-35"
+            popoverBodyClassName="p-2"
+            renderAction={(action, helpers) => (
+              <button
+                key={action.id}
+                type="button"
+                onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  helpers.onAction(action);
+                }}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
+                disabled={action.disabled}
+              >
+                {action.icon}
+                {action.label}
+              </button>
+            )}
+          />
         ),
-        headerClassName: "text-center",
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
         hideable: false,
         sortable: false,
       },
@@ -236,138 +259,53 @@ export default function Warehouses() {
     [formatDate, openLocationsModal, startEdit]
   );
 
-  const buildCsv = (
-    rows: Array<{
-      warehouseId: string;
-      name: string;
-      department: string;
-      province: string;
-      district: string;
-      address: string | null;
-      isActive: boolean;
-      createdAt: string;
-      updatedAt: string;
-    }>
-  ) => {
-    const header = [
-      "id",
-      "name",
-      "department",
-      "province",
-      "district",
-      "address",
-      "isActive",
-      "createdAt",
-      "updatedAt",
-    ];
-    const escape = (value: string) => {
-      if (value.includes('"') || value.includes(",") || value.includes("\n")) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    };
-
-    const lines = rows.map((row, index) => {
-      const csvId = String(index + 1).padStart(5, "0");
-      return [
-        csvId,
-        row.name,
-        row.department,
-        row.province,
-        row.district,
-        row.address ?? "",
-        String(row.isActive),
-        formatDate(row.createdAt),
-        formatDate(row.updatedAt),
-      ]
-        .map((v) => escape(String(v)))
-        .join(",");
-    });
-
-    return [header.join(","), ...lines].join("\n");
-  };
-
-  const downloadCsv = async () => {
-    if (exporting) return;
-    setExporting(true);
-
-    try {
-      const pageSize = 100;
-      const first = await listWarehouses({ ...queryParams, page: 1, limit: pageSize });
-      const allItems = [...(first.items ?? [])];
-      const pages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));
-
-      for (let p = 2; p <= pages; p += 1) {
-        const res = await listWarehouses({ ...queryParams, page: p, limit: pageSize });
-        if (res.items?.length) allItems.push(...res.items);
-      }
-
-      const sorted = [...allItems].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
-      const csv = `\uFEFF${buildCsv(sorted)}`;
-
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "almacenes.csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } finally {
-      setExporting(false);
-    }
-  };
-
   return (
     <PageShell>
       <PageTitle title="Almacenes" />
-        <div className="flex items-center justify-between">
-          <Headed title="Almacenes"  size="lg" />
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={startCreate}
-            title="Nuevo almacén"
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-            }}
-          >
-            Crear almacén
-          </SystemButton>
-        </div>
+      <div className="flex items-center justify-between">
+        <Headed title="Almacenes" size="lg" />
+        <SystemButton
+          size="sm"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={startCreate}
+          title="Nuevo almacen"
+          style={{
+            backgroundColor: PRIMARY,
+            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
+          }}
+        >
+          Crear almacen
+        </SystemButton>
+      </div>
 
-        <DataTable
-          tableId="warehouses-table"
-          data={sortedWarehouses}
-          columns={columns}
-          rowKey="warehouseId"
-          loading={loading}
-          emptyMessage="No hay almacenes con los filtros actuales."
-          showSearch
-          searchPlaceholder="Buscar almacenes..."
-          selectableColumns
-          hoverable={false}
-          animated={false}
-          pagination={{
-            page: safePage,
-            limit: effectiveLimit,
-            total,
-          }}
-          onPageChange={(nextPage) => {
-            setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
-          }}
-        />
+      <DataTable
+        tableId="warehouses-table"
+        data={sortedWarehouses}
+        columns={columns}
+        rowKey="warehouseId"
+        loading={loading}
+        emptyMessage="No hay almacenes con los filtros actuales."
+        showSearch
+        searchPlaceholder="Buscar almacenes..."
+        selectableColumns
+        hoverable={false}
+        animated={false}
+        pagination={{
+          page: safePage,
+          limit: effectiveLimit,
+          total,
+        }}
+        onPageChange={(nextPage) => {
+          setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+        }}
+      />
 
       <WarehouseFormModal
         open={openCreate || Boolean(editingWarehouseId)}
@@ -378,13 +316,13 @@ export default function Warehouses() {
           void refetch();
         }}
         primaryColor={PRIMARY}
-        entityLabel="almacén"
+        entityLabel="almacen"
       />
 
       {deletingWarehouseId && (
         <Modal
           open={true}
-          title="Confirmar acción"
+          title="Confirmar accion"
           onClose={() => setDeletingWarehouseId(null)}
           className="w-[300px] max-h-[300px]"
         >
@@ -394,11 +332,12 @@ export default function Warehouses() {
             transition={{ duration: 0.16 }}
           >
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
-              <span className="font-semibold">Ojo:</span> estás por cambiar el estado de un almacén. Hazlo solo si estás seguro.
+              <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un almacen.
+              Hazlo solo si estas seguro.
             </div>
 
             <p className="mt-3 text-[11px] text-black/70">
-              ¿Confirmas esta acción? Puede afectar disponibilidad, reportes y procesos internos.
+              Confirmas esta accion? Puede afectar disponibilidad, reportes y procesos internos.
             </p>
 
             <div className="mt-4 flex justify-end gap-2">
@@ -414,8 +353,8 @@ export default function Warehouses() {
       )}
 
       <WarehouseLocationsModal
-        open={Boolean(openLocationsWarehouseId && warehouse)}
-        warehouse={warehouse}
+        open={Boolean(openLocationsWarehouseId && selectedWarehouse)}
+        warehouse={selectedWarehouse}
         onClose={closeLocationsModal}
         primaryColor={PRIMARY}
         primaryHover={PRIMARY_HOVER}
@@ -423,4 +362,3 @@ export default function Warehouses() {
     </PageShell>
   );
 }
-

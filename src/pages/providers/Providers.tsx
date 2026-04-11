@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -48,12 +48,12 @@ export default function Providers() {
 
   const page = paginationState.pageIndex + 1;
 
-  const getSupplierDisplayName = (supplier: Supplier) => {
+  const getSupplierDisplayName = useCallback((supplier: Supplier) => {
     const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
     return fullName || supplier.tradeName || "-";
-  };
+  }, []);
 
-  const loadSuppliers = async () => {
+  const loadSuppliers = useCallback(async () => {
     clearFlash();
     setLoading(true);
 
@@ -92,23 +92,23 @@ export default function Providers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearFlash, page, paginationState.pageSize, showFlash]);
 
   useEffect(() => {
     void loadSuppliers();
-  }, [page, paginationState.pageSize]);
+  }, [loadSuppliers]);
 
-  const startCreate = () => {
+  const startCreate = useCallback(() => {
     setEditingSupplierId(null);
     setOpenCreate(true);
-  };
+  }, []);
 
-  const openEdit = (supplierId: string) => {
+  const openEdit = useCallback((supplierId: string) => {
     setOpenCreate(false);
     setEditingSupplierId(supplierId);
-  };
+  }, []);
 
-  const confirmToggleActive = async () => {
+  const confirmToggleActive = useCallback(async () => {
     if (!toggleSupplierId) return;
 
     try {
@@ -119,7 +119,23 @@ export default function Providers() {
     } catch {
       showFlash(errorResponse("Error al cambiar estado"));
     }
-  };
+  }, [loadSuppliers, nextActiveState, showFlash, toggleSupplierId]);
+
+  const handleCreateSaved = useCallback(() => {
+    if (paginationState.pageIndex === 0) {
+      void loadSuppliers();
+      return;
+    }
+
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [loadSuppliers, paginationState.pageIndex]);
+
+  const handleEditSaved = useCallback(() => {
+    void loadSuppliers();
+  }, [loadSuppliers]);
 
   const columns = useMemo<DataTableColumn<Supplier>[]>(
     () => [
@@ -128,6 +144,7 @@ export default function Providers() {
         header: "Documento",
         cell: (row) => <span className="text-black/60 text-xs">{row.documentNumber ?? "-"}</span>,
         className: "text-black/60",
+        visible: false,
       },
       {
         id: "supplier",
@@ -144,16 +161,17 @@ export default function Providers() {
       },
       {
         id: "phone",
-        header: "Teléfono",
+        header: "Telefono",
         cell: (row) => <span className="text-black/70">{row.phone ?? "-"}</span>,
         className: "text-black/70",
       },
       {
         id: "address",
-        header: "Dirección",
+        header: "Direccion",
         cell: (row) => <span className="text-black/70">{row.address ?? "-"}</span>,
         className: "text-black/70",
         showInCards: false,
+        visible: false,
       },
       {
         id: "leadTimeDays",
@@ -164,7 +182,7 @@ export default function Providers() {
             <Timer className="h-4 w-4" />
           </div>
         ),
-        headerClassName: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
         className: "text-center text-black/70",
         showInCards: false,
       },
@@ -172,74 +190,73 @@ export default function Providers() {
         id: "status",
         header: "Estado",
         cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
-        headerClassName: "text-left",
+        headerClassName: "text-center [&>div]:justify-center",
+        className: "text-center",
         sortAccessor: (row) => row.isActive,
       },
       {
         id: "actions",
         header: "ACCIONES",
         cell: (row) => (
-          <div className="flex items-center justify-center">
-            <ActionsPopover
-              actions={[
-                {
-                  id: "edit",
-                  label: "Editar",
-                  icon: <Pencil className="h-4 w-4 text-black/60" />,
-                  onClick: () => openEdit(row.supplierId),
+          <ActionsPopover
+            actions={[
+              {
+                id: "edit",
+                label: "Editar",
+                icon: <Pencil className="h-4 w-4 text-black/60" />,
+                onClick: () => openEdit(row.supplierId),
+              },
+              {
+                id: "methods",
+                label: "Metodos de pago",
+                icon: <IconPaymentMethod />,
+                onClick: () => setMethodSupplierId(row.supplierId),
+              },
+              {
+                id: "toggle",
+                label: row.isActive ? "Eliminar" : "Restaurar",
+                icon: <Power className="h-4 w-4" />,
+                danger: row.isActive,
+                className: row.isActive
+                  ? "text-rose-700 hover:bg-rose-50"
+                  : "text-cyan-700 hover:bg-cyan-50",
+                onClick: () => {
+                  setToggleSupplierId(row.supplierId);
+                  setNextActiveState(!row.isActive);
                 },
-                {
-                  id: "methods",
-                  label: "Métodos de pago",
-                  icon: <IconPaymentMethod />,
-                  onClick: () => setMethodSupplierId(row.supplierId),
-                },
-                {
-                  id: "toggle",
-                  label: row.isActive ? "Eliminar" : "Restaurar",
-                  icon: <Power className="h-4 w-4" />,
-                  danger: row.isActive,
-                  className: row.isActive
-                    ? "text-rose-700 hover:bg-rose-50"
-                    : "text-cyan-700 hover:bg-cyan-50",
-                  onClick: () => {
-                    setToggleSupplierId(row.supplierId);
-                    setNextActiveState(!row.isActive);
-                  },
-                },
-              ]}
-              columns={1}
-              compact
-              showLabels
-              triggerIcon={<Menu className="h-4 w-4" />}
-              popoverClassName="min-w-35"
-              popoverBodyClassName="p-2"
-              renderAction={(action, helpers) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    helpers.onAction(action);
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
-                  disabled={action.disabled}
-                >
-                  {action.icon}
-                  {action.label}
-                </button>
-              )}
-            />
-          </div>
+              },
+            ]}
+            columns={1}
+            compact
+            showLabels
+            triggerIcon={<Menu className="h-4 w-4" />}
+            popoverClassName="min-w-35"
+            popoverBodyClassName="p-2"
+            renderAction={(action, helpers) => (
+              <button
+                key={action.id}
+                type="button"
+                onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  helpers.onAction(action);
+                }}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
+                disabled={action.disabled}
+              >
+                {action.icon}
+                {action.label}
+              </button>
+            )}
+          />
         ),
-        className: "text-right",
-        headerClassName: "text-right",
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
         showInCards: false,
         sortable: false,
         hideable: false,
       },
     ],
-    [getSupplierDisplayName, openEdit, setMethodSupplierId, setNextActiveState, setToggleSupplierId]
+    [getSupplierDisplayName, openEdit]
   );
 
   const safePage = serverPagination.page;
@@ -248,56 +265,50 @@ export default function Providers() {
   return (
     <PageShell>
       <PageTitle title="Proveedores" />
-        <div className="flex items-center justify-between">
-          <Headed
-            title="Proveedores"
-            size="lg"
-          />
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={startCreate}
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-          >
-            Crear proveedor
-          </SystemButton>
-        </div>
-        
-        <DataTable
-          tableId="providers-table"
-          data={suppliers}
-          columns={columns}
-          rowKey="supplierId"
-          loading={loading}
-          emptyMessage="No hay proveedores con los filtros actuales."
-          showSearch
-          searchPlaceholder="Buscar proveedores..."
-          selectableColumns
-          hoverable={false}
-          animated={false}
-          pagination={{
-            page: safePage,
-            limit: effectiveLimit,
-            total: serverPagination.total,
+      <div className="flex items-center justify-between">
+        <Headed title="Proveedores" size="lg" />
+        <SystemButton
+          size="sm"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={startCreate}
+          style={{
+            backgroundColor: PRIMARY,
+            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
-          onPageChange={(nextPage) => {
-            setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
-          }}
-          tableClassName="text-[10px]"
-        />
+        >
+          Crear proveedor
+        </SystemButton>
+      </div>
+
+      <DataTable
+        tableId="providers-table"
+        data={suppliers}
+        columns={columns}
+        rowKey="supplierId"
+        loading={loading}
+        emptyMessage="No hay proveedores con los filtros actuales."
+        showSearch
+        searchPlaceholder="Buscar proveedores..."
+        selectableColumns
+        hoverable={false}
+        animated={false}
+        pagination={{
+          page: safePage,
+          limit: effectiveLimit,
+          total: serverPagination.total,
+        }}
+        onPageChange={(nextPage) => {
+          setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+        }}
+        tableClassName="text-[10px]"
+      />
 
       <SupplierFormModal
         open={openCreate}
         mode="create"
         onClose={() => setOpenCreate(false)}
-        onSaved={() => {
-          setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
-          void loadSuppliers();
-        }}
+        onSaved={handleCreateSaved}
         primaryColor={PRIMARY}
       />
 
@@ -306,9 +317,7 @@ export default function Providers() {
         mode="edit"
         supplierId={editingSupplierId}
         onClose={() => setEditingSupplierId(null)}
-        onSaved={() => {
-          void loadSuppliers();
-        }}
+        onSaved={handleEditSaved}
         primaryColor={PRIMARY}
       />
 
@@ -321,8 +330,8 @@ export default function Providers() {
         >
           <p className="text-sm text-black/70">
             {nextActiveState
-              ? "Se activará el proveedor nuevamente."
-              : "Se desactivará el proveedor seleccionado."}
+              ? "Se activara el proveedor nuevamente."
+              : "Se desactivara el proveedor seleccionado."}
           </p>
 
           <div className="mt-4 flex justify-end gap-2">
@@ -343,7 +352,7 @@ export default function Providers() {
 
       {methodSupplierId && (
         <ProviderMethodListModal
-          title="Métodos de pago del proveedor"
+          title="Metodos de pago del proveedor"
           supplierId={methodSupplierId}
           close={() => setMethodSupplierId(null)}
           className="w-[600px] max-h-[600px]"
@@ -352,4 +361,3 @@ export default function Providers() {
     </PageShell>
   );
 }
-
