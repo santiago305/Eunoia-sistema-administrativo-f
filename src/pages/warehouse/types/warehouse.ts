@@ -53,4 +53,20 @@ export type WarehouseLocationsResponse = {
 
 export type WarehouseOption = { warehouseId: string; name: string };
 
+export type WarehouseStockItem = {
+  skuId: string;
+  skuName: string;
+  productName: string;
+  onHand: number;
+  locationCodes: string[];
+};
+
+export type WarehouseStockResponse = {
+  warehouseId: string;
+  warehouseName: string;
+  totalSkus: number;
+  totalOnHand: number;
+  items: WarehouseStockItem[];
+};
+
 

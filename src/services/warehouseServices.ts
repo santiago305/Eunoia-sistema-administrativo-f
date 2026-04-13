@@ -8,6 +8,7 @@ import type {
   WarehouseListResponse,
   Warehouse,
   WarehouseLocationsResponse,
+  WarehouseStockResponse,
 } from "@/pages/warehouse/types/warehouse";
 
 export const createWarehouse = async (payload: CreateWarehouseDto): Promise<Warehouse> => {
@@ -45,6 +46,11 @@ export const getWarehouseById = async (id: string): Promise<Warehouse> => {
 
 export const getLocationsById = async (id: string): Promise<WarehouseLocationsResponse> => {
   const response = await axiosInstance.get(API_WAREHOUSES_GROUP.getWithLocations(id));
+  return response.data;
+};
+
+export const getWarehouseStockById = async (id: string): Promise<WarehouseStockResponse> => {
+  const response = await axiosInstance.get(API_WAREHOUSES_GROUP.getStock(id));
   return response.data;
 };
 

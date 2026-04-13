@@ -9,6 +9,7 @@ import { useWarehouses } from "@/hooks/useWarehouse";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
+import { WarehouseStockModal } from "./components/WarehouseStockModal";
 import { SystemButton } from "@/components/SystemButton";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { StatusPill } from "@/components/StatusTag";
@@ -30,6 +31,10 @@ export default function Warehouses() {
   const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
   const [openLocationsWarehouseId, setOpenLocationsWarehouseId] = useState<string | null>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<{
+    warehouseId: string;
+    name: string;
+  } | null>(null);
+  const [stockWarehouse, setStockWarehouse] = useState<{
     warehouseId: string;
     name: string;
   } | null>(null);
@@ -121,6 +126,14 @@ export default function Warehouses() {
     setSelectedWarehouse(null);
   }, []);
 
+  const openStockModal = useCallback((warehouse: { warehouseId: string; name: string }) => {
+    setStockWarehouse(warehouse);
+  }, []);
+
+  const closeStockModal = useCallback(() => {
+    setStockWarehouse(null);
+  }, []);
+
   const startEdit = useCallback((warehouseId: string) => {
     setOpenCreate(false);
     setEditingWarehouseId(warehouseId);
@@ -167,6 +180,7 @@ export default function Warehouses() {
         id: "name",
         header: "Almacen",
         accessorKey: "name",
+        cell: (row) => <span className="font-medium text-black">{row.name}</span>,
         className: "text-black/70",
         cardTitle: true,
       },
@@ -276,7 +290,7 @@ export default function Warehouses() {
         sortable: false,
       },
     ],
-    [formatDate, openLocationsModal, startEdit]
+    [formatDate, openLocationsModal, openStockModal, startEdit]
   );
 
   return (
@@ -325,6 +339,12 @@ export default function Warehouses() {
           limit: effectiveLimit,
           total,
         }}
+        onRowClick={(row) =>
+          openStockModal({
+            warehouseId: row.warehouseId,
+            name: row.name,
+          })
+        }
         onPageChange={(nextPage) => {
           setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
         }}
@@ -381,6 +401,12 @@ export default function Warehouses() {
         onClose={closeLocationsModal}
         primaryColor={PRIMARY}
         primaryHover={PRIMARY_HOVER}
+      />
+
+      <WarehouseStockModal
+        open={Boolean(stockWarehouse)}
+        warehouse={stockWarehouse}
+        onClose={closeStockModal}
       />
     </PageShell>
   );
