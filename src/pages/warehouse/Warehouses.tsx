@@ -4,6 +4,7 @@ import { Modal } from "@/components/modales/Modal";
 import { motion, useReducedMotion } from "framer-motion";
 import { Boxes, Menu, Pencil, Plus, Power } from "lucide-react";
 
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useWarehouses } from "@/hooks/useWarehouse";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
@@ -20,6 +21,7 @@ import { PageShell } from "@/components/layout/PageShell";
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
+const SEARCH_DEBOUNCE_MS = 500;
 
 export default function Warehouses() {
   const shouldReduceMotion = useReducedMotion();
@@ -36,16 +38,34 @@ export default function Warehouses() {
     pageIndex: 0,
     pageSize: DEFAULT_LIMIT,
   });
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
   const page = paginationState.pageIndex + 1;
   const limit = paginationState.pageSize;
+  const debouncedSearch = useDebouncedValue(searchText.trim(), SEARCH_DEBOUNCE_MS);
+
+  useEffect(() => {
+    if (debouncedSearch === appliedSearch) return;
+
+    if (paginationState.pageIndex !== 0) {
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+      return;
+    }
+
+    setAppliedSearch(debouncedSearch);
+  }, [appliedSearch, debouncedSearch, paginationState.pageIndex]);
 
   const queryParams = useMemo(
     () => ({
       page,
       limit,
+      q: appliedSearch || undefined,
     }),
-    [page, limit]
+    [appliedSearch, page, limit]
   );
 
   const {
@@ -294,6 +314,9 @@ export default function Warehouses() {
         emptyMessage="No hay almacenes con los filtros actuales."
         showSearch
         searchPlaceholder="Buscar almacenes..."
+        searchValue={searchText}
+        onSearchChange={setSearchText}
+        searchMode="server"
         selectableColumns
         hoverable={false}
         animated={false}

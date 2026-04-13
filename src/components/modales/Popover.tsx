@@ -185,7 +185,7 @@ function resolvePlacement(
   };
 }
 
-export function Popover({
+export function   Popover({
   open,
   onClose,
   anchorRef,
@@ -407,7 +407,7 @@ export function Popover({
           role="dialog"
           aria-modal="false"
           className={cn(
-            "fixed z-50 flex max-h-[calc(100vh-1rem)] min-w-88 max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-[0_16px_40px_-16px_rgba(0,0,0,0.22)]",
+            "fixed z-50 flex max-h-[calc(100vh-1rem)] min-w-44 max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-[0_16px_40px_-16px_rgba(0,0,0,0.22)]",
             transformOriginClass,
             className,
           )}

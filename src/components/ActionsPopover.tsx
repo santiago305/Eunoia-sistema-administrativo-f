@@ -203,12 +203,12 @@ export function ActionsPopover({
         animation={animation}
         className={cn(
           "max-w-[calc(100vw-1rem)] rounded-xl border-border bg-popover text-popover-foreground",
-          compact ? "min-w-40" : "min-w-48",
+          compact ? "min-w-25" : "min-w-30",
           popoverClassName,
         )}
         bodyClassName={cn(popoverBodyClassName)}
       >
-        <div className={cn("grid gap-2", getColumnsClass(columns), gridClassName)}>
+        <div className={cn("grid", getColumnsClass(columns), gridClassName)}>
           {visibleActions.map((action) => {
             if (renderAction) {
               return <div key={action.id}>{renderAction(action, helpers)}</div>;

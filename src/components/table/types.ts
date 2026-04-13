@@ -39,6 +39,8 @@ export type DataTableSelectionChangeMeta<T> = {
 
 export type DataTableSortDirection = 'asc' | 'desc';
 
+export type DataTableSearchMode = 'client' | 'server';
+
 export type DataTableSortState =
     | {
           columnId: string;
@@ -68,6 +70,7 @@ export type DataTableProps<T> = {
     searchPlaceholder?: string;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
+    searchMode?: DataTableSearchMode;
     globalSearchFn?: (row: T, query: string) => boolean;
     stickyHeader?: boolean;
     responsiveCards?: boolean;

@@ -15,14 +15,27 @@ export function useWarehouses(params: ListWarehousesQuery) {
     setLoading(true);
     setError(null);
     try {
+      console.log("[Warehouses search] request", params);
       const res: WarehouseListResponse = await listWarehouses(params);
       setItems(res.items ?? []);
       setTotal(res.total ?? 0);
       setPage(res.page ?? params.page ?? 1);
       setLimit(res.limit ?? params.limit ?? 10);
+      console.log("[Warehouses search] response", {
+        q: params.q ?? "",
+        page: res.page ?? params.page ?? 1,
+        limit: res.limit ?? params.limit ?? 10,
+        total: res.total ?? 0,
+        items: res.items?.length ?? 0,
+      });
     } catch (e: any) {
       setItems([]);
       setTotal(0);
+      console.log("[Warehouses search] error", {
+        q: params.q ?? "",
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+      });
       setError(e?.response?.data?.message ?? "No se pudieron cargar los almacenes.");
     } finally {
       setLoading(false);

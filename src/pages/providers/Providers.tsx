@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "reac
 import { PageTitle } from "@/components/PageTitle";
 import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
@@ -19,6 +20,7 @@ import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
+const SEARCH_DEBOUNCE_MS = 500;
 
 export default function Providers() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -39,6 +41,10 @@ export default function Providers() {
     pageIndex: 0,
     pageSize: DEFAULT_LIMIT,
   });
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+
+  const debouncedSearch = useDebouncedValue(searchText.trim(), SEARCH_DEBOUNCE_MS);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
@@ -47,6 +53,20 @@ export default function Providers() {
   const [methodSupplierId, setMethodSupplierId] = useState<string | null>(null);
 
   const page = paginationState.pageIndex + 1;
+
+  useEffect(() => {
+    if (debouncedSearch === appliedSearch) return;
+
+    if (paginationState.pageIndex !== 0) {
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+      return;
+    }
+
+    setAppliedSearch(debouncedSearch);
+  }, [appliedSearch, debouncedSearch, paginationState.pageIndex]);
 
   const getSupplierDisplayName = useCallback((supplier: Supplier) => {
     const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
@@ -58,9 +78,16 @@ export default function Providers() {
     setLoading(true);
 
     try {
+      console.log("[Providers search] request", {
+        page,
+        limit: paginationState.pageSize,
+        q: appliedSearch || undefined,
+      });
+
       const res = await listSuppliers({
         page,
         limit: paginationState.pageSize,
+        q: appliedSearch || undefined,
       });
 
       const items = res.items ?? [];
@@ -68,6 +95,14 @@ export default function Providers() {
       const nextPage = res.page ?? page;
       const nextLimit = res.limit ?? paginationState.pageSize;
       const nextTotalPages = Math.max(1, Math.ceil(nextTotal / nextLimit));
+
+      console.log("[Providers search] response", {
+        appliedSearch,
+        page: nextPage,
+        limit: nextLimit,
+        total: nextTotal,
+        items: items.length,
+      });
 
       setSuppliers(items);
       setServerPagination({
@@ -88,11 +123,16 @@ export default function Providers() {
         hasPrev: false,
         hasNext: false,
       });
+      console.log("[Providers search] error", {
+        page,
+        limit: paginationState.pageSize,
+        q: appliedSearch || undefined,
+      });
       showFlash(errorResponse("Error al listar proveedores"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, page, paginationState.pageSize, showFlash]);
+  }, [appliedSearch, clearFlash, page, paginationState.pageSize, showFlash]);
 
   useEffect(() => {
     void loadSuppliers();
@@ -290,6 +330,9 @@ export default function Providers() {
         emptyMessage="No hay proveedores con los filtros actuales."
         showSearch
         searchPlaceholder="Buscar proveedores..."
+        searchValue={searchText}
+        onSearchChange={setSearchText}
+        searchMode="server"
         selectableColumns
         hoverable={false}
         animated={false}

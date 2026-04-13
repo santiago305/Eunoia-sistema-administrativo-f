@@ -72,6 +72,7 @@ export function DataTable<T extends Record<string, unknown>>({
   searchPlaceholder = "Buscar...",
   searchValue,
   onSearchChange,
+  searchMode = "client",
   globalSearchFn,
   stickyHeader = true,
   responsiveCards = true,
@@ -235,6 +236,8 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const filteredData = useMemo(() => {
+    if (searchMode === "server") return data;
+
     const query = activeSearch.trim().toLowerCase();
     if (!query) return data;
 
@@ -253,7 +256,7 @@ export function DataTable<T extends Record<string, unknown>>({
           return normalizeSearchText(value).includes(query);
         });
     });
-  }, [activeSearch, columns, data, globalSearchFn]);
+  }, [activeSearch, columns, data, globalSearchFn, searchMode]);
 
   const sortedData = useMemo(() => {
     if (!sort) return filteredData;
