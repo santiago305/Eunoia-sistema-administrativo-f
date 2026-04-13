@@ -1,234 +1,270 @@
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 import { motion, useReducedMotion } from "framer-motion";
-import { Boxes } from "lucide-react";
 import { Modal } from "@/components/modales/Modal";
-import { UbigeoSelectSection, type UbigeoSelection } from "@/components/UbigeoSelectSection";
-import { createWarehouse, getWarehouseById, updateWarehouse, updateWarehouseActive } from "@/services/warehouseServices";
 import { FloatingInput } from "@/components/FloatingInput";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { FloatingTextarea } from "@/components/FloatingTextarea";
+import {
+  UbigeoSelectSection,
+  type UbigeoSelection,
+} from "@/components/UbigeoSelectSection";
 import { SystemButton } from "@/components/SystemButton";
+import {
+  createWarehouse,
+  getWarehouseById,
+  updateWarehouse,
+  updateWarehouseActive,
+} from "@/services/warehouseServices";
 
 export type WarehouseFormState = {
-    name: string;
-    department: string;
-    province: string;
-    district: string;
-    address: string;
-    isActive: boolean;
+  name: string;
+  department: string;
+  province: string;
+  district: string;
+  address: string;
+  isActive: boolean;
 };
 
 type WarehouseFormModalProps = {
-    open: boolean;
-    mode: "create" | "edit";
-    warehouseId?: string | null;
-    onClose: () => void;
-    onSaved?: () => void;
-    primaryColor: string;
-    entityLabel?: string;
+  open: boolean;
+  mode: "create" | "edit";
+  warehouseId?: string | null;
+  onClose: () => void;
+  onSaved?: () => void;
+  primaryColor: string;
+  entityLabel?: string;
 };
 
+type BackendErrorPayload = {
+  message?: string | string[];
+};
+
+function extractErrorMessage(error: unknown, fallback: string) {
+  if (!isAxiosError<BackendErrorPayload>(error)) return fallback;
+
+  const message = error.response?.data?.message;
+  if (Array.isArray(message)) {
+    return message.find(Boolean) ?? fallback;
+  }
+
+  return message || fallback;
+}
+
 export function WarehouseFormModal({
-    open,
-    mode,
-    warehouseId,
-    onClose,
-    onSaved,
-    primaryColor,
-    entityLabel = "almacén",
+  open,
+  mode,
+  warehouseId,
+  onClose,
+  onSaved,
+  primaryColor,
+  entityLabel = "almacén",
 }: WarehouseFormModalProps) {
-    const shouldReduceMotion = useReducedMotion();
-    const [form, setForm] = useState<WarehouseFormState>({
+  const shouldReduceMotion = useReducedMotion();
+  const [form, setForm] = useState<WarehouseFormState>({
+    name: "",
+    department: "",
+    province: "",
+    district: "",
+    address: "",
+    isActive: true,
+  });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestedWarehouseIdRef = useRef<string | null>(null);
+
+  const primaryRing = useMemo(
+    () =>
+      ({
+        "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+      }) as CSSProperties,
+    [primaryColor],
+  );
+
+  useEffect(() => {
+    if (!open) {
+      requestedWarehouseIdRef.current = null;
+      return;
+    }
+    setError(null);
+
+    if (mode === "create") {
+      requestedWarehouseIdRef.current = null;
+      setForm({
         name: "",
         department: "",
         province: "",
         district: "",
         address: "",
         isActive: true,
-    });
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+      });
+      return;
+    }
 
-    const primaryRing = useMemo(
-        () => ({ "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties),
-        [primaryColor],
-    );
+    if (!warehouseId) return;
+    if (requestedWarehouseIdRef.current === warehouseId) return;
 
-    useEffect(() => {
-        if (!open) return;
-        setError(null);
+    let cancelled = false;
+    requestedWarehouseIdRef.current = warehouseId;
+    setLoading(true);
 
-        if (mode === "create") {
-            setForm({
-                name: "",
-                department: "",
-                province: "",
-                district: "",
-                address: "",
-                isActive: true,
-            });
-            return;
+    void (async () => {
+      try {
+        const warehouse = await getWarehouseById(warehouseId);
+        if (cancelled) return;
+
+        setForm({
+          name: warehouse.name ?? "",
+          department: warehouse.department ?? "",
+          province: warehouse.province ?? "",
+          district: warehouse.district ?? "",
+          address: warehouse.address ?? "",
+          isActive: warehouse.isActive ?? true,
+        });
+      } catch (error: unknown) {
+        if (!cancelled) {
+          setError(extractErrorMessage(error, "No se pudo cargar el almacén."));
         }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mode, warehouseId]);
+
+  if (!open) return null;
+
+  const title = mode === "edit" ? `Detalle de ${entityLabel}` : `Nuevo ${entityLabel}`;
+  const submitLabel = mode === "edit" ? "Guardar cambios" : "Guardar";
+  const canSubmit =
+    Boolean(form.name.trim()) &&
+    Boolean(form.department.trim()) &&
+    Boolean(form.province.trim()) &&
+    Boolean(form.district.trim()) &&
+    !saving;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      if (mode === "edit") {
         if (!warehouseId) return;
 
-        let cancelled = false;
-        setLoading(true);
-        void (async () => {
-            try {
-                const warehouse = await getWarehouseById(warehouseId);
-                if (cancelled) return;
-                setForm({
-                    name: warehouse.name ?? "",
-                    department: warehouse.department ?? "",
-                    province: warehouse.province ?? "",
-                    district: warehouse.district ?? "",
-                    address: warehouse.address ?? "",
-                    isActive: warehouse.isActive ?? true,
-                });
-            } catch (e: any) {
-                if (!cancelled) {
-                    setError(e?.response?.data?.message ?? "No se pudo cargar el almacén.");
-                }
-            } finally {
-                if (!cancelled) setLoading(false);
+        await updateWarehouse(warehouseId, {
+          name: form.name.trim() || undefined,
+          department: form.department.trim() || undefined,
+          province: form.province.trim() || undefined,
+          district: form.district.trim() || undefined,
+          address: form.address.trim() || null,
+        });
+        await updateWarehouseActive(warehouseId, { isActive: form.isActive });
+      } else {
+        await createWarehouse({
+          name: form.name.trim(),
+          department: form.department.trim(),
+          province: form.province.trim(),
+          district: form.district.trim(),
+          address: form.address.trim() || null,
+          isActive: form.isActive,
+        });
+      }
+
+      onSaved?.();
+      onClose();
+    } catch (error: unknown) {
+      setError(extractErrorMessage(error, "No se pudo guardar el almacén."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUbigeoChange = (next: UbigeoSelection) => {
+    setForm((prev) => ({
+      ...prev,
+      department: next.department,
+      province: next.province,
+      district: next.district,
+    }));
+  };
+
+  return (
+    <Modal open={open} title={title} onClose={onClose} className="w-[500px] max-h-[500px]">
+      <motion.div
+        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
+        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.16 }}
+      >
+        <div className="space-y-4">
+          <FloatingInput
+            label="Nombre"
+            name="warehouse-name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            disabled={loading}
+            className="h-11 text-sm"
+            style={primaryRing}
+          />
+
+          <UbigeoSelectSection
+            value={{
+              ubigeo: "",
+              department: form.department,
+              province: form.province,
+              district: form.district,
+            }}
+            onChange={handleUbigeoChange}
+            disabled={loading}
+            showUbigeoInput={false}
+            className="h-11"
+            textSize="text-sm mt-2"
+          />
+
+          <FloatingTextarea
+            label="Direccion"
+            name="warehouse-address"
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            disabled={loading}
+            rows={4}
+            className="min-h-[90px] text-sm"
+            style={primaryRing}
+          />
+        </div>
+
+        {error ? (
+          <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex justify-end gap-2">
+          <SystemButton variant="outline" size="md" onClick={onClose} disabled={saving}>
+            Cancelar
+          </SystemButton>
+          <SystemButton
+            size="md"
+            style={
+              {
+                backgroundColor: primaryColor,
+                borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+              } as CSSProperties
             }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [open, mode, warehouseId]);
-
-    if (!open) return null;
-
-    const title = mode === "edit" ? `Editar ${entityLabel}` : `Nuevo ${entityLabel}`;
-    const submitLabel = mode === "edit" ? "Guardar cambios" : "Guardar";
-    const canSubmit =
-        Boolean(form.name.trim()) &&
-        Boolean(form.department.trim()) &&
-        Boolean(form.province.trim()) &&
-        Boolean(form.district.trim()) &&
-        !saving;
-
-    const handleSubmit = async () => {
-        if (!canSubmit) return;
-
-        setSaving(true);
-        setError(null);
-        try {
-            if (mode === "edit") {
-                if (!warehouseId) return;
-                await updateWarehouse(warehouseId, {
-                    name: form.name.trim() || undefined,
-                    department: form.department.trim() || undefined,
-                    province: form.province.trim() || undefined,
-                    district: form.district.trim() || undefined,
-                    address: form.address.trim() || null,
-                });
-                await updateWarehouseActive(warehouseId, { isActive: form.isActive });
-            } else {
-                await createWarehouse({
-                    name: form.name.trim(),
-                    department: form.department.trim(),
-                    province: form.province.trim(),
-                    district: form.district.trim(),
-                    address: form.address.trim() || null,
-                    isActive: form.isActive,
-                });
-            }
-
-            onSaved?.();
-            onClose();
-        } catch (e: any) {
-            setError(e?.response?.data?.message ?? "No se pudo guardar el almacén.");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleUbigeoChange = (next: UbigeoSelection) => {
-        setForm((prev) => ({
-            ...prev,
-            department: next.department,
-            province: next.province,
-            district: next.district,
-        }));
-    };
-
-    return (
-        <Modal open={open} title={title} onClose={onClose} className="w-[500px] max-h-[500px]">
-            <motion.div
-                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.16 }}
-            >
-                <div className="space-y-4 p-2">
-                    <div className="border-b border-black/10 px-3 sm:px-4 py-1">
-                        <SectionHeaderForm icon={Boxes} title="Datos del almacén" />
-                    </div>
-                    <FloatingInput
-                        label="Nombre"
-                        name="warehouse-name"
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        disabled={loading}
-                        className="h-11 text-sm"
-                        style={primaryRing}
-                    />
-                    <UbigeoSelectSection
-                        value={{
-                            ubigeo: "",
-                            department: form.department,
-                            province: form.province,
-                            district: form.district,
-                        }}
-                        onChange={handleUbigeoChange}
-                        disabled={loading}
-                        showUbigeoInput={false}
-                        className="h-11"
-                        textSize="text-sm mt-2"
-                    />
-                    <div className="grid grid-cols-1">
-                        <label className="text-sm">
-                            Dirección (opcional)
-                            <textarea
-                                className="mt-2 min-h-[90px] w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2"
-                                style={primaryRing}
-                                value={form.address}
-                                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                                disabled={loading}
-                            />
-                        </label>
-                    </div>
-                </div>
-
-                {error && (
-                    <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                        {error}
-                    </div>
-                )}
-
-                <div className="mt-4 flex justify-end gap-2">
-                    <SystemButton variant="outline" size="md" onClick={onClose} disabled={saving}>
-                        Cancelar
-                    </SystemButton>
-                    <SystemButton
-                        size="md"
-                        style={{
-                            backgroundColor: primaryColor,
-                            borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                            "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                        } as CSSProperties}
-                        onClick={handleSubmit}
-                        disabled={!canSubmit || loading}
-                        loading={saving}
-                    >
-                        {saving ? "Guardando..." : submitLabel}
-                    </SystemButton>
-                </div>
-            </motion.div>
-        </Modal>
-    );
+            onClick={handleSubmit}
+            disabled={!canSubmit || loading}
+            loading={saving}
+          >
+            {saving ? "Guardando..." : submitLabel}
+          </SystemButton>
+        </div>
+      </motion.div>
+    </Modal>
+  );
 }

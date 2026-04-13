@@ -231,6 +231,7 @@ export default function Warehouses() {
       {
         id: "actions",
         header: "ACCIONES",
+        stopRowClick: true,
         cell: (row) => (
           <ActionsPopover
             actions={[
@@ -246,7 +247,7 @@ export default function Warehouses() {
               },
               {
                 id: "edit",
-                label: "Editar",
+                label: "Detalles",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
                 onClick: () => startEdit(row.warehouseId),
               },

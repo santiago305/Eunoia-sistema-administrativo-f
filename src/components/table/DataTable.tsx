@@ -553,15 +553,19 @@ export function DataTable<T extends Record<string, unknown>>({
                       {visibleColumns.map((column) => {
                         const isCellClickable =
                           !!column.onCellClick && column.clickable !== false;
+                        const shouldStopRowClick =
+                          column.stopRowClick || isCellClickable;
 
                         return (
                           <td
                             key={column.id}
                             onClick={
-                              isCellClickable
+                              shouldStopRowClick
                                 ? (event) => {
                                     event.stopPropagation();
-                                    column.onCellClick?.(row, index, event);
+                                    if (isCellClickable) {
+                                      column.onCellClick?.(row, index, event);
+                                    }
                                   }
                                 : undefined
                             }

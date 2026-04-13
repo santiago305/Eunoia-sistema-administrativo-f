@@ -15,6 +15,7 @@ export type DataTableColumn<T> = {
     width?: string;
     clickable?: boolean;
     onCellClick?: (row: T, index: number, event: MouseEvent<HTMLElement>) => void;
+    stopRowClick?: boolean;
     searchable?: boolean;
     searchValue?: (row: T) => string;
     sortable?: boolean;
