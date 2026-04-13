@@ -3,7 +3,7 @@ import { createProductRecipe, deleteProductRecipe } from "@/services/productReci
 import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
 import { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
-import { Power, Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SystemButton } from "@/components/SystemButton";
@@ -110,7 +110,7 @@ export function RecipeFormFields({
                                 void deleteRecipe(row.id);
                             }}
                         >
-                            <Power className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                         </SystemButton>
                     </div>
                 ),

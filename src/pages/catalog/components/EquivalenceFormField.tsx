@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Scale, Power } from "lucide-react";
+import { Plus, Scale, Trash2 } from "lucide-react";
 import { createProductEquivalence, deleteProductEquivalence } from "@/services/equivalenceService";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -113,7 +113,7 @@ export function EquivalenceFormFields({
                 void deleteEquivalence(row.id);
               }}
             >
-              <Power className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </SystemButton>
           </div>
         ),

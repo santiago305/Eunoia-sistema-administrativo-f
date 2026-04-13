@@ -6,7 +6,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
 import type { Supplier } from "@/pages/providers/types/supplier";
-import { Menu, Pencil, Plus, Power, Timer } from "lucide-react";
+import { Menu, Pencil, Plus, Timer, Trash2 } from "lucide-react";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
 import { SystemButton } from "@/components/SystemButton";
@@ -255,7 +255,7 @@ export default function Providers() {
               {
                 id: "toggle",
                 label: row.isActive ? "Eliminar" : "Restaurar",
-                icon: <Power className="h-4 w-4" />,
+                icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
                 className: row.isActive
                   ? "text-rose-700 hover:bg-rose-50"

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Power, ReceiptText } from "lucide-react";
+import { Plus, ReceiptText, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SystemButton } from "@/components/SystemButton";
@@ -179,7 +179,7 @@ export function PaymentListModal({
               onClick={() => handleRemove(row.payDocId)}
               title="Eliminar pago"
             >
-              <Power className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </SystemButton>
           </div>
         ),

@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { Modal } from "@/components/modales/Modal";
-import { motion, useReducedMotion } from "framer-motion";
-import { Boxes, Menu, Pencil, Plus, Power } from "lucide-react";
+import { Boxes, Menu, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useWarehouses } from "@/hooks/useWarehouse";
@@ -18,6 +16,7 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { ConfirmActionModal } from "@/components/alert.dialog/ConfirmActionModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
@@ -25,7 +24,6 @@ const DEFAULT_LIMIT = 10;
 const SEARCH_DEBOUNCE_MS = 500;
 
 export default function Warehouses() {
-  const shouldReduceMotion = useReducedMotion();
   const [openCreate, setOpenCreate] = useState(false);
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
   const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
@@ -254,7 +252,7 @@ export default function Warehouses() {
               {
                 id: "toggle",
                 label: row.isActive ? "Eliminar" : "Restaurar",
-                icon: <Power className="h-4 w-4" />,
+                icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
                 className: row.isActive
                   ? "text-rose-700 hover:bg-rose-50"
@@ -363,38 +361,13 @@ export default function Warehouses() {
         entityLabel="almacen"
       />
 
-      {deletingWarehouseId && (
-        <Modal
-          open={true}
-          title="Confirmar accion"
-          onClose={() => setDeletingWarehouseId(null)}
-          className="w-[300px] max-h-[300px]"
-        >
-          <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-            animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.16 }}
-          >
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
-              <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un almacen.
-              Hazlo solo si estas seguro.
-            </div>
-
-            <p className="mt-3 text-[11px] text-black/70">
-              Confirmas esta accion? Puede afectar disponibilidad, reportes y procesos internos.
-            </p>
-
-            <div className="mt-4 flex justify-end gap-2">
-              <SystemButton variant="outline" size="sm" onClick={() => setDeletingWarehouseId(null)}>
-                Cancelar
-              </SystemButton>
-              <SystemButton variant="danger" size="sm" onClick={confirmDelete}>
-                Confirmar
-              </SystemButton>
-            </div>
-          </motion.div>
-        </Modal>
-      )}
+      <ConfirmActionModal
+        open={Boolean(deletingWarehouseId)}
+        title="Eliminar almacen"
+        description="¿Estás seguro de que deseas eliminar este almacen?"
+        onClose={() => setDeletingWarehouseId(null)}
+        onConfirm={confirmDelete}
+      />
 
       <WarehouseLocationsModal
         open={Boolean(openLocationsWarehouseId && selectedWarehouse)}

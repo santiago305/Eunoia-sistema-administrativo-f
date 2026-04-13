@@ -1,6 +1,6 @@
 import type { ActionItem } from "@/components/ActionsPopover";
 import type { Product } from "@/pages/catalog/types/product";
-import { Pencil, Power } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 type Handlers = {
   openEquivalences?: (productId: string) => void | Promise<void>;
@@ -23,7 +23,7 @@ export function getDropdownItemProducts(product: Product, handlers: Handlers): A
     {
       id: "toggle",
       label: product.isActive ? "Eliminar" : "Restaurar",
-      icon: <Power className="h-4 w-4" />,
+      icon: <Trash2 className="h-4 w-4" />,
       danger: product.isActive,
       className: product.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50",
       onClick: () => {

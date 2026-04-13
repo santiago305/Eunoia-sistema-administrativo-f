@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Plus, Power } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -152,7 +152,7 @@ export function PaymentMethodListModal({
               onClick={() => removeMethod(row.methodId)}
               title="Eliminar método"
             >
-              <Power className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </SystemButton>
           </div>
         ),

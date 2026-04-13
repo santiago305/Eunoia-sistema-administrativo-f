@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { Modal } from "@/components/modales/Modal";
-import { motion, useReducedMotion } from "framer-motion";
-import { MapPin, Pencil, Power } from "lucide-react";
+import { useReducedMotion } from "framer-motion";
+import { MapPin, Pencil, Trash2 } from "lucide-react";
 import {
   createLocation,
   getLocationById,
@@ -18,6 +18,7 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import { ConfirmActionModal } from "@/components/alert.dialog/ConfirmActionModal";
 
 type WarehouseRef = { warehouseId: string; name: string } | null;
 
@@ -240,7 +241,7 @@ export function WarehouseLocationsModal({
               <Pencil className="h-4 w-4" />
             </IconButton>
             <IconButton
-              title={row.isActive ? "Desactivar" : "Activar"}
+              title={row.isActive ? "Eliminar" : "Activar"}
               onClick={() => {
                 setDeletingLocationId(row.locationId);
                 setNextActiveState(!row.isActive);
@@ -249,7 +250,7 @@ export function WarehouseLocationsModal({
               PRIMARY={PRIMARY}
               PRIMARY_HOVER={PRIMARY_HOVER}
             >
-              <Power className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </IconButton>
           </div>
         ),
@@ -273,67 +274,52 @@ export function WarehouseLocationsModal({
         open={open}
         title={`Ubicaciones del almacen - ${warehouse.name}`}
         onClose={onClose}
-        className="w-[760px] max-h-[620px]"
       >
-        <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-          animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.16 }}
-          className="space-y-4"
-        >
-          <div className="rounded-2xl border border-black/10 bg-white px-4 py-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <SectionHeaderForm icon={MapPin} title="Nueva ubicacion" />
-              <div className="text-xs text-black/60">
-                {loading ? "Cargando..." : `${pagination.total} registros`}
-              </div>
-            </div>
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_120px]">
+            <FloatingInput
+              label="Codigo"
+              name="location-create-code"
+              value={createForm.code}
+              onChange={(e) =>
+                setCreateForm((prev) => ({
+                  ...prev,
+                  code: e.target.value,
+                }))
+              }
+            />
 
-            <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_120px]">
-              <FloatingInput
-                label="Codigo"
-                name="location-create-code"
-                value={createForm.code}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    code: e.target.value,
-                  }))
-                }
-              />
+            <FloatingInput
+              label="Descripcion"
+              name="location-create-description"
+              value={createForm.description}
+              onChange={(e) =>
+                setCreateForm((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+            />
 
-              <FloatingInput
-                label="Descripcion"
-                name="location-create-description"
-                value={createForm.description}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-              />
-
-              <div className="flex items-end">
-                <SystemButton
-                  size="sm"
-                  className="h-11 w-full text-sm"
-                  style={{
-                    backgroundColor: primaryColor,
-                    borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                  }}
-                  onClick={() => void saveCreate()}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryColor;
-                  }}
-                  disabled={!canCreate}
-                >
-                  Crear
-                </SystemButton>
-              </div>
+            <div className="flex items-end">
+              <SystemButton
+                size="sm"
+                className="h-10 w-full text-sm"
+                style={{
+                  backgroundColor: primaryColor,
+                  borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                }}
+                onClick={() => void saveCreate()}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryColor;
+                }}
+                disabled={!canCreate}
+              >
+                Crear
+              </SystemButton>
             </div>
           </div>
 
@@ -355,7 +341,7 @@ export function WarehouseLocationsModal({
           />
 
           {error ? <div className="px-2 text-sm text-rose-600">{error}</div> : null}
-        </motion.div>
+        </div>
       </Modal>
 
       {editingLocationId ? (
@@ -390,38 +376,18 @@ export function WarehouseLocationsModal({
         </Modal>
       ) : null}
 
-      {deletingLocationId ? (
-        <Modal
-          open={Boolean(deletingLocationId)}
-          title={nextActiveState ? "Restaurar ubicacion" : "Desactivar ubicacion"}
-          onClose={() => setDeletingLocationId(null)}
-          className="w-[300px] max-h-[300px]"
-        >
-          <p className="text-sm text-black/70">
-            {nextActiveState
-              ? "Se activara la ubicacion nuevamente."
-              : "Se desactivara la ubicacion seleccionada."}
-          </p>
-          <div className="mt-4 flex justify-end gap-2">
-            <SystemButton
-              variant="outline"
-              size="md"
-              className="rounded-2xl"
-              onClick={() => setDeletingLocationId(null)}
-            >
-              Cancelar
-            </SystemButton>
-            <SystemButton
-              size="md"
-              variant="danger"
-              className="rounded-2xl"
-              onClick={() => void confirmToggleActive()}
-            >
-              Confirmar
-            </SystemButton>
-          </div>
-        </Modal>
-      ) : null}
+      <ConfirmActionModal
+        open={Boolean(deletingLocationId)}
+        title={nextActiveState ? "Restaurar ubicacion" : "Desactivar ubicacion"}
+        description={
+          nextActiveState
+            ? "Se activara la ubicacion nuevamente."
+            : "Se desactivara la ubicacion seleccionada."
+        }
+        confirmVariant={nextActiveState ? "primary" : "danger"}
+        onClose={() => setDeletingLocationId(null)}
+        onConfirm={confirmToggleActive}
+      />
     </>
   );
 }

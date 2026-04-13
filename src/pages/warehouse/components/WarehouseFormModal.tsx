@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import { motion, useReducedMotion } from "framer-motion";
 import { Modal } from "@/components/modales/Modal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingTextarea } from "@/components/FloatingTextarea";
@@ -60,7 +59,6 @@ export function WarehouseFormModal({
   primaryColor,
   entityLabel = "almacén",
 }: WarehouseFormModalProps) {
-  const shouldReduceMotion = useReducedMotion();
   const [form, setForm] = useState<WarehouseFormState>({
     name: "",
     department: "",
@@ -196,75 +194,69 @@ export function WarehouseFormModal({
 
   return (
     <Modal open={open} title={title} onClose={onClose} className="w-[500px] max-h-[500px]">
-      <motion.div
-        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-        animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.16 }}
-      >
-        <div className="space-y-4">
-          <FloatingInput
-            label="Nombre"
-            name="warehouse-name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            disabled={loading}
-            className="h-11 text-sm"
-            style={primaryRing}
-          />
+      <div className="space-y-4">
+        <FloatingInput
+          label="Nombre"
+          name="warehouse-name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          disabled={loading}
+          className="h-11 text-sm"
+          style={primaryRing}
+        />
 
-          <UbigeoSelectSection
-            value={{
-              ubigeo: "",
-              department: form.department,
-              province: form.province,
-              district: form.district,
-            }}
-            onChange={handleUbigeoChange}
-            disabled={loading}
-            showUbigeoInput={false}
-            className="h-11"
-            textSize="text-sm mt-2"
-          />
+        <UbigeoSelectSection
+          value={{
+            ubigeo: "",
+            department: form.department,
+            province: form.province,
+            district: form.district,
+          }}
+          onChange={handleUbigeoChange}
+          disabled={loading}
+          showUbigeoInput={false}
+          className="h-11"
+          textSize="text-sm mt-2"
+        />
 
-          <FloatingTextarea
-            label="Direccion"
-            name="warehouse-address"
-            value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
-            disabled={loading}
-            rows={4}
-            className="min-h-[90px] text-sm"
-            style={primaryRing}
-          />
+        <FloatingTextarea
+          label="Direccion"
+          name="warehouse-address"
+          value={form.address}
+          onChange={(e) => setForm({ ...form, address: e.target.value })}
+          disabled={loading}
+          rows={4}
+          className="min-h-[90px] text-sm"
+          style={primaryRing}
+        />
+      </div>
+
+      {error ? (
+        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {error}
         </div>
+      ) : null}
 
-        {error ? (
-          <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {error}
-          </div>
-        ) : null}
-
-        <div className="mt-4 flex justify-end gap-2">
-          <SystemButton variant="outline" size="md" onClick={onClose} disabled={saving}>
-            Cancelar
-          </SystemButton>
-          <SystemButton
-            size="md"
-            style={
-              {
-                backgroundColor: primaryColor,
-                borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-              } as CSSProperties
-            }
-            onClick={handleSubmit}
-            disabled={!canSubmit || loading}
-            loading={saving}
-          >
-            {saving ? "Guardando..." : submitLabel}
-          </SystemButton>
-        </div>
-      </motion.div>
+      <div className="mt-4 flex justify-end gap-2">
+        <SystemButton variant="outline" size="md" onClick={onClose} disabled={saving}>
+          Cancelar
+        </SystemButton>
+        <SystemButton
+          size="md"
+          style={
+            {
+              backgroundColor: primaryColor,
+              borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+              "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+            } as CSSProperties
+          }
+          onClick={handleSubmit}
+          disabled={!canSubmit || loading}
+          loading={saving}
+        >
+          {saving ? "Guardando..." : submitLabel}
+        </SystemButton>
+      </div>
     </Modal>
   );
 }

@@ -32,7 +32,7 @@ type ModalProps = {
   closeButtonClassName?: string;
 };
 
-export function Modal({
+export function  Modal({
   open,
   onClose,
   children,

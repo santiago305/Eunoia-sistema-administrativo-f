@@ -82,6 +82,10 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
         const detailColumns = cardColumns.filter(
           (column) => column.id !== titleColumn?.id,
         );
+        const isTitleClickable =
+          !!titleColumn?.onCellClick && titleColumn.clickable !== false;
+        const shouldStopTitleRowClick =
+          !!titleColumn && (titleColumn.stopRowClick || isTitleClickable);
 
         const cardClasses = cn(
           "rounded-2xl border border-border bg-background p-4 shadow-sm",
@@ -99,11 +103,16 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
           (column: DataTableColumn<T>) => (event: MouseEvent<HTMLElement>) => {
             const isColumnClickable =
               !!column.onCellClick && column.clickable !== false;
+            const shouldStopRowClick =
+              column.stopRowClick || isColumnClickable;
 
-            if (!isColumnClickable) return;
+            if (!shouldStopRowClick) return;
 
             event.stopPropagation();
-            column.onCellClick?.(row, index, event);
+
+            if (isColumnClickable) {
+              column.onCellClick?.(row, index, event);
+            }
           };
 
         const content = (
@@ -115,12 +124,15 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
                 </div>
 
                 <div
-                  onClick={handleColumnClick(titleColumn)}
+                  onClick={
+                    shouldStopTitleRowClick
+                      ? handleColumnClick(titleColumn)
+                      : undefined
+                  }
                   className={cn(
                     "mt-1 text-base font-semibold text-foreground",
-                    !!titleColumn.onCellClick &&
-                      titleColumn.clickable !== false &&
-                      "cursor-pointer",
+                    isTitleClickable && "cursor-pointer",
+                    titleColumn.stopRowClick && "cursor-default",
                   )}
                 >
                   {getColumnValue(row, index, titleColumn)}
@@ -132,14 +144,19 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
               {detailColumns.map((column) => {
                 const isColumnClickable =
                   !!column.onCellClick && column.clickable !== false;
+                const shouldStopRowClick =
+                  column.stopRowClick || isColumnClickable;
 
                 return (
                   <div
                     key={column.id}
-                    onClick={handleColumnClick(column)}
+                    onClick={
+                      shouldStopRowClick ? handleColumnClick(column) : undefined
+                    }
                     className={cn(
                       "flex items-start justify-between gap-3 border-t border-border/60 pt-3 first:border-t-0 first:pt-0",
                       isColumnClickable && "cursor-pointer",
+                      column.stopRowClick && !isColumnClickable && "cursor-default",
                     )}
                   >
                     <span className="min-w-0 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">

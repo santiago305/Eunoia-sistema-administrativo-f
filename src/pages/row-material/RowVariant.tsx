@@ -7,7 +7,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Layers, Menu, Pencil, Plus, Power, Search, SlidersHorizontal } from "lucide-react";
+import { Layers, Menu, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { listUnits } from "@/services/unitService";
 import { ListUnitResponse } from "@/pages/catalog/types/unit";
@@ -477,7 +477,7 @@ export default function RowVariant() {
                                                         {
                                                             label: (
                                                                 <>
-                                                                    <Power className="h-4 w-4" />
+                                                                    <Trash2 className="h-4 w-4" />
                                                                     {v.isActive ? "Eliminar" : "Restaurar"}
                                                                 </>
                                                             ),
@@ -547,7 +547,7 @@ export default function RowVariant() {
                                                     PRIMARY={PRIMARY}
                                                     PRIMARY_HOVER={PRIMARY_HOVER}
                                                 >
-                                                    <Power className="h-4 w-4" />
+                                                    <Trash2 className="h-4 w-4" />
                                                 </IconButton>
                                             </div>
                                         </div>

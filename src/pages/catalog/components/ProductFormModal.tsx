@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Boxes, PackageCheck, Scale, FlaskConical, Save, Plus, Pencil, Power } from "lucide-react";
+import { Boxes, PackageCheck, Scale, FlaskConical, Save, Plus, Pencil, Trash2 } from "lucide-react";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { createProduct, getById, updateProduct, updateProductActive } from "@/services/productService";
@@ -370,7 +370,7 @@ export function ProductFormModal({
               }}
               title={row.isActive ? "Eliminar variante" : "Restaurar variante"}
             >
-              <Power className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </SystemButton>
           </div>
         ),

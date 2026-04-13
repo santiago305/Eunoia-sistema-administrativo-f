@@ -3,7 +3,7 @@ import { Modal } from "@/components/modales/Modal";
 import { PaymentMethodSelectComposed } from "@/pages/payment-methods/components/PaymentMethodSelectComposed";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { Plus, Power } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { PaymentMethodFormModal } from "@/pages/payment-methods/components/PaymentMethodFormModal";
 import {
   createSupplierMethod,
@@ -146,7 +146,7 @@ export function ProviderMethodListModal({
               onClick={() => removeMethod(row.methodId)}
               title="Eliminar método"
             >
-              <Power className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </SystemButton>
           </div>
         ),
