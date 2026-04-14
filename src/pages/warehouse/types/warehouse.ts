@@ -13,13 +13,44 @@ export type Warehouse = {
   department: string;
   province: string;
   district: string;
-  address: string | null;
+  address?: string | null;
   isActive: boolean;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string | null;
 };
 
-export type WarehouseSelectOption = { value: string; label: string };
+export type WarehouseListItem = {
+  warehouseId: string;
+  name: string;
+  department: string;
+  province: string;
+  district: string;
+  address?: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type ListWarehousesResponse = {
+  items: WarehouseListItem[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export type ListActiveWarehousesParams = {
+  page?: number;
+  limit?: number;
+  q?: string;
+};
+
+export type WarehouseSelectOption = {
+  value: string;
+  label: string;
+  department?: string;
+  province?: string;
+  district?: string;
+  address?: string;
+};
 
 export type WarehouseListResponse = {
   items: Warehouse[];

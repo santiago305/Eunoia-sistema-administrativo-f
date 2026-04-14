@@ -9,7 +9,7 @@ import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listActive } from "@/services/warehouseServices";
+import { listActiveWarehouses } from "@/services/warehouseServices";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money } from "@/utils/functionPurchases";
 import { createOutOrder } from "@/services/documentService";
@@ -78,11 +78,15 @@ export default function OutOrder() {
   const loadWarehouses = async () => {
     clearFlash();
     try {
-      const res = await listActive();
+      const res = await listActiveWarehouses({ page: 1, limit: 100 });
       const options =
-        res?.map((s) => ({
-          value: s.warehouseId,
-          label: s.name,
+        (res.items ?? []).map((warehouse) => ({
+          value: warehouse.warehouseId,
+          label: warehouse.name,
+          department: warehouse.department,
+          province: warehouse.province,
+          district: warehouse.district,
+          address: warehouse.address,
         })) ?? [];
       setWarehouseOptions(options);
     } catch {
@@ -187,19 +191,15 @@ export default function OutOrder() {
     setProducts((prev) => {
       const selectedId = selected.sku.id;
       if (!selectedId) return prev;
-
       const items = prev?.items ?? [];
       const exists = items.some((p) => p.sku.id === selectedId);
-
       if (exists) return prev;
-
       return {
         ...(prev ?? {}),
         items: [...items, selected],
         total: [...items, selected].length,
       };
     });
-
     setPendingItem(buildEmptyItem());
   };
 
@@ -223,26 +223,21 @@ export default function OutOrder() {
 
   const saveOrder = async () => {
     clearFlash();
-
     if (!form.fromWarehouseId || !form.serieId) {
       showFlash(errorResponse("Completa los datos del documento"));
       return;
     }
-
     if (!form.items?.length) {
       showFlash(errorResponse("Agrega al menos un item"));
       return;
     }
-
     setLoading(true);
-
     try {
       const payload: CreateOutOrder = {
         ...form,
         note: form.note?.trim() || undefined,
         items: form.items ?? [],
       };
-
       const res = await createOutOrder(payload);
       const nextId = res.docId ?? "";
       setLastSavedOutOrderId(nextId);
