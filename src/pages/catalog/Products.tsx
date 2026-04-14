@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type MouseEvent } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { Download, Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusPill } from "@/components/StatusTag";
@@ -9,16 +9,15 @@ import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useProducts } from "@/hooks/useProducts";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listCatalogProducts } from "@/services/productService";
+import { listCatalogProducts, updateProductActive } from "@/services/productService";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { Product } from "@/pages/catalog/types/product";
 import { Headed } from "@/components/Headed";
 import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
 import { ActionsPopover } from "@/components/ActionsPopover";
-import { ProductFormModal } from "./components/ProductFormModal";
 import { ProductCreateModal } from "./components/ProductCreateModal";
-import { Modal } from "@/components/modales/Modal";
 import { PageShell } from "@/components/layout/PageShell";
+import { AlertModal } from "@/components/AlertModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.PRODUCT;
@@ -29,8 +28,6 @@ export default function CatalogProducts() {
 
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
-    const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
-    const [editingWorkspaceTab, setEditingWorkspaceTab] = useState<"details" | "variantCreated">("details");
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
@@ -52,29 +49,16 @@ export default function CatalogProducts() {
         limit: apiLimit,
         loading,
         refresh,
-        setActive,
     } = useProducts(queryParams, { mode: "product" });
 
     const startCreate = () => {
         setEditingProductId(null);
-        setEditingVariantId(null);
-        setEditingWorkspaceTab("details");
         setOpenCreate(true);
     };
 
     const openEdit = useCallback((product: Product) => {
         setOpenCreate(false);
-        const parentId = product.parentProductId ?? product.productId ?? null;
-        if (product.sourceType === "VARIANT" && parentId) {
-            setEditingProductId(parentId);
-            setEditingVariantId(product.id);
-            setEditingWorkspaceTab("variantCreated");
-            return;
-        }
-
         setEditingProductId(product.id);
-        setEditingVariantId(null);
-        setEditingWorkspaceTab("details");
     }, []);
 
     const columns = useMemo<DataTableColumn<Product>[]>(
@@ -160,7 +144,11 @@ export default function CatalogProducts() {
         clearFlash();
         try {
             const product = products.find((p) => p.id === deletingProductId);
-            if (product) await setActive(deletingProductId, !product.isActive);
+            if (product) {
+            await updateProductActive(deletingProductId, {
+                isActive: !product.isActive,
+            });
+            }  
             setDeletingProductId(null);
             showFlash(successResponse("Estado de producto actualizado"));
         } catch {
@@ -305,59 +293,35 @@ export default function CatalogProducts() {
                 }}
             />
 
-            <ProductFormModal
+            <ProductCreateModal
                 open={Boolean(editingProductId)}
                 mode="edit"
                 productId={editingProductId}
-                initialWorkspaceTab={editingWorkspaceTab}
-                initialVariantId={editingVariantId}
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
                 entityLabel="producto"
                 onClose={() => {
                     setEditingProductId(null);
-                    setEditingVariantId(null);
-                    setEditingWorkspaceTab("details");
                 }}
                 onSaved={() => {
                     void refresh();
                 }}
             />
 
-            <Modal
-                open={deletingProductId ? true : false}
-                title="Confirmar accion"
+            <AlertModal
+                open={!!deletingProductId}
+                type="deleted"
+                title="Confirmar acción"
                 onClose={() => setDeletingProductId(null)}
-                className="max-w-md"
-            >
-                <motion.div
-                    initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                    animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.16 }}
-                >
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                        <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto. Hazlo solo si estas seguro.
-                    </div>
-                    <div className="mt-4 flex justify-end gap-2">
-                        <SystemButton
-                            variant="outline"
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={() => setDeletingProductId(null)}
-                        >
-                            Cancelar
-                        </SystemButton>
-                        <SystemButton
-                            variant="danger"
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={confirmDelete}
-                        >
-                            Confirmar
-                        </SystemButton>
-                    </div>
-                </motion.div>
-            </Modal>
+                onConfirm={confirmDelete}
+                message={
+                    <>
+                        <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto.
+                        Hazlo solo si estas seguro.
+                    </>
+                }
+                confirmText="Confirmar"
+            />
         </PageShell>
     );
 }

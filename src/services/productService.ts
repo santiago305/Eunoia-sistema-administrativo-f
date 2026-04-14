@@ -1,24 +1,31 @@
 import axiosInstance from "@/common/utils/axios";
-import { API_PRODUCTS_GROUP } from "@/services/APIs";
+import { API_PRODUCTS_GROUP, API_SKUS_GROUP } from "@/services/APIs";
 import type {
   CreateProductDto,
   CreateBaseProductDto,
   CreateProductSkuDto,
   UpdateProductDto,
+  UpdateProductSkuDto,
   UpdateProductActiveDto,
   ListProductsQuery,
   ProductListResponse,
   Product,
-  ProductVariant,
-  ProductWithVariantsResponse,
+  ProductBaseUnit,
+  ProductCatalogProduct,
+  ProductCatalogProductDetailResponse,
+  ProductCatalogSkuResponse,
+  ProductDetailResponse,
 } from "@/pages/catalog/types/product";
+import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 
 export const createProduct = async (payload: CreateProductDto): Promise<Product> => {
   const response = await axiosInstance.post(API_PRODUCTS_GROUP.create, payload);
   return response.data;
 };
 
-export const createBaseProduct = async (payload: CreateBaseProductDto): Promise<Product> => {
+export const createBaseProduct = async (
+  payload: CreateBaseProductDto,
+): Promise<ProductCatalogProduct> => {
   const response = await axiosInstance.post(API_PRODUCTS_GROUP.createBase, payload);
   return response.data;
 };
@@ -26,8 +33,37 @@ export const createBaseProduct = async (payload: CreateBaseProductDto): Promise<
 export const createProductSku = async (
   productId: string,
   payload: CreateProductSkuDto,
-): Promise<Record<string, unknown>> => {
+): Promise<ProductCatalogSkuResponse> => {
   const response = await axiosInstance.post(API_PRODUCTS_GROUP.createSku(productId), payload);
+  return response.data;
+};
+
+export const updateProductSku = async (
+  skuId: string,
+  payload: UpdateProductSkuDto,
+): Promise<ProductCatalogSkuResponse> => {
+  const response = await axiosInstance.patch(API_SKUS_GROUP.update(skuId), payload);
+  return response.data;
+};
+
+const attachBaseUnit = (product: Product & { baseUnit?: ProductBaseUnit | null }) => ({
+  ...product,
+  baseUnitId: product.baseUnitId ?? product.baseUnit?.id ?? null,
+  baseUnitName: product.baseUnitName ?? product.baseUnit?.name,
+  baseUnitCode: product.baseUnitCode ?? product.baseUnit?.code,
+});
+
+const normalizeProductList = (response: ProductListResponse): ProductListResponse => ({
+  ...response,
+  items: (response.items ?? []).map((item) =>
+    attachBaseUnit(item as Product & { baseUnit?: ProductBaseUnit | null }),
+  ),
+});
+
+export const getCatalogProductById = async (
+  id: string,
+): Promise<ProductCatalogProductDetailResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.byIdP(id));
   return response.data;
 };
 
@@ -39,19 +75,19 @@ export const updateProduct = async (id: string, payload: UpdateProductDto): Prom
 export const updateProductActive = async (
   id: string,
   payload: UpdateProductActiveDto
-): Promise<{ ok: boolean }> => {
+): Promise<Product> => {
   const response = await axiosInstance.patch(API_PRODUCTS_GROUP.updateActive(id), payload);
   return response.data;
 };
 
 export const listProducts = async (params: ListProductsQuery): Promise<ProductListResponse> => {
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.base, { params });
-  return response.data;
+  return normalizeProductList(response.data);
 };
 
 export const listProductsFlat = async (params: ListProductsQuery): Promise<ProductListResponse> => {
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.flat, { params });
-  return response.data;
+  return normalizeProductList(response.data);
 };
 
 export const listCatalogProducts = async (
@@ -60,10 +96,10 @@ export const listCatalogProducts = async (
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.items, {
     params: {
       ...params,
-      type: "PRODUCT",
+      type: ProductTypes.PRODUCT,
     },
   });
-  return response.data;
+  return normalizeProductList(response.data);
 };
 
 export const listCatalogMaterials = async (
@@ -72,25 +108,25 @@ export const listCatalogMaterials = async (
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.items, {
     params: {
       ...params,
-      type: "MATERIAL",
+      type: ProductTypes.MATERIAL,
     },
   });
-  return response.data;
+  return normalizeProductList(response.data);
 };
 
-export const getProductVariants = async (id: string): Promise<ProductVariant[]> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.variants(id));
-  return response.data;
-};
-
-export const getProductWithVariants = async (id: string): Promise<ProductWithVariantsResponse> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.withVariants(id));
-  return response.data;
-};
-
-export const getById = async (id: string): Promise<Product> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.byIdP(id));
-  return response.data;
+export const getById = async (id: string): Promise<ProductDetailResponse> => {
+  const data = await getCatalogProductById(id);
+  return {
+    ...data,
+    product: attachBaseUnit({
+      ...data.product,
+      createdAt: data.product.createdAt ?? "",
+      updatedAt: data.product.updatedAt ?? null,
+      baseUnit: data.baseUnit ?? null,
+    }),
+    skus: data.skus ?? [],
+    baseUnit: data.baseUnit ?? null,
+  };
 };
 
 export const getProductByName = async (name: string): Promise<ProductListResponse> => {

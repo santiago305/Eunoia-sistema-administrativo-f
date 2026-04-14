@@ -13,8 +13,29 @@ export type ProductEquivalence = {
   fromUnitId: string;
   toUnitId: string;
   factor: number;
+  product?: {
+    id: string;
+    name: string;
+  };
+  fromUnit?: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  toUnit?: {
+    id: string;
+    code: string;
+    name: string;
+  };
 };
 
 export type ListProductEquivalencesResponse = ProductEquivalence[];
+
+export type EquivalenceDraft = {
+  id: string;
+  fromUnitId: string;
+  toUnitId: string;
+  factor: number;
+};
 
 

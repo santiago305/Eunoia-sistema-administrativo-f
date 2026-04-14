@@ -161,7 +161,7 @@ export default function RowVariant() {
     const loadEquivalences = async (productId: string) => {
         setLoadingEquivalences(true);
         try {
-            const res = await listProductEquivalences({ productId });
+            const res = await listProductEquivalences(productId);
             setEquivalences(res ?? []);
         } catch {
             setEquivalences([]);

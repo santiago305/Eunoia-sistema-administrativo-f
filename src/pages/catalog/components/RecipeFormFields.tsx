@@ -1,196 +1,351 @@
-import { useCallback, useMemo, useState } from "react";
-import { createProductRecipe, deleteProductRecipe } from "@/services/productRecipeService";
-import { ProductRecipe } from "@/pages/catalog/types/productRecipe";
-import { ListUnitResponse } from "@/pages/catalog/types/unit";
-import type { PrimaVariant } from "@/pages/catalog/types/variant";
-import { Plus, Trash2 } from "lucide-react";
+
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Power } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import type { ListUnitResponse } from "@/pages/catalog/types/unit";
+import type { PrimaVariant } from "@/pages/catalog/types/variant";
+
+export type RecipeDraftItem = {
+  id: string;
+  materialSkuId: string;
+  quantity: string;
+  unitId: string;
+};
+
+export type RecipeDraft = {
+  yieldQuantity: string;
+  notes: string;
+  items: RecipeDraftItem[];
+};
+
+export const createEmptyRecipeDraft = (): RecipeDraft => ({
+  yieldQuantity: "1",
+  notes: "",
+  items: [],
+});
+
+type RecipeRow = {
+  id: string;
+  materialSkuId: string;
+  quantity: string;
+  unitId: string;
+};
+
+type RecipeFormFieldsProps = {
+  units?: ListUnitResponse;
+  primaVariants: PrimaVariant[];
+  recipe: RecipeDraft;
+  onChange: (next: RecipeDraft) => void;
+  onDeleteItem?: (itemId: string) => Promise<void>;
+  loading?: boolean;
+  saving?: boolean;
+  primaryColor?: string;
+  tableId: string;
+  recipeSkuOptions: any;
+  onSelectSku: (skuId:string)=> void;
+  selectedSkuId:string;
+};
+
+const buildRowId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `recipe-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const getPrimaUnitId = (prima?: PrimaVariant) => prima?.unit?.id ?? prima?.baseUnitId ?? "";
+
+const getPrimaUnitName = (prima?: PrimaVariant) => prima?.unit?.name ?? prima?.unitName ?? "SIN UNIDAD DE MEDIDA";
 
 export function RecipeFormFields({
-    finishedType,
-    finishedItemId,
-    units,
-    primaVariants,
-    recipes,
-    loading,
-    onCreated,
-}: {
-    finishedType: "PRODUCT" | "VARIANT";
-    finishedItemId: string;
-    units?: ListUnitResponse;
-    primaVariants: PrimaVariant[];
-    recipes: ProductRecipe[];
-    loading: boolean;
-    onCreated: () => Promise<void>;
-}) {
-    
-    const PRIMARY = "hsl(var(--primary))";
-    const [primaVariantId, setPrimaVariantId] = useState("");
-    const [quantity, setQuantity] = useState("1");
-    const activePrimaVariants = (primaVariants ?? []).filter((v) => v.isActive !== false);
+  units,
+  primaVariants,
+  recipe,
+  onChange,
+  onDeleteItem,
+  loading,
+  saving,
+  primaryColor = "hsl(var(--primary))",
+  tableId,
+  recipeSkuOptions,
+  onSelectSku,
+  selectedSkuId
+}: RecipeFormFieldsProps) {
+  const [materialSkuId, setMaterialSkuId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [unitId, setUnitId] = useState("");
 
-    const primaVariantOptions = (activePrimaVariants ?? []).map((v) => ({
+  const activePrimaVariants = useMemo(
+    () => (primaVariants ?? []).filter((v) => v.isActive !== false),
+    [primaVariants],
+  );
+
+  useEffect(() => {
+    const selected = activePrimaVariants.find((v) => v.id === materialSkuId);
+    const nextUnitId = getPrimaUnitId(selected);
+    setUnitId(nextUnitId);
+  }, [materialSkuId, activePrimaVariants]);
+
+  const primaVariantOptions = useMemo(
+    () =>
+      (activePrimaVariants ?? []).map((v) => ({
         value: v.id ?? "",
-        label: `${v.productName ?? "Producto"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
-        ${v.sku ? ` - ${v.sku}`: ""} ${v.customSku ? `(${v.customSku})`: ""}`,      })); 
+        label: `${v.productName ?? "Producto"} ${v.attributes?.presentation ?? ""} ${
+          v.attributes?.variant ?? ""
+        } ${v.attributes?.color ?? ""} ${v.sku ? ` - ${v.sku}` : ""} ${
+          v.customSku ? `(${v.customSku})` : ""
+        }`.trim(),
+      })),
+    [activePrimaVariants],
+  );
 
-    const selectedPrimaVariant = (activePrimaVariants ?? []).find((v) => v.id === primaVariantId);
-    const baseUnitLabel =
-        selectedPrimaVariant?.unitName && selectedPrimaVariant?.unitCode
-            ? `${selectedPrimaVariant.unitName} (${selectedPrimaVariant.unitCode})`
-            : ((units ?? []).find((u) => u.id === selectedPrimaVariant?.baseUnitId)?.name ?? (selectedPrimaVariant?.baseUnitId ? selectedPrimaVariant.baseUnitId : "Sin unidad base"));
+  const selectedPrimaVariant = useMemo(
+    () => activePrimaVariants.find((v) => v.id === materialSkuId),
+    [activePrimaVariants, materialSkuId],
+  );
+  const baseUnitLabel = getPrimaUnitName(selectedPrimaVariant);
 
-    type RecipeRow = {
-        id: string;
-        primaLabel: string;
-        consumption: string;
+  const recipeRows = useMemo<RecipeRow[]>(
+    () =>
+      (recipe.items ?? []).map((item) => ({
+        id: item.id,
+        materialSkuId: item.materialSkuId,
+        quantity: item.quantity,
+        unitId: item.unitId,
+      })),
+    [recipe.items],
+  );
+
+  const removeItem = async (id: string) => {
+    if (onDeleteItem) {
+      await onDeleteItem(id);
+      return;
+    }
+
+    onChange({
+      ...recipe,
+      items: recipe.items.filter((item) => item.id !== id),
+    });
+  };
+
+  const updateItem = (
+    id: string,
+    patch: Partial<Pick<RecipeDraftItem, "materialSkuId" | "quantity" | "unitId">>,
+  ) => {
+    onChange({
+      ...recipe,
+      items: recipe.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    });
+  };
+
+  const unitOptions = useMemo(
+    () =>
+      (units ?? []).map((unit) => ({
+        value: unit.id,
+        label: `${unit.name} (${unit.code})`,
+      })),
+    [units],
+  );
+
+  const columns = useMemo<DataTableColumn<RecipeRow>[]>(
+    () => [
+      {
+        id: "prima",
+        header: "Materia prima",
+        cell: (row) => (
+          <FloatingSelect
+            label="Materia prima"
+            name={`recipe-material-${row.id}`}
+            value={row.materialSkuId}
+            onChange={(value) => updateItem(row.id, { materialSkuId: value })}
+            options={primaVariantOptions}
+            searchable
+            searchPlaceholder="Buscar producto..."
+            emptyMessage="Sin productos"
+          />
+        ),
+        hideable: false,
+        sortable: false,
+      },
+      {
+        id: "quantity",
+        header: "Cantidad",
+        cell: (row) => (
+          <FloatingInput
+            label="Cantidad"
+            type="number"
+            name={`recipe-qty-${row.id}`}
+            min="0"
+            step="0.01"
+            value={row.quantity}
+            onChange={(event) => updateItem(row.id, { quantity: event.target.value })}
+            className="text-black/90"
+          />
+        ),
+        hideable: false,
+        sortable: false,
+      },
+      {
+        id: "unit",
+        header: "Unidad",
+        cell: (row) => (
+          <FloatingSelect
+            label="Unidad"
+            name={`recipe-unit-${row.id}`}
+            value={row.unitId}
+            onChange={(value) => updateItem(row.id, { unitId: value })}
+            options={unitOptions}
+            searchable
+            searchPlaceholder="Buscar unidad..."
+            emptyMessage="Sin unidades"
+          />
+        ),
+        hideable: false,
+        sortable: false,
+      },
+      {
+        id: "actions",
+        header: "",
+        pinned: "right",
+        lockPosition: true,
+        cell: (row) => (
+          <div className="flex justify-end">
+            <SystemButton
+              variant="danger"
+              size="custom"
+              className="h-8 w-9 rounded-lg"
+              onClick={() => void removeItem(row.id)}
+              disabled={Boolean(saving)}
+            >
+              <Power className="h-4 w-4" />
+            </SystemButton>
+          </div>
+        ),
+        headerClassName: "text-right w-[40px]",
+        className: "text-right",
+        hideable: false,
+        sortable: false,
+      },
+    ],
+    [primaVariantOptions, unitOptions, removeItem, saving, updateItem],
+  );
+
+  const canAddItem = Boolean(materialSkuId && unitId && Number(quantity) > 0);
+
+  const handleAddItem = async () => {
+    if (!canAddItem) return;
+
+    const nextItem: RecipeDraftItem = {
+      id: buildRowId(),
+      materialSkuId,
+      quantity,
+      unitId,
     };
 
-    const deleteRecipe = useCallback(async (id: string) => {
-        try {
-            await deleteProductRecipe(id);
-            await onCreated();
-        } catch {
-            console.log("algo salio mal");
-        }
-    }, [onCreated]);
-
-    const recipeRows = useMemo<RecipeRow[]>(
-        () =>
-            (recipes ?? []).map((recipe) => {
-                const prima = (primaVariants ?? []).find((v) => v.id === recipe.primaVariantId);
-                const unitLabel =
-                    prima?.unitName && prima?.unitCode
-                        ? `${prima.unitName} (${prima.unitCode})`
-                        : ((units ?? []).find((u) => u.id === prima?.baseUnitId)?.name ?? (prima?.baseUnitId ? prima.baseUnitId : recipe.primaVariantId));
-                const primaLabel = prima ? `${prima.productName ?? "Producto"}
-                ${prima.sku ? ` - ${prima.sku}`: ""} ${prima.customSku ? `(${prima.customSku})`: ""}` : recipe.primaVariantId;
-
-                return {
-                    id: recipe.id,
-                    primaLabel,
-                    consumption: `${recipe.quantity} - ${unitLabel}`,
-                };
-            }),
-        [recipes, primaVariants, units],
-    );
-
-    const columns = useMemo<DataTableColumn<RecipeRow>[]>(
-        () => [
-            {
-                id: "prima",
-                header: "Materia prima",
-                accessorKey: "primaLabel",
-                className: "text-black/70",
-                hideable: false,
-                sortable: false,
-            },
-            {
-                id: "consumption",
-                header: "Consumo",
-                accessorKey: "consumption",
-                className: "text-black/70",
-                hideable: false,
-                sortable: false,
-            },
-            {
-                id: "actions",
-                header: "",
-                cell: (row) => (
-                    <div className="flex justify-end">
-                        <SystemButton
-                            variant="danger"
-                            size="custom"
-                            className="h-8 w-9 rounded-lg"
-                            onClick={() => {
-                                void deleteRecipe(row.id);
-                            }}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </SystemButton>
-                    </div>
-                ),
-                headerClassName: "text-right w-[40px]",
-                className: "text-right",
-                hideable: false,
-                sortable: false,
-            },
-        ],
-        [deleteRecipe],
-    );
-
-    const handleCreate = async () => {
-        if (!finishedItemId || !primaVariantId || !quantity) return;
-        await createProductRecipe({
-            finishedType,
-            finishedItemId,
-            primaVariantId,
-            quantity: Number(quantity),
-        });
-        setPrimaVariantId("");
-        setQuantity("1");
-        await onCreated();
+    const nextRecipe: RecipeDraft = {
+      ...recipe,
+      items: [...recipe.items, nextItem],
     };
 
-    return (
-        <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.5fr_45px] mt-2">
-                <FloatingSelect
-                    label="Materia prima"
-                    name="materia-prima"
-                    value={primaVariantId}
-                    onChange={(value) => setPrimaVariantId(value)}
-                    options={primaVariantOptions}
-                    searchable
-                    searchPlaceholder="Buscar producto..."
-                    emptyMessage="Sin productos"
-                />
+    onChange(nextRecipe);
 
-                <FloatingInput
-                    label="Unidad base"
-                    name="unit-base"
-                    value={baseUnitLabel}
-                    disabled
-                />
+    setMaterialSkuId("");
+    setQuantity("1");
+    setUnitId("");
+  };
 
-                <FloatingInput
-                    label="Cantidad"
-                    type="number"
-                    name="cantidad"
-                    className="text-black/90"
-                    value={quantity}
-                    min="0"
-                    step="1"
-                    onChange={(e) => setQuantity(e.target.value)}
-                />
-
-                <SystemButton
-                    leftIcon={<Plus className="h-4 w-4" />}
-                    className="h-10"
-                    style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
-                    onClick={() => void handleCreate()}
-                    disabled={!finishedItemId || !primaVariantId || !quantity}
-                />
-            </div>
-
-            <div className="rounded-2xl border border-black/10 overflow-hidden">
-                <DataTable
-                    tableId={`recipe-list-${finishedType}-${finishedItemId}`}
-                    data={recipeRows}
-                    columns={columns}
-                    rowKey="id"
-                    loading={loading}
-                    emptyMessage="No hay recetas registradas."
-                    hoverable={false}
-                    animated={false}
-                    className="text-xs"
-                    tableClassName="text-xs"
-                />
-            </div>
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.65fr] pt-3">
+          <FloatingSelect
+            label="Seleccionar SKU"
+            name="selectedSku"
+            value={selectedSkuId}
+            onChange={onSelectSku}
+            options={recipeSkuOptions}
+            searchable
+            searchPlaceholder="Buscar producto..."
+            emptyMessage="Sin productos"
+          />
+          <FloatingInput
+              label="Nota"
+              name="notes"
+              value={recipe.notes}
+              onChange={(event) =>
+                onChange({
+                  ...recipe,
+                  notes: event.target.value,
+                })
+              }
+            />
+          <FloatingInput
+            label="Rendimiento"
+            type="number"
+            name="yield"
+            min={0}
+            value={recipe.yieldQuantity}
+            onChange={(event) =>
+              onChange({
+                ...recipe,
+                yieldQuantity: event.target.value,
+              })
+            }
+          />
         </div>
-    );
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.5fr_45px]">
+        <FloatingSelect
+          label="Materia prima"
+          name="materia-prima"
+          value={materialSkuId}
+          onChange={(value) => setMaterialSkuId(value)}
+          options={primaVariantOptions}
+          searchable
+          searchPlaceholder="Buscar producto..."
+          emptyMessage="Sin productos"
+        />
+
+        <FloatingInput label="Unidad base" name="unit-base" value={baseUnitLabel} disabled />
+
+        <FloatingInput
+          label="Cantidad"
+          type="number"
+          name="cantidad"
+          className="text-black/90"
+          value={quantity}
+          min="0"
+          step="1"
+          onChange={(e) => setQuantity(e.target.value)}
+        />
+
+        <SystemButton
+          leftIcon={<Plus className="h-4 w-4" />}
+          className="h-10"
+          style={{
+            backgroundColor: primaryColor,
+            borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+          }}
+          onClick={handleAddItem}
+          disabled={!canAddItem || Boolean(saving)}
+        />
+      </div>
+      <DataTable
+        tableId={tableId}
+        data={recipeRows}
+        columns={columns}
+        rowKey="id"
+        loading={loading}
+        emptyMessage="No hay recetas registradas."
+        hoverable={false}
+        animated={false}
+        className="text-xs"
+        tableClassName="text-xs"
+      />
+
+    </div>
+  );
 }
