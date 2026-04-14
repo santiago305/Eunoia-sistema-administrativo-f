@@ -154,9 +154,9 @@ export default function CatalogProducts() {
                 isActive: !product.isActive,
             });
             }  
-            await refresh();
             setDeletingProductId(null);
             showFlash(successResponse("Estado de producto actualizado"));
+            await refresh();
         } catch {
             showFlash(errorResponse("Error al cambiar estado del producto"));
         }

@@ -236,7 +236,7 @@ export function ProductSkuTable({
           rowKey="id"
           loading={false}
           emptyMessage="No hay SKUs configurados."
-          responsiveCards={false}
+          responsiveCards={true}
           stickyHeader={false}
           hoverable={false}
           animated={false}

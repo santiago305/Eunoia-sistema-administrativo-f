@@ -75,9 +75,9 @@ export default function RowMaterial() {
             const product = products.find((p) => p.id === deletingProductId);
             if (product) await setActive(deletingProductId, !product.isActive);
 
-            await refresh();
             setDeletingProductId(null);
             showFlash(successResponse("Estado de materia prima actualizado"));
+            await refresh();
         } catch {
             showFlash(errorResponse("Error al cambiar estado de la materia prima"));
         }
