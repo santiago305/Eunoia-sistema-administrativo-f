@@ -25,7 +25,7 @@ import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { Boxes, FileText, Filter, LineChart, Menu, Wrench, ArrowLeftRight } from "lucide-react";
 import { normalizeQuantity } from "@/utils/functionPurchases";
-import { aggregateByWarehouse, mapSnapshotToRow, useEChart } from "./data/inventoryUtils";
+import { aggregateByWarehouse, mapSnapshotToRow, useEChart } from "./utils/inventoryUtils";
 
 const DEFAULT_LIMIT = 10;
 

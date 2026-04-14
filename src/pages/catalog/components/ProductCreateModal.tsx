@@ -233,7 +233,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 const empty = createEmptyRecipeDraft();
                 setPersistedRecipesBySkuId((prev) => ({ ...prev, [skuId]: empty }));
                 setEditedRecipesBySkuId((prev) => (prev[skuId] ? prev : { ...prev, [skuId]: empty }));
-                showFlash(errorResponse("Recipe not found"));
             } else {
                 showFlash(errorResponse(getApiErrorMessage(error, "Error al cargar recetas")));
             }
@@ -252,7 +251,21 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         getCatalogProductById(productId)
             .then(async (response) => {
                 const { product, baseUnit, skus: responseSkus } = response;
-                const nextSkuRows = (responseSkus ?? []).map(mapSkuResponseToDraftRow);
+                const sortedSkus = [...(responseSkus ?? [])].sort((left, right) => {
+                    const leftSku = String(left.sku.backendSku ?? "");
+                    const rightSku = String(right.sku.backendSku ?? "");
+
+                    if (!leftSku && !rightSku) return 0;
+                    if (!leftSku) return 1;
+                    if (!rightSku) return -1;
+
+                    return leftSku.localeCompare(rightSku, "es", {
+                        numeric: true,
+                        sensitivity: "base",
+                    });
+                });
+
+                const nextSkuRows = sortedSkus.map(mapSkuResponseToDraftRow);
                 setForm({
                     name: product.name ?? "",
                     description: product.description ?? "",
@@ -262,7 +275,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     wantsVariants: (responseSkus?.length ?? 0) > 1 ? "yes" : "no",
                 });
 
-                setSkus(responseSkus ?? []);
+                setSkus(sortedSkus);
                 setSkuRows(nextSkuRows);
                 setPersistedSkuRowsById(mapSkuDraftRowsById(nextSkuRows));
                 await loadEquivalences(product.id);
@@ -289,9 +302,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 sku: item.sku.backendSku ?? undefined,
                 productName: item.sku.name ?? "",
                 productDescription: "",
-                unitName: item.unit?.name ?? (item.sku as { baseUnitName?: string }).baseUnitName,
-                unitCode: item.unit?.code ?? (item.sku as { baseUnitCode?: string }).baseUnitCode,
-                baseUnitId: item.unit?.id ?? (item.sku as { baseUnitId?: string }).baseUnitId,
+                unitName: item.unit?.name ?? "",
+                unitCode: item.unit?.code ?? "",
+                baseUnitId: item.unit?.id ?? "",
                 unit: item.unit ?? undefined,
                 isActive: item.sku.isActive ?? true,
                 attributes: Object.fromEntries(item.attributes.map((attr) => [attr.code, attr.value])),
@@ -593,9 +606,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             createdSkuIdsByDraftId: skuIdsByDraftId,
             hasPersistableItems: (recipeDraft) => buildRecipePayload(recipeDraft).items.length > 0,
         });
-
         const failedRecipeIds: string[] = [];
-
         for (const candidate of retryableRecipes) {
             try {
                 await createSkuRecipe(candidate.skuId, buildRecipePayload(candidate.recipeDraft));
@@ -603,7 +614,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 failedRecipeIds.push(candidate.draftId);
             }
         }
-
         return {
             failedRecipeIds,
             nonPersistedDrafts: nextNonPersistedDrafts,
@@ -621,7 +631,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             response: Awaited<ReturnType<typeof createProductSku>>;
         }> = [];
         const failedSkuDraftIds: string[] = [];
-
         for (const skuPayload of skuPayloads) {
             if (existingSkuIdsByDraftId[skuPayload.draftId]) continue;
 
@@ -632,7 +641,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 failedSkuDraftIds.push(skuPayload.draftId);
             }
         }
-
         return {
             skuPayloads,
             failedSkuDraftIds,
@@ -647,7 +655,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         const changedSkuRows = skuRows.filter((row) => persistedSkuRowsById[row.id] && hasSkuDraftChanges(row, persistedSkuRowsById[row.id]));
         const failedSkuIds: string[] = [];
         const updatedSkuResponses: ProductSkuWithAttributes[] = [];
-
         for (const row of changedSkuRows) {
             try {
                 const response = await updateProductSku(row.id, buildSkuUpdatePayload(row));
@@ -656,9 +663,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 failedSkuIds.push(row.id);
             }
         }
-
         applyPersistedSkuResponses(updatedSkuResponses);
-
         return {
             changedSkuRows,
             failedSkuIds,
@@ -672,7 +677,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 failedRecipeDraftIds: [] as string[],
             };
         }
-
         const rowHasData = (row: ProductSkuDraft) =>
             Boolean(
                 row.name.trim() ||
@@ -748,7 +752,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     continue;
                 }
             }
-
             if (recipePayload && recipePayload.items.length > 0) {
                 try {
                     await createSkuRecipe(skuId, recipePayload);
@@ -784,7 +787,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 unitId: item.unitId,
             }))
             .filter((item) => item.materialSkuId && item.unitId && item.quantity > 0);
-
         return {
             yieldQuantity: Number(recipeDraft.yieldQuantity) || 1,
             notes: recipeDraft.notes.trim() ? recipeDraft.notes.trim() : null,
