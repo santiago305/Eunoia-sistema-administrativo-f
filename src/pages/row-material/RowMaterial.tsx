@@ -11,13 +11,13 @@ import { listCatalogMaterials } from "@/services/productService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
-import { ProductFormModal } from "../catalog/components/ProductFormModal";
 import type { Product } from "@/pages/catalog/types/product";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { Headed } from "@/components/Headed";
-import { Modal } from "@/components/modales/Modal";
 import { getDropdownItemProducts } from "../catalog/data/getDropdownItemProducts";
 import { PageShell } from "@/components/layout/PageShell";
+import { AlertModal } from "@/components/AlertModal";
+import { ProductCreateModal } from "../catalog/components/ProductCreateModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.MATERIAL;
@@ -53,6 +53,11 @@ export default function RowMaterial() {
         setActive,
     } = useProducts(queryParams, { mode: "material" });
 
+    const deletingProduct = useMemo(
+        () => products.find((product) => product.id === deletingProductId) ?? null,
+        [products, deletingProductId],
+    );
+
     const startCreate = () => {
         setEditingProductId(null);
         setOpenCreate(true);
@@ -69,6 +74,8 @@ export default function RowMaterial() {
         try {
             const product = products.find((p) => p.id === deletingProductId);
             if (product) await setActive(deletingProductId, !product.isActive);
+
+            await refresh();
             setDeletingProductId(null);
             showFlash(successResponse("Estado de materia prima actualizado"));
         } catch {
@@ -293,7 +300,7 @@ export default function RowMaterial() {
                 {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
             </div>
 
-            <ProductFormModal
+            <ProductCreateModal
                 open={openCreate}
                 mode="create"
                 productType={PRODUCT_TYPE}
@@ -305,7 +312,7 @@ export default function RowMaterial() {
                 }}
             />
 
-            <ProductFormModal
+            <ProductCreateModal
                 open={Boolean(editingProductId)}
                 mode="edit"
                 productId={editingProductId}
@@ -320,40 +327,23 @@ export default function RowMaterial() {
                 }}
             />
 
-            <Modal
-                open={deletingProductId ? true : false}
-                title="Confirmar accion"
+            <AlertModal
+                open={!!deletingProductId}
+                type={deletingProduct?.isActive ? "deleted" : "restore"}
+                title="Confirmar acción"
                 onClose={() => setDeletingProductId(null)}
-                className="max-w-md"
-            >
-                <motion.div
-                    initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
-                    animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.16 }}
-                >
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                        <span className="font-semibold">Ojo:</span> estas por cambiar el estado de una materia prima. Hazlo solo si estas seguro.
-                    </div>
-                    <div className="mt-4 flex justify-end gap-2">
-                        <SystemButton
-                            variant="outline"
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={() => setDeletingProductId(null)}
-                        >
-                            Cancelar
-                        </SystemButton>
-                        <SystemButton
-                            variant="danger"
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={confirmDelete}
-                        >
-                            Confirmar
-                        </SystemButton>
-                    </div>
-                </motion.div>
-            </Modal>
+                onConfirm={confirmDelete}
+                message={
+                    <>
+                        {deletingProduct?.isActive ? (
+                            <>Estas por eliminar una materia prima. Hazlo solo si estas seguro.</>
+                        ) : (
+                            <>Estas por restaurar una materia prima. Hazlo solo si estas seguro.</>
+                        )}
+                    </>
+                }
+                confirmText="Confirmar"
+            />
         </PageShell>
     );
 }

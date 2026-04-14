@@ -51,6 +51,11 @@ export default function CatalogProducts() {
         refresh,
     } = useProducts(queryParams, { mode: "product" });
 
+    const deletingProduct = useMemo(
+        () => products.find((product) => product.id === deletingProductId) ?? null,
+        [products, deletingProductId],
+    );
+
     const startCreate = () => {
         setEditingProductId(null);
         setOpenCreate(true);
@@ -149,6 +154,7 @@ export default function CatalogProducts() {
                 isActive: !product.isActive,
             });
             }  
+            await refresh();
             setDeletingProductId(null);
             showFlash(successResponse("Estado de producto actualizado"));
         } catch {
@@ -310,14 +316,17 @@ export default function CatalogProducts() {
 
             <AlertModal
                 open={!!deletingProductId}
-                type="deleted"
+                type={deletingProduct?.isActive ? "deleted" : "restore"}
                 title="Confirmar acción"
                 onClose={() => setDeletingProductId(null)}
                 onConfirm={confirmDelete}
                 message={
                     <>
-                        <span className="font-semibold">Ojo:</span> estas por cambiar el estado de un producto.
-                        Hazlo solo si estas seguro.
+                        {deletingProduct?.isActive ? (
+                            <>Estas por eliminar un producto. Hazlo solo si estas seguro.</>
+                        ) : (
+                            <>Estas por restaurar un producto. Hazlo solo si estas seguro.</>
+                        )}
                     </>
                 }
                 confirmText="Confirmar"

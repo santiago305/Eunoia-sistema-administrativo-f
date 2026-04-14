@@ -233,7 +233,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 const empty = createEmptyRecipeDraft();
                 setPersistedRecipesBySkuId((prev) => ({ ...prev, [skuId]: empty }));
                 setEditedRecipesBySkuId((prev) => (prev[skuId] ? prev : { ...prev, [skuId]: empty }));
-                showFlash(errorResponse("Recipe not found"));
             } else {
                 showFlash(errorResponse(getApiErrorMessage(error, "Error al cargar recetas")));
             }
