@@ -38,7 +38,6 @@ const CatalogAdjustments = lazy(() => import("@/pages/catalog/AdjustmentProducts
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/components/LocationModal"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
-const RowVariant = lazy(() => import("@/pages/row-material/RowVariant"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
 const RowMaterialAdjustments = lazy(() => import("@/pages/row-material/AdjustmentRowMaterial"));
 const RowMaterialDocuments = lazy(() => import("@/pages/row-material/DocumentRowMaterial"));
@@ -164,10 +163,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.rowMaterialAdjustments,
                 element: withRouteGuard(RoutesPaths.rowMaterialAdjustments, <RowMaterialAdjustments />),
-            },
-            {
-                path: RoutesPaths.rowVariant,
-                element: withRouteGuard(RoutesPaths.rowVariant, <RowVariant />),
             },
             {
                 path: RoutesPaths.KardexPrima,

@@ -18,7 +18,7 @@ import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { listInventory } from "@/services/inventoryService";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import type { InventoryRow } from "@/pages/catalog/types/inventory";
 import type { FinishedProducts } from "@/pages/catalog/types/variant";

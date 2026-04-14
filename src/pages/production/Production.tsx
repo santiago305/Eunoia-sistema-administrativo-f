@@ -26,7 +26,7 @@ import { ModalNavigateProduction } from "@/pages/production/components/ModalNavi
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
-import { RoutesPaths } from "@/Router/config/routesPaths";
+import { RoutesPaths } from "@/router/config/routesPaths";
 
 const PRIMARY = "hsl(var(--primary))";
 
