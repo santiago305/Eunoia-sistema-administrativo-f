@@ -4,7 +4,9 @@ import type {
   CreateWarehouseDto,
   UpdateWarehouseDto,
   UpdateWarehouseActiveDto,
+  ListActiveWarehousesParams,
   ListWarehousesQuery,
+  ListWarehousesResponse,
   WarehouseListResponse,
   Warehouse,
   WarehouseLocationsResponse,
@@ -34,9 +36,23 @@ export const listWarehouses = async (params: ListWarehousesQuery): Promise<Wareh
   return response.data;
 };
 
-export const listActive = async (): Promise<Warehouse[]> => {
-  const response = await axiosInstance.get(API_WAREHOUSES_GROUP.listActive);
+export const listActiveWarehouses = async (
+  params: ListActiveWarehousesParams = { page: 1, limit: 100 },
+): Promise<ListWarehousesResponse> => {
+  const response = await axiosInstance.get(API_WAREHOUSES_GROUP.list, {
+    params: {
+      ...params,
+      page: params.page ?? 1,
+      limit: params.limit ?? 100,
+      isActive: "true",
+    },
+  });
   return response.data;
+};
+
+export const listActive = async (): Promise<Warehouse[]> => {
+  const response = await listActiveWarehouses({ page: 1, limit: 100 });
+  return response.items ?? [];
 };
 
 export const getWarehouseById = async (id: string): Promise<Warehouse> => {
