@@ -17,6 +17,6 @@ export const StatusPill =
             }
         >
             <span className={["h-1.5 w-1.5 rounded-full", active ? "bg-[color:var(--p-dot)]" : "bg-rose-500"].join(" ")} style={active ? ({ "--p-dot": PRIMARY } as React.CSSProperties) : undefined} />
-            {active ? "Activo" : "Eliminado"}
+            {active ? "Activado" : "Desactivado"}
         </span>
     );

@@ -16,7 +16,7 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
-import { ConfirmActionModal } from "@/components/alert.dialog/ConfirmActionModal";
+import { AlertModal } from "@/components/AlertModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
@@ -157,6 +157,14 @@ export default function Warehouses() {
     await setActive(deletingWarehouseId, !warehouseToToggle.isActive);
     setDeletingWarehouseId(null);
   }, [deletingWarehouseId, setActive, warehouses]);
+
+  const warehousePendingToggle = useMemo(
+    () =>
+      deletingWarehouseId
+        ? warehouses.find(({ warehouseId }) => warehouseId === deletingWarehouseId) ?? null
+        : null,
+    [deletingWarehouseId, warehouses]
+  );
 
   const formatDate = useCallback((value: string) => {
     const date = new Date(value);
@@ -361,12 +369,20 @@ export default function Warehouses() {
         entityLabel="almacen"
       />
 
-      <ConfirmActionModal
+      <AlertModal
         open={Boolean(deletingWarehouseId)}
-        title="Eliminar almacen"
-        description="¿Estás seguro de que deseas eliminar este almacen?"
+        type={warehousePendingToggle?.isActive ? "warning" : "restore"}
+        title={warehousePendingToggle?.isActive ? "Desactivar almacen" : "Restaurar almacen"}
+        message={
+          warehousePendingToggle?.isActive
+            ? "Estas por desactivar este almacen. Hazlo solo si estas seguro."
+            : "Estas por restaurar este almacen. Hazlo solo si estas seguro."
+        }
+        confirmText={warehousePendingToggle?.isActive ? "Desactivar" : "Restaurar"}
         onClose={() => setDeletingWarehouseId(null)}
-        onConfirm={confirmDelete}
+        onConfirm={() => {
+          void confirmDelete();
+        }}
       />
 
       <WarehouseLocationsModal

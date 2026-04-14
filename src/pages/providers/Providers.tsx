@@ -78,12 +78,6 @@ export default function Providers() {
     setLoading(true);
 
     try {
-      console.log("[Providers search] request", {
-        page,
-        limit: paginationState.pageSize,
-        q: appliedSearch || undefined,
-      });
-
       const res = await listSuppliers({
         page,
         limit: paginationState.pageSize,
@@ -95,14 +89,6 @@ export default function Providers() {
       const nextPage = res.page ?? page;
       const nextLimit = res.limit ?? paginationState.pageSize;
       const nextTotalPages = Math.max(1, Math.ceil(nextTotal / nextLimit));
-
-      console.log("[Providers search] response", {
-        appliedSearch,
-        page: nextPage,
-        limit: nextLimit,
-        total: nextTotal,
-        items: items.length,
-      });
 
       setSuppliers(items);
       setServerPagination({
@@ -122,11 +108,6 @@ export default function Providers() {
         totalPages: 1,
         hasPrev: false,
         hasNext: false,
-      });
-      console.log("[Providers search] error", {
-        page,
-        limit: paginationState.pageSize,
-        q: appliedSearch || undefined,
       });
       showFlash(errorResponse("Error al listar proveedores"));
     } finally {

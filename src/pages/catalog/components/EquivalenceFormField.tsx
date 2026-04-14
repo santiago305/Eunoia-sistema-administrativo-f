@@ -85,7 +85,7 @@ export function EquivalenceFormFields({
         await onCreated?.();
       }
     } catch {
-      console.log("algo salio mal");
+      return;
     }
   };
 

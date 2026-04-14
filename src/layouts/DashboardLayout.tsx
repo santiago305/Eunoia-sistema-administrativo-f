@@ -63,7 +63,6 @@ const DashboardContent = () => {
             type="button"
             title="Abrir menu"
             onClick={() => {
-              console.log("[DashboardLayout] mobile trigger click");
               openMobileSidebar();
             }}
             className="fixed right-3 top-3 z-30 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background/95 shadow-sm backdrop-blur sm:hidden"

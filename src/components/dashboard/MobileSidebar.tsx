@@ -18,18 +18,7 @@ const MobileSidebar = ({ user, onLogout }: MobileSidebarProps) => {
   const previousPathnameRef = useRef(location.pathname);
 
   useEffect(() => {
-    console.log("[MobileSidebar] render", {
-      pathname: location.pathname,
-      isMobileSidebarOpen,
-    });
-  }, [isMobileSidebarOpen, location.pathname]);
-
-  useEffect(() => {
     if (previousPathnameRef.current !== location.pathname) {
-      console.log("[MobileSidebar] route change close", {
-        from: previousPathnameRef.current,
-        to: location.pathname,
-      });
       previousPathnameRef.current = location.pathname;
       closeMobileSidebar();
     }

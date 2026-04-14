@@ -18,7 +18,7 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { ConfirmActionModal } from "@/components/alert.dialog/ConfirmActionModal";
+import { AlertModal } from "@/components/AlertModal";
 
 type WarehouseRef = { warehouseId: string; name: string } | null;
 
@@ -376,17 +376,20 @@ export function WarehouseLocationsModal({
         </Modal>
       ) : null}
 
-      <ConfirmActionModal
+      <AlertModal
         open={Boolean(deletingLocationId)}
+        type={nextActiveState ? "restore" : "warning"}
         title={nextActiveState ? "Restaurar ubicacion" : "Desactivar ubicacion"}
-        description={
+        message={
           nextActiveState
             ? "Se activara la ubicacion nuevamente."
             : "Se desactivara la ubicacion seleccionada."
         }
-        confirmVariant={nextActiveState ? "primary" : "danger"}
+        confirmText={nextActiveState ? "Activar" : "Desactivar"}
         onClose={() => setDeletingLocationId(null)}
-        onConfirm={confirmToggleActive}
+        onConfirm={() => {
+          void confirmToggleActive();
+        }}
       />
     </>
   );

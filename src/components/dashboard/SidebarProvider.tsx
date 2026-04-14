@@ -29,15 +29,6 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
         setIsCollapsed(isTablet);
     }, [isMobile, isTablet]);
 
-    useEffect(() => {
-        console.log("[SidebarProvider] responsive state", {
-            isMobile,
-            isTablet,
-            isCollapsed,
-            isMobileSidebarOpen,
-        });
-    }, [isCollapsed, isMobile, isMobileSidebarOpen, isTablet]);
-
     const toggleSidebar = useCallback(() => {
         if (isMobile) {
             setIsMobileSidebarOpen((prev) => !prev);
@@ -52,12 +43,10 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const openMobileSidebar = useCallback(() => {
-        console.log("[SidebarProvider] openMobileSidebar");
         setIsMobileSidebarOpen(true);
     }, []);
 
     const closeMobileSidebar = useCallback(() => {
-        console.log("[SidebarProvider] closeMobileSidebar");
         setIsMobileSidebarOpen(false);
     }, []);
 
