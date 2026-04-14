@@ -74,30 +74,24 @@ export const API_SECURITY_GROUP = {
 };
 
 export const API_PRODUCTS_GROUP = {
-  base: "/catalog/products",
+  base: "/products",
   items: "/products",
-  create: "/catalog/products",
+  create: "/products",
   createBase: "/products",
   flat: "/catalog/products/flat",
-  productFinisheds: "/catalog/products/variants/finished",
-  productFinishedsActive: "/catalog/products/finished/active",
   productPrimasActive: "/catalog/products/prima/active",
-  finishedWithRecipes: "/catalog/products/variants/finished-with-recipes",
   byId: (id: string) => `/catalog/products/${id}/variants`,
-  byIdP: (id: string) => `/catalog/products/${id}`,
+  byIdP: (id: string) => `/products/${id}`,
   byName: (name: string) => `/catalog/products/by-name/${encodeURIComponent(name)}`,
-  update: (id: string) => `/catalog/products/${id}`,
-  updateActive: (id: string) => `/catalog/products/${id}/active`,
+  update: (id: string) => `/products/${id}`,
+  updateActive: (id: string) => `/products/${id}`,
   createSku: (id: string) => `/products/${id}/skus`,
-  variants: (id: string) => `/catalog/products/${id}/variants`,
-  withVariants: (id: string) => `/catalog/products/${id}/with-variants`,
 };
 
 export const API_VARIANTS_GROUP = {
   base:"/catalog/variants",
   create:"/catalog/variants",
   list:"/catalog/variants",
-  listRowMaterials: "/catalog/variants/row-materials",
   searchProductAndVariant: (q: string, raw = true, withRecipes = false) =>
   `/catalog/products/variants/search?q=${encodeURIComponent(q)}&raw=${raw}&withRecipes=${withRecipes}`,
   byId: (id: string) => `/catalog/variants/${id}`,
@@ -127,23 +121,26 @@ export const API_LOCATIONS_GROUP = {
 };
 
 export const API_UNITS_GROUP = {
-  list: "catalog/units"
+  list: "/units",
+  byId: (id: string) => `/units/${id}`,
+  byCode: (code: string) => `/units/code/${encodeURIComponent(code)}`,
+  create: "/units",
 };
 
 export const API_PRODUCT_EQUIVALENCES_GROUP = {
-  base: "/catalog/product-equivalences",
-  create: "/catalog/product-equivalences",
-  list: "/catalog/product-equivalences",
-  byId: (id: string) => `/catalog/product-equivalences/${id}`,
-  delete: (id: string) => `/catalog/product-equivalences/${id}`,
+  byProduct: (productId: string) => `/products/${productId}/equivalences`,
+  byId: (id: string) => `/equivalences/${id}`,
 };
 
 export const API_PRODUCT_RECIPES_GROUP = {
-  base: "/catalog/product-recipes",
-  create: "/catalog/product-recipes",
-  list: "/catalog/product-recipes",
-  byId: (id: string) => `/catalog/product-recipes/${id}`,
-  delete: (id: string) => `/catalog/product-recipes/${id}`,
+  bySku: (skuId: string) => `/skus/${skuId}/recipe`,
+  deleteItem: (skuId: string, itemId: string) => `/skus/${skuId}/recipe/items/${itemId}`,
+};
+
+export const API_SKUS_GROUP = {
+  base: "/skus",
+  byId: (id: string) => `/skus/${id}`,
+  update: (id: string) => `/skus/${id}`,
 };
 
 export const API_SUPPLIERS_GROUP = {
@@ -207,7 +204,7 @@ export const API_PDF_GENERATED_GROUP = {
 };
 
 export const API_DOCUMENT_SERIES_GROUP = {
-  list: "/inventory/document-series",
+  list: "/series/active",
 };
 
 export const API_KARDEX_GROUP = {

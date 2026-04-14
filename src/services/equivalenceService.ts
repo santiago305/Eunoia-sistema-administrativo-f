@@ -2,27 +2,30 @@ import axiosInstance from "@/common/utils/axios";
 import { API_PRODUCT_EQUIVALENCES_GROUP } from "@/services/APIs";
 import type {
   CreateProductEquivalenceDto,
-  ListProductEquivalencesQuery,
   ListProductEquivalencesResponse,
   ProductEquivalence,
 } from "@/pages/catalog/types/equivalence";
 
 export const listProductEquivalences = async (
-  params: ListProductEquivalencesQuery
+  productId: string
 ): Promise<ListProductEquivalencesResponse> => {
-  const response = await axiosInstance.get(API_PRODUCT_EQUIVALENCES_GROUP.list, { params });
+  const response = await axiosInstance.get(API_PRODUCT_EQUIVALENCES_GROUP.byProduct(productId));
   return response.data;
 };
 
 export const createProductEquivalence = async (
+  productId: string,
   payload: CreateProductEquivalenceDto
 ): Promise<ProductEquivalence> => {
-  const response = await axiosInstance.post(API_PRODUCT_EQUIVALENCES_GROUP.create, payload);
+  const response = await axiosInstance.post(
+    API_PRODUCT_EQUIVALENCES_GROUP.byProduct(productId),
+    payload,
+  );
   return response.data;
 };
 
 export const deleteProductEquivalence = async (id: string): Promise<void> => {
-  await axiosInstance.delete(API_PRODUCT_EQUIVALENCES_GROUP.delete(id));
+  await axiosInstance.delete(API_PRODUCT_EQUIVALENCES_GROUP.byId(id));
 };
 
 

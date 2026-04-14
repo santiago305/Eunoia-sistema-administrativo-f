@@ -98,7 +98,7 @@ export function EquivalenceModal({
   ) => {
     if (canUpdate()) setLoading(true);
     try {
-      const res = await listProductEquivalences({ productId });
+      const res = await listProductEquivalences(productId);
       const list = res ?? [];
       if (!canUpdate()) return;
       setEquivalences(list);

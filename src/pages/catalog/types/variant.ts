@@ -67,6 +67,11 @@ export type PrimaVariant = {
     variant?:string,
     color?:string
   };
+  unit?:{
+    id:string;
+    name:string;
+    code:string;
+  }
   customSku?:string;
 };
  export type VariantRow = {

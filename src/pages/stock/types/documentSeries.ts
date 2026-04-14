@@ -10,6 +10,8 @@ export type DocumentSeries = {
   docType?: string;
   warehouseId?: string;
   nextNumber?: number;
+  separator?: string;
+  padding?: number;
   isActive?: boolean;
   createdAt?: string;
 };

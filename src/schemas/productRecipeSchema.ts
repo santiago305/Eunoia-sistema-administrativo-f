@@ -1,16 +1,17 @@
 import { z } from "zod";
 
-export const listProductRecipesQuerySchema = z.object({
-  finishedType: z.enum(["PRODUCT", "VARIANT"]),
-  finishedItemId: z.string().uuid(),
-});
-
-export const createProductRecipeSchema = z.object({
-  finishedType: z.enum(["PRODUCT", "VARIANT"]),
-  finishedItemId: z.string().uuid(),
-  primaVariantId: z.string().uuid(),
-  quantity: z.number().min(0),
-  waste: z.number().min(0).optional(),
+export const createSkuRecipeSchema = z.object({
+  yieldQuantity: z.number().min(0),
+  notes: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        materialSkuId: z.string().uuid(),
+        quantity: z.number().min(0),
+        unitId: z.string().uuid(),
+      }),
+    )
+    .min(1),
 });
 
 

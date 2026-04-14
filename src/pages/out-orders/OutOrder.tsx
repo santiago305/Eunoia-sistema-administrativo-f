@@ -10,17 +10,18 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
-import { searchProductAndVariant } from "@/services/catalogService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money } from "@/utils/functionPurchases";
 import { createOutOrder } from "@/services/documentService";
 import { ModalNavigateOutOrder } from "@/pages/out-orders/components/ModalNavigateOutOrder";
 import { OutOrderItemModal } from "@/pages/out-orders/components/OutOrderItemModal";
-import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import type { AddOutOrderItemDto, CreateOutOrder } from "@/pages/out-orders/type/outOrder";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
+import { ProductTypes } from "../catalog/types/ProductTypes";
+import { listSkus } from "@/services/skuService";
+import { ListSkusResponse } from "../catalog/types/product";
 
 const PRIMARY = "hsl(var(--primary))";
 const CURRENCY = "PEN";
@@ -59,8 +60,8 @@ export default function OutOrder() {
   const [openItemModal, setOpenItemModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedOutOrderId, setLastSavedOutOrderId] = useState("");
-  const [products, setProducts] = useState<FinishedProducts[]>([]);
-  const [searchResults, setSearchResults] = useState<FinishedProducts[]>([]);
+  const [products, setProducts] = useState<ListSkusResponse>();
+  const [searchResults, setSearchResults] = useState<ListSkusResponse>();
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
@@ -69,8 +70,8 @@ export default function OutOrder() {
     setForm(buildEmptyForm());
     setPendingItem(buildEmptyItem());
     setSerie({ value: "", label: "" });
-    setProducts([]);
-    setSearchResults([]);
+    setProducts(undefined);
+    setSearchResults(undefined);
     setQuery("");
   };
 
@@ -96,29 +97,24 @@ export default function OutOrder() {
       setForm((prev) => ({ ...prev, serieId: "" }));
       return;
     }
-
     try {
       const res = await listDocumentSeries({
         warehouseId,
         docType: DocType.OUT,
         isActive: true,
       });
-
-      if (!res?.length) {
+      if (!res) {
         setSerie({ value: "", label: "" });
         setForm((prev) => ({ ...prev, serieId: "" }));
         return;
       }
-
-      const nextSerie = res[0];
-      const nextNumber = Number(nextSerie.nextNumber ?? 0);
-
+      const nextNumber = Number(res.nextNumber ?? 0);
+      const paddedNumber = String(nextNumber).padStart(Number(res.padding ?? 0), "0");
       setSerie({
-        value: nextSerie.id,
-        label: `${nextSerie.code}-${nextNumber}`,
+        value: res.id,
+        label: `${res.code}${res.separator ?? "-"}${paddedNumber}`,
       });
-
-      setForm((prev) => ({ ...prev, serieId: nextSerie.id }));
+      setForm((prev) => ({ ...prev, serieId: res.id }));
     } catch {
       setSerie({ value: "", label: "" });
       setForm((prev) => ({ ...prev, serieId: "" }));
@@ -128,23 +124,25 @@ export default function OutOrder() {
 
   const searchProducts = async () => {
     try {
-      const res = await searchProductAndVariant({
+      const res = await listSkus({
         q: query,
-        raw: false,
+        productType: ProductTypes.PRODUCT,
       });
       setSearchResults(res ?? []);
+      setProducts(res ?? []);
     } catch {
-      setSearchResults([]);
       showFlash(errorResponse("Error al cargar productos"));
     }
   };
 
   const productOptions = useMemo(
     () =>
-      (searchResults ?? []).map((v) => ({
-        value: v.itemId ?? v.id ?? "",
-        label: `${v.productName ?? "Materia vrima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
-        ${v.sku ? ` - ${v.sku}`: ""} (${v.customSku ?? "-"})`,      })),
+      (searchResults?.items ?? []).map((v) => ({
+        value: v.sku.id,
+        label: `${v.sku.name} ${v.attributes ?? ""} ${v.sku.backendSku ? `-${v.sku.backendSku}`:""}
+        ${v.sku.customSku ? `(${v.sku.customSku})`: ""} 
+        `
+      } )),
     [searchResults],
   );
 
@@ -152,8 +150,8 @@ export default function OutOrder() {
     const { itemId, quantity, unitCost } = pendingItem;
 
     const selected =
-      searchResults.find((p) => (p.itemId ?? p.id) === itemId) ??
-      products.find((p) => (p.itemId ?? p.id) === itemId);
+      searchResults?.items.find((p) => p.sku.id === itemId) ??
+      products?.items.find((p) => p.sku.id === itemId);
 
     if (!itemId) {
       showFlash(errorResponse("Selecciona un producto"));
@@ -187,26 +185,35 @@ export default function OutOrder() {
     }));
 
     setProducts((prev) => {
-      const selectedId = selected.itemId ?? selected.id;
+      const selectedId = selected.sku.id;
       if (!selectedId) return prev;
-      const exists = prev.some((p) => (p.itemId ?? p.id) === selectedId);
-      return exists ? prev : [...prev, selected];
+
+      const items = prev?.items ?? [];
+      const exists = items.some((p) => p.sku.id === selectedId);
+
+      if (exists) return prev;
+
+      return {
+        ...(prev ?? {}),
+        items: [...items, selected],
+        total: [...items, selected].length,
+      };
     });
 
     setPendingItem(buildEmptyItem());
-  };
-
-  const removeItem = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      items: (prev.items ?? []).filter((_, i) => i !== index),
-    }));
   };
 
   const updateItem = (index: number, patch: Partial<AddOutOrderItemDto>) => {
     setForm((prev) => ({
       ...prev,
       items: (prev.items ?? []).map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const removeItem = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      items: (prev.items ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -253,7 +260,7 @@ export default function OutOrder() {
       if (query.trim()) {
         void searchProducts();
       } else {
-        setSearchResults([]);
+        setSearchResults(undefined);
       }
     }, 500);
 
@@ -267,14 +274,15 @@ export default function OutOrder() {
 
   const itemRows = useMemo<OutOrderItemRow[]>(() => {
     return (form.items ?? []).map((item, index) => {
-      const product = products.find((p) => (p.itemId ?? p.id) === item.itemId);
+      const product = products?.items.find((p) => (p.sku.id) === item.itemId);
 
       return {
         id: `${item.itemId}-${index}`,
         itemId: item.itemId,
-        sku: product?.sku ?? "-",
-        productName: product?.productName ?? "Producto",
-        unitName: product?.unitName ?? "-",
+        sku: product?.sku.backendSku ?? "-",
+        productName: product?.sku.name ?? "Producto",
+        customSku: product?.sku.customSku,
+        unitName: product?.unit?.name ?? "-",
         quantity: item.quantity,
         unitCost: item.unitCost,
       };

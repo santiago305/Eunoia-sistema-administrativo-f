@@ -6,6 +6,8 @@ import {
   listProductsQuerySchema,
 } from "@/schemas/productSchemas";
 import type { ProductType } from "@/pages/catalog/types/ProductTypes";
+import { RecipeDraft } from "../components/RecipeFormFields";
+import { EquivalenceDraft } from "./equivalence";
 
 
 export type CreateProductDto = z.infer<typeof createProductSchema>;
@@ -13,24 +15,65 @@ export type UpdateProductDto = z.infer<typeof updateProductSchema>;
 export type UpdateProductActiveDto = z.infer<typeof updateProductActiveSchema>;
 export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 
-export type Product = {
+export type ProductCatalogProductType = "MATERIAL" | "PRODUCT";
+
+export type ProductCatalogProduct = {
   id: string;
-  sourceType?: "PRODUCT" | "VARIANT";
-  displayName?: string | null;
-  familyProductId?: string | null;
-  parentProductId?: string | null;
-  productId?: string;
-  isGroupRoot?: boolean;
-  isOperationalItem?: boolean;
-  hasVariants?: boolean;
-  variantsCount?: number;
-  type: ProductType | string;
   name: string;
   description: string | null;
-  brand?: string | null;
+  type: ProductCatalogProductType;
+  brand: string | null;
+  baseUnitId: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProductCatalogUnit = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+export type ProductCatalogSku = {
+  id: string;
+  productId: string;
+  backendSku: string;
+  customSku: string | null;
+  name: string;
+  barcode: string | null;
+  price: number;
+  cost: number;
+  isSellable: boolean;
+  isPurchasable: boolean;
+  isManufacturable: boolean;
+  isStockTracked: boolean;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProductCatalogSkuAttribute = {
+  code: string;
+  name?: string | null;
+  value: string;
+};
+
+export type ProductCatalogSkuResponse = {
+  sku: ProductCatalogSku;
+  attributes: ProductCatalogSkuAttribute[];
+};
+
+export type ProductCatalogProductDetailResponse = {
+  product: ProductCatalogProduct;
+  baseUnit: ProductCatalogUnit | null;
+  skus: ProductCatalogSkuResponse[];
+};
+
+export type Product = Omit<ProductCatalogProduct, "createdAt" | "updatedAt" | "type"> & {
+  hasVariants?: boolean;
   skuCount?: number | null;
   inventoryTotal?: number | null;
-  isActive: boolean;
   barcode?: string | null;
   sku?: string | null;
   price?: number;
@@ -38,7 +81,7 @@ export type Product = {
   minStock?: number | null;
   baseUnitName?: string;
   baseUnitCode?: string;
-  baseUnitId?: string;
+  baseUnit?: ProductCatalogUnit | null;
   attributes?: {
     presentation: string,
     variant:string,
@@ -47,6 +90,66 @@ export type Product = {
   createdAt: string;
   updatedAt: string | null;
   customSku?: string;
+  type: ProductCatalogProductType | ProductType | string;
+};
+
+export type ProductBaseUnit = ProductCatalogUnit;
+
+export type ProductSku = ProductCatalogSku;
+
+export type ProductSkuAttribute = ProductCatalogSkuAttribute;
+
+export type ProductSkuWithAttributes = ProductCatalogSkuResponse & {
+  unit?: ProductBaseUnit | null;
+};
+
+export type ListSkusQuery = {
+  productType?: ProductType;
+  productId?: string;
+  isActive?: boolean;
+  q?: string;
+  page?: number;
+  limit?: number;
+};
+export type ProductCreateModalProps = {
+  open: boolean;
+  mode?: "create" | "edit";
+  productId?: string | null;
+  productType: ProductCatalogProductType;
+  primaryColor?: string;
+  entityLabel?: string;
+  onClose: () => void;
+  onSaved?: () => void;
+};
+
+export type WorkspaceTab = "details" | "equivalences" | "recipes";
+
+export type ProductCreateForm = {
+  name: string;
+  description: string;
+  brand: string;
+  baseUnitId: string;
+  isActive: boolean;
+  wantsVariants: "no" | "yes";
+};
+
+export type ProductCreateDraft = {
+  equivalences: EquivalenceDraft[];
+  recipesBySku: Record<string, RecipeDraft>;
+};
+
+
+export type ListSkusResponse = {
+  items: ProductSkuWithAttributes[];
+  total: number;
+  page?: number;
+  limit?: number;
+};
+
+export type ProductDetailResponse = {
+  product: Product;
+  baseUnit: ProductBaseUnit | null;
+  skus: ProductSkuWithAttributes[];
 };
 
 export type ProductForm = {
@@ -75,10 +178,14 @@ export type ProductForm = {
 export type CreateBaseProductDto = {
   name: string;
   description?: string | null;
-  type: string;
+  type: ProductCatalogProductType;
   brand?: string | null;
   baseUnitId?: string;
   isActive?: boolean;
+};
+
+export type UpdateActiveProduct = {
+  isActive: boolean;
 };
 
 export type CreateProductSkuAttributeDto = {
@@ -101,18 +208,25 @@ export type CreateProductSkuDto = {
   attributes?: CreateProductSkuAttributeDto[];
 };
 
+export type UpdateProductSkuDto = {
+  name?: string;
+  customSku?: string | null;
+  barcode?: string | null;
+  price?: number;
+  cost?: number;
+  isSellable?: boolean;
+  isPurchasable?: boolean;
+  isManufacturable?: boolean;
+  isStockTracked?: boolean;
+  isActive?: boolean;
+  attributes?: CreateProductSkuAttributeDto[];
+};
+
 export type ProductListResponse = {
   items: Product[];
   total: number;
   page: number;
   limit: number;
 };
-
-export type ProductVariant = Record<string, unknown>;
-
-export type ProductWithVariantsResponse = {
-  product: Product;
-  variants: ProductVariant[];
-} | null;
 
 

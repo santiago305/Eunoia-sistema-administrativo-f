@@ -1,28 +1,40 @@
 import axiosInstance from "@/common/utils/axios";
 import { API_PRODUCT_RECIPES_GROUP } from "@/services/APIs";
 import type {
-  CreateProductRecipeDto,
-  ListProductRecipesQuery,
-  ListProductRecipesResponse,
-  ProductRecipe,
+  CreateSkuRecipeDto,
+  UpdateRecipePayload,
+  SkuRecipeResponse,
+  SuccessResponse,
+  RecipeResponse,
 } from "@/pages/catalog/types/productRecipe";
 
-export const listProductRecipes = async (
-  params: ListProductRecipesQuery
-): Promise<ListProductRecipesResponse> => {
-  const response = await axiosInstance.get(API_PRODUCT_RECIPES_GROUP.list, { params });
+export const getSkuRecipe = async (skuId: string): Promise<SkuRecipeResponse> => {
+  const response = await axiosInstance.get(API_PRODUCT_RECIPES_GROUP.bySku(skuId));
   return response.data;
 };
 
-export const createProductRecipe = async (
-  payload: CreateProductRecipeDto
-): Promise<ProductRecipe> => {
-  const response = await axiosInstance.post(API_PRODUCT_RECIPES_GROUP.create, payload);
+export const createSkuRecipe = async (
+  skuId: string,
+  payload: CreateSkuRecipeDto,
+): Promise<SkuRecipeResponse> => {
+  const response = await axiosInstance.post(API_PRODUCT_RECIPES_GROUP.bySku(skuId), payload);
   return response.data;
 };
 
-export const deleteProductRecipe = async (id: string): Promise<void> => {
-  await axiosInstance.delete(API_PRODUCT_RECIPES_GROUP.delete(id));
+export const updateSkuRecipe = async (
+  skuId: string,
+  payload: UpdateRecipePayload,
+): Promise<RecipeResponse> => {
+  const response = await axiosInstance.patch(API_PRODUCT_RECIPES_GROUP.bySku(skuId), payload);
+  return response.data;
+};
+
+export const deleteSkuRecipeItem = async (
+  skuId: string,
+  itemId: string,
+): Promise<SuccessResponse<RecipeResponse>> => {
+  const response = await axiosInstance.delete(API_PRODUCT_RECIPES_GROUP.deleteItem(skuId, itemId));
+  return response.data;
 };
 
 

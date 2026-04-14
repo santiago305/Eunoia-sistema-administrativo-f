@@ -5,7 +5,6 @@ export const listProductEquivalencesQuerySchema = z.object({
 });
 
 export const createProductEquivalenceSchema = z.object({
-  productId: z.string().uuid(),
   fromUnitId: z.string().uuid(),
   toUnitId: z.string().uuid(),
   factor: z.number().min(0),

@@ -7,14 +7,19 @@ import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { ProductEquivalence } from "@/pages/catalog/types/equivalence";
-import { ListUnitResponse } from "@/pages/catalog/types/unit";
+import type { CreateProductEquivalenceDto, ProductEquivalence } from "@/pages/catalog/types/equivalence";
+import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 
 type EquivalenceRow = {
   id: string;
   unitName: string;
   description: string;
 };
+
+type EquivalenceLike = Pick<
+  ProductEquivalence,
+  "id" | "fromUnitId" | "toUnitId" | "factor" | "fromUnit" | "toUnit"
+>;
 
 export function EquivalenceFormFields({
   productId,
@@ -23,14 +28,20 @@ export function EquivalenceFormFields({
   equivalences,
   loading,
   onCreated,
+  onCreateEquivalence,
+  onDeleteEquivalence,
+  tableId,
   PRIMARY,
 }: {
-  productId: string;
+  productId?: string;
   baseUnitId: string;
   units?: ListUnitResponse;
-  equivalences: ProductEquivalence[];
-  loading: boolean;
-  onCreated: () => Promise<void>;
+  equivalences: EquivalenceLike[];
+  loading?: boolean;
+  onCreated?: () => Promise<void>;
+  onCreateEquivalence?: (payload: CreateProductEquivalenceDto) => Promise<void> | void;
+  onDeleteEquivalence?: (id: string) => Promise<void> | void;
+  tableId?: string;
   PRIMARY: string;
 }) {
   const [fromUnitId, setFromUnitId] = useState("");
@@ -46,24 +57,33 @@ export function EquivalenceFormFields({
     (baseUnitId ? baseUnitId : "Sin unidad base");
 
   const handleCreate = async () => {
-    if (!productId || !baseUnitId || !fromUnitId || !factor) return;
+    if (!baseUnitId || !fromUnitId || !factor) return;
 
-    await createProductEquivalence({
-      productId,
+    const payload = {
       fromUnitId,
       toUnitId: baseUnitId,
       factor: Number(factor),
-    });
+    };
+
+    if (onCreateEquivalence) {
+      await onCreateEquivalence(payload);
+    } else if (productId) {
+      await createProductEquivalence(productId, payload);
+      await onCreated?.();
+    }
 
     setFromUnitId("");
     setFactor("1");
-    await onCreated();
   };
 
   const deleteEquivalence = async (id: string) => {
     try {
-      await deleteProductEquivalence(id);
-      await onCreated();
+      if (onDeleteEquivalence) {
+        await onDeleteEquivalence(id);
+      } else {
+        await deleteProductEquivalence(id);
+        await onCreated?.();
+      }
     } catch {
       console.log("algo salio mal");
     }
@@ -72,13 +92,17 @@ export function EquivalenceFormFields({
   const rows = useMemo<EquivalenceRow[]>(
     () =>
       equivalences.map((eq) => {
-        const fromLabel = (units ?? []).find((u) => u.id === eq.fromUnitId);
-        const toLabel = (units ?? []).find((u) => u.id === eq.toUnitId);
+        const fromUnit =
+          eq.fromUnit ?? (units ?? []).find((u) => u.id === eq.fromUnitId);
+        const toUnit =
+          eq.toUnit ?? (units ?? []).find((u) => u.id === eq.toUnitId);
+        const fromLabel = fromUnit ? `${fromUnit.name} (${fromUnit.code})` : eq.fromUnitId;
+        const toLabel = toUnit ? `${toUnit.name} (${toUnit.code})` : eq.toUnitId;
 
         return {
           id: eq.id,
-          unitName: fromLabel ? `${fromLabel.name} (${eq.factor})` : eq.fromUnitId,
-          description: `Equivale a ${eq.factor} - ${toLabel?.name ?? eq.toUnitId}`,
+          unitName: `${fromLabel} (${eq.factor})`,
+          description: `Equivale a ${eq.factor} - ${toLabel}`,
         };
       }),
     [equivalences, units],
@@ -123,8 +147,13 @@ export function EquivalenceFormFields({
         sortable: false,
       },
     ],
-    [rows],
+    [deleteEquivalence],
   );
+
+  const canPersist = Boolean(onCreateEquivalence || productId);
+  const canCreate = Boolean(baseUnitId && fromUnitId && factor && canPersist);
+  const resolvedTableId =
+    tableId ?? (productId ? `product-equivalences-${productId}` : "product-equivalences-draft");
 
   return (
     <div className="space-y-4">
@@ -163,7 +192,7 @@ export function EquivalenceFormFields({
               borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             }}
             onClick={() => void handleCreate()}
-            disabled={!productId || !baseUnitId || !fromUnitId || !factor}
+            disabled={!canCreate}
           >
             Agregar
           </SystemButton>
@@ -171,7 +200,7 @@ export function EquivalenceFormFields({
         <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm
         mt-3">
           <DataTable
-            tableId={`product-equivalences-${productId}`}
+            tableId={resolvedTableId}
             data={rows}
             columns={columns}
             rowKey="id"

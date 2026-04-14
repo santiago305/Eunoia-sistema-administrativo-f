@@ -28,8 +28,6 @@ export default function RowMaterial() {
 
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
-    const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
-    const [editingWorkspaceTab, setEditingWorkspaceTab] = useState<"details" | "variantCreated">("details");
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
@@ -57,24 +55,12 @@ export default function RowMaterial() {
 
     const startCreate = () => {
         setEditingProductId(null);
-        setEditingVariantId(null);
-        setEditingWorkspaceTab("details");
         setOpenCreate(true);
     };
 
     const openEdit = useCallback((product: Product) => {
         setOpenCreate(false);
-        const parentId = product.parentProductId ?? product.productId ?? null;
-        if (product.sourceType === "VARIANT" && parentId) {
-            setEditingProductId(parentId);
-            setEditingVariantId(product.id);
-            setEditingWorkspaceTab("variantCreated");
-            return;
-        }
-
         setEditingProductId(product.id);
-        setEditingVariantId(null);
-        setEditingWorkspaceTab("details");
     }, []);
 
     const confirmDelete = async () => {
@@ -323,15 +309,11 @@ export default function RowMaterial() {
                 open={Boolean(editingProductId)}
                 mode="edit"
                 productId={editingProductId}
-                initialWorkspaceTab={editingWorkspaceTab}
-                initialVariantId={editingVariantId}
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
                 entityLabel="materia prima"
                 onClose={() => {
                     setEditingProductId(null);
-                    setEditingVariantId(null);
-                    setEditingWorkspaceTab("details");
                 }}
                 onSaved={() => {
                     void refresh();
