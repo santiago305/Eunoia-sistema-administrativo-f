@@ -49,7 +49,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
     const isNumber = type === "number";
 
     return (
-      <div className="w-full">
+      <div className="w-full min-h-[40px]">
         <div className="relative">
           <input
             ref={ref}

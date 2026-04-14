@@ -1,9 +1,14 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { AlertModal } from "@/components/AlertModal";
 import { Modal } from "@/components/modales/Modal";
-import { PaymentMethodSelectComposed } from "@/pages/payment-methods/components/PaymentMethodSelectComposed";
+import { FloatingInput } from "@/components/FloatingInput";
+import { SystemButton } from "@/components/SystemButton";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { Plus, Trash2 } from "lucide-react";
+import { PaymentMethodSelectComposed } from "@/pages/payment-methods/components/PaymentMethodSelectComposed";
 import { PaymentMethodFormModal } from "@/pages/payment-methods/components/PaymentMethodFormModal";
 import {
   createSupplierMethod,
@@ -11,11 +16,10 @@ import {
   getAllPaymentMethods,
   getPaymentMethodsBySupplier,
 } from "@/services/paymentMethodService";
-import type { PaymentMethod, PaymentMethodPivot } from "@/pages/payment-methods/types/paymentMethod";
-import { FloatingInput } from "@/components/FloatingInput";
-import { SystemButton } from "@/components/SystemButton";
-import { DataTable } from "@/components/table/DataTable";
-import type { DataTableColumn } from "@/components/table/types";
+import type {
+  PaymentMethod,
+  PaymentMethodPivot,
+} from "@/pages/payment-methods/types/paymentMethod";
 
 type ProviderMethodListModalProps = {
   title: string;
@@ -24,8 +28,13 @@ type ProviderMethodListModalProps = {
   supplierId: string;
 };
 
-type SelectOption = { value: string; label: string };
-const PRIMARY = "hsl(var(--primary))";
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+const primaryColor = "hsl(var(--primary))";
+const softBorder = `color-mix(in srgb, ${primaryColor} 20%, transparent)`;
 
 export function ProviderMethodListModal({
   title,
@@ -34,6 +43,7 @@ export function ProviderMethodListModal({
   supplierId,
 }: ProviderMethodListModalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
+
   const [rows, setRows] = useState<PaymentMethodPivot[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,83 +52,114 @@ export function ProviderMethodListModal({
   const [number, setNumber] = useState("");
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
+  const [pendingRemoveMethod, setPendingRemoveMethod] = useState<PaymentMethodPivot | null>(null);
+  const [removing, setRemoving] = useState(false);
 
-  const loadSupplierMethods = async (options?: { silent?: boolean }) => {
-    if (!supplierId) return;
-    if (!options?.silent) clearFlash();
-    setLoading(true);
-    try {
-      const data = await getPaymentMethodsBySupplier(supplierId);
-      setRows(data ?? []);
-    } catch {
-      setRows([]);
-      if (!options?.silent) {
-        showFlash(errorResponse("No se pudieron cargar los métodos de pago."));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadSupplierMethods = useCallback(
+    async (silent = false) => {
+      if (!supplierId) return;
 
-  const loadAllMethods = async (options?: { silent?: boolean }) => {
-    if (!options?.silent) clearFlash();
-    try {
-      const records = await getAllPaymentMethods();
-      setAllMethods(records);
-    } catch {
-      setAllMethods([]);
-      if (!options?.silent) {
-        showFlash(errorResponse("No se pudieron cargar los métodos de pago disponibles."));
+      if (!silent) clearFlash();
+      setLoading(true);
+
+      try {
+        const data = await getPaymentMethodsBySupplier(supplierId);
+        setRows(data ?? []);
+      } catch {
+        setRows([]);
+        if (!silent) {
+          showFlash(errorResponse("No se pudieron cargar los métodos de pago."));
+        }
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    },
+    [clearFlash, showFlash, supplierId],
+  );
+
+  const loadAllMethods = useCallback(
+    async (silent = false) => {
+      if (!silent) clearFlash();
+
+      try {
+        const data = await getAllPaymentMethods();
+        setAllMethods(data ?? []);
+      } catch {
+        setAllMethods([]);
+        if (!silent) {
+          showFlash(errorResponse("No se pudieron cargar los métodos disponibles."));
+        }
+      }
+    },
+    [clearFlash, showFlash],
+  );
 
   useEffect(() => {
     void loadSupplierMethods();
-    void loadAllMethods({ silent: true });
-  }, [supplierId]);
+    void loadAllMethods(true);
+  }, [loadAllMethods, loadSupplierMethods]);
 
   const availableOptions = useMemo<SelectOption[]>(() => {
-    const selectedSet = new Set(rows.map((r) => r.methodId));
+    const selectedSet = new Set(rows.map((row) => row.methodId));
+
     return allMethods
-      .filter((m) => !selectedSet.has(m.methodId))
-      .map((m) => ({ value: m.methodId, label: `${m.name}` }));
+      .filter((method) => !selectedSet.has(method.methodId))
+      .map((method) => ({
+        value: method.methodId,
+        label: method.name,
+      }));
   }, [allMethods, rows]);
 
   useEffect(() => {
-    if (selectedId && !availableOptions.some((o) => o.value === selectedId)) {
+    if (selectedId && !availableOptions.some((option) => option.value === selectedId)) {
       setSelectedId("");
     }
-  }, [availableOptions, selectedId]);
+  }, [selectedId, availableOptions]);
 
-  const addMethod = async () => {
+  const addMethod = useCallback(async () => {
     if (!supplierId || !selectedId || adding) return;
+
     clearFlash();
     setAdding(true);
+
     try {
-      await createSupplierMethod({ supplierId, methodId: selectedId, number });
+      await createSupplierMethod({
+        supplierId,
+        methodId: selectedId,
+        number,
+      });
+
       showFlash(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
-      await loadSupplierMethods({ silent: true });
+      await loadSupplierMethods(true);
     } catch {
       showFlash(errorResponse("No se pudo agregar el método"));
     } finally {
       setAdding(false);
     }
-  };
+  }, [adding, clearFlash, loadSupplierMethods, number, selectedId, showFlash, supplierId]);
 
-  const removeMethod = async (methodId?: string | null) => {
-    if (!supplierId || !methodId) return;
-    clearFlash();
-    try {
-      await deleteSupplierMethod(supplierId, methodId);
-      showFlash(successResponse("Método eliminado"));
-      await loadSupplierMethods({ silent: true });
-    } catch {
-      showFlash(errorResponse("No se pudo eliminar el método"));
-    }
-  };
+  const removeMethod = useCallback(
+    async (methodId?: string | null) => {
+      if (!supplierId || !methodId) return;
+
+      clearFlash();
+      setRemoving(true);
+
+      try {
+        await deleteSupplierMethod(supplierId, methodId);
+        showFlash(successResponse("Método desvinculado"));
+        await loadSupplierMethods(true);
+        setPendingRemoveMethod(null);
+      } catch {
+        showFlash(errorResponse("No se pudo desvincular el método"));
+      } finally {
+        setRemoving(false);
+      }
+    },
+    [clearFlash, loadSupplierMethods, showFlash, supplierId],
+  );
 
   const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
     () => [
@@ -143,8 +184,8 @@ export function ProviderMethodListModal({
               variant="danger"
               size="custom"
               className="h-7 w-7 rounded-lg p-0"
-              onClick={() => removeMethod(row.methodId)}
-              title="Eliminar método"
+              onClick={() => setPendingRemoveMethod(row)}
+              title="Quitar método"
             >
               <Trash2 className="h-4 w-4" />
             </SystemButton>
@@ -155,71 +196,67 @@ export function ProviderMethodListModal({
         hideable: false,
       },
     ],
-    [removeMethod]
+    [],
   );
 
   return (
     <Modal open={true} onClose={close} title={title} className={className}>
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-xs text-black/60">
-            {loading ? "Cargando..." : `${rows.length} métodos`}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-black/10 overflow-hidden">
-          <div className="flex flex-col gap-3 px-5 py-4 border-b border-black/10 text-xs text-black/60">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="flex-2">
-                <PaymentMethodSelectComposed
-                  label="Método de pago"
-                  value={selectedId}
-                  onChange={setSelectedId}
-                  options={availableOptions}
-                  onCreate={() => setOpenCreateMethod(true)}
-                  onEdit={(methodId) => setEditingMethodId(methodId)}
-                  className="h-10"
-                  textSize="text-xs"
-                  disabled={adding}
-                  emptyLabel="Sin resultados"
-                />
-              </div>
-              <div className="flex-1 ml-3">
-                <FloatingInput
-                  label="Número"
-                  name="supplier-payment-number"
-                  value={number}
-                  onChange={(e) => setNumber(e.target.value)}
-                  className="h-10 text-xs"
-                />
-              </div>
-              <SystemButton
-                size="sm"
-                className="mb-1"
-                leftIcon={<Plus className="h-4 w-4" />}
-                disabled={!selectedId || adding}
-                onClick={addMethod}
-                style={{ backgroundColor: PRIMARY, borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)` }}
-              >
-                {adding ? "Añadiendo..." : ""}
-              </SystemButton>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5">
-            <DataTable
-              tableId="supplier-methods-table"
-              data={rows}
-              columns={columns}
-              rowKey="methodId"
-              loading={loading}
-              emptyMessage="No hay métodos asignados."
-              hoverable={false}
-              animated={false}
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <PaymentMethodSelectComposed
+              label="Método de pago"
+              value={selectedId}
+              onChange={setSelectedId}
+              options={availableOptions}
+              onCreate={() => setOpenCreateMethod(true)}
+              onEdit={(methodId) => setEditingMethodId(methodId)}
+              className="h-10"
+              textSize="text-xs"
+              disabled={adding}
+              emptyLabel="Sin resultados"
             />
           </div>
+
+          <div className="flex-1">
+            <FloatingInput
+              label="Número"
+              name="supplier-payment-number"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              className="h-10 text-xs"
+              disabled={adding}
+            />
+          </div>
+
+          <SystemButton
+            size="sm"
+            className="sm:mb-1 h-10"
+            leftIcon={<Plus className="h-4 w-4" />}
+            disabled={!selectedId || adding}
+            onClick={addMethod}
+            style={{
+              backgroundColor: primaryColor,
+              borderColor: softBorder,
+            }}
+          >
+            {adding ? "Añadiendo..." : "Agregar"}
+          </SystemButton>
         </div>
+
+
+        <DataTable
+          tableId="supplier-methods-table"
+          data={rows}
+          columns={columns}
+          rowKey="methodId"
+          loading={loading}
+          emptyMessage="No hay métodos asignados."
+          hoverable={false}
+          animated={false}
+        />
       </div>
+
       <PaymentMethodFormModal
         open={openCreateMethod || Boolean(editingMethodId)}
         mode={editingMethodId ? "edit" : "create"}
@@ -229,11 +266,31 @@ export function ProviderMethodListModal({
           setEditingMethodId(null);
         }}
         onSaved={() => {
-          void loadAllMethods({ silent: true });
-          void loadSupplierMethods({ silent: true });
+          void loadAllMethods(true);
+          void loadSupplierMethods(true);
         }}
-        primaryColor={PRIMARY}
+        primaryColor={primaryColor}
         entityLabel="método de pago"
+      />
+
+      <AlertModal
+        open={Boolean(pendingRemoveMethod)}
+        type="warning"
+        title="Desvincular método de pago"
+        message={
+          pendingRemoveMethod
+            ? `Estas por quitar el método ${pendingRemoveMethod.name} de este proveedor. Hazlo solo si estas seguro.`
+            : ""
+        }
+        confirmText="Desvincular"
+        loading={removing}
+        onClose={() => {
+          if (removing) return;
+          setPendingRemoveMethod(null);
+        }}
+        onConfirm={() => {
+          void removeMethod(pendingRemoveMethod?.methodId);
+        }}
       />
     </Modal>
   );
