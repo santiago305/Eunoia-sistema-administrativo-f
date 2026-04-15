@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -17,6 +16,7 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { AlertModal } from "@/components/AlertModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -49,7 +49,7 @@ export default function Providers() {
   const [openCreate, setOpenCreate] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [toggleSupplierId, setToggleSupplierId] = useState<string | null>(null);
-  const [nextActiveState, setNextActiveState] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   const [methodSupplierId, setMethodSupplierId] = useState<string | null>(null);
 
   const page = paginationState.pageIndex + 1;
@@ -129,18 +129,40 @@ export default function Providers() {
     setEditingSupplierId(supplierId);
   }, []);
 
+  const supplierPendingToggle = useMemo(
+    () =>
+      toggleSupplierId
+        ? suppliers.find(({ supplierId }) => supplierId === toggleSupplierId) ?? null
+        : null,
+    [suppliers, toggleSupplierId]
+  );
+
   const confirmToggleActive = useCallback(async () => {
-    if (!toggleSupplierId) return;
+    if (!supplierPendingToggle || togglingStatus) return;
+
+    const nextActiveState = !supplierPendingToggle.isActive;
 
     try {
-      await updateSupplierActive(toggleSupplierId, { isActive: nextActiveState });
+      setTogglingStatus(true);
+      await updateSupplierActive(supplierPendingToggle.supplierId, { isActive: nextActiveState });
+      setSuppliers((prev) =>
+        prev.map((supplier) =>
+          supplier.supplierId === supplierPendingToggle.supplierId
+            ? {
+                ...supplier,
+                isActive: nextActiveState,
+              }
+            : supplier,
+        ),
+      );
       setToggleSupplierId(null);
-      await loadSuppliers();
-      showFlash(successResponse(nextActiveState ? "Proveedor activado" : "Proveedor desactivado"));
+      showFlash(successResponse(nextActiveState ? "Proveedor reactivado" : "Proveedor desactivado"));
     } catch {
       showFlash(errorResponse("Error al cambiar estado"));
+    } finally {
+      setTogglingStatus(false);
     }
-  }, [loadSuppliers, nextActiveState, showFlash, toggleSupplierId]);
+  }, [showFlash, supplierPendingToggle, togglingStatus]);
 
   const handleCreateSaved = useCallback(() => {
     if (paginationState.pageIndex === 0) {
@@ -223,7 +245,7 @@ export default function Providers() {
             actions={[
               {
                 id: "edit",
-                label: "Editar",
+                label: "Detalles",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
                 onClick: () => openEdit(row.supplierId),
               },
@@ -235,16 +257,13 @@ export default function Providers() {
               },
               {
                 id: "toggle",
-                label: row.isActive ? "Eliminar" : "Restaurar",
+                label: row.isActive ? "Desactivar" : "Reactivar",
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
                 className: row.isActive
                   ? "text-rose-700 hover:bg-rose-50"
                   : "text-cyan-700 hover:bg-cyan-50",
-                onClick: () => {
-                  setToggleSupplierId(row.supplierId);
-                  setNextActiveState(!row.isActive);
-                },
+                onClick: () => setToggleSupplierId(row.supplierId),
               },
             ]}
             columns={1}
@@ -345,34 +364,22 @@ export default function Providers() {
         primaryColor={PRIMARY}
       />
 
-      {toggleSupplierId && (
-        <Modal
-          open={true}
-          title={nextActiveState ? "Activar proveedor" : "Desactivar proveedor"}
-          onClose={() => setToggleSupplierId(null)}
-          className="max-w-md"
-        >
-          <p className="text-sm text-black/70">
-            {nextActiveState
-              ? "Se activara el proveedor nuevamente."
-              : "Se desactivara el proveedor seleccionado."}
-          </p>
-
-          <div className="mt-4 flex justify-end gap-2">
-            <SystemButton variant="outline" size="sm" onClick={() => setToggleSupplierId(null)}>
-              Cancelar
-            </SystemButton>
-
-            <SystemButton
-              variant={nextActiveState ? "primary" : "danger"}
-              size="sm"
-              onClick={confirmToggleActive}
-            >
-              Confirmar
-            </SystemButton>
-          </div>
-        </Modal>
-      )}
+      <AlertModal
+        open={Boolean(toggleSupplierId)}
+        type={supplierPendingToggle?.isActive ? "warning" : "restore"}
+        title={supplierPendingToggle?.isActive ? "Desactivar proveedor" : "Reactivar proveedor"}
+        message={
+          supplierPendingToggle?.isActive
+            ? "Estas por desactivar este proveedor. Hazlo solo si estas seguro."
+            : "Estas por reactivar este proveedor. Hazlo solo si estas seguro."
+        }
+        confirmText={supplierPendingToggle?.isActive ? "Desactivar" : "Reactivar"}
+        loading={togglingStatus}
+        onClose={() => setToggleSupplierId(null)}
+        onConfirm={() => {
+          void confirmToggleActive();
+        }}
+      />
 
       {methodSupplierId && (
         <ProviderMethodListModal

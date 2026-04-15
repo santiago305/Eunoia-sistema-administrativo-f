@@ -259,7 +259,7 @@ export default function Warehouses() {
               },
               {
                 id: "toggle",
-                label: row.isActive ? "Eliminar" : "Restaurar",
+                label: row.isActive ? "Desactivar" : "Restaurar",
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
                 className: row.isActive
