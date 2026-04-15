@@ -14,12 +14,13 @@ import {
   createSupplierMethod,
   deleteSupplierMethod,
   getAllPaymentMethods,
-  getPaymentMethodsBySupplier,
+  listSupplierMethodsBySupplier,
 } from "@/services/paymentMethodService";
 import type {
   PaymentMethod,
-  PaymentMethodPivot,
+  SupplierMethodRelation,
 } from "@/pages/payment-methods/types/paymentMethod";
+import { IconButton } from "@/components/IconBoton";
 
 type ProviderMethodListModalProps = {
   title: string;
@@ -34,6 +35,7 @@ type SelectOption = {
 };
 
 const primaryColor = "hsl(var(--primary))";
+const primaryHover = "#1aa392";
 const softBorder = `color-mix(in srgb, ${primaryColor} 20%, transparent)`;
 
 export function ProviderMethodListModal({
@@ -44,7 +46,7 @@ export function ProviderMethodListModal({
 }: ProviderMethodListModalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
 
-  const [rows, setRows] = useState<PaymentMethodPivot[]>([]);
+  const [rows, setRows] = useState<SupplierMethodRelation[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -52,7 +54,7 @@ export function ProviderMethodListModal({
   const [number, setNumber] = useState("");
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
-  const [pendingRemoveMethod, setPendingRemoveMethod] = useState<PaymentMethodPivot | null>(null);
+  const [pendingRemoveMethod, setPendingRemoveMethod] = useState<SupplierMethodRelation | null>(null);
   const [removing, setRemoving] = useState(false);
 
   const loadSupplierMethods = useCallback(
@@ -63,7 +65,7 @@ export function ProviderMethodListModal({
       setLoading(true);
 
       try {
-        const data = await getPaymentMethodsBySupplier(supplierId);
+        const data = await listSupplierMethodsBySupplier(supplierId);
         setRows(data ?? []);
       } catch {
         setRows([]);
@@ -100,15 +102,12 @@ export function ProviderMethodListModal({
   }, [loadAllMethods, loadSupplierMethods]);
 
   const availableOptions = useMemo<SelectOption[]>(() => {
-    const selectedSet = new Set(rows.map((row) => row.methodId));
-
     return allMethods
-      .filter((method) => !selectedSet.has(method.methodId))
       .map((method) => ({
         value: method.methodId,
         label: method.name,
       }));
-  }, [allMethods, rows]);
+  }, [allMethods]);
 
   useEffect(() => {
     if (selectedId && !availableOptions.some((option) => option.value === selectedId)) {
@@ -126,7 +125,7 @@ export function ProviderMethodListModal({
       await createSupplierMethod({
         supplierId,
         methodId: selectedId,
-        number,
+        number: number.trim() || undefined,
       });
 
       showFlash(successResponse("Método agregado"));
@@ -141,14 +140,14 @@ export function ProviderMethodListModal({
   }, [adding, clearFlash, loadSupplierMethods, number, selectedId, showFlash, supplierId]);
 
   const removeMethod = useCallback(
-    async (methodId?: string | null) => {
-      if (!supplierId || !methodId) return;
+    async (supplierMethodId?: string | null) => {
+      if (!supplierMethodId) return;
 
       clearFlash();
       setRemoving(true);
 
       try {
-        await deleteSupplierMethod(supplierId, methodId);
+        await deleteSupplierMethod(supplierMethodId);
         showFlash(successResponse("Método desvinculado"));
         await loadSupplierMethods(true);
         setPendingRemoveMethod(null);
@@ -158,15 +157,15 @@ export function ProviderMethodListModal({
         setRemoving(false);
       }
     },
-    [clearFlash, loadSupplierMethods, showFlash, supplierId],
+    [clearFlash, loadSupplierMethods, showFlash],
   );
 
-  const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
+  const columns = useMemo<DataTableColumn<SupplierMethodRelation>[]>(
     () => [
       {
         id: "method",
         header: "Método",
-        accessorKey: "name",
+        cell: (row) => <span className="text-black/70">{row.methodName}</span>,
         className: "text-black/70",
       },
       {
@@ -177,23 +176,25 @@ export function ProviderMethodListModal({
       },
       {
         id: "actions",
-        header: "",
+        header: "Acciones",
+        stopRowClick: true,
         cell: (row) => (
           <div className="flex justify-end">
-            <SystemButton
-              variant="danger"
-              size="custom"
-              className="h-7 w-7 rounded-lg p-0"
+            <IconButton
+              title="Eliminar"
               onClick={() => setPendingRemoveMethod(row)}
-              title="Quitar método"
+              tone="danger"
+              PRIMARY={primaryColor}
+              PRIMARY_HOVER={primaryHover}
             >
               <Trash2 className="h-4 w-4" />
-            </SystemButton>
+            </IconButton>
           </div>
         ),
         className: "text-right",
-        headerClassName: "text-right",
+        headerClassName: "text-right [&>div]:justify-end",
         hideable: false,
+        sortable: false,
       },
     ],
     [],
@@ -249,7 +250,7 @@ export function ProviderMethodListModal({
           tableId="supplier-methods-table"
           data={rows}
           columns={columns}
-          rowKey="methodId"
+          rowKey="supplierMethodId"
           loading={loading}
           emptyMessage="No hay métodos asignados."
           hoverable={false}
@@ -279,7 +280,7 @@ export function ProviderMethodListModal({
         title="Desvincular método de pago"
         message={
           pendingRemoveMethod
-            ? `Estas por quitar el método ${pendingRemoveMethod.name} de este proveedor. Hazlo solo si estas seguro.`
+            ? `Estas por quitar el método ${pendingRemoveMethod.methodName} de este proveedor. Hazlo solo si estas seguro.`
             : ""
         }
         confirmText="Desvincular"
@@ -289,7 +290,7 @@ export function ProviderMethodListModal({
           setPendingRemoveMethod(null);
         }}
         onConfirm={() => {
-          void removeMethod(pendingRemoveMethod?.methodId);
+          void removeMethod(pendingRemoveMethod?.supplierMethodId);
         }}
       />
     </Modal>

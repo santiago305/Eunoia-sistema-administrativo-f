@@ -16,8 +16,28 @@ import type {
   PaymentMethodPivot,
   SetPaymentMethodActiveDto,
   SupplierMethod,
+  SupplierMethodRelation,
   UpdatePaymentMethodDto,
 } from "@/pages/payment-methods/types/paymentMethod";
+
+type ApiEnvelope<T> = {
+  type: string;
+  message: string;
+  data: T;
+};
+
+const unwrapApiData = <T>(payload: T | ApiEnvelope<T>): T => {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "data" in (payload as ApiEnvelope<T>) &&
+    "message" in (payload as ApiEnvelope<T>)
+  ) {
+    return (payload as ApiEnvelope<T>).data;
+  }
+
+  return payload as T;
+};
 
 export const createPaymentMethod = async (payload: CreatePaymentMethodDto): Promise<PaymentMethod> => {
   const response = await axiosInstance.post(API_PAYMENT_METHODS_GROUP.create, payload);
@@ -95,22 +115,33 @@ export const deleteCompanyMethod = async (
 export const createSupplierMethod = async (
   payload: CreateSupplierMethodDto
 ): Promise<SupplierMethod> => {
-  const response = await axiosInstance.post(API_SUPPLIER_METHODS_GROUP.create, payload);
-  return response.data;
+  const response = await axiosInstance.post<ApiEnvelope<SupplierMethod>>(API_SUPPLIER_METHODS_GROUP.create, payload);
+  return unwrapApiData(response.data);
+};
+
+export const listSupplierMethodsBySupplier = async (
+  supplierId: string
+): Promise<SupplierMethodRelation[]> => {
+  const response = await axiosInstance.get<ApiEnvelope<SupplierMethodRelation[]>>(
+    API_SUPPLIER_METHODS_GROUP.listBySupplier(supplierId)
+  );
+  return unwrapApiData(response.data);
 };
 
 export const getSupplierMethodById = async (
-  supplierId: string,
-  methodId: string
-): Promise<SupplierMethod> => {
-  const response = await axiosInstance.get(API_SUPPLIER_METHODS_GROUP.byId(supplierId, methodId));
-  return response.data;
+  supplierMethodId: string
+): Promise<SupplierMethodRelation> => {
+  const response = await axiosInstance.get<ApiEnvelope<SupplierMethodRelation>>(
+    API_SUPPLIER_METHODS_GROUP.byId(supplierMethodId)
+  );
+  return unwrapApiData(response.data);
 };
 
 export const deleteSupplierMethod = async (
-  supplierId: string,
-  methodId: string
-): Promise<SupplierMethod> => {
-  const response = await axiosInstance.delete(API_SUPPLIER_METHODS_GROUP.remove(supplierId, methodId));
-  return response.data;
+  supplierMethodId: string
+): Promise<{ supplierMethodId: string }> => {
+  const response = await axiosInstance.delete<ApiEnvelope<{ supplierMethodId: string }>>(
+    API_SUPPLIER_METHODS_GROUP.remove(supplierMethodId)
+  );
+  return unwrapApiData(response.data);
 };

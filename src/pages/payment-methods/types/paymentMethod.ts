@@ -26,10 +26,19 @@ export type PaymentMethod = {
 export type PaymentMethodPivot = {
   methodId: string;
   name: string;
-  number?:string;
+  number?: string;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type SupplierMethodRelation = {
+  supplierMethodId: string;
+  supplierId: string;
+  methodId: string;
+  methodName: string;
+  number?: string | null;
+  isActive: boolean;
 };
 
 export type PaymentMethodListResponse = {
@@ -49,11 +58,14 @@ export type PaymentMethodGetByIdResponse = {
 export type CompanyMethod = {
   companyId: string;
   methodId: string;
-  number:string;
+  number: string;
 };
 
 export type SupplierMethod = {
+  supplierMethodId: string;
   supplierId: string;
   methodId: string;
-  number:string;
+  methodName?: string;
+  number?: string | null;
+  isActive?: boolean;
 };

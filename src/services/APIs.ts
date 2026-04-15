@@ -267,8 +267,9 @@ export const API_COMPANY_METHODS_GROUP = {
 
 export const API_SUPPLIER_METHODS_GROUP = {
   create: "/supplier-methods",
-  byId: (supplierId: string, methodId: string) => `/supplier-methods/${supplierId}/${methodId}`,
-  remove: (supplierId: string, methodId: string) => `/supplier-methods/${supplierId}/${methodId}`,
+  listBySupplier: (supplierId: string) => `/supplier-methods/by-supplier/${supplierId}`,
+  byId: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
+  remove: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
 };
 
 
