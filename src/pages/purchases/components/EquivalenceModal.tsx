@@ -7,7 +7,6 @@ import { listProductEquivalences } from "@/services/equivalenceService";
 import { listUnits } from "@/services/unitService";
 import { AfectType, VoucherDocTypes } from "@/pages/purchases/types/purchaseEnums";
 import type { AfectTypeType } from "@/pages/purchases/types/purchaseEnums";
-import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import type { ProductEquivalence } from "@/pages/catalog/types/equivalence";
 import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PurchaseOrder, PurchaseOrderItem } from "@/pages/purchases/types/purchase";
@@ -18,11 +17,12 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
+import { buildPurchaseSkuLabel, type PurchaseSkuInfo } from "../utils/purchaseSkus";
 
 type EquivalenceModalProps = {
   open: boolean;
   itemId: string;
-  products: FinishedProducts[];
+  products: PurchaseSkuInfo[];
   documentType: PurchaseOrder["documentType"];
   primaryColor: string;
   igv: number;
@@ -212,9 +212,15 @@ export function EquivalenceModal({
         return;
       }
 
-      const selectedProduct = products.find((p) => p.itemId === itemId);
+      const selectedProduct = products.find((p) => p.skuId === itemId);
       if (!selectedProduct) {
         if (canUpdate()) showFlash(errorResponse("No se encontró el producto seleccionado"));
+        if (active) handleClose();
+        return;
+      }
+
+      if (!selectedProduct.productId) {
+        if (canUpdate()) showFlash(errorResponse("No se encontro el producto base del SKU seleccionado"));
         if (active) handleClose();
         return;
       }
@@ -229,7 +235,7 @@ export function EquivalenceModal({
       const unitList = await loadUnits(canUpdate);
       if (!active) return;
 
-      await loadEquivalences(itemId, unitList, canUpdate);
+      await loadEquivalences(selectedProduct.productId, unitList, canUpdate);
     };
 
     void run();
@@ -243,9 +249,8 @@ export function EquivalenceModal({
     { value: AfectType.TAXED, label: "GRAVADA - OPERACION ONEROSA" },
     { value: AfectType.EXEMPT, label: "EXONERADA - OPERACION ONEROSA" },
   ];
-  const buildProductLabel = (product?: FinishedProducts) =>
-  `${product?.productName ?? "Materia prima"} ${product?.attributes?.presentation ?? ""} ${product?.attributes?.variant ?? ""} ${product?.attributes?.color ?? ""}
-  ${product?.sku ? ` - ${product?.sku}` : ""} ${product?.customSku ? `(${product?.customSku})` : ""}`.trim();
+  const buildProductLabel = (product?: PurchaseSkuInfo) =>
+    product ? buildPurchaseSkuLabel(product) : "SKU";
 
 
   const equivalenceRows = useMemo<EquivalenceRow[]>(() => {
@@ -416,7 +421,7 @@ export function EquivalenceModal({
                 equivalence: pendingUnitBase,
                 factor: pendingFactor,
                 unitBase:pendingEquivalence,
-                name: buildProductLabel(products.find((p) => p.itemId === itemId)),
+                name: buildProductLabel(products.find((p) => p.skuId === itemId)),
               });
 
               handleClose();
