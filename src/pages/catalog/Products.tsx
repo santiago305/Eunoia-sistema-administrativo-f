@@ -18,6 +18,8 @@ import { ActionsPopover } from "@/components/ActionsPopover";
 import { ProductCreateModal } from "./components/ProductCreateModal";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.PRODUCT;
@@ -31,16 +33,20 @@ export default function CatalogProducts() {
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
+    const [searchText, setSearchText] = useState("");
+    const debouncedSearch = useDebouncedValue(searchText.trim(), 400);
 
     const limit = 30;
 
     const queryParams = useMemo(
-        () => ({
-            page,
-            limit,
-        }),
-        [page],
+    () => ({
+        page,
+        limit,
+        q: debouncedSearch || undefined,
+    }),
+    [page, limit, debouncedSearch],
     );
+
 
     const {
         items: products,
@@ -237,6 +243,7 @@ export default function CatalogProducts() {
             setExporting(false);
         }
     };
+    
 
     return (
         <PageShell>
@@ -276,6 +283,12 @@ export default function CatalogProducts() {
                 loading={loading}
                 emptyMessage="No hay productos disponibles."
                 showSearch
+                searchMode="server"
+                searchValue={searchText}
+                onSearchChange={(value) => {
+                    setSearchText(value);
+                    setPage(1);
+                }}
                 searchPlaceholder="Buscar productos..."
                 animated={!shouldReduceMotion}
                 tableClassName="text-[11px]"

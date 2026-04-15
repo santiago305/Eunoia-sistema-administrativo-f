@@ -138,7 +138,6 @@ export type ProductCreateDraft = {
   recipesBySku: Record<string, RecipeDraft>;
 };
 
-
 export type ListSkusResponse = {
   items: ProductSkuWithAttributes[];
   total: number;

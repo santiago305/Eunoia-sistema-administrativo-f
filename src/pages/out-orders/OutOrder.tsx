@@ -16,47 +16,24 @@ import { createOutOrder } from "@/services/documentService";
 import { ModalNavigateOutOrder } from "@/pages/out-orders/components/ModalNavigateOutOrder";
 import { OutOrderItemModal } from "@/pages/out-orders/components/OutOrderItemModal";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import type { AddOutOrderItemDto, CreateOutOrder } from "@/pages/out-orders/type/outOrder";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import { ProductTypes } from "../catalog/types/ProductTypes";
 import { listSkus } from "@/services/skuService";
 import { ListSkusResponse } from "../catalog/types/product";
+import { buildEmptyFormOutOrder, buildEmptyItemOutOrder, formatAttrs } from "./utils/out-orders";
+import { CreateOutOrder, AddOutOrderItemDto, Direction, OutOrderItemRow } from "./type/outOrder";
 
 const PRIMARY = "hsl(var(--primary))";
 const CURRENCY = "PEN";
-
-const buildEmptyForm = (): CreateOutOrder => ({
-  docType: DocType.OUT,
-  serieId: "",
-  fromWarehouseId: "",
-  note: "",
-  items: [],
-});
-
-const buildEmptyItem = (): AddOutOrderItemDto => ({
-  itemId: "",
-  quantity: 1,
-  unitCost: undefined,
-});
-
-type OutOrderItemRow = {
-  id: string;
-  itemId: string;
-  sku: string;
-  productName: string;
-  unitName: string;
-  quantity: number;
-  unitCost?: number;
-};
 
 export default function OutOrder() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
-  const [pendingItem, setPendingItem] = useState<AddOutOrderItemDto>(() => buildEmptyItem());
+  const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyFormOutOrder());
+  const [pendingItem, setPendingItem] = useState<AddOutOrderItemDto>(() => buildEmptyItemOutOrder());
   const [openItemModal, setOpenItemModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedOutOrderId, setLastSavedOutOrderId] = useState("");
@@ -67,8 +44,8 @@ export default function OutOrder() {
   const [query, setQuery] = useState("");
 
   const resetForm = () => {
-    setForm(buildEmptyForm());
-    setPendingItem(buildEmptyItem());
+    setForm(buildEmptyFormOutOrder());
+    setPendingItem(buildEmptyItemOutOrder());
     setSerie({ value: "", label: "" });
     setProducts(undefined);
     setSearchResults(undefined);
@@ -141,12 +118,18 @@ export default function OutOrder() {
 
   const productOptions = useMemo(
     () =>
-      (searchResults?.items ?? []).map((v) => ({
-        value: v.sku.id,
-        label: `${v.sku.name} ${v.attributes ?? ""} ${v.sku.backendSku ? `-${v.sku.backendSku}`:""}
-        ${v.sku.customSku ? `(${v.sku.customSku})`: ""} 
-        `
-      } )),
+      (searchResults?.items ?? []).map((v) => {
+        const attrsText = formatAttrs(v.attributes); 
+
+        return {
+          value: v.sku.id,
+          label: `${v.sku.name}${
+            attrsText ? ` ${attrsText}` : ""
+          }${v.sku.backendSku ? ` -${v.sku.backendSku}` : ""}${
+            v.sku.customSku ? ` (${v.sku.customSku})` : ""
+          }`,
+        };
+      }),
     [searchResults],
   );
 
@@ -200,7 +183,7 @@ export default function OutOrder() {
         total: [...items, selected].length,
       };
     });
-    setPendingItem(buildEmptyItem());
+    setPendingItem(buildEmptyItemOutOrder());
   };
 
   const updateItem = (index: number, patch: Partial<AddOutOrderItemDto>) => {
@@ -223,7 +206,7 @@ export default function OutOrder() {
 
   const saveOrder = async () => {
     clearFlash();
-    if (!form.fromWarehouseId || !form.serieId) {
+    if (!form.warehouseId || !form.serieId) {
       showFlash(errorResponse("Completa los datos del documento"));
       return;
     }
@@ -232,14 +215,22 @@ export default function OutOrder() {
       return;
     }
     setLoading(true);
+
+    const sendItems = form.items.map((obj)=>({
+      skuId:obj.itemId,
+      quantity:obj.quantity,
+      unitCost:obj.unitCost ?? undefined
+    }));
     try {
       const payload: CreateOutOrder = {
-        ...form,
+        docType:form.docType,
+        warehouseId: form.warehouseId,
+        direction:Direction.OUT,
         note: form.note?.trim() || undefined,
-        items: form.items ?? [],
+        items: sendItems ?? [],
       };
       const res = await createOutOrder(payload);
-      const nextId = res.docId ?? "";
+      const nextId = res.documentId ?? "";
       setLastSavedOutOrderId(nextId);
       showFlash(successResponse("Salida registrada"));
       setOpenNavigateModal(true);
@@ -270,12 +261,16 @@ export default function OutOrder() {
   const itemRows = useMemo<OutOrderItemRow[]>(() => {
     return (form.items ?? []).map((item, index) => {
       const product = products?.items.find((p) => (p.sku.id) === item.itemId);
-
+      const attrsText = formatAttrs(product?.attributes);
       return {
         id: `${item.itemId}-${index}`,
         itemId: item.itemId,
         sku: product?.sku.backendSku ?? "-",
-        productName: product?.sku.name ?? "Producto",
+        productName: `${product?.sku.name} ${
+            attrsText ? ` ${attrsText}` : ""
+          }${product?.sku.backendSku ? ` -${product.sku.backendSku}` : ""}${
+            product?.sku.customSku ? ` (${product.sku.customSku})` : ""
+          }`,
         customSku: product?.sku.customSku,
         unitName: product?.unit?.name ?? "-",
         quantity: item.quantity,
@@ -285,14 +280,6 @@ export default function OutOrder() {
   }, [form.items, products]);
 
   const columns: DataTableColumn<OutOrderItemRow>[] = [
-    {
-      id: "sku",
-      header: "SKU",
-      accessorKey: "sku",
-      hideable: false,
-      sortable: false,
-      headerClassName: "h-11",
-    },
     {
       id: "productName",
       header: "Producto",
@@ -403,7 +390,7 @@ export default function OutOrder() {
                 <FloatingSelect
                   label="Producto"
                   name="pending-item"
-                  value={pendingItem.itemId}
+                  value={pendingItem.itemId ?? ""}
                   onChange={(value) => {
                     setPendingItem((prev) => ({ ...prev, itemId: value }));
                     setOpenItemModal(Boolean(value));
@@ -452,10 +439,10 @@ export default function OutOrder() {
               <div className="grid grid-cols-2 gap-4">
                 <FloatingSelect
                   label="Almacén"
-                  name="fromWarehouseId"
-                  value={form.fromWarehouseId}
+                  name="warehouseId"
+                  value={form.warehouseId}
                   onChange={(value) => {
-                    setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
+                    setForm((prev) => ({ ...prev, warehouseId: value, serieId: "" }));
                     void loadSeries(value);
                   }}
                   options={warehouseOptions}
@@ -489,7 +476,7 @@ export default function OutOrder() {
 
                 <SystemButton
                   className="flex-1"
-                  disabled={loading || !form.fromWarehouseId || !form.serieId || !(form.items ?? []).length}
+                  disabled={loading || !form.warehouseId || !form.serieId || !(form.items ?? []).length}
                   onClick={saveOrder}
                 >
                   {loading ? "Guardando..." : "Guardar"}
@@ -507,7 +494,7 @@ export default function OutOrder() {
         onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
         onClose={() => {
           setOpenItemModal(false);
-          setPendingItem(buildEmptyItem());
+          setPendingItem(buildEmptyItemOutOrder());
         }}
         onAdd={() => {
           addItem();

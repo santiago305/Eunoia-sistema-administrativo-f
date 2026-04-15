@@ -18,6 +18,8 @@ import { getDropdownItemProducts } from "../catalog/data/getDropdownItemProducts
 import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
 import { ProductCreateModal } from "../catalog/components/ProductCreateModal";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.MATERIAL;
@@ -31,6 +33,8 @@ export default function RowMaterial() {
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
+    const [searchText, setSearchText] = useState("");
+    const debouncedSearch = useDebouncedValue(searchText.trim(), 400);
 
     const limit = 30;
 
@@ -38,8 +42,9 @@ export default function RowMaterial() {
         () => ({
             page,
             limit,
+            q: debouncedSearch || undefined
         }),
-        [page],
+        [page, limit, debouncedSearch],
     );
 
     const {
@@ -285,6 +290,12 @@ export default function RowMaterial() {
                     loading={loading}
                     emptyMessage="No hay materias primas disponibles."
                     showSearch
+                    searchMode="server"
+                    searchValue={searchText}
+                    onSearchChange={(value) => {
+                        setSearchText(value);
+                        setPage(1);
+                    }}
                     searchPlaceholder="Buscar materias primas..."
                     animated={!shouldReduceMotion}
                     tableClassName="text-[11px]"
