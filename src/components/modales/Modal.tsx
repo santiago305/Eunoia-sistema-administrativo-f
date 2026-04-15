@@ -75,6 +75,7 @@ export function  Modal({
   const previousFocusedElementRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const descriptionId = useId();
+  const overlayTransition = { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const };
 
   const handleRequestClose = useCallback(() => {
     if (!canClose) return;
@@ -85,6 +86,8 @@ export function  Modal({
   useEffect(() => {
     if (!open) return;
 
+    // Product decision: any modal transition should clear floating selects
+    // so no detached panel can remain above or behind the dialog.
     dispatchCloseAllFloatingSelects();
     previousFocusedElementRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -202,7 +205,7 @@ export function  Modal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0" style={{ zIndex: UI_LAYERS.modal }}>
+        <div className="fixed inset-0" style={{ zIndex: UI_LAYERS.modalOverlay }}>
           {showOverlay ? (
             <motion.div
               className={cn(
@@ -213,6 +216,7 @@ export function  Modal({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={overlayTransition}
             />
           ) : null}
 
@@ -221,6 +225,7 @@ export function  Modal({
               "relative flex min-h-full w-full items-center justify-center p-4 sm:p-6",
               containerClassName,
             )}
+            style={{ zIndex: UI_LAYERS.modalContent }}
             onClick={handleBackdropClick}
           >
             <motion.div
@@ -232,9 +237,9 @@ export function  Modal({
               aria-describedby={description ? descriptionId : undefined}
               tabIndex={-1}
               onClick={(event) => event.stopPropagation()}
-              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              transition={overlayTransition}
               className={cn(
-                "relative flex h-auto max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[0_20px_50px_-18px_rgba(0,0,0,0.22)]",
+                "relative flex h-auto max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-modal-panel",
                 className,
               )}
               {...animationProps}
@@ -242,7 +247,7 @@ export function  Modal({
               {!hideHeader && (title || description || showCloseButton) ? (
                 <div
                   className={cn(
-                    "flex items-start justify-between gap-4 border-b border-border bg-muted/40 px-3 py-3",
+                    "shrink-0 flex items-start justify-between gap-4 border-b border-border bg-muted/40 px-3 py-3",
                     headerClassName,
                   )}
                 >
@@ -295,7 +300,7 @@ export function  Modal({
               {footer ? (
                 <div
                   className={cn(
-                    "border-t border-border bg-muted/40 px-5 py-4",
+                    "shrink-0 border-t border-border bg-muted/40 px-5 py-4",
                     footerClassName,
                   )}
                 >

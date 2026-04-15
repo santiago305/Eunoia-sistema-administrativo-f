@@ -28,6 +28,8 @@ type FloatingSelectProps = {
   searchPlaceholder?: string;
   emptyMessage?: string;
   onSearchChange?: (value: string) => void;
+  preserveSearchOnClose?: boolean;
+  panelWidthMode?: "trigger" | "min-trigger";
 };
 
 export function FloatingSelect({
@@ -45,6 +47,8 @@ export function FloatingSelect({
   searchPlaceholder = "Buscar...",
   emptyMessage = "Sin resultados",
   onSearchChange,
+  preserveSearchOnClose = false,
+  panelWidthMode = "trigger",
 }: FloatingSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -61,9 +65,11 @@ export function FloatingSelect({
 
   const closeSelect = useCallback(() => {
     setOpen(false);
-    setQuery("");
+    if (!preserveSearchOnClose) {
+      setQuery("");
+    }
     setActiveIndex(-1);
-  }, []);
+  }, [preserveSearchOnClose]);
 
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value),
@@ -167,6 +173,10 @@ export function FloatingSelect({
       ? Math.max(viewportPadding, rect.top - spacing - panelEl.offsetHeight)
       : rect.bottom + spacing;
     const width = rect.width;
+    const widthStyle =
+      panelWidthMode === "min-trigger"
+        ? { minWidth: width, maxWidth: `calc(100vw - ${viewportPadding * 2}px)` }
+        : { width };
     const left = Math.min(
       Math.max(viewportPadding, rect.left),
       Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
@@ -176,11 +186,11 @@ export function FloatingSelect({
       position: "fixed",
       top,
       left,
-      width,
       zIndex: UI_LAYERS.floatingSelect,
+      ...widthStyle,
     });
     setListMaxHeight(Math.max(96, Math.min(256, openAbove ? spaceAbove : spaceBelow)));
-  }, [closeSelect]);
+  }, [closeSelect, panelWidthMode]);
 
   const setPanelNode = useCallback((node: HTMLDivElement | null) => {
     panelRef.current = node;
@@ -276,13 +286,15 @@ export function FloatingSelect({
   const openSelect = useCallback(
     (preferredIndex?: number) => {
       dispatchCloseAllFloatingSelects();
-      setQuery("");
+      if (!preserveSearchOnClose) {
+        setQuery("");
+      }
       setOpen(true);
       if (typeof preferredIndex === "number") {
         setActiveIndex(filteredOptions[preferredIndex] ? preferredIndex : -1);
       }
     },
-    [filteredOptions],
+    [filteredOptions, preserveSearchOnClose],
   );
 
   const moveActiveIndex = useCallback((direction: -1 | 1) => {
@@ -352,7 +364,7 @@ export function FloatingSelect({
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="fixed overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
+      className="fixed overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-floating-panel"
       style={panelStyle}
       id={panelId}
       role="listbox"
@@ -375,6 +387,7 @@ export function FloatingSelect({
             }}
             onKeyDown={handleKeyboardNavigation}
             placeholder={searchPlaceholder}
+            aria-label={`Buscar ${label}`}
             aria-controls={panelId}
             className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30"
           />
@@ -400,6 +413,8 @@ export function FloatingSelect({
                 id={`${panelId}-option-${index}`}
                 type="button"
                 onMouseDown={(event) => {
+                  // Selection happens on mousedown so it wins before the
+                  // document-level outside click listener closes the panel.
                   event.preventDefault();
                   event.stopPropagation();
                   onChange(option.value);
@@ -496,7 +511,10 @@ export function FloatingSelect({
           aria-label={selectedOption ? `${label}: ${selectedOption.label}` : label}
           aria-describedby={error ? errorId : undefined}
         >
-          <span className={selectedOption ? "text-foreground" : "text-muted-foreground"}>
+          <span
+            className={`truncate pr-2 ${selectedOption ? "text-foreground" : "text-muted-foreground"}`}
+            title={selectedOption?.label ?? placeholder ?? ""}
+          >
             {selectedOption?.label ?? placeholder}
           </span>
 

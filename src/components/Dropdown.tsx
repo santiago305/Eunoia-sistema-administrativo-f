@@ -19,7 +19,7 @@ type DropdownProps = {
 };
 
 const DEFAULT_ITEM_CLASS =
-  "w-full rounded-lg px-3 py-2 text-left text-[11px] text-black/80 hover:bg-black/[0.03]";
+  "w-full rounded-lg px-3 py-2 text-left text-[11px] text-popover-foreground transition-colors hover:bg-muted";
 
 export function Dropdown({
   trigger,
@@ -106,11 +106,11 @@ export function Dropdown({
   const menuContent = (
     <div
       ref={menuRef}
-      className={`fixed min-w-44 rounded-xl border border-black/10 bg-white p-1 shadow-lg ${menuClassName}`}
+      className={`fixed min-w-44 overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-floating-panel ${menuClassName}`}
       style={menuStyle}
     >
       {visibleItems ? (
-        <div className="flex flex-col gap-1">
+        <div className="scrollbar-panel flex max-h-[min(70vh,24rem)] flex-col gap-1 overflow-y-auto">
           {visibleItems.map((item, index) => (
             <button
               key={index}

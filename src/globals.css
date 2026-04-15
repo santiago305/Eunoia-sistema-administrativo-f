@@ -99,6 +99,10 @@
     --sidebar-accent-foreground: 0 0% 15%;
     --sidebar-border: 0 0% 92%;
     --sidebar-ring: 174 69% 42%;
+
+    /* Shared elevated surface tokens */
+    --shadow-floating-panel: 0 16px 40px -16px rgba(0, 0, 0, 0.22);
+    --shadow-modal-panel: 0 20px 50px -18px rgba(0, 0, 0, 0.22);
   }
 }
 @layer base {
@@ -188,6 +192,35 @@ textarea {
 .scrollbar-panel {
   scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) hsl(var(--surface));
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.scrollbar-panel::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-panel::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scrollbar-panel::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+  background-clip: padding-box;
+}
+
+.shadow-floating-panel {
+  box-shadow: var(--shadow-floating-panel);
+}
+
+.shadow-modal-panel {
+  box-shadow: var(--shadow-modal-panel);
 }
 

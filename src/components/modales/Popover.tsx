@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { UI_LAYERS } from "@/components/ui/layers";
 import { cn } from "@/lib/utils";
 
 type PopoverPlacement =
@@ -405,17 +406,18 @@ export function   Popover({
         <motion.div
           ref={popoverRef}
           role="dialog"
-          aria-modal="false"
-          className={cn(
-            "fixed z-50 flex max-h-[calc(100vh-1rem)] min-w-44 max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-[0_16px_40px_-16px_rgba(0,0,0,0.22)]",
-            transformOriginClass,
-            className,
-          )}
-          style={{
-            top: position.top,
-            left: position.left,
-            visibility: position.ready ? "visible" : "hidden",
-          }}
+            aria-modal="false"
+            className={cn(
+              "fixed flex max-h-[calc(100vh-1rem)] min-w-44 max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-floating-panel",
+              transformOriginClass,
+              className,
+            )}
+            style={{
+              zIndex: UI_LAYERS.popover,
+              top: position.top,
+              left: position.left,
+              visibility: position.ready ? "visible" : "hidden",
+            }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           {...animationProps}
         >
