@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { UI_LAYERS } from "@/components/ui/layers";
 
 type DropdownItem = {
   label: ReactNode;
@@ -79,7 +80,7 @@ export function Dropdown({
       top,
       left,
       transform,
-      zIndex: 9999,
+      zIndex: UI_LAYERS.dropdown,
     });
   };
 
@@ -105,7 +106,7 @@ export function Dropdown({
   const menuContent = (
     <div
       ref={menuRef}
-      className={`fixed z-[9999] min-w-44 rounded-xl border border-black/10 bg-white p-1 shadow-lg ${menuClassName}`}
+      className={`fixed min-w-44 rounded-xl border border-black/10 bg-white p-1 shadow-lg ${menuClassName}`}
       style={menuStyle}
     >
       {visibleItems ? (

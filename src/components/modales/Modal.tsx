@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { type ReactNode, type RefObject, useEffect } from "react";
+import { type ReactNode, type RefObject, useCallback, useEffect, useId, useRef } from "react";
+import { dispatchCloseAllFloatingSelects } from "@/components/floatingSelectEvents";
+import { UI_LAYERS } from "@/components/ui/layers";
 import { cn } from "@/lib/utils";
 
 type ModalAnimation = "scale" | "slide";
@@ -32,6 +34,15 @@ type ModalProps = {
   closeButtonClassName?: string;
 };
 
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
+
 export function  Modal({
   open,
   onClose,
@@ -60,13 +71,58 @@ export function  Modal({
   closeButtonClassName,
 }: ModalProps) {
   const canClose = !preventClose;
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusedElementRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  const handleRequestClose = useCallback(() => {
+    if (!canClose) return;
+    dispatchCloseAllFloatingSelects();
+    onClose();
+  }, [canClose, onClose]);
 
   useEffect(() => {
     if (!open) return;
 
+    dispatchCloseAllFloatingSelects();
+    previousFocusedElementRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && closeOnEscape && canClose) {
-        onClose();
+      if (event.key === "Escape" && closeOnEscape) {
+        handleRequestClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusableElements = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((element) => !element.hasAttribute("disabled"));
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+      if (event.shiftKey) {
+        if (!activeElement || activeElement === firstElement || !dialogRef.current.contains(activeElement)) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+        return;
+      }
+
+      if (!activeElement || activeElement === lastElement || !dialogRef.current.contains(activeElement)) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
@@ -93,14 +149,36 @@ export function  Modal({
       requestAnimationFrame(() => {
         initialFocusRef.current?.focus();
       });
+    } else {
+      requestAnimationFrame(() => {
+        const dialogElement = dialogRef.current;
+        if (!dialogElement) return;
+
+        const focusableElements = Array.from(
+          dialogElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+        ).filter((element) => !element.hasAttribute("disabled"));
+
+        if (focusableElements.length > 0) {
+          focusableElements[0].focus();
+          return;
+        }
+
+        dialogElement.focus();
+      });
     }
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPaddingRight;
+      const previousFocusedElement = previousFocusedElementRef.current;
+      if (previousFocusedElement?.isConnected) {
+        requestAnimationFrame(() => {
+          previousFocusedElement.focus();
+        });
+      }
     };
-  }, [canClose, closeOnEscape, initialFocusRef, lockScroll, onClose, open]);
+  }, [closeOnEscape, handleRequestClose, initialFocusRef, lockScroll, open]);
 
   const animationProps =
     animation === "slide"
@@ -116,15 +194,15 @@ export function  Modal({
         };
 
   const handleBackdropClick = () => {
-    if (closeOnOverlayClick && canClose) {
-      onClose();
+    if (closeOnOverlayClick) {
+      handleRequestClose();
     }
   };
 
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0" style={{ zIndex: UI_LAYERS.modal }}>
           {showOverlay ? (
             <motion.div
               className={cn(
@@ -146,9 +224,13 @@ export function  Modal({
             onClick={handleBackdropClick}
           >
             <motion.div
+              ref={dialogRef}
               role="dialog"
               aria-modal="true"
-              aria-label={title || "Modal"}
+              aria-label={!title ? "Modal" : undefined}
+              aria-labelledby={title ? titleId : undefined}
+              aria-describedby={description ? descriptionId : undefined}
+              tabIndex={-1}
               onClick={(event) => event.stopPropagation()}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
@@ -167,6 +249,7 @@ export function  Modal({
                   <div className="min-w-0">
                     {title ? (
                       <h2
+                        id={titleId}
                         className={cn(
                           "text-sm font-semibold tracking-tight text-foreground",
                           titleClassName,
@@ -178,6 +261,7 @@ export function  Modal({
 
                     {description ? (
                       <p
+                        id={descriptionId}
                         className={cn(
                           "mt-1 text-sm leading-5 text-muted-foreground",
                           descriptionClassName,
@@ -191,7 +275,7 @@ export function  Modal({
                   {showCloseButton && canClose ? (
                     <button
                       type="button"
-                      onClick={onClose}
+                      onClick={handleRequestClose}
                       className={cn(
                         "inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                         closeButtonClassName,
