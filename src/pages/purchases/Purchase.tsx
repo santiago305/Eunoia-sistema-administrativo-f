@@ -10,8 +10,6 @@ import {
   PaymentTypes,
   VoucherDocTypes,
 } from "@/pages/purchases/types/purchaseEnums";
-import { FinishedProducts } from "@/pages/catalog/types/variant";
-import { searchProductAndVariant } from "@/services/catalogService";
 import { listAll } from "@/services/supplierService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -25,11 +23,10 @@ import type {
   PurchaseOrderItem,
 } from "@/pages/purchases/types/purchase";
 import { SupplierFormModal } from "../providers/components/SupplierFormModal";
-import { ProductFormModal } from "../catalog/components/ProductFormModal";
 import { WarehouseFormModal } from "../warehouse/components/WarehouseFormModal";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { createPurchaseOrder, updatePurchaseOrder } from "@/services/purchaseService";
-import { listActive } from "@/services/warehouseServices";
+import { listActiveWarehouses } from "@/services/warehouseServices";
 import { EquivalenceModal } from "./components/EquivalenceModal";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
 import { ModalNavegate } from "./components/ModalNavegate";
@@ -55,6 +52,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getById } from "@/services/purchaseService";
 import { SupplierOption } from "../providers/types/supplier";
 import { WarehouseSelectOption } from "../warehouse/types/warehouse";
+import { listSkus } from "@/services/skuService";
+import type { ListSkusResponse } from "@/pages/catalog/types/product";
+import {
+  buildPurchaseSkuLabel,
+  mapSkuToPurchaseSkuInfo,
+  mergePurchaseSkus,
+  type PurchaseSkuInfo,
+} from "./utils/purchaseSkus";
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
@@ -76,7 +81,8 @@ export default function PurchaseCreateLocal() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
 
-  const [products, setProducts] = useState<FinishedProducts[]>([]);
+  const [products, setProducts] = useState<PurchaseSkuInfo[]>([]);
+  const [searchResults, setSearchResults] = useState<ListSkusResponse>();
   const [itemId, setItemId] = useState("");
   const [supplierOptions, setSupplierOptions] = useState<SupplierOption[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
@@ -110,84 +116,26 @@ export default function PurchaseCreateLocal() {
     { value: CurrencyTypes.USD, label: "USD ($)" },
   ];
 
-  const mergeProducts = (current: FinishedProducts[], incoming: FinishedProducts[]) => {
-    const map = new Map<string, FinishedProducts>();
-
-    current.forEach((item) => {
-      const key = item.itemId ?? item.id ?? "";
-      if (!key) return;
-      map.set(key, item);
-    });
-
-    incoming.forEach((item) => {
-      const key = item.itemId ?? item.id ?? "";
-      if (!key) return;
-      map.set(key, item);
-    });
-
-    return Array.from(map.values());
-  };
-
-  const searchPrimaVariants = async () => {
-    if (!productQuery.trim()) return;
+  const searchMaterialSkus = async (query: string) => {
+    if (!query.trim()) return;
 
     try {
-      const result = await searchProductAndVariant({
-        q: productQuery,
-        raw: true,
+      const response = await listSkus({
+        q: query,
+        productType: ProductTypes.MATERIAL,
+        isActive: true,
+        page: 1,
+        limit: 50,
       });
 
-      const normalized: FinishedProducts[] = (result ?? [])
-        .map((row: any) => {
-          const resolvedItemId = row.itemId ?? row.primaId ?? row.id ?? "";
-          const resolvedProductId = row.productId ?? (row.type === "PRODUCT" ? resolvedItemId : undefined);
-          const resolvedVariantId = row.variantId ?? (row.type === "VARIANT" ? resolvedItemId : null);
-
-          return {
-            ...row,
-            id: resolvedItemId,
-            itemId: resolvedItemId,
-            productId: resolvedProductId,
-            variantId: resolvedVariantId,
-            isActive: row.isActive ?? true,
-          };
-        })
-        .filter((row) => row.itemId);
-
-      setProducts((prev) => mergeProducts(prev, normalized));
+      const mapped = (response.items ?? []).map(mapSkuToPurchaseSkuInfo);
+      setSearchResults(response);
+      setProducts((prev) => mergePurchaseSkus(prev, mapped));
     } catch {
+      setSearchResults(undefined);
       if (!isEdit) setProducts([]);
-      showFlash(errorResponse("Error al cargar variantes PRIMA"));
+      showFlash(errorResponse("Error al cargar SKUs de materia prima"));
     }
-  };
-
-  const mapOrderProducts = (items: PurchaseOrderItem[]) => {
-    const map = new Map<string, FinishedProducts>();
-
-    items.forEach((item) => {
-      const product = item.stockItem?.product;
-      const variant = item.stockItem?.variant;
-
-      const resolvedItemId = item.stockItemId;
-      if (!resolvedItemId || map.has(resolvedItemId)) return;
-
-      map.set(resolvedItemId, {
-        id: resolvedItemId,
-        itemId: resolvedItemId,
-        productId: product?.id ?? variant?.productId ?? undefined,
-        variantId: variant?.id ?? null,
-        sku: variant?.sku ?? product?.sku ?? undefined,
-        productName: variant?.productName ?? product?.name ?? undefined,
-        productDescription: variant?.productDescription ?? product?.description ?? undefined,
-        unitName: variant?.unitName ?? product?.baseUnitName ?? undefined,
-        unitCode: variant?.unitCode ?? product?.baseUnitCode ?? undefined,
-        baseUnitId: variant?.baseUnitId ?? product?.baseUnitId ?? undefined,
-        isActive: variant?.isActive ?? product?.isActive ?? undefined,
-        type: item.stockItem?.type ?? undefined,
-      });
-    });
-
-    return Array.from(map.values());
   };
 
   const loadSuppliers = async () => {
@@ -215,11 +163,11 @@ export default function PurchaseCreateLocal() {
   const loadWarehouses = async () => {
     clearFlash();
     try {
-      const res = await listActive();
+      const res = await listActiveWarehouses({ page: 1, limit: 100 });
       const options =
-        res?.map((s) => ({
-          value: s.warehouseId,
-          label: s.name,
+        (res.items ?? []).map((warehouse) => ({
+          value: warehouse.warehouseId,
+          label: warehouse.name,
         })) ?? [];
       setWarehouseOptions(options);
     } catch {
@@ -228,10 +176,16 @@ export default function PurchaseCreateLocal() {
     }
   };
 
-  const productOptions = (products ?? []).map((v) => ({
-    value: v.itemId!,
-    label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}
-    ${v.sku ? ` - ${v.sku}`: ""} ${v.customSku ? `- (${v.customSku})` : ""}`,      }));
+  const productOptions = useMemo(
+    () =>
+      (searchResults?.items ?? [])
+        .map(mapSkuToPurchaseSkuInfo)
+        .map((sku) => ({
+          value: sku.skuId,
+          label: buildPurchaseSkuLabel(sku),
+        })),
+    [searchResults],
+  );
 
   const updateItem = (itemIdToUpdate: string, patch: Partial<PurchaseOrderItem>) => {
     setForm((prev) => ({
@@ -285,12 +239,12 @@ export default function PurchaseCreateLocal() {
 
   const itemRows = useMemo<PurchaseItemRow[]>(() => {
     return (form.items ?? []).map((item) => {
-      const product = products.find((p) => p.itemId === item.stockItemId);
+      const product = products.find((p) => p.skuId === item.stockItemId);
 
       return {
         id: item.stockItemId,
         stockItemId: item.stockItemId,
-        sku: product?.sku ?? "-",
+        sku: product?.backendSku ?? "-",
         name: item.name ?? "-",
         unit: item.unitBase ?? "-",
         equivalence: item.equivalence,
@@ -396,9 +350,6 @@ export default function PurchaseCreateLocal() {
         payments: data.payments ?? [],
         quotas: data.quotas ?? [],
       }));
-
-      const mappedProducts = mapOrderProducts(data.items ?? []);
-      setProducts(mappedProducts);
     } catch {
       showFlash(errorResponse("Error al cargar la compra."));
     }
@@ -412,9 +363,9 @@ export default function PurchaseCreateLocal() {
   useEffect(() => {
     const id = setTimeout(() => {
       if (productQuery.trim()) {
-        void searchPrimaVariants();
-      } else if (!isEdit) {
-        setProducts([]);
+        void searchMaterialSkus(productQuery);
+      } else {
+        setSearchResults(undefined);
       }
     }, 1000);
 
@@ -882,14 +833,14 @@ export default function PurchaseCreateLocal() {
         />
       )}
 
-      <ProductFormModal
+      {/* <ProductFormModal
         open={openCreatePrima}
         mode="create"
         productType={ProductTypes.PRIMA}
         primaryColor={PRIMARY}
         entityLabel="materia prima"
         onClose={() => setOpenCreatePrima(false)}
-      />
+      /> */}
 
       <WarehouseFormModal
         open={openCreateWarehouse}

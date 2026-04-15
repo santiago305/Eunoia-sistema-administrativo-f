@@ -37,7 +37,7 @@ export default function OutOrder() {
   const [openItemModal, setOpenItemModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedOutOrderId, setLastSavedOutOrderId] = useState("");
-  const [products, setProducts] = useState<ListSkusResponse>();
+  const [productsCache, setProductsCache] = useState<ListSkusResponse>();
   const [searchResults, setSearchResults] = useState<ListSkusResponse>();
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
@@ -47,9 +47,27 @@ export default function OutOrder() {
     setForm(buildEmptyFormOutOrder());
     setPendingItem(buildEmptyItemOutOrder());
     setSerie({ value: "", label: "" });
-    setProducts(undefined);
+    setProductsCache(undefined);
     setSearchResults(undefined);
     setQuery("");
+  };
+
+  const mergeSkuCache = (previous: ListSkusResponse | undefined, incoming: ListSkusResponse | undefined) => {
+    const prevItems = previous?.items ?? [];
+    const nextItems = incoming?.items ?? [];
+
+    if (nextItems.length === 0) return previous;
+
+    const map = new Map(prevItems.map((item) => [item.sku.id, item]));
+    nextItems.forEach((item) => map.set(item.sku.id, item));
+
+    const merged = Array.from(map.values());
+    return {
+      items: merged,
+      total: merged.length,
+      page: 1,
+      limit: merged.length,
+    };
   };
 
   const loadWarehouses = async () => {
@@ -109,8 +127,9 @@ export default function OutOrder() {
         q: query,
         productType: ProductTypes.PRODUCT,
       });
-      setSearchResults(res ?? []);
-      setProducts(res ?? []);
+      const response = res ?? undefined;
+      setSearchResults(response);
+      setProductsCache((prev) => mergeSkuCache(prev, response));
     } catch {
       showFlash(errorResponse("Error al cargar productos"));
     }
@@ -138,7 +157,7 @@ export default function OutOrder() {
 
     const selected =
       searchResults?.items.find((p) => p.sku.id === itemId) ??
-      products?.items.find((p) => p.sku.id === itemId);
+      productsCache?.items.find((p) => p.sku.id === itemId);
 
     if (!itemId) {
       showFlash(errorResponse("Selecciona un producto"));
@@ -171,7 +190,7 @@ export default function OutOrder() {
       items: [...(prev.items ?? []), { itemId, quantity, unitCost }],
     }));
 
-    setProducts((prev) => {
+    setProductsCache((prev) => {
       const selectedId = selected.sku.id;
       if (!selectedId) return prev;
       const items = prev?.items ?? [];
@@ -181,6 +200,8 @@ export default function OutOrder() {
         ...(prev ?? {}),
         items: [...items, selected],
         total: [...items, selected].length,
+        page: 1,
+        limit: [...items, selected].length,
       };
     });
     setPendingItem(buildEmptyItemOutOrder());
@@ -260,7 +281,7 @@ export default function OutOrder() {
 
   const itemRows = useMemo<OutOrderItemRow[]>(() => {
     return (form.items ?? []).map((item, index) => {
-      const product = products?.items.find((p) => (p.sku.id) === item.itemId);
+      const product = productsCache?.items.find((p) => (p.sku.id) === item.itemId);
       const attrsText = formatAttrs(product?.attributes);
       return {
         id: `${item.itemId}-${index}`,
@@ -277,7 +298,7 @@ export default function OutOrder() {
         unitCost: item.unitCost,
       };
     });
-  }, [form.items, products]);
+  }, [form.items, productsCache]);
 
   const columns: DataTableColumn<OutOrderItemRow>[] = [
     {
