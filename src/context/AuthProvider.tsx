@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   loginUser,
   logoutUser,
+  refresh_token,
   userInfoAuth,
   type UserInfoAuthResponse,
 } from "@/services/authService";
@@ -51,9 +52,10 @@ const parseLoginFieldErrors = (message?: string) => {
 
 export const AuthProvider = ({ children }: PropsUrl) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const extractRole = (data: UserInfoAuthResponse | null | undefined) =>
     data?.rol ?? null;
@@ -61,21 +63,20 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const extractUserId = (data: UserInfoAuthResponse | null | undefined) =>
     data?.user_id ?? null;
 
-  const resetAuthState = useCallback(() => {
+  const resetAuthState = useCallback((checked = true) => {
     setIsAuthenticated(false);
     setUserRole(null);
     setUserId(null);
+    setAuthChecked(checked);
   }, []);
 
-  const checkAuth = useCallback(async (): Promise<AuthResponse> => {
-    setLoading(true);
-    try {
-      const response = await userInfoAuth();
+  const applyAuthState = useCallback(
+    (response: UserInfoAuthResponse): AuthResponse => {
       const role = extractRole(response);
       const id = extractUserId(response);
 
       if (!role || !id) {
-        resetAuthState();
+        resetAuthState(true);
         return {
           success: false,
           message: "No se pudo obtener el usuario autenticado",
@@ -85,21 +86,49 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       setUserRole(role);
       setUserId(String(id));
       setIsAuthenticated(true);
+      setAuthChecked(true);
 
       return { success: true, message: "Autenticacion validada" };
+    },
+    [resetAuthState]
+  );
+
+  const fetchAuthenticatedUser = useCallback(async (): Promise<AuthResponse> => {
+    const response = await userInfoAuth({ skipAuthRefresh: true });
+    return applyAuthState(response);
+  }, [applyAuthState]);
+
+  const resolveUnauthorizedAuth = useCallback(async (): Promise<AuthResponse> => {
+    try {
+      await refresh_token();
+      return await fetchAuthenticatedUser();
+    } catch (refreshError: unknown) {
+      resetAuthState(true);
+      return {
+        success: false,
+        message: "No hay una sesion activa.",
+      };
+    }
+  }, [fetchAuthenticatedUser, resetAuthState]);
+
+  const checkAuth = useCallback(async (): Promise<AuthResponse> => {
+    setLoading(true);
+    try {
+      return await fetchAuthenticatedUser();
     } catch (error: unknown) {
-      console.error("Error en checkAuth:", error);
-      resetAuthState();
+      const err = error as AxiosError;
+
+      if (err?.response?.status === 401) {
+        return await resolveUnauthorizedAuth();
+      }
+
+      resetAuthState(true);
       const message = getApiErrorMessage(error, "Error inesperado en autenticacion");
       return { success: false, message };
     } finally {
       setLoading(false);
     }
-  }, [resetAuthState]);
-
-  useEffect(() => {
-    void checkAuth();
-  }, [checkAuth]);
+  }, [fetchAuthenticatedUser, resetAuthState, resolveUnauthorizedAuth]);
 
   const login = useCallback(async (payload: LoginCredentials): Promise<AuthResponse> => {
     try {
@@ -113,11 +142,14 @@ export const AuthProvider = ({ children }: PropsUrl) => {
         message: loginResponse.message || "Inicio de sesion exitoso",
       };
     } catch (error: unknown) {
-      const message = getApiErrorMessage(error, "Error en la autenticacion");
       const err = error as AxiosError<LoginErrorPayload>;
       const status = err?.response?.status;
       const details = err?.response?.data?.details;
       const backendType = err?.response?.data?.type;
+      const message =
+        status === 401
+          ? "Correo o contrasena incorrectos."
+          : getApiErrorMessage(error, "Error en la autenticacion");
       const fieldErrors = parseLoginFieldErrors(err?.response?.data?.message ?? message);
 
       return {
@@ -132,7 +164,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     try {
       await logoutUser();
     } finally {
-      resetAuthState();
+      resetAuthState(true);
     }
   }, [resetAuthState]);
 
@@ -140,6 +172,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     <AuthContext.Provider
       value={{
         isAuthenticated,
+        authChecked,
         userRole,
         userId,
         login,

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { PrivateRouteProps } from "@/router/guards/typeGuards";
@@ -13,9 +14,16 @@ const normalizeRole = (role?: string | null) =>
   String(role ?? "").trim().toLowerCase();
 
 const PrivateRoute = ({ children, rolesAllowed }: PrivateRouteProps) => {
-  const { isAuthenticated, loading, userRole } = useAuth();
+  const { isAuthenticated, authChecked, loading, userRole, checkAuth } = useAuth();
 
-  if (loading) return <div>Cargando... Redirigiendo a Dashboard...</div>;
+  useEffect(() => {
+    if (authChecked || loading || isAuthenticated) return;
+    void checkAuth();
+  }, [authChecked, checkAuth, isAuthenticated, loading]);
+
+  if (loading || (!authChecked && !isAuthenticated)) {
+    return <div>Cargando sesion...</div>;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to={RoutesPaths.login} replace />;

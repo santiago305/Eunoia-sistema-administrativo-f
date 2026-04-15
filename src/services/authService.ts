@@ -2,6 +2,7 @@ import axiosInstance from "@/common/utils/axios";
 import { getApiErrorMessage } from "@/common/utils/apiError";
 import { API_AUTH_GROUP } from "./APIs";
 import { LoginCredentials } from "@/pages/Auth/types/auth";
+import type { AxiosRequestConfig } from "axios";
 
 export interface LoginApiSuccessResponse {
   message: string;
@@ -11,6 +12,14 @@ export interface UserInfoAuthResponse {
   user_id: string;
   rol: string;
 }
+
+type AuthRequestConfig = AxiosRequestConfig & {
+  skipAuthRefresh?: boolean;
+};
+
+type UserInfoAuthOptions = {
+  skipAuthRefresh?: boolean;
+};
 
 const getDeviceNameHeader = () => {
   if (typeof window === "undefined") return "Unknown device";
@@ -38,15 +47,15 @@ export const loginUser = async (
   return response.data;
 };
 
-export const userInfoAuth = async (): Promise<UserInfoAuthResponse> => {
-  try {
-    const response = await axiosInstance.get(API_AUTH_GROUP.userAuth);
-    return response.data;
-  } catch (error: unknown) {
-    const message = getApiErrorMessage(error, "Error en userInfoAuth");
-    console.error("error en userInfoAuth", message);
-    throw new Error(message);
-  }
+export const userInfoAuth = async (
+  options: UserInfoAuthOptions = {}
+): Promise<UserInfoAuthResponse> => {
+  const config = {
+    skipAuthRefresh: options.skipAuthRefresh ?? false,
+  } as AuthRequestConfig;
+
+  const response = await axiosInstance.get(API_AUTH_GROUP.userAuth, config);
+  return response.data;
 };
 
 export const checkTokenValidity = async () => {
@@ -62,14 +71,8 @@ export const checkTokenValidity = async () => {
 };
 
 export const refresh_token = async () => {
-  try {
-    const response = await axiosInstance.post(API_AUTH_GROUP.refreshToken);
-    return response.data;
-  } catch (error: unknown) {
-    const message = getApiErrorMessage(error, "Error al refrescar token");
-    console.error(message);
-    return false;
-  }
+  const response = await axiosInstance.post(API_AUTH_GROUP.refreshToken);
+  return response.data;
 };
 
 export const logoutUser = async () => {

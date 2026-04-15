@@ -8,6 +8,11 @@ const axiosInstance = axios.create({
 });
 
 let isRefreshing = false;
+type AuthAxiosRequestConfig = AxiosRequestConfig & {
+  _retry?: boolean;
+  skipAuthRefresh?: boolean;
+};
+
 type FailedQueueItem = {
   resolve: (value?: unknown) => void;
   reject: (error: unknown) => void;
@@ -50,7 +55,7 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = (error.config ?? {}) as AuthAxiosRequestConfig;
     const status = error.response?.status;
     const responseMessage = String(error.response?.data?.message ?? "");
 
@@ -62,8 +67,10 @@ axiosInstance.interceptors.response.use(
       console.warn("Tu sesion de seguridad expiro. Recarga la pagina e intenta de nuevo.");
     }
 
-    const isAuthEndpoint = originalRequest.url?.includes('/auth/refresh') ?? false;
-    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/') ?? false;
+    const shouldSkipAuthRefresh = originalRequest.skipAuthRefresh === true;
+
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint && !shouldSkipAuthRefresh) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -74,14 +81,14 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const newToken = await refresh_token(); 
+        const newToken = await refresh_token();
 
         processQueue(null, newToken);
 
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        logoutUser();
+        void logoutUser();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

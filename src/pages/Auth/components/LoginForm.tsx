@@ -15,6 +15,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [submitting, setSubmitting] = useState(false);
   const [lockSeconds, setLockSeconds] = useState<number>(0);
+  const [formError, setFormError] = useState("");
   const navigate = useNavigate();
   const { showFlash, clearFlash } = useFlashMessage();
   const { login } = useAuth();
@@ -76,6 +77,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
     }
 
     clearFlash();
+    setFormError("");
     clearErrors(["email", "password"]);
     setSubmitting(true);
     try {
@@ -86,6 +88,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
       } else {
         const retrySeconds = response.data?.retryAfterSeconds ?? 0;
         if (retrySeconds > 0) {
+          setFormError(response.message);
           showFlash(
             errorResponse(
               `Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(retrySeconds)}`
@@ -93,9 +96,11 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
           );
           setLockSeconds(retrySeconds);
         } else if (response.data?.status === 423) {
+          setFormError("Cuenta bloqueada. Intenta nuevamente en 1 minuto");
           showFlash(errorResponse("Cuenta bloqueada. Intenta nuevamente en 1 minuto"));
           setLockSeconds(60);
         } else {
+          setFormError(response.message);
           if (response.data?.fieldErrors?.email) {
             setError("email", { type: "server", message: response.data.fieldErrors.email });
           }
@@ -106,6 +111,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
         }
       }
     } catch {
+      setFormError("Credenciales invalidas o error de red");
       showFlash(errorResponse("Credenciales invalidas o error de red"));
     } finally {
       setSubmitting(false);
@@ -160,6 +166,12 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
                 ? `Espera ${formatSeconds(lockSeconds)}`
                 : "Ingresar"}
           </Button>
+
+          {formError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {formError}
+            </div>
+          ) : null}
         </form>
       </div>
 
