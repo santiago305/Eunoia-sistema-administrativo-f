@@ -18,7 +18,7 @@ const paymentTypeEnum = z.enum(Object.values(PaymentTypes) as [string, ...string
 const afectTypeEnum = z.enum(Object.values(AfectType) as [string, ...string[]]);
 
 export const addPurchaseOrderItemSchema = z.object({
-  stockItemId: uuidSchema,
+  skuId: uuidSchema,
   afectType: afectTypeEnum,
   quantity: z.number().int().min(1),
   porcentageIgv: z.number().min(0),

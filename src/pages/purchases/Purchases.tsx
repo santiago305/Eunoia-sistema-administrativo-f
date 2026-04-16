@@ -7,8 +7,8 @@ import type { DataTableColumn } from "@/components/table/types";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listAll } from "@/services/supplierService";
-import { listActive } from "@/services/warehouseServices";
+import { listSuppliers } from "@/services/supplierService";
+import { listActiveWarehouses } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
 import { money, toDateInputValue, tryShowPicker, todayIso, buildMonthStartIso } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
@@ -16,7 +16,6 @@ import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
 import { useNavigate } from "react-router-dom";
 import { SupplierOption } from "../providers/types/supplier";
-import { Warehouse } from "../warehouse/types/warehouse";
 import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
@@ -29,7 +28,7 @@ import { PageShell } from "@/components/layout/PageShell";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
-    [PurchaseOrderStatuses.SENT]: "Esperando",
+    [PurchaseOrderStatuses.SENT]: "Enviado",
     [PurchaseOrderStatuses.PARTIAL]: "Parcial",
     [PurchaseOrderStatuses.RECEIVED]: "Recibido",
     [PurchaseOrderStatuses.CANCELLED]: "Cancelado",
@@ -71,6 +70,8 @@ export default function Purchases() {
     const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
     const [toDate, setToDate] = useState(() => todayIso());
     const [page, setPage] = useState(1);
+    const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
+    const [appliedWarehouseSearch, setAppliedWarehouseSearch] = useState("");
     const limit = 8;
 
     const [purchases, setPurchases] = useState<PurchaseOrder[]>([]);
@@ -123,44 +124,50 @@ export default function Purchases() {
         return () => clearTimeout(t);
     }, [numeroInput]);
 
-    const loadSuppliers = async () => {
+    const loadSuppliers = async (appliedSearch: string) => {
+        clearFlash();
         try {
-            const res = await listAll();
-            const options =
-                res?.map((s) => {
-                    const fullName = [s.name, s.lastName].filter(Boolean).join(" ").trim();
-                    const display = (fullName || s.tradeName || "").trim();
-                    return {
-                        value: s.supplierId,
-                        label: display || s.supplierId,
-                        doc: s.documentNumber ?? "",
-                    };
-                }) ?? [];
-            setSupplierOptions([{ value: "", label: "Todos" }, ...options]);
+          const res = await listSuppliers({
+            page: 1,
+            limit: 100,
+            q: appliedSearch?.trim() || undefined,
+          });
+          const options = (res.items ?? []).map((s) => {
+            const fullName = [s.name, s.lastName].filter(Boolean).join(" ").trim();
+            const display = (fullName || s.tradeName || "").trim();
+            const doc = s.documentNumber ? ` (${s.documentNumber})` : "";
+            return {
+              value: s.supplierId,
+              label: `${display}${doc}`.trim() || s.supplierId,
+              days: s.leadTimeDays,
+            };
+          });
+          setSupplierOptions([{
+                value: "",
+                label: "Todos",
+                days: undefined,
+            }, ...options]);
         } catch {
-            setSupplierOptions([{ value: "", label: "Todos" }]);
-            showFlash(errorResponse("Error al cargar proveedores"));
+          setSupplierOptions([]);
+          showFlash(errorResponse("Error al cargar proveedores"));
         }
     };
 
-    const loadWarehouses = async () => {
-        try {
-            const res = await listActive();
-            const options =
-                res?.map((s: Warehouse) => {
-                    const address = `${s.department}-${s.province}-${s.district}`;
-                    return {
-                        value: s.warehouseId,
-                        label: s.name,
-                        address,
-                    };
-                }) ?? [];
-            setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
-        } catch {
-            setWarehouseOptions([{ value: "", label: "Todos" }]);
-            showFlash(errorResponse("Error al cargar almacenes"));
-        }
-    };
+    const loadWarehouses = async (q:string) => {
+    clearFlash();
+    try {
+      const res = await listActiveWarehouses({ page: 1, limit: 100, q });
+      const options =
+        (res.items ?? []).map((warehouse) => ({
+          value: warehouse.warehouseId,
+          label: warehouse.name,
+        })) ?? [];
+      setWarehouseOptions([{value:"", label:"Todos"}, ...options]);
+    } catch {
+      setWarehouseOptions([]);
+      showFlash(errorResponse("Error al cargar almacenes"));
+    }
+  };
 
     const loadPurchases = async () => {
         clearFlash();
@@ -263,9 +270,12 @@ export default function Purchases() {
     };
 
     useEffect(() => {
-        void loadSuppliers();
-        void loadWarehouses();
-    }, []);
+        void loadWarehouses(appliedWarehouseSearch);
+    }, [appliedWarehouseSearch]);
+    
+    useEffect(() => {
+        void loadSuppliers(appliedSupplierSearch);
+    }, [appliedSupplierSearch]);
 
     useEffect(() => {
         void loadPurchases();
@@ -672,6 +682,9 @@ export default function Purchases() {
                             }}
                             options={supplierSelectOptions}
                             searchable
+                            searchPlaceholder="Buscar proveedor..."
+                            emptyMessage="Sin proveedores"
+                            onSearchChange={(text) => setAppliedSupplierSearch(text)}
                             className="h-9 text-xs"
                         />
 
@@ -685,6 +698,9 @@ export default function Purchases() {
                             }}
                             options={warehouseSelectOptions}
                             searchable
+                            searchPlaceholder="Buscar proveedor..."
+                            emptyMessage="Sin proveedores"
+                            onSearchChange={(text) => setAppliedWarehouseSearch(text)}
                             className="h-9 text-xs"
                         />
 

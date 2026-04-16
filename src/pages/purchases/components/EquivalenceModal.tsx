@@ -154,11 +154,11 @@ export function EquivalenceModal({
 
     setForm((prev) => {
       const items = prev.items ?? [];
-      const existing = items.find((item) => item.stockItemId === finalItemId);
+      const existing = items.find((item) => item.skuId === finalItemId);
 
       if (existing) {
         const nextItems = items.map((item) =>
-          item.stockItemId === finalItemId
+          item.skuId === finalItemId
             ? recalcItem({
                 ...item,
                 quantity: item.quantity + quantity,
@@ -174,7 +174,7 @@ export function EquivalenceModal({
       }
 
       const newItem: PurchaseOrderItem = recalcItem({
-        stockItemId: finalItemId,
+        skuId: finalItemId,
         unitBase,
         equivalence,
         factor,
