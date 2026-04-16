@@ -1,6 +1,9 @@
 import { FloatingInput } from "@/components/FloatingInput";
-import { Search, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
+import { Popover } from "@/components/modales/Popover";
+import {   ListFilter, Search, X } from "lucide-react";
+import { useRef, useState, type ReactNode } from "react";
+import type { DataTableRangeDates } from "./types";
 
 type Props = {
   showSearch?: boolean;
@@ -8,6 +11,8 @@ type Props = {
   searchPlaceholder: string;
   onSearchChange: (value: string) => void;
   filters?: ReactNode;
+  filterPopoverContent?: ReactNode;
+  rangeDates?: DataTableRangeDates;
   rightContent?: ReactNode;
   selectionInfo?: ReactNode;
 };
@@ -18,16 +23,30 @@ export function DataTableToolbar({
   searchPlaceholder,
   onSearchChange,
   filters,
+  filterPopoverContent,
+  rangeDates,
   rightContent,
   selectionInfo,
 }: Props) {
-  if (!showSearch && !filters && !rightContent && !selectionInfo) return null;
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersAnchorRef = useRef<HTMLButtonElement | null>(null);
+
+  if (
+    !showSearch &&
+    !filters &&
+    !filterPopoverContent &&
+    !rangeDates &&
+    !rightContent &&
+    !selectionInfo
+  ) {
+    return null;
+  }
 
   return (
     <div className="relative z-30 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-        {showSearch || filters ? (
-          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+        {showSearch || filters || filterPopoverContent || rangeDates ? (
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             {showSearch ? (
               <div className="relative w-full max-w-md">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -50,6 +69,49 @@ export function DataTableToolbar({
                   </button>
                 ) : null}
               </div>
+            ) : null}
+
+            {rangeDates ? (
+              <div className="w-full sm:w-[min(22rem,calc(100vw-2rem))]">
+                <FloatingDateRangePicker
+                  label={rangeDates.label ?? "rangeDates"}
+                  name={rangeDates.name ?? "datatable-rangeDates"}
+                  startDate={rangeDates.startDate}
+                  endDate={rangeDates.endDate}
+                  onChange={rangeDates.onChange}
+                  disabled={rangeDates.disabled}
+                  className="h-11 rounded-md border-border/70 px-3 text-xs shadow-sm"
+                />
+              </div>
+            ) : null}
+
+            {filterPopoverContent ? (
+              <>
+                <button
+                  ref={filtersAnchorRef}
+                  type="button"
+                  aria-expanded={filtersOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => setFiltersOpen((current) => !current)}
+                  className="inline-flex h-11 items-center gap-2 rounded-md border border-border/70 bg-background px-4 text-xs font-medium shadow-sm transition hover:bg-muted/50"
+                >
+                  <ListFilter className="h-4 w-4"/>
+                </button>
+
+                <Popover
+                  open={filtersOpen}
+                  onClose={() => setFiltersOpen(false)}
+                  anchorRef={filtersAnchorRef}
+                  placement="bottom-end"
+                  offset={12}
+                  animation="scale"
+                  title="Filtros"
+                  bodyClassName="w-[min(56rem,calc(100vw-2rem))] p-3"
+                  className="border-border/70 bg-background/95 shadow-2xl backdrop-blur-xl"
+                >
+                  {filterPopoverContent}
+                </Popover>
+              </>
             ) : null}
 
             {filters ? (

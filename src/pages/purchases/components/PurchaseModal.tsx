@@ -3,21 +3,28 @@ import PurchaseCreateLocal from "@/pages/purchases/Purchase";
 
 type Props = {
   open: boolean;
+  poId?: string;
   onClose: () => void;
   onSaved?: (poId: string) => void | Promise<void>;
 };
 
-export function PurchaseModal({ open, onClose, onSaved }: Props) {
+export function PurchaseModal({ open, poId, onClose, onSaved }: Props) {
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Nueva compra"
+      closeOnOverlayClick={false}
+      title={poId ? "Editar compra" : "Nueva compra"}
       className="w-[min(92rem,calc(100vw-2rem))]"
       bodyClassName="p-0"
     >
       <div className="px-4 pb-4">
-        <PurchaseCreateLocal inModal onClose={onClose} onSaved={onSaved} />
+        <PurchaseCreateLocal
+          inModal
+          poIdOverride={poId}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
       </div>
     </Modal>
   );

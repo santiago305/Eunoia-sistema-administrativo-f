@@ -73,6 +73,8 @@ export function DataTable<T extends Record<string, unknown>>({
   searchValue,
   onSearchChange,
   filters,
+  filterPopoverContent,
+  rangeDates,
   searchMode = "client",
   globalSearchFn,
   stickyHeader = true,
@@ -361,6 +363,13 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const isRowClickable = !!onRowClick && rowClickable !== false;
+  const resolvedRangeDates = rangeDates
+    ? {
+        ...rangeDates,
+        name: rangeDates.name ?? `data-table:${tableId}:rangeDates`,
+        label: rangeDates.label ?? "Rango de fechas",
+      }
+    : undefined;
 
   return (
     <div className={cn("w-full", className)}>
@@ -373,6 +382,8 @@ export function DataTable<T extends Record<string, unknown>>({
           setInternalSearch(value);
         }}
         filters={filters}
+        filterPopoverContent={filterPopoverContent}
+        rangeDates={resolvedRangeDates}
         selectionInfo={
           selectableRows ? (
             <div className="inline-flex items-center gap-2 rounded-sm border border-border/70 bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">

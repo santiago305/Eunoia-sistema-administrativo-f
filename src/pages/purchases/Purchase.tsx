@@ -4,7 +4,6 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import {
   AfectType,
-  type AfectTypeType,
   CurrencyType,
   CurrencyTypes,
   PaymentFormTypes,
@@ -90,12 +89,14 @@ type PurchaseItemRow = {
 
 type PurchaseCreateLocalProps = {
   inModal?: boolean;
+  poIdOverride?: string;
   onClose?: () => void;
   onSaved?: (poId: string) => void | Promise<void>;
 };
 
 export default function PurchaseCreateLocal({
   inModal = false,
+  poIdOverride,
   onClose,
   onSaved,
 }: PurchaseCreateLocalProps) {
@@ -120,8 +121,9 @@ export default function PurchaseCreateLocal({
   const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
 
   const [form, setForm] = useState<PurchaseOrder>(() => buildEmptyForm());
-  const { poId } = useParams<{ poId: string }>();
-  const isEdit = Boolean(poId);
+  const { poId: routePoId } = useParams<{ poId: string }>();
+  const effectivePoId = poIdOverride ?? routePoId;
+  const isEdit = Boolean(effectivePoId);
 
   const ringStyle = {
     "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
@@ -342,10 +344,10 @@ export default function PurchaseCreateLocal({
     clearFlash();
 
     try {
-      const res = poId ? await updatePurchaseOrder(poId, payload) : await createPurchaseOrder(payload);
+      const res = effectivePoId ? await updatePurchaseOrder(effectivePoId, payload) : await createPurchaseOrder(payload);
       if (res.type === "success") {
         showFlash(successResponse("Compra registrada."));
-        const nextPoId = res.order?.poId ?? poId ?? "";
+        const nextPoId = res.order?.poId ?? effectivePoId ?? "";
         if (nextPoId) setLastSavedPoId(nextPoId);
         setOpenPaymentModal(false);
         setOpenNavigateModal(true);
@@ -407,9 +409,9 @@ export default function PurchaseCreateLocal({
   };
 
   useEffect(() => {
-    if (!poId) return;
-    void loadPurchase(poId);
-  }, [poId]);
+    if (!effectivePoId) return;
+    void loadPurchase(effectivePoId);
+  }, [effectivePoId]);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -772,7 +774,7 @@ export default function PurchaseCreateLocal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <FloatingDateTimePicker
                   label="Fecha de emisión"
                   name="date-issue"
@@ -799,9 +801,6 @@ export default function PurchaseCreateLocal({
                   }}
                   clearable={false}
                 />
-              </div>
-
-              <div className="grid grid-cols-1">
                 <FloatingDateTimePicker
                   label="Fecha de ingreso a almacén"
                   name="expected-at"
@@ -836,8 +835,8 @@ export default function PurchaseCreateLocal({
 
             <div className="border-t border-black/10 px-3 sm:px-4 py-3">
               <div className="flex gap-2">
-                <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
-                  Limpiar
+                <SystemButton variant="outline" className="flex-1" onClick={onClose}>
+                  Cerrar 
                 </SystemButton>
                 <SystemButton
                   className="flex-1"
@@ -950,7 +949,7 @@ export default function PurchaseCreateLocal({
           onClose?.();
           navigate("/compras");
         }}
-        poId={lastSavedPoId || poId}
+        poId={lastSavedPoId || effectivePoId}
         primaryColor={PRIMARY}
         isEdit={isEdit}
       />

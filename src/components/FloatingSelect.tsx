@@ -182,14 +182,29 @@ export function FloatingSelect({
       Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
     );
 
-    setPanelStyle({
+    const nextStyle: CSSProperties = {
       position: "fixed",
       top,
       left,
       zIndex: UI_LAYERS.floatingSelect,
       ...widthStyle,
+    };
+    const nextMaxHeight = Math.max(
+      96,
+      Math.min(256, openAbove ? spaceAbove : spaceBelow),
+    );
+
+    setPanelStyle((previous) => {
+      const keys = Object.keys(nextStyle) as Array<keyof CSSProperties>;
+      const previousKeys = Object.keys(previous) as Array<keyof CSSProperties>;
+
+      if (previousKeys.length !== keys.length) return nextStyle;
+      for (const key of keys) {
+        if (previous[key] !== nextStyle[key]) return nextStyle;
+      }
+      return previous;
     });
-    setListMaxHeight(Math.max(96, Math.min(256, openAbove ? spaceAbove : spaceBelow)));
+    setListMaxHeight((previous) => (previous === nextMaxHeight ? previous : nextMaxHeight));
   }, [closeSelect, panelWidthMode]);
 
   const setPanelNode = useCallback((node: HTMLDivElement | null) => {
@@ -246,14 +261,32 @@ export function FloatingSelect({
     resizeObserver.observe(triggerEl);
     resizeObserver.observe(panelEl);
 
-    const mutationObserver = new MutationObserver(() => {
+    let mutationRaf = 0;
+
+    const scheduleMutationUpdate = () => {
+      if (mutationRaf) return;
+      mutationRaf = window.requestAnimationFrame(() => {
+        mutationRaf = 0;
+        updatePanelPosition();
+      });
+    };
+
+    const mutationObserver = new MutationObserver((mutations) => {
       const currentTrigger = triggerRef.current;
       if (!currentTrigger || !currentTrigger.isConnected) {
         closeSelect();
         return;
       }
 
-      updatePanelPosition();
+      const panelNode = panelRef.current;
+      for (const mutation of mutations) {
+        const target = mutation.target as Node | null;
+        if (panelNode && target && panelNode.contains(target)) {
+          continue;
+        }
+        scheduleMutationUpdate();
+        break;
+      }
     });
 
     mutationObserver.observe(document.body, {
@@ -268,6 +301,7 @@ export function FloatingSelect({
     return () => {
       resizeObserver.disconnect();
       mutationObserver.disconnect();
+      window.cancelAnimationFrame(mutationRaf);
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };
