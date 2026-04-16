@@ -72,6 +72,7 @@ export function DataTable<T extends Record<string, unknown>>({
   searchPlaceholder = "Buscar...",
   searchValue,
   onSearchChange,
+  filters,
   searchMode = "client",
   globalSearchFn,
   stickyHeader = true,
@@ -371,6 +372,7 @@ export function DataTable<T extends Record<string, unknown>>({
           if (controlledSearch) return onSearchChange?.(value);
           setInternalSearch(value);
         }}
+        filters={filters}
         selectionInfo={
           selectableRows ? (
             <div className="inline-flex items-center gap-2 rounded-sm border border-border/70 bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">

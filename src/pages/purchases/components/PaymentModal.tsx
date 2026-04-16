@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Banknote, Wallet } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -66,8 +66,28 @@ export function PaymentModal({
     poId: "",
   });
 
+  const previousOpenRef = useRef(open);
   const [saving, setSaving] = useState(false);
   const { showFlash, clearFlash } = useFlashMessage();
+
+  useEffect(() => {
+    const wasOpen = previousOpenRef.current;
+    previousOpenRef.current = open;
+
+    if (!open || wasOpen) return;
+
+    setForm((prev) => ({
+      ...prev,
+      method: PaymentTypes.EFECTIVO,
+      date: new Date().toISOString(),
+      operationNumber: "",
+      currency: CurrencyTypes.PEN,
+      amount: String(normalizeMoney(totalToPay)),
+      note: "",
+      quotaId: quotaId ?? null,
+      poId,
+    }));
+  }, [open, poId, quotaId, totalToPay]);
 
   const paymentMethodOptions = Object.values(PaymentTypes).map((method) => ({
     value: method,
@@ -83,7 +103,10 @@ export function PaymentModal({
     if (saving) return;
 
     const amountNumber = normalizeMoney(parseDecimalInput(form.amount));
-    if (!Number.isFinite(amountNumber) || amountNumber <= 0) return;
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      showFlash(errorResponse("Ingresa un monto válido"));
+      return;
+    }
 
     setSaving(true);
     clearFlash();
@@ -106,16 +129,15 @@ export function PaymentModal({
         if (loadQuotas) {
           loadQuotas();
         }
-
         await onSaved?.();
       } else {
         showFlash(errorResponse("Error al guardar pago"));
       }
 
       close();
-      setSaving(false);
     } catch {
       showFlash(errorResponse("Error al guardar pago"));
+    } finally {
       setSaving(false);
     }
   };
@@ -143,49 +165,34 @@ export function PaymentModal({
           <SectionHeaderForm icon={Wallet} title="Registrar pago" />
 
           <div className="grid grid-cols-1 lg:grid-cols-[0.7fr_1fr] gap-4">
-            <div className="space-y-3">
-              <FloatingInput
-                label="Monto"
-                name="amount"
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.amount}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    amount: e.target.value,
-                  }))
+            <FloatingInput
+              label="Monto"
+              name="amount"
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.amount}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  amount: e.target.value,
+                }))
+              }
+              onBlur={() => {
+                const num = parseDecimalInput(form.amount);
+                if (!Number.isFinite(num)) {
+                  setForm((prev) => ({ ...prev, amount: "" }));
+                  return;
                 }
-                onBlur={() => {
-                  const num = parseDecimalInput(form.amount);
-                  if (!Number.isFinite(num)) {
-                    setForm((prev) => ({ ...prev, amount: "" }));
-                    return;
-                  }
 
-                  const clamped = Math.max(0, Math.min(normalizeMoney(num), normalizeMoney(totalToPay)));
-                  setForm((prev) => ({
-                    ...prev,
-                    amount: String(clamped),
-                  }));
-                }}
-                className="h-14 text-lg"
-              />
-
-              <SystemButton
-                leftIcon={<Banknote className="h-5 w-5" />}
-                className="w-full h-11"
-                style={{
-                  backgroundColor: PRIMARY,
-                  borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                }}
-                onClick={handleSave}
-                disabled={saving || totalToPay === 0}
-              >
-                {saving ? "Guardando..." : "Agregar pago"}
-              </SystemButton>
-            </div>
+                const clamped = Math.max(0, Math.min(normalizeMoney(num), normalizeMoney(totalToPay)));
+                setForm((prev) => ({
+                  ...prev,
+                  amount: String(clamped),
+                }));
+              }}
+              className="h-14 text-lg"
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FloatingDatePicker
@@ -253,6 +260,20 @@ export function PaymentModal({
                     }))
                   }
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <SystemButton
+                  leftIcon={<Banknote className="h-5 w-5" />}
+                  className="w-full h-11"
+                  style={{
+                    backgroundColor: PRIMARY,
+                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                  }}
+                  onClick={handleSave}
+                  disabled={saving || totalToPay === 0}
+                >
+                  {saving ? "Guardando..." : "Agregar pago"}
+                </SystemButton>
               </div>
             </div>
           </div>

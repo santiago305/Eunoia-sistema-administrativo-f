@@ -1,4 +1,4 @@
-import { Modal } from "@/components/settings/modal";
+import { Modal } from "@/components/modales/Modal";
 import { SystemButton } from "@/components/SystemButton";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
 import { Plus, List } from "lucide-react";
@@ -22,6 +22,7 @@ export function ModalNavegate({
   onGoToList,
   poId,
   primaryColor,
+  onClose
 }: ModalNavegateProps) {
   const accent = primaryColor ?? DEFAULT_PRIMARY;
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -66,7 +67,10 @@ export function ModalNavegate({
   if (!open) return null;
 
   return (
-    <Modal title="Compra procesada" className="w-300 h-[93vh]">
+      <Modal
+        open={open}
+        onClose={onClose}
+        title="Compra procesada" className="w-300 h-[93vh]">
       <div className="space-y-6">
         <div className="space-y-2">
           <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">

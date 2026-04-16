@@ -71,6 +71,7 @@ export type DataTableProps<T> = {
     searchPlaceholder?: string;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
+    filters?: ReactNode;
     searchMode?: DataTableSearchMode;
     globalSearchFn?: (row: T, query: string) => boolean;
     stickyHeader?: boolean;

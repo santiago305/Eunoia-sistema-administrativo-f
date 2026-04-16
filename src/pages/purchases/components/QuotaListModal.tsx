@@ -77,7 +77,7 @@ export function QuotaListModal({
   };
   useEffect(() => {
     void loadQuotas();
-  }, [poId, quotas, clearFlash, showFlash]);
+  }, [open]);
 
   useEffect(() => {
     if (quotas) setRows(quotas);
