@@ -26,43 +26,22 @@ export type UpdatePurchaseOrderActiveDto = z.infer<typeof setPurchaseOrderActive
 export type ListPurchaseOrdersQuery = z.infer<typeof listPurchaseOrdersQuerySchema>;
 
 export type PurchaseOrderItem = {
-  stockItemId: string,
-  stockItem?: {
-    type?: string;
-    stockItemId: string,
-    product?: {
-      id?: string;
-      name?: string;
-      description?: string;
-      baseUnitId?: string;
-      sku?: string;
-      isActive?: boolean;
-      type?: string;
-      baseUnitName?: string;
-      baseUnitCode?: string;
-    };
-    variant?: {
-      id?: string;
-      productId?: string;
-      productName?: string;
-      productDescription?: string;
-      baseUnitId?: string;
-      unitCode?: string;
-      unitName?: string;
-      sku?: string;
-      isActive?: boolean;
-      createdAt?: string;
-    };
-  };
-  unitBase:string,
-  equivalence:string,
-  factor:number,
+  skuId: string,
+  sku?: {
+    id: string,
+    backendSku?: string | null,
+    customSku?: string | null,
+    name?: string | null,
+  },
+  unitBase: string,
+  equivalence: string,
+  factor: number,
   afectType: AfectTypeType,
   quantity: number,
   porcentageIgv: number,
   baseWithoutIgv: number,
   amountIgv: number,
-  unitValue:number,
+  unitValue: number,
   unitPrice: number,
   purchaseValue: number,
   name?:string;

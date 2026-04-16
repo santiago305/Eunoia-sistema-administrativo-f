@@ -10,7 +10,7 @@ import {
   PaymentTypes,
   VoucherDocTypes,
 } from "@/pages/purchases/types/purchaseEnums";
-import { listAll } from "@/services/supplierService";
+import { listSuppliers } from "@/services/supplierService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -66,9 +66,9 @@ const IGV = 0.18;
 
 type PurchaseItemRow = {
   id: string;
-  stockItemId: string;
+  skuId: string;
   sku: string;
-  name: string;
+  name?: string;
   unit: string;
   equivalence: string | number;
   factor: number;
@@ -87,15 +87,16 @@ export default function PurchaseCreateLocal() {
   const [supplierOptions, setSupplierOptions] = useState<SupplierOption[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
 
-  const [openAddSupplier, setOpenAddSupplier] = useState(false);
+  const [openCreate, setOpenCreate] = useState(false);
   const [openCreateWarehouse, setOpenCreateWarehouse] = useState(false);
-  const [openCreatePrima, setOpenCreatePrima] = useState(false);
   const [openEquivalences, setOpenEquivalence] = useState(false);
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedPoId, setLastSavedPoId] = useState("");
 
   const [productQuery, setProductQuery] = useState("");
+  const [supplierQuery, setSupplierQuery] = useState("");
+  const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
 
   const [form, setForm] = useState<PurchaseOrder>(() => buildEmptyForm());
   const { poId } = useParams<{ poId: string }>();
@@ -138,21 +139,25 @@ export default function PurchaseCreateLocal() {
     }
   };
 
-  const loadSuppliers = async () => {
+  const loadSuppliers = async (appliedSearch: string) => {
     clearFlash();
     try {
-      const res = await listAll();
-      const options =
-        res?.map((s) => {
-          const fullName = [s.name, s.lastName].filter(Boolean).join(" ").trim();
-          const display = (fullName || s.tradeName || "").trim();
-          const doc = s.documentNumber ? ` (${s.documentNumber})` : "";
-          return {
-            value: s.supplierId,
-            label: `${display}${doc}`.trim() || s.supplierId,
-            days: s.leadTimeDays,
-          };
-        }) ?? [];
+      const res = await listSuppliers({
+        page: 1,
+        limit: 100,
+        q: appliedSearch?.trim() || undefined,
+      });
+
+      const options = (res.items ?? []).map((s) => {
+        const fullName = [s.name, s.lastName].filter(Boolean).join(" ").trim();
+        const display = (fullName || s.tradeName || "").trim();
+        const doc = s.documentNumber ? ` (${s.documentNumber})` : "";
+        return {
+          value: s.supplierId,
+          label: `${display}${doc}`.trim() || s.supplierId,
+          days: s.leadTimeDays,
+        };
+      });
       setSupplierOptions(options);
     } catch {
       setSupplierOptions([]);
@@ -191,7 +196,7 @@ export default function PurchaseCreateLocal() {
     setForm((prev) => ({
       ...prev,
       items: (prev.items ?? []).map((item) => {
-        if (item.stockItemId !== itemIdToUpdate) return item;
+        if (item.skuId !== itemIdToUpdate) return item;
 
         const normalizedPatch: Partial<PurchaseOrderItem> = { ...patch };
 
@@ -211,7 +216,7 @@ export default function PurchaseCreateLocal() {
   const removeItem = (itemIdToRemove: string) => {
     setForm((prev) => ({
       ...prev,
-      items: (prev.items ?? []).filter((item) => item.stockItemId !== itemIdToRemove),
+      items: (prev.items ?? []).filter((item) => item.skuId !== itemIdToRemove),
     }));
   };
 
@@ -239,12 +244,12 @@ export default function PurchaseCreateLocal() {
 
   const itemRows = useMemo<PurchaseItemRow[]>(() => {
     return (form.items ?? []).map((item) => {
-      const product = products.find((p) => p.skuId === item.stockItemId);
+      const product = products.find((p) => p.skuId === item.skuId);
 
       return {
-        id: item.stockItemId,
-        stockItemId: item.stockItemId,
-        sku: product?.backendSku ?? "-",
+        id: item.skuId,
+        skuId: item.skuId,
+        sku: product?.backendSku ?? product?.customSku ?? "-",
         name: item.name ?? "-",
         unit: item.unitBase ?? "-",
         equivalence: item.equivalence,
@@ -284,7 +289,7 @@ export default function PurchaseCreateLocal() {
       expectedAt: form.expectedAt ?? "",
       dateIssue: form.dateIssue ?? "",
       dateExpiration: form.dateExpiration ? form.dateExpiration : undefined,
-      items: (form.items ?? []).map(({ stockItem, ...rest }) => ({
+      items: (form.items ?? []).map(({ sku, name ,...rest }) => ({
         ...rest,
         quantity: normalizeQuantity(rest.quantity),
         unitPrice: normalizePrice(rest.unitPrice),
@@ -341,12 +346,16 @@ export default function PurchaseCreateLocal() {
       setForm((prev) => ({
         ...prev,
         ...data,
-        items: (data.items ?? []).map(({ stockItem, ...rest }) =>
-          recalcItem({
+        items: (data.items ?? []).map((item) => {
+          const { sku, ...rest } = item;
+          const skuId = item.skuId || sku?.id || "";
+
+          return recalcItem({
             ...rest,
+            skuId,
             factor: Number(rest.factor ?? 1),
-          }),
-        ),
+          });
+        }),
         payments: data.payments ?? [],
         quotas: data.quotas ?? [],
       }));
@@ -373,6 +382,18 @@ export default function PurchaseCreateLocal() {
   }, [productQuery, isEdit]);
 
   useEffect(() => {
+    const id = setTimeout(() => {
+      setAppliedSupplierSearch(supplierQuery);
+    }, 500);
+
+    return () => clearTimeout(id);
+  }, [supplierQuery]);
+
+  useEffect(() => {
+    void loadSuppliers(appliedSupplierSearch);
+  }, [appliedSupplierSearch]);
+
+  useEffect(() => {
     setForm((prev) => ({
       ...prev,
       totalTaxed: normalizeMoney(totals.totalTaxed),
@@ -384,9 +405,13 @@ export default function PurchaseCreateLocal() {
   }, [totals.totalTaxed, totals.totalExempted, totals.totalIgv, totals.totalValue, totals.totalPrice]);
 
   useEffect(() => {
-    void loadSuppliers();
     void loadWarehouses();
   }, []);
+
+  const handleCreateSaved = () => {
+    setOpenCreate(false);
+    void loadSuppliers(appliedSupplierSearch);
+  };
 
   const currency = form.currency;
 
@@ -421,13 +446,13 @@ export default function PurchaseCreateLocal() {
           <div className="w-24">
             <FloatingInput
               label="Cant."
-              name={`quantity-${row.stockItemId}`}
+              name={`quantity-${row.skuId}`}
               type="number"
               min={0}
               step="0.001"
               value={String(row.quantity)}
               onChange={(e) =>
-                updateItem(row.stockItemId, {
+                updateItem(row.skuId, {
                   quantity: parseDecimalInput(e.target.value),
                 })
               }
@@ -446,13 +471,13 @@ export default function PurchaseCreateLocal() {
           <div className="w-24">
             <FloatingInput
               label="P. unit"
-              name={`unit-price-${row.stockItemId}`}
+              name={`unit-price-${row.skuId}`}
               type="number"
               min={0}
               step="0.0001"
               value={String(row.unitPrice)}
               onChange={(e) =>
-                updateItem(row.stockItemId, {
+                updateItem(row.skuId, {
                   unitPrice: parseDecimalInput(e.target.value),
                 })
               }
@@ -472,7 +497,7 @@ export default function PurchaseCreateLocal() {
           <div className="w-28">
             <FloatingInput
               label="Total"
-              name={`total-price-${row.stockItemId}`}
+              name={`total-price-${row.skuId}`}
               type="number"
               min={0}
               step="0.01"
@@ -482,7 +507,7 @@ export default function PurchaseCreateLocal() {
                 const nextUnitPrice =
                   row.quantity > 0 ? normalizePrice(nextTotal / row.quantity) : 0;
 
-                updateItem(row.stockItemId, { unitPrice: nextUnitPrice });
+                updateItem(row.skuId, { unitPrice: nextUnitPrice });
               }}
               className="h-9 text-xs text-right"
             />
@@ -503,7 +528,7 @@ export default function PurchaseCreateLocal() {
               size="icon"
               className="h-8 w-8"
               title="Eliminar"
-              onClick={() => removeItem(row.stockItemId)}
+              onClick={() => removeItem(row.skuId)}
             >
               <Trash2 className="h-4 w-4" />
             </SystemButton>
@@ -540,18 +565,6 @@ export default function PurchaseCreateLocal() {
                   emptyMessage="Sin productos"
                   onSearchChange={(text) => setProductQuery(text)}
                 />
-
-                <SystemButton
-                  leftIcon={<Plus className="h-4 w-4" />}
-                  className="h-10"
-                  style={{
-                    backgroundColor: PRIMARY,
-                    borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                  }}
-                  onClick={() => setOpenCreatePrima(true)}
-                >
-                  Crear
-                </SystemButton>
               </div>
             </div>
 
@@ -694,6 +707,7 @@ export default function PurchaseCreateLocal() {
                     searchable
                     searchPlaceholder="Buscar proveedor..."
                     emptyMessage="Sin proveedores"
+                    onSearchChange={(text) => setSupplierQuery(text)}
                   />
 
                   <SystemButton
@@ -704,7 +718,7 @@ export default function PurchaseCreateLocal() {
                       borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                     }}
                     title="Agregar proveedor"
-                    onClick={() => setOpenAddSupplier(true)}
+                    onClick={() => setOpenCreate(true)}
                   >
                     <Plus className="h-4 w-4" />
                   </SystemButton>
@@ -821,26 +835,15 @@ export default function PurchaseCreateLocal() {
         </div>
       </div>
 
-      {openAddSupplier && (
+      {openCreate && (
         <SupplierFormModal
-          open={openAddSupplier}
+          open={openCreate}
           mode="create"
-          onClose={() => setOpenAddSupplier(false)}
-          onSaved={() => {
-            void loadSuppliers();
-          }}
+          onClose={() => setOpenCreate(false)}
+          onSaved={handleCreateSaved}
           primaryColor={PRIMARY}
         />
       )}
-
-      {/* <ProductFormModal
-        open={openCreatePrima}
-        mode="create"
-        productType={ProductTypes.PRIMA}
-        primaryColor={PRIMARY}
-        entityLabel="materia prima"
-        onClose={() => setOpenCreatePrima(false)}
-      /> */}
 
       <WarehouseFormModal
         open={openCreateWarehouse}
