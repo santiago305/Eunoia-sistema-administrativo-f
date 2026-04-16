@@ -16,6 +16,7 @@ import {
   CLOSE_ALL_FLOATING_DATES_EVENT,
   dispatchCloseAllFloatingDates,
 } from "@/components/floatingDateEvents";
+import { SystemButton } from "@/components/SystemButton";
 import { UI_LAYERS } from "@/components/ui/layers";
 import { CalendarPanel } from "./CalendarPanel";
 import { formatRange, isBeforeDay } from "./dateUtils";
@@ -47,7 +48,7 @@ export function FloatingDateRangePicker({
   endDate,
   onChange,
   error,
-  placeholder = "Seleccionar rango",
+  placeholder = "",
   disabled = false,
   readOnly = false,
   className,
@@ -225,30 +226,34 @@ export function FloatingDateRangePicker({
           disablePast={disablePast}
           disableFuture={disableFuture}
           footer={
-            <div className="flex items-center justify-between gap-2">
-              <button
+            <div className="flex items-center justify-between gap-2 [&_button]:h-7 [&_button]:rounded-md [&_button]:px-2.5 [&_button]:text-[11px]">
+              <SystemButton
                 type="button"
+                variant="ghost"
+                size="custom"
+                className="text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   const today = new Date();
                   onChange({ startDate: today, endDate: today });
                   if (closeOnComplete) closePanel();
                 }}
-                className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 Hoy
-              </button>
+              </SystemButton>
 
               {clearable ? (
-                <button
+                <SystemButton
                   type="button"
+                  variant="ghost"
+                  size="custom"
+                  className="text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     onChange({ startDate: null, endDate: null });
                     closePanel();
                   }}
-                  className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
                   Limpiar
-                </button>
+                </SystemButton>
               ) : null}
             </div>
           }

@@ -1,10 +1,6 @@
 ﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Menu, Plus, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Filter } from "lucide-react";
+import { Menu, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingSelect } from "@/components/FloatingSelect";
-import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
-import { SystemButton } from "@/components/SystemButton";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { ActionsPopover } from "@/components/ActionsPopover";
@@ -19,8 +15,6 @@ import {
 } from "@/services/productionService";
 import { getProductionOrderPdf } from "@/services/pdfServices";
 import {
-  parseDateInputValue,
-  toLocalDateKey,
   todayIso,
   buildMonthStartIso,
 } from "@/utils/functionPurchases";
@@ -30,6 +24,7 @@ import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { ProductionFilters } from "@/pages/production/components/ProductionFilters";
 import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
 
 const PRIMARY = "hsl(var(--primary))";
@@ -53,6 +48,8 @@ type ProductionRow = {
   estado?: ProductionStatus;
   tiempoProduccion?: ProductionStatus;
   termino: string;
+  productos: string[];
+  productIds: string[];
   original: ProductionOrder;
 };
 
@@ -71,6 +68,31 @@ const formatDateTime = (value?: string | null) => {
   });
 };
 
+const normalizeSearchText = (value?: string | null) => (value ?? "").toLowerCase().trim();
+
+const getProductionItemLabel = (item: NonNullable<ProductionOrder["items"]>[number]) => {
+  const finishedItem = item.finishedItem;
+  const productName = finishedItem?.variant?.productName ?? finishedItem?.product?.name ?? "";
+  const presentation =
+    (finishedItem?.variant?.attributes as { presentation?: string } | undefined)?.presentation ??
+    (finishedItem?.product?.attributes as { presentation?: string } | undefined)?.presentation ??
+    "";
+  const variant =
+    (finishedItem?.variant?.attributes as { variant?: string } | undefined)?.variant ??
+    (finishedItem?.product?.attributes as { variant?: string } | undefined)?.variant ??
+    "";
+  const color =
+    (finishedItem?.variant?.attributes as { color?: string } | undefined)?.color ??
+    (finishedItem?.product?.attributes as { color?: string } | undefined)?.color ??
+    "";
+  const sku = finishedItem?.variant?.sku ?? finishedItem?.product?.sku ?? "";
+
+  return [productName, presentation, variant, color, sku]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" ");
+};
+
 export default function Production() {
   const { showFlash, clearFlash } = useFlashMessage();
 
@@ -83,6 +105,7 @@ export default function Production() {
   const [openFormModal, setOpenFormModal] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingProductionId, setEditingProductionId] = useState<string | undefined>(undefined);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
@@ -246,21 +269,78 @@ export default function Production() {
   ];
 
   const rows = useMemo<ProductionRow[]>(() => {
-    return (orders ?? []).map((order) => ({
-      id:
-        order.productionId ??
-        `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt ?? ""}`,
-      registro: formatDateTime(order.manufactureDate),
-      serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
-      referencia: order.reference || "-",
-      almacenOrigen: order.fromWarehouse?.name ?? "-",
-      almacenDestino: order.toWarehouse?.name ?? "-",
-      estado: order.status ?? ProductionStatus.DRAFT,
-      tiempoProduccion: order.status ?? ProductionStatus.DRAFT,
-      termino: formatDateTime(order.manufactureDate),
-      original: order,
-    }));
+    return (orders ?? []).map((order) => {
+      const items = order.items ?? [];
+      const productos = items
+        .map((item) => getProductionItemLabel(item))
+        .filter(Boolean);
+      const productIds = items
+        .map((item) => item.finishedItemId)
+        .filter(Boolean);
+
+      return {
+        id:
+          order.productionId ??
+          `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt ?? ""}`,
+        registro: formatDateTime(order.manufactureDate),
+        serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
+        referencia: order.reference || "-",
+        almacenOrigen: order.fromWarehouse?.name ?? "-",
+        almacenDestino: order.toWarehouse?.name ?? "-",
+        estado: order.status ?? ProductionStatus.DRAFT,
+        tiempoProduccion: order.status ?? ProductionStatus.DRAFT,
+        termino: formatDateTime(order.manufactureDate),
+        productos,
+        productIds,
+        original: order,
+      };
+    });
   }, [orders]);
+
+  const productOptions = useMemo(() => {
+    const options = new Map<string, { value: string; label: string }>();
+
+    rows.forEach((row) => {
+      row.productIds.forEach((productId, index) => {
+        if (!productId || options.has(productId)) return;
+
+        options.set(productId, {
+          value: productId,
+          label: row.productos[index] || `Producto ${index + 1}`,
+        });
+      });
+    });
+
+    return Array.from(options.values()).sort((a, b) =>
+      a.label.localeCompare(b.label, "es", { sensitivity: "base" }),
+    );
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    if (selectedProductIds.length === 0) return rows;
+
+    return rows.filter((row) =>
+      row.productIds.some((productId) => selectedProductIds.includes(productId)),
+    );
+  }, [rows, selectedProductIds]);
+
+  const globalSearchFn = (row: ProductionRow, query: string) => {
+    const normalizedQuery = normalizeSearchText(query);
+    if (!normalizedQuery) return true;
+
+    const statusLabel = row.estado ? (statusLabels[row.estado] ?? "") : "";
+
+    return [
+      row.registro,
+      row.serie,
+      row.referencia,
+      row.almacenOrigen,
+      row.almacenDestino,
+      row.termino,
+      row.productos.join(" "),
+      statusLabel,
+    ].some((value) => normalizeSearchText(value).includes(normalizedQuery));
+  };
 
   const columns = useMemo<DataTableColumn<ProductionRow>[]>(() => {
     return [
@@ -425,96 +505,65 @@ export default function Production() {
         hideable: false,
       },
     ];
-  }, [nowIso, orders]);
+  }, [nowIso]);
 
   return (
     <PageShell className="bg-white">
       <PageTitle title="Produccion" />
 
       <div className="space-y-4">
-        <div className="my-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <Headed title="Ordenes de Produccion" size="lg" />
+        <Headed title="Ordenes de Produccion" size="lg" />
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-1 text-[10px]">
-              Total: <span className="font-semibold text-black">{pagination.total}</span>
-            </div>
-          </div>
-        </div>
+        <ProductionFilters
+          fromDate={fromDate}
+          toDate={toDate}
+          warehouseId={warehouseId}
+          statusFilter={statusFilter}
+          selectedProductIds={selectedProductIds}
+          warehouseOptions={warehouseOptions}
+          statusOptions={statusOptions}
+          productOptions={productOptions}
+          onDateRangeChange={({ fromDate: nextFromDate, toDate: nextToDate }) => {
+            setFromDate(nextFromDate);
+            setToDate(nextToDate);
+            setPage(1);
+          }}
+          onWarehouseChange={(value) => {
+            setWarehouseId(value);
+            setPage(1);
+          }}
+          onStatusChange={(value) => {
+            setStatusFilter(value);
+            setPage(1);
+          }}
+          onProductsChange={(value) => {
+            setSelectedProductIds(value);
+            setPage(1);
+          }}
+          onCreate={handleCreate}
+          primaryColor={PRIMARY}
+        />
 
-        <section className="space-y-4 rounded-2xl border border-black/10 bg-gray-50 p-4 shadow-sm">
-          <SectionHeaderForm icon={Filter} title="Filtros" />
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[0.55fr_0.25fr_0.25fr_0.2fr]">
-            <FloatingDateRangePicker
-              label="Rango de fechas"
-              name="production-date-range"
-              startDate={parseDateInputValue(fromDate)}
-              endDate={parseDateInputValue(toDate)}
-              onChange={({ startDate, endDate }) => {
-                setFromDate(startDate ? toLocalDateKey(startDate) : "");
-                setToDate(endDate ? toLocalDateKey(endDate) : "");
-                setPage(1);
-              }}
-            />
-
-            <FloatingSelect
-              label="Almacen"
-              name="warehouseId"
-              value={warehouseId}
-              onChange={(value) => {
-                setWarehouseId(value);
-                setPage(1);
-              }}
-              options={warehouseOptions}
-              searchable
-              searchPlaceholder="Buscar almacen..."
-              emptyMessage="Sin almacenes"
-            />
-
-            <FloatingSelect
-              label="Estado"
-              name="statusFilter"
-              value={statusFilter}
-              onChange={(value) => {
-                setStatusFilter(value as "all" | ProductionStatus);
-                setPage(1);
-              }}
-              options={statusOptions}
-              searchable={false}
-            />
-
-            <SystemButton
-              leftIcon={<Plus className="h-4 w-4" />}
-              className="h-10"
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent) `,
-              }}
-              onClick={handleCreate}
-            >
-              Orden de produccion
-            </SystemButton>
-          </div>
-        </section>
-
-          <DataTable
-            tableId="production-orders-table"
-            data={rows}
-            columns={columns}
-            rowKey="id"
-            loading={loading}
-            emptyMessage="No hay ordenes con los filtros actuales."
-            hoverable={false}
-            animated={false}
-            selectableColumns
-            pagination={{
-              page,
-              limit,
-              total: pagination.total,
-            }}
-            onPageChange={setPage}
-          />
+        <DataTable
+          tableId="production-orders-table"
+          data={filteredRows}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          emptyMessage="No hay ordenes con los filtros actuales."
+          hoverable={false}
+          animated={false}
+          selectableColumns
+          showSearch
+          searchPlaceholder="Buscar serie, referencia, almacén, producto o estado..."
+          globalSearchFn={globalSearchFn}
+          pagination={{
+            page,
+            limit,
+            total: pagination.total,
+          }}
+          onPageChange={setPage}
+        />
 
         <PdfViewerModal
           open={openPdfModal}

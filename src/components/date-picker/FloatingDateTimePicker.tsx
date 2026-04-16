@@ -16,6 +16,7 @@ import {
   CLOSE_ALL_FLOATING_DATES_EVENT,
   dispatchCloseAllFloatingDates,
 } from "@/components/floatingDateEvents";
+import { SystemButton } from "@/components/SystemButton";
 import { UI_LAYERS } from "@/components/ui/layers";
 import { CalendarPanel } from "./CalendarPanel";
 import { formatDateTime, setTimeParts } from "./dateUtils";
@@ -210,10 +211,13 @@ export function FloatingDateTimePicker({
           timeValue={draftDate}
           onTimeChange={setDraftDate}
           footer={
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 [&_button]:h-7 [&_button]:rounded-md [&_button]:px-2.5 [&_button]:text-[11px]">
               <div className="flex items-center gap-2">
-                <button
+                <SystemButton
                   type="button"
+                  variant="ghost"
+                  size="custom"
+                  className="text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     const now = new Date();
                     setDraftDate(now);
@@ -221,35 +225,37 @@ export function FloatingDateTimePicker({
                     onChange(now);
                     closePanel();
                   }}
-                  className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
                   Ahora
-                </button>
+                </SystemButton>
 
                 {clearable ? (
-                  <button
+                  <SystemButton
                     type="button"
+                    variant="ghost"
+                    size="custom"
+                    className="text-muted-foreground hover:text-foreground"
                     onClick={() => {
                       onChange(null);
                       closePanel();
                     }}
-                    className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   >
                     Limpiar
-                  </button>
+                  </SystemButton>
                 ) : null}
               </div>
 
-              <button
+              <SystemButton
                 type="button"
+                size="custom"
+                className="font-semibold"
                 onClick={() => {
                   onChange(draftDate);
                   closePanel();
                 }}
-                className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
               >
                 Aplicar
-              </button>
+              </SystemButton>
             </div>
           }
         />
