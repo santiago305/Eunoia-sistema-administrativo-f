@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
@@ -10,7 +11,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers } from "@/services/supplierService";
 import { listActiveWarehouses } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
-import { money, toDateInputValue, tryShowPicker, todayIso, buildMonthStartIso } from "@/utils/functionPurchases";
+import { buildMonthStartIso, money, parseDateInputValue, toLocalDateKey, todayIso } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -645,27 +646,15 @@ export default function Purchases() {
                 <section className="bg-gray-50 shadow-sm p-4 space-y-4 rounded-2xl border border-black/10">
                     <SectionHeaderForm icon={Filter} title="Filtros" />
 
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.2fr_0.2fr_0.5fr_1fr_1fr_0.5fr_0.6fr]">
-                        <FloatingInput
-                            label="Fecha inicio"
-                            name="from-date"
-                            type="date"
-                            value={toDateInputValue(fromDate)}
-                            onClick={(e) => tryShowPicker(e.currentTarget)}
-                            onChange={(e) => {
-                                setFromDate(e.target.value);
-                                setPage(1);
-                            }}
-                            className="h-9 text-xs"
-                        />
-                        <FloatingInput
-                            label="Fecha fin"
-                            name="to-date"
-                            type="date"
-                            value={toDateInputValue(toDate)}
-                            onClick={(e) => tryShowPicker(e.currentTarget)}
-                            onChange={(e) => {
-                                setToDate(e.target.value);
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.1fr_0.5fr_1fr_1fr_0.5fr_0.6fr]">
+                        <FloatingDateRangePicker
+                            label="Rango de fechas"
+                            name="purchase-date-range"
+                            startDate={parseDateInputValue(fromDate)}
+                            endDate={parseDateInputValue(toDate)}
+                            onChange={({ startDate, endDate }) => {
+                                setFromDate(startDate ? toLocalDateKey(startDate) : "");
+                                setToDate(endDate ? toLocalDateKey(endDate) : "");
                                 setPage(1);
                             }}
                             className="h-9 text-xs"

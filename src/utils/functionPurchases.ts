@@ -123,10 +123,22 @@ const toLocalIso = (date: Date) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
+export const toLocalDateKey = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
 export const toDateInputValue = (value?: string | null) => {
   if (!value) return "";
   const match = value.match(/^\d{4}-\d{2}-\d{2}/);
   return match ? match[0] : "";
+};
+
+export const parseDateInputValue = (value?: string | null) => {
+  const normalized = toDateInputValue(value);
+  if (!normalized) return null;
+  const date = new Date(`${normalized}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
 };
 
 export const toDateTimeInputValue = (value?: string | null) => {

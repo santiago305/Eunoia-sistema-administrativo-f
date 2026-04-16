@@ -1,8 +1,8 @@
 ﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Menu, Plus, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Filter } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
 import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { DataTable } from "@/components/table/DataTable";
@@ -19,8 +19,8 @@ import {
 } from "@/services/productionService";
 import { getProductionOrderPdf } from "@/services/pdfServices";
 import {
-  toDateInputValue,
-  tryShowPicker,
+  parseDateInputValue,
+  toLocalDateKey,
   todayIso,
   buildMonthStartIso,
 } from "@/utils/functionPurchases";
@@ -430,27 +430,15 @@ export default function Production() {
         <section className="space-y-4 rounded-2xl border border-black/10 bg-gray-50 p-4 shadow-sm">
           <SectionHeaderForm icon={Filter} title="Filtros" />
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[0.2fr_0.2fr_0.4fr_0.4fr_0.28fr]">
-            <FloatingInput
-              label="Fecha inicio"
-              name="fromDate"
-              type="date"
-              value={toDateInputValue(fromDate)}
-              onClick={(event) => tryShowPicker(event.currentTarget)}
-              onChange={(event) => {
-                setFromDate(event.target.value);
-                setPage(1);
-              }}
-            />
-
-            <FloatingInput
-              label="Fecha fin"
-              name="toDate"
-              type="date"
-              value={toDateInputValue(toDate)}
-              onClick={(event) => tryShowPicker(event.currentTarget)}
-              onChange={(event) => {
-                setToDate(event.target.value);
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[0.55fr_0.25fr_0.25fr_0.2fr]">
+            <FloatingDateRangePicker
+              label="Rango de fechas"
+              name="production-date-range"
+              startDate={parseDateInputValue(fromDate)}
+              endDate={parseDateInputValue(toDate)}
+              onChange={({ startDate, endDate }) => {
+                setFromDate(startDate ? toLocalDateKey(startDate) : "");
+                setToDate(endDate ? toLocalDateKey(endDate) : "");
                 setPage(1);
               }}
             />

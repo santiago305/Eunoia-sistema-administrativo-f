@@ -3,13 +3,14 @@ import { Calendar, Plus, Trash2, Wallet } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDatePicker } from "@/components/date-picker/FloatingDatePicker";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes } from "@/pages/purchases/types/purchaseEnums";
 import type { CreditQuota, Payment, PurchaseOrder } from "@/pages/purchases/types/purchase";
-import { todayIso, toDateInputValue, clampQuotas, buildQuotas, tryShowPicker, normalizeMoney, parseDecimalInput } from "@/utils/functionPurchases";
+import { todayIso, toDateInputValue, parseDateInputValue, toLocalDateKey, clampQuotas, buildQuotas, normalizeMoney, parseDecimalInput } from "@/utils/functionPurchases";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
 import { getPaymentMethodsBySupplier } from "@/services/paymentMethodService";
@@ -173,13 +174,13 @@ export function PurchasePaymentModal({
         id: "expirationDate",
         header: "Fecha de pago",
         cell: (row) => (
-          <FloatingInput
+          <FloatingDatePicker
             label="Fecha"
             name={`quota-date-${row.rowIndex}`}
-            type="date"
-            value={toDateInputValue(row.expirationDate)}
-            onClick={(e) => tryShowPicker(e.currentTarget)}
-            onChange={(e) => updateQuota(row.rowIndex, { expirationDate: e.target.value })}
+            value={parseDateInputValue(row.expirationDate)}
+            onChange={(date) =>
+              updateQuota(row.rowIndex, { expirationDate: date ? toLocalDateKey(date) : "" })
+            }
             className="h-9 text-xs"
           />
         ),
@@ -339,13 +340,11 @@ export function PurchasePaymentModal({
                       searchable={false}
                       className="h-9 text-xs"
                     />
-                    <FloatingInput
+                    <FloatingDatePicker
                       label="Fecha"
                       name={`payment-date-${index}`}
-                      type="date"
-                      value={toDateInputValue(payment.date)}
-                      onClick={(e) => tryShowPicker(e.currentTarget)}
-                      onChange={(e) => updatePayment(index, { date: e.target.value })}
+                      value={parseDateInputValue(payment.date)}
+                      onChange={(date) => updatePayment(index, { date: date ? toLocalDateKey(date) : "" })}
                       className="h-9 text-xs"
                     />
 

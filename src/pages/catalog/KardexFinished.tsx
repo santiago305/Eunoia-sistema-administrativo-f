@@ -1,8 +1,8 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SystemButton } from "@/components/SystemButton";
@@ -14,9 +14,10 @@ import { searchProductAndVariant } from "@/services/catalogService";
 import { getDailyTotals, listKardex } from "@/services/kardexService";
 import {
   buildMonthStartIso,
+  parseDateInputValue,
+  toLocalDateKey,
   toDateInputValue,
   todayIso,
-  tryShowPicker,
 } from "@/utils/functionPurchases";
 import type { KardexDailyTotal, LedgerEntry } from "@/pages/catalog/types/kardex";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
@@ -33,11 +34,6 @@ import { PageShell } from "@/components/layout/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 25;
-
-const toLocalDateKey = (date: Date) => {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-};
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -476,31 +472,18 @@ export default function KardexProduction() {
         <section className="rounded-2xl border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
           <SectionHeaderForm icon={Filter} title="Filtros" />
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.5fr_0.5fr_1fr]">
-            <div className="grid grid-cols-2 gap-2">
-              <FloatingInput
-                label="Fecha inicio"
-                name="fromDate"
-                type="date"
-                value={toDateInputValue(fromDate)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-              />
-              <FloatingInput
-                label="Fecha fin"
-                name="toDate"
-                type="date"
-                value={toDateInputValue(toDate)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) => {
-                  setToDate(e.target.value);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.1fr_0.8fr_1fr]">
+            <FloatingDateRangePicker
+              label="Rango de fechas"
+              name="kardex-finished-date-range"
+              startDate={parseDateInputValue(fromDate)}
+              endDate={parseDateInputValue(toDate)}
+              onChange={({ startDate, endDate }) => {
+                setFromDate(startDate ? toLocalDateKey(startDate) : "");
+                setToDate(endDate ? toLocalDateKey(endDate) : "");
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+            />
 
             <FloatingSelect
               label="Almacén"

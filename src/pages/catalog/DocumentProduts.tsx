@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Filter, Menu } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
@@ -16,7 +16,7 @@ import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { getDocuments } from "@/services/documentService";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
-import { buildMonthStartIso, todayIso, toDateInputValue, tryShowPicker } from "@/utils/functionPurchases";
+import { buildMonthStartIso, parseDateInputValue, toLocalDateKey, todayIso } from "@/utils/functionPurchases";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { DocumentInventory, DocumentRow } from "@/pages/catalog/types/documentInventory";
@@ -332,27 +332,15 @@ export default function DocumentProduts() {
                     <div className="space-y-4">
                         <section className="bg-gray-50 shadow-sm p-4 space-y-4 rounded-2xl border border-black/10">
                             <SectionHeaderForm icon={Filter} title="Filtros" />
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
-                                <FloatingInput
-                                    label="Fecha inicio"
-                                    name="from-date"
-                                    type="date"
-                                    value={toDateInputValue(fromDate)}
-                                    onClick={(e) => tryShowPicker(e.currentTarget)}
-                                    onChange={(e) => {
-                                        setFromDate(e.target.value);
-                                        setPage(1);
-                                    }}
-                                    className="h-9 text-xs"
-                                />
-                                <FloatingInput
-                                    label="Fecha fin"
-                                    name="to-date"
-                                    type="date"
-                                    value={toDateInputValue(toDate)}
-                                    onClick={(e) => tryShowPicker(e.currentTarget)}
-                                    onChange={(e) => {
-                                        setToDate(e.target.value);
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                                <FloatingDateRangePicker
+                                    label="Rango de fechas"
+                                    name="documents-date-range"
+                                    startDate={parseDateInputValue(fromDate)}
+                                    endDate={parseDateInputValue(toDate)}
+                                    onChange={({ startDate, endDate }) => {
+                                        setFromDate(startDate ? toLocalDateKey(startDate) : "");
+                                        setToDate(endDate ? toLocalDateKey(endDate) : "");
                                         setPage(1);
                                     }}
                                     className="h-9 text-xs"

@@ -15,6 +15,7 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDateTimePicker } from "@/components/date-picker/FloatingDateTimePicker";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import type {
@@ -36,8 +37,6 @@ import {
   recalcItem,
   money,
   addDaysToIsoDate,
-  toDateTimeInputValue,
-  tryShowPicker,
   clampQuotas,
   addDaysToIsoDateFrom,
   buildQuotas,
@@ -63,6 +62,17 @@ import {
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
+
+const toLocalDateTimeString = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+const parseDateValue = (value?: string | null) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 type PurchaseItemRow = {
   id: string;
@@ -726,14 +736,12 @@ export default function PurchaseCreateLocal() {
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                <FloatingInput
+                <FloatingDateTimePicker
                   label="Fecha de emisión"
                   name="date-issue"
-                  type="datetime-local"
-                  value={toDateTimeInputValue(form.dateIssue)}
-                  onClick={(e) => tryShowPicker(e.currentTarget)}
-                  onChange={(e) => {
-                    const nextDate = e.target.value;
+                  value={parseDateValue(form.dateIssue)}
+                  onChange={(date) => {
+                    const nextDate = date ? toLocalDateTimeString(date) : "";
                     const selected = supplierOptions.find((s) => s.value === form.supplierId);
                     const leadDays = selected?.days ?? 0;
 
@@ -752,17 +760,21 @@ export default function PurchaseCreateLocal() {
                       };
                     });
                   }}
+                  clearable={false}
                 />
               </div>
 
               <div className="grid grid-cols-1">
-                <FloatingInput
+                <FloatingDateTimePicker
                   label="Fecha de ingreso a almacén"
                   name="expected-at"
-                  type="datetime-local"
-                  value={toDateTimeInputValue(form.expectedAt)}
-                  onClick={(e) => tryShowPicker(e.currentTarget)}
-                  onChange={(e) => setForm((prev) => ({ ...prev, expectedAt: e.target.value }))}
+                  value={parseDateValue(form.expectedAt)}
+                  onChange={(date) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      expectedAt: date ? toLocalDateTimeString(date) : "",
+                    }))
+                  }
                 />
               </div>
 

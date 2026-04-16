@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Banknote, Wallet } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDatePicker } from "@/components/date-picker/FloatingDatePicker";
 import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { Payment } from "@/pages/purchases/types/purchase";
@@ -13,8 +14,8 @@ import {
 } from "@/pages/purchases/types/purchaseEnums";
 import {
   money,
-  toDateInputValue,
-  tryShowPicker,
+  parseDateInputValue,
+  toLocalDateKey,
   normalizeMoney,
   parseDecimalInput,
 } from "@/utils/functionPurchases";
@@ -187,16 +188,14 @@ export function PaymentModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FloatingInput
+              <FloatingDatePicker
                 label="Fecha de pago"
                 name="payment-date"
-                type="date"
-                value={toDateInputValue(form.date)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) =>
+                value={parseDateInputValue(form.date)}
+                onChange={(date) =>
                   setForm((prev) => ({
                     ...prev,
-                    date: e.target.value,
+                    date: date ? toLocalDateKey(date) : "",
                   }))
                 }
               />
