@@ -5,13 +5,12 @@ import { FloatingSelect } from "@/components/FloatingSelect";
 import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers } from "@/services/supplierService";
 import { listActiveWarehouses } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
-import { buildMonthStartIso, money, parseDateInputValue, toLocalDateKey, todayIso } from "@/utils/functionPurchases";
+import { buildMonthStartIso, money, parseDateInputValue, toDateInputValue, toLocalDateKey, todayIso, tryShowPicker } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -21,11 +20,15 @@ import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
 import { ActionsPopover, type ActionItem } from "@/components/ActionsPopover";
-import { Calendar, CreditCard, FileText, Filter, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Timer, XCircle } from "lucide-react";
+import { Calendar, CreditCard, FileText, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/services/pdfServices";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { SystemButton } from "@/components/SystemButton";
+import { PurchaseModal } from "./components/PurchaseModal";
+
+const PRIMARY = "hsl(var(--primary))";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
@@ -92,6 +95,7 @@ export default function Purchases() {
     const [modalPayment, setModalPayment] = useState(false);
     const [modalPaymentList, setModalPaymentList] = useState(false);
     const [modalQuotaList, setModalQuotaList] = useState(false);
+    const [openPurchaseModal, setOpenPurchaseModal] = useState(false);
 
     const [totalPaid, setTotalPaid] = useState(0);
     const [totalToPay, setTotalToPay] = useState(0);
@@ -169,6 +173,19 @@ export default function Purchases() {
       showFlash(errorResponse("Error al cargar almacenes"));
     }
   };
+
+    const resetFilters = () => {
+        setNumeroInput("");
+        setSupplierId("");
+        setWarehouseId("");
+        setDocumentType("");
+        setStatusFilter("");
+        setFromDate(buildMonthStartIso());
+        setToDate(todayIso());
+        setAppliedSupplierSearch("");
+        setAppliedWarehouseSearch("");
+        setPage(1);
+    };
 
     const loadPurchases = async () => {
         clearFlash();
@@ -632,116 +649,149 @@ export default function Purchases() {
         <PageShell className="bg-white">
             <PageTitle title="Compras" />
             <div className="space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <Headed title="Compras" 
-                    size="lg" />
-
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-0 text-[10px]">
-                            Total: <span className="font-semibold text-black">{pagination.total}</span>
-                        </div>
-                    </div>
+               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <Headed 
+                        title="Compras" 
+                        size="lg"
+                    />
+                    <SystemButton
+                        size="md"
+                        className="w-full lg:w-auto"
+                        leftIcon={<Plus className="h-4 w-4" />}
+                        style={{
+                        backgroundColor: PRIMARY,
+                        borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                        boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+                        }}
+                        onClick={() => setOpenPurchaseModal(true)}
+                    >
+                        Crear nueva compra
+                    </SystemButton>
                 </div>
 
-                <section className="bg-gray-50 shadow-sm p-4 space-y-4 rounded-2xl border border-black/10">
-                    <SectionHeaderForm icon={Filter} title="Filtros" />
+                <DataTable
+                    tableId="purchase-list"
+                    data={purchaseRows}
+                    columns={columns}
+                    rowKey="id"
+                    loading={loading}
+                    emptyMessage="No hay compras con los filtros actuales."
+                    hoverable={false}
+                    animated={false}
+                    selectableColumns
+                    filters={
+                        <>
+                            <div className="grid  grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-[0.1fr_0.1fr_0.7fr_1.2fr_1fr_0.7fr_0.7fr] w-full">
+                                <FloatingInput
+                                    label="Fecha inicio"
+                                    name="from-date"
+                                    type="date"
+                                    value={toDateInputValue(fromDate)}
+                                    onClick={(e) => tryShowPicker(e.currentTarget)}
+                                    onChange={(e) => {
+                                        setFromDate(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    className="h-11 rounded-sm border-border shadow-sm"
+                                />
+                                <FloatingInput
+                                    label="Fecha fin"
+                                    name="to-date"
+                                    type="date"
+                                    value={toDateInputValue(toDate)}
+                                    onClick={(e) => tryShowPicker(e.currentTarget)}
+                                    onChange={(e) => {
+                                        setToDate(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    className="h-11 rounded-sm border-border shadow-sm"
+                                />
+                                <FloatingInput
+                                    label="N. documento"
+                                    name="document-number"
+                                    value={numeroInput}
+                                    onChange={(e) => {
+                                        setNumeroInput(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    className="h-11 rounded-sm border-border shadow-sm"
+                                />
+                                <FloatingSelect
+                                    label="Proveedor"
+                                    name="supplier"
+                                    value={supplierId}
+                                    onChange={(value) => {
+                                        setSupplierId(value);
+                                        setPage(1);
+                                    }}
+                                    options={supplierSelectOptions}
+                                    searchable
+                                    searchPlaceholder="Buscar proveedor..."
+                                    emptyMessage="Sin proveedores"
+                                    onSearchChange={(text) => setAppliedSupplierSearch(text)}
+                                    className="h-11 rounded-sm border-border shadow-sm"
+                                />
+                                <FloatingSelect
+                                    label="Almacen"
+                                    name="warehouse"
+                                    value={warehouseId}
+                                    onChange={(value) => {
+                                        setWarehouseId(value);
+                                        setPage(1);
+                                    }}
+                                    options={warehouseSelectOptions}
+                                    searchable
+                                    searchPlaceholder="Buscar almacén..."
+                                    emptyMessage="Sin almacenes"
+                                    onSearchChange={(text) => setAppliedWarehouseSearch(text)}
+                                    className="h-11 rounded-sm border-border shadow-sm"
+                                />
 
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.1fr_0.5fr_1fr_1fr_0.5fr_0.6fr]">
-                        <FloatingDateRangePicker
-                            label="Rango de fechas"
-                            name="purchase-date-range"
-                            startDate={parseDateInputValue(fromDate)}
-                            endDate={parseDateInputValue(toDate)}
-                            onChange={({ startDate, endDate }) => {
-                                setFromDate(startDate ? toLocalDateKey(startDate) : "");
-                                setToDate(endDate ? toLocalDateKey(endDate) : "");
-                                setPage(1);
-                            }}
-                            className="h-9 text-xs"
-                        />
-                        <FloatingInput label="N. documento" name="document-number" value={numeroInput} onChange={(e) => setNumeroInput(e.target.value)} className="h-9 text-xs" />
+                                <FloatingSelect
+                                    label="Tipos"
+                                    name="document-type"
+                                    value={documentType}
+                                    onChange={(value) => {
+                                        setDocumentType(value);
+                                        setPage(1);
+                                    }}
+                                    options={docTypeOptions}
+                                    searchable
+                                    className="h-11 rounded-sm border-border shadow-sm"
+                                />
 
-                        <FloatingSelect
-                            label="Proveedor"
-                            name="supplier"
-                            value={supplierId}
-                            onChange={(value) => {
-                                setSupplierId(value);
-                                setPage(1);
-                            }}
-                            options={supplierSelectOptions}
-                            searchable
-                            searchPlaceholder="Buscar proveedor..."
-                            emptyMessage="Sin proveedores"
-                            onSearchChange={(text) => setAppliedSupplierSearch(text)}
-                            className="h-9 text-xs"
-                        />
+                                <FloatingSelect
+                                    label="Estado"
+                                    name="status"
+                                    value={statusFilter}
+                                    onChange={(value) => {
+                                        setStatusFilter(value);
+                                        setPage(1);
+                                    }}
+                                    options={statusOptions}
+                                    searchable
+                                    className="h-11 rounded-sm border-border shadow-sm"
+                                />
+                            </div>
+                        </>
+                    }
+                    pagination={{
+                        page,
+                        limit,
+                        total: pagination.total,
+                    }}
+                    onPageChange={setPage}
+                    tableClassName="text-[10px]"
+                />
 
-                        <FloatingSelect
-                            label="Almacen"
-                            name="warehouse"
-                            value={warehouseId}
-                            onChange={(value) => {
-                                setWarehouseId(value);
-                                setPage(1);
-                            }}
-                            options={warehouseSelectOptions}
-                            searchable
-                            searchPlaceholder="Buscar proveedor..."
-                            emptyMessage="Sin proveedores"
-                            onSearchChange={(text) => setAppliedWarehouseSearch(text)}
-                            className="h-9 text-xs"
-                        />
-
-                        <FloatingSelect
-                            label="Tipo"
-                            name="document-type"
-                            value={documentType}
-                            onChange={(value) => {
-                                setDocumentType(value);
-                                setPage(1);
-                            }}
-                            options={docTypeOptions}
-                            searchable
-                            className="h-9 text-xs"
-                        />
-
-                        <FloatingSelect
-                            label="Estado"
-                            name="status"
-                            value={statusFilter}
-                            onChange={(value) => {
-                                setStatusFilter(value);
-                                setPage(1);
-                            }}
-                            options={statusOptions}
-                            searchable
-                            className="h-9 text-xs"
-                        />
-                    </div>
-                </section>
-
-                    <DataTable
-                        tableId="purchase-list"
-                        data={purchaseRows}
-                        columns={columns}
-                        rowKey="id"
-                        loading={loading}
-                        emptyMessage="No hay compras con los filtros actuales."
-                        hoverable={false}
-                        animated={false}
-                        selectableColumns
-                        pagination={{
-                            page,
-                            limit,
-                            total: pagination.total,
-                        }}
-                        onPageChange={setPage}
-                        tableClassName="text-[10px]"
-                    />
-
-                    {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
+                {error && <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>}
             </div>
+
+            <PurchaseModal
+                open={openPurchaseModal}
+                onClose={() => setOpenPurchaseModal(false)}
+                onSaved={() => loadPurchases()}
+            />
             <PaymentModal
                 title="Formulario de Pago"
                 close={() => {

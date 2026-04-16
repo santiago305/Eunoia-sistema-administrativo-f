@@ -4,6 +4,7 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import {
   AfectType,
+  type AfectTypeType,
   CurrencyType,
   CurrencyTypes,
   PaymentFormTypes,
@@ -87,7 +88,17 @@ type PurchaseItemRow = {
   totalPrice: number;
 };
 
-export default function PurchaseCreateLocal() {
+type PurchaseCreateLocalProps = {
+  inModal?: boolean;
+  onClose?: () => void;
+  onSaved?: (poId: string) => void | Promise<void>;
+};
+
+export default function PurchaseCreateLocal({
+  inModal = false,
+  onClose,
+  onSaved,
+}: PurchaseCreateLocalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
 
@@ -332,13 +343,15 @@ export default function PurchaseCreateLocal() {
 
     try {
       const res = poId ? await updatePurchaseOrder(poId, payload) : await createPurchaseOrder(payload);
-
       if (res.type === "success") {
         showFlash(successResponse("Compra registrada."));
         const nextPoId = res.order?.poId ?? poId ?? "";
         if (nextPoId) setLastSavedPoId(nextPoId);
         setOpenPaymentModal(false);
         setOpenNavigateModal(true);
+        if (nextPoId) {
+          await onSaved?.(nextPoId);
+        }
       }
 
       if (res.type === "error") {
@@ -352,17 +365,36 @@ export default function PurchaseCreateLocal() {
   const loadPurchase = async (poId: string) => {
     try {
       const data = await getById(poId);
+      const skusFromOrder = (data.items ?? [])
+        .map((item) => item.sku ?? null).filter((sku): 
+        sku is NonNullable<typeof sku> => Boolean(sku?.sku?.id));
+      if (skusFromOrder.length > 0) {
+        setProducts((prev) => mergePurchaseSkus(prev, skusFromOrder.map(mapSkuToPurchaseSkuInfo)));
+      }
 
       setForm((prev) => ({
         ...prev,
         ...data,
         items: (data.items ?? []).map((item) => {
           const { sku, ...rest } = item;
-          const skuId = item.skuId || sku?.id || "";
+          const skuEntity = sku?.sku;
+          const skuId = sku?.sku.id ?? "";
+          const skuInfo = sku ? mapSkuToPurchaseSkuInfo(sku) : undefined;
+          const resolvedName =
+            skuInfo ? buildPurchaseSkuLabel(skuInfo) : (skuEntity?.name ?? rest.name ?? "SKU");
 
           return recalcItem({
             ...rest,
             skuId,
+            name: resolvedName,
+            sku: skuEntity
+              ? {
+                  id: skuEntity.id,
+                  backendSku: skuEntity.backendSku ?? null,
+                  customSku: skuEntity.customSku ?? null,
+                  name: skuEntity.name ?? null,
+                }
+              : undefined,
             factor: Number(rest.factor ?? 1),
           });
         }),
@@ -552,15 +584,19 @@ export default function PurchaseCreateLocal() {
     ];
   }, []);
 
-  return (
-    <PageShell>
-      <div className="h-screen w-full py-0">
-        <div className="mt-4 grid h-[calc(100vh-64px)] grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr]">
+  const content = (
+    <>
+      <div className={inModal ? "w-full" : "h-screen w-full py-0"}>
+        <div
+          className={`mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr] ${
+            inModal ? "h-[80vh]" : "h-[calc(100vh-64px)]"
+          }`}
+        >
           <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="border-b border-black/10 p-3 sm:p-4">
               <SectionHeaderForm icon={Boxes} title="Productos" />
 
-              <div className="mt-2 grid gap-2 xl:grid-cols-[85%_1fr] px-0 grid-cols-[85%_1fr]">
+              <div className="mt-2 grid gap-2 xl:grid-cols-1">
                 <FloatingSelect
                   label="Producto"
                   name="producto"
@@ -574,6 +610,7 @@ export default function PurchaseCreateLocal() {
                   searchPlaceholder="Buscar producto..."
                   emptyMessage="Sin productos"
                   onSearchChange={(text) => setProductQuery(text)}
+                  className="h-12"
                 />
               </div>
             </div>
@@ -910,12 +947,16 @@ export default function PurchaseCreateLocal() {
         }}
         onGoToList={() => {
           setOpenNavigateModal(false);
+          onClose?.();
           navigate("/compras");
         }}
         poId={lastSavedPoId || poId}
         primaryColor={PRIMARY}
         isEdit={isEdit}
       />
-    </PageShell>
+    </>
   );
+
+  if (inModal) return content;
+  return <PageShell>{content}</PageShell>;
 }

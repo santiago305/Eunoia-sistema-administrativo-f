@@ -24,16 +24,17 @@ export const getSidebarItems = (): SidebarItem[] => [
     {
         label: "Compras",
         icon: <IconPurchase className="text-sidebar-foreground" />,
-        children: [
-            {
-                label: "Nueva Compra",
-                href: RoutesPaths.purchase,
-            },
-            {
-                label: "Comprobantes",
-                href: RoutesPaths.purchases,
-            },
-        ],
+        href: RoutesPaths.purchases,
+        // children: [
+        //     {
+        //         label: "Nueva Compra",
+        //         href: RoutesPaths.purchase,
+        //     },
+        //     {
+        //         label: "Comprobantes",
+        //         href: RoutesPaths.purchases,
+        //     },
+        // ],
     },
     {
         label: "Stock",

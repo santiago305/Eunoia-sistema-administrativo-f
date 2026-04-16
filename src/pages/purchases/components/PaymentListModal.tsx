@@ -92,7 +92,7 @@ export function PaymentListModal({
     return () => {
       alive = false;
     };
-  }, [poId, payments]);
+  }, [poId, payments, open]);
 
   useEffect(() => {
     if (payments) setRows(payments);

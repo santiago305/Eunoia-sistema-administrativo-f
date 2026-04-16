@@ -11,6 +11,7 @@ import type {
   UpdatePurchaseOrderActiveDto,
   UpdatePurchaseOrderDto,
 } from "@/pages/purchases/types/purchase";
+import type { PurchaseOrderDetailOutput } from "@/pages/purchases/types/itemPurchaseEdit";
 
 export const createPurchaseOrder = async (
   payload: CreatePurchaseOrderDto
@@ -71,7 +72,7 @@ export const listPurchaseOrderItems = async (id: string): Promise<PurchaseOrderI
   return response.data;
 };
 
-export const getById = async (id: string): Promise<PurchaseOrder> => {
+export const getById = async (id: string): Promise<PurchaseOrderDetailOutput> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.getById(id));
   return response.data;
 };
