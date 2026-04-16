@@ -3,6 +3,7 @@ import { Boxes, FileText, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
+import { FloatingDateTimePicker } from "@/components/date-picker/FloatingDateTimePicker";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
@@ -13,7 +14,7 @@ import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant } from "@/services/catalogService";
 import { createProductionOrder, getProductionOrder, updateProductionOrder } from "@/services/productionService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
-import { money, toDateTimeInputValue, tryShowPicker } from "@/utils/functionPurchases";
+import { money } from "@/utils/functionPurchases";
 import type {
   AddProductionOrderItemDto,
   CreateProductionOrderDto,
@@ -30,12 +31,23 @@ import { RoutesPaths } from "@/router/config/routesPaths";
 
 const PRIMARY = "hsl(var(--primary))";
 
+const toLocalDateTimeString = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+const parseDateValue = (value?: string | null) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const buildEmptyForm = (): CreateProductionOrderDto => ({
   fromWarehouseId: "",
   toWarehouseId: "",
   serieId: "",
   reference: "",
-  manufactureDate: new Date().toISOString(),
+  manufactureDate: toLocalDateTimeString(new Date()),
   items: [],
 });
 
@@ -400,7 +412,7 @@ export default function ProductionCreate() {
         toWarehouseId: data.toWarehouseId ?? "",
         serieId: data.serieId ?? "",
         reference: data.reference ?? "",
-        manufactureDate: data.manufactureDate ?? new Date().toISOString(),
+        manufactureDate: data.manufactureDate ?? toLocalDateTimeString(new Date()),
         items: (data.items ?? []).map((item) => ({
           finishedItemId: item.finishedItemId,
           quantity: item.quantity,
@@ -557,13 +569,17 @@ export default function ProductionCreate() {
                 />
               </div>
 
-              <FloatingInput
+              <FloatingDateTimePicker
                 label="Fecha de culminacion"
                 name="production-manufacture-date"
-                type="datetime-local"
-                value={toDateTimeInputValue(form.manufactureDate)}
-                onClick={(e) => tryShowPicker(e.currentTarget)}
-                onChange={(e) => setForm((prev) => ({ ...prev, manufactureDate: e.target.value }))}
+                value={parseDateValue(form.manufactureDate)}
+                onChange={(date) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    manufactureDate: date ? toLocalDateTimeString(date) : "",
+                  }))
+                }
+                clearable={false}
                 className="h-9 text-xs"
               />
             </div>

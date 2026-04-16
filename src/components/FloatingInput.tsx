@@ -1,11 +1,12 @@
 import { Eye, EyeOff } from "lucide-react";
 import {
   forwardRef,
-  useMemo,
+  useId,
   useState,
   type ChangeEvent,
   type InputHTMLAttributes,
 } from "react";
+import { cn } from "@/lib/utils";
 
 type FloatingInputProps = {
   label: string;
@@ -30,6 +31,9 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
       disabled,
       className = "",
       defaultValue,
+      id,
+      readOnly,
+      "aria-describedby": ariaDescribedBy,
       ...props
     }: FloatingInputProps,
     ref,
@@ -38,35 +42,41 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
     const [uncontrolledValue, setUncontrolledValue] = useState(
       String(defaultValue ?? ""),
     );
+    const generatedId = useId();
+    const inputId = id ?? `${name}-${generatedId}`;
+    const errorId = error ? `${inputId}-error` : undefined;
+    const describedBy = [ariaDescribedBy, errorId].filter(Boolean).join(" ") || undefined;
+    const isControlled = value !== undefined && value !== null;
 
-    const resolvedValue = useMemo(() => {
-      if (value !== undefined && value !== null) return String(value);
-      return uncontrolledValue;
-    }, [uncontrolledValue, value]);
-
+    const resolvedValue = isControlled ? String(value) : uncontrolledValue;
     const hasValue = resolvedValue.trim().length > 0;
     const isPassword = type === "password";
     const isNumber = type === "number";
+    const isReadOnly = Boolean(readOnly);
+    const canTogglePassword = isPassword && !disabled;
 
     return (
-      <div className="w-full min-h-[40px]">
+      <div className="w-full">
         <div className="relative">
           <input
             ref={ref}
-            id={name}
+            id={inputId}
             name={name}
             type={isPassword ? (showPassword ? "text" : "password") : type}
             value={value}
             defaultValue={defaultValue}
             onChange={(event) => {
-              if (value === undefined) {
+              if (!isControlled) {
                 setUncontrolledValue(event.target.value);
               }
               onChange?.(event);
             }}
             disabled={disabled}
+            readOnly={readOnly}
             placeholder=" "
-            className={[
+            aria-invalid={Boolean(error)}
+            aria-describedby={describedBy}
+            className={cn(
               "peer h-10 w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground outline-none transition-all",
               isPassword ? "pr-10" : "",
               isNumber
@@ -75,22 +85,32 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
               error
                 ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200/40"
                 : "border-border focus:border-primary focus:ring-2 focus:ring-primary/30",
-              disabled ? "cursor-not-allowed bg-muted text-muted-foreground" : "",
+              disabled
+                ? "cursor-not-allowed border-border/70 bg-muted text-muted-foreground"
+                : "",
+              isReadOnly
+                ? "cursor-default bg-muted/40 text-foreground"
+                : "",
               className,
-            ].join(" ")}
+            )}
             {...props}
           />
 
           <label
-            htmlFor={name}
-            className={[
-              "pointer-events-none absolute left-3 bg-background px-1 text-xs transition-all duration-200",
-              hasValue ? "top-0 -translate-y-1/2 text-[10px]" : "top-1/2 -translate-y-1/2 text-xs",
-              error
-                ? "text-red-500 peer-focus:text-red-500"
-                : "text-muted-foreground peer-focus:text-primary",
-              "peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[10px]",
-            ].join(" ")}
+            htmlFor={inputId}
+            className={cn(
+              "pointer-events-none absolute left-3 px-1 text-xs transition-all duration-200",
+              disabled ? "bg-muted" : isReadOnly ? "bg-muted/40" : "bg-background",
+              hasValue ? "top-0 -translate-y-1/2 text-[11px]" : "top-1/2 -translate-y-1/2",
+              disabled
+                ? "text-muted-foreground/80 peer-focus:text-muted-foreground/80"
+                : isReadOnly
+                  ? "text-muted-foreground peer-focus:text-muted-foreground"
+                  : error
+                    ? "text-red-500 peer-focus:text-red-500"
+                    : "text-muted-foreground peer-focus:text-primary",
+              "peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[11px]",
+            )}
           >
             {label}
           </label>
@@ -98,8 +118,17 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
           {isPassword ? (
             <button
               type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition hover:text-foreground"
+              onClick={() => {
+                if (!canTogglePassword) return;
+                setShowPassword((prev) => !prev);
+              }}
+              disabled={!canTogglePassword}
+              tabIndex={disabled ? -1 : 0}
+              aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+              className={cn(
+                "absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground transition",
+                canTogglePassword ? "hover:text-foreground" : "cursor-not-allowed opacity-50",
+              )}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -110,7 +139,11 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
           ) : null}
         </div>
 
-        {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+        {error ? (
+          <p id={errorId} className="mt-1 text-xs text-red-600">
+            {error}
+          </p>
+        ) : null}
       </div>
     );
   },
