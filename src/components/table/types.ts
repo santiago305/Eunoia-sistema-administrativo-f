@@ -33,6 +33,15 @@ export type DataTablePaginationMeta = {
     total: number;
 };
 
+export type DataTableRangeDates = {
+    startDate: Date | null;
+    endDate: Date | null;
+    onChange: (range: { startDate: Date | null; endDate: Date | null }) => void;
+    label?: string;
+    name?: string;
+    disabled?: boolean;
+};
+
 export type DataTableSelectionChangeMeta<T> = {
     selectedRows: T[];
     selectedKeys: string[];
@@ -72,6 +81,8 @@ export type DataTableProps<T> = {
     searchValue?: string;
     onSearchChange?: (value: string) => void;
     filters?: ReactNode;
+    filterPopoverContent?: ReactNode;
+    rangeDates?: DataTableRangeDates;
     searchMode?: DataTableSearchMode;
     globalSearchFn?: (row: T, query: string) => boolean;
     stickyHeader?: boolean;

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
-import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -10,11 +8,10 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers } from "@/services/supplierService";
 import { listActiveWarehouses } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
-import { buildMonthStartIso, money, parseDateInputValue, toDateInputValue, toLocalDateKey, todayIso, tryShowPicker } from "@/utils/functionPurchases";
+import { buildMonthStartIso, money, parseDateInputValue, toLocalDateKey, todayIso } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
-import { useNavigate } from "react-router-dom";
 import { SupplierOption } from "../providers/types/supplier";
 import { PurchaseOrder } from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
@@ -63,7 +60,6 @@ type PurchaseRow = {
 
 export default function Purchases() {
     const { showFlash, clearFlash } = useFlashMessage();
-    const navigate = useNavigate();
 
     const [numeroInput, setNumeroInput] = useState("");
     const [debouncedNumero, setDebouncedNumero] = useState("");
@@ -96,6 +92,7 @@ export default function Purchases() {
     const [modalPaymentList, setModalPaymentList] = useState(false);
     const [modalQuotaList, setModalQuotaList] = useState(false);
     const [openPurchaseModal, setOpenPurchaseModal] = useState(false);
+    const [editPoId, setEditPoId] = useState<string | undefined>(undefined);
 
     const [totalPaid, setTotalPaid] = useState(0);
     const [totalToPay, setTotalToPay] = useState(0);
@@ -173,19 +170,6 @@ export default function Purchases() {
       showFlash(errorResponse("Error al cargar almacenes"));
     }
   };
-
-    const resetFilters = () => {
-        setNumeroInput("");
-        setSupplierId("");
-        setWarehouseId("");
-        setDocumentType("");
-        setStatusFilter("");
-        setFromDate(buildMonthStartIso());
-        setToDate(todayIso());
-        setAppliedSupplierSearch("");
-        setAppliedWarehouseSearch("");
-        setPage(1);
-    };
 
     const loadPurchases = async () => {
         clearFlash();
@@ -605,7 +589,12 @@ export default function Purchases() {
                                 id: "edit",
                                 label: "Editar",
                                 icon: <Pencil className="h-4 w-4 text-black/60" />,
-                                onClick: () => navigate(`/compra/${row.purchase.poId}`),
+                                onClick: () => {
+                                    const nextPoId = row.purchase.poId ?? "";
+                                    if (!nextPoId) return;
+                                    setEditPoId(nextPoId);
+                                    setOpenPurchaseModal(true);
+                                },
                             },
                             row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                                 id: "cancel",
@@ -663,7 +652,10 @@ export default function Purchases() {
                         borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                         boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
                         }}
-                        onClick={() => setOpenPurchaseModal(true)}
+                        onClick={() => {
+                            setEditPoId(undefined);
+                            setOpenPurchaseModal(true);
+                        }}
                     >
                         Crear nueva compra
                     </SystemButton>
@@ -679,101 +671,82 @@ export default function Purchases() {
                     hoverable={false}
                     animated={false}
                     selectableColumns
-                    filters={
-                        <>
-                            <div className="grid  grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-[0.1fr_0.1fr_0.7fr_1.2fr_1fr_0.7fr_0.7fr] w-full">
-                                <FloatingInput
-                                    label="Fecha inicio"
-                                    name="from-date"
-                                    type="date"
-                                    value={toDateInputValue(fromDate)}
-                                    onClick={(e) => tryShowPicker(e.currentTarget)}
-                                    onChange={(e) => {
-                                        setFromDate(e.target.value);
-                                        setPage(1);
-                                    }}
-                                    className="h-11 rounded-sm border-border shadow-sm"
-                                />
-                                <FloatingInput
-                                    label="Fecha fin"
-                                    name="to-date"
-                                    type="date"
-                                    value={toDateInputValue(toDate)}
-                                    onClick={(e) => tryShowPicker(e.currentTarget)}
-                                    onChange={(e) => {
-                                        setToDate(e.target.value);
-                                        setPage(1);
-                                    }}
-                                    className="h-11 rounded-sm border-border shadow-sm"
-                                />
-                                <FloatingInput
-                                    label="N. documento"
-                                    name="document-number"
-                                    value={numeroInput}
-                                    onChange={(e) => {
-                                        setNumeroInput(e.target.value);
-                                        setPage(1);
-                                    }}
-                                    className="h-11 rounded-sm border-border shadow-sm"
-                                />
-                                <FloatingSelect
-                                    label="Proveedor"
-                                    name="supplier"
-                                    value={supplierId}
-                                    onChange={(value) => {
-                                        setSupplierId(value);
-                                        setPage(1);
-                                    }}
-                                    options={supplierSelectOptions}
-                                    searchable
-                                    searchPlaceholder="Buscar proveedor..."
-                                    emptyMessage="Sin proveedores"
-                                    onSearchChange={(text) => setAppliedSupplierSearch(text)}
-                                    className="h-11 rounded-sm border-border shadow-sm"
-                                />
-                                <FloatingSelect
-                                    label="Almacen"
-                                    name="warehouse"
-                                    value={warehouseId}
-                                    onChange={(value) => {
-                                        setWarehouseId(value);
-                                        setPage(1);
-                                    }}
-                                    options={warehouseSelectOptions}
-                                    searchable
-                                    searchPlaceholder="Buscar almacén..."
-                                    emptyMessage="Sin almacenes"
-                                    onSearchChange={(text) => setAppliedWarehouseSearch(text)}
-                                    className="h-11 rounded-sm border-border shadow-sm"
-                                />
+                    showSearch
+                    searchMode="server"
+                    searchPlaceholder="N. documento"
+                    searchValue={numeroInput}
+                    onSearchChange={(value) => {
+                        setNumeroInput(value);
+                        setPage(1);
+                    }}
+                    rangeDates={{
+                        startDate: parseDateInputValue(fromDate),
+                        endDate: parseDateInputValue(toDate),
+                        onChange: ({ startDate, endDate }) => {
+                            setFromDate(startDate ? toLocalDateKey(startDate) : "");
+                            setToDate(endDate ? toLocalDateKey(endDate) : "");
+                            setPage(1);
+                        },
+                    }}
+                    filterPopoverContent={
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.2fr_0.7fr_0.6fr_0.5fr]">
+                            <FloatingSelect
+                                label="Proveedor"
+                                name="supplier"
+                                value={supplierId}
+                                onChange={(value) => {
+                                    setSupplierId(value);
+                                    setPage(1);
+                                }}
+                                options={supplierSelectOptions}
+                                searchable
+                                searchPlaceholder="Buscar proveedor..."
+                                emptyMessage="Sin proveedores"
+                                onSearchChange={(text) => setAppliedSupplierSearch(text)}
+                                className="h-11 rounded-sm border-border shadow-sm"
+                            />
+                            <FloatingSelect
+                                label="Almacén"
+                                name="warehouse"
+                                value={warehouseId}
+                                onChange={(value) => {
+                                    setWarehouseId(value);
+                                    setPage(1);
+                                }}
+                                options={warehouseSelectOptions}
+                                searchable
+                                searchPlaceholder="Buscar almacén..."
+                                emptyMessage="Sin almacenes"
+                                onSearchChange={(text) => setAppliedWarehouseSearch(text)}
+                                className="h-11 rounded-sm border-border shadow-sm"
+                            />
 
-                                <FloatingSelect
-                                    label="Tipos"
-                                    name="document-type"
-                                    value={documentType}
-                                    onChange={(value) => {
-                                        setDocumentType(value);
-                                        setPage(1);
-                                    }}
-                                    options={docTypeOptions}
-                                    searchable
-                                    className="h-11 rounded-sm border-border shadow-sm"
-                                />
+                            <FloatingSelect
+                                label="Tipos"
+                                name="document-type"
+                                value={documentType}
+                                onChange={(value) => {
+                                    setDocumentType(value);
+                                    setPage(1);
+                                }}
+                                options={docTypeOptions}
+                                searchable
+                                className="h-11 rounded-sm border-border shadow-sm"
+                            />
 
-                                <FloatingSelect
-                                    label="Estado"
-                                    name="status"
-                                    value={statusFilter}
-                                    onChange={(value) => {
-                                        setStatusFilter(value);
-                                        setPage(1);
-                                    }}
-                                    options={statusOptions}
-                                    searchable
-                                    className="h-11 rounded-sm border-border shadow-sm"
-                                />
-                            </div>
-                        </>
+                            <FloatingSelect
+                                label="Estado"
+                                name="status"
+                                value={statusFilter}
+                                onChange={(value) => {
+                                    setStatusFilter(value);
+                                    setPage(1);
+                                }}
+                                options={statusOptions}
+                                searchable
+                                className="h-11 rounded-sm border-border shadow-sm"
+                            />
+                        </div>
                     }
                     pagination={{
                         page,
@@ -789,7 +762,11 @@ export default function Purchases() {
 
             <PurchaseModal
                 open={openPurchaseModal}
-                onClose={() => setOpenPurchaseModal(false)}
+                poId={editPoId}
+                onClose={() => {
+                    setOpenPurchaseModal(false);
+                    setEditPoId(undefined);
+                }}
                 onSaved={() => loadPurchases()}
             />
             <PaymentModal
