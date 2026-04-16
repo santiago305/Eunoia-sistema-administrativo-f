@@ -26,12 +26,11 @@ import {
 } from "@/utils/functionPurchases";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
-import { RoutesPaths } from "@/router/config/routesPaths";
-import { useNavigate } from "react-router-dom";
 import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -74,7 +73,6 @@ const formatDateTime = (value?: string | null) => {
 
 export default function Production() {
   const { showFlash, clearFlash } = useFlashMessage();
-  const navigate = useNavigate();
 
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProductionStatus>("all");
@@ -82,6 +80,9 @@ export default function Production() {
   const [toDate, setToDate] = useState(() => todayIso());
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
+  const [openFormModal, setOpenFormModal] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [editingProductionId, setEditingProductionId] = useState<string | undefined>(undefined);
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
@@ -204,7 +205,21 @@ export default function Production() {
 
   const handleEdit = (id: string) => {
     if (!id) return;
-    navigate(RoutesPaths.productionEdit.replace(":productionId", encodeURIComponent(id)));
+    setFormMode("edit");
+    setEditingProductionId(id);
+    setOpenFormModal(true);
+  };
+
+  const handleCreate = () => {
+    setFormMode("create");
+    setEditingProductionId(undefined);
+    setOpenFormModal(true);
+  };
+
+  const handleCloseFormModal = () => {
+    setOpenFormModal(false);
+    setEditingProductionId(undefined);
+    setFormMode("create");
   };
 
   const openProductionPdf = (id: string) => {
@@ -476,7 +491,7 @@ export default function Production() {
                 backgroundColor: PRIMARY,
                 borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent) `,
               }}
-              onClick={() => navigate(RoutesPaths.productionCreate)}
+              onClick={handleCreate}
             >
               Orden de produccion
             </SystemButton>
@@ -509,6 +524,18 @@ export default function Production() {
           }}
           title="Orden de produccion"
           getPdf={() => getProductionOrderPdf(selectedProductionId!)}
+          primaryColor={PRIMARY}
+        />
+
+        <ProductionOrderFormModal
+          open={openFormModal}
+          mode={formMode}
+          productionId={editingProductionId}
+          onClose={handleCloseFormModal}
+          onSaved={async () => {
+            handleCloseFormModal();
+            await loadOrders();
+          }}
           primaryColor={PRIMARY}
         />
       </div>

@@ -59,7 +59,7 @@ export const RoutesPaths = {
   company:'/empresa',
   
   //production
-  production:'/Ordenes de produccion',
+  production:'/produccion',
   productionCreate: "/nueva orden de produccion",
   productionEdit: "/nueva orden de produccion/:productionId",
 

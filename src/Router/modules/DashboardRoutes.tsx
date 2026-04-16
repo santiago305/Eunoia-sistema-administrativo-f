@@ -9,7 +9,7 @@
  */
 
 import { lazy, ReactElement } from "react";
-import { RouteObject } from "react-router-dom";
+import { Navigate, RouteObject } from "react-router-dom";
 import PrivateRoute from "../guards/PrivateRoute";
 import { getRouteMetaByPath } from "../config/routesConfig";
 import { RoutesPaths } from "../config/routesPaths";
@@ -50,7 +50,6 @@ const KardexPrima = lazy(() => import("@/pages/row-material/KardexPrima"));
 const KardexFinished = lazy(() => import("@/pages/catalog/KardexFinished"));
 const TransferProduct= lazy(() => import("@/pages/catalog/TransferProducts"));
 const TransferRowMaterial = lazy(() => import("@/pages/row-material/TransferRowMaterial"));
-const ProductionCreate = lazy(() => import("@/pages/production/Production"));
 const OutOrder = lazy(() => import("@/pages/out-orders/OutOrder"));
 const CatalogInventory = lazy(() => import("@/pages/catalog/Inventory"));
 
@@ -202,11 +201,11 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.productionCreate,
-                element: withRouteGuard(RoutesPaths.productionCreate, <ProductionCreate />),
+                element: withRouteGuard(RoutesPaths.productionCreate, <Navigate to={RoutesPaths.production} replace />),
             },
             {
                 path: RoutesPaths.productionEdit,
-                element: withRouteGuard(RoutesPaths.productionEdit, <ProductionCreate />),
+                element: withRouteGuard(RoutesPaths.productionEdit, <Navigate to={RoutesPaths.production} replace />),
             },
             {
                 path: RoutesPaths.outOrder,

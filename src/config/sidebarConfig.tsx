@@ -142,17 +142,8 @@ export const getSidebarItems = (): SidebarItem[] => [
     },
     {
         label: "Producción",
+        href: RoutesPaths.production,
         icon: <IconProduction className="text-sidebar-foreground" />,
-        children: [
-            {
-                label: "Ordenes",
-                href: RoutesPaths.production,
-            },
-            {
-                label: "Crear orden",
-                href: RoutesPaths.productionCreate,
-            }
-        ],
     },
     {
         label: "Almacenes",
