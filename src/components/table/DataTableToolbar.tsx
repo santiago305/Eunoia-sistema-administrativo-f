@@ -1,6 +1,6 @@
 import { FloatingInput } from "@/components/FloatingInput";
 import { AnimatedDateRangePicker } from "@/components/date-picker/AnimatedDateRangePicker";
-import { Popover } from "@/components/modales/Popover";
+import { DataTableFiltersPopover } from "@/components/table/filters";
 import {
   Tooltip,
   TooltipContent,
@@ -8,15 +8,14 @@ import {
 } from "@/components/ui/tooltip";
 import {   ListFilter, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import type { DataTableRangeDates } from "./types";
+import type { DataTableFiltersConfig, DataTableRangeDates } from "./types";
 
 type Props = {
   showSearch?: boolean;
   searchValue: string;
   searchPlaceholder: string;
   onSearchChange: (value: string) => void;
-  filters?: ReactNode;
-  filterPopoverContent?: ReactNode;
+  filtersConfig?: DataTableFiltersConfig;
   rangeDates?: DataTableRangeDates;
   rightContent?: ReactNode;
   selectionInfo?: ReactNode;
@@ -27,8 +26,7 @@ export function DataTableToolbar({
   searchValue,
   searchPlaceholder,
   onSearchChange,
-  filters,
-  filterPopoverContent,
+  filtersConfig,
   rangeDates,
   rightContent,
   selectionInfo,
@@ -38,8 +36,7 @@ export function DataTableToolbar({
 
   if (
     !showSearch &&
-    !filters &&
-    !filterPopoverContent &&
+    !filtersConfig &&
     !rangeDates &&
     !rightContent &&
     !selectionInfo
@@ -50,7 +47,7 @@ export function DataTableToolbar({
   return (
     <div className="relative z-30 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-        {showSearch || filters || filterPopoverContent ? (
+        {showSearch ? (
           <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             {showSearch ? (
               <div className="relative w-full max-w-md">
@@ -75,46 +72,13 @@ export function DataTableToolbar({
                 ) : null}
               </div>
             ) : null}
-
-            {filterPopoverContent ? (
-              <>
-                <button
-                  ref={filtersAnchorRef}
-                  type="button"
-                  aria-expanded={filtersOpen}
-                  aria-haspopup="dialog"
-                  onClick={() => setFiltersOpen((current) => !current)}
-                  className="inline-flex h-11 items-center gap-2 rounded-md border border-border/70 bg-background px-4 text-xs font-medium shadow-sm transition hover:bg-muted/50"
-                >
-                  <ListFilter className="h-4 w-4"/>
-                </button>
-
-                <Popover
-                  open={filtersOpen}
-                  onClose={() => setFiltersOpen(false)}
-                  anchorRef={filtersAnchorRef}
-                  placement="bottom-end"
-                  offset={12}
-                  animation="scale"
-                  title="Filtros"
-                  bodyClassName="w-[min(56rem,calc(100vw-2rem))] p-3"
-                  className="border-border/70 bg-background/95 shadow-2xl backdrop-blur-xl"
-                >
-                  {filterPopoverContent}
-                </Popover>
-              </>
-            ) : null}
-
-            {filters ? (
-              <div className="flex flex-wrap items-center gap-2">{filters}</div>
-            ) : null}
           </div>
         ) : null}
 
         {selectionInfo}
       </div>
 
-      {rangeDates || rightContent ? (
+      {rightContent || filtersConfig || rangeDates ? (
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
           {rangeDates ? (
             <Tooltip delayDuration={0}>
@@ -133,6 +97,39 @@ export function DataTableToolbar({
               </TooltipTrigger>
               <TooltipContent side="bottom">Fechas</TooltipContent>
             </Tooltip>
+          ) : null}
+
+          {filtersConfig ? (
+            <>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <button
+                    ref={filtersAnchorRef}
+                    type="button"
+                    aria-expanded={filtersOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => setFiltersOpen((current) => !current)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border/70 bg-background text-xs font-medium shadow-sm transition hover:bg-muted/50"
+                  >
+                    <ListFilter className="h-4 w-4"/>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Filtros</TooltipContent>
+              </Tooltip>
+
+              <DataTableFiltersPopover
+                open={filtersOpen}
+                anchorRef={filtersAnchorRef}
+                categories={filtersConfig.categories}
+                value={filtersConfig.value}
+                onChange={filtersConfig.onChange}
+                onClose={() => setFiltersOpen(false)}
+                title={filtersConfig.title}
+                minWidth={filtersConfig.minWidth}
+                maxWidth={filtersConfig.maxWidth}
+                emptyMessage={filtersConfig.emptyMessage}
+              />
+            </>
           ) : null}
 
           {rightContent ? <div className="flex items-center justify-end">{rightContent}</div> : null}

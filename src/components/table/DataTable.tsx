@@ -72,8 +72,7 @@ export function DataTable<T extends Record<string, unknown>>({
   searchPlaceholder = "Buscar...",
   searchValue,
   onSearchChange,
-  filters,
-  filterPopoverContent,
+  filtersConfig,
   rangeDates,
   searchMode = "client",
   globalSearchFn,
@@ -363,9 +362,6 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const isRowClickable = !!onRowClick && rowClickable !== false;
-  // Temporalmente desactivados para aislar el ruido del rango de fechas.
-  const disabledFilters = filters ? undefined : undefined;
-  const disabledFilterPopoverContent = filterPopoverContent ? undefined : undefined;
   const resolvedRangeDates = rangeDates
     ? {
         ...rangeDates,
@@ -384,8 +380,7 @@ export function DataTable<T extends Record<string, unknown>>({
           if (controlledSearch) return onSearchChange?.(value);
           setInternalSearch(value);
         }}
-        filters={disabledFilters}
-        filterPopoverContent={disabledFilterPopoverContent}
+        filtersConfig={filtersConfig}
         rangeDates={resolvedRangeDates}
         selectionInfo={
           selectableRows ? (

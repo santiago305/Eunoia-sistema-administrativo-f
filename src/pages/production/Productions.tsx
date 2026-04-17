@@ -1,7 +1,8 @@
 ﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Menu, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck } from "lucide-react";
+import { Menu, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
+import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
 import type { DataTableColumn } from "@/components/table/types";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -15,8 +16,8 @@ import {
 } from "@/services/productionService";
 import { getProductionOrderPdf } from "@/services/pdfServices";
 import {
-  todayIso,
-  buildMonthStartIso,
+  parseDateInputValue,
+  toLocalDateKey,
 } from "@/utils/functionPurchases";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
@@ -24,6 +25,7 @@ import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { SystemButton } from "@/components/SystemButton";
 import { ProductionFilters } from "@/pages/production/components/ProductionFilters";
 import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
 
@@ -98,8 +100,8 @@ export default function Production() {
 
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProductionStatus>("all");
-  const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-  const [toDate, setToDate] = useState(() => todayIso());
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
   const [openFormModal, setOpenFormModal] = useState(false);
@@ -125,6 +127,8 @@ export default function Production() {
   const [page, setPage] = useState(1);
   const limit = DEFAULT_LIMIT;
   const nowIso = useMemo(() => new Date().toISOString(), []);
+  const productionTableFilters = useMemo<DataTableFilterTree>(() => [], []);
+  const productionAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => [], []);
 
   const loadWarehouses = async () => {
     try {
@@ -512,22 +516,30 @@ export default function Production() {
       <PageTitle title="Produccion" />
 
       <div className="space-y-4">
-        <Headed title="Ordenes de Produccion" size="lg" />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <Headed title="Ordenes de Produccion" size="lg" />
+          <SystemButton
+            size="md"
+            className="w-full lg:w-auto"
+            leftIcon={<Plus className="h-4 w-4" />}
+            style={{
+              backgroundColor: PRIMARY,
+              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+            }}
+            onClick={handleCreate}
+          >
+            Nueva orden
+          </SystemButton>
+        </div>
 
         <ProductionFilters
-          fromDate={fromDate}
-          toDate={toDate}
           warehouseId={warehouseId}
           statusFilter={statusFilter}
           selectedProductIds={selectedProductIds}
           warehouseOptions={warehouseOptions}
           statusOptions={statusOptions}
           productOptions={productOptions}
-          onDateRangeChange={({ fromDate: nextFromDate, toDate: nextToDate }) => {
-            setFromDate(nextFromDate);
-            setToDate(nextToDate);
-            setPage(1);
-          }}
           onWarehouseChange={(value) => {
             setWarehouseId(value);
             setPage(1);
@@ -540,8 +552,6 @@ export default function Production() {
             setSelectedProductIds(value);
             setPage(1);
           }}
-          onCreate={handleCreate}
-          primaryColor={PRIMARY}
         />
 
         <DataTable
@@ -557,6 +567,21 @@ export default function Production() {
           showSearch
           searchPlaceholder="Buscar serie, referencia, almacén, producto o estado..."
           globalSearchFn={globalSearchFn}
+          rangeDates={{
+            startDate: parseDateInputValue(fromDate),
+            endDate: parseDateInputValue(toDate),
+            onChange: ({ startDate, endDate }) => {
+              setFromDate(startDate ? toLocalDateKey(startDate) : "");
+              setToDate(endDate ? toLocalDateKey(endDate) : "");
+              setPage(1);
+            },
+          }}
+          filtersConfig={{
+            categories: productionTableFilters,
+            value: productionAppliedFilters,
+            onChange: () => undefined,
+            emptyMessage: "Sin filtros por ahora.",
+          }}
           pagination={{
             page,
             limit,

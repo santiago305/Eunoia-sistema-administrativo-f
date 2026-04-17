@@ -1,4 +1,8 @@
 import type { MouseEvent, ReactNode } from 'react';
+import type {
+    AppliedDataTableFilter,
+    DataTableFilterTree,
+} from './filters/types';
 
 export type DataTablePinned = 'left' | 'right';
 
@@ -43,6 +47,16 @@ export type DataTableRangeDates = {
     panelMinWidth?: number;
 };
 
+export type DataTableFiltersConfig = {
+    categories: DataTableFilterTree;
+    value: AppliedDataTableFilter[];
+    onChange: (next: AppliedDataTableFilter[]) => void;
+    title?: string;
+    maxWidth?: number;
+    minWidth?: number;
+    emptyMessage?: string;
+};
+
 export type DataTableSelectionChangeMeta<T> = {
     selectedRows: T[];
     selectedKeys: string[];
@@ -81,8 +95,7 @@ export type DataTableProps<T> = {
     searchPlaceholder?: string;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
-    filters?: ReactNode;
-    filterPopoverContent?: ReactNode;
+    filtersConfig?: DataTableFiltersConfig;
     rangeDates?: DataTableRangeDates;
     searchMode?: DataTableSearchMode;
     globalSearchFn?: (row: T, query: string) => boolean;

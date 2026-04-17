@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingSelect } from "@/components/FloatingSelect";
 import { DataTable } from "@/components/table/DataTable";
+import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
 import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
@@ -336,6 +336,170 @@ export default function Purchases() {
         [warehouseOptions],
     );
 
+    const purchaseTableFilters = useMemo<DataTableFilterTree>(() => {
+        const supplierFilterOptions = supplierSelectOptions
+            .filter((option) => option.value)
+            .map((option) => ({
+                id: option.value,
+                label: option.label,
+            }));
+
+        const warehouseFilterOptions = warehouseSelectOptions
+            .filter((option) => option.value)
+            .map((option) => ({
+                id: option.value,
+                label: option.label,
+            }));
+
+        const documentTypeFilterOptions = docTypeOptions
+            .filter((option) => option.value)
+            .map((option) => ({
+                id: option.value,
+                label: option.label,
+            }));
+
+        const statusFilterOptions = statusOptions
+            .filter((option) => option.value)
+            .map((option) => ({
+                id: option.value,
+                label: option.label,
+            }));
+
+        return [
+            {
+                id: "supplier",
+                label: "Proveedor",
+                modes: [
+                    {
+                        id: "select",
+                        label: "Seleccionar",
+                        groups: [
+                            {
+                                id: "options",
+                                label: "Proveedores",
+                                searchable: true,
+                                options: supplierFilterOptions,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                id: "warehouse",
+                label: "Almacén",
+                modes: [
+                    {
+                        id: "select",
+                        label: "Seleccionar",
+                        groups: [
+                            {
+                                id: "options",
+                                label: "Almacenes",
+                                searchable: true,
+                                options: warehouseFilterOptions,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                id: "documentType",
+                label: "Tipo",
+                modes: [
+                    {
+                        id: "select",
+                        label: "Seleccionar",
+                        groups: [
+                            {
+                                id: "options",
+                                label: "Tipos",
+                                options: documentTypeFilterOptions,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                id: "status",
+                label: "Estado",
+                modes: [
+                    {
+                        id: "select",
+                        label: "Seleccionar",
+                        groups: [
+                            {
+                                id: "options",
+                                label: "Estados",
+                                options: statusFilterOptions,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ];
+    }, [docTypeOptions, statusOptions, supplierSelectOptions, warehouseSelectOptions]);
+
+    const purchaseAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => {
+        const filters: AppliedDataTableFilter[] = [];
+
+        if (supplierId) {
+            filters.push({
+                id: "supplier:select:options",
+                categoryId: "supplier",
+                modeId: "select",
+                groupId: "options",
+                operator: "OR",
+                optionIds: [supplierId],
+            });
+        }
+
+        if (warehouseId) {
+            filters.push({
+                id: "warehouse:select:options",
+                categoryId: "warehouse",
+                modeId: "select",
+                groupId: "options",
+                operator: "OR",
+                optionIds: [warehouseId],
+            });
+        }
+
+        if (documentType) {
+            filters.push({
+                id: "documentType:select:options",
+                categoryId: "documentType",
+                modeId: "select",
+                groupId: "options",
+                operator: "OR",
+                optionIds: [documentType],
+            });
+        }
+
+        if (statusFilter) {
+            filters.push({
+                id: "status:select:options",
+                categoryId: "status",
+                modeId: "select",
+                groupId: "options",
+                operator: "OR",
+                optionIds: [statusFilter],
+            });
+        }
+
+        return filters;
+    }, [documentType, statusFilter, supplierId, warehouseId]);
+
+    const handlePurchaseFiltersChange = useCallback((next: AppliedDataTableFilter[]) => {
+        const getFirstOption = (categoryId: string) =>
+            next.find((item) => item.categoryId === categoryId)?.optionIds[0] ?? "";
+
+        setSupplierId(getFirstOption("supplier"));
+        setWarehouseId(getFirstOption("warehouse"));
+        setDocumentType(getFirstOption("documentType"));
+        setStatusFilter(getFirstOption("status"));
+        setPage(1);
+    }, []);
+
     const purchaseRows = useMemo<PurchaseRow[]>(
         () =>
             purchases.map((purchase) => {
@@ -669,7 +833,7 @@ export default function Purchases() {
                             setOpenPurchaseModal(true);
                         }}
                     >
-                        Crear nueva compra
+                        Nueva compra
                     </SystemButton>
                 </div>
 
@@ -700,66 +864,11 @@ export default function Purchases() {
                             setPage(1);
                         },
                     }}
-                    filterPopoverContent={
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.2fr_0.7fr_0.6fr_0.5fr]">
-                            <FloatingSelect
-                                label="Proveedor"
-                                name="supplier"
-                                value={supplierId}
-                                onChange={(value) => {
-                                    setSupplierId(value);
-                                    setPage(1);
-                                }}
-                                options={supplierSelectOptions}
-                                searchable
-                                searchPlaceholder="Buscar proveedor..."
-                                emptyMessage="Sin proveedores"
-                                onSearchChange={(text) => setAppliedSupplierSearch(text)}
-                                className="h-11 rounded-sm border-border shadow-sm"
-                            />
-                            <FloatingSelect
-                                label="Almacén"
-                                name="warehouse"
-                                value={warehouseId}
-                                onChange={(value) => {
-                                    setWarehouseId(value);
-                                    setPage(1);
-                                }}
-                                options={warehouseSelectOptions}
-                                searchable
-                                searchPlaceholder="Buscar almacén..."
-                                emptyMessage="Sin almacenes"
-                                onSearchChange={(text) => setAppliedWarehouseSearch(text)}
-                                className="h-11 rounded-sm border-border shadow-sm"
-                            />
-
-                            <FloatingSelect
-                                label="Tipos"
-                                name="document-type"
-                                value={documentType}
-                                onChange={(value) => {
-                                    setDocumentType(value);
-                                    setPage(1);
-                                }}
-                                options={docTypeOptions}
-                                searchable
-                                className="h-11 rounded-sm border-border shadow-sm"
-                            />
-
-                            <FloatingSelect
-                                label="Estado"
-                                name="status"
-                                value={statusFilter}
-                                onChange={(value) => {
-                                    setStatusFilter(value);
-                                    setPage(1);
-                                }}
-                                options={statusOptions}
-                                searchable
-                                className="h-11 rounded-sm border-border shadow-sm"
-                            />
-                        </div>
-                    }
+                    filtersConfig={{
+                        categories: purchaseTableFilters,
+                        value: purchaseAppliedFilters,
+                        onChange: handlePurchaseFiltersChange,
+                    }}
                     pagination={{
                         page,
                         limit,
