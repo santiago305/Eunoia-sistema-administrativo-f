@@ -1,6 +1,11 @@
 import { FloatingInput } from "@/components/FloatingInput";
 import { AnimatedDateRangePicker } from "@/components/date-picker/AnimatedDateRangePicker";
 import { Popover } from "@/components/modales/Popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {   ListFilter, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import type { DataTableRangeDates } from "./types";
@@ -112,17 +117,22 @@ export function DataTableToolbar({
       {rangeDates || rightContent ? (
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
           {rangeDates ? (
-            <div className="flex justify-end">
-              <AnimatedDateRangePicker
-                label={rangeDates.label ?? "rangeDates"}
-                name={rangeDates.name ?? "datatable-rangeDates"}
-                startDate={rangeDates.startDate}
-                endDate={rangeDates.endDate}
-                onChange={rangeDates.onChange}
-                disabled={rangeDates.disabled}
-                className="h-11 rounded-md border-border/70 px-3 text-xs shadow-sm"
-              />
-            </div>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <div className="flex justify-end">
+                  <AnimatedDateRangePicker
+                    label={rangeDates.label ?? "rangeDates"}
+                    name={rangeDates.name ?? "datatable-rangeDates"}
+                    startDate={rangeDates.startDate}
+                    endDate={rangeDates.endDate}
+                    onChange={rangeDates.onChange}
+                    disabled={rangeDates.disabled}
+                    className="h-11 rounded-md border-border/70 px-3 text-xs shadow-sm"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Fechas</TooltipContent>
+            </Tooltip>
           ) : null}
 
           {rightContent ? <div className="flex items-center justify-end">{rightContent}</div> : null}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { DataTable } from "@/components/table/DataTable";
@@ -8,7 +8,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers } from "@/services/supplierService";
 import { listActiveWarehouses } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
-import { buildMonthStartIso, money, parseDateInputValue, toLocalDateKey, todayIso } from "@/utils/functionPurchases";
+import { money, parseDateInputValue, toLocalDateKey } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -67,8 +67,8 @@ export default function Purchases() {
     const [warehouseId, setWarehouseId] = useState("");
     const [documentType, setDocumentType] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
-    const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-    const [toDate, setToDate] = useState(() => todayIso());
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
     const [page, setPage] = useState(1);
     const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
     const [appliedWarehouseSearch, setAppliedWarehouseSearch] = useState("");
@@ -126,7 +126,7 @@ export default function Purchases() {
         return () => clearTimeout(t);
     }, [numeroInput]);
 
-    const loadSuppliers = async (appliedSearch: string) => {
+    const loadSuppliers = useCallback(async (appliedSearch: string) => {
         clearFlash();
         try {
           const res = await listSuppliers({
@@ -153,9 +153,9 @@ export default function Purchases() {
           setSupplierOptions([]);
           showFlash(errorResponse("Error al cargar proveedores"));
         }
-    };
+    }, [clearFlash, showFlash]);
 
-    const loadWarehouses = async (q:string) => {
+    const loadWarehouses = useCallback(async (q:string) => {
     clearFlash();
     try {
       const res = await listActiveWarehouses({ page: 1, limit: 100, q });
@@ -169,9 +169,9 @@ export default function Purchases() {
       setWarehouseOptions([]);
       showFlash(errorResponse("Error al cargar almacenes"));
     }
-  };
+  }, [clearFlash, showFlash]);
 
-    const loadPurchases = async () => {
+    const loadPurchases = useCallback(async () => {
         clearFlash();
         setLoading(true);
         setError(null);
@@ -215,7 +215,19 @@ export default function Purchases() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [
+        clearFlash,
+        debouncedNumero,
+        documentType,
+        fromDate,
+        limit,
+        page,
+        showFlash,
+        statusFilter,
+        supplierId,
+        toDate,
+        warehouseId,
+    ]);
 
     const setSent = async (id: string) => {
         clearFlash();
@@ -273,15 +285,15 @@ export default function Purchases() {
 
     useEffect(() => {
         void loadWarehouses(appliedWarehouseSearch);
-    }, [appliedWarehouseSearch]);
+    }, [appliedWarehouseSearch, loadWarehouses]);
     
     useEffect(() => {
         void loadSuppliers(appliedSupplierSearch);
-    }, [appliedSupplierSearch]);
+    }, [appliedSupplierSearch, loadSuppliers]);
 
     useEffect(() => {
         void loadPurchases();
-    }, [page, debouncedNumero, supplierId, warehouseId, documentType, statusFilter, fromDate, toDate]);
+    }, [loadPurchases]);
 
     const now = new Date().toISOString();
 
