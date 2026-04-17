@@ -1,5 +1,5 @@
 import { FloatingInput } from "@/components/FloatingInput";
-import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
+import { AnimatedDateRangePicker } from "@/components/date-picker/AnimatedDateRangePicker";
 import { Popover } from "@/components/modales/Popover";
 import {   ListFilter, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
@@ -45,7 +45,7 @@ export function DataTableToolbar({
   return (
     <div className="relative z-30 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-        {showSearch || filters || filterPopoverContent || rangeDates ? (
+        {showSearch || filters || filterPopoverContent ? (
           <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             {showSearch ? (
               <div className="relative w-full max-w-md">
@@ -68,21 +68,6 @@ export function DataTableToolbar({
                     <X className="h-4 w-4" />
                   </button>
                 ) : null}
-              </div>
-            ) : null}
-
-            {rangeDates ? (
-              <div className="w-full sm:w-[min(22rem,calc(100vw-2rem))]">
-                <FloatingDateRangePicker
-                  label={rangeDates.label ?? "rangeDates"}
-                  name={rangeDates.name ?? "datatable-rangeDates"}
-                  startDate={rangeDates.startDate}
-                  endDate={rangeDates.endDate}
-                  onChange={rangeDates.onChange}
-                  disabled={rangeDates.disabled}
-                  panelMinWidth={rangeDates.panelMinWidth}
-                  className="h-11 rounded-md border-border/70 px-3 text-xs shadow-sm"
-                />
               </div>
             ) : null}
 
@@ -124,7 +109,25 @@ export function DataTableToolbar({
         {selectionInfo}
       </div>
 
-      {rightContent ? <div className="flex items-center justify-end">{rightContent}</div> : null}
+      {rangeDates || rightContent ? (
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+          {rangeDates ? (
+            <div className="flex justify-end">
+              <AnimatedDateRangePicker
+                label={rangeDates.label ?? "rangeDates"}
+                name={rangeDates.name ?? "datatable-rangeDates"}
+                startDate={rangeDates.startDate}
+                endDate={rangeDates.endDate}
+                onChange={rangeDates.onChange}
+                disabled={rangeDates.disabled}
+                className="h-11 rounded-md border-border/70 px-3 text-xs shadow-sm"
+              />
+            </div>
+          ) : null}
+
+          {rightContent ? <div className="flex items-center justify-end">{rightContent}</div> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

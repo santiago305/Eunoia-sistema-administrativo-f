@@ -1,4 +1,9 @@
 import { Popover } from "@/components/modales/Popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Eye, EyeOff, GripVertical, Pin, RotateCcw, Settings2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import type { DataTableColumnManagerItem } from "./types";
@@ -36,22 +41,27 @@ export function DataTableColumnManager({
 
   return (
     <div className="relative z-80 inline-block">
-      <button
-        ref={buttonRef}
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        onClick={() => setOpen((current) => !current)}
-        className={cn(
-          "inline-flex h-11 items-center gap-2 rounded-md border px-4 text-xs font-medium shadow-sm transition",
-          open
-            ? "border-primary/30 bg-primary/5 text-foreground"
-            : "border-border/70 bg-background text-foreground hover:bg-muted/50",
-        )}
-      >
-        <Settings2 className="h-4 w-4" />
-        columnas
-      </button>
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <button
+            ref={buttonRef}
+            type="button"
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            aria-label="Columnas"
+            onClick={() => setOpen((current) => !current)}
+            className={cn(
+              "inline-flex h-11 w-11 items-center justify-center rounded-md border text-xs font-medium shadow-sm transition",
+              open
+                ? "border-primary/30 bg-primary/5 text-foreground"
+                : "border-border/70 bg-background text-foreground hover:bg-muted/50",
+            )}
+          >
+            <Settings2 className="h-4 w-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Columnas</TooltipContent>
+      </Tooltip>
 
       <Popover
         open={open}

@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { CalendarClock } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -7,7 +8,7 @@ import { DatePickerPanelPortal } from "./DatePickerPanelPortal";
 import { formatDateTime, setTimeParts } from "./dateUtils";
 import { useFloatingDatePanel } from "./useFloatingDatePanel";
 
-type FloatingDateTimePickerProps = {
+type AnimatedDateTimePickerProps = {
   label: string;
   name: string;
   value?: Date | null;
@@ -23,9 +24,11 @@ type FloatingDateTimePickerProps = {
   disablePast?: boolean;
   disableFuture?: boolean;
   clearable?: boolean;
+  collapsedWidth?: number;
+  expandedWidth?: number;
 };
 
-export function FloatingDateTimePicker({
+export function AnimatedDateTimePicker({
   label,
   name,
   value,
@@ -41,9 +44,12 @@ export function FloatingDateTimePicker({
   disablePast,
   disableFuture,
   clearable = true,
-}: FloatingDateTimePickerProps) {
+  collapsedWidth = 42,
+  expandedWidth = 280,
+}: AnimatedDateTimePickerProps) {
   const [monthDate, setMonthDate] = useState<Date>(value ?? new Date());
   const [draftDate, setDraftDate] = useState<Date>(value ?? new Date());
+  const [expanded, setExpanded] = useState(Boolean(value));
 
   const labelId = useId();
   const panelId = useId();
@@ -56,8 +62,8 @@ export function FloatingDateTimePicker({
     triggerRef,
     panelRef,
     canOpen,
-    togglePanel,
     closePanel,
+    openPanel,
   } = useFloatingDatePanel({
     disabled,
     readOnly,
@@ -69,16 +75,25 @@ export function FloatingDateTimePicker({
   const hasValue = displayValue.trim().length > 0;
 
   useEffect(() => {
-    if (!open) return;
-    const base = value ?? new Date();
-    setMonthDate(base);
-    setDraftDate(base);
+    if (open) {
+      const base = value ?? new Date();
+      setMonthDate(base);
+      setDraftDate(base);
+      setExpanded(true);
+    }
   }, [open, value]);
 
+  const handleClose = () => {
+    closePanel();
+    if (!hasValue) {
+      setExpanded(false);
+    }
+  };
+
   return (
-    <div ref={rootRef} className={cn("w-full", containerClassName)}>
+    <div ref={rootRef} className={cn("w-fit", containerClassName)}>
       <div className="relative">
-        <button
+        <motion.button
           ref={triggerRef}
           type="button"
           id={name}
@@ -86,12 +101,15 @@ export function FloatingDateTimePicker({
           disabled={disabled}
           onClick={() => {
             if (!canOpen) return;
-            togglePanel();
+            setExpanded(true);
+            openPanel();
           }}
+          animate={{ width: expanded || hasValue ? expandedWidth : collapsedWidth }}
+          transition={{ type: "spring", stiffness: 340, damping: 28 }}
           className={cn(
-            "peer relative flex h-10 w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-left text-sm text-foreground outline-none transition-all",
+            "peer relative flex h-10 items-center gap-2 overflow-hidden rounded-lg border bg-background px-3 text-left text-sm text-foreground outline-none transition-all",
             error
-              ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200/40"
+              ? "border-red-500 ring-2 ring-red-200/40"
               : open
                 ? "border-primary ring-2 ring-primary/30"
                 : "border-border",
@@ -105,37 +123,28 @@ export function FloatingDateTimePicker({
           aria-describedby={error ? errorId : undefined}
           aria-labelledby={labelId}
         >
-          <span
-            className={cn(
-              "truncate pr-2",
-              hasValue ? "text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {displayValue || placeholder}
-          </span>
-
           <CalendarClock className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </button>
 
-        <label
-          id={labelId}
-          className={cn(
-            "pointer-events-none absolute left-3 px-1 text-xs transition-all duration-200",
-            disabled ? "bg-muted" : readOnly ? "bg-muted/40" : "bg-background",
-            hasValue || open
-              ? "top-0 -translate-y-1/2 text-[11px]"
-              : "top-1/2 -translate-y-1/2",
-            disabled
-              ? "text-muted-foreground/80"
-              : readOnly
-                ? "text-muted-foreground"
-                : error
-                  ? "text-red-500"
-                  : open
-                    ? "text-primary"
-                    : "text-muted-foreground",
-          )}
-        >
+          <AnimatePresence initial={false}>
+            {(expanded || hasValue) ? (
+              <motion.span
+                key="content"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.16 }}
+                className={cn(
+                  "truncate pr-1",
+                  hasValue ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {displayValue || placeholder}
+              </motion.span>
+            ) : null}
+          </AnimatePresence>
+        </motion.button>
+
+        <label id={labelId} className="sr-only">
           {label}
         </label>
       </div>
@@ -184,6 +193,7 @@ export function FloatingDateTimePicker({
                     setMonthDate(now);
                     onChange(now);
                     closePanel();
+                    setExpanded(true);
                   }}
                 >
                   Ahora
@@ -197,7 +207,7 @@ export function FloatingDateTimePicker({
                     className="text-muted-foreground hover:text-foreground"
                     onClick={() => {
                       onChange(null);
-                      closePanel();
+                      handleClose();
                     }}
                   >
                     Limpiar
@@ -212,6 +222,7 @@ export function FloatingDateTimePicker({
                 onClick={() => {
                   onChange(draftDate);
                   closePanel();
+                  setExpanded(true);
                 }}
               >
                 Aplicar
