@@ -40,6 +40,7 @@ type CalendarPanelProps = {
   timeValue?: Date | null;
   onTimeChange?: (date: Date) => void;
   footer?: React.ReactNode;
+  className?: string;
 };
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
@@ -70,6 +71,7 @@ export function CalendarPanel({
   timeValue,
   onTimeChange,
   footer,
+  className,
 }: CalendarPanelProps) {
   const [view, setView] = useState<CalendarView>("day");
   const [yearPage, setYearPage] = useState(monthDate.getFullYear());
@@ -154,7 +156,10 @@ export function CalendarPanel({
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="w-[320px] overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-floating-panel"
+      className={cn(
+        "w-full overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-floating-panel",
+        className,
+      )}
     >
       <div className="flex items-center justify-between border-b border-border px-3 py-3">
         <button

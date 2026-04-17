@@ -39,6 +39,7 @@ type FloatingDateRangePickerProps = {
   disableFuture?: boolean;
   clearable?: boolean;
   closeOnComplete?: boolean;
+  panelMinWidth?: number;
 };
 
 export function FloatingDateRangePicker({
@@ -59,9 +60,22 @@ export function FloatingDateRangePicker({
   disableFuture,
   clearable = true,
   closeOnComplete = true,
+  panelMinWidth = 320,
 }: FloatingDateRangePickerProps) {
+  const hiddenPanelStyle = useMemo<CSSProperties>(
+    () => ({
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: panelMinWidth,
+      visibility: "hidden",
+      pointerEvents: "none",
+      zIndex: UI_LAYERS.floatingSelect,
+    }),
+    [panelMinWidth],
+  );
   const [open, setOpen] = useState(false);
-  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>(hiddenPanelStyle);
   const [monthDate, setMonthDate] = useState<Date>(startDate ?? new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
 
@@ -97,7 +111,7 @@ export function FloatingDateRangePicker({
     const rect = triggerEl.getBoundingClientRect();
     const spacing = 8;
     const viewportPadding = 8;
-    const width = Math.max(rect.width, 320);
+    const width = Math.max(rect.width, panelMinWidth);
     const spaceBelow = window.innerHeight - rect.bottom - spacing - viewportPadding;
     const spaceAbove = rect.top - spacing - viewportPadding;
     const openAbove = spaceBelow < 340 && spaceAbove > spaceBelow;
@@ -116,9 +130,17 @@ export function FloatingDateRangePicker({
       top,
       left,
       width,
+      visibility: "visible",
+      pointerEvents: "auto",
       zIndex: UI_LAYERS.floatingSelect,
     });
-  }, [closePanel]);
+  }, [closePanel, panelMinWidth]);
+
+  useEffect(() => {
+    if (!open) {
+      setPanelStyle(hiddenPanelStyle);
+    }
+  }, [hiddenPanelStyle, open]);
 
   useEffect(() => {
     const handleOutside = (event: MouseEvent) => {
@@ -257,6 +279,7 @@ export function FloatingDateRangePicker({
               ) : null}
             </div>
           }
+          className="w-full"
         />
       </div>
     ) : null;
@@ -278,6 +301,7 @@ export function FloatingDateRangePicker({
             }
             dispatchCloseAllFloatingSelects();
             dispatchCloseAllFloatingDates();
+            setPanelStyle(hiddenPanelStyle);
             setOpen(true);
           }}
           className={cn(

@@ -40,6 +40,7 @@ export type DataTableRangeDates = {
     label?: string;
     name?: string;
     disabled?: boolean;
+    panelMinWidth?: number;
 };
 
 export type DataTableSelectionChangeMeta<T> = {

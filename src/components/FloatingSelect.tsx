@@ -218,7 +218,7 @@ export function FloatingSelect({
         }
       });
     }
-  }, [updatePanelPosition]);
+  }, [searchable, updatePanelPosition]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -292,7 +292,6 @@ export function FloatingSelect({
     mutationObserver.observe(document.body, {
       childList: true,
       subtree: true,
-      attributes: true,
     });
 
     window.addEventListener("resize", handleViewportChange);
