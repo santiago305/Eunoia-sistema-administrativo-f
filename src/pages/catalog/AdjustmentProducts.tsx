@@ -104,17 +104,24 @@ export default function AdjustmentProducts() {
             return;
         }
         try {
-            const res = await listDocumentSeries({ warehouseId, docType: DocType.ADJUSTMENT, isActive: true });
-            if (!res?.length) {
+            const response = await listDocumentSeries({
+                warehouseId,
+                docType: DocType.ADJUSTMENT,
+                isActive: true,
+            });
+            const seriesList = Array.isArray(response) ? response : response ? [response] : [];
+
+            if (seriesList.length === 0) {
                 setSerie({ value: "", label: "" });
                 setForm((prev) => ({ ...prev, serieId: "" }));
                 return;
             }
-            const nextSerie = res[0];
+            const nextSerie = seriesList[0];
             const nextNumber = Number(nextSerie.nextNumber ?? 0);
+            const paddedNumber = String(nextNumber).padStart(Number(nextSerie.padding ?? 0), "0");
             setSerie({
                 value: nextSerie.id,
-                label: `${nextSerie.code}-${nextNumber}`,
+                label: `${nextSerie.code}${nextSerie.separator ?? "-"}${paddedNumber}`,
             });
             setForm((prev) => ({ ...prev, serieId: nextSerie.id }));
         } catch {
