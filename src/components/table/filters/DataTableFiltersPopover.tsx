@@ -141,14 +141,50 @@ export function DataTableFiltersPopover({
       window.innerWidth - width - VIEWPORT_PADDING,
     );
 
+    console.log("[DataTableFiltersPopover] updatePosition", {
+      isExpanded,
+      activeCategoryId,
+      activeGroupId,
+      anchorRect: {
+        top: anchorRect.top,
+        right: anchorRect.right,
+        bottom: anchorRect.bottom,
+        left: anchorRect.left,
+        width: anchorRect.width,
+        height: anchorRect.height,
+      },
+      panelRect: {
+        top: panelRect.top,
+        right: panelRect.right,
+        bottom: panelRect.bottom,
+        left: panelRect.left,
+        width: panelRect.width,
+        height: panelRect.height,
+      },
+      maxAllowedWidth,
+      computed: {
+        width,
+        preferredLeft,
+        left,
+        top,
+      },
+    });
+
     setPosition((previous) => {
+      if (previous.ready) {
+        console.log("[DataTableFiltersPopover] position transition", {
+          previous,
+          next: { top, left, ready: true },
+        });
+      }
+
       if (previous.ready && previous.top === top && previous.left === left) {
         return previous;
       }
 
       return { top, left, ready: true };
     });
-  }, [anchorRef, maxWidth]);
+  }, [activeCategoryId, activeGroupId, anchorRef, isExpanded, maxWidth]);
 
   useLayoutEffect(() => {
     if (!open) return;
