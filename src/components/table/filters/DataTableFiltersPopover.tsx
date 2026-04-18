@@ -27,7 +27,7 @@ import {
 
 type PositionState = {
   top: number;
-  left: number;
+  right: number;
   ready: boolean;
 };
 
@@ -51,7 +51,7 @@ export function DataTableFiltersPopover({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState<PositionState>({
     top: 0,
-    left: 0,
+    right: 0,
     ready: false,
   });
   const [draftFilters, setDraftFilters] = useState<AppliedDataTableFilter[]>([]);
@@ -128,63 +128,28 @@ export function DataTableFiltersPopover({
       maxWidth ?? Number.POSITIVE_INFINITY,
       window.innerWidth - VIEWPORT_PADDING * 2,
     );
-    const width = Math.min(panelRect.width || anchorRect.width, maxAllowedWidth);
+    const width = Math.min(panel.offsetWidth || anchorRect.width, maxAllowedWidth);
+    const height = panel.offsetHeight || panelRect.height;
     const top = clamp(
       anchorRect.bottom + 10,
       VIEWPORT_PADDING,
-      window.innerHeight - panelRect.height - VIEWPORT_PADDING,
+      window.innerHeight - height - VIEWPORT_PADDING,
     );
-    const preferredLeft = anchorRect.right - width;
-    const left = clamp(
-      preferredLeft,
+    const preferredRight = window.innerWidth - anchorRect.right;
+    const right = clamp(
+      preferredRight,
       VIEWPORT_PADDING,
       window.innerWidth - width - VIEWPORT_PADDING,
     );
 
-    console.log("[DataTableFiltersPopover] updatePosition", {
-      isExpanded,
-      activeCategoryId,
-      activeGroupId,
-      anchorRect: {
-        top: anchorRect.top,
-        right: anchorRect.right,
-        bottom: anchorRect.bottom,
-        left: anchorRect.left,
-        width: anchorRect.width,
-        height: anchorRect.height,
-      },
-      panelRect: {
-        top: panelRect.top,
-        right: panelRect.right,
-        bottom: panelRect.bottom,
-        left: panelRect.left,
-        width: panelRect.width,
-        height: panelRect.height,
-      },
-      maxAllowedWidth,
-      computed: {
-        width,
-        preferredLeft,
-        left,
-        top,
-      },
-    });
-
     setPosition((previous) => {
-      if (previous.ready) {
-        console.log("[DataTableFiltersPopover] position transition", {
-          previous,
-          next: { top, left, ready: true },
-        });
-      }
-
-      if (previous.ready && previous.top === top && previous.left === left) {
+      if (previous.ready && previous.top === top && previous.right === right) {
         return previous;
       }
 
-      return { top, left, ready: true };
+      return { top, right, ready: true };
     });
-  }, [activeCategoryId, activeGroupId, anchorRef, isExpanded, maxWidth]);
+  }, [anchorRef, maxWidth]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -200,6 +165,24 @@ export function DataTableFiltersPopover({
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
+    };
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let animationFrame = 0;
+
+    // Keep the popover attached while surrounding layout transitions move the anchor.
+    const trackAnchorPosition = () => {
+      updatePosition();
+      animationFrame = requestAnimationFrame(trackAnchorPosition);
+    };
+
+    animationFrame = requestAnimationFrame(trackAnchorPosition);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
     };
   }, [open, updatePosition]);
 
@@ -248,7 +231,7 @@ export function DataTableFiltersPopover({
 
   useEffect(() => {
     if (!open) {
-      setPosition({ top: 0, left: 0, ready: false });
+      setPosition({ top: 0, right: 0, ready: false });
     }
   }, [open]);
 
@@ -348,14 +331,14 @@ export function DataTableFiltersPopover({
         exit={{ opacity: 0, scale: 0.985, y: 6 }}
         transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "fixed overflow-hidden rounded-2xl border border-border/70 bg-background text-foreground shadow-2xl",
+          "fixed origin-top-right overflow-hidden rounded-2xl border border-border/70 bg-background text-foreground shadow-2xl",
           "flex max-h-[calc(100vh-1rem)] flex-col",
           isExpanded || draftFilters.length > 0 ? "min-h-[20rem]" : "min-h-[14rem]",
         )}
         style={{
           zIndex: UI_LAYERS.popover + 5,
           top: position.top,
-          left: position.left,
+          right: position.right,
           maxWidth: maxWidth
             ? `min(${maxWidth}px, calc(100vw - 1rem))`
             : "calc(100vw - 1rem)",
