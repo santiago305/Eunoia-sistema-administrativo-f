@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Funnel, RotateCcw, X } from "lucide-react";
+import { Check, RotateCcw } from "lucide-react";
 import { createPortal } from "react-dom";
 import {
   useCallback,
@@ -32,8 +32,6 @@ type PositionState = {
 };
 
 const VIEWPORT_PADDING = 8;
-const DEFAULT_MIN_WIDTH = 860;
-const DEFAULT_MAX_WIDTH = 1120;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(value, max));
@@ -46,24 +44,20 @@ export function DataTableFiltersPopover({
   value,
   onChange,
   onClose,
-  title = "Filtros",
-  minWidth = DEFAULT_MIN_WIDTH,
-  maxWidth = DEFAULT_MAX_WIDTH,
+  minWidth,
+  maxWidth,
   emptyMessage = "Sin resultados",
 }: DataTableFiltersPopoverProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const initialMountRef = useRef(true);
-
   const [position, setPosition] = useState<PositionState>({
     top: 0,
     left: 0,
     ready: false,
   });
-
   const [draftFilters, setDraftFilters] = useState<AppliedDataTableFilter[]>([]);
 
   const {
-    activeMode,
+    activeCategory,
     activeGroup,
     activeCategoryId,
     activeModeId,
@@ -72,45 +66,40 @@ export function DataTableFiltersPopover({
     setOperator,
     selectedOptionIds,
     categoryItems,
-    modeItems,
-    groupItems,
     optionItems,
-    groupSearch,
-    setGroupSearch,
     optionSearch,
     setOptionSearch,
     selectCategory,
-    selectMode,
-    selectGroup,
     toggleOption,
     resetDraftToPath,
   } = useCascadingFiltersNavigation({
     open,
     categories,
-    value: draftFilters.length > 0 ? draftFilters : value,
+    value: draftFilters,
   });
 
   useEffect(() => {
     if (!open) return;
     setDraftFilters(cloneAppliedFilters(value));
-    initialMountRef.current = true;
   }, [open, value]);
 
-  const currentFilterId = useMemo(() => {
-    return buildAppliedFilterId({
-      categoryId: activeCategoryId,
-      modeId: activeModeId,
-      groupId: activeGroupId,
-    });
-  }, [activeCategoryId, activeGroupId, activeModeId]);
+  const currentFilterId = useMemo(
+    () =>
+      buildAppliedFilterId({
+        categoryId: activeCategoryId,
+        modeId: activeModeId,
+        groupId: activeGroupId,
+      }),
+    [activeCategoryId, activeGroupId, activeModeId],
+  );
 
-  const currentAppliedFilter = useMemo(() => {
-    return draftFilters.find((item) => item.id === currentFilterId) ?? null;
-  }, [currentFilterId, draftFilters]);
+  const currentAppliedFilter = useMemo(
+    () => draftFilters.find((item) => item.id === currentFilterId) ?? null,
+    [currentFilterId, draftFilters],
+  );
 
   useEffect(() => {
-    if (!open) return;
-    if (!currentAppliedFilter) return;
+    if (!open || !currentAppliedFilter) return;
 
     resetDraftToPath({
       categoryId: currentAppliedFilter.categoryId,
@@ -121,27 +110,30 @@ export function DataTableFiltersPopover({
     });
   }, [currentAppliedFilter, open, resetDraftToPath]);
 
+  const isExpanded = Boolean(activeCategoryId && activeGroupId);
+  const selectedCategoryIds = useMemo(
+    () => [...new Set(draftFilters.map((item) => item.categoryId))],
+    [draftFilters],
+  );
+  const showFooter = isExpanded || draftFilters.length > 0;
+
   const updatePosition = useCallback(() => {
     const anchor = anchorRef.current;
     const panel = panelRef.current;
-
     if (!anchor || !panel) return;
 
     const anchorRect = anchor.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
-
-    const width = clamp(
-      Math.max(minWidth, panelRect.width || minWidth),
-      minWidth,
-      Math.min(maxWidth, window.innerWidth - VIEWPORT_PADDING * 2),
+    const maxAllowedWidth = Math.min(
+      maxWidth ?? Number.POSITIVE_INFINITY,
+      window.innerWidth - VIEWPORT_PADDING * 2,
     );
-
+    const width = Math.min(panelRect.width || anchorRect.width, maxAllowedWidth);
     const top = clamp(
       anchorRect.bottom + 10,
       VIEWPORT_PADDING,
       window.innerHeight - panelRect.height - VIEWPORT_PADDING,
     );
-
     const preferredLeft = anchorRect.right - width;
     const left = clamp(
       preferredLeft,
@@ -150,21 +142,13 @@ export function DataTableFiltersPopover({
     );
 
     setPosition((previous) => {
-      if (
-        previous.ready &&
-        previous.top === top &&
-        previous.left === left
-      ) {
+      if (previous.ready && previous.top === top && previous.left === left) {
         return previous;
       }
 
-      return {
-        top,
-        left,
-        ready: true,
-      };
+      return { top, left, ready: true };
     });
-  }, [anchorRef, minWidth, maxWidth]);
+  }, [anchorRef, maxWidth]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -174,9 +158,7 @@ export function DataTableFiltersPopover({
 
     raf1 = requestAnimationFrame(() => {
       updatePosition();
-      raf2 = requestAnimationFrame(() => {
-        updatePosition();
-      });
+      raf2 = requestAnimationFrame(() => updatePosition());
     });
 
     return () => {
@@ -208,26 +190,21 @@ export function DataTableFiltersPopover({
       }
     };
 
-    const handleViewportChange = () => {
-      updatePosition();
-    };
-
     const resizeObserver = new ResizeObserver(() => {
       updatePosition();
     });
 
     resizeObserver.observe(anchor);
     resizeObserver.observe(panel);
-
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
@@ -239,14 +216,20 @@ export function DataTableFiltersPopover({
     }
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    if (!currentAppliedFilter) return;
-    if (initialMountRef.current) {
-      initialMountRef.current = false;
+  function handleCategoryClick(categoryId: string) {
+    if (activeCategoryId === categoryId) {
+      resetDraftToPath({
+        categoryId: null,
+        modeId: null,
+        groupId: null,
+        optionIds: [],
+        operator: "OR",
+      });
       return;
     }
-  }, [currentAppliedFilter, open]);
+
+    selectCategory(categoryId);
+  }
 
   function setDraftOperator(nextOperator: FilterLogicOperator) {
     setOperator(nextOperator);
@@ -259,9 +242,7 @@ export function DataTableFiltersPopover({
         modeId: activeModeId,
         groupId: activeGroupId,
       });
-
       const currentFilter = current.find((item) => item.id === filterId);
-
       if (!currentFilter) return current;
 
       return current.map((item) =>
@@ -307,9 +288,9 @@ export function DataTableFiltersPopover({
   function handleClearAll() {
     setDraftFilters([]);
     resetDraftToPath({
-      categoryId: categories[0]?.id ?? null,
-      modeId: categories[0]?.modes[0]?.id ?? null,
-      groupId: categories[0]?.modes[0]?.groups[0]?.id ?? null,
+      categoryId: null,
+      modeId: null,
+      groupId: null,
       optionIds: [],
       operator: "OR",
     });
@@ -319,11 +300,6 @@ export function DataTableFiltersPopover({
     onChange(draftFilters.filter((item) => item.optionIds.length > 0));
     onClose();
   }
-
-  const selectedCount = draftFilters.reduce(
-    (acc, item) => acc + item.optionIds.length,
-    0,
-  );
 
   const panelContent = open ? (
     <AnimatePresence>
@@ -337,206 +313,186 @@ export function DataTableFiltersPopover({
         transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
           "fixed overflow-hidden rounded-2xl border border-border/70 bg-background text-foreground shadow-2xl",
-          "flex max-h-[calc(100vh-1rem)] min-h-[26rem] flex-col",
+          "flex max-h-[calc(100vh-1rem)] flex-col",
+          isExpanded || draftFilters.length > 0 ? "min-h-[20rem]" : "min-h-[14rem]",
         )}
         style={{
           zIndex: UI_LAYERS.popover + 5,
           top: position.top,
           left: position.left,
-          width: `min(${maxWidth}px, calc(100vw - 1rem))`,
-          minWidth: `min(${minWidth}px, calc(100vw - 1rem))`,
+          maxWidth: maxWidth
+            ? `min(${maxWidth}px, calc(100vw - 1rem))`
+            : "calc(100vw - 1rem)",
+          minWidth: minWidth
+            ? `min(${minWidth}px, calc(100vw - 1rem))`
+            : undefined,
           visibility: position.ready ? "visible" : "hidden",
         }}
       >
-        <div className="flex items-center justify-between gap-4 border-b border-border/70 bg-muted/30 px-4 py-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Funnel className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {selectedCount} opción(es) seleccionada(s)
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            aria-label="Cerrar"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="grid min-h-0 flex-1 grid-cols-[16rem_14rem_18rem_minmax(18rem,1fr)]">
+        <div className="flex min-h-0 flex-1">
           <DataTableFilterColumn
-            title="Campos"
             items={categoryItems}
             activeId={activeCategoryId}
-            onItemClick={selectCategory}
+            selectedIds={selectedCategoryIds}
+            onItemClick={handleCategoryClick}
             emptyMessage={emptyMessage}
+            showCheckOnSelected
+            className={cn(
+              "flex-none",
+              isExpanded ? "border-r border-border/70" : "border-r-0",
+            )}
           />
 
-          <DataTableFilterColumn
-            title="Tipo"
-            items={modeItems}
-            activeId={activeModeId}
-            onItemClick={selectMode}
-            emptyMessage={emptyMessage}
-          />
+          {isExpanded ? (
+            <section className="flex min-w-0 flex-1 flex-col bg-background">
+              <div className="border-b border-border/70 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {activeCategory?.label ?? activeGroup?.label ?? "Opciones"}
+                  </h3>
 
-          <DataTableFilterColumn
-            title={activeMode?.label ?? "Grupos"}
-            items={groupItems}
-            activeId={activeGroupId}
-            onItemClick={selectGroup}
-            searchable={(activeMode?.groups.length ?? 0) > 6}
-            searchValue={groupSearch}
-            onSearchChange={setGroupSearch}
-            emptyMessage={emptyMessage}
-          />
+                  <div className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-background px-2 py-1 text-xs">
+                    <span className="text-muted-foreground">Filtro:</span>
 
-          <section className="flex min-w-[18rem] flex-1 flex-col bg-background">
-            <div className="border-b border-border/70 px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  {activeGroup?.label ?? "Opciones"}
-                </h3>
-
-                <div className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-background px-2 py-1 text-xs">
-                  <span className="text-muted-foreground">Filtro:</span>
-
-                  <button
-                    type="button"
-                    onClick={() => setDraftOperator("OR")}
-                    className={cn(
-                      "rounded px-2 py-1 font-medium transition",
-                      operator === "OR"
-                        ? "bg-primary/12 text-primary"
-                        : "text-muted-foreground hover:bg-muted",
-                    )}
-                  >
-                    OR
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDraftOperator("AND")}
-                    className={cn(
-                      "rounded px-2 py-1 font-medium transition",
-                      operator === "AND"
-                        ? "bg-primary/12 text-primary"
-                        : "text-muted-foreground hover:bg-muted",
-                    )}
-                  >
-                    AND
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-b border-border/70 px-3 py-2">
-              <div className="relative">
-                <input
-                  value={optionSearch}
-                  onChange={(event) => setOptionSearch(event.target.value)}
-                  placeholder={activeGroup?.searchable ? "Buscar..." : "Buscar..."}
-                  className="h-9 w-full rounded-md border border-border/70 bg-background px-3 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
-
-            <div className="scrollbar-panel min-h-0 flex-1 overflow-y-auto p-1.5">
-              {optionItems.length === 0 ? (
-                <div className="px-3 py-3 text-xs text-muted-foreground">
-                  {emptyMessage}
-                </div>
-              ) : (
-                optionItems.map((option) => {
-                  const isSelected = selectedOptionIds.includes(option.id);
-
-                  return (
                     <button
-                      key={option.id}
                       type="button"
-                      disabled={option.disabled}
-                      onClick={() => handleToggleOption(option.id)}
+                      onClick={() => setDraftOperator("OR")}
+                      disabled={!activeGroupId}
                       className={cn(
-                        "flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left text-sm transition",
-                        option.disabled
-                          ? "cursor-not-allowed opacity-50"
-                          : "hover:bg-muted/60",
-                        isSelected
-                          ? "bg-primary/10 text-foreground"
-                          : "text-foreground",
+                        "rounded px-2 py-1 font-medium transition",
+                        !activeGroupId && "cursor-not-allowed opacity-50",
+                        operator === "OR"
+                          ? "bg-primary/12 text-primary"
+                          : "text-muted-foreground hover:bg-muted",
                       )}
                     >
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{option.label}</div>
-                        {typeof option.count === "number" ? (
-                          <div className="mt-0.5 text-[11px] text-muted-foreground">
-                            {option.count}
-                          </div>
-                        ) : null}
-                      </div>
+                      OR
+                    </button>
 
-                      <span
+                    <button
+                      type="button"
+                      onClick={() => setDraftOperator("AND")}
+                      disabled={!activeGroupId}
+                      className={cn(
+                        "rounded px-2 py-1 font-medium transition",
+                        !activeGroupId && "cursor-not-allowed opacity-50",
+                        operator === "AND"
+                          ? "bg-primary/12 text-primary"
+                          : "text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      AND
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-b border-border/70 px-3 py-2">
+                <div className="relative">
+                  <input
+                    value={optionSearch}
+                    onChange={(event) => setOptionSearch(event.target.value)}
+                    disabled={!activeGroupId}
+                    placeholder="Buscar..."
+                    className="h-9 w-full rounded-md border border-border/70 bg-background px-3 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <div className="scrollbar-panel min-h-0 flex-1 overflow-y-auto py-2">
+                {optionItems.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-muted-foreground">
+                    {emptyMessage}
+                  </div>
+                ) : (
+                  optionItems.map((option) => {
+                    const isSelected = selectedOptionIds.includes(option.id);
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        disabled={option.disabled}
+                        onClick={() => handleToggleOption(option.id)}
                         className={cn(
-                          "inline-flex h-5 min-w-5 items-center justify-center rounded border px-1.5 text-[10px] font-semibold",
+                          "flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left text-sm transition",
+                          option.disabled
+                            ? "cursor-not-allowed opacity-50"
+                            : "hover:bg-muted/60",
                           isSelected
-                            ? "border-primary/20 bg-primary/12 text-primary"
-                            : "border-border/70 text-transparent",
+                            ? "bg-primary/10 text-foreground"
+                            : "text-foreground",
                         )}
                       >
-                        ✓
-                      </span>
-                    </button>
-                  );
-                })
-              )}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium">{option.label}</div>
+                          {typeof option.count === "number" ? (
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                              {option.count}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <span
+                          className={cn(
+                            "inline-flex h-5 min-w-5 items-center justify-center rounded border px-1.5",
+                            isSelected
+                              ? "border-primary/20 bg-primary/12 text-primary"
+                              : "border-border/70 text-transparent",
+                          )}
+                        >
+                          <Check className="h-3 w-3" />
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          ) : null}
+        </div>
+
+        {showFooter ? (
+          <div className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/25 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleClearCurrent}
+                disabled={!currentAppliedFilter}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border/70 bg-background px-3 text-xs font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Limpiar actual
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border/70 bg-background px-3 text-xs font-medium transition hover:bg-muted"
+              >
+                <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                Limpiar todo
+              </button>
             </div>
-          </section>
-        </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/25 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleClearCurrent}
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border/70 bg-background px-3 text-xs font-medium transition hover:bg-muted"
-            >
-              Limpiar actual
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border/70 bg-background px-4 text-xs font-medium transition hover:bg-muted"
+              >
+                Cancelar
+              </button>
 
-            <button
-              type="button"
-              onClick={handleClearAll}
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border/70 bg-background px-3 text-xs font-medium transition hover:bg-muted"
-            >
-              <RotateCcw className="mr-2 h-3.5 w-3.5" />
-              Limpiar todo
-            </button>
+              <button
+                type="button"
+                onClick={handleApply}
+                className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+              >
+                Aplicar filtros
+              </button>
+            </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border/70 bg-background px-4 text-xs font-medium transition hover:bg-muted"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="button"
-              onClick={handleApply}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
+        ) : null}
       </motion.div>
     </AnimatePresence>
   ) : null;

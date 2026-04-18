@@ -38,21 +38,10 @@ export function useCascadingFiltersNavigation({
   useEffect(() => {
     if (!open) return;
 
-    const firstCategory = categories[0] ?? null;
-
     const firstApplied = value[0];
-
-    const initialCategoryId = firstApplied?.categoryId ?? firstCategory?.id ?? null;
-    const initialCategory =
-      categories.find((item) => item.id === initialCategoryId) ?? null;
-
-    const initialModeId =
-      firstApplied?.modeId ?? initialCategory?.modes[0]?.id ?? null;
-    const initialMode =
-      initialCategory?.modes.find((item) => item.id === initialModeId) ?? null;
-
-    const initialGroupId =
-      firstApplied?.groupId ?? initialMode?.groups[0]?.id ?? null;
+    const initialCategoryId = firstApplied?.categoryId ?? null;
+    const initialModeId = firstApplied?.modeId ?? null;
+    const initialGroupId = firstApplied?.groupId ?? null;
 
     setActiveCategoryId(initialCategoryId);
     setActiveModeId(initialModeId);

@@ -1,4 +1,4 @@
-import { ChevronRight, Search } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FilterColumnItem } from "./types";
 
@@ -34,7 +34,7 @@ export function DataTableFilterColumn({
   return (
     <section
       className={cn(
-        "flex min-w-[15rem] max-w-[18rem] flex-1 flex-col border-r border-border/70 bg-background",
+        "flex min-w-0 flex-col border-r border-border/70 bg-background",
         className,
       )}
     >
@@ -60,7 +60,7 @@ export function DataTableFilterColumn({
         </div>
       ) : null}
 
-      <div className="scrollbar-panel min-h-0 flex-1 overflow-y-auto p-1.5">
+      <div className="scrollbar-panel min-h-0 flex-1 overflow-y-auto py-3">
         {items.length === 0 ? (
           <div className="px-3 py-3 text-xs text-muted-foreground">
             {emptyMessage}
@@ -99,13 +99,17 @@ export function DataTableFilterColumn({
 
                 <div className="flex items-center gap-2">
                   {showCheckOnSelected && isSelected ? (
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/12 px-1.5 text-[10px] font-semibold text-primary">
-                      ✓
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/12 px-1.5 text-primary">
+                      <Check className="h-3 w-3" />
                     </span>
                   ) : null}
 
                   {item.hasChildren ? (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    isActive ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )
                   ) : null}
                 </div>
               </button>
