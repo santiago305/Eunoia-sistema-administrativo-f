@@ -26,7 +26,7 @@ export const RoutesPaths = {
   catalogSummary: "/catalago",
   catalogProducts: "/catalago/productos",
   catalogVariants: "/catalago/variantes",
-  catalogDocuments: "/catalago/documentos",
+  catalogTransferences: "/catalago/transferencias",
   catalogAdjustments: "/catalago/ajustes",
   catalogTransfer: "/catalago/transfer",
   KardexFinished:'/catalago/kardex',

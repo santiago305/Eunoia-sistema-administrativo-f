@@ -34,13 +34,9 @@ export type CreateAdjustment = {
 
 
 export type AdjustmentResponse = {
-  id?: string;
-  docId?: string;
-  docType?: string;
-  status?: string;
-  serie?: string;
-  correlative?: number;
-  createdAt?: string;
+  data?: {
+    documentId:string
+  };
   message?: string;
   type?: string;
 };

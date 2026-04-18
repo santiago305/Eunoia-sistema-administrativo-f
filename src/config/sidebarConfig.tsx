@@ -77,7 +77,6 @@ export const getSidebarItems = (): SidebarItem[] => [
     },
     {
         label: "Catalogo",
-        // href: RoutesPaths.catalogSummary,
         icon: <IconStock className="text-sidebar-foreground" />,
         children: [
             {
@@ -85,21 +84,13 @@ export const getSidebarItems = (): SidebarItem[] => [
                 href: RoutesPaths.catalogProducts,
             },
             {
-                label: "Documentos",
-                href: RoutesPaths.catalogDocuments,
-            },
-            {
                 label: "Transferencias",
-                href: RoutesPaths.catalogTransfer,
+                href: RoutesPaths.catalogTransferences,
             },
             {
                 label: "Ajustes",
                 href: RoutesPaths.catalogAdjustments,
             },
-            // {
-            //     label: "Variantes",
-            //     href: RoutesPaths.catalogVariants,
-            // },
             {
                 label: "Movimientos",
                 href: RoutesPaths.KardexFinished,
@@ -112,7 +103,6 @@ export const getSidebarItems = (): SidebarItem[] => [
     },
     {
         label: "Suministros",
-        // href: RoutesPaths.rowMaterialSummary,
         icon: <IconRowMaterial className="text-sidebar-foreground" />,
         children: [
             {

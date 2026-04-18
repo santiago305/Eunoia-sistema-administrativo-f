@@ -18,8 +18,8 @@ import { getDocuments } from "@/services/documentService";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import { buildMonthStartIso, parseDateInputValue, toLocalDateKey, todayIso } from "@/utils/functionPurchases";
 import { RoutesPaths } from "@/router/config/routesPaths";
-import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
-import type { DocumentInventory } from "@/pages/catalog/types/documentInventory";
+import type { InventoryDocument } from "@/pages/catalog/types/documentInventory";
+import { InventoryDocumentProductType } from "@/pages/catalog/types/documentInventory";
 import { DocStatus, DocType, type Warehouse } from "@/pages/warehouse/types/warehouse";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
@@ -40,7 +40,7 @@ const docTypeLabels: Record<DocType, string> = {
 
 type DocumentRow = {
     id: string;
-    document: DocumentInventory;
+    document: InventoryDocument;
     numero: string;
     docLabel: string;
     statusLabel: string;
@@ -62,16 +62,8 @@ export default function DocumentRowMaterial() {
     const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
     const [page, setPage] = useState(1);
     const limit = 10;
-
-    const [documents, setDocuments] = useState<DocumentInventory[]>([]);
-    const [pagination, setPagination] = useState({
-        total: 0,
-        page: 1,
-        limit,
-        totalPages: 1,
-        hasPrev: false,
-        hasNext: false,
-    });
+    const [documents, setDocuments] = useState<InventoryDocument[]>([]);
+    const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -110,54 +102,37 @@ export default function DocumentRowMaterial() {
         }
     };
 
+    useEffect(() => {
+        void loadWarehouses();
+    }, []);
+
     const loadDocuments = async () => {
         clearFlash();
         setLoading(true);
         setError(null);
         try {
             const res = await getDocuments({
-                docType: docType || undefined,
-                status: statusFilter || undefined,
-                warehouseId: warehouseId || undefined,
-                productType: ProductTypes.PRIMA,
+                page,
+                limit,
                 from: fromDate || undefined,
                 to: toDate || undefined,
-                page: String(page),
-                limit: String(limit),
+                warehouseId: warehouseId || undefined,
+                docType: docType || undefined,
+                productType: InventoryDocumentProductType.MATERIAL,
+                status: statusFilter || undefined,
             });
 
             setDocuments(res.items ?? []);
-            const nextTotal = res.total ?? 0;
-            const nextPage = res.page ?? page;
-            const nextLimit = res.limit ?? limit;
-            const nextTotalPages = Math.max(1, Math.ceil(nextTotal / (nextLimit || limit)));
-            setPagination({
-                total: nextTotal,
-                page: nextPage,
-                limit: nextLimit,
-                totalPages: nextTotalPages,
-                hasPrev: nextPage > 1,
-                hasNext: nextPage < nextTotalPages,
-            });
+            setTotal(res.total ?? 0);
         } catch {
             setDocuments([]);
-            setPagination((prev) => ({
-                ...prev,
-                total: 0,
-                totalPages: 1,
-                hasPrev: false,
-                hasNext: false,
-            }));
+            setTotal(0);
             setError("Error al listar documentos");
             showFlash(errorResponse("Error al listar documentos"));
         } finally {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        void loadWarehouses();
-    }, []);
 
     useEffect(() => {
         void loadDocuments();
@@ -172,9 +147,11 @@ export default function DocumentRowMaterial() {
     const documentRows = useMemo<DocumentRow[]>(
         () =>
             documents.map((document) => {
-                const numero = [document.serie, document.correlative]
-                    .filter((v) => v !== null && v !== undefined && String(v).length > 0)
-                    .join("-");
+                const serie = document.serieCode || document.serie || "";
+                const sep = document.serieSeparator || "-";
+                const num = document.correlative != null ? String(document.correlative) : "";
+                const padded = document.seriePadding ? num.padStart(document.seriePadding, "0") : num;
+                const numero = [serie, padded].filter(Boolean).join(sep) || document.id;
                 const date = document.createdAt ? formatDate(new Date(document.createdAt)) : "-";
                 const time = document.createdAt
                     ? new Date(document.createdAt).toLocaleTimeString("es-PE", {
@@ -191,8 +168,8 @@ export default function DocumentRowMaterial() {
                     numero,
                     docLabel: docTypeLabels[document.docType] ?? document.docType,
                     statusLabel: statusLabels[document.status] ?? document.status,
-                    fromWarehouse: document.fromWarehouse || "-",
-                    toWarehouse: document.toWarehouse || "-",
+                    fromWarehouse: document.fromWarehouse?.name || document.fromWarehouseName || "-",
+                    toWarehouse: document.toWarehouse?.name || document.toWarehouseName || "-",
                     createdBy,
                     date,
                     time,
@@ -335,7 +312,7 @@ export default function DocumentRowMaterial() {
                     size="lg" />
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-0 text-[10px]">
-                            Total: <span className="font-semibold text-black">{pagination.total}</span>
+                            Total: <span className="font-semibold text-black">{total}</span>
                         </div>
                     </div>
                 </div>
@@ -409,7 +386,7 @@ export default function DocumentRowMaterial() {
                                 pagination={{
                                     page,
                                     limit,
-                                    total: pagination.total,
+                                    total,
                                 }}
                                 onPageChange={setPage}
                                 tableClassName="text-[10px]"

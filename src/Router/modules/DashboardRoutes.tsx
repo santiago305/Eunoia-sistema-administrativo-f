@@ -33,7 +33,7 @@ const StockReservations = lazy(() => import("@/pages/stock/Reservations"));
 const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
 const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
 const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
-const CatalogDocuments = lazy(() => import("@/pages/catalog/DocumentProduts"));
+const CatalogTransferences = lazy(() => import("@/pages/catalog/TransferProduts"));
 const CatalogAdjustments = lazy(() => import("@/pages/catalog/AdjustmentProducts"));
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/components/LocationModal"));
@@ -48,7 +48,7 @@ const Company = lazy(() => import("@/pages/company/Company"));
 const Production = lazy(() => import("@/pages/production/Productions"));
 const KardexPrima = lazy(() => import("@/pages/row-material/KardexPrima"));
 const KardexFinished = lazy(() => import("@/pages/catalog/KardexFinished"));
-const TransferProduct= lazy(() => import("@/pages/catalog/TransferProducts"));
+const TransferProduct = lazy(() => import("@/pages/catalog/TransferFormProducts"));
 const TransferRowMaterial = lazy(() => import("@/pages/row-material/TransferRowMaterial"));
 const OutOrder = lazy(() => import("@/pages/out-orders/OutOrder"));
 const CatalogInventory = lazy(() => import("@/pages/catalog/Inventory"));
@@ -128,8 +128,8 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.catalogSummary, <CatalogSummary />),
             },
             {
-                path: RoutesPaths.catalogDocuments,
-                element: withRouteGuard(RoutesPaths.catalogDocuments, <CatalogDocuments />),
+                path: RoutesPaths.catalogTransferences,
+                element: withRouteGuard(RoutesPaths.catalogTransferences, <CatalogTransferences />),
             },
             {
                 path: RoutesPaths.catalogAdjustments,

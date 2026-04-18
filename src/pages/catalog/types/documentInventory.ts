@@ -1,44 +1,95 @@
-import { User } from "@/components/dashboard/types";
-import { DocType, DocStatus } from "@/pages/warehouse/types/warehouse";
-import { ProductType } from "./ProductTypes";
+import { DocStatus, DocType } from "@/pages/warehouse/types/warehouse";
 
-export type GetDocuments = {
-  docType?: DocType;
-  status?: DocStatus;
-  warehouseId?: string;
-  productType?: ProductType;
+export enum InventoryDocumentProductType {
+  MATERIAL = "MATERIAL",
+  PRODUCT = "PRODUCT",
+}
+
+export type InventoryDocumentWarehouseRef = {
+  warehouseId: string;
+  name: string | null;
+};
+
+export type InventoryDocumentUserRef = {
+  id: string;
+  name: string | null;
+  email: string | null;
+};
+
+export type InventoryDocument = {
+  id: string;
+  docType: DocType;
+  productType: InventoryDocumentProductType | null;
+  status: DocStatus;
+
+  serieId: string | null;
+  serie: string | null;
+  serieCode: string | null;
+  serieSeparator: string | null;
+  seriePadding: number | null;
+  correlative: number | null;
+
+  fromWarehouseId: string | null;
+  fromWarehouseName: string | null;
+  fromWarehouse: InventoryDocumentWarehouseRef | null;
+
+  toWarehouseId: string | null;
+  toWarehouseName: string | null;
+  toWarehouse: InventoryDocumentWarehouseRef | null;
+
+  referenceId: string | null;
+  referenceType: string | null;
+  note: string | null;
+
+  createdById: string | null;
+  createdBy: InventoryDocumentUserRef | null;
+
+  postedById: string | null;
+  postedBy: InventoryDocumentUserRef | null;
+
+  postedAt: string | null;
+  createdAt: string;
+};
+
+export type GetInventoryDocumentsParams = {
+  page?: number;
+  limit?: number;
   from?: string | Date;
   to?: string | Date;
-  page?: string;
-  limit?: string;
-};
-export type DocumentInventory = {
-  id:string;
-  docType: DocType;
-  status: DocStatus;
-  serie:string;
-  correlative:number;
-  toWarehouse:string;
-  fromWarehouse:string;
-  createdBy:User;
-  createdAt:string;
-};
-export type DocumentRow = {
-    id: string;
-    document: DocumentInventory;
-    numero: string;
-    docLabel: string;
-    statusLabel: string;
-    fromWarehouse: string;
-    toWarehouse: string;
-    createdBy: string;
-    date: string;
-    time?: string;
+  warehouseId?: string;
+  warehouseIds?: string[];
+  docType?: DocType;
+  productType?: InventoryDocumentProductType;
+  status?: DocStatus;
+  q?: string;
 };
 
-export type DocumentListResponse = {
-  items: DocumentInventory[];
+export type InventoryDocumentListResponse = {
+  items: InventoryDocument[];
   total: number;
   page: number;
   limit: number;
 };
+export type skuStock = {
+  warehouseId:string,
+  stockItemId:string,
+  locationId?:string,
+  onHand:number,
+  reserved:number,
+  available:number,
+  updatedAt:string,
+}
+
+export type InventoryDocumentRow = {
+  id: string;
+  document: InventoryDocument;
+  numero: string;
+  docLabel: string;
+  statusLabel: string;
+  fromWarehouse: string;
+  toWarehouse: string;
+  createdBy: string;
+  date: string;
+  time?: string;
+};
+
