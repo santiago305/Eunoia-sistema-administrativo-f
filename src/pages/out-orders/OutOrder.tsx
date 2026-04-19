@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Boxes, ClipboardList, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -27,10 +27,11 @@ import { CreateOutOrder, AddOutOrderItemDto, Direction, OutOrderItemRow } from "
 const PRIMARY = "hsl(var(--primary))";
 const CURRENCY = "PEN";
 
+
 export default function OutOrder() {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
-
+  
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyFormOutOrder());
   const [pendingItem, setPendingItem] = useState<AddOutOrderItemDto>(() => buildEmptyItemOutOrder());
@@ -42,6 +43,11 @@ export default function OutOrder() {
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
+  
+  const handleCloseItemModal = useCallback(() => {
+    setOpenItemModal(false);
+    setPendingItem(buildEmptyItemOutOrder());
+  }, []);
 
   const resetForm = () => {
     setForm(buildEmptyFormOutOrder());
@@ -513,10 +519,7 @@ export default function OutOrder() {
         pendingItem={pendingItem}
         primaryColor={PRIMARY}
         onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
-        onClose={() => {
-          setOpenItemModal(false);
-          setPendingItem(buildEmptyItemOutOrder());
-        }}
+        onClose={handleCloseItemModal}
         onAdd={() => {
           addItem();
           setOpenItemModal(false);

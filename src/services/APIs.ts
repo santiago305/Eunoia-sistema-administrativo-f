@@ -241,7 +241,7 @@ export const API_INVENTORY_GROUP = {
 
 export const API_DOCUMENT_INVENTORY_GROUP = {
   outOrderCreated: "/stock-items/movements/create",
-  adjustmentCreated: "/inventory/documents/create-add-item-post-adjustment",
+  adjustmentCreated: "stock-items/movements/adjustment",
   transfertCreated: "stock-items/movements/transfer",
   listDocuments: "/inventory-documents",
   getStock: "skus/get-stock",

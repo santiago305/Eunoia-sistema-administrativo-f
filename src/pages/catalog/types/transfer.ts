@@ -1,4 +1,4 @@
-import { skuStock } from "./documentInventory";
+import { InventoryDocumentProductType, skuStock } from "./documentInventory";
 import { ProductSkuWithAttributes } from "./product";
 
 export type TransferItem = {
@@ -48,6 +48,7 @@ export type TransferProductsProps = {
   inModal?: boolean;
   onClose?: () => void;
   onSaved?: (transferId: string) => void | Promise<void>;
+  type?: InventoryDocumentProductType
 };
 
 export const emptyStockDetail: StockDetailState = {

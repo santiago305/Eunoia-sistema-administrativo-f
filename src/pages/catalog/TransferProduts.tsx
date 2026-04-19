@@ -302,7 +302,7 @@ export default function TransferenceProduts() {
     <PageShell className="bg-white">
       <PageTitle title="Transferencias" />
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between pt-2">
+        <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
           <Headed title="Transferencias (Productos)" size="lg" />
           <div className="flex flex-wrap items-center gap-2">
             <SystemButton
@@ -391,6 +391,7 @@ export default function TransferenceProduts() {
         onClose={() => {
           setOpenPdfModal(false);
           setSelectedDocumentId(null);
+          loadDocuments();
         }}
         title="Documento de inventario"
         getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
@@ -403,6 +404,7 @@ export default function TransferenceProduts() {
           setPage(1);
           void loadDocuments();
         }}
+        type={InventoryDocumentProductType.PRODUCT}
       />
     </PageShell>
   );

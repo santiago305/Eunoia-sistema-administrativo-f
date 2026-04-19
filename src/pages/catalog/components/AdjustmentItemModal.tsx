@@ -1,4 +1,5 @@
 import { Boxes, Plus } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
@@ -7,11 +8,16 @@ import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
 import { parseDecimalInput } from "@/utils/functionPurchases";
-import type { AdjustmentItem } from "@/pages/catalog/types/adjustment";
+import { Direction } from "@/pages/out-orders/type/outOrder";
+
+type AdjustmentItemModalValue = {
+    quantity: number;
+    adjustmentType?: string;
+};
 
 const ADJUSTMENT_TYPE_OPTIONS = [
-    { value: "REDUCIR", label: "Reducir" },
-    { value: "AUMENTAR", label: "Aumentar" },
+    { value: Direction.OUT, label: "Reducir" },
+    { value: Direction.IN, label: "Aumentar" },
 ];
 
 type AdjustmentItemModalMessages = {
@@ -21,8 +27,8 @@ type AdjustmentItemModalMessages = {
 
 export type AdjustmentItemModalProps = {
     open: boolean;
-    pendingItem: AdjustmentItem;
-    onChange: (patch: Partial<AdjustmentItem>) => void;
+    pendingItem: AdjustmentItemModalValue;
+    onChange: (patch: Partial<AdjustmentItemModalValue>) => void;
     onClose: () => void;
     onAdd: () => void;
     title?: string;
@@ -41,6 +47,24 @@ export function AdjustmentItemModal({
     messages,
 }: AdjustmentItemModalProps) {
     const { showFlash } = useFlashMessage();
+    const onCloseRef = useRef(onClose);
+    const onAddRef = useRef(onAdd);
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
+
+    useEffect(() => {
+        onAddRef.current = onAdd;
+    }, [onAdd]);
+
+    const handleClose = useCallback(() => {
+        onCloseRef.current();
+    }, []);
+
+    const handleAdd = useCallback(() => {
+        onAddRef.current();
+    }, []);
 
     if (!open) return null;
 
@@ -48,11 +72,17 @@ export function AdjustmentItemModal({
     const zeroQuantityMessage = messages?.zeroQuantity ?? "La cantidad no puede ser cero";
 
     return (
-        <Modal open={open} title={title} onClose={onClose} className="w-[400px] max-h-90 space-y-3">
+        <Modal
+            open={open}
+            title={title}
+            onClose={handleClose}
+            closeOnOverlayClick={false}
+            className="w-[400px] max-h-90 space-y-3"
+        >
             <div className="grid grid-cols-1 gap-3">
                 <SectionHeaderForm icon={Boxes} title={sectionTitle} />
 
-                {pendingItem.adjustmentType === "REDUCIR" && (
+                {pendingItem.adjustmentType === Direction.OUT && (
                     <FloatingInput
                         label="Cantidad"
                         name="adjustment-qty"
@@ -67,7 +97,7 @@ export function AdjustmentItemModal({
                     />
                 )}
 
-                {pendingItem.adjustmentType === "AUMENTAR" && (
+                {pendingItem.adjustmentType === Direction.IN && (
                     <FloatingInput
                         label="Cantidad"
                         name="adjustment-qty"
@@ -94,7 +124,7 @@ export function AdjustmentItemModal({
             </div>
 
             <div className="mt-15 flex justify-end gap-2">
-                <SystemButton variant="outline" size="sm" onClick={onClose}>
+                <SystemButton variant="outline" size="sm" onClick={handleClose}>
                     Cancelar
                 </SystemButton>
                 <SystemButton
@@ -106,7 +136,7 @@ export function AdjustmentItemModal({
                         if (pendingItem.quantity === 0) {
                             return showFlash(errorResponse(zeroQuantityMessage));
                         }
-                        onAdd();
+                        handleAdd();
                     }}
                     leftIcon={<Plus className="h-4 w-4" />}
                 >

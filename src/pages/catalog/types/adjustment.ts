@@ -1,7 +1,7 @@
 ﻿import {  DocType } from "@/pages/warehouse/types/warehouse";
 
 export type AdjustmentItem = {
-  stockItemId: string;
+  skuId: string;
   quantity: number;
   unitCost?: number;
   fromLocationId?: string;
@@ -23,9 +23,9 @@ export type AdjustmentItemRow = AdjustmentItem & {
 };
 
 export type CreateAdjustment = {
-  docType: DocType;
+  docType?: DocType;
   serieId: string;
-  fromWarehouseId?: string;
+  warehouseId?: string;
   referenceId?: string;
   referenceType?: string;
   note?: string;

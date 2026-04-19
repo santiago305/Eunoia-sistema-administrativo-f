@@ -34,7 +34,8 @@ const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
 const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
 const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
 const CatalogTransferences = lazy(() => import("@/pages/catalog/TransferProduts"));
-const CatalogAdjustments = lazy(() => import("@/pages/catalog/AdjustmentProducts"));
+const CatalogAdjustments = lazy(() => import("@/pages/catalog/AdjustmentProduts"));
+const CatalogAdjustment = lazy(() => import("@/pages/catalog/components/AdjustmentFormProducts"));
 const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/components/LocationModal"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
@@ -48,7 +49,7 @@ const Company = lazy(() => import("@/pages/company/Company"));
 const Production = lazy(() => import("@/pages/production/Productions"));
 const KardexPrima = lazy(() => import("@/pages/row-material/KardexPrima"));
 const KardexFinished = lazy(() => import("@/pages/catalog/KardexFinished"));
-const TransferProduct = lazy(() => import("@/pages/catalog/TransferFormProducts"));
+const TransferProduct = lazy(() => import("@/pages/catalog/components/TransferFormProducts"));
 const TransferRowMaterial = lazy(() => import("@/pages/row-material/TransferRowMaterial"));
 const OutOrder = lazy(() => import("@/pages/out-orders/OutOrder"));
 const CatalogInventory = lazy(() => import("@/pages/catalog/Inventory"));
@@ -134,6 +135,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.catalogAdjustments,
                 element: withRouteGuard(RoutesPaths.catalogAdjustments, <CatalogAdjustments />),
+            },
+            {
+                path: RoutesPaths.catalogAdjustment,
+                element: withRouteGuard(RoutesPaths.catalogAdjustment, <CatalogAdjustment />),
             },
             {
                 path: RoutesPaths.KardexFinished,

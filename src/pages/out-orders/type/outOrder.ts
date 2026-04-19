@@ -13,7 +13,8 @@ export type ItemOutOrder = {
   itemId?:string,
   skuId?:string,
   quantity:number,
-  unitCost?:number
+  unitCost?:number,
+  direccion?:string
 }
 
 export type AddOutOrderItemDto = ItemOutOrder;
