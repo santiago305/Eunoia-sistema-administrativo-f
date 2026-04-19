@@ -1,4 +1,3 @@
-import { Modal } from "@/components/settings/modal";
 import { Plus, PackagePlus } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { SystemButton } from "@/components/SystemButton";
@@ -6,6 +5,7 @@ import { SectionHeaderForm } from "@/components/SectionHederForm";
 import type { CSSProperties } from "react";
 import type { AddOutOrderItemDto } from "@/pages/out-orders/type/outOrder";
 import { parseDecimalInput } from "@/utils/functionPurchases";
+import { Modal } from "@/components/modales/Modal";
 
 type OutOrderItemModalProps = {
   open: boolean;
@@ -32,7 +32,7 @@ export function OutOrderItemModal({
   const accent = primaryColor ?? DEFAULT_PRIMARY;
 
   return (
-    <Modal title="Agregar item" onClose={onClose} className="max-w-xl">
+    <Modal title="Agregar item" onClose={onClose} className="max-w-xl" open>
       <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 bg-gray-50 p-4 shadow-sm space-y-4">
           <SectionHeaderForm icon={PackagePlus} title="Datos del item" />

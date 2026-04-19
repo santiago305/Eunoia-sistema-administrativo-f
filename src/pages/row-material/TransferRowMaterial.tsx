@@ -1,602 +1,411 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Boxes, FileText, Trash2 } from "lucide-react";
+import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
-import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import { ActionsPopover } from "@/components/ActionsPopover";
+import { PdfViewerModal } from "@/components/ModalOpenPdf";
+import { formatDate } from "@/components/TimerToEnd";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { errorResponse, successResponse } from "@/common/utils/response";
+import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
-import { searchProductAndVariant } from "@/services/catalogService";
-import { listDocumentSeries } from "@/services/documentSeriesService";
-import { createTransfer } from "@/services/documentService";
-import { getStock } from "@/services/inventoryService";
-import { money, parseDecimalInput } from "@/utils/functionPurchases";
-import type { PrimaVariant } from "@/pages/catalog/types/variant";
-import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import { RoutesPaths } from "@/router/config/routesPaths";
-import { useNavigate } from "react-router-dom";
-import { buildEmptyFormTransfer, buildEmptyItemTransfer, buildStockSummary, CreateTransfer, Stock, TransferItem, TransferItemRow } from "../catalog/types/transfer";
+import { getDocumentInventoryPdf } from "@/services/pdfServices";
+import {
+  buildMonthStartIso,
+  parseDateInputValue,
+  toLocalDateKey,
+  todayIso,
+} from "@/utils/functionPurchases";
+import type {
+  InventoryDocument,
+  InventoryDocumentRow,
+} from "@/pages/catalog/types/documentInventory";
+import { InventoryDocumentProductType } from "@/pages/catalog/types/documentInventory";
+import { DocStatus, DocType, type Warehouse } from "@/pages/warehouse/types/warehouse";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
-import { TransferItemModal } from "@/pages/catalog/components/TransferItemModal";
-import { TransferResultModal } from "@/pages/catalog/components/TransferResultModal";
+import { SystemButton } from "@/components/SystemButton";
+import { getDocuments } from "@/services/documentService";
+import { TransferProductsModal } from "@/pages/catalog/components/TransferProductsModal";
 
-const CURRENCY = "PEN";
-export default function TransferRowMaterial() {
-    const { showFlash, clearFlash } = useFlashMessage();
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-    const [form, setForm] = useState<CreateTransfer>(() => buildEmptyFormTransfer());
-    const [pendingItem, setPendingItem] = useState<TransferItem>(() => buildEmptyItemTransfer());
-    const [openItemModal, setOpenItemModal] = useState(false);
-    const [openNavigateModal, setOpenNavigateModal] = useState(false);
-    const [lastSavedTransferId, setLastSavedTransferId] = useState("");
-    const [products, setProducts] = useState<PrimaVariant[]>([]);
-    const [searchResults, setSearchResults] = useState<PrimaVariant[]>([]);
-    const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
-    const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
-    const [query, setQuery] = useState("");
-    const [stockLoading, setStockLoading] = useState(false);
-    const [stockError, setStockError] = useState<string | null>(null);
-    const [stockSummaryFrom, setStockSummaryFrom] = useState<Stock | null>(null);
-    const [stockSummaryTo, setStockSummaryTo] = useState<Stock | null>(null);
+const statusLabels: Record<DocStatus, string> = {
+  [DocStatus.DRAFT]: "Borrador",
+  [DocStatus.POSTED]: "Contabilizado",
+  [DocStatus.CANCELLED]: "Anulado",
+};
 
-    const resetForm = () => {
-        setForm(buildEmptyFormTransfer());
-        setPendingItem(buildEmptyItemTransfer());
-        setSerie({ value: "", label: "" });
-        setProducts([]);
-        setStockSummaryFrom(null);
-        setStockSummaryTo(null);
-        setStockError(null);
-    };
+const docTypeLabels: Record<DocType, string> = {
+  [DocType.ADJUSTMENT]: "Ajuste",
+  [DocType.TRANSFER]: "Transferencia",
+  [DocType.IN]: "Ingreso",
+  [DocType.OUT]: "Salida",
+  [DocType.PRODUCTION]: "Producción",
+};
 
-    const loadWarehouses = async () => {
-        clearFlash();
-        try {
-            const res = await listActive();
-            const options =
-                res?.map((s) => ({
-                    value: s.warehouseId,
-                    label: s.name,
-                })) ?? [];
-            setWarehouseOptions(options);
-        } catch {
-            setWarehouseOptions([]);
-            showFlash(errorResponse("Error al cargar almacenes"));
-        }
-    };
+const buildNumero = (document: InventoryDocument) => {
+  const serie = document.serieCode || document.serie || "";
+  const sep = document.serieSeparator || "-";
+  const num = document.correlative != null ? String(document.correlative) : "";
+  const padded = document.seriePadding ? num.padStart(document.seriePadding, "0") : num;
+  return [serie, padded].filter(Boolean).join(sep) || document.id;
+};
 
-    const loadSeries = async (warehouseId: string) => {
-        if (!warehouseId) {
-            setSerie({ value: "", label: "" });
-            setForm((prev) => ({ ...prev, serieId: "" }));
-            setStockSummaryFrom(null);
-            setStockSummaryTo(null);
-            setStockError(null);
-            return;
-        }
-        try {
-            const response = await listDocumentSeries({
-                warehouseId,
-                docType: DocType.TRANSFER,
-                isActive: true,
-            });
-            const seriesList = Array.isArray(response) ? response : response ? [response] : [];
+export default function TransferenceProduts() {
+  const { showFlash, clearFlash } = useFlashMessage();
 
-            if (seriesList.length === 0) {
-                setSerie({ value: "", label: "" });
-                setForm((prev) => ({ ...prev, serieId: "" }));
-                return;
-            }
-            const nextSerie = seriesList[0];
-            const nextNumber = Number(nextSerie.nextNumber ?? 0);
-            const paddedNumber = String(nextNumber).padStart(Number(nextSerie.padding ?? 0), "0");
-            setSerie({
-                value: nextSerie.id,
-                label: `${nextSerie.code}${nextSerie.separator ?? "-"}${paddedNumber}`,
-            });
-            setForm((prev) => ({ ...prev, serieId: nextSerie.id }));
-        } catch {
-            setSerie({ value: "", label: "" });
-            setForm((prev) => ({ ...prev, serieId: "" }));
-            showFlash(errorResponse("Error al cargar series"));
-        }
-    };
+  const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
+  const [toDate, setToDate] = useState(() => todayIso());
+  const [warehouseId, setWarehouseId] = useState("");
+  const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
-    const searchProducts = async () => {
-        try {
-            const res = await searchProductAndVariant({
-                q: query,
-                raw: true,
-            });
-            setSearchResults(res ?? []);
-        } catch {
-            setSearchResults([]);
-            showFlash(errorResponse("Error al cargar productos"));
-        }
-    };
+  const PRIMARY = "hsl(var(--primary))";
 
-    const resolveItemId = (item?: { itemId?: string; primaId?: string; id?: string }) =>
-        item?.itemId ?? item?.primaId ?? item?.id ?? "";
+  const [warehouseOptions, setWarehouseOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [openPdfModal, setOpenPdfModal] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [openTransferModal, setOpenTransferModal] = useState(false);
+  const [documents, setDocuments] = useState<InventoryDocument[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const productOptions = useMemo(
-        () => [
-            { value: "", label: "Seleccionar producto" },
-            ...(searchResults ?? []).map((v) => ({
-                value: resolveItemId(v),
-                label: `${v.productName ?? "Materia prima"} ${v.attributes?.presentation ?? ""} ${v.attributes?.variant ?? ""} ${v.attributes?.color ?? ""}${v.sku ? ` - ${v.sku}` : ""} (${v.customSku ?? "-"})`,
-            })),
-        ],
-        [searchResults]
-    );
+  const statusOptions = [
+    { value: "", label: "Todos" },
+    { value: DocStatus.DRAFT, label: statusLabels[DocStatus.DRAFT] },
+    { value: DocStatus.POSTED, label: statusLabels[DocStatus.POSTED] },
+    { value: DocStatus.CANCELLED, label: statusLabels[DocStatus.CANCELLED] },
+  ];
 
-    const addItem = () => {
-        const { stockItemId, quantity } = pendingItem;
-        const selected =
-            searchResults.find((p) => resolveItemId(p) === stockItemId) ??
-            products.find((p) => resolveItemId(p) === stockItemId);
+  const loadWarehouses = async () => {
+    clearFlash();
+    try {
+      const res = await listActive();
+      const options =
+        res?.map((warehouse: Warehouse) => ({
+          value: warehouse.warehouseId,
+          label: warehouse.name,
+        })) ?? [];
+      setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
+    } catch {
+      setWarehouseOptions([{ value: "", label: "Todos" }]);
+      showFlash(errorResponse("Error al cargar almacenes"));
+    }
+  };
 
-        if (!stockItemId) {
-            showFlash(errorResponse("Selecciona un producto"));
-            return;
-        }
-        if (quantity === 0) {
-            showFlash(errorResponse("La cantidad no puede ser 0"));
-            return;
-        }
-        if (!selected) {
-            showFlash(errorResponse("Producto no encontrado"));
-            return;
-        }
-        const alreadyAdded = (form.items ?? []).some((item) => item.stockItemId === stockItemId);
-        if (alreadyAdded) {
-            showFlash(errorResponse("El producto ya fue agregado"));
-            return;
-        }
+  useEffect(() => {
+    void loadWarehouses();
+  }, []);
 
-        setForm((prev) => ({
-            ...prev,
-            items: [...(prev.items ?? []), { stockItemId, quantity }],
-        }));
-        setProducts((prev) => {
-            const selectedId = resolveItemId(selected);
-            if (!selectedId) return prev;
-            const exists = prev.some((p) => resolveItemId(p) === selectedId);
-            return exists ? prev : [...prev, selected];
-        });
-        setPendingItem(buildEmptyItemTransfer());
-    };
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedQuery(query.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [query]);
 
-    const removeItem = (index: number) => {
-        setForm((prev) => ({
-            ...prev,
-            items: (prev.items ?? []).filter((_, i) => i !== index),
-        }));
-    };
+  const loadDocuments = async () => {
+    clearFlash();
+    setLoading(true);
+    setError(null);
 
-    const updateItem = (index: number, patch: Partial<TransferItem>) => {
-        setForm((prev) => ({
-            ...prev,
-            items: (prev.items ?? []).map((item, i) => (i === index ? { ...item, ...patch } : item)),
-        }));
-    };
+    try {
+      const res = await getDocuments({
+        page,
+        limit,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+        warehouseId: warehouseId || undefined,
+        docType: DocType.TRANSFER,
+        productType: InventoryDocumentProductType.MATERIAL,
+        status: statusFilter || undefined,
+        q: debouncedQuery || undefined,
+      });
 
-    const totalCost = useMemo(() => {
-        return (form.items ?? []).reduce((acc, item) => acc + item.quantity * (item.unitCost ?? 0), 0);
-    }, [form.items]);
+      setDocuments(res.items ?? []);
+      setTotal(res.total ?? 0);
+    } catch {
+      setDocuments([]);
+      setTotal(0);
+      setError("Error al listar documentos");
+      showFlash(errorResponse("Error al listar documentos"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const itemRows = useMemo<TransferItemRow[]>(() => {
-        return (form.items ?? []).map((item, index) => {
-            const product = products.find((p) => resolveItemId(p) === item.stockItemId);
-            return {
-                ...item,
-                rowIndex: index,
-                sku: product?.sku,
-                customSku: product?.customSku,
-                productName: product?.productName,
-                unitName: product?.unitName,
-                attributes: product?.attributes,
-            };
-        });
-    }, [form.items, products]);
+  useEffect(() => {
+    void loadDocuments();
+  }, [page, fromDate, toDate, warehouseId, statusFilter, debouncedQuery]);
 
-    const columns = useMemo<DataTableColumn<TransferItemRow>[]>(
-        () => [
-            {
-                id: "sku",
-                header: "SKU",
-                cell: (row) => <span className="text-black/70">{row.customSku ?? "-"}</span>,
-                headerClassName: "text-left w-[90px]",
-                className: "text-black/70",
+  const openDocumentPdf = (id: string) => {
+    clearFlash();
+    setSelectedDocumentId(id);
+    setOpenPdfModal(true);
+  };
+
+  const documentRows = useMemo<InventoryDocumentRow[]>(
+    () =>
+      documents.map((document) => {
+        const numero = buildNumero(document);
+        const date = document.createdAt ? formatDate(new Date(document.createdAt)) : "-";
+        const time = document.createdAt
+          ? new Date(document.createdAt).toLocaleTimeString("es-PE", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+          : undefined;
+
+        const createdBy = document.createdBy?.name || document.createdBy?.email || "-";
+        const fromWarehouse = document.fromWarehouse?.name || document.fromWarehouseName || "-";
+        const toWarehouse = document.toWarehouse?.name || document.toWarehouseName || "-";
+
+        return {
+          id: document.id ?? numero,
+          document,
+          numero,
+          docLabel: docTypeLabels[document.docType] ?? document.docType,
+          statusLabel: statusLabels[document.status] ?? document.status,
+          fromWarehouse,
+          toWarehouse,
+          createdBy,
+          date,
+          time,
+        };
+      }),
+    [documents],
+  );
+
+  const columns: DataTableColumn<InventoryDocumentRow>[] = [
+    {
+      id: "createdAt",
+      header: "Emisión",
+      cell: (row) => (
+        <div className="text-black/70">
+          {row.date}
+          {row.time ? (
+            <>
+              <br />
+              {row.time}
+            </>
+          ) : null}
+        </div>
+      ),
+      headerClassName: "text-left w-[70px]",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "numero",
+      header: "Documento",
+      accessorKey: "numero",
+      headerClassName: "text-left w-[100px] py-4",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "fromWarehouse",
+      header: "Origen",
+      accessorKey: "fromWarehouse",
+      headerClassName: "text-left w-[140px]",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "toWarehouse",
+      header: "Destino",
+      accessorKey: "toWarehouse",
+      headerClassName: "text-left w-[140px]",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "createdBy",
+      header: "Usuario",
+      accessorKey: "createdBy",
+      headerClassName: "text-left w-[140px]",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "status",
+      header: "Estado",
+      cell: (row) => (
+        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+          {row.statusLabel}
+        </span>
+      ),
+      headerClassName: "text-left w-[90px]",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "actions",
+      header: "ACCIONES",
+      headerClassName: "text-center w-[70px]",
+      cell: (row) => (
+        <div className="flex justify-center">
+          <ActionsPopover
+            actions={[
+              {
+                id: "open-pdf",
+                label: "Abrir pdf",
+                icon: <Menu className="h-4 w-4 text-black/60" />,
+                onClick: () => openDocumentPdf(row.document.id ?? row.id),
+              },
+            ]}
+            columns={1}
+            compact
+            showLabels
+            triggerIcon={<Menu className="h-4 w-4" />}
+            popoverClassName="min-w-40"
+            popoverBodyClassName="p-2"
+            renderAction={(action, helpers) => (
+              <button
+                key={action.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  helpers.onAction(action);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03]"
+                disabled={action.disabled}
+              >
+                {action.icon}
+                {action.label}
+              </button>
+            )}
+          />
+        </div>
+      ),
+      className: "text-left",
+      hideable: true,
+      sortable: false,
+    },
+  ];
+
+  return (
+    <PageShell className="bg-white">
+      <PageTitle title="Transferencias" />
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between pt-2">
+          <Headed title="Transferencias (Materiales)" size="lg" />
+          <div className="flex flex-wrap items-center gap-2">
+            <SystemButton
+              size="md"
+              className="w-full lg:w-auto"
+              leftIcon={<Plus className="h-4 w-4" />}
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+              }}
+              onClick={() => setOpenTransferModal(true)}
+            >
+              Crear nueva transferencia
+            </SystemButton>
+          </div>
+        </div>
+
+        <DataTable
+          tableId="inventory-documents-transfer-products"
+          data={documentRows}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          emptyMessage="No hay documentos con los filtros actuales."
+          hoverable={false}
+          animated={false}
+          selectableColumns
+          showSearch
+          searchMode="server"
+          searchPlaceholder="Buscar documento"
+          searchValue={query}
+          onSearchChange={(value) => setQuery(value)}
+          rangeDates={{
+            startDate: parseDateInputValue(fromDate),
+            endDate: parseDateInputValue(toDate),
+            onChange: ({ startDate, endDate }) => {
+              setFromDate(startDate ? toLocalDateKey(startDate) : "");
+              setToDate(endDate ? toLocalDateKey(endDate) : "");
+              setPage(1);
             },
-            {
-                id: "product",
-                header: "Producto",
-                cell: (row) => (
-                    <span className="text-black/70">
-                        {`${row.productName ?? ""} ${row.attributes?.presentation ?? ""} ${row.attributes?.variant ?? ""} ${row.attributes?.color ?? ""} (${row.sku ?? "-"})`}
-                    </span>
-                ),
-                headerClassName: "text-left w-[170px]",
-                className: "text-black/70",
-            },
-            {
-                id: "unit",
-                header: "Unidad",
-                cell: (row) => <span className="text-black/70">{row.unitName ?? "-"}</span>,
-                headerClassName: "text-left w-[110px]",
-                className: "text-black/70",
-            },
-            {
-                id: "quantity",
-                header: "Cantidad",
-                cell: (row) => (
-                    <FloatingInput
-                        label="Cantidad"
-                        name={`qty-${row.rowIndex}`}
-                        type="number"
-                        value={String(row.quantity)}
-                        onChange={(e) => updateItem(row.rowIndex, { quantity: parseDecimalInput(e.target.value) })}
-                        className="h-8 text-[10px]"
-                    />
-                ),
-                headerClassName: "text-left w-[130px]",
-                className: "text-black/70",
-            },
-            {
-                id: "actions",
-                header: "",
-                cell: (row) => (
-                    <div className="flex justify-end">
-                        <SystemButton
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-rose-600"
-                            onClick={() => removeItem(row.rowIndex)}
-                            title="Eliminar"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </SystemButton>
-                    </div>
-                ),
-                headerClassName: "text-right w-[50px]",
-                className: "text-right",
-            },
-        ],
-        [removeItem, updateItem]
-    );
+          }}
+          filterPopoverContent={
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_0.6fr]">
+              <FloatingSelect
+                label="Almacén"
+                name="warehouse"
+                value={warehouseId}
+                onChange={(value) => {
+                  setWarehouseId(value);
+                  setPage(1);
+                }}
+                options={warehouseOptions}
+                searchable
+                className="h-11 rounded-sm border-border shadow-sm"
+              />
 
-    const saveTransfer = async () => {
-        clearFlash();
-        if (!form.fromWarehouseId || !form.toWarehouseId || !form.serieId) {
-            showFlash(errorResponse("Completa los datos del documento"));
-            return;
-        }
-        if (!form.items?.length) {
-            showFlash(errorResponse("Agrega al menos un item"));
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const payload: CreateTransfer = {
-                ...form,
-                note: form.note?.trim() || undefined,
-                items: form.items ?? [],
-            };
-            const res = await createTransfer(payload);
-            const nextId = res.id ?? (res as { docId?: string }).docId ?? "";
-            setLastSavedTransferId(nextId);
-            showFlash(successResponse("Transferencia registrada"));
-            setOpenNavigateModal(true);
-        } catch {
-            showFlash(errorResponse("Error al guardar la transferencia"));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const extractStockValue = (data: any) => {
-        if (data == null) return null;
-        if (typeof data === "number") return data;
-        const candidates = ["stock", "quantity", "available", "balance", "total", "onHand"];
-        for (const key of candidates) {
-            const value = data?.[key];
-            if (typeof value === "number") return value;
-        }
-        return null;
-    };
-
-    const fetchStockValue = async (warehouseId: string, itemId: string) => {
-        const data = await getStock({ warehouseId, itemId });
-        return extractStockValue(data);
-    };
-
-    const handleRowClick = async (row: TransferItemRow) => {
-        if (!form.fromWarehouseId) {
-            showFlash(errorResponse("Selecciona el almacén de origen"));
-            return;
-        }
-        setStockLoading(true);
-        setStockError(null);
-        try {
-            const fromPromise = fetchStockValue(form.fromWarehouseId, row.stockItemId);
-            const toPromise = form.toWarehouseId
-                ? fetchStockValue(form.toWarehouseId, row.stockItemId)
-                : Promise.resolve(null);
-            const [fromValue, toValue] = await Promise.all([fromPromise, toPromise]);
-
-            setStockSummaryFrom(buildStockSummary(row, fromValue));
-            setStockSummaryTo(form.toWarehouseId ? buildStockSummary(row, toValue) : null);
-        } catch {
-            setStockError("Error al obtener stock");
-            setStockSummaryFrom(buildStockSummary(row, null));
-            setStockSummaryTo(form.toWarehouseId ? buildStockSummary(row, null) : null);
-        } finally {
-            setStockLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        const id = setTimeout(() => {
-            if (query.trim()) {
-                void searchProducts();
-            } else {
-                setSearchResults([]);
-            }
-        }, 500);
-
-        return () => clearTimeout(id);
-    }, [query]);
-
-    useEffect(() => {
-        resetForm();
-        void loadWarehouses();
-    }, []);
-
-    const summaryBase = stockSummaryFrom ?? stockSummaryTo;
-    const selectedRowId = stockSummaryFrom?.itemId ?? stockSummaryTo?.itemId;
-
-    return (
-        <PageShell className="bg-white">
-            <PageTitle title="Transferencia de productos" />
-            <div className="space-y-4">
-                <Headed title="Transferencia entre almacenes" 
-                subtitle="El almacén de origen debe tener un stock mayor a (0)." 
-                size="lg" />
-
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
-                    <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
-                        <div className="border-b border-black/10 p-3 sm:p-4">
-                            <SectionHeaderForm icon={Boxes} title="Materia prima y materiales" />
-                            <div className="mt-3 grid grid-cols-1 gap-2">
-                                <FloatingSelect
-                                    label="Seleccionar producto"
-                                    name="transfer-row-material"
-                                    value={pendingItem.stockItemId}
-                                    options={productOptions}
-                                    onChange={(value) => {
-                                        setPendingItem((prev) => ({ ...prev, stockItemId: value }));
-                                        setOpenItemModal(Boolean(value));
-                                    }}
-                                    searchable
-                                    searchPlaceholder="Buscar producto..."
-                                    onSearchChange={(text) => setQuery(text)}
-                                    className="h-9 text-xs"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-auto">
-                            <DataTable
-                                tableId="transfer-products-items"
-                                data={itemRows}
-                                columns={columns}
-                                rowKey="stockItemId"
-                                emptyMessage="Aún no agregas items."
-                                animated={false}
-                                tableClassName="table-fixed text-[11px]"
-                                onRowClick={handleRowClick}
-                                rowClassName={(row) => (row.stockItemId === selectedRowId ? "bg-primary/5" : undefined)}
-                            />
-                        </div>
-
-                        <div className="border-t border-black/10 px-3 sm:px-4 py-3">
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="text-[11px] text-black/60">Total costo items</div>
-                                <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-                                    <span className="font-semibold text-black tabular-nums">{money(totalCost, CURRENCY)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto flex flex-col max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]">
-                        <div className="border-b border-black/10 px-3 sm:px-4 py-2 mt-2">
-                            <SectionHeaderForm icon={FileText} title="Datos de documento" />
-                        </div>
-                        <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-3">
-                            <div className="grid grid-cols-2 gap-4">
-                              <FloatingSelect
-                                  label="Almacén de origen"
-                                  name="transfer-warehouse-from"
-                                  value={form.fromWarehouseId ?? ""}
-                                  options={warehouseOptions}
-                                  onChange={(value) => {
-                                      setForm((prev) => ({ ...prev, fromWarehouseId: value, serieId: "" }));
-                                      setStockSummaryFrom(null);
-                                      setStockSummaryTo(null);
-                                      setStockError(null);
-                                      void loadSeries(value);
-                                  }}
-                                  className="h-9 text-xs"
-                                  searchable
-                              />
-                              <FloatingSelect
-                                  label="Almacén de destino"
-                                  name="transfer-warehouse-to"
-                                  value={form.toWarehouseId ?? ""}
-                                  options={warehouseOptions}
-                                  onChange={(value) => {
-                                      setForm((prev) => ({ ...prev, toWarehouseId: value }));
-                                      setStockSummaryTo(null);
-                                      setStockError(null);
-                                  }}
-                                  className="h-9 text-xs"
-                                  searchable
-                              />
-                              <FloatingInput
-                                  label="Serie"
-                                  name="transfer-serie"
-                                  value={serie.label}
-                                  disabled
-                                  className="h-9 text-xs text-black/90"
-                              />
-                              <FloatingInput
-                                  label="Nota"
-                                  name="transfer-note"
-                                  value={form.note ?? ""}
-                                  onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-                                  className="h-9 text-xs"
-                              />
-                            </div>
-                            <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
-                                <p className="text-[11px] font-semibold text-black">Resumen</p>
-                                <div className="mt-2 space-y-1 text-[11px] text-black/70">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Producto</span>
-                                        <span className="font-semibold text-right">{summaryBase?.name ?? "-"}</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>SKU</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {summaryBase?.sku ?? "-"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>SKU interno</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {summaryBase?.customSku ?? "-"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Presentación</span>
-                                        <span className="font-semibold text-right">
-                                            {summaryBase?.attributes?.presentation ?? "-"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Variante</span>
-                                        <span className="font-semibold text-right">
-                                            {summaryBase?.attributes?.variant ?? "-"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Color</span>
-                                        <span className="font-semibold text-right">
-                                            {summaryBase?.attributes?.color ?? "-"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Unidad</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {summaryBase?.unit ?? "-"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Stock origen</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {stockLoading
-                                                ? "Cargando..."
-                                                : stockError
-                                                    ? "-"
-                                                    : stockSummaryFrom?.value ?? "-"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Stock destino</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {!form.toWarehouseId
-                                                ? "-"
-                                                : stockLoading
-                                                    ? "Cargando..."
-                                                    : stockError
-                                                        ? "-"
-                                                        : stockSummaryTo?.value ?? "-"}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-black/10 px-3 sm:px-4 py-3">
-                            <div className="flex gap-2">
-                                <SystemButton variant="outline" className="flex-1" onClick={resetForm}>
-                                    Limpiar
-                                </SystemButton>
-                                <SystemButton
-                                    className="flex-1"
-                                    disabled={
-                                        loading ||
-                                        !form.fromWarehouseId ||
-                                        !form.toWarehouseId ||
-                                        !form.serieId ||
-                                        !(form.items ?? []).length
-                                    }
-                                    onClick={saveTransfer}
-                                >
-                                    {loading ? "Guardando..." : "Guardar"}
-                                </SystemButton>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
+              <FloatingSelect
+                label="Estado"
+                name="status"
+                value={statusFilter}
+                onChange={(value) => {
+                  setStatusFilter(value as DocStatus | "");
+                  setPage(1);
+                }}
+                options={statusOptions}
+                searchable
+                className="h-11 rounded-sm border-border shadow-sm"
+              />
             </div>
+          }
+          pagination={{
+            page,
+            limit,
+            total,
+          }}
+          onPageChange={setPage}
+          tableClassName="text-[10px]"
+        />
 
-            <TransferItemModal
-                open={openItemModal}
-                pendingItem={pendingItem}
-                onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
-                onClose={() => {
-                    setOpenItemModal(false);
-                    setPendingItem(buildEmptyItemTransfer());
-                }}
-                onAdd={() => {
-                    addItem();
-                    setOpenItemModal(false);
-                }}
-            />
+        {error ? <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div> : null}
+      </div>
 
-            <TransferResultModal
-                open={openNavigateModal}
-                onClose={() => setOpenNavigateModal(false)}
-                onNew={() => {
-                    setOpenNavigateModal(false);
-                    resetForm();
-                    setLastSavedTransferId("");
-                    navigate(RoutesPaths.rowMaterialTransfer);
-                }}
-                onGoToList={() => {
-                    setOpenNavigateModal(false);
-                    navigate(RoutesPaths.KardexPrima);
-                }}
-                transferId={lastSavedTransferId}
-                title="Transferencia de inventario procesada"
-                goToLabel="Ir a kardex de materia prima"
-            />
-        </PageShell>
-    );
+      <PdfViewerModal
+        open={openPdfModal}
+        onClose={() => {
+          setOpenPdfModal(false);
+          setSelectedDocumentId(null);
+          loadDocuments();
+        }}
+        title="Documento de inventario"
+        getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
+      />
+
+      <TransferProductsModal
+        open={openTransferModal}
+        onClose={() => setOpenTransferModal(false)}
+        onSaved={() => {
+          setPage(1);
+          void loadDocuments();
+        }}
+        type={ InventoryDocumentProductType.MATERIAL }
+      />
+    </PageShell>
+  );
 }

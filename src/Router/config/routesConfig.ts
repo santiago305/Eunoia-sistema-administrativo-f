@@ -55,6 +55,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.catalogAdjustments, name: "catalogAdjustments", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
   { path: RoutesPaths.catalogTransfer, name: "catalogTransfer", isProtected: true, 
     rolesAllowed: ["admin", "supervisor"] },
+  { path: RoutesPaths.catalogAdjustment, name: "catalogAdjustment", isProtected: true, rolesAllowed: ["admin", "supervisor"] },
   { path: RoutesPaths.catalogInventory, name: "catalogInventory", isProtected: true, 
     rolesAllowed: ["admin", "moderator", "supervisor"] },
     
