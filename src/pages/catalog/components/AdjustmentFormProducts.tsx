@@ -17,7 +17,7 @@ import { createOutOrder, getStockSku } from "@/services/documentService";
 import { listSkus } from "@/services/skuService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
+import { ProductType, ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/pages/catalog/types/product";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import { AdjustmentItemModal } from "@/pages/catalog/components/AdjustmentItemModal";
@@ -34,6 +34,8 @@ export type AdjustmentFormProductsProps = {
   onClose?: () => void;
   loadDocuments?: () => void;
   onSaved?: (adjustmentId: string) => void | Promise<void>;
+  type?: ProductType,
+  route:string
 };
 
 type PendingAdjustmentItem = {
@@ -74,7 +76,9 @@ export default function AdjustmentFormProducts({
   open = true,
   onClose,
   onSaved,
-  loadDocuments
+  loadDocuments,
+  type,
+  route,
 }: AdjustmentFormProductsProps) {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
@@ -185,7 +189,7 @@ export default function AdjustmentFormProducts({
     try {
       const res = await listSkus({
         q: requestQuery,
-        productType: ProductTypes.PRODUCT,
+        productType: type,
         isActive: true,
         page: 1,
         limit: 50,
@@ -497,7 +501,7 @@ export default function AdjustmentFormProducts({
         ) : null}
 
         <div className={`grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] mt-3 ${viewportHeightClasses}`}>
-          <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
+          <section className="rounded-2xl border border-black/10 bg-white shadow-sm flex flex-col">
             <div className="border-b border-black/10 p-3 sm:p-4">
               <SectionHeaderForm icon={Boxes} title="Productos" />
 
@@ -530,6 +534,7 @@ export default function AdjustmentFormProducts({
                 data={itemRows}
                 columns={columns}
                 rowKey="skuId"
+                responsiveCards
                 emptyMessage="Aún no agregas items."
                 animated={false}
                 tableClassName="text-[11px]"
@@ -703,7 +708,7 @@ export default function AdjustmentFormProducts({
           resetForm();
           setLastSavedAdjustmentId("");
           if (!inModal) {
-            navigate(RoutesPaths.catalogAdjustment);
+            navigate(route);
           }
         }}
         onGoToList={() => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
@@ -24,7 +24,7 @@ import { SystemButton } from "@/components/SystemButton";
 import { getDocuments } from "@/services/documentService";
 import AdjustmentProductModal from "@/pages/catalog/components/AdjustmentFormProducts";
 import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
-import { ProductTypes } from "./types/ProductTypes";
+import { ProductTypes } from "../catalog/types/ProductTypes";
 import { RoutesPaths } from "@/router/config/routesPaths";
 
 const statusLabels: Record<DocStatus, string> = {
@@ -210,7 +210,7 @@ export default function AdjustmentProduts() {
         to: toDate || undefined,
         warehouseId: warehouseId || undefined,
         docType: DocType.ADJUSTMENT,
-        productType: InventoryDocumentProductType.PRODUCT,
+        productType: InventoryDocumentProductType.MATERIAL,
         status: statusFilter || undefined,
         q: debouncedQuery || undefined,
       });
@@ -349,8 +349,7 @@ export default function AdjustmentProduts() {
       <PageTitle title="Ajustes" />
       <div className="space-y-4">
         <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
-          <Headed title="Ajustes (Productos)" size="lg" />
-
+          <Headed title="Ajustes (Materiales)" size="lg" />
           <div className="flex justify-end">
             <SystemButton
               size="md"
@@ -424,8 +423,8 @@ export default function AdjustmentProduts() {
         onClose={handleClose}
         onSaved={() => setRefresh(prev => prev + 1)}
         loadDocuments={() => setRefresh(prev => prev + 1)}
-        type={ProductTypes.PRODUCT}
-        route={RoutesPaths.catalogAdjustment}
+        type={ProductTypes.MATERIAL}
+        route={RoutesPaths.rowMaterialAdjustments}
       />
     </PageShell>
   );
