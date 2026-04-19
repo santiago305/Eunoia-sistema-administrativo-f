@@ -11,6 +11,7 @@ import { listActive } from "@/services/warehouseServices";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import {
   buildMonthStartIso,
+  endOfDayIso,
   parseDateInputValue,
   toLocalDateKey,
   todayIso,
@@ -45,7 +46,7 @@ export default function AdjustmentProduts() {
   const { showFlash, clearFlash } = useFlashMessage();
 
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-  const [toDate, setToDate] = useState(() => todayIso());
+  const [toDate, setToDate] = useState(() => endOfDayIso());
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
   const [query, setQuery] = useState("");
@@ -424,7 +425,6 @@ export default function AdjustmentProduts() {
         onSaved={() => setRefresh(prev => prev + 1)}
         loadDocuments={() => setRefresh(prev => prev + 1)}
         type={ProductTypes.MATERIAL}
-        route={RoutesPaths.rowMaterialAdjustments}
       />
     </PageShell>
   );

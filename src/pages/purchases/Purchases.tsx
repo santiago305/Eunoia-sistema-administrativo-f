@@ -8,7 +8,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers } from "@/services/supplierService";
 import { listActiveWarehouses } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
-import { buildMonthStartIso, money, parseDateInputValue, todayIso, toLocalDateKey } from "@/utils/functionPurchases";
+import { buildMonthStartIso, endOfDayIso, money, parseDateInputValue, todayIso, toLocalDateKey } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -68,7 +68,7 @@ export default function Purchases() {
     const [documentType, setDocumentType] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-    const [toDate, setToDate] = useState(() => todayIso()); 
+    const [toDate, setToDate] = useState(() => endOfDayIso()); 
     const [page, setPage] = useState(1);
     const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
     const [appliedWarehouseSearch, setAppliedWarehouseSearch] = useState("");

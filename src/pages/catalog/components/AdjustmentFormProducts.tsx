@@ -35,7 +35,6 @@ export type AdjustmentFormProductsProps = {
   loadDocuments?: () => void;
   onSaved?: (adjustmentId: string) => void | Promise<void>;
   type?: ProductType,
-  route:string
 };
 
 type PendingAdjustmentItem = {
@@ -78,7 +77,6 @@ export default function AdjustmentFormProducts({
   onSaved,
   loadDocuments,
   type,
-  route,
 }: AdjustmentFormProductsProps) {
   const { showFlash, clearFlash } = useFlashMessage();
   const navigate = useNavigate();
@@ -122,10 +120,8 @@ export default function AdjustmentFormProducts({
 
   const handleClose = useCallback(() => {
     resetForm();
-    if (onClose) {
-      onClose();
-    }
-    navigate(RoutesPaths.catalogAdjustments);
+    onClose?.();
+    loadDocuments?.();
   },[]);
 
   const loadWarehouses = async () => {
@@ -707,9 +703,6 @@ export default function AdjustmentFormProducts({
           setOpenNavigateModal(false);
           resetForm();
           setLastSavedAdjustmentId("");
-          if (!inModal) {
-            navigate(route);
-          }
         }}
         onGoToList={() => {
           setOpenNavigateModal(false);

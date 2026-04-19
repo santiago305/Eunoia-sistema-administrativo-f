@@ -13,6 +13,7 @@ import { listActive } from "@/services/warehouseServices";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
 import {
   buildMonthStartIso,
+  endOfDayIso,
   parseDateInputValue,
   toLocalDateKey,
   todayIso,
@@ -55,7 +56,7 @@ export default function TransferenceProduts() {
   const { showFlash, clearFlash } = useFlashMessage();
 
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-  const [toDate, setToDate] = useState(() => todayIso());
+  const [toDate, setToDate] = useState(() => endOfDayIso());
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
   const [query, setQuery] = useState("");
