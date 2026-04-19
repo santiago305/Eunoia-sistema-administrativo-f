@@ -117,6 +117,19 @@ export const recalcItem = (item: PurchaseOrderItem): PurchaseOrderItem => {
     purchaseValue: toNumber(purchaseValue),
   };
 };
+export const endOfDayIso = () => {
+  const now = new Date();
+  const end = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59
+  );
+
+  return toLocalIso(end);
+};
 
 const toLocalIso = (date: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");
