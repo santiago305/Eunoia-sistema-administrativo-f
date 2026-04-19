@@ -304,7 +304,7 @@ export default function TransferenceProduts() {
       <div className="space-y-4">
         <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
           <Headed title="Transferencias (Productos)" size="lg" />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex justify-end">
             <SystemButton
               size="md"
               className="w-full lg:w-auto"

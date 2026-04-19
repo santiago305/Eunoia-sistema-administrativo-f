@@ -40,7 +40,7 @@ const Warehouses = lazy(() => import("@/pages/warehouse/Warehouses"));
 const Locations = lazy(() => import("@/pages/warehouse/components/LocationModal"));
 const RowMaterial = lazy(() => import("@/pages/row-material/RowMaterial"));
 const RowMaterialSummary = lazy(() => import("@/pages/row-material/SummaryRow"));
-const RowMaterialAdjustments = lazy(() => import("@/pages/row-material/AdjustmentRowMaterial"));
+const RowMaterialAdjustments = lazy(() => import("@/pages/row-material/AdjustmentRowMaterials"));
 const RowMaterialDocuments = lazy(() => import("@/pages/row-material/DocumentRowMaterial"));
 const Providers = lazy(() => import("@/pages/providers/Providers"));
 const Purchase = lazy(() => import("@/pages/purchases/Purchase"));

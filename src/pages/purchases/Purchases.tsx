@@ -8,7 +8,7 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { listSuppliers } from "@/services/supplierService";
 import { listActiveWarehouses } from "@/services/warehouseServices";
 import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
-import { money, parseDateInputValue, toLocalDateKey } from "@/utils/functionPurchases";
+import { buildMonthStartIso, money, parseDateInputValue, todayIso, toLocalDateKey } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -67,8 +67,8 @@ export default function Purchases() {
     const [warehouseId, setWarehouseId] = useState("");
     const [documentType, setDocumentType] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
-    const [fromDate, setFromDate] = useState("");
-    const [toDate, setToDate] = useState("");
+    const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
+    const [toDate, setToDate] = useState(() => todayIso()); 
     const [page, setPage] = useState(1);
     const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
     const [appliedWarehouseSearch, setAppliedWarehouseSearch] = useState("");
@@ -814,27 +814,29 @@ export default function Purchases() {
         <PageShell className="bg-white">
             <PageTitle title="Compras" />
             <div className="space-y-4">
-               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
                     <Headed 
                         title="Compras" 
                         size="lg"
                     />
-                    <SystemButton
-                        size="md"
-                        className="w-full lg:w-auto"
-                        leftIcon={<Plus className="h-4 w-4" />}
-                        style={{
-                        backgroundColor: PRIMARY,
-                        borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                        boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-                        }}
-                        onClick={() => {
-                            setEditPoId(undefined);
-                            setOpenPurchaseModal(true);
-                        }}
-                    >
-                        Nueva compra
-                    </SystemButton>
+                    <div className="flex justify-end">
+                        <SystemButton
+                            size="md"
+                            className="w-full lg:w-auto"
+                            leftIcon={<Plus className="h-4 w-4" />}
+                            style={{
+                            backgroundColor: PRIMARY,
+                            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+                            }}
+                            onClick={() => {
+                                setEditPoId(undefined);
+                                setOpenPurchaseModal(true);
+                            }}
+                        >
+                            Nueva compra
+                        </SystemButton>
+                    </div>
                 </div>
 
                 <DataTable

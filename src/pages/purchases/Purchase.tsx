@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Newspaper, Boxes, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
@@ -162,6 +162,14 @@ export default function PurchaseCreateLocal({
     }
   };
 
+  
+    const handleClosePayment = useCallback(()=>{
+        setOpenPaymentModal(false)
+    },[])
+
+    const handleCloseEquivalence = useCallback(()=>{
+        setOpenEquivalence(false)
+    },[])
   const loadSuppliers = async (appliedSearch: string) => {
     clearFlash();
     try {
@@ -913,13 +921,13 @@ export default function PurchaseCreateLocal({
         igv={IGV}
         setForm={setForm}
         setItemId={setItemId}
-        onClose={() => setOpenEquivalence(false)}
+        onClose={handleCloseEquivalence}
       />
 
       {openPaymentModal && (
         <PurchasePaymentModal
           open={openPaymentModal}
-          onClose={() => setOpenPaymentModal(false)}
+          onClose={handleClosePayment}
           form={form}
           setForm={setForm}
           totalPrice={totals.totalPrice}

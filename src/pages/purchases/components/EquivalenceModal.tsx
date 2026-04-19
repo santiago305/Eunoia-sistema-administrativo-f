@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { Boxes, Scale } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { errorResponse } from "@/common/utils/response";
@@ -71,12 +71,12 @@ export function EquivalenceModal({
     setPendingUnitBase("");
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setEquivalences([]);
     setLoading(false);
     resetPending();
     onClose();
-  };
+  },[]);
 
   const loadUnits = async (canUpdate: () => boolean) => {
     if (units.length > 0) return units;
