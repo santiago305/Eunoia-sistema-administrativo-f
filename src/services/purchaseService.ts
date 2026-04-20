@@ -8,6 +8,8 @@ import type {
   PurchaseOrder,
   PurchaseOrderItemsResponse,
   PurchaseOrderListResponse,
+  PurchaseSearchSnapshot,
+  PurchaseSearchStateResponse,
   UpdatePurchaseOrderActiveDto,
   UpdatePurchaseOrderDto,
 } from "@/pages/purchases/types/purchase";
@@ -24,6 +26,29 @@ export const listPurchaseOrders = async (
   params: ListPurchaseOrdersQuery
 ): Promise<PurchaseOrderListResponse> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.list, { params });
+  return response.data;
+};
+
+export const getPurchaseSearchState = async (): Promise<PurchaseSearchStateResponse> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.searchState);
+  return response.data;
+};
+
+export const savePurchaseSearchMetric = async (
+  name: string,
+  snapshot: PurchaseSearchSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.saveSearchMetric, {
+    name,
+    snapshot,
+  });
+  return response.data;
+};
+
+export const deletePurchaseSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_PURCHASE_GROUP.deleteSearchMetric(metricId));
   return response.data;
 };
 

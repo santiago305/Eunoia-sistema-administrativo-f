@@ -12,6 +12,7 @@ import type { DataTableFiltersConfig, DataTableRangeDates } from "./types";
 
 type Props = {
   showSearch?: boolean;
+  customSearchContent?: ReactNode;
   searchValue: string;
   searchPlaceholder: string;
   onSearchChange: (value: string) => void;
@@ -23,6 +24,7 @@ type Props = {
 
 export function DataTableToolbar({
   showSearch,
+  customSearchContent,
   searchValue,
   searchPlaceholder,
   onSearchChange,
@@ -35,6 +37,7 @@ export function DataTableToolbar({
   const filtersAnchorRef = useRef<HTMLButtonElement | null>(null);
 
   if (
+    !customSearchContent &&
     !showSearch &&
     !filtersConfig &&
     !rangeDates &&
@@ -47,6 +50,10 @@ export function DataTableToolbar({
   return (
     <div className="relative z-30 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+        {customSearchContent ? (
+          <div className="min-w-0 flex-1">{customSearchContent}</div>
+        ) : null}
+
         {showSearch ? (
           <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             {showSearch ? (

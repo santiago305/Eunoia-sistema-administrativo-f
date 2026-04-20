@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Menu, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
@@ -26,7 +26,6 @@ import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
-import { ProductionFilters } from "@/pages/production/components/ProductionFilters";
 import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
 
 const PRIMARY = "hsl(var(--primary))";
@@ -127,8 +126,6 @@ export default function Production() {
   const [page, setPage] = useState(1);
   const limit = DEFAULT_LIMIT;
   const nowIso = useMemo(() => new Date().toISOString(), []);
-  const productionTableFilters = useMemo<DataTableFilterTree>(() => [], []);
-  const productionAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => [], []);
 
   const loadWarehouses = async () => {
     try {
@@ -319,6 +316,135 @@ export default function Production() {
       a.label.localeCompare(b.label, "es", { sensitivity: "base" }),
     );
   }, [rows]);
+
+  const productionTableFilters = useMemo<DataTableFilterTree>(() => {
+    const warehouseFilterOptions = warehouseOptions
+      .filter((option) => option.value)
+      .map((option) => ({
+        id: option.value,
+        label: option.label,
+      }));
+
+    const statusFilterOptions = statusOptions
+      .filter((option) => option.value !== "all")
+      .map((option) => ({
+        id: option.value,
+        label: option.label,
+      }));
+
+    const productFilterOptions = productOptions.map((option) => ({
+      id: option.value,
+      label: option.label,
+    }));
+
+    return [
+      {
+        id: "warehouse",
+        label: "Almacén",
+        modes: [
+          {
+            id: "select",
+            label: "Seleccionar",
+            groups: [
+              {
+                id: "options",
+                label: "Almacenes",
+                searchable: true,
+                options: warehouseFilterOptions,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "status",
+        label: "Estado",
+        modes: [
+          {
+            id: "select",
+            label: "Seleccionar",
+            groups: [
+              {
+                id: "options",
+                label: "Estados",
+                options: statusFilterOptions,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "product",
+        label: "Producto",
+        modes: [
+          {
+            id: "select",
+            label: "Seleccionar",
+            groups: [
+              {
+                id: "options",
+                label: "Productos",
+                searchable: true,
+                options: productFilterOptions,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }, [productOptions, statusOptions, warehouseOptions]);
+
+  const productionAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => {
+    const filters: AppliedDataTableFilter[] = [];
+
+    if (warehouseId) {
+      filters.push({
+        id: "warehouse:select:options",
+        categoryId: "warehouse",
+        modeId: "select",
+        groupId: "options",
+        operator: "OR",
+        optionIds: [warehouseId],
+      });
+    }
+
+    if (statusFilter !== "all") {
+      filters.push({
+        id: "status:select:options",
+        categoryId: "status",
+        modeId: "select",
+        groupId: "options",
+        operator: "OR",
+        optionIds: [statusFilter],
+      });
+    }
+
+    if (selectedProductIds.length > 0) {
+      filters.push({
+        id: "product:select:options",
+        categoryId: "product",
+        modeId: "select",
+        groupId: "options",
+        operator: "OR",
+        optionIds: selectedProductIds,
+      });
+    }
+
+    return filters;
+  }, [selectedProductIds, statusFilter, warehouseId]);
+
+  const handleProductionFiltersChange = useCallback((next: AppliedDataTableFilter[]) => {
+    const getFirstOption = (categoryId: string) =>
+      next.find((item) => item.categoryId === categoryId)?.optionIds[0] ?? "";
+
+    const getOptionIds = (categoryId: string) =>
+      next.find((item) => item.categoryId === categoryId)?.optionIds ?? [];
+
+    setWarehouseId(getFirstOption("warehouse"));
+    setStatusFilter((getFirstOption("status") || "all") as "all" | ProductionStatus);
+    setSelectedProductIds(getOptionIds("product"));
+    setPage(1);
+  }, []);
 
   const filteredRows = useMemo(() => {
     if (selectedProductIds.length === 0) return rows;
@@ -533,27 +659,6 @@ export default function Production() {
           </SystemButton>
         </div>
 
-        <ProductionFilters
-          warehouseId={warehouseId}
-          statusFilter={statusFilter}
-          selectedProductIds={selectedProductIds}
-          warehouseOptions={warehouseOptions}
-          statusOptions={statusOptions}
-          productOptions={productOptions}
-          onWarehouseChange={(value) => {
-            setWarehouseId(value);
-            setPage(1);
-          }}
-          onStatusChange={(value) => {
-            setStatusFilter(value);
-            setPage(1);
-          }}
-          onProductsChange={(value) => {
-            setSelectedProductIds(value);
-            setPage(1);
-          }}
-        />
-
         <DataTable
           tableId="production-orders-table"
           data={filteredRows}
@@ -579,8 +684,8 @@ export default function Production() {
           filtersConfig={{
             categories: productionTableFilters,
             value: productionAppliedFilters,
-            onChange: () => undefined,
-            emptyMessage: "Sin filtros por ahora.",
+            onChange: handleProductionFiltersChange,
+            emptyMessage: "Sin resultados.",
           }}
           pagination={{
             page,
@@ -616,4 +721,3 @@ export default function Production() {
     </PageShell>
   );
 }
-

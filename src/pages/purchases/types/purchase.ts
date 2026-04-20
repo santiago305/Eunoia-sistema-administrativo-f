@@ -25,6 +25,52 @@ export type UpdatePurchaseOrderDto = z.infer<typeof updatePurchaseOrderSchema>;
 export type UpdatePurchaseOrderActiveDto = z.infer<typeof setPurchaseOrderActiveSchema>;
 export type ListPurchaseOrdersQuery = z.infer<typeof listPurchaseOrdersQuerySchema>;
 
+export type PurchaseSearchFilters = {
+  supplierIds: string[];
+  warehouseIds: string[];
+  statuses: PurchaseOrderStatus[];
+  documentTypes: VoucherDocType[];
+  paymentForms: PaymentFormType[];
+};
+
+export type PurchaseSearchSnapshot = {
+  q?: string;
+  filters: PurchaseSearchFilters;
+};
+
+export type PurchaseSearchOption = {
+  id: string;
+  label: string;
+  keywords?: string[];
+};
+
+export type PurchaseRecentSearch = {
+  recentId: string;
+  label: string;
+  snapshot: PurchaseSearchSnapshot;
+  lastUsedAt: string;
+};
+
+export type PurchaseSavedMetric = {
+  metricId: string;
+  name: string;
+  label: string;
+  snapshot: PurchaseSearchSnapshot;
+  updatedAt: string;
+};
+
+export type PurchaseSearchStateResponse = {
+  recent: PurchaseRecentSearch[];
+  saved: PurchaseSavedMetric[];
+  catalogs: {
+    suppliers: PurchaseSearchOption[];
+    warehouses: PurchaseSearchOption[];
+    statuses: PurchaseSearchOption[];
+    documentTypes: PurchaseSearchOption[];
+    paymentForms: PurchaseSearchOption[];
+  };
+};
+
 export type PurchaseOrderItem = {
   skuId: string,
   sku?: {
@@ -50,7 +96,10 @@ export type PurchaseOrderItem = {
 export type PurchaseOrder = {
   poId?: string;
   supplierId: string;
+  supplierName?: string;
+  supplierDocumentNumber?: string;
   warehouseId: string;
+  warehouseName?: string;
   documentType: VoucherDocType;
   serie: string;
   correlative?: number;

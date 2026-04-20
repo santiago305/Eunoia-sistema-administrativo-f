@@ -1,19 +1,37 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
-import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
-import type { DataTableColumn } from "@/components/table/types";
+import {
+    DataTableSearchBar,
+    DataTableSearchChips,
+    DataTableSearchPanel,
+    type DataTableRecentSearchItem,
+    type DataTableSavedSearchItem,
+    type DataTableSearchColumn,
+} from "@/components/table/search";
+import type { DataTableColumn, DataTableColumnPreference } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listSuppliers } from "@/services/supplierService";
-import { listActiveWarehouses } from "@/services/warehouseServices";
-import { enterPurchaseOrder, listPurchaseOrders, setCancelPurchase, setSentPurchase } from "@/services/purchaseService";
-import { buildMonthStartIso, endOfDayIso, money, parseDateInputValue, todayIso, toLocalDateKey } from "@/utils/functionPurchases";
+import {
+    deletePurchaseSearchMetric,
+    enterPurchaseOrder,
+    getPurchaseSearchState,
+    listPurchaseOrders,
+    savePurchaseSearchMetric,
+    setCancelPurchase,
+    setSentPurchase,
+} from "@/services/purchaseService";
+import { buildMonthStartIso, endOfDayIso, money, parseDateInputValue, toLocalDateKey } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
-import { SupplierOption } from "../providers/types/supplier";
-import { PurchaseOrder } from "./types/purchase";
+import { PurchaseModal } from "./components/PurchaseModal";
+import type {
+    PurchaseOrder,
+    PurchaseSearchFilters,
+    PurchaseSearchSnapshot,
+    PurchaseSearchStateResponse,
+} from "./types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/components/TimerToEnd";
 import { ActionsPopover, type ActionItem } from "@/components/ActionsPopover";
@@ -23,7 +41,16 @@ import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
-import { PurchaseModal } from "./components/PurchaseModal";
+import { useLocalStorage } from "@/components/table/use-local-storage";
+import {
+    buildPurchaseSearchChips,
+    createEmptyPurchaseSearchFilters,
+    hasPurchaseSearchCriteria,
+    removePurchaseSearchKey,
+    sanitizePurchaseSearchSnapshot,
+    togglePurchaseSearchOption,
+    type PurchaseSearchFilterKey,
+} from "./utils/purchaseSmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -41,7 +68,10 @@ const docTypeLabels: Record<VoucherDocType, string> = {
     [VoucherDocTypes.NOTA_VENTA]: "Nota de venta",
 };
 
-const normalizeNumber = (raw: string) => raw.trim().replace(/\s+/g, "");
+const paymentFormLabels: Record<string, string> = {
+    [PaymentFormTypes.CONTADO]: "Contado",
+    [PaymentFormTypes.CREDITO]: "Credito",
+};
 
 type PurchaseRow = {
     id: string;
@@ -61,17 +91,12 @@ type PurchaseRow = {
 export default function Purchases() {
     const { showFlash, clearFlash } = useFlashMessage();
 
-    const [numeroInput, setNumeroInput] = useState("");
-    const [debouncedNumero, setDebouncedNumero] = useState("");
-    const [supplierId, setSupplierId] = useState("");
-    const [warehouseId, setWarehouseId] = useState("");
-    const [documentType, setDocumentType] = useState("");
-    const [statusFilter, setStatusFilter] = useState("");
+    const [searchText, setSearchText] = useState("");
+    const [appliedSearchText, setAppliedSearchText] = useState("");
+    const [searchFilters, setSearchFilters] = useState<PurchaseSearchFilters>(() => createEmptyPurchaseSearchFilters());
     const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-    const [toDate, setToDate] = useState(() => endOfDayIso()); 
+    const [toDate, setToDate] = useState(() => endOfDayIso());
     const [page, setPage] = useState(1);
-    const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
-    const [appliedWarehouseSearch, setAppliedWarehouseSearch] = useState("");
     const limit = 8;
 
     const [purchases, setPurchases] = useState<PurchaseOrder[]>([]);
@@ -85,9 +110,8 @@ export default function Purchases() {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const [supplierOptions, setSupplierOptions] = useState<(SupplierOption & { doc?: string })[]>([]);
-    const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string; address?: string }[]>([]);
+    const [searchState, setSearchState] = useState<PurchaseSearchStateResponse | null>(null);
+    const [savingMetric, setSavingMetric] = useState(false);
     const [modalPayment, setModalPayment] = useState(false);
     const [modalPaymentList, setModalPaymentList] = useState(false);
     const [modalQuotaList, setModalQuotaList] = useState(false);
@@ -102,89 +126,52 @@ export default function Purchases() {
     const [openPdfModal, setOpenPdfModal] = useState(false);
     const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
 
-    const docTypeOptions = [
-        { value: "", label: "todos" },
-        { value: VoucherDocTypes.BOLETA, label: "Boleta" },
-        { value: VoucherDocTypes.FACTURA, label: "Factura" },
-        { value: VoucherDocTypes.NOTA_VENTA, label: "Nota de venta" },
-    ];
+    const draftSnapshot = useMemo(
+        () =>
+            sanitizePurchaseSearchSnapshot({
+                q: searchText,
+                filters: searchFilters,
+            }),
+        [searchFilters, searchText],
+    );
 
-    const statusOptions = [
-        { value: "", label: "todos" },
-        { value: PurchaseOrderStatuses.DRAFT, label: "Borrador" },
-        { value: PurchaseOrderStatuses.SENT, label: "Enviado" },
-        { value: PurchaseOrderStatuses.PARTIAL, label: "Parcial" },
-        { value: PurchaseOrderStatuses.RECEIVED, label: "Recibido" },
-        { value: PurchaseOrderStatuses.CANCELLED, label: "Cancelado" },
-    ];
+    const executedSnapshot = useMemo(
+        () =>
+            sanitizePurchaseSearchSnapshot({
+                q: appliedSearchText,
+                filters: searchFilters,
+            }),
+        [appliedSearchText, searchFilters],
+    );
 
-    useEffect(() => {
-        const t = setTimeout(() => {
-            setDebouncedNumero(numeroInput.trim());
-            setPage(1);
-        }, 400);
-        return () => clearTimeout(t);
-    }, [numeroInput]);
-
-    const loadSuppliers = useCallback(async (appliedSearch: string) => {
-        clearFlash();
+    const loadSearchState = useCallback(async () => {
         try {
-          const res = await listSuppliers({
-            page: 1,
-            limit: 100,
-            q: appliedSearch?.trim() || undefined,
-          });
-          const options = (res.items ?? []).map((s) => {
-            const fullName = [s.name, s.lastName].filter(Boolean).join(" ").trim();
-            const display = (fullName || s.tradeName || "").trim();
-            const doc = s.documentNumber ? ` (${s.documentNumber})` : "";
-            return {
-              value: s.supplierId,
-              label: `${display}${doc}`.trim() || s.supplierId,
-              days: s.leadTimeDays,
-            };
-          });
-          setSupplierOptions([{
-                value: "",
-                label: "Todos",
-                days: undefined,
-            }, ...options]);
+            const response = await getPurchaseSearchState();
+            setSearchState(response);
         } catch {
-          setSupplierOptions([]);
-          showFlash(errorResponse("Error al cargar proveedores"));
+            showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
         }
-    }, [clearFlash, showFlash]);
+    }, [showFlash]);
 
-    const loadWarehouses = useCallback(async (q:string) => {
-    clearFlash();
-    try {
-      const res = await listActiveWarehouses({ page: 1, limit: 100, q });
-      const options =
-        (res.items ?? []).map((warehouse) => ({
-          value: warehouse.warehouseId,
-          label: warehouse.name,
-        })) ?? [];
-      setWarehouseOptions([{value:"", label:"Todos"}, ...options]);
-    } catch {
-      setWarehouseOptions([]);
-      showFlash(errorResponse("Error al cargar almacenes"));
-    }
-  }, [clearFlash, showFlash]);
+    const submitSearch = useCallback(() => {
+        setAppliedSearchText(searchText.trim());
+        setPage(1);
+    }, [searchText]);
 
     const loadPurchases = useCallback(async () => {
         clearFlash();
         setLoading(true);
         setError(null);
-        const number = normalizeNumber(debouncedNumero);
         try {
             const res = await listPurchaseOrders({
                 page,
                 limit,
-                supplierId: supplierId || undefined,
-                warehouseId: warehouseId || undefined,
-                documentType: documentType || undefined,
-                status: statusFilter || undefined,
-                number: number || undefined,
+                q: executedSnapshot.q,
+                supplierIds: executedSnapshot.filters.supplierIds.length ? executedSnapshot.filters.supplierIds : undefined,
+                warehouseIds: executedSnapshot.filters.warehouseIds.length ? executedSnapshot.filters.warehouseIds : undefined,
+                documentTypes: executedSnapshot.filters.documentTypes.length ? executedSnapshot.filters.documentTypes : undefined,
+                statuses: executedSnapshot.filters.statuses.length ? executedSnapshot.filters.statuses : undefined,
+                paymentForms: executedSnapshot.filters.paymentForms.length ? executedSnapshot.filters.paymentForms : undefined,
                 from: fromDate || undefined,
                 to: toDate || undefined,
             });
@@ -201,6 +188,9 @@ export default function Purchases() {
                 hasPrev: nextPage > 1,
                 hasNext: nextPage < nextTotalPages,
             });
+            if (hasPurchaseSearchCriteria(executedSnapshot)) {
+                void loadSearchState();
+            }
         } catch {
             setPurchases([]);
             setPagination((prev) => ({
@@ -217,16 +207,13 @@ export default function Purchases() {
         }
     }, [
         clearFlash,
-        debouncedNumero,
-        documentType,
+        executedSnapshot,
         fromDate,
         limit,
+        loadSearchState,
         page,
         showFlash,
-        statusFilter,
-        supplierId,
         toDate,
-        warehouseId,
     ]);
 
     const setSent = async (id: string) => {
@@ -284,228 +271,19 @@ export default function Purchases() {
     };
 
     useEffect(() => {
-        void loadWarehouses(appliedWarehouseSearch);
-    }, [appliedWarehouseSearch, loadWarehouses]);
-    
-    useEffect(() => {
-        void loadSuppliers(appliedSupplierSearch);
-    }, [appliedSupplierSearch, loadSuppliers]);
-
-    useEffect(() => {
         void loadPurchases();
     }, [loadPurchases]);
 
+    useEffect(() => {
+        void loadSearchState();
+    }, [loadSearchState]);
+
     const now = new Date().toISOString();
-
-    const supplierMetaById = useMemo(() => {
-        const map = new Map<string, { label: string; doc?: string }>();
-        supplierOptions.forEach((opt) => {
-            if (opt.value) map.set(opt.value, { label: opt.label, doc: opt.doc });
-        });
-        return map;
-    }, [supplierOptions]);
-
-    const warehouseMetaById = useMemo(() => {
-        const map = new Map<string, { label: string; address?: string }>();
-        warehouseOptions.forEach((opt) => {
-            if (opt.value) map.set(opt.value, { label: opt.label, address: opt.address });
-        });
-        return map;
-    }, [warehouseOptions]);
-
-    const supplierSelectOptions = useMemo(
-        () =>
-            supplierOptions.map((opt) => {
-                const doc = opt.doc ? ` (${opt.doc})` : "";
-                return {
-                    value: opt.value,
-                    label: `${opt.label}${doc}`.trim(),
-                };
-            }),
-        [supplierOptions],
-    );
-
-    const warehouseSelectOptions = useMemo(
-        () =>
-            warehouseOptions.map((opt) => {
-                return {
-                    value: opt.value,
-                    label: `${opt.label}`.trim(),
-                };
-            }),
-        [warehouseOptions],
-    );
-
-    const purchaseTableFilters = useMemo<DataTableFilterTree>(() => {
-        const supplierFilterOptions = supplierSelectOptions
-            .filter((option) => option.value)
-            .map((option) => ({
-                id: option.value,
-                label: option.label,
-            }));
-
-        const warehouseFilterOptions = warehouseSelectOptions
-            .filter((option) => option.value)
-            .map((option) => ({
-                id: option.value,
-                label: option.label,
-            }));
-
-        const documentTypeFilterOptions = docTypeOptions
-            .filter((option) => option.value)
-            .map((option) => ({
-                id: option.value,
-                label: option.label,
-            }));
-
-        const statusFilterOptions = statusOptions
-            .filter((option) => option.value)
-            .map((option) => ({
-                id: option.value,
-                label: option.label,
-            }));
-
-        return [
-            {
-                id: "supplier",
-                label: "Proveedor",
-                modes: [
-                    {
-                        id: "select",
-                        label: "Seleccionar",
-                        groups: [
-                            {
-                                id: "options",
-                                label: "Proveedores",
-                                searchable: true,
-                                options: supplierFilterOptions,
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                id: "warehouse",
-                label: "Almacén",
-                modes: [
-                    {
-                        id: "select",
-                        label: "Seleccionar",
-                        groups: [
-                            {
-                                id: "options",
-                                label: "Almacenes",
-                                searchable: true,
-                                options: warehouseFilterOptions,
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                id: "documentType",
-                label: "Tipo",
-                modes: [
-                    {
-                        id: "select",
-                        label: "Seleccionar",
-                        groups: [
-                            {
-                                id: "options",
-                                label: "Tipos",
-                                options: documentTypeFilterOptions,
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                id: "status",
-                label: "Estado",
-                modes: [
-                    {
-                        id: "select",
-                        label: "Seleccionar",
-                        groups: [
-                            {
-                                id: "options",
-                                label: "Estados",
-                                options: statusFilterOptions,
-                            },
-                        ],
-                    },
-                ],
-            },
-        ];
-    }, [docTypeOptions, statusOptions, supplierSelectOptions, warehouseSelectOptions]);
-
-    const purchaseAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => {
-        const filters: AppliedDataTableFilter[] = [];
-
-        if (supplierId) {
-            filters.push({
-                id: "supplier:select:options",
-                categoryId: "supplier",
-                modeId: "select",
-                groupId: "options",
-                operator: "OR",
-                optionIds: [supplierId],
-            });
-        }
-
-        if (warehouseId) {
-            filters.push({
-                id: "warehouse:select:options",
-                categoryId: "warehouse",
-                modeId: "select",
-                groupId: "options",
-                operator: "OR",
-                optionIds: [warehouseId],
-            });
-        }
-
-        if (documentType) {
-            filters.push({
-                id: "documentType:select:options",
-                categoryId: "documentType",
-                modeId: "select",
-                groupId: "options",
-                operator: "OR",
-                optionIds: [documentType],
-            });
-        }
-
-        if (statusFilter) {
-            filters.push({
-                id: "status:select:options",
-                categoryId: "status",
-                modeId: "select",
-                groupId: "options",
-                operator: "OR",
-                optionIds: [statusFilter],
-            });
-        }
-
-        return filters;
-    }, [documentType, statusFilter, supplierId, warehouseId]);
-
-    const handlePurchaseFiltersChange = useCallback((next: AppliedDataTableFilter[]) => {
-        const getFirstOption = (categoryId: string) =>
-            next.find((item) => item.categoryId === categoryId)?.optionIds[0] ?? "";
-
-        setSupplierId(getFirstOption("supplier"));
-        setWarehouseId(getFirstOption("warehouse"));
-        setDocumentType(getFirstOption("documentType"));
-        setStatusFilter(getFirstOption("status"));
-        setPage(1);
-    }, []);
 
     const purchaseRows = useMemo<PurchaseRow[]>(
         () =>
             purchases.map((purchase) => {
                 const numero = [purchase.serie, purchase.correlative].filter((v) => v !== null && v !== undefined && String(v).length > 0).join("-");
-                const supplierMeta = purchase.supplierId ? supplierMetaById.get(purchase.supplierId) : undefined;
-                const warehouseMeta = purchase.warehouseId ? warehouseMetaById.get(purchase.warehouseId) : undefined;
                 const statusLabel = purchase.status ? (statusLabels[purchase.status] ?? purchase.status) : "-";
                 const docLabel = purchase.documentType ? (docTypeLabels[purchase.documentType] ?? purchase.documentType) : "-";
                 const date = formatDate(new Date(purchase.dateIssue ?? ""));
@@ -529,9 +307,9 @@ export default function Purchases() {
                     id: purchase.poId ?? `${purchase.supplierId}-${purchase.createdAt ?? numero}`,
                     purchase,
                     numero,
-                    supplierLabel: supplierMeta?.label ?? "-",
-                    supplierDoc: supplierMeta?.doc ?? "",
-                    warehouseLabel: warehouseMeta?.label ?? "-",
+                    supplierLabel: purchase.supplierName ?? "-",
+                    supplierDoc: purchase.supplierDocumentNumber ?? "",
+                    warehouseLabel: purchase.warehouseName ?? "-",
                     statusLabel,
                     docLabel,
                     date,
@@ -540,7 +318,7 @@ export default function Purchases() {
                     timeEnter,
                 };
             }),
-        [purchases, supplierMetaById, warehouseMetaById],
+        [purchases],
     );
 
     const columns: DataTableColumn<PurchaseRow>[] = [
@@ -607,7 +385,7 @@ export default function Purchases() {
         {
             id: "paymentForm",
             header: "Forma",
-            cell: (row) => <span className="text-black/70">{row.purchase.paymentForm}</span>,
+            cell: (row) => <span className="text-black/70">{paymentFormLabels[row.purchase.paymentForm ?? ""] ?? row.purchase.paymentForm}</span>,
             headerClassName: "text-left w-[50px]",
             className: "text-black/70",
             hideable: true,
@@ -810,6 +588,149 @@ export default function Purchases() {
         },
     ];
 
+    const preferenceStorageKey = "data-table-preferences:purchase-list";
+    const [columnPreferences] = useLocalStorage<DataTableColumnPreference>(preferenceStorageKey, {
+        visibleColumnIds: columns.filter((column) => column.visible !== false).map((column) => column.id),
+        orderedColumnIds: columns.map((column) => column.id),
+    });
+
+    const smartSearchColumns = useMemo<DataTableSearchColumn<PurchaseSearchFilterKey>[]>(() => {
+        const visibilityMap: Record<PurchaseSearchFilterKey, string> = {
+            supplierIds: "supplier",
+            warehouseIds: "warehouse",
+            statuses: "status",
+            documentTypes: "docLabel",
+            paymentForms: "paymentForm",
+        };
+
+        return [
+            {
+                id: "supplierIds",
+                label: "Proveedor",
+                options: searchState?.catalogs.suppliers ?? [],
+                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.supplierIds),
+            },
+            {
+                id: "warehouseIds",
+                label: "Almacen",
+                options: searchState?.catalogs.warehouses ?? [],
+                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.warehouseIds),
+            },
+            {
+                id: "statuses",
+                label: "Estado",
+                options: searchState?.catalogs.statuses ?? [],
+                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.statuses),
+            },
+            {
+                id: "documentTypes",
+                label: "Tipo",
+                options: searchState?.catalogs.documentTypes ?? [],
+                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.documentTypes),
+            },
+            {
+                id: "paymentForms",
+                label: "Forma",
+                options: searchState?.catalogs.paymentForms ?? [],
+                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.paymentForms),
+            },
+        ];
+    }, [columnPreferences.visibleColumnIds, searchState]);
+
+    const recentSearches = useMemo<DataTableRecentSearchItem<PurchaseSearchSnapshot>[]>(
+        () =>
+            (searchState?.recent ?? []).map((item) => ({
+                id: item.recentId,
+                label: item.label,
+                snapshot: item.snapshot,
+            })),
+        [searchState],
+    );
+
+    const savedMetrics = useMemo<DataTableSavedSearchItem<PurchaseSearchSnapshot>[]>(
+        () =>
+            (searchState?.saved ?? []).map((metric) => ({
+                id: metric.metricId,
+                name: metric.name,
+                label: metric.label,
+                snapshot: metric.snapshot,
+            })),
+        [searchState],
+    );
+
+    const searchChips = useMemo(
+        () => buildPurchaseSearchChips(executedSnapshot, searchState),
+        [executedSnapshot, searchState],
+    );
+
+    const applySmartSnapshot = useCallback((snapshot: { q?: string; filters: PurchaseSearchFilters }) => {
+        const normalized = sanitizePurchaseSearchSnapshot(snapshot);
+        setSearchText(normalized.q ?? "");
+        setAppliedSearchText(normalized.q ?? "");
+        setSearchFilters(normalized.filters);
+        setPage(1);
+    }, []);
+
+    const handleToggleSmartOption = useCallback((key: PurchaseSearchFilterKey, optionId: string) => {
+        setSearchFilters((current) => {
+            const next = togglePurchaseSearchOption(
+                sanitizePurchaseSearchSnapshot({ q: searchText, filters: current }),
+                key,
+                optionId,
+            );
+            return next.filters;
+        });
+        setPage(1);
+    }, [searchText]);
+
+    const handleRemoveChip = useCallback((key: "q" | PurchaseSearchFilterKey) => {
+        const nextSnapshot = removePurchaseSearchKey(
+            sanitizePurchaseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+            key,
+        );
+        setSearchText(nextSnapshot.q ?? "");
+        setAppliedSearchText(nextSnapshot.q ?? "");
+        setSearchFilters(nextSnapshot.filters);
+        setPage(1);
+    }, [appliedSearchText, searchFilters]);
+
+    const handleSaveMetric = useCallback(async (name: string) => {
+        const snapshot = sanitizePurchaseSearchSnapshot({ q: appliedSearchText, filters: searchFilters });
+        if (!hasPurchaseSearchCriteria(snapshot)) return false;
+
+        setSavingMetric(true);
+        try {
+            const response = await savePurchaseSearchMetric(name, snapshot);
+            if (response.type === "success") {
+                showFlash(successResponse(response.message));
+                await loadSearchState();
+                return true;
+            } else {
+                showFlash(errorResponse(response.message));
+                return false;
+            }
+        } catch {
+            showFlash(errorResponse("Error al guardar la metrica"));
+            return false;
+        } finally {
+            setSavingMetric(false);
+        }
+    }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+
+    const handleDeleteMetric = useCallback(async (metricId: string) => {
+        try {
+            const response = await deletePurchaseSearchMetric(metricId);
+            if (response.type === "success") {
+                showFlash(successResponse(response.message));
+                await loadSearchState();
+            } else {
+                showFlash(errorResponse(response.message));
+            }
+        } catch {
+            showFlash(errorResponse("Error al eliminar la metrica"));
+        }
+    }, [loadSearchState, showFlash]);
+
     return (
         <PageShell className="bg-white">
             <PageTitle title="Compras" />
@@ -839,6 +760,11 @@ export default function Purchases() {
                     </div>
                 </div>
 
+                <DataTableSearchChips
+                    chips={searchChips}
+                    onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+                />
+
                 <DataTable
                     tableId="purchase-list"
                     data={purchaseRows}
@@ -849,14 +775,31 @@ export default function Purchases() {
                     hoverable={false}
                     animated={false}
                     selectableColumns
-                    showSearch
-                    searchMode="server"
-                    searchPlaceholder="N. documento"
-                    searchValue={numeroInput}
-                    onSearchChange={(value) => {
-                        setNumeroInput(value);
-                        setPage(1);
-                    }}
+                    toolbarSearchContent={
+                        <DataTableSearchBar
+                            value={searchText}
+                            onChange={(value) => {
+                                setSearchText(value);
+                            }}
+                            onSubmitSearch={submitSearch}
+                            searchLabel="Busca tu compra"
+                            searchName="purchase-smart-search"
+                            panelClassName="max-w-[38rem]"
+                            canSaveMetric={hasPurchaseSearchCriteria(executedSnapshot)}
+                            saveLoading={savingMetric}
+                            onSaveMetric={handleSaveMetric}
+                        >
+                            <DataTableSearchPanel
+                                recent={recentSearches}
+                                saved={savedMetrics}
+                                columns={smartSearchColumns}
+                                snapshot={draftSnapshot}
+                                onApplySnapshot={applySmartSnapshot}
+                                onToggleOption={handleToggleSmartOption}
+                                onDeleteMetric={handleDeleteMetric}
+                            />
+                        </DataTableSearchBar>
+                    }
                     rangeDates={{
                         startDate: parseDateInputValue(fromDate),
                         endDate: parseDateInputValue(toDate),
@@ -865,11 +808,6 @@ export default function Purchases() {
                             setToDate(endDate ? toLocalDateKey(endDate) : "");
                             setPage(1);
                         },
-                    }}
-                    filtersConfig={{
-                        categories: purchaseTableFilters,
-                        value: purchaseAppliedFilters,
-                        onChange: handlePurchaseFiltersChange,
                     }}
                     pagination={{
                         page,

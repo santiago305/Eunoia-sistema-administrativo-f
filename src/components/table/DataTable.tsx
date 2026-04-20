@@ -85,6 +85,7 @@ export function DataTable<T extends Record<string, unknown>>({
   initialSort = null,
   controlledSort,
   onSortChange,
+  toolbarSearchContent,
 }: DataTableProps<T>) {
   const preferenceStorageKey = `data-table-preferences:${tableId}`;
   const controlledSearch = typeof searchValue === "string";
@@ -374,6 +375,7 @@ export function DataTable<T extends Record<string, unknown>>({
     <div className={cn("w-full", className)}>
       <DataTableToolbar
         showSearch={showSearch}
+        customSearchContent={toolbarSearchContent}
         searchValue={activeSearch}
         searchPlaceholder={searchPlaceholder}
         onSearchChange={(value) => {

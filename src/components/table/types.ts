@@ -108,6 +108,7 @@ export type DataTableProps<T> = {
     initialSort?: DataTableSortState;
     controlledSort?: DataTableSortState;
     onSortChange?: (sort: DataTableSortState) => void;
+    toolbarSearchContent?: ReactNode;
 };
 
 export type DataTableColumnPreference = {
