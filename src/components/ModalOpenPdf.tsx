@@ -1,17 +1,23 @@
 import { SystemButton } from "@/components/SystemButton";
 import { List } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Modal } from "./modales/Modal";
 
 type PdfViewerModalProps = {
   open: boolean;
   onClose: () => void;
   title?: string;
-  getPdf: () => Promise<Blob>; // <- aquí pasas el método
+  getPdf: () => Promise<Blob>;
   primaryColor?: string;
+  footer?: ReactNode;
+  className?: string;
+  iframeTitle?: string;
+  reloadKey?: string | number | boolean | null;
+  loadWhen?: boolean;
 };
 
 const DEFAULT_PRIMARY = "hsl(var(--primary))";
+const DEFAULT_CLASSNAME = "w-[800px]";
 
 export function PdfViewerModal({
   open,
@@ -19,14 +25,24 @@ export function PdfViewerModal({
   title = "Documento",
   getPdf,
   primaryColor,
+  footer,
+  className,
+  iframeTitle,
+  reloadKey = null,
+  loadWhen = true,
 }: PdfViewerModalProps) {
   const accent = primaryColor ?? DEFAULT_PRIMARY;
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const getPdfRef = useRef(getPdf);
 
   useEffect(() => {
-    if (!open) {
+    getPdfRef.current = getPdf;
+  }, [getPdf]);
+
+  useEffect(() => {
+    if (!open || !loadWhen) {
       setPdfUrl(null);
       setError(null);
       setLoading(false);
@@ -40,8 +56,9 @@ export function PdfViewerModal({
       setLoading(true);
       setError(null);
       setPdfUrl(null);
+
       try {
-        const blob = await getPdf();
+        const blob = await getPdfRef.current();
         if (!alive) return;
         objectUrl = URL.createObjectURL(blob);
         setPdfUrl(objectUrl);
@@ -59,13 +76,15 @@ export function PdfViewerModal({
       alive = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [open, getPdf]);
+  }, [loadWhen, open, reloadKey]);
 
   if (!open) return null;
 
+  const resolvedClassName = [DEFAULT_CLASSNAME, className].filter(Boolean).join(" ");
+
   return (
-    <Modal title={title} className="w-[800px] h-[95vh]" open={open} onClose={onClose}>
-      <div className="space-y-3">
+    <Modal title={title} className={resolvedClassName} open={open} onClose={onClose}>
+      <div className="space-y-6">
         <div className="rounded-2xl border border-black/10 overflow-hidden bg-white">
           {loading && (
             <div className="flex h-[70vh] items-center justify-center text-sm text-black/60">
@@ -81,7 +100,7 @@ export function PdfViewerModal({
 
           {!loading && !error && pdfUrl && (
             <iframe
-              title="pdf-viewer"
+              title={iframeTitle ?? title}
               src={pdfUrl}
               className="h-[75vh] w-full overflow-auto"
             />
@@ -94,19 +113,21 @@ export function PdfViewerModal({
           )}
         </div>
 
-        <div className="flex">
-          <SystemButton
-            leftIcon={<List className="h-4 w-4" />}
-            className="ms-auto"
-            style={{
-              backgroundColor: accent,
-              borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
-            }}
-            onClick={onClose}
-          >
-            Cerrar
-          </SystemButton>
-        </div>
+        {footer ?? (
+          <div className="flex">
+            <SystemButton
+              leftIcon={<List className="h-4 w-4" />}
+              className="ms-auto"
+              style={{
+                backgroundColor: accent,
+                borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
+              }}
+              onClick={onClose}
+            >
+              Cerrar
+            </SystemButton>
+          </div>
+        )}
       </div>
     </Modal>
   );

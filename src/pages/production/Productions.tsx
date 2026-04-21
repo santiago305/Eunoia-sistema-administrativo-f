@@ -712,6 +712,8 @@ export default function Production() {
             setSelectedProductionId(null);
           }}
           title="Orden de produccion"
+          loadWhen={Boolean(selectedProductionId)}
+          reloadKey={selectedProductionId}
           getPdf={() => getProductionOrderPdf(selectedProductionId!)}
           primaryColor={PRIMARY}
         />

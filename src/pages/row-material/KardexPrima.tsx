@@ -637,6 +637,8 @@ export default function KardexProduction() {
             setPdfLoader(null);
           }}
           title={pdfTitle}
+          loadWhen={Boolean(pdfLoader)}
+          reloadKey={pdfTitle}
           getPdf={pdfLoader}
           primaryColor={PRIMARY}
         />

@@ -432,6 +432,8 @@ export default function DocumentRowMaterial() {
                     setSelectedDocumentId(null);
                 }}
                 title="Documento de inventario"
+                loadWhen={Boolean(selectedDocumentId)}
+                reloadKey={selectedDocumentId}
                 getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
             />
         </PageShell>

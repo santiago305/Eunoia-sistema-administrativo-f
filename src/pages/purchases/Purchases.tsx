@@ -854,7 +854,9 @@ export default function Purchases() {
                     setOpenPdfModal(false);
                     setSelectedProductionId(null);
                 }}
-                title="Orden de producción"
+                title="Orden de compra"
+                loadWhen={Boolean(selectedProductionId)}
+                reloadKey={selectedProductionId}
                 getPdf={() => getPurchaseOrderPdf(selectedProductionId!)}
             />
         </PageShell>

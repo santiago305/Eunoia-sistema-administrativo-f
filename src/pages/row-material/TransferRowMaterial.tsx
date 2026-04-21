@@ -401,6 +401,8 @@ export default function TransferenceProduts() {
           loadDocuments();
         }}
         title="Documento de inventario"
+        loadWhen={Boolean(selectedDocumentId)}
+        reloadKey={selectedDocumentId}
         getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
       />
 

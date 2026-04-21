@@ -422,6 +422,8 @@ export default function AdjustmentProduts() {
           void loadDocuments();
         }}
         title="Documento de inventario"
+        loadWhen={Boolean(selectedDocumentId)}
+        reloadKey={selectedDocumentId}
         getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
       />
 
