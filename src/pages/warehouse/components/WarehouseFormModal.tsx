@@ -4,10 +4,7 @@ import { isAxiosError } from "axios";
 import { Modal } from "@/components/modales/Modal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingTextarea } from "@/components/FloatingTextarea";
-import {
-  UbigeoSelectSection,
-  type UbigeoSelection,
-} from "@/components/UbigeoSelectSection";
+import { UbigeoSelectSection } from "@/components/UbigeoSelectSection";
 import { SystemButton } from "@/components/SystemButton";
 import {
   createWarehouse,
@@ -15,6 +12,7 @@ import {
   updateWarehouse,
   updateWarehouseActive,
 } from "@/services/warehouseServices";
+import type { UbigeoSelection } from "@/types/ubigeo";
 
 export type WarehouseFormState = {
   name: string;

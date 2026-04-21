@@ -72,11 +72,15 @@ export type WarehouseSearchStateResponse = {
   recent: WarehouseRecentSearch[];
   saved: WarehouseSavedMetric[];
   catalogs: {
-    departments: DataTableSearchOption[];
-    provinces: DataTableSearchOption[];
-    districts: DataTableSearchOption[];
     statuses: DataTableSearchOption[];
   };
+};
+
+export type WarehouseSearchCatalogs = {
+  departments: DataTableSearchOption[];
+  provinces: DataTableSearchOption[];
+  districts: DataTableSearchOption[];
+  statuses: DataTableSearchOption[];
 };
 
 export type ListWarehousesQuery = Omit<z.infer<typeof listWarehousesQuerySchema>, "filters"> & {

@@ -4,9 +4,9 @@ import {
   type DataTableSavedSearchItem,
 } from "@/components/table/search";
 import type {
+  WarehouseSearchCatalogs,
   WarehouseSearchRule,
   WarehouseSearchSnapshot,
-  WarehouseSearchStateResponse,
 } from "@/pages/warehouse/types/warehouse";
 import {
   findWarehouseSearchRule,
@@ -21,7 +21,7 @@ type Props = {
   saved?: DataTableSavedSearchItem<WarehouseSearchSnapshot>[];
   columns: WarehouseSmartSearchColumn[];
   snapshot: WarehouseSearchSnapshot;
-  searchState?: WarehouseSearchStateResponse | null;
+  catalogs?: WarehouseSearchCatalogs | null;
   filterQuery?: string;
   onApplySnapshot: (snapshot: WarehouseSearchSnapshot) => void;
   onApplyRule: (rule: WarehouseSearchRule) => void;
@@ -34,7 +34,7 @@ export function WarehouseSmartSearchPanel({
   saved = [],
   columns,
   snapshot,
-  searchState,
+  catalogs,
   filterQuery,
   onApplySnapshot,
   onApplyRule,
@@ -53,7 +53,7 @@ export function WarehouseSmartSearchPanel({
       onDeleteMetric={onDeleteMetric}
       getRule={findWarehouseSearchRule}
       getRuleSummary={(currentSnapshot, fieldId) =>
-        getWarehouseSearchRuleSummary(currentSnapshot, fieldId, searchState)
+        getWarehouseSearchRuleSummary(currentSnapshot, fieldId, catalogs)
       }
       getSelectionCount={getWarehouseSearchSelectionCount}
       fieldsSectionTitle="Columnas"

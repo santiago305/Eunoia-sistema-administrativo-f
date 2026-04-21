@@ -1,29 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
-import { ubigeoPeru } from "@/data/ubigeoPeru";
-
-export type UbigeoDepartment = { id: string; name: string };
-export type UbigeoProvince = { id: string; name: string; departmentId: string };
-export type UbigeoDistrict = {
-  id: string;
-  name: string;
-  provinceId: string;
-  departmentId: string;
-};
-
-export type UbigeoData = {
-  departments: UbigeoDepartment[];
-  provinces: UbigeoProvince[];
-  districts: UbigeoDistrict[];
-};
-
-export type UbigeoSelection = {
-  ubigeo: string;
-  department: string;
-  province: string;
-  district: string;
-};
+import {
+  listUbigeoDepartments,
+  listUbigeoDistricts,
+  listUbigeoProvinces,
+} from "@/services/ubigeoService";
+import type {
+  UbigeoDepartment,
+  UbigeoDistrict,
+  UbigeoProvince,
+  UbigeoSelection,
+} from "@/types/ubigeo";
 
 type Props = {
   value: UbigeoSelection;
@@ -41,6 +29,16 @@ type Props = {
   };
 };
 
+function normalizeName(value?: string | null) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function findByName<T extends { name: string }>(items: T[], name?: string | null) {
+  const normalized = normalizeName(name);
+  if (!normalized) return null;
+  return items.find((item) => normalizeName(item.name) === normalized) ?? null;
+}
+
 export function UbigeoSelectSection({
   value,
   onChange,
@@ -55,84 +53,169 @@ export function UbigeoSelectSection({
     provinceId: "",
     districtId: "",
   });
+  const [departments, setDepartments] = useState<UbigeoDepartment[]>([]);
+  const [provinces, setProvinces] = useState<UbigeoProvince[]>([]);
+  const [districts, setDistricts] = useState<UbigeoDistrict[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const hydratedDistrictRef = useRef("");
 
   const departmentOptions = useMemo(
-    () => ubigeoPeru.departments.map((d) => ({ value: d.id, label: d.name })),
-    []
+    () => departments.map((department) => ({ value: department.id, label: department.name })),
+    [departments],
   );
 
   const provinceOptions = useMemo(
-    () =>
-      ubigeoPeru.provinces
-        .filter((p) => p.departmentId === ids.departmentId)
-        .map((p) => ({ value: p.id, label: p.name })),
-    [ids.departmentId]
+    () => provinces.map((province) => ({ value: province.id, label: province.name })),
+    [provinces],
   );
 
   const districtOptions = useMemo(
-    () =>
-      ubigeoPeru.districts
-        .filter((d) => d.provinceId === ids.provinceId)
-        .map((d) => ({ value: d.id, label: d.name })),
-    [ids.provinceId]
+    () => districts.map((district) => ({ value: district.id, label: district.name })),
+    [districts],
   );
 
   useEffect(() => {
-    const normalizedDepartment = value.department.trim();
-    const normalizedProvince = value.province.trim();
-    const normalizedDistrict = value.district.trim();
-    const normalizedUbigeo = value.ubigeo.trim();
+    let cancelled = false;
+    setLoadingDepartments(true);
 
-    if (normalizedUbigeo) {
-      const district = ubigeoPeru.districts.find((d) => d.id === normalizedUbigeo);
-
-      if (district) {
-        setIds({
-          departmentId: district.departmentId,
-          provinceId: district.provinceId,
-          districtId: district.id,
-        });
-
-        if (!normalizedDistrict || !normalizedProvince || !normalizedDepartment) {
-          onChange({
-            ubigeo: district.id,
-            department:
-              ubigeoPeru.departments.find((d) => d.id === district.departmentId)?.name ?? "",
-            province:
-              ubigeoPeru.provinces.find((p) => p.id === district.provinceId)?.name ?? "",
-            district: district.name,
-          });
+    void (async () => {
+      try {
+        const items = await listUbigeoDepartments();
+        if (!cancelled) {
+          setDepartments(items);
         }
-
-        return;
+      } finally {
+        if (!cancelled) {
+          setLoadingDepartments(false);
+        }
       }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const department = findByName(departments, value.department);
+    const nextDepartmentId = department?.id ?? "";
+
+    setIds((prev) => {
+      if (prev.departmentId === nextDepartmentId) return prev;
+      return {
+        departmentId: nextDepartmentId,
+        provinceId: nextDepartmentId === prev.departmentId ? prev.provinceId : "",
+        districtId: nextDepartmentId === prev.departmentId ? prev.districtId : "",
+      };
+    });
+  }, [departments, value.department]);
+
+  useEffect(() => {
+    if (!ids.departmentId) {
+      setProvinces([]);
+      setDistricts([]);
+      setIds((prev) =>
+        prev.provinceId || prev.districtId
+          ? { ...prev, provinceId: "", districtId: "" }
+          : prev,
+      );
+      return;
     }
 
-    const departmentId =
-      ubigeoPeru.departments.find(
-        (d) => d.name.toLowerCase() === normalizedDepartment.toLowerCase()
-      )?.id ?? "";
+    let cancelled = false;
+    setLoadingProvinces(true);
 
-    const provinceId =
-      ubigeoPeru.provinces.find(
-        (p) =>
-          p.name.toLowerCase() === normalizedProvince.toLowerCase() &&
-          (!departmentId || p.departmentId === departmentId)
-      )?.id ?? "";
+    void (async () => {
+      try {
+        const items = await listUbigeoProvinces({ departmentId: ids.departmentId });
+        if (!cancelled) {
+          setProvinces(items);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingProvinces(false);
+        }
+      }
+    })();
 
-    const districtId =
-      ubigeoPeru.districts.find(
-        (d) =>
-          d.name.toLowerCase() === normalizedDistrict.toLowerCase() &&
-          (!provinceId || d.provinceId === provinceId)
-      )?.id ?? "";
+    return () => {
+      cancelled = true;
+    };
+  }, [ids.departmentId]);
 
-    setIds({
-      departmentId,
-      provinceId,
-      districtId,
+  useEffect(() => {
+    const province = findByName(provinces, value.province);
+    const nextProvinceId = province?.id ?? "";
+
+    setIds((prev) => {
+      if (prev.provinceId === nextProvinceId) return prev;
+      return {
+        ...prev,
+        provinceId: nextProvinceId,
+        districtId: nextProvinceId === prev.provinceId ? prev.districtId : "",
+      };
     });
-  }, [value.department, value.province, value.district, value.ubigeo, onChange]);
+  }, [provinces, value.province]);
+
+  useEffect(() => {
+    if (!ids.provinceId) {
+      setDistricts([]);
+      setIds((prev) => (prev.districtId ? { ...prev, districtId: "" } : prev));
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingDistricts(true);
+
+    void (async () => {
+      try {
+        const items = await listUbigeoDistricts({ provinceId: ids.provinceId });
+        if (!cancelled) {
+          setDistricts(items);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingDistricts(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ids.provinceId]);
+
+  useEffect(() => {
+    const district = findByName(districts, value.district);
+    const nextDistrictId = district?.id ?? "";
+
+    setIds((prev) => {
+      if (prev.districtId === nextDistrictId) return prev;
+      return {
+        ...prev,
+        districtId: nextDistrictId,
+      };
+    });
+
+    if (!district) {
+      hydratedDistrictRef.current = "";
+      return;
+    }
+
+    if (value.ubigeo === district.id || hydratedDistrictRef.current === district.id) {
+      return;
+    }
+
+    hydratedDistrictRef.current = district.id;
+    onChange({
+      ubigeo: district.id,
+      department: value.department,
+      province: value.province,
+      district: value.district,
+    });
+  }, [districts, onChange, value.department, value.district, value.province, value.ubigeo]);
 
   return (
     <section className="space-y-3">
@@ -147,13 +230,16 @@ export function UbigeoSelectSection({
           value={ids.departmentId}
           onChange={(departmentId) => {
             const departmentName =
-              ubigeoPeru.departments.find((d) => d.id === departmentId)?.name ?? "";
+              departments.find((department) => department.id === departmentId)?.name ?? "";
 
+            hydratedDistrictRef.current = "";
             setIds({
               departmentId,
               provinceId: "",
               districtId: "",
             });
+            setProvinces([]);
+            setDistricts([]);
 
             onChange({
               ubigeo: "",
@@ -167,7 +253,7 @@ export function UbigeoSelectSection({
           searchPlaceholder="Buscar departamento..."
           emptyMessage="Sin departamentos"
           error={errors?.department}
-          disabled={disabled}
+          disabled={disabled || loadingDepartments}
           className={className}
         />
 
@@ -177,13 +263,15 @@ export function UbigeoSelectSection({
           value={ids.provinceId}
           onChange={(provinceId) => {
             const provinceName =
-              ubigeoPeru.provinces.find((p) => p.id === provinceId)?.name ?? "";
+              provinces.find((province) => province.id === provinceId)?.name ?? "";
 
+            hydratedDistrictRef.current = "";
             setIds((prev) => ({
               ...prev,
               provinceId,
               districtId: "",
             }));
+            setDistricts([]);
 
             onChange({
               ubigeo: "",
@@ -197,7 +285,7 @@ export function UbigeoSelectSection({
           searchPlaceholder="Buscar provincia..."
           emptyMessage="Sin provincias"
           error={errors?.province}
-          disabled={disabled || !ids.departmentId}
+          disabled={disabled || !ids.departmentId || loadingProvinces}
           className={className}
         />
 
@@ -207,8 +295,9 @@ export function UbigeoSelectSection({
           value={ids.districtId}
           onChange={(districtId) => {
             const districtName =
-              ubigeoPeru.districts.find((d) => d.id === districtId)?.name ?? "";
+              districts.find((district) => district.id === districtId)?.name ?? "";
 
+            hydratedDistrictRef.current = districtId;
             setIds((prev) => ({
               ...prev,
               districtId,
@@ -226,22 +315,22 @@ export function UbigeoSelectSection({
           searchPlaceholder="Buscar distrito..."
           emptyMessage="Sin distritos"
           error={errors?.district}
-          disabled={disabled || !ids.provinceId}
+          disabled={disabled || !ids.provinceId || loadingDistricts}
           className={className}
         />
 
-        {showUbigeoInput && (
+        {showUbigeoInput ? (
           <FloatingInput
             label="Ubigeo"
             name="ubigeo"
             value={value.ubigeo}
             readOnly={lockUbigeo}
             disabled={disabled}
-            onChange={(e) => onChange({ ...value, ubigeo: e.target.value })}
+            onChange={(event) => onChange({ ...value, ubigeo: event.target.value })}
             error={errors?.ubigeo}
             className={className}
           />
-        )}
+        ) : null}
       </div>
     </section>
   );

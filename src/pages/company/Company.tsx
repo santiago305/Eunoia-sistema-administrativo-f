@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Card, CardHeader } from "@/components/AppCard";
 import { PageTitle } from "@/components/PageTitle";
 import { SystemButton } from "@/components/SystemButton";
-import type { UbigeoSelection } from "@/components/UbigeoSelectSection";
+import type { UbigeoSelection } from "@/types/ubigeo";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { CompanyFormSection } from "@/pages/company/components/CompanyFormSection";

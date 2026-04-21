@@ -24,6 +24,7 @@ import { WarehouseStockModal } from "./components/WarehouseStockModal";
 import { WarehouseSmartSearchPanel } from "./components/WarehouseSmartSearchPanel";
 import type {
   Warehouse,
+  WarehouseSearchCatalogs,
   WarehouseSearchFilters,
   WarehouseSearchRule,
   WarehouseSearchSnapshot,
@@ -37,19 +38,40 @@ import {
   updateWarehouseActive,
 } from "@/services/warehouseServices";
 import {
+  listUbigeoDepartments,
+  listUbigeoDistricts,
+  listUbigeoProvinces,
+} from "@/services/ubigeoService";
+import {
+  applyWarehouseSearchRuleWithDependencies,
   buildWarehouseSearchChips,
   buildWarehouseSmartSearchColumns,
   createEmptyWarehouseSearchFilters,
+  getWarehouseSearchRuleValues,
   hasWarehouseSearchCriteria,
-  removeWarehouseSearchKey,
+  removeWarehouseSearchKeyWithDependencies,
   sanitizeWarehouseSearchSnapshot,
-  upsertWarehouseSearchRule,
   type WarehouseSearchFilterKey,
 } from "@/pages/warehouse/utils/warehouseSmartSearch";
+import { WarehouseSearchFields } from "@/pages/warehouse/types/warehouse";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
+
+const EMPTY_WAREHOUSE_SEARCH_CATALOGS: WarehouseSearchCatalogs = {
+  departments: [],
+  provinces: [],
+  districts: [],
+  statuses: [],
+};
+
+function toSearchOptions(items: Array<{ id: string; name: string }>) {
+  return items.map((item) => ({
+    id: item.id,
+    label: item.name,
+  }));
+}
 
 export default function Warehouses() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -61,6 +83,13 @@ export default function Warehouses() {
   const [loading, setLoading] = useState(false);
   const [searchState, setSearchState] = useState<WarehouseSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [ubigeoCatalogs, setUbigeoCatalogs] = useState<
+    Pick<WarehouseSearchCatalogs, "departments" | "provinces" | "districts">
+  >({
+    departments: [],
+    provinces: [],
+    districts: [],
+  });
 
   const [serverPagination, setServerPagination] = useState({
     total: 0,
@@ -112,6 +141,31 @@ export default function Warehouses() {
         filters: searchFilters,
       }),
     [appliedSearchText, searchFilters],
+  );
+
+  const selectedDepartmentIds = useMemo(
+    () => getWarehouseSearchRuleValues(draftSnapshot, WarehouseSearchFields.DEPARTMENT),
+    [draftSnapshot],
+  );
+
+  const selectedProvinceIds = useMemo(
+    () => getWarehouseSearchRuleValues(draftSnapshot, WarehouseSearchFields.PROVINCE),
+    [draftSnapshot],
+  );
+
+  const searchCatalogs = useMemo<WarehouseSearchCatalogs>(
+    () => ({
+      departments: ubigeoCatalogs.departments,
+      provinces: ubigeoCatalogs.provinces,
+      districts: ubigeoCatalogs.districts,
+      statuses: searchState?.catalogs.statuses ?? EMPTY_WAREHOUSE_SEARCH_CATALOGS.statuses,
+    }),
+    [
+      searchState?.catalogs.statuses,
+      ubigeoCatalogs.departments,
+      ubigeoCatalogs.districts,
+      ubigeoCatalogs.provinces,
+    ],
   );
 
   const loadSearchState = useCallback(async () => {
@@ -185,6 +239,86 @@ export default function Warehouses() {
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await listUbigeoDepartments();
+        if (!cancelled) {
+          setUbigeoCatalogs((current) => ({
+            ...current,
+            departments: toSearchOptions(response),
+          }));
+        }
+      } catch {
+        if (!cancelled) {
+          showFlash(errorResponse("Error al cargar departamentos"));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showFlash]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await listUbigeoProvinces(
+          selectedDepartmentIds.length ? { departmentIds: selectedDepartmentIds } : undefined,
+        );
+        if (!cancelled) {
+          setUbigeoCatalogs((current) => ({
+            ...current,
+            provinces: toSearchOptions(response),
+          }));
+        }
+      } catch {
+        if (!cancelled) {
+          showFlash(errorResponse("Error al cargar provincias"));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDepartmentIds, showFlash]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await listUbigeoDistricts(
+          selectedProvinceIds.length
+            ? { provinceIds: selectedProvinceIds }
+            : selectedDepartmentIds.length
+              ? { departmentIds: selectedDepartmentIds }
+              : undefined,
+        );
+        if (!cancelled) {
+          setUbigeoCatalogs((current) => ({
+            ...current,
+            districts: toSearchOptions(response),
+          }));
+        }
+      } catch {
+        if (!cancelled) {
+          showFlash(errorResponse("Error al cargar distritos"));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDepartmentIds, selectedProvinceIds, showFlash]);
 
   const sortedWarehouses = useMemo(
     () =>
@@ -409,8 +543,8 @@ export default function Warehouses() {
   );
 
   const smartSearchColumns = useMemo(
-    () => buildWarehouseSmartSearchColumns(searchState),
-    [searchState],
+    () => buildWarehouseSmartSearchColumns(searchCatalogs),
+    [searchCatalogs],
   );
 
   const recentSearches = useMemo<DataTableRecentSearchItem<WarehouseSearchSnapshot>[]>(
@@ -435,8 +569,8 @@ export default function Warehouses() {
   );
 
   const searchChips = useMemo(
-    () => buildWarehouseSearchChips(executedSnapshot, searchState),
-    [executedSnapshot, searchState],
+    () => buildWarehouseSearchChips(executedSnapshot, searchCatalogs),
+    [executedSnapshot, searchCatalogs],
   );
 
   const applySmartSnapshot = useCallback((snapshot: WarehouseSearchSnapshot) => {
@@ -452,7 +586,7 @@ export default function Warehouses() {
 
   const handleApplySearchRule = useCallback((rule: WarehouseSearchRule) => {
     setSearchFilters((current) => {
-      const next = upsertWarehouseSearchRule(
+      const next = applyWarehouseSearchRuleWithDependencies(
         sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
         rule,
       );
@@ -466,7 +600,7 @@ export default function Warehouses() {
 
   const handleRemoveSearchRule = useCallback((fieldId: WarehouseSearchFilterKey) => {
     setSearchFilters((current) => {
-      const next = removeWarehouseSearchKey(
+      const next = removeWarehouseSearchKeyWithDependencies(
         sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
         fieldId,
       );
@@ -479,7 +613,7 @@ export default function Warehouses() {
   }, [searchText]);
 
   const handleRemoveChip = useCallback((key: "q" | WarehouseSearchFilterKey) => {
-    const nextSnapshot = removeWarehouseSearchKey(
+    const nextSnapshot = removeWarehouseSearchKeyWithDependencies(
       sanitizeWarehouseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
       key,
     );
@@ -605,7 +739,7 @@ export default function Warehouses() {
               saved={savedMetrics}
               columns={smartSearchColumns}
               snapshot={draftSnapshot}
-              searchState={searchState}
+              catalogs={searchCatalogs}
               filterQuery={searchText}
               onApplySnapshot={applySmartSnapshot}
               onApplyRule={handleApplySearchRule}

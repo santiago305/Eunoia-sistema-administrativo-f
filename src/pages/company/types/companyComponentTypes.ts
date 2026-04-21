@@ -1,9 +1,9 @@
 import type { FormEvent } from "react";
-import type { UbigeoSelection } from "@/components/UbigeoSelectSection";
 import type {
   CompanyFormErrors,
   CompanyFormValues,
 } from "@/pages/company/types/companyFormTypes";
+import type { UbigeoSelection } from "@/types/ubigeo";
 
 export type CompanyFieldUpdater = <K extends keyof CompanyFormValues>(
   field: K,

@@ -46,6 +46,12 @@ export const API_COMPANY_GROUP = {
   uploadLogo: "/company/logo",
   uploadCert: "/company/cert",
 };
+
+export const API_UBIGEO_GROUP = {
+  departments: "/ubigeo/departments",
+  provinces: "/ubigeo/provinces",
+  districts: "/ubigeo/districts",
+};
 export const API_ROLES_GROUP = {
   findAll: "/roles",
 };

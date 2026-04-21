@@ -6,11 +6,11 @@ import type {
 } from "@/components/table/search";
 import type {
   WarehouseSearchField,
+  WarehouseSearchCatalogs,
   WarehouseSearchFilters,
   WarehouseSearchOperator,
   WarehouseSearchRule,
   WarehouseSearchSnapshot,
-  WarehouseSearchStateResponse,
 } from "@/pages/warehouse/types/warehouse";
 import {
   WarehouseSearchFields,
@@ -180,21 +180,21 @@ function sanitizeRule(rule?: Partial<WarehouseSearchRule> | null): WarehouseSear
   return null;
 }
 
-function getCatalogMaps(searchState?: WarehouseSearchStateResponse | null) {
+function getCatalogMaps(catalogs?: WarehouseSearchCatalogs | null) {
   return {
-    department: new Map(searchState?.catalogs.departments.map((item) => [item.id, item.label]) ?? []),
-    province: new Map(searchState?.catalogs.provinces.map((item) => [item.id, item.label]) ?? []),
-    district: new Map(searchState?.catalogs.districts.map((item) => [item.id, item.label]) ?? []),
-    status: new Map((searchState?.catalogs.statuses ?? STATUS_OPTIONS).map((item) => [item.id, item.label])),
+    department: new Map(catalogs?.departments.map((item) => [item.id, item.label]) ?? []),
+    province: new Map(catalogs?.provinces.map((item) => [item.id, item.label]) ?? []),
+    district: new Map(catalogs?.districts.map((item) => [item.id, item.label]) ?? []),
+    status: new Map((catalogs?.statuses ?? STATUS_OPTIONS).map((item) => [item.id, item.label])),
   };
 }
 
 function getCatalogLabels(
   field: WarehouseSearchField,
   values: string[],
-  searchState?: WarehouseSearchStateResponse | null,
+  catalogs?: WarehouseSearchCatalogs | null,
 ) {
-  const maps = getCatalogMaps(searchState);
+  const maps = getCatalogMaps(catalogs);
   const map =
     field === WarehouseSearchFields.DEPARTMENT
       ? maps.department
@@ -211,13 +211,13 @@ function getCatalogLabels(
 
 function getRuleLabel(
   rule: WarehouseSearchRule,
-  searchState?: WarehouseSearchStateResponse | null,
+  catalogs?: WarehouseSearchCatalogs | null,
   includeFieldLabel = true,
 ) {
   const fieldLabel = FIELD_LABELS[rule.field];
 
   if (rule.operator === WarehouseSearchOperators.IN) {
-    const labels = getCatalogLabels(rule.field, rule.values ?? [], searchState);
+    const labels = getCatalogLabels(rule.field, rule.values ?? [], catalogs);
     const content = labels.join(" - ");
     const prefix =
       rule.mode === "exclude"
@@ -316,9 +316,17 @@ export function removeWarehouseSearchKey(
   });
 }
 
+export function getWarehouseSearchRuleValues(
+  snapshot: WarehouseSearchSnapshot,
+  key: WarehouseSearchFilterKey,
+) {
+  const rule = findWarehouseSearchRule(snapshot, key);
+  return rule?.operator === WarehouseSearchOperators.IN ? rule.values ?? [] : [];
+}
+
 export function buildWarehouseSearchChips(
   snapshot: WarehouseSearchSnapshot,
-  searchState?: WarehouseSearchStateResponse | null,
+  catalogs?: WarehouseSearchCatalogs | null,
 ): WarehouseSearchChip[] {
   const normalized = sanitizeWarehouseSearchSnapshot(snapshot);
   const chips: WarehouseSearchChip[] = [];
@@ -332,7 +340,7 @@ export function buildWarehouseSearchChips(
   }
 
   normalized.filters.forEach((rule) => {
-    const label = getRuleLabel(rule, searchState);
+    const label = getRuleLabel(rule, catalogs);
     if (!label) return;
     chips.push({
       id: rule.field,
@@ -356,15 +364,15 @@ export function getWarehouseSearchSelectionCount(
 export function getWarehouseSearchRuleSummary(
   snapshot: WarehouseSearchSnapshot,
   key: WarehouseSearchFilterKey,
-  searchState?: WarehouseSearchStateResponse | null,
+  catalogs?: WarehouseSearchCatalogs | null,
 ) {
   const rule = findWarehouseSearchRule(snapshot, key);
   if (!rule) return null;
-  return getRuleLabel(rule, searchState, false);
+  return getRuleLabel(rule, catalogs, false);
 }
 
 export function buildWarehouseSmartSearchColumns(
-  searchState?: WarehouseSearchStateResponse | null,
+  catalogs?: WarehouseSearchCatalogs | null,
 ): WarehouseSmartSearchColumn[] {
   return [
     {
@@ -382,7 +390,7 @@ export function buildWarehouseSmartSearchColumns(
       description: "Selecciona departamentos para incluir o excluir.",
       operators: [{ id: WarehouseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: searchState?.catalogs.departments ?? [],
+      options: catalogs?.departments ?? [],
     },
     {
       id: WarehouseSearchFields.PROVINCE,
@@ -391,7 +399,7 @@ export function buildWarehouseSmartSearchColumns(
       description: "Selecciona provincias para incluir o excluir.",
       operators: [{ id: WarehouseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: searchState?.catalogs.provinces ?? [],
+      options: catalogs?.provinces ?? [],
     },
     {
       id: WarehouseSearchFields.DISTRICT,
@@ -400,7 +408,7 @@ export function buildWarehouseSmartSearchColumns(
       description: "Selecciona distritos para incluir o excluir.",
       operators: [{ id: WarehouseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: searchState?.catalogs.districts ?? [],
+      options: catalogs?.districts ?? [],
     },
     {
       id: WarehouseSearchFields.ADDRESS,
@@ -417,7 +425,7 @@ export function buildWarehouseSmartSearchColumns(
       description: "Selecciona estados para incluir o excluir del resultado.",
       operators: [{ id: WarehouseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: searchState?.catalogs.statuses ?? STATUS_OPTIONS,
+      options: catalogs?.statuses ?? STATUS_OPTIONS,
     },
     {
       id: WarehouseSearchFields.CREATED_AT,
@@ -438,4 +446,40 @@ export function buildWarehouseSmartSearchColumns(
       },
     },
   ];
+}
+
+export function applyWarehouseSearchRuleWithDependencies(
+  snapshot: WarehouseSearchSnapshot,
+  rule: WarehouseSearchRule,
+) {
+  let nextSnapshot = upsertWarehouseSearchRule(snapshot, rule);
+
+  if (rule.field === WarehouseSearchFields.DEPARTMENT) {
+    nextSnapshot = removeWarehouseSearchKey(nextSnapshot, WarehouseSearchFields.PROVINCE);
+    nextSnapshot = removeWarehouseSearchKey(nextSnapshot, WarehouseSearchFields.DISTRICT);
+  }
+
+  if (rule.field === WarehouseSearchFields.PROVINCE) {
+    nextSnapshot = removeWarehouseSearchKey(nextSnapshot, WarehouseSearchFields.DISTRICT);
+  }
+
+  return nextSnapshot;
+}
+
+export function removeWarehouseSearchKeyWithDependencies(
+  snapshot: WarehouseSearchSnapshot,
+  key: "q" | WarehouseSearchFilterKey,
+) {
+  let nextSnapshot = removeWarehouseSearchKey(snapshot, key);
+
+  if (key === WarehouseSearchFields.DEPARTMENT) {
+    nextSnapshot = removeWarehouseSearchKey(nextSnapshot, WarehouseSearchFields.PROVINCE);
+    nextSnapshot = removeWarehouseSearchKey(nextSnapshot, WarehouseSearchFields.DISTRICT);
+  }
+
+  if (key === WarehouseSearchFields.PROVINCE) {
+    nextSnapshot = removeWarehouseSearchKey(nextSnapshot, WarehouseSearchFields.DISTRICT);
+  }
+
+  return nextSnapshot;
 }
