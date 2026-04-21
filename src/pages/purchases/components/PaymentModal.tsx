@@ -144,16 +144,16 @@ export function PaymentModal({
 
   return (
     <Modal open={open} onClose={close} title={title} className={className}>
-      <div className="p-4 sm:p-5 space-y-4">
+      <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="rounded-3xl border border-black/10 bg-emerald-50/70 p-4">
+          <div className="rounded-sm border border-black/10 bg-emerald-50/70 p-4">
             <p className="text-xs text-black/60">Total Pagado</p>
             <div className="mt-1 text-xl font-semibold text-emerald-700 tabular-nums">
               {money(totalPaid, form.currency)}
             </div>
           </div>
 
-          <div className="rounded-3xl border border-black/10 bg-rose-50/70 p-4">
+          <div className="rounded-sm border border-black/10 bg-rose-50/70 p-4">
             <p className="text-xs text-black/60">Total Pendiente</p>
             <div className="mt-1 text-xl font-semibold text-rose-700 tabular-nums">
               {money(totalToPay, form.currency)}
@@ -161,7 +161,7 @@ export function PaymentModal({
           </div>
         </div>
 
-        <div className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 space-y-4">
+        <div className="space-y-4">
           <SectionHeaderForm icon={Wallet} title="Registrar pago" />
 
           <div className="grid grid-cols-1 lg:grid-cols-[0.7fr_1fr] gap-4">

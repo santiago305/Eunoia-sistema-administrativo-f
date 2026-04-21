@@ -1,4 +1,8 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { Loader2 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
@@ -55,46 +59,52 @@ const sizeClasses: Record<ButtonSize, string> = {
   custom: "",
 };
 
-export function SystemButton({
-  children,
-  variant = "primary",
-  size = "md",
-  loading = false,
-  fullWidth = false,
-  leftIcon,
-  rightIcon,
-  disabled,
-  className,
-  type = "button",
-  ...props
-}: SystemButtonProps) {
-  const isDisabled = disabled || loading;
+export const SystemButton = forwardRef<HTMLButtonElement, SystemButtonProps>(
+  function SystemButton(
+    {
+      children,
+      variant = "primary",
+      size = "md",
+      loading = false,
+      fullWidth = false,
+      leftIcon,
+      rightIcon,
+      disabled,
+      className,
+      type = "button",
+      ...props
+    },
+    ref,
+  ) {
+    const isDisabled = disabled || loading;
 
-  return (
-    <button
-      type={type}
-      disabled={isDisabled}
-      className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium outline-none transition-all duration-200 select-none",
-        "focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-60",
-        variantClasses[variant],
-        sizeClasses[size],
-        fullWidth && "w-full",
-        className
-      )}
-      {...props}
-    >
-      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+    return (
+      <button
+        ref={ref}
+        type={type}
+        disabled={isDisabled}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 font-medium outline-none transition-all duration-200 select-none",
+          "focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-60",
+          variantClasses[variant],
+          sizeClasses[size],
+          fullWidth && "w-full",
+          className
+        )}
+        {...props}
+      >
+        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
 
-      {!loading && leftIcon && (
-        <span className="flex items-center justify-center">{leftIcon}</span>
-      )}
+        {!loading && leftIcon && (
+          <span className="flex items-center justify-center">{leftIcon}</span>
+        )}
 
-      {children && <span>{children}</span>}
+        {children}
 
-      {!loading && rightIcon && (
-        <span className="flex items-center justify-center">{rightIcon}</span>
-      )}
-    </button>
-  );
-}
+        {!loading && rightIcon && (
+          <span className="flex items-center justify-center">{rightIcon}</span>
+        )}
+      </button>
+    );
+  },
+);

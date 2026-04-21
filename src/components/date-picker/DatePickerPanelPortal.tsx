@@ -19,7 +19,12 @@ export function DatePickerPanelPortal({
   if (!open) return null;
 
   return createPortal(
-    <div ref={panelRef} style={panelStyle} id={panelId}>
+    <div
+      ref={panelRef}
+      style={panelStyle}
+      id={panelId}
+      data-floating-overlay-root="true"
+    >
       {children}
     </div>,
     document.body,

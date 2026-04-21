@@ -16,6 +16,48 @@ const purchaseStatusEnum = z.enum(Object.values(PurchaseOrderStatuses) as [strin
 const voucherDocEnum = z.enum(Object.values(VoucherDocTypes) as [string, ...string[]]);
 const paymentTypeEnum = z.enum(Object.values(PaymentTypes) as [string, ...string[]]);
 const afectTypeEnum = z.enum(Object.values(AfectType) as [string, ...string[]]);
+const purchaseSearchFieldEnum = z.enum([
+  "supplierId",
+  "warehouseId",
+  "status",
+  "documentType",
+  "paymentForm",
+  "number",
+  "total",
+  "totalPaid",
+  "totalToPay",
+  "waitTime",
+  "dateIssue",
+  "expectedAt",
+]);
+const purchaseSearchOperatorEnum = z.enum([
+  "in",
+  "contains",
+  "eq",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "on",
+  "before",
+  "after",
+  "between",
+  "onOrBefore",
+  "onOrAfter",
+]);
+const purchaseSearchRuleSchema = z.object({
+  field: purchaseSearchFieldEnum,
+  operator: purchaseSearchOperatorEnum,
+  mode: z.enum(["include", "exclude"]).optional(),
+  value: z.string().optional(),
+  values: z.array(z.string()).optional(),
+  range: z
+    .object({
+      start: z.string().optional(),
+      end: z.string().optional(),
+    })
+    .optional(),
+});
 
 export const addPurchaseOrderItemSchema = z.object({
   skuId: uuidSchema,
@@ -92,6 +134,7 @@ export const listPurchaseOrdersQuerySchema = z.object({
   paymentForms: z.array(paymentFormEnum).optional(),
   number: z.string().optional(),
   q: z.string().optional(),
+  filters: z.array(purchaseSearchRuleSchema).optional(),
   from: z.string().optional(),
   to: z.string().optional(),
   page: z.number().int().min(1).optional(),

@@ -25,7 +25,11 @@ export const createPurchaseOrder = async (
 export const listPurchaseOrders = async (
   params: ListPurchaseOrdersQuery
 ): Promise<PurchaseOrderListResponse> => {
-  const response = await axiosInstance.get(API_PURCHASE_GROUP.list, { params });
+  const requestParams = {
+    ...params,
+    filters: params.filters?.length ? JSON.stringify(params.filters) : undefined,
+  };
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.list, { params: requestParams });
   return response.data;
 };
 

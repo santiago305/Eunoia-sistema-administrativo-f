@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { Plus, ReceiptText, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SystemButton } from "@/components/SystemButton";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { removePayment } from "@/services/paymentService";
 import { listPayments } from "@/services/purchaseService";
 import { Payment } from "@/pages/purchases/types/purchase";
@@ -47,7 +46,7 @@ export function PaymentListModal({
   const [modalPayment, setModalPayment] = useState(false);
   const { showFlash, clearFlash } = useFlashMessage();
 
-  const reloadPayments = async (options?: { silent?: boolean }) => {
+  const reloadPayments = useCallback(async (options?: { silent?: boolean }) => {
     if (!poId) return;
     if (!options?.silent) clearFlash();
 
@@ -63,7 +62,7 @@ export function PaymentListModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearFlash, poId, showFlash]);
 
   useEffect(() => {
     let alive = true;
@@ -92,7 +91,7 @@ export function PaymentListModal({
     return () => {
       alive = false;
     };
-  }, [poId, payments, open]);
+  }, [clearFlash, poId, payments, open, showFlash]);
 
   useEffect(() => {
     if (payments) setRows(payments);
@@ -110,7 +109,7 @@ export function PaymentListModal({
     [rows, poId],
   );
 
-  const handleRemove = async (paymentId?: string | null) => {
+  const handleRemove = useCallback(async (paymentId?: string | null) => {
     if (!paymentId) return;
 
     clearFlash();
@@ -128,7 +127,7 @@ export function PaymentListModal({
     } catch {
       showFlash(errorResponse("Error al eliminar pago"));
     }
-  };
+  }, [clearFlash, loadPurchases, reloadPayments, showFlash]);
 
   const columns = useMemo<DataTableColumn<PaymentRow>[]>(
     () => [
@@ -188,64 +187,61 @@ export function PaymentListModal({
         hideable: false,
       },
     ],
-    [rows],
+    [handleRemove],
   );
 
   return (
     <Modal open={open} onClose={close} title={title} className={className}>
       <div className="space-y-4">
-        <div className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeaderForm icon={ReceiptText} title="Listado de pagos" />
 
-            {!credit && (
-              <SystemButton
-                leftIcon={<Plus className="h-4 w-4" />}
-                style={{
-                  backgroundColor: PRIMARY,
-                  borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                }}
-                onClick={() => setModalPayment(true)}
-              >
-                Agregar pago
-              </SystemButton>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-4 py-3">
-              <p className="text-xs text-black/60">Pagos registrados</p>
-              <div className="mt-1 text-sm font-semibold text-black tabular-nums">
-                {loading ? "Cargando..." : `${rows.length} registros`}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-black/10 bg-emerald-50/70 px-4 py-3">
-              <p className="text-xs text-black/60">Total pagado</p>
-              <div className="mt-1 text-sm font-semibold text-emerald-700 tabular-nums">
-                {money(totalPaid, rows[0]?.currency ?? "PEN")}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-black/10 bg-rose-50/70 px-4 py-3">
-              <p className="text-xs text-black/60">Total pendiente</p>
-              <div className="mt-1 text-sm font-semibold text-rose-700 tabular-nums">
-                {money(totalToPay, rows[0]?.currency ?? "PEN")}
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-sm border border-black/10 bg-black/[0.02] px-4 py-3">
+            <p className="text-xs text-black/60">Pagos registrados</p>
+            <div className="mt-1 text-sm font-semibold text-black tabular-nums">
+              {loading ? "Cargando..." : `${rows.length} registros`}
             </div>
           </div>
 
-          <DataTable
-            tableId={`purchase-payments-table-${poId}`}
-            data={paymentRows}
-            columns={columns}
-            rowKey="id"
-            loading={loading}
-            emptyMessage="No hay pagos registrados."
-            hoverable={false}
-            animated={false}
-          />
+          <div className="rounded-sm border border-black/10 bg-emerald-50/70 px-4 py-3">
+            <p className="text-xs text-black/60">Total pagado</p>
+            <div className="mt-1 text-sm font-semibold text-emerald-700 tabular-nums">
+              {money(totalPaid, rows[0]?.currency ?? "PEN")}
+            </div>
+          </div>
+
+          <div className="rounded-sm border border-black/10 bg-rose-50/70 px-4 py-3">
+            <p className="text-xs text-black/60">Total pendiente</p>
+            <div className="mt-1 text-sm font-semibold text-rose-700 tabular-nums">
+              {money(totalToPay, rows[0]?.currency ?? "PEN")}
+            </div>
+          </div>
         </div>
+        <div className="flex items-center justify-end gap-3">
+
+          {!credit && (
+            <SystemButton
+              leftIcon={<Plus className="h-4 w-4" />}
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              }}
+              onClick={() => setModalPayment(true)}
+            >
+              Agregar pago
+            </SystemButton>
+          )}
+        </div>
+
+        <DataTable
+          tableId={`purchase-payments-table-${poId}`}
+          data={paymentRows}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          emptyMessage="No hay pagos registrados."
+          hoverable={false}
+          animated={false}
+        />
       </div>
       <PaymentModal
         title="Formulario de Pago"

@@ -40,6 +40,10 @@ export function DataTableSearchBar({
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       if (metricModalOpen) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-floating-overlay-root='true']")) {
+        return;
+      }
       if (!wrapperRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -100,16 +104,26 @@ export function DataTableSearchBar({
         {open ? (
           <div
             className={cn(
-              "absolute left-0 top-[calc(100%+0.5rem)] w-full max-w-[42rem] rounded-sm border border-border/70 bg-background p-4 shadow-xl",
+              "absolute left-0 top-[calc(100%+0.5rem)] flex w-full max-w-md flex-col overflow-hidden rounded-sm border border-border/70 bg-background shadow-xl",
               panelClassName,
             )}
           >
+            <div className="p-4">
+              {children}
+            </div>
+
             {onSaveMetric ? (
-              <div className="mb-3 flex justify-end">
+              <div className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/25 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-foreground">
+                    Guardar metrica
+                  </p>
+                </div>
+
                 <SystemButton
-                  variant="secondary"
+                  variant="primary"
                   size="sm"
-                  className="rounded-sm px-3 text-[11px]"
+                  className="shrink-0 rounded-sm px-3 text-[11px]"
                   leftIcon={<Save className="h-3.5 w-3.5" />}
                   disabled={!canSaveMetric}
                   onClick={() => {
@@ -121,7 +135,6 @@ export function DataTableSearchBar({
                 </SystemButton>
               </div>
             ) : null}
-            {children}
           </div>
         ) : null}
       </div>

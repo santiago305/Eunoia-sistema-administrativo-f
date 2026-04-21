@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Newspaper, Boxes, Plus, Trash2 } from "lucide-react";
-import { DataTable } from "@/components/table/DataTable";
+import { Plus, Trash2 } from "lucide-react";
 import type { DataTableColumn } from "@/components/table/types";
 import {
   AfectType,
@@ -16,7 +15,6 @@ import { errorResponse, successResponse } from "@/common/utils/response";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { FloatingDateTimePicker } from "@/components/date-picker/FloatingDateTimePicker";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import type {
   CreatePurchaseOrderDto,
@@ -29,6 +27,7 @@ import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { createPurchaseOrder, updatePurchaseOrder } from "@/services/purchaseService";
 import { listActiveWarehouses } from "@/services/warehouseServices";
 import { EquivalenceModal } from "./components/EquivalenceModal";
+import { PurchaseItemsSection } from "./components/PurchaseItemsSection";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
 import { ModalNavegate } from "./components/ModalNavegate";
 import { PageShell } from "@/components/layout/PageShell";
@@ -140,16 +139,15 @@ export default function PurchaseCreateLocal({
     { value: CurrencyTypes.USD, label: "USD ($)" },
   ];
 
-  const searchMaterialSkus = async (query: string) => {
-    if (!query.trim()) return;
-
+  const searchMaterialSkus = useCallback(async (query: string) => {
+    const normalizedQuery = query.trim();
     try {
       const response = await listSkus({
-        q: query,
+        q: normalizedQuery || undefined,
         productType: ProductTypes.MATERIAL,
         isActive: true,
         page: 1,
-        limit: 50,
+        limit: 10,
       });
 
       const mapped = (response.items ?? []).map(mapSkuToPurchaseSkuInfo);
@@ -160,7 +158,7 @@ export default function PurchaseCreateLocal({
       if (!isEdit) setProducts([]);
       showFlash(errorResponse("Error al cargar SKUs de materia prima"));
     }
-  };
+  }, [isEdit, showFlash]);
 
   
     const handleClosePayment = useCallback(()=>{
@@ -170,7 +168,7 @@ export default function PurchaseCreateLocal({
     const handleCloseEquivalence = useCallback(()=>{
         setOpenEquivalence(false)
     },[])
-  const loadSuppliers = async (appliedSearch: string) => {
+  const loadSuppliers = useCallback(async (appliedSearch: string) => {
     clearFlash();
     try {
       const res = await listSuppliers({
@@ -194,9 +192,9 @@ export default function PurchaseCreateLocal({
       setSupplierOptions([]);
       showFlash(errorResponse("Error al cargar proveedores"));
     }
-  };
+  }, [clearFlash, showFlash]);
 
-  const loadWarehouses = async () => {
+  const loadWarehouses = useCallback(async () => {
     clearFlash();
     try {
       const res = await listActiveWarehouses({ page: 1, limit: 100 });
@@ -210,7 +208,7 @@ export default function PurchaseCreateLocal({
       setWarehouseOptions([]);
       showFlash(errorResponse("Error al cargar almacenes"));
     }
-  };
+  }, [clearFlash, showFlash]);
 
   const productOptions = useMemo(
     () =>
@@ -298,7 +296,7 @@ export default function PurchaseCreateLocal({
   };
 
   const savePurchase = async () => {
-    if (!form.items?.length || !form.serie.trim() || !form.supplierId) return;
+    if (!form.items?.length || !form.serie.trim() || !form.supplierId || !form.warehouseId) return;
 
     const payload: CreatePurchaseOrderDto = {
       supplierId: form.supplierId,
@@ -315,12 +313,12 @@ export default function PurchaseCreateLocal({
       totalIgv: normalizeMoney(form.totalIgv),
       purchaseValue: normalizeMoney(form.purchaseValue),
       total: normalizeMoney(form.total),
-      note: form.note ?? "",
+      note: form.note?.trim() || undefined,
       status: form.status,
-      expectedAt: form.expectedAt ?? "",
-      dateIssue: form.dateIssue ?? "",
-      dateExpiration: form.dateExpiration ? form.dateExpiration : undefined,
-      items: (form.items ?? []).map(({ sku, name ,...rest }) => ({
+      expectedAt: form.expectedAt?.trim() ? form.expectedAt : undefined,
+      dateIssue: form.dateIssue?.trim() ? form.dateIssue : undefined,
+      dateExpiration: form.dateExpiration?.trim() ? form.dateExpiration : undefined,
+      items: (form.items ?? []).map(({ sku: _sku, name: _name, ...rest }) => ({
         ...rest,
         quantity: normalizeQuantity(rest.quantity),
         unitPrice: normalizePrice(rest.unitPrice),
@@ -358,9 +356,15 @@ export default function PurchaseCreateLocal({
         const nextPoId = res.order?.poId ?? effectivePoId ?? "";
         if (nextPoId) setLastSavedPoId(nextPoId);
         setOpenPaymentModal(false);
-        setOpenNavigateModal(true);
         if (nextPoId) {
           await onSaved?.(nextPoId);
+        }
+        if (inModal) {
+          resetForm();
+          setOpenNavigateModal(false);
+          onClose?.();
+        } else {
+          setOpenNavigateModal(true);
         }
       }
 
@@ -372,7 +376,7 @@ export default function PurchaseCreateLocal({
     }
   };
 
-  const loadPurchase = async (poId: string) => {
+  const loadPurchase = useCallback(async (poId: string) => {
     try {
       const data = await getById(poId);
       const skusFromOrder = (data.items ?? [])
@@ -414,24 +418,20 @@ export default function PurchaseCreateLocal({
     } catch {
       showFlash(errorResponse("Error al cargar la compra."));
     }
-  };
+  }, [showFlash]);
 
   useEffect(() => {
     if (!effectivePoId) return;
     void loadPurchase(effectivePoId);
-  }, [effectivePoId]);
+  }, [effectivePoId, loadPurchase]);
 
   useEffect(() => {
     const id = setTimeout(() => {
-      if (productQuery.trim()) {
-        void searchMaterialSkus(productQuery);
-      } else {
-        setSearchResults(undefined);
-      }
-    }, 1000);
+      void searchMaterialSkus(productQuery);
+    }, productQuery.trim() ? 350 : 0);
 
     return () => clearTimeout(id);
-  }, [productQuery, isEdit]);
+  }, [productQuery, searchMaterialSkus]);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -443,7 +443,7 @@ export default function PurchaseCreateLocal({
 
   useEffect(() => {
     void loadSuppliers(appliedSupplierSearch);
-  }, [appliedSupplierSearch]);
+  }, [appliedSupplierSearch, loadSuppliers]);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -458,7 +458,7 @@ export default function PurchaseCreateLocal({
 
   useEffect(() => {
     void loadWarehouses();
-  }, []);
+  }, [loadWarehouses]);
 
   const handleCreateSaved = () => {
     setOpenCreate(false);
@@ -574,7 +574,7 @@ export default function PurchaseCreateLocal({
         id: "actions",
         header: "Acciones",
         cell: (row) => (
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-center">
             <SystemButton
               variant="danger"
               size="icon"
@@ -586,8 +586,8 @@ export default function PurchaseCreateLocal({
             </SystemButton>
           </div>
         ),
-        className: "text-right",
-        headerClassName: "text-right",
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
         hideable: false,
         sortable: false,
       },
@@ -598,66 +598,26 @@ export default function PurchaseCreateLocal({
     <>
       <div className={inModal ? "w-full" : "h-screen w-full py-0"}>
         <div
-          className={`mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr] ${
+          className={`py-4 grid grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr] ${
             inModal ? "h-[80vh]" : "h-[calc(100vh-64px)]"
           }`}
         >
-          <section className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
-            <div className="border-b border-black/10 p-3 sm:p-4">
-              <SectionHeaderForm icon={Boxes} title="Productos" />
+          <PurchaseItemsSection
+            itemId={itemId}
+            productOptions={productOptions}
+            itemRows={itemRows}
+            itemColumns={itemColumns}
+            totalValueLabel={money(totals.totalValue, currency)}
+            totalPriceLabel={money(totals.totalPrice, currency)}
+            igvPercent={Math.round(IGV * 100)}
+            onSelectItem={(value) => {
+              setItemId(value);
+              setOpenEquivalence(Boolean(value));
+            }}
+            onSearchProduct={setProductQuery}
+          />
 
-              <div className="mt-2 grid gap-2 xl:grid-cols-1">
-                <FloatingSelect
-                  label="Producto"
-                  name="producto"
-                  value={itemId}
-                  onChange={(value) => {
-                    setItemId(value);
-                    setOpenEquivalence(Boolean(value));
-                  }}
-                  options={productOptions}
-                  searchable
-                  searchPlaceholder="Buscar producto..."
-                  emptyMessage="Sin productos"
-                  onSearchChange={(text) => setProductQuery(text)}
-                  className="h-12"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-auto">
-              <DataTable
-                tableId="purchase-create-items-table"
-                data={itemRows}
-                columns={itemColumns}
-                rowKey="id"
-                emptyMessage="Aun no agregas productos."
-                hoverable={false}
-                animated={false}
-              />
-            </div>
-
-            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-[11px] text-black/60">
-                  Nota: "Precio" incluye IGV. "Valor" es base sin IGV (IGV {Math.round(IGV * 100)}%).
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-                    Total valor: <span className="font-semibold text-black">{money(totals.totalValue, currency)}</span>
-                  </div>
-                  <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-                    Total precio: <span className="font-semibold text-black">{money(totals.totalPrice, currency)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <aside className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden flex flex-col">
-            <div className="border-b border-black/10 px-3 sm:px-4 py-2">
-              <SectionHeaderForm icon={Newspaper} title="Documento" />
-            </div>
+          <aside className="overflow-hidden flex flex-col border-0 border-black/10 lg:border-l">
 
             <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
               <div className="grid grid-cols-2 gap-3">
@@ -822,8 +782,8 @@ export default function PurchaseCreateLocal({
                 />
               </div>
 
-              <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
-                <p className="text-[11px] font-semibold text-black">Resumen</p>
+              <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3 mt-2">
+                <p className="text-xs font-semibold text-black">Resumen</p>
                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
                   <div className="flex items-center justify-between">
                     <span>Items</span>
@@ -841,11 +801,8 @@ export default function PurchaseCreateLocal({
               </div>
             </div>
 
-            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
+            <div className="p-3">
               <div className="flex gap-2">
-                <SystemButton variant="outline" className="flex-1" onClick={onClose}>
-                  Cerrar 
-                </SystemButton>
                 <SystemButton
                   className="flex-1"
                   disabled={

@@ -18,14 +18,12 @@ export function PurchaseModal({ open, poId, onClose, onSaved }: Props) {
       className="w-[min(92rem,calc(100vw-2rem))]"
       bodyClassName="p-0"
     >
-      <div className="px-4 pb-4">
-        <PurchaseCreateLocal
-          inModal
-          poIdOverride={poId}
-          onClose={onClose}
-          onSaved={onSaved}
-        />
-      </div>
+      <PurchaseCreateLocal
+        inModal
+        poIdOverride={poId}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
     </Modal>
   );
 }

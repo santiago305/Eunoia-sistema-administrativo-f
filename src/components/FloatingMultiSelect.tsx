@@ -50,7 +50,7 @@ export function FloatingMultiSelect({
   options,
   onChange,
   error,
-  placeholder = "Seleccionar opciones",
+  placeholder,
   disabled = false,
   className = "",
   containerClassName = "",
@@ -339,6 +339,7 @@ export function FloatingMultiSelect({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
       className="fixed overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-floating-panel"
+      data-floating-overlay-root="true"
       style={panelStyle}
       id={panelId}
       role="listbox"
@@ -383,10 +384,12 @@ export function FloatingMultiSelect({
             const isActive = activeIndex === index;
 
             return (
-              <button
+              <SystemButton
                 key={option.value}
                 id={`${panelId}-option-${index}`}
                 type="button"
+                variant="ghost"
+                size="custom"
                 onMouseDown={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -406,7 +409,7 @@ export function FloatingMultiSelect({
               >
                 <span className="truncate">{option.label}</span>
                 {isSelected ? <Check className="h-4 w-4 shrink-0" /> : null}
-              </button>
+              </SystemButton>
             );
           })
         )}
@@ -433,9 +436,11 @@ export function FloatingMultiSelect({
   return (
     <div ref={rootRef} className={`w-full ${containerClassName}`}>
       <div className="relative">
-        <button
+        <SystemButton
           ref={triggerRef}
           type="button"
+          variant="outline"
+          size="custom"
           id={name}
           name={name}
           disabled={disabled}
@@ -532,7 +537,7 @@ export function FloatingMultiSelect({
               }`}
             />
           </div>
-        </button>
+        </SystemButton>
 
         <label
           id={labelId}

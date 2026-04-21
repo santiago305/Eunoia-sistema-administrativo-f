@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import { Calendar, Plus, Trash2, Wallet } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -76,8 +76,8 @@ export function PurchasePaymentModal({
     }));
   };
 
-  const loadSupplierMethods = async (id:string) => {
-    clearFlash()
+  const loadSupplierMethods = useCallback(async (id: string) => {
+    clearFlash();
     try {
       const data = await getPaymentMethodsBySupplier(id);
       const normalized = (data ?? []).map((m) => ({
@@ -97,11 +97,11 @@ export function PurchasePaymentModal({
     } catch {
       showFlash(errorResponse("No se pudieron cargar los metodos de pago."));
     }
-  };
+  }, [clearFlash, showFlash]);
 
-  useEffect(()=> {
+  useEffect(() => {
     void loadSupplierMethods(form.supplierId);
-  }, [])
+  }, [form.supplierId, loadSupplierMethods]);
 
   const updatePayment = (index: number, patch: Partial<Payment>) => {
     setForm((prev) => ({
@@ -117,19 +117,35 @@ export function PurchasePaymentModal({
     }));
   };
 
-  const updateQuota = (index: number, patch: Partial<CreditQuota>) => {
+  const updateQuota = useCallback((index: number, patch: Partial<CreditQuota>) => {
     setForm((prev) => ({
       ...prev,
-      quotas: (prev.quotas ?? []).map((quota, i) => (i === index ? { ...quota, ...patch } : quota)),
+      quotas: (prev.quotas ?? []).map((quota, i) =>
+        i === index
+          ? {
+              quotaId: patch.quotaId ?? quota.quotaId,
+              number: patch.number ?? quota.number,
+              expirationDate: patch.expirationDate ?? quota.expirationDate,
+              paymentDate: patch.paymentDate ?? quota.paymentDate,
+              totalToPay: patch.totalToPay ?? quota.totalToPay,
+              totalPaid: patch.totalPaid ?? quota.totalPaid,
+              poId: patch.poId ?? quota.poId,
+        }
+          : quota,
+      ),
     }));
-  };
+  }, [setForm]);
 
-  const removeQuota = (index: number) => {
+  const removeQuota = useCallback((index: number) => {
     setForm((prev) => {
       const quotas = (prev.quotas ?? []).filter((_, i) => i !== index);
-      return { ...prev, quotas, numQuotas: quotas.length };
+      return {
+        ...prev,
+        quotas,
+        numQuotas: quotas.length,
+      };
     });
-  };
+  }, [setForm]);
 
   const paymentFormOptions = [
     { value: PaymentFormTypes.CONTADO, label: "Contado" },
@@ -308,7 +324,7 @@ export function PurchasePaymentModal({
         )}
 
         {!showCredit && (
-          <div className="rounded-3xl border border-black/10 bg-white p-4 space-y-3">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <SectionHeaderForm icon={Wallet} title="Pagos" />
               <SystemButton
@@ -422,7 +438,7 @@ export function PurchasePaymentModal({
           </div>
         )}
 
-        <div className="rounded-xl border border-black/10 bg-black/[0.02] px-3 py-2 text-md font-semibold space-y-1">
+        <div className="rounded-sm border border-black/10 bg-black/[0.02] px-3 py-2 text-sm font-semibold space-y-1">
           <div className="flex items-center justify-between">
             <span>Total pagado</span>
             <span className="font-semibold">{formatMoney(totalPaid, currency)}</span>

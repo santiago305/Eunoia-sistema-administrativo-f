@@ -4,12 +4,10 @@ import { DataTable } from "@/components/table/DataTable";
 import {
     DataTableSearchBar,
     DataTableSearchChips,
-    DataTableSearchPanel,
     type DataTableRecentSearchItem,
     type DataTableSavedSearchItem,
-    type DataTableSearchColumn,
 } from "@/components/table/search";
-import type { DataTableColumn, DataTableColumnPreference } from "@/components/table/types";
+import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import {
@@ -21,7 +19,7 @@ import {
     setCancelPurchase,
     setSentPurchase,
 } from "@/services/purchaseService";
-import { buildMonthStartIso, endOfDayIso, money, parseDateInputValue, toLocalDateKey } from "@/utils/functionPurchases";
+import { money, parseDateInputValue, toLocalDateKey } from "@/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
@@ -29,6 +27,7 @@ import { PurchaseModal } from "./components/PurchaseModal";
 import type {
     PurchaseOrder,
     PurchaseSearchFilters,
+    PurchaseSearchRule,
     PurchaseSearchSnapshot,
     PurchaseSearchStateResponse,
 } from "./types/purchase";
@@ -41,16 +40,17 @@ import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
-import { useLocalStorage } from "@/components/table/use-local-storage";
 import {
     buildPurchaseSearchChips,
+    buildPurchaseSmartSearchColumns,
     createEmptyPurchaseSearchFilters,
     hasPurchaseSearchCriteria,
+    upsertPurchaseSearchRule,
     removePurchaseSearchKey,
     sanitizePurchaseSearchSnapshot,
-    togglePurchaseSearchOption,
     type PurchaseSearchFilterKey,
 } from "./utils/purchaseSmartSearch";
+import { PurchaseSmartSearchPanel } from "./components/PurchaseSmartSearchPanel";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -94,8 +94,8 @@ export default function Purchases() {
     const [searchText, setSearchText] = useState("");
     const [appliedSearchText, setAppliedSearchText] = useState("");
     const [searchFilters, setSearchFilters] = useState<PurchaseSearchFilters>(() => createEmptyPurchaseSearchFilters());
-    const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
-    const [toDate, setToDate] = useState(() => endOfDayIso());
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
     const [page, setPage] = useState(1);
     const limit = 8;
 
@@ -167,11 +167,7 @@ export default function Purchases() {
                 page,
                 limit,
                 q: executedSnapshot.q,
-                supplierIds: executedSnapshot.filters.supplierIds.length ? executedSnapshot.filters.supplierIds : undefined,
-                warehouseIds: executedSnapshot.filters.warehouseIds.length ? executedSnapshot.filters.warehouseIds : undefined,
-                documentTypes: executedSnapshot.filters.documentTypes.length ? executedSnapshot.filters.documentTypes : undefined,
-                statuses: executedSnapshot.filters.statuses.length ? executedSnapshot.filters.statuses : undefined,
-                paymentForms: executedSnapshot.filters.paymentForms.length ? executedSnapshot.filters.paymentForms : undefined,
+                filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
                 from: fromDate || undefined,
                 to: toDate || undefined,
             });
@@ -349,6 +345,7 @@ export default function Purchases() {
             className: "text-black/70",
             hideable: true,
             sortable: false,
+            visible: false,
         },
         {
             id: "numero",
@@ -408,6 +405,7 @@ export default function Purchases() {
             className: "text-left",
             hideable: true,
             sortable: false,
+            visible: false,
         },
         {
             id: "totalToPay",
@@ -427,6 +425,25 @@ export default function Purchases() {
                 </span>
             ),
             headerClassName: "text-left w-[60px]",
+            className: "text-black/70",
+            hideable: true,
+            sortable: false,
+        },
+        {
+            id: "expectedAt",
+            header: "Ing. Almacen",
+            cell: (row) => (
+                <div className="text-black/70">
+                    {row.dateEnter}
+                    {row.timeEnter ? (
+                        <>
+                            <br />
+                            {row.timeEnter}
+                        </>
+                    ) : null}
+                </div>
+            ),
+            headerClassName: "text-left w-[50px]",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -455,34 +472,16 @@ export default function Purchases() {
                     )}
                 </div>
             ),
-            headerClassName: "text-center w-[60px]",
+            headerClassName: "w-[60px] text-center [&>div]:justify-center",
             className: "text-center",
             hideable: true,
             sortable: false,
         },
-        {
-            id: "expectedAt",
-            header: "Ing. Almacen",
-            cell: (row) => (
-                <div className="text-black/70">
-                    {row.dateEnter}
-                    {row.timeEnter ? (
-                        <>
-                            <br />
-                            {row.timeEnter}
-                        </>
-                    ) : null}
-                </div>
-            ),
-            headerClassName: "text-left w-[50px]",
-            className: "text-black/70",
-            hideable: true,
-            sortable: false,
-        },
+        
         {
             id: "actions",
-            header: "ACCIONES",
-            headerClassName: "text-center w-[50px]",
+            header: "acciones",
+            headerClassName: "w-[50px] text-center [&>div]:justify-center",
             cell: (row) => (
                 <div className="flex justify-center">
                     <ActionsPopover
@@ -588,54 +587,10 @@ export default function Purchases() {
         },
     ];
 
-    const preferenceStorageKey = "data-table-preferences:purchase-list";
-    const [columnPreferences] = useLocalStorage<DataTableColumnPreference>(preferenceStorageKey, {
-        visibleColumnIds: columns.filter((column) => column.visible !== false).map((column) => column.id),
-        orderedColumnIds: columns.map((column) => column.id),
-    });
-
-    const smartSearchColumns = useMemo<DataTableSearchColumn<PurchaseSearchFilterKey>[]>(() => {
-        const visibilityMap: Record<PurchaseSearchFilterKey, string> = {
-            supplierIds: "supplier",
-            warehouseIds: "warehouse",
-            statuses: "status",
-            documentTypes: "docLabel",
-            paymentForms: "paymentForm",
-        };
-
-        return [
-            {
-                id: "supplierIds",
-                label: "Proveedor",
-                options: searchState?.catalogs.suppliers ?? [],
-                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.supplierIds),
-            },
-            {
-                id: "warehouseIds",
-                label: "Almacen",
-                options: searchState?.catalogs.warehouses ?? [],
-                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.warehouseIds),
-            },
-            {
-                id: "statuses",
-                label: "Estado",
-                options: searchState?.catalogs.statuses ?? [],
-                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.statuses),
-            },
-            {
-                id: "documentTypes",
-                label: "Tipo",
-                options: searchState?.catalogs.documentTypes ?? [],
-                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.documentTypes),
-            },
-            {
-                id: "paymentForms",
-                label: "Forma",
-                options: searchState?.catalogs.paymentForms ?? [],
-                visible: columnPreferences.visibleColumnIds.includes(visibilityMap.paymentForms),
-            },
-        ];
-    }, [columnPreferences.visibleColumnIds, searchState]);
+    const smartSearchColumns = useMemo(
+        () => buildPurchaseSmartSearchColumns(searchState),
+        [searchState],
+    );
 
     const recentSearches = useMemo<DataTableRecentSearchItem<PurchaseSearchSnapshot>[]>(
         () =>
@@ -663,7 +618,7 @@ export default function Purchases() {
         [executedSnapshot, searchState],
     );
 
-    const applySmartSnapshot = useCallback((snapshot: { q?: string; filters: PurchaseSearchFilters }) => {
+    const applySmartSnapshot = useCallback((snapshot: PurchaseSearchSnapshot) => {
         const normalized = sanitizePurchaseSearchSnapshot(snapshot);
         setSearchText(normalized.q ?? "");
         setAppliedSearchText(normalized.q ?? "");
@@ -671,12 +626,22 @@ export default function Purchases() {
         setPage(1);
     }, []);
 
-    const handleToggleSmartOption = useCallback((key: PurchaseSearchFilterKey, optionId: string) => {
+    const handleApplySearchRule = useCallback((rule: PurchaseSearchRule) => {
         setSearchFilters((current) => {
-            const next = togglePurchaseSearchOption(
+            const next = upsertPurchaseSearchRule(
                 sanitizePurchaseSearchSnapshot({ q: searchText, filters: current }),
-                key,
-                optionId,
+                rule,
+            );
+            return next.filters;
+        });
+        setPage(1);
+    }, [searchText]);
+
+    const handleRemoveSearchRule = useCallback((fieldId: PurchaseSearchFilterKey) => {
+        setSearchFilters((current) => {
+            const next = removePurchaseSearchKey(
+                sanitizePurchaseSearchSnapshot({ q: searchText, filters: current }),
+                fieldId,
             );
             return next.filters;
         });
@@ -784,18 +749,20 @@ export default function Purchases() {
                             onSubmitSearch={submitSearch}
                             searchLabel="Busca tu compra"
                             searchName="purchase-smart-search"
-                            panelClassName="max-w-[38rem]"
                             canSaveMetric={hasPurchaseSearchCriteria(executedSnapshot)}
                             saveLoading={savingMetric}
                             onSaveMetric={handleSaveMetric}
                         >
-                            <DataTableSearchPanel
+                            <PurchaseSmartSearchPanel
                                 recent={recentSearches}
                                 saved={savedMetrics}
                                 columns={smartSearchColumns}
                                 snapshot={draftSnapshot}
+                                searchState={searchState}
+                                filterQuery={searchText}
                                 onApplySnapshot={applySmartSnapshot}
-                                onToggleOption={handleToggleSmartOption}
+                                onApplyRule={handleApplySearchRule}
+                                onRemoveRule={handleRemoveSearchRule}
                                 onDeleteMetric={handleDeleteMetric}
                             />
                         </DataTableSearchBar>
@@ -828,7 +795,13 @@ export default function Purchases() {
                     setOpenPurchaseModal(false);
                     setEditPoId(undefined);
                 }}
-                onSaved={() => loadPurchases()}
+                onSaved={async (poId) => {
+                    await loadPurchases();
+                    setOpenPurchaseModal(false);
+                    setEditPoId(undefined);
+                    setSelectedProductionId(poId);
+                    setOpenPdfModal(true);
+                }}
             />
             <PaymentModal
                 title="Formulario de Pago"

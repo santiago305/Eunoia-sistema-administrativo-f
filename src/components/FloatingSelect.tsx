@@ -6,6 +6,7 @@ import {
   CLOSE_ALL_FLOATING_SELECTS_EVENT,
   dispatchCloseAllFloatingSelects,
 } from "@/components/floatingSelectEvents";
+import { SystemButton } from "@/components/SystemButton";
 import { UI_LAYERS } from "@/components/ui/layers";
 
 type SelectOption = {
@@ -398,6 +399,7 @@ export function FloatingSelect({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
       className="fixed overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-floating-panel"
+      data-floating-overlay-root="true"
       style={panelStyle}
       id={panelId}
       role="listbox"
@@ -441,10 +443,12 @@ export function FloatingSelect({
             const isActive = activeIndex === index;
 
             return (
-              <button
+              <SystemButton
                 key={option.value}
                 id={`${panelId}-option-${index}`}
                 type="button"
+                variant="ghost"
+                size="custom"
                 onMouseDown={(event) => {
                   // Selection happens on mousedown so it wins before the
                   // document-level outside click listener closes the panel.
@@ -467,7 +471,7 @@ export function FloatingSelect({
               >
                 <span>{option.label}</span>
                 {isSelected ? <Check className="h-4 w-4" /> : null}
-              </button>
+              </SystemButton>
             );
           })
         )}
@@ -478,9 +482,11 @@ export function FloatingSelect({
   return (
     <div ref={rootRef} className={`w-full ${containerClassName}`}>
       <div className="relative">
-        <button
+        <SystemButton
           ref={triggerRef}
           type="button"
+          variant="outline"
+          size="custom"
           id={name}
           name={name}
           disabled={disabled}
@@ -558,7 +564,7 @@ export function FloatingSelect({
               error ? "text-red-500" : open ? "text-primary" : "text-muted-foreground"
             }`}
           />
-        </button>
+        </SystemButton>
 
         <label
           id={labelId}

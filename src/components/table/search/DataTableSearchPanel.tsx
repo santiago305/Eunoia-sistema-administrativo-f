@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
-  ChevronRight,
   Search,
   Star,
   Trash2,
@@ -123,7 +122,7 @@ export function DataTableSearchPanel<
                   onClick={() =>
                     onToggleOption(activeColumn.id, option.id)
                   }
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition ${
+                  className={`flex w-full items-center justify-between rounded-sm px-3 py-2 text-left transition ${
                     selected
                       ? "bg-slate-900 text-white shadow-sm"
                       : "bg-slate-50 text-slate-700 hover:bg-slate-100"
@@ -174,7 +173,7 @@ export function DataTableSearchPanel<
                 key={item.id}
                 type="button"
                 onClick={() => onApplySnapshot(item.snapshot)}
-                className="flex w-full items-center rounded-xl px-3 py-2 text-left text-[13px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                className="flex w-full items-center rounded-sm px-3 py-2 text-left text-[13px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
                 title={item.label}
               >
                 <span className="block min-w-0 flex-1 truncate">
@@ -203,13 +202,11 @@ export function DataTableSearchPanel<
               key={column.id}
               type="button"
               onClick={() => setActiveColumnId(column.id)}
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-slate-100"
+              className="flex w-full items-center rounded-sm px-3 py-2 text-left transition hover:bg-slate-100"
             >
               <span className="truncate text-[13px] font-medium text-slate-800">
                 {column.label}
               </span>
-
-              <ChevronRight className="ml-3 h-4 w-4 shrink-0 text-slate-400" />
             </button>
           ))}
         </div>
@@ -250,7 +247,7 @@ export function DataTableSearchPanel<
             {saved.map((metric) => (
               <div
                 key={metric.id}
-                className="group flex items-center gap-2 rounded-xl px-3 py-2 transition hover:bg-slate-100"
+                className="group flex items-center gap-2 rounded-sm px-3 py-2 transition hover:bg-slate-100"
               >
                 <button
                   type="button"

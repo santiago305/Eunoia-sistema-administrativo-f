@@ -76,9 +76,9 @@ export function EquivalenceModal({
     setLoading(false);
     resetPending();
     onClose();
-  },[]);
+  }, [onClose]);
 
-  const loadUnits = async (canUpdate: () => boolean) => {
+  const loadUnits = useCallback(async (canUpdate: () => boolean) => {
     if (units.length > 0) return units;
     try {
       const res = await listUnits();
@@ -89,9 +89,9 @@ export function EquivalenceModal({
       if (canUpdate()) showFlash(errorResponse("Error al cargar unidades"));
       return [];
     }
-  };
+  }, [showFlash, units]);
 
-  const loadEquivalences = async (
+  const loadEquivalences = useCallback(async (
     productId: string,
     unitList: ListUnitResponse,
     canUpdate: () => boolean,
@@ -128,7 +128,7 @@ export function EquivalenceModal({
     } finally {
       if (canUpdate()) setLoading(false);
     }
-  };
+  }, [showFlash]);
 
   const addSelectedProduct = (
     selectedItemId?: string,
@@ -243,7 +243,7 @@ export function EquivalenceModal({
     return () => {
       active = false;
     };
-  }, [open, itemId, products]);
+  }, [open, itemId, products, handleClose, loadEquivalences, loadUnits, showFlash]);
 
   const afectTypeOptions = [
     { value: AfectType.TAXED, label: "GRAVADA - OPERACION ONEROSA" },
@@ -260,7 +260,6 @@ export function EquivalenceModal({
       const fromName = fromLabel?.name ?? "UNIDADES";
       const toName = toLabel?.name ?? "UNIDADES";
       const factor = Number(eq.factor ?? 1);
-      const safeToName = toName || eq.fromUnitId;
 
       return {
         id: eq.id,
@@ -273,10 +272,13 @@ export function EquivalenceModal({
     });
   }, [equivalences, units]);
 
-  const isActiveRow = (row: EquivalenceRow) =>
-    pendingEquivalence === row.fromName &&
-    pendingUnitBase === row.toName &&
-    pendingFactor === row.factor;
+  const isActiveRow = useCallback(
+    (row: EquivalenceRow) =>
+      pendingEquivalence === row.fromName &&
+      pendingUnitBase === row.toName &&
+      pendingFactor === row.factor,
+    [pendingEquivalence, pendingFactor, pendingUnitBase],
+  );
 
   const equivalenceColumns = useMemo<DataTableColumn<EquivalenceRow>[]>(() => {
     return [
@@ -311,14 +313,14 @@ export function EquivalenceModal({
         sortable: false,
       },
     ];
-  }, [pendingEquivalence, pendingUnitBase, pendingFactor, primaryColor]);
+  }, [isActiveRow, primaryColor]);
 
   if (!open) return null;
 
   return (
     <Modal onClose={handleClose} title="Agregar Producto" className="w-lg">
       <div className="space-y-4">
-        <div className="rounded-2xl border border-black/10 p-4 md:p-5">
+        <div className="">
           <SectionHeaderForm icon={Boxes} title="tributación" />
 
           <div className="mt-4 mb-3 grid grid-cols-1 gap-3 md:grid-cols-1">
@@ -338,7 +340,7 @@ export function EquivalenceModal({
             />
           </div>
         </div>
-        <div className="rounded-2xl border border-black/10 p-4 md:p-5">
+        <div className="">
           <SectionHeaderForm icon={Boxes} title="Datos del producto" />
 
           <div className="mt-4 mb-3 grid grid-cols-1 gap-3 md:grid-cols-1">
@@ -364,7 +366,7 @@ export function EquivalenceModal({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-black/10 p-4 md:p-5">
+        <div className="">
           <SectionHeaderForm icon={Scale} title="Equivalencias" />
             <div className="max-h-56 overflow-auto">
               <DataTable
