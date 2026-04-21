@@ -11,7 +11,7 @@ import type {
   SmartSearchRule,
 } from "./types";
 
-const DEFAULT_VISIBLE_FIELDS = 6;
+const DEFAULT_VISIBLE_FIELDS = 4;
 
 type Props<
   TFieldKey extends string,

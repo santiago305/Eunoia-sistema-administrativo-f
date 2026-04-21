@@ -58,7 +58,7 @@ export function ProviderSmartSearchPanel({
       getSelectionCount={getProviderSearchSelectionCount}
       fieldsSectionTitle="Columnas"
       fieldsSectionDescription="Filtra proveedores por identidad, contacto, estado o tiempo de espera."
-      initialVisibleFields={6}
+      initialVisibleFields={4}
       filterQuery={filterQuery}
     />
   );

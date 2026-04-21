@@ -58,7 +58,7 @@ export function PurchaseSmartSearchPanel({
       getSelectionCount={getPurchaseSearchSelectionCount}
       fieldsSectionTitle="Columnas"
       fieldsSectionDescription="Usa cualquier columna de la tabla salvo fechas de auditoria."
-      initialVisibleFields={6}
+      initialVisibleFields={4}
       filterQuery={filterQuery}
     />
   );
