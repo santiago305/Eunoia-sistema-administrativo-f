@@ -27,6 +27,7 @@ import AdjustmentProductModal from "@/pages/catalog/components/AdjustmentFormPro
 import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
 import { ProductTypes } from "./types/ProductTypes";
 import { RoutesPaths } from "@/router/config/routesPaths";
+import { useCompany } from "@/hooks/useCompany";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -44,6 +45,9 @@ const buildNumero = (document: InventoryDocument) => {
 
 export default function AdjustmentProduts() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { hasCompany } = useCompany();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
   const [toDate, setToDate] = useState(() => endOfDayIso());
@@ -362,6 +366,8 @@ export default function AdjustmentProduts() {
                 boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
               }}
               onClick={() => setOpenAdjustmentModal(true)}
+              disabled={companyActionDisabled}
+              title={companyActionTitle}
             >
               Crear nuevo ajuste
             </SystemButton>

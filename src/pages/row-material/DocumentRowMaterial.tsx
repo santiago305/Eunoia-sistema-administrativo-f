@@ -23,6 +23,7 @@ import { InventoryDocumentProductType } from "@/pages/catalog/types/documentInve
 import { DocStatus, DocType, type Warehouse } from "@/pages/warehouse/types/warehouse";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
+import { useCompany } from "@/hooks/useCompany";
 
 const statusLabels: Record<DocStatus, string> = {
     [DocStatus.DRAFT]: "Borrador",
@@ -52,8 +53,11 @@ type DocumentRow = {
 };
 
 export default function DocumentRowMaterial() {
-    const { showFlash, clearFlash } = useFlashMessage();
-    const navigate = useNavigate();
+	    const { showFlash, clearFlash } = useFlashMessage();
+        const { hasCompany } = useCompany();
+	    const navigate = useNavigate();
+        const companyActionDisabled = !hasCompany;
+        const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
     const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
     const [toDate, setToDate] = useState(() => todayIso());
@@ -399,10 +403,20 @@ export default function DocumentRowMaterial() {
                         <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                             <p className="text-sm font-semibold">Crear documento rápido</p>
                             <div className="mt-3 grid grid-cols-1 gap-2">
-                                <SystemButton className="text-xs" onClick={() => navigate(RoutesPaths.rowMaterialAdjustments)}>
+                                <SystemButton
+                                    className="text-xs"
+                                    onClick={() => navigate(RoutesPaths.rowMaterialAdjustments)}
+                                    disabled={companyActionDisabled}
+                                    title={companyActionTitle}
+                                >
                                     Ajuste
                                 </SystemButton>
-                                <SystemButton className="text-xs" onClick={() => navigate(RoutesPaths.rowMaterialTransfer)}>
+                                <SystemButton
+                                    className="text-xs"
+                                    onClick={() => navigate(RoutesPaths.rowMaterialTransfer)}
+                                    disabled={companyActionDisabled}
+                                    title={companyActionTitle}
+                                >
                                     Transferencia
                                 </SystemButton>
                             </div>

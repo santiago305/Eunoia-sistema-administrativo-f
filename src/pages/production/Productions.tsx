@@ -27,6 +27,7 @@ import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
 import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
+import { useCompany } from "@/hooks/useCompany";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -96,6 +97,9 @@ const getProductionItemLabel = (item: NonNullable<ProductionOrder["items"]>[numb
 
 export default function Production() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { hasCompany } = useCompany();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProductionStatus>("all");
@@ -572,6 +576,7 @@ export default function Production() {
                     icon: <Play className="h-4 w-4 text-black/60" />,
                     hidden: order.status !== ProductionStatus.DRAFT,
                     onClick: () => handleStart(order.productionId ?? ""),
+                    disabled: companyActionDisabled,
                   },
                   {
                     id: "edit",
@@ -579,6 +584,7 @@ export default function Production() {
                     icon: <Pencil className="h-4 w-4 text-black/60" />,
                     hidden: order.status !== ProductionStatus.DRAFT,
                     onClick: () => handleEdit(order.productionId ?? ""),
+                    disabled: companyActionDisabled,
                   },
                   {
                     id: "pdf",
@@ -594,6 +600,7 @@ export default function Production() {
                     className: "text-rose-700 hover:bg-rose-50",
                     hidden: order.status !== ProductionStatus.DRAFT,
                     onClick: () => handleCancel(order.productionId ?? ""),
+                    disabled: companyActionDisabled,
                   },
                   {
                     id: "close",
@@ -604,6 +611,7 @@ export default function Production() {
                       order.status === ProductionStatus.PARTIAL
                     ),
                     onClick: () => handleClose(order.productionId ?? ""),
+                    disabled: companyActionDisabled,
                   },
                 ]}
                 columns={1}
@@ -635,7 +643,7 @@ export default function Production() {
         hideable: false,
       },
     ];
-  }, [nowIso]);
+  }, [companyActionDisabled, nowIso]);
 
   return (
     <PageShell className="bg-white">
@@ -654,6 +662,8 @@ export default function Production() {
               boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
             }}
             onClick={handleCreate}
+            disabled={companyActionDisabled}
+            title={companyActionTitle}
           >
             Nueva orden
           </SystemButton>

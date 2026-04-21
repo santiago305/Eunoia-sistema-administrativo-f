@@ -58,6 +58,7 @@ import {
   mergePurchaseSkus,
   type PurchaseSkuInfo,
 } from "./utils/purchaseSkus";
+import { useCompany } from "@/hooks/useCompany";
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
@@ -100,7 +101,9 @@ export default function PurchaseCreateLocal({
   onSaved,
 }: PurchaseCreateLocalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { hasCompany } = useCompany();
   const navigate = useNavigate();
+  const companyActionDisabled = !hasCompany;
 
   const [products, setProducts] = useState<PurchaseSkuInfo[]>([]);
   const [searchResults, setSearchResults] = useState<ListSkusResponse>();
@@ -698,6 +701,7 @@ export default function PurchaseCreateLocal({
                     }}
                     title="Agregar almacén"
                     onClick={() => setOpenCreateWarehouse(true)}
+                    disabled={companyActionDisabled}
                   >
                     <Plus className="h-4 w-4" />
                   </SystemButton>
@@ -736,6 +740,7 @@ export default function PurchaseCreateLocal({
                     }}
                     title="Agregar proveedor"
                     onClick={() => setOpenCreate(true)}
+                    disabled={companyActionDisabled}
                   >
                     <Plus className="h-4 w-4" />
                   </SystemButton>
@@ -806,6 +811,7 @@ export default function PurchaseCreateLocal({
                 <SystemButton
                   className="flex-1"
                   disabled={
+                    companyActionDisabled ||
                     !form.items?.length ||
                     !form.serie.trim() ||
                     !form.supplierId ||
@@ -893,7 +899,7 @@ export default function PurchaseCreateLocal({
           currency={currency}
           formatMoney={money}
           onSave={savePurchase}
-          saveDisabled={!form.items?.length || !form.serie.trim() || !form.supplierId}
+          saveDisabled={companyActionDisabled || !form.items?.length || !form.serie.trim() || !form.supplierId}
           isEdit={isEdit}
         />
       )}

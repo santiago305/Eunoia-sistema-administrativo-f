@@ -11,6 +11,7 @@
 import { lazy, ReactElement } from "react";
 import { Navigate, RouteObject } from "react-router-dom";
 import PrivateRoute from "../guards/PrivateRoute";
+import CompanyRequiredRoute from "../guards/CompanyRequiredRoute";
 import { getRouteMetaByPath } from "../config/routesConfig";
 import { RoutesPaths } from "../config/routesPaths";
 
@@ -58,6 +59,9 @@ const withRouteGuard = (path: string, element: ReactElement) => {
     const routeMeta = getRouteMetaByPath(path);
     return <PrivateRoute rolesAllowed={routeMeta?.rolesAllowed}>{element}</PrivateRoute>;
 };
+
+const withCompanyRouteGuard = (path: string, element: ReactElement) =>
+  withRouteGuard(path, <CompanyRequiredRoute>{element}</CompanyRequiredRoute>);
 
 export const dashboardRoutes: RouteObject[] = [
     {
@@ -138,7 +142,7 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.catalogAdjustment,
-                element: withRouteGuard(RoutesPaths.catalogAdjustment, <CatalogAdjustment />),
+                element: withCompanyRouteGuard(RoutesPaths.catalogAdjustment, <CatalogAdjustment />),
             },
             {
                 path: RoutesPaths.KardexFinished,
@@ -178,7 +182,7 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.purchase,
-                element: withRouteGuard(RoutesPaths.purchase, <Purchase />),
+                element: withCompanyRouteGuard(RoutesPaths.purchase, <Purchase />),
             },
             {
                 path: RoutesPaths.purchases,
@@ -186,7 +190,7 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.purchaseEdit,
-                element: withRouteGuard(RoutesPaths.purchaseEdit, <Purchase />),
+                element: withCompanyRouteGuard(RoutesPaths.purchaseEdit, <Purchase />),
             },
             {
                 path: RoutesPaths.security,
@@ -214,11 +218,11 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.outOrder,
-                element: withRouteGuard(RoutesPaths.outOrder, <OutOrder />),
+                element: withCompanyRouteGuard(RoutesPaths.outOrder, <OutOrder />),
             },
             {
                 path: RoutesPaths.catalogTransfer,
-                element: withRouteGuard(RoutesPaths.catalogTransfer, <TransferProduct />),
+                element: withCompanyRouteGuard(RoutesPaths.catalogTransfer, <TransferProduct />),
             },
             {
                 path: RoutesPaths.catalogInventory,
@@ -226,7 +230,7 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.rowMaterialTransfer,
-                element: withRouteGuard(RoutesPaths.rowMaterialTransfer, <TransferRowMaterial />),
+                element: withCompanyRouteGuard(RoutesPaths.rowMaterialTransfer, <TransferRowMaterial />),
             },
         ],
     },

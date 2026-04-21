@@ -19,6 +19,7 @@ import { ProductCreateModal } from "./components/ProductCreateModal";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useCompany } from "@/hooks/useCompany";
 
 
 const PRIMARY = "hsl(var(--primary))";
@@ -27,6 +28,8 @@ const PRODUCT_TYPE = ProductTypes.PRODUCT;
 export default function CatalogProducts() {
     const shouldReduceMotion = useReducedMotion();
     const { showFlash, clearFlash } = useFlashMessage();
+    const { hasCompany } = useCompany();
+    const companyActionDisabled = !hasCompany;
 
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -120,7 +123,10 @@ export default function CatalogProducts() {
                             actions={getDropdownItemProducts(row, {
                                 openEdit,
                                 setDeletingProductId,
-                            })}
+                            }).map((action) => ({
+                                ...action,
+                                disabled: companyActionDisabled || action.disabled,
+                            }))}
                             columns={1}
                             compact
                             showLabels
@@ -147,7 +153,7 @@ export default function CatalogProducts() {
                 ),
             },
         ],
-        [openEdit],
+        [companyActionDisabled, openEdit],
     );
 
     const confirmDelete = async () => {
@@ -269,6 +275,7 @@ export default function CatalogProducts() {
                         onClick={startCreate}
                         leftIcon={<Plus className="h-4 w-4" />}
                         title="Nuevo producto"
+                        disabled={companyActionDisabled}
                     >
                         Nuevo producto
                     </SystemButton>

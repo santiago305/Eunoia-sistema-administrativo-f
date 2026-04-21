@@ -5,6 +5,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { usePagination } from "@/hooks/usePagination";
 import { applyAdjustment, getStockMock } from "@/data/stockService";
+import { useCompany } from "@/hooks/useCompany";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -26,8 +27,11 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Adjustments() {
+  const { hasCompany } = useCompany();
   const [, setStockVersion] = useState(0);
   const stockMock = getStockMock();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
   const [searchParams, setSearchParams] = useSearchParams();
   const skuParam = searchParams.get("sku") ?? "";
   const [skuFilter, setSkuFilter] = useState(skuParam);
@@ -168,7 +172,13 @@ export default function Adjustments() {
           <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Ajustes recientes</p>
-              <button className="text-xs px-3 py-1 rounded-md border border-black/10">Nuevo ajuste</button>
+	              <button
+                  className="text-xs px-3 py-1 rounded-md border border-black/10 disabled:opacity-50"
+                  disabled={companyActionDisabled}
+                  title={companyActionTitle}
+                >
+                  Nuevo ajuste
+                </button>
             </div>
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
@@ -264,13 +274,15 @@ export default function Adjustments() {
                   value={adjReason}
                   onChange={(event) => setAdjReason(event.target.value)}
                 />
-                <button
-                  className="w-full text-sm px-3 py-2 rounded-md bg-black text-white"
-                  type="button"
-                  onClick={createAdjustment}
-                >
-                  Postear ajuste
-                </button>
+	                <button
+	                  className="w-full text-sm px-3 py-2 rounded-md bg-black text-white"
+	                  type="button"
+	                  onClick={createAdjustment}
+                      disabled={companyActionDisabled}
+                      title={companyActionTitle}
+	                >
+	                  Postear ajuste
+	                </button>
               </div>
             </div>
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">

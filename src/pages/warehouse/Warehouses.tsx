@@ -17,6 +17,7 @@ import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
+import { useCompany } from "@/hooks/useCompany";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
@@ -24,6 +25,7 @@ const DEFAULT_LIMIT = 10;
 const SEARCH_DEBOUNCE_MS = 500;
 
 export default function Warehouses() {
+  const { hasCompany } = useCompany();
   const [openCreate, setOpenCreate] = useState(false);
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
   const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
@@ -43,6 +45,8 @@ export default function Warehouses() {
   });
   const [searchText, setSearchText] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
   const page = paginationState.pageIndex + 1;
   const limit = paginationState.pageSize;
@@ -250,12 +254,14 @@ export default function Warehouses() {
                     warehouseId: row.warehouseId,
                     name: row.name,
                   }),
+                disabled: companyActionDisabled,
               },
               {
                 id: "edit",
                 label: "Detalles",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
                 onClick: () => startEdit(row.warehouseId),
+                disabled: companyActionDisabled,
               },
               {
                 id: "toggle",
@@ -266,6 +272,7 @@ export default function Warehouses() {
                   ? "text-rose-700 hover:bg-rose-50"
                   : "text-cyan-700 hover:bg-cyan-50",
                 onClick: () => setDeletingWarehouseId(row.warehouseId),
+                disabled: companyActionDisabled,
               },
             ]}
             columns={1}
@@ -297,7 +304,7 @@ export default function Warehouses() {
         sortable: false,
       },
     ],
-    [formatDate, openLocationsModal, openStockModal, startEdit]
+    [companyActionDisabled, formatDate, openLocationsModal, openStockModal, startEdit]
   );
 
   return (
@@ -321,6 +328,8 @@ export default function Warehouses() {
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
           }}
+          disabled={companyActionDisabled}
+          title={companyActionTitle}
         >
           Crear almacen
         </SystemButton>

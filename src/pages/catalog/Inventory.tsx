@@ -26,6 +26,7 @@ import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import { Boxes, FileText, Filter, LineChart, Menu, Wrench, ArrowLeftRight } from "lucide-react";
 import { normalizeQuantity } from "@/utils/functionPurchases";
 import { aggregateByWarehouse, mapSnapshotToRow, useEChart } from "./utils/inventoryUtils";
+import { useCompany } from "@/hooks/useCompany";
 
 const DEFAULT_LIMIT = 10;
 
@@ -37,7 +38,9 @@ const formatIsoDate = (date: Date) => {
 export default function CatalogInventory() {
   const shouldReduceMotion = useReducedMotion();
   const { showFlash } = useFlashMessage();
+  const { hasCompany } = useCompany();
   const navigate = useNavigate();
+  const companyActionDisabled = !hasCompany;
   const animationConfig = useMemo<
     Pick<
       echarts.EChartsOption,
@@ -539,6 +542,7 @@ export default function CatalogInventory() {
       id: `transfer-${row.id}`,
       label: "Transferir",
       icon: <ArrowLeftRight className="h-4 w-4 text-black/60" />,
+      disabled: companyActionDisabled,
       onClick: () => {
         navigate(RoutesPaths.catalogTransfer);
       },
@@ -547,6 +551,7 @@ export default function CatalogInventory() {
       id: `adjust-${row.id}`,
       label: "Ajustar",
       icon: <Wrench className="h-4 w-4 text-black/60" />,
+      disabled: companyActionDisabled,
       onClick: () => {
         navigate(RoutesPaths.catalogAdjustments);
       },
@@ -561,7 +566,7 @@ export default function CatalogInventory() {
     void loadInventory();
   }, [page, warehouseId, searchTerm]);
 
-  const columns = useMemo<DataTableColumn<InventoryRow>[]>(
+	  const columns = useMemo<DataTableColumn<InventoryRow>[]>(
     () => [
       {
         id: "name",
@@ -636,8 +641,8 @@ export default function CatalogInventory() {
         ),
       },
     ],
-    [navigate],
-  );
+	    [companyActionDisabled, navigate],
+	  );
 
 
   return (

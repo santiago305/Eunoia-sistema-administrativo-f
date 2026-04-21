@@ -51,6 +51,7 @@ import {
     type PurchaseSearchFilterKey,
 } from "./utils/purchaseSmartSearch";
 import { PurchaseSmartSearchPanel } from "./components/PurchaseSmartSearchPanel";
+import { useCompany } from "@/hooks/useCompany";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -90,6 +91,9 @@ type PurchaseRow = {
 
 export default function Purchases() {
     const { showFlash, clearFlash } = useFlashMessage();
+    const { hasCompany } = useCompany();
+    const companyActionDisabled = !hasCompany;
+    const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
     const [searchText, setSearchText] = useState("");
     const [appliedSearchText, setAppliedSearchText] = useState("");
@@ -491,12 +495,14 @@ export default function Purchases() {
                                 label: "Ingresar Almacen",
                                 icon: <PackageCheck className="h-4 w-4 text-black/60" />,
                                 onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
                             },
                             row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                                 id: "process",
                                 label: "Procesar",
                                 icon: <Play className="h-4 w-4 text-black/60" />,
                                 onClick: () => setSent(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
                             },
                             row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
                             row.purchase.totalPaid != row.purchase.total && {
@@ -509,6 +515,7 @@ export default function Purchases() {
                                     setTotalToPay(row.purchase.totalToPay ?? 0);
                                     setPoId(row.purchase.poId ?? "");
                                 },
+                                disabled: companyActionDisabled,
                             },
                             row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
                                 id: "quotas",
@@ -548,6 +555,7 @@ export default function Purchases() {
                                     setEditPoId(nextPoId);
                                     setOpenPurchaseModal(true);
                                 },
+                                disabled: companyActionDisabled,
                             },
                             row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                                 id: "cancel",
@@ -555,6 +563,7 @@ export default function Purchases() {
                                 className: "text-rose-700 hover:bg-rose-50",
                                 icon: <XCircle className="h-4 w-4" />,
                                 onClick: () => cancelOrder(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
                             },
                         ].filter(Boolean) as ActionItem[]}
                     columns={1}
@@ -719,6 +728,8 @@ export default function Purchases() {
                                 setEditPoId(undefined);
                                 setOpenPurchaseModal(true);
                             }}
+                            disabled={companyActionDisabled}
+                            title={companyActionTitle}
                         >
                             Nueva compra
                         </SystemButton>

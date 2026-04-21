@@ -4,6 +4,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { usePagination } from "@/hooks/usePagination";
 import { getStockMock } from "@/data/stockService";
+import { useCompany } from "@/hooks/useCompany";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -25,6 +26,9 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Reservations() {  const stockMock = getStockMock();
+  const { hasCompany } = useCompany();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
   // PROVISIONAL: reservations mocked from schema while backend is under construction.
   const reservations = useMemo(() => {
     return stockMock.reservations.map((row) => {
@@ -76,7 +80,13 @@ export default function Reservations() {  const stockMock = getStockMock();
           <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Reservas activas</p>
-              <button className="text-xs px-3 py-1 rounded-md border border-black/10">Nueva reserva</button>
+              <button
+                className="text-xs px-3 py-1 rounded-md border border-black/10 disabled:opacity-50"
+                disabled={companyActionDisabled}
+                title={companyActionTitle}
+              >
+                Nueva reserva
+              </button>
             </div>
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
@@ -144,7 +154,13 @@ export default function Reservations() {  const stockMock = getStockMock();
                 <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Almacen" />
                 <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Cantidad" />
                 <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Expiracion" />
-                <button className="w-full text-sm px-3 py-2 rounded-md bg-black text-white">Guardar reserva</button>
+                <button
+                  className="w-full text-sm px-3 py-2 rounded-md bg-black text-white disabled:opacity-50"
+                  disabled={companyActionDisabled}
+                  title={companyActionTitle}
+                >
+                  Guardar reserva
+                </button>
               </div>
             </div>
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">

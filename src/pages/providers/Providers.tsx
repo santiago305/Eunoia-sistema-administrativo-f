@@ -17,6 +17,7 @@ import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
+import { useCompany } from "@/hooks/useCompany";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -24,6 +25,9 @@ const SEARCH_DEBOUNCE_MS = 500;
 
 export default function Providers() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { hasCompany } = useCompany();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
@@ -248,12 +252,14 @@ export default function Providers() {
                 label: "Detalles",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
                 onClick: () => openEdit(row.supplierId),
+                disabled: companyActionDisabled,
               },
               {
                 id: "methods",
                 label: "Metodos de pago",
                 icon: <IconPaymentMethod />,
                 onClick: () => setMethodSupplierId(row.supplierId),
+                disabled: companyActionDisabled,
               },
               {
                 id: "toggle",
@@ -264,6 +270,7 @@ export default function Providers() {
                   ? "text-rose-700 hover:bg-rose-50"
                   : "text-cyan-700 hover:bg-cyan-50",
                 onClick: () => setToggleSupplierId(row.supplierId),
+                disabled: companyActionDisabled,
               },
             ]}
             columns={1}
@@ -296,7 +303,7 @@ export default function Providers() {
         hideable: false,
       },
     ],
-    [getSupplierDisplayName, openEdit]
+    [companyActionDisabled, getSupplierDisplayName, openEdit]
   );
 
   const safePage = serverPagination.page;
@@ -316,6 +323,8 @@ export default function Providers() {
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
+          disabled={companyActionDisabled}
+          title={companyActionTitle}
         >
           Crear proveedor
         </SystemButton>

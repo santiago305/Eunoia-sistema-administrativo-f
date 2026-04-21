@@ -6,6 +6,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { getStockMock } from "@/data/stockService";
 import { RoutesPaths } from "@/router/config/routesPaths";
+import { useCompany } from "@/hooks/useCompany";
 
 const statusBadges = [
   { label: "Disponible", value: "78%" },
@@ -34,7 +35,10 @@ const useEChart = (options: echarts.EChartsOption) => {
 
 export default function Inventory() {
   const stockMock = getStockMock();
+  const { hasCompany } = useCompany();
   const navigate = useNavigate();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
   const { page } = useParams();
   const currentPage = Math.max(1, Number(page ?? "1") || 1);
   const pageSize = 10;
@@ -308,8 +312,22 @@ export default function Inventory() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockMovements}?sku=${row.sku}`)}>Ver kardex</button>
-                    <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockTransfers}?sku=${row.sku}`)}>Transferir</button>
-                    <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockAdjustments}?sku=${row.sku}`)}>Ajustar</button>
+	                    <button
+                          className="text-xs px-2 py-1 rounded-md border border-black/10 disabled:opacity-50"
+                          onClick={() => navigate(`${RoutesPaths.stockTransfers}?sku=${row.sku}`)}
+                          disabled={companyActionDisabled}
+                          title={companyActionTitle}
+                        >
+                          Transferir
+                        </button>
+	                    <button
+                          className="text-xs px-2 py-1 rounded-md border border-black/10 disabled:opacity-50"
+                          onClick={() => navigate(`${RoutesPaths.stockAdjustments}?sku=${row.sku}`)}
+                          disabled={companyActionDisabled}
+                          title={companyActionTitle}
+                        >
+                          Ajustar
+                        </button>
                   </div>
                 </div>
               ))}
@@ -379,8 +397,22 @@ export default function Inventory() {
                       <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockMovements}?sku=${row.sku}`)}>Ver kardex</button>
-                          <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockTransfers}?sku=${row.sku}`)}>Transferir</button>
-                          <button className="text-xs px-2 py-1 rounded-md border border-black/10" onClick={() => navigate(`${RoutesPaths.stockAdjustments}?sku=${row.sku}`)}>Ajustar</button>
+	                          <button
+                                className="text-xs px-2 py-1 rounded-md border border-black/10 disabled:opacity-50"
+                                onClick={() => navigate(`${RoutesPaths.stockTransfers}?sku=${row.sku}`)}
+                                disabled={companyActionDisabled}
+                                title={companyActionTitle}
+                              >
+                                Transferir
+                              </button>
+	                          <button
+                                className="text-xs px-2 py-1 rounded-md border border-black/10 disabled:opacity-50"
+                                onClick={() => navigate(`${RoutesPaths.stockAdjustments}?sku=${row.sku}`)}
+                                disabled={companyActionDisabled}
+                                title={companyActionTitle}
+                              >
+                                Ajustar
+                              </button>
                         </div>
                       </td>
                     </tr>

@@ -19,14 +19,18 @@ import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
 import { ProductCreateModal } from "../catalog/components/ProductCreateModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useCompany } from "@/hooks/useCompany";
 
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.MATERIAL;
 
 export default function RowMaterial() {
-    const shouldReduceMotion = useReducedMotion();
-    const { showFlash, clearFlash } = useFlashMessage();
+	    const shouldReduceMotion = useReducedMotion();
+	    const { showFlash, clearFlash } = useFlashMessage();
+        const { hasCompany } = useCompany();
+        const companyActionDisabled = !hasCompany;
+        const companyActionTitle = hasCompany ? "Nueva materia prima" : "Primero registra la empresa.";
 
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -132,10 +136,13 @@ export default function RowMaterial() {
                 cell: (row) => (
                     <div className="flex justify-center">
                         <ActionsPopover
-                            actions={getDropdownItemProducts(row, {
-                                openEdit,
-                                setDeletingProductId,
-                            })}
+	                            actions={getDropdownItemProducts(row, {
+	                                openEdit,
+	                                setDeletingProductId,
+	                            }).map((action) => ({
+                                    ...action,
+                                    disabled: companyActionDisabled || action.disabled,
+                                }))}
                             columns={1}
                             compact
                             showLabels
@@ -162,8 +169,8 @@ export default function RowMaterial() {
                 ),
             },
         ],
-        [openEdit],
-    );
+	        [companyActionDisabled, openEdit],
+	    );
 
     const buildCsv = (
         rows: Array<{
@@ -270,15 +277,16 @@ export default function RowMaterial() {
                             {exporting ? "Exportando..." : "Exportar CSV"}
                         </SystemButton>
 
-                        <SystemButton
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={startCreate}
-                            leftIcon={<Plus className="h-4 w-4" />}
-                            title="Nueva materia prima"
-                        >
-                            Nueva materia prima
-                        </SystemButton>
+	                        <SystemButton
+	                            size="sm"
+	                            className="text-[11px]"
+	                            onClick={startCreate}
+	                            leftIcon={<Plus className="h-4 w-4" />}
+	                            title={companyActionTitle}
+                                disabled={companyActionDisabled}
+	                        >
+	                            Nueva materia prima
+	                        </SystemButton>
                     </div>
                 </motion.div>
 

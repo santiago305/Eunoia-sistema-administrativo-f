@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
+import { useCompany } from "@/hooks/useCompany";
 
 // PROVISIONAL: series configuration mocked while backend is under construction.
 const seriesRows = [
@@ -30,6 +31,9 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function SeriesTypes() {
+  const { hasCompany } = useCompany();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
   const usageChart = useMemo<echarts.EChartsOption>(
     () => ({
       grid: { left: 20, right: 16, top: 10, bottom: 20, containLabel: true },
@@ -62,7 +66,13 @@ export default function SeriesTypes() {
           <div className="xl:col-span-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Series</p>
-              <button className="text-xs px-3 py-1 rounded-md border border-black/10">Nueva serie</button>
+              <button
+                className="text-xs px-3 py-1 rounded-md border border-black/10 disabled:opacity-50"
+                disabled={companyActionDisabled}
+                title={companyActionTitle}
+              >
+                Nueva serie
+              </button>
             </div>
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">

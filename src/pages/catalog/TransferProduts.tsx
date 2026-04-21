@@ -29,6 +29,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
 import { getDocuments } from "@/services/documentService";
 import { TransferProductsModal } from "@/pages/catalog/components/TransferProductsModal";
+import { useCompany } from "@/hooks/useCompany";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -54,6 +55,9 @@ const buildNumero = (document: InventoryDocument) => {
 
 export default function TransferenceProduts() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { hasCompany } = useCompany();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
   const [fromDate, setFromDate] = useState(() => buildMonthStartIso());
   const [toDate, setToDate] = useState(() => endOfDayIso());
@@ -316,6 +320,8 @@ export default function TransferenceProduts() {
                 boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
               }}
               onClick={() => setOpenTransferModal(true)}
+              disabled={companyActionDisabled}
+              title={companyActionTitle}
             >
               Crear nueva transferencia
             </SystemButton>

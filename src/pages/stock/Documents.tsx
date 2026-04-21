@@ -4,6 +4,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { usePagination } from "@/hooks/usePagination";
 import { getStockMock } from "@/data/stockService";
+import { useCompany } from "@/hooks/useCompany";
 
 const useEChart = (options: echarts.EChartsOption) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -25,7 +26,10 @@ const useEChart = (options: echarts.EChartsOption) => {
 };
 
 export default function Documents() {
+  const { hasCompany } = useCompany();
   const stockMock = getStockMock();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
   const statusLabel = (value: string) => {
     switch (value) {
       case "Posted":
@@ -164,10 +168,15 @@ export default function Documents() {
                   "Ingreso",
                   "Salida",
                 ].map((label) => (
-                  <button key={label} className="text-xs px-3 py-2 rounded-md border border-black/10">
-                    {label}
-                  </button>
-                ))}
+	                  <button
+                      key={label}
+                      className="text-xs px-3 py-2 rounded-md border border-black/10 disabled:opacity-50"
+                      disabled={companyActionDisabled}
+                      title={companyActionTitle}
+                    >
+	                    {label}
+	                  </button>
+	                ))}
               </div>
             </div>
 
@@ -183,7 +192,13 @@ export default function Documents() {
                 <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Almacen origen" />
                 <input className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm" placeholder="Almacen destino" />
                 <textarea className="min-h-[80px] w-full rounded-lg border border-black/10 px-3 py-2 text-sm" placeholder="Notas" />
-                <button className="w-full text-sm px-3 py-2 rounded-md bg-black text-white">Postear documento</button>
+	                <button
+                    className="w-full text-sm px-3 py-2 rounded-md bg-black text-white disabled:opacity-50"
+                    disabled={companyActionDisabled}
+                    title={companyActionTitle}
+                  >
+                    Postear documento
+                  </button>
               </div>
             </div>
           </div>

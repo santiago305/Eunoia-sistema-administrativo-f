@@ -32,11 +32,13 @@ import {
   uploadCompanyLogo,
 } from "@/services/companyService";
 import { Headed } from "@/components/Headed";
+import { useCompany } from "@/hooks/useCompany";
 
 const COMPANY_PRIMARY = "hsl(var(--primary))";
 
 export default function CompanyPage() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { refreshCompany } = useCompany();
 
   const [loading, setLoading] = useState(true);
   const [savingLogo, setSavingLogo] = useState(false);
@@ -142,6 +144,7 @@ export default function CompanyPage() {
 
     try {
       await uploadCompanyLogo(file);
+      await refreshCompany();
       showFlash(successResponse("Logo actualizado"));
       await fetchCompany();
     } catch {
@@ -157,6 +160,7 @@ export default function CompanyPage() {
 
     try {
       await uploadCompanyCert(file);
+      await refreshCompany();
       showFlash(successResponse("Certificado actualizado"));
       await fetchCompany();
     } catch {
@@ -183,9 +187,11 @@ export default function CompanyPage() {
 
       if (!hasCompany) {
         await createCompany(validation.values);
+        await refreshCompany();
         showFlash(successResponse("Empresa creada"));
       } else {
         await updateCompany(validation.values);
+        await refreshCompany();
         showFlash(successResponse("Empresa actualizada"));
       }
 
