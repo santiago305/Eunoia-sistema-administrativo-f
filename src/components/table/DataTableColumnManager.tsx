@@ -40,7 +40,7 @@ export function DataTableColumnManager({
   }, [columns, orderedColumnIds]);
 
   return (
-    <div className="relative z-80 inline-block">
+    <div className="relative inline-block">
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <button
