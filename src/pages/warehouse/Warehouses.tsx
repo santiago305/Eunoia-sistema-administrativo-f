@@ -1,31 +1,86 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { PageTitle } from "@/components/PageTitle";
 import { Boxes, Menu, Pencil, Plus, Trash2 } from "lucide-react";
-
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useWarehouses } from "@/hooks/useWarehouse";
-import type { Warehouse } from "@/pages/warehouse/types/warehouse";
+import { PageTitle } from "@/components/PageTitle";
+import { AlertModal } from "@/components/AlertModal";
+import { ActionsPopover } from "@/components/ActionsPopover";
+import { Headed } from "@/components/Headed";
+import { PageShell } from "@/components/layout/PageShell";
+import { StatusPill } from "@/components/StatusTag";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  type DataTableRecentSearchItem,
+  type DataTableSavedSearchItem,
+} from "@/components/table/search";
+import { SystemButton } from "@/components/SystemButton";
+import { errorResponse, successResponse } from "@/common/utils/response";
+import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { useCompany } from "@/hooks/useCompany";
 import { WarehouseFormModal } from "@/pages/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
 import { WarehouseStockModal } from "./components/WarehouseStockModal";
-import { SystemButton } from "@/components/SystemButton";
-import { ActionsPopover } from "@/components/ActionsPopover";
-import { StatusPill } from "@/components/StatusTag";
-
-import { DataTable } from "@/components/table/DataTable";
-import type { DataTableColumn } from "@/components/table/types";
-import { Headed } from "@/components/Headed";
-import { PageShell } from "@/components/layout/PageShell";
-import { AlertModal } from "@/components/AlertModal";
-import { useCompany } from "@/hooks/useCompany";
+import { WarehouseSmartSearchPanel } from "./components/WarehouseSmartSearchPanel";
+import type {
+  Warehouse,
+  WarehouseSearchFilters,
+  WarehouseSearchRule,
+  WarehouseSearchSnapshot,
+  WarehouseSearchStateResponse,
+} from "@/pages/warehouse/types/warehouse";
+import {
+  deleteWarehouseSearchMetric,
+  getWarehouseSearchState,
+  listWarehouses,
+  saveWarehouseSearchMetric,
+  updateWarehouseActive,
+} from "@/services/warehouseServices";
+import {
+  buildWarehouseSearchChips,
+  buildWarehouseSmartSearchColumns,
+  createEmptyWarehouseSearchFilters,
+  hasWarehouseSearchCriteria,
+  removeWarehouseSearchKey,
+  sanitizeWarehouseSearchSnapshot,
+  upsertWarehouseSearchRule,
+  type WarehouseSearchFilterKey,
+} from "@/pages/warehouse/utils/warehouseSmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
 const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
-const SEARCH_DEBOUNCE_MS = 500;
 
 export default function Warehouses() {
+  const { showFlash, clearFlash } = useFlashMessage();
   const { hasCompany } = useCompany();
+  const companyActionDisabled = !hasCompany;
+  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
+
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchState, setSearchState] = useState<WarehouseSearchStateResponse | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
+
+  const [serverPagination, setServerPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: DEFAULT_LIMIT,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false,
+  });
+
+  const [paginationState, setPaginationState] = useState({
+    pageIndex: 0,
+    pageSize: DEFAULT_LIMIT,
+  });
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState<WarehouseSearchFilters>(() =>
+    createEmptyWarehouseSearchFilters(),
+  );
+
   const [openCreate, setOpenCreate] = useState(false);
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
   const [deletingWarehouseId, setDeletingWarehouseId] = useState<string | null>(null);
@@ -39,78 +94,104 @@ export default function Warehouses() {
     name: string;
   } | null>(null);
 
-  const [paginationState, setPaginationState] = useState({
-    pageIndex: 0,
-    pageSize: DEFAULT_LIMIT,
-  });
-  const [searchText, setSearchText] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const companyActionDisabled = !hasCompany;
-  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
-
   const page = paginationState.pageIndex + 1;
-  const limit = paginationState.pageSize;
-  const debouncedSearch = useDebouncedValue(searchText.trim(), SEARCH_DEBOUNCE_MS);
 
-  useEffect(() => {
-    if (debouncedSearch === appliedSearch) return;
-
-    if (paginationState.pageIndex !== 0) {
-      setPaginationState((prev) => ({
-        ...prev,
-        pageIndex: 0,
-      }));
-      return;
-    }
-
-    setAppliedSearch(debouncedSearch);
-  }, [appliedSearch, debouncedSearch, paginationState.pageIndex]);
-
-  const queryParams = useMemo(
-    () => ({
-      page,
-      limit,
-      q: appliedSearch || undefined,
-    }),
-    [appliedSearch, page, limit]
+  const draftSnapshot = useMemo(
+    () =>
+      sanitizeWarehouseSearchSnapshot({
+        q: searchText,
+        filters: searchFilters,
+      }),
+    [searchFilters, searchText],
   );
 
-  const {
-    items: warehouses,
-    total,
-    page: apiPage,
-    limit: apiLimit,
-    loading,
-    setActive,
-    refetch,
-  } = useWarehouses(queryParams);
+  const executedSnapshot = useMemo(
+    () =>
+      sanitizeWarehouseSearchSnapshot({
+        q: appliedSearchText,
+        filters: searchFilters,
+      }),
+    [appliedSearchText, searchFilters],
+  );
+
+  const loadSearchState = useCallback(async () => {
+    try {
+      const response = await getWarehouseSearchState();
+      setSearchState(response);
+    } catch {
+      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+    }
+  }, [showFlash]);
+
+  const submitSearch = useCallback(() => {
+    setAppliedSearchText(searchText.trim());
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [searchText]);
+
+  const loadWarehouses = useCallback(async () => {
+    clearFlash();
+    setLoading(true);
+
+    try {
+      const res = await listWarehouses({
+        page,
+        limit: paginationState.pageSize,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
+      });
+
+      const items = res.items ?? [];
+      const nextTotal = res.total ?? 0;
+      const nextPage = res.page ?? page;
+      const nextLimit = res.limit ?? paginationState.pageSize;
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / nextLimit));
+
+      setWarehouses(items);
+      setServerPagination({
+        total: nextTotal,
+        page: nextPage,
+        limit: nextLimit,
+        totalPages: nextTotalPages,
+        hasPrev: nextPage > 1,
+        hasNext: nextPage < nextTotalPages,
+      });
+
+      if (hasWarehouseSearchCriteria(executedSnapshot)) {
+        void loadSearchState();
+      }
+    } catch {
+      setWarehouses([]);
+      setServerPagination({
+        total: 0,
+        page: 1,
+        limit: paginationState.pageSize,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      });
+      showFlash(errorResponse("Error al listar almacenes"));
+    } finally {
+      setLoading(false);
+    }
+  }, [clearFlash, executedSnapshot, loadSearchState, page, paginationState.pageSize, showFlash]);
 
   useEffect(() => {
-    setPaginationState((prev) => {
-      const nextPageIndex = apiPage ? apiPage - 1 : prev.pageIndex;
-      const nextPageSize = apiLimit ?? prev.pageSize;
+    void loadWarehouses();
+  }, [loadWarehouses]);
 
-      if (nextPageIndex === prev.pageIndex && nextPageSize === prev.pageSize) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        pageIndex: nextPageIndex,
-        pageSize: nextPageSize,
-      };
-    });
-  }, [apiLimit, apiPage]);
-
-  const effectiveLimit = apiLimit ?? limit;
-  const safePage = apiPage ?? page;
+  useEffect(() => {
+    void loadSearchState();
+  }, [loadSearchState]);
 
   const sortedWarehouses = useMemo(
     () =>
       [...warehouses].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       ),
-    [warehouses]
+    [warehouses],
   );
 
   const startCreate = useCallback(() => {
@@ -150,7 +231,7 @@ export default function Warehouses() {
     if (!deletingWarehouseId) return;
 
     const warehouseToToggle = warehouses.find(
-      ({ warehouseId }) => warehouseId === deletingWarehouseId
+      ({ warehouseId }) => warehouseId === deletingWarehouseId,
     );
 
     if (!warehouseToToggle) {
@@ -158,16 +239,36 @@ export default function Warehouses() {
       return;
     }
 
-    await setActive(deletingWarehouseId, !warehouseToToggle.isActive);
-    setDeletingWarehouseId(null);
-  }, [deletingWarehouseId, setActive, warehouses]);
+    try {
+      await updateWarehouseActive(deletingWarehouseId, {
+        isActive: !warehouseToToggle.isActive,
+      });
+      setWarehouses((prev) =>
+        prev.map((warehouse) =>
+          warehouse.warehouseId === deletingWarehouseId
+            ? {
+                ...warehouse,
+                isActive: !warehouseToToggle.isActive,
+              }
+            : warehouse,
+        ),
+      );
+      showFlash(
+        successResponse(!warehouseToToggle.isActive ? "Almacen restaurado" : "Almacen desactivado"),
+      );
+    } catch {
+      showFlash(errorResponse("Error al cambiar estado del almacen"));
+    } finally {
+      setDeletingWarehouseId(null);
+    }
+  }, [deletingWarehouseId, warehouses, showFlash]);
 
   const warehousePendingToggle = useMemo(
     () =>
       deletingWarehouseId
         ? warehouses.find(({ warehouseId }) => warehouseId === deletingWarehouseId) ?? null
         : null,
-    [deletingWarehouseId, warehouses]
+    [deletingWarehouseId, warehouses],
   );
 
   const formatDate = useCallback((value: string) => {
@@ -304,8 +405,147 @@ export default function Warehouses() {
         sortable: false,
       },
     ],
-    [companyActionDisabled, formatDate, openLocationsModal, openStockModal, startEdit]
+    [companyActionDisabled, formatDate, openLocationsModal, startEdit],
   );
+
+  const smartSearchColumns = useMemo(
+    () => buildWarehouseSmartSearchColumns(searchState),
+    [searchState],
+  );
+
+  const recentSearches = useMemo<DataTableRecentSearchItem<WarehouseSearchSnapshot>[]>(
+    () =>
+      (searchState?.recent ?? []).map((item) => ({
+        id: item.recentId,
+        label: item.label,
+        snapshot: item.snapshot,
+      })),
+    [searchState],
+  );
+
+  const savedMetrics = useMemo<DataTableSavedSearchItem<WarehouseSearchSnapshot>[]>(
+    () =>
+      (searchState?.saved ?? []).map((metric) => ({
+        id: metric.metricId,
+        name: metric.name,
+        label: metric.label,
+        snapshot: metric.snapshot,
+      })),
+    [searchState],
+  );
+
+  const searchChips = useMemo(
+    () => buildWarehouseSearchChips(executedSnapshot, searchState),
+    [executedSnapshot, searchState],
+  );
+
+  const applySmartSnapshot = useCallback((snapshot: WarehouseSearchSnapshot) => {
+    const normalized = sanitizeWarehouseSearchSnapshot(snapshot);
+    setSearchText(normalized.q ?? "");
+    setAppliedSearchText(normalized.q ?? "");
+    setSearchFilters(normalized.filters);
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, []);
+
+  const handleApplySearchRule = useCallback((rule: WarehouseSearchRule) => {
+    setSearchFilters((current) => {
+      const next = upsertWarehouseSearchRule(
+        sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
+        rule,
+      );
+      return next.filters;
+    });
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [searchText]);
+
+  const handleRemoveSearchRule = useCallback((fieldId: WarehouseSearchFilterKey) => {
+    setSearchFilters((current) => {
+      const next = removeWarehouseSearchKey(
+        sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
+        fieldId,
+      );
+      return next.filters;
+    });
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [searchText]);
+
+  const handleRemoveChip = useCallback((key: "q" | WarehouseSearchFilterKey) => {
+    const nextSnapshot = removeWarehouseSearchKey(
+      sanitizeWarehouseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+      key,
+    );
+    setSearchText(nextSnapshot.q ?? "");
+    setAppliedSearchText(nextSnapshot.q ?? "");
+    setSearchFilters(nextSnapshot.filters);
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [appliedSearchText, searchFilters]);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    const snapshot = sanitizeWarehouseSearchSnapshot({
+      q: appliedSearchText,
+      filters: searchFilters,
+    });
+    if (!hasWarehouseSearchCriteria(snapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const response = await saveWarehouseSearchMetric(name, snapshot);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+        return true;
+      }
+
+      showFlash(errorResponse(response.message));
+      return false;
+    } catch {
+      showFlash(errorResponse("Error al guardar la metrica"));
+      return false;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+
+  const handleDeleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deleteWarehouseSearchMetric(metricId);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch {
+      showFlash(errorResponse("Error al eliminar la metrica"));
+    }
+  }, [loadSearchState, showFlash]);
+
+  const handleSavedWarehouse = useCallback(() => {
+    if (paginationState.pageIndex === 0) {
+      void loadWarehouses();
+      return;
+    }
+
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [loadWarehouses, paginationState.pageIndex]);
+
+  const safePage = serverPagination.page;
+  const effectiveLimit = serverPagination.limit;
 
   return (
     <PageShell>
@@ -316,7 +556,6 @@ export default function Warehouses() {
           size="sm"
           leftIcon={<Plus className="h-4 w-4" />}
           onClick={startCreate}
-          title="Nuevo almacen"
           style={{
             backgroundColor: PRIMARY,
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
@@ -335,6 +574,11 @@ export default function Warehouses() {
         </SystemButton>
       </div>
 
+      <DataTableSearchChips
+        chips={searchChips}
+        onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+      />
+
       <DataTable
         tableId="warehouses-table"
         data={sortedWarehouses}
@@ -342,18 +586,38 @@ export default function Warehouses() {
         rowKey="warehouseId"
         loading={loading}
         emptyMessage="No hay almacenes con los filtros actuales."
-        showSearch
-        searchPlaceholder="Buscar almacenes..."
-        searchValue={searchText}
-        onSearchChange={setSearchText}
-        searchMode="server"
         selectableColumns
         hoverable={false}
         animated={false}
+        toolbarSearchContent={
+          <DataTableSearchBar
+            value={searchText}
+            onChange={setSearchText}
+            onSubmitSearch={submitSearch}
+            searchLabel="Busca tu almacen"
+            searchName="warehouse-smart-search"
+            canSaveMetric={hasWarehouseSearchCriteria(executedSnapshot)}
+            saveLoading={savingMetric}
+            onSaveMetric={handleSaveMetric}
+          >
+            <WarehouseSmartSearchPanel
+              recent={recentSearches}
+              saved={savedMetrics}
+              columns={smartSearchColumns}
+              snapshot={draftSnapshot}
+              searchState={searchState}
+              filterQuery={searchText}
+              onApplySnapshot={applySmartSnapshot}
+              onApplyRule={handleApplySearchRule}
+              onRemoveRule={handleRemoveSearchRule}
+              onDeleteMetric={handleDeleteMetric}
+            />
+          </DataTableSearchBar>
+        }
         pagination={{
           page: safePage,
           limit: effectiveLimit,
-          total,
+          total: serverPagination.total,
         }}
         onRowClick={(row) =>
           openStockModal({
@@ -371,9 +635,7 @@ export default function Warehouses() {
         mode={editingWarehouseId ? "edit" : "create"}
         warehouseId={editingWarehouseId}
         onClose={closeFormModal}
-        onSaved={() => {
-          void refetch();
-        }}
+        onSaved={handleSavedWarehouse}
         primaryColor={PRIMARY}
         entityLabel="almacen"
       />

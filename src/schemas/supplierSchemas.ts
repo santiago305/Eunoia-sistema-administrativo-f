@@ -44,6 +44,7 @@ export const listSuppliersQuerySchema = z.object({
   phone: z.string().optional(),
   email: z.string().optional(),
   q: z.string().optional(),
+  filters: z.unknown().optional(),
 });
 
 

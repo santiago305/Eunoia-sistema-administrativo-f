@@ -1,4 +1,9 @@
 import { z } from "zod";
+import type {
+  DataTableSearchOption,
+  SmartSearchRangeValue,
+  SmartSearchRuleMode,
+} from "@/components/table/search";
 import {
   createSupplierSchema,
   updateSupplierSchema,
@@ -10,7 +15,78 @@ import { DocumentType } from "./DocumentType";
 export type CreateSupplierDto = z.infer<typeof createSupplierSchema>;
 export type UpdateSupplierDto = z.infer<typeof updateSupplierSchema>;
 export type UpdateSupplierActiveDto = z.infer<typeof updateSupplierActiveSchema>;
-export type ListSuppliersQuery = z.infer<typeof listSuppliersQuerySchema>;
+
+export const ProviderSearchFields = {
+  DOCUMENT_TYPE: "documentType",
+  DOCUMENT_NUMBER: "documentNumber",
+  NAME: "name",
+  LAST_NAME: "lastName",
+  TRADE_NAME: "tradeName",
+  PHONE: "phone",
+  EMAIL: "email",
+  STATUS: "status",
+  LEAD_TIME_DAYS: "leadTimeDays",
+} as const;
+
+export type ProviderSearchField =
+  typeof ProviderSearchFields[keyof typeof ProviderSearchFields];
+
+export const ProviderSearchOperators = {
+  IN: "in",
+  CONTAINS: "contains",
+  EQ: "eq",
+  GT: "gt",
+  GTE: "gte",
+  LT: "lt",
+  LTE: "lte",
+} as const;
+
+export type ProviderSearchOperator =
+  typeof ProviderSearchOperators[keyof typeof ProviderSearchOperators];
+
+export type ProviderSearchRule = {
+  field: ProviderSearchField;
+  operator: ProviderSearchOperator;
+  mode?: SmartSearchRuleMode;
+  value?: string;
+  values?: string[];
+  range?: SmartSearchRangeValue;
+};
+
+export type ProviderSearchFilters = ProviderSearchRule[];
+
+export type ProviderSearchSnapshot = {
+  q?: string;
+  filters: ProviderSearchFilters;
+};
+
+export type ProviderRecentSearch = {
+  recentId: string;
+  label: string;
+  snapshot: ProviderSearchSnapshot;
+  lastUsedAt: string;
+};
+
+export type ProviderSavedMetric = {
+  metricId: string;
+  name: string;
+  label: string;
+  snapshot: ProviderSearchSnapshot;
+  updatedAt: string;
+};
+
+export type ProviderSearchStateResponse = {
+  recent: ProviderRecentSearch[];
+  saved: ProviderSavedMetric[];
+  catalogs: {
+    documentTypes: DataTableSearchOption[];
+    statuses: DataTableSearchOption[];
+  };
+};
+
+export type ListSuppliersQuery = Omit<z.infer<typeof listSuppliersQuerySchema>, "filters"> & {
+  filters?: ProviderSearchFilters | string;
+};
 
 export type Supplier = {
   supplierId: string;

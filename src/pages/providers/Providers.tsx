@@ -1,27 +1,54 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { PageTitle } from "@/components/PageTitle";
-import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { errorResponse, successResponse } from "@/common/utils/response";
-import { listSuppliers, updateSupplierActive } from "@/services/supplierService";
-import type { Supplier } from "@/pages/providers/types/supplier";
 import { Menu, Pencil, Plus, Timer, Trash2 } from "lucide-react";
-import { SupplierFormModal } from "./components/SupplierFormModal";
-import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
-import { SystemButton } from "@/components/SystemButton";
+import { PageTitle } from "@/components/PageTitle";
+import { AlertModal } from "@/components/AlertModal";
 import { ActionsPopover } from "@/components/ActionsPopover";
-import { StatusPill } from "@/components/StatusTag";
-import { IconPaymentMethod } from "@/components/dashboard/icons";
-import { DataTable } from "@/components/table/DataTable";
-import type { DataTableColumn } from "@/components/table/types";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
-import { AlertModal } from "@/components/AlertModal";
+import { StatusPill } from "@/components/StatusTag";
+import { DataTable } from "@/components/table/DataTable";
+import type { DataTableColumn } from "@/components/table/types";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  type DataTableRecentSearchItem,
+  type DataTableSavedSearchItem,
+} from "@/components/table/search";
+import { IconPaymentMethod } from "@/components/dashboard/icons";
+import { SystemButton } from "@/components/SystemButton";
+import { errorResponse, successResponse } from "@/common/utils/response";
+import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useCompany } from "@/hooks/useCompany";
+import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
+import { ProviderSmartSearchPanel } from "./components/ProviderSmartSearchPanel";
+import { SupplierFormModal } from "./components/SupplierFormModal";
+import type {
+  ProviderSearchFilters,
+  ProviderSearchRule,
+  ProviderSearchSnapshot,
+  ProviderSearchStateResponse,
+  Supplier,
+} from "@/pages/providers/types/supplier";
+import {
+  deleteProviderSearchMetric,
+  getProviderSearchState,
+  listSuppliers,
+  saveProviderSearchMetric,
+  updateSupplierActive,
+} from "@/services/supplierService";
+import {
+  buildProviderSearchChips,
+  buildProviderSmartSearchColumns,
+  createEmptyProviderSearchFilters,
+  hasProviderSearchCriteria,
+  removeProviderSearchKey,
+  sanitizeProviderSearchSnapshot,
+  upsertProviderSearchRule,
+  type ProviderSearchFilterKey,
+} from "@/pages/providers/utils/providerSmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
-const SEARCH_DEBOUNCE_MS = 500;
 
 export default function Providers() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -31,6 +58,8 @@ export default function Providers() {
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchState, setSearchState] = useState<ProviderSearchStateResponse | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
 
   const [serverPagination, setServerPagination] = useState({
     total: 0,
@@ -46,9 +75,10 @@ export default function Providers() {
     pageSize: DEFAULT_LIMIT,
   });
   const [searchText, setSearchText] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
-
-  const debouncedSearch = useDebouncedValue(searchText.trim(), SEARCH_DEBOUNCE_MS);
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState<ProviderSearchFilters>(() =>
+    createEmptyProviderSearchFilters(),
+  );
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
@@ -58,19 +88,40 @@ export default function Providers() {
 
   const page = paginationState.pageIndex + 1;
 
-  useEffect(() => {
-    if (debouncedSearch === appliedSearch) return;
+  const draftSnapshot = useMemo(
+    () =>
+      sanitizeProviderSearchSnapshot({
+        q: searchText,
+        filters: searchFilters,
+      }),
+    [searchFilters, searchText],
+  );
 
-    if (paginationState.pageIndex !== 0) {
-      setPaginationState((prev) => ({
-        ...prev,
-        pageIndex: 0,
-      }));
-      return;
+  const executedSnapshot = useMemo(
+    () =>
+      sanitizeProviderSearchSnapshot({
+        q: appliedSearchText,
+        filters: searchFilters,
+      }),
+    [appliedSearchText, searchFilters],
+  );
+
+  const loadSearchState = useCallback(async () => {
+    try {
+      const response = await getProviderSearchState();
+      setSearchState(response);
+    } catch {
+      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
+  }, [showFlash]);
 
-    setAppliedSearch(debouncedSearch);
-  }, [appliedSearch, debouncedSearch, paginationState.pageIndex]);
+  const submitSearch = useCallback(() => {
+    setAppliedSearchText(searchText.trim());
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [searchText]);
 
   const getSupplierDisplayName = useCallback((supplier: Supplier) => {
     const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
@@ -85,7 +136,8 @@ export default function Providers() {
       const res = await listSuppliers({
         page,
         limit: paginationState.pageSize,
-        q: appliedSearch || undefined,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
       });
 
       const items = res.items ?? [];
@@ -103,6 +155,10 @@ export default function Providers() {
         hasPrev: nextPage > 1,
         hasNext: nextPage < nextTotalPages,
       });
+
+      if (hasProviderSearchCriteria(executedSnapshot)) {
+        void loadSearchState();
+      }
     } catch {
       setSuppliers([]);
       setServerPagination({
@@ -117,11 +173,15 @@ export default function Providers() {
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, clearFlash, page, paginationState.pageSize, showFlash]);
+  }, [clearFlash, executedSnapshot, loadSearchState, page, paginationState.pageSize, showFlash]);
 
   useEffect(() => {
     void loadSuppliers();
   }, [loadSuppliers]);
+
+  useEffect(() => {
+    void loadSearchState();
+  }, [loadSearchState]);
 
   const startCreate = useCallback(() => {
     setEditingSupplierId(null);
@@ -138,7 +198,7 @@ export default function Providers() {
       toggleSupplierId
         ? suppliers.find(({ supplierId }) => supplierId === toggleSupplierId) ?? null
         : null,
-    [suppliers, toggleSupplierId]
+    [suppliers, toggleSupplierId],
   );
 
   const confirmToggleActive = useCallback(async () => {
@@ -303,8 +363,132 @@ export default function Providers() {
         hideable: false,
       },
     ],
-    [companyActionDisabled, getSupplierDisplayName, openEdit]
+    [companyActionDisabled, getSupplierDisplayName, openEdit],
   );
+
+  const smartSearchColumns = useMemo(
+    () => buildProviderSmartSearchColumns(searchState),
+    [searchState],
+  );
+
+  const recentSearches = useMemo<DataTableRecentSearchItem<ProviderSearchSnapshot>[]>(
+    () =>
+      (searchState?.recent ?? []).map((item) => ({
+        id: item.recentId,
+        label: item.label,
+        snapshot: item.snapshot,
+      })),
+    [searchState],
+  );
+
+  const savedMetrics = useMemo<DataTableSavedSearchItem<ProviderSearchSnapshot>[]>(
+    () =>
+      (searchState?.saved ?? []).map((metric) => ({
+        id: metric.metricId,
+        name: metric.name,
+        label: metric.label,
+        snapshot: metric.snapshot,
+      })),
+    [searchState],
+  );
+
+  const searchChips = useMemo(
+    () => buildProviderSearchChips(executedSnapshot, searchState),
+    [executedSnapshot, searchState],
+  );
+
+  const applySmartSnapshot = useCallback((snapshot: ProviderSearchSnapshot) => {
+    const normalized = sanitizeProviderSearchSnapshot(snapshot);
+    setSearchText(normalized.q ?? "");
+    setAppliedSearchText(normalized.q ?? "");
+    setSearchFilters(normalized.filters);
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, []);
+
+  const handleApplySearchRule = useCallback((rule: ProviderSearchRule) => {
+    setSearchFilters((current) => {
+      const next = upsertProviderSearchRule(
+        sanitizeProviderSearchSnapshot({ q: searchText, filters: current }),
+        rule,
+      );
+      return next.filters;
+    });
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [searchText]);
+
+  const handleRemoveSearchRule = useCallback((fieldId: ProviderSearchFilterKey) => {
+    setSearchFilters((current) => {
+      const next = removeProviderSearchKey(
+        sanitizeProviderSearchSnapshot({ q: searchText, filters: current }),
+        fieldId,
+      );
+      return next.filters;
+    });
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [searchText]);
+
+  const handleRemoveChip = useCallback((key: "q" | ProviderSearchFilterKey) => {
+    const nextSnapshot = removeProviderSearchKey(
+      sanitizeProviderSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+      key,
+    );
+    setSearchText(nextSnapshot.q ?? "");
+    setAppliedSearchText(nextSnapshot.q ?? "");
+    setSearchFilters(nextSnapshot.filters);
+    setPaginationState((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [appliedSearchText, searchFilters]);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    const snapshot = sanitizeProviderSearchSnapshot({
+      q: appliedSearchText,
+      filters: searchFilters,
+    });
+    if (!hasProviderSearchCriteria(snapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const response = await saveProviderSearchMetric(name, snapshot);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+        return true;
+      }
+
+      showFlash(errorResponse(response.message));
+      return false;
+    } catch {
+      showFlash(errorResponse("Error al guardar la metrica"));
+      return false;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+
+  const handleDeleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deleteProviderSearchMetric(metricId);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch {
+      showFlash(errorResponse("Error al eliminar la metrica"));
+    }
+  }, [loadSearchState, showFlash]);
 
   const safePage = serverPagination.page;
   const effectiveLimit = serverPagination.limit;
@@ -330,6 +514,11 @@ export default function Providers() {
         </SystemButton>
       </div>
 
+      <DataTableSearchChips
+        chips={searchChips}
+        onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+      />
+
       <DataTable
         tableId="providers-table"
         data={suppliers}
@@ -337,14 +526,34 @@ export default function Providers() {
         rowKey="supplierId"
         loading={loading}
         emptyMessage="No hay proveedores con los filtros actuales."
-        showSearch
-        searchPlaceholder="Buscar proveedores..."
-        searchValue={searchText}
-        onSearchChange={setSearchText}
-        searchMode="server"
         selectableColumns
         hoverable={false}
         animated={false}
+        toolbarSearchContent={
+          <DataTableSearchBar
+            value={searchText}
+            onChange={setSearchText}
+            onSubmitSearch={submitSearch}
+            searchLabel="Busca tu proveedor"
+            searchName="provider-smart-search"
+            canSaveMetric={hasProviderSearchCriteria(executedSnapshot)}
+            saveLoading={savingMetric}
+            onSaveMetric={handleSaveMetric}
+          >
+            <ProviderSmartSearchPanel
+              recent={recentSearches}
+              saved={savedMetrics}
+              columns={smartSearchColumns}
+              snapshot={draftSnapshot}
+              searchState={searchState}
+              filterQuery={searchText}
+              onApplySnapshot={applySmartSnapshot}
+              onApplyRule={handleApplySearchRule}
+              onRemoveRule={handleRemoveSearchRule}
+              onDeleteMetric={handleDeleteMetric}
+            />
+          </DataTableSearchBar>
+        }
         pagination={{
           page: safePage,
           limit: effectiveLimit,

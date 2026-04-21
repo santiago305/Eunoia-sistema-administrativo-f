@@ -11,6 +11,8 @@ import type {
   Warehouse,
   WarehouseLocationsResponse,
   WarehouseStockResponse,
+  WarehouseSearchSnapshot,
+  WarehouseSearchStateResponse,
 } from "@/pages/warehouse/types/warehouse";
 
 export const createWarehouse = async (payload: CreateWarehouseDto): Promise<Warehouse> => {
@@ -32,7 +34,39 @@ export const updateWarehouseActive = async (
 };
 
 export const listWarehouses = async (params: ListWarehousesQuery): Promise<WarehouseListResponse> => {
-  const response = await axiosInstance.get(API_WAREHOUSES_GROUP.list, { params });
+  const requestParams = {
+    ...params,
+    filters:
+      Array.isArray(params.filters) && params.filters.length
+        ? JSON.stringify(params.filters)
+        : typeof params.filters === "string"
+          ? params.filters
+          : undefined,
+  };
+  const response = await axiosInstance.get(API_WAREHOUSES_GROUP.list, { params: requestParams });
+  return response.data;
+};
+
+export const getWarehouseSearchState = async (): Promise<WarehouseSearchStateResponse> => {
+  const response = await axiosInstance.get(API_WAREHOUSES_GROUP.searchState);
+  return response.data;
+};
+
+export const saveWarehouseSearchMetric = async (
+  name: string,
+  snapshot: WarehouseSearchSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_WAREHOUSES_GROUP.saveSearchMetric, {
+    name,
+    snapshot,
+  });
+  return response.data;
+};
+
+export const deleteWarehouseSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_WAREHOUSES_GROUP.deleteSearchMetric(metricId));
   return response.data;
 };
 

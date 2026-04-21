@@ -8,6 +8,8 @@ import type {
   SupplierListResponse,
   Supplier,
   SupplierIdentityLookupResult,
+  ProviderSearchSnapshot,
+  ProviderSearchStateResponse,
 } from "@/pages/providers/types/supplier";
 import { DocumentType } from "@/pages/providers/types/DocumentType";
 
@@ -30,9 +32,42 @@ export const updateSupplierActive = async (
 };
 
 export const listSuppliers = async (params: ListSuppliersQuery): Promise<SupplierListResponse> => {
-  const response = await axiosInstance.get(API_SUPPLIERS_GROUP.list, { params });
+  const requestParams = {
+    ...params,
+    filters:
+      Array.isArray(params.filters) && params.filters.length
+        ? JSON.stringify(params.filters)
+        : typeof params.filters === "string"
+          ? params.filters
+          : undefined,
+  };
+  const response = await axiosInstance.get(API_SUPPLIERS_GROUP.list, { params: requestParams });
   return response.data;
 };
+
+export const getProviderSearchState = async (): Promise<ProviderSearchStateResponse> => {
+  const response = await axiosInstance.get(API_SUPPLIERS_GROUP.searchState);
+  return response.data;
+};
+
+export const saveProviderSearchMetric = async (
+  name: string,
+  snapshot: ProviderSearchSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_SUPPLIERS_GROUP.saveSearchMetric, {
+    name,
+    snapshot,
+  });
+  return response.data;
+};
+
+export const deleteProviderSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_SUPPLIERS_GROUP.deleteSearchMetric(metricId));
+  return response.data;
+};
+
 export const listAll = async (): Promise<Supplier[]> => {
   const response = await axiosInstance.get(API_SUPPLIERS_GROUP.listAll);
   return response.data;

@@ -1,11 +1,87 @@
 import { createWarehouseSchema, updateWarehouseSchema, updateWarehouseActiveSchema, listWarehousesQuerySchema } from "@/schemas/warehouseSchema";
 import { z } from "zod";
+import type {
+  DataTableSearchOption,
+  SmartSearchRangeValue,
+  SmartSearchRuleMode,
+} from "@/components/table/search";
 
 
 export type CreateWarehouseDto = z.infer<typeof createWarehouseSchema>;
 export type UpdateWarehouseDto = z.infer<typeof updateWarehouseSchema>;
 export type UpdateWarehouseActiveDto = z.infer<typeof updateWarehouseActiveSchema>;
-export type ListWarehousesQuery = z.infer<typeof listWarehousesQuerySchema>;
+
+export const WarehouseSearchFields = {
+  NAME: "name",
+  DEPARTMENT: "department",
+  PROVINCE: "province",
+  DISTRICT: "district",
+  ADDRESS: "address",
+  STATUS: "status",
+  CREATED_AT: "createdAt",
+} as const;
+
+export type WarehouseSearchField =
+  typeof WarehouseSearchFields[keyof typeof WarehouseSearchFields];
+
+export const WarehouseSearchOperators = {
+  IN: "in",
+  CONTAINS: "contains",
+  EQ: "eq",
+  ON: "on",
+  AFTER: "after",
+  BEFORE: "before",
+  BETWEEN: "between",
+} as const;
+
+export type WarehouseSearchOperator =
+  typeof WarehouseSearchOperators[keyof typeof WarehouseSearchOperators];
+
+export type WarehouseSearchRule = {
+  field: WarehouseSearchField;
+  operator: WarehouseSearchOperator;
+  mode?: SmartSearchRuleMode;
+  value?: string;
+  values?: string[];
+  range?: SmartSearchRangeValue;
+};
+
+export type WarehouseSearchFilters = WarehouseSearchRule[];
+
+export type WarehouseSearchSnapshot = {
+  q?: string;
+  filters: WarehouseSearchFilters;
+};
+
+export type WarehouseRecentSearch = {
+  recentId: string;
+  label: string;
+  snapshot: WarehouseSearchSnapshot;
+  lastUsedAt: string;
+};
+
+export type WarehouseSavedMetric = {
+  metricId: string;
+  name: string;
+  label: string;
+  snapshot: WarehouseSearchSnapshot;
+  updatedAt: string;
+};
+
+export type WarehouseSearchStateResponse = {
+  recent: WarehouseRecentSearch[];
+  saved: WarehouseSavedMetric[];
+  catalogs: {
+    departments: DataTableSearchOption[];
+    provinces: DataTableSearchOption[];
+    districts: DataTableSearchOption[];
+    statuses: DataTableSearchOption[];
+  };
+};
+
+export type ListWarehousesQuery = Omit<z.infer<typeof listWarehousesQuerySchema>, "filters"> & {
+  filters?: WarehouseSearchFilters | string;
+};
 
 export type Warehouse = {
   warehouseId: string; 

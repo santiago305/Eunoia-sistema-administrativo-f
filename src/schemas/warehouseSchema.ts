@@ -32,5 +32,6 @@ export const listWarehousesQuerySchema = z.object({
   district: z.string().optional(),
   address: z.string().optional(),
   q: z.string().optional(),
+  filters: z.unknown().optional(),
 });
 
