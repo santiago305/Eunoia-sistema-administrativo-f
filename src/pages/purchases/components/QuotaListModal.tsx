@@ -52,7 +52,6 @@ export function QuotaListModal({
   const [rows, setRows] = useState<CreditQuota[]>(quotas ?? []);
   const [loading, setLoading] = useState(false);
   const [modalPayment, setModalPayment] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [qtaId, setQtaId] = useState("");
   const [selectedTotals, setSelectedTotals] = useState<SelectedTotals>({
     totalPaid: 0,
@@ -60,11 +59,10 @@ export function QuotaListModal({
   });
   const { showFlash, clearFlash } = useFlashMessage();
 
-  const loadQuotas = async () => {
+  const loadQuotas = useCallback(async () => {
     if (!poId) return;
     setLoading(true);
     clearFlash();
-    setError(null);
     try {
       const data = await listQuotas(poId);
       setRows(data ?? []);
@@ -74,10 +72,11 @@ export function QuotaListModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearFlash, poId, showFlash]);
+
   useEffect(() => {
     void loadQuotas();
-  }, [open]);
+  }, [loadQuotas, open]);
 
   useEffect(() => {
     if (quotas) setRows(quotas);
@@ -116,6 +115,8 @@ export function QuotaListModal({
         id: "number",
         header: "Cuota",
         accessorKey: "number",
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
         hideable: false,
       },
       {
@@ -153,7 +154,7 @@ export function QuotaListModal({
         id: "actions",
         header: "Acciones",
         cell: (row) => (
-          <div className="flex justify-end">
+          <div className="flex justify-center">
             {!row.isFullyPaid && (
               <SystemButton
                 size="sm"
@@ -173,8 +174,8 @@ export function QuotaListModal({
             )}
           </div>
         ),
-        className: "text-right",
-        headerClassName: "text-right",
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
         hideable: false,
       },
     ],
@@ -183,28 +184,20 @@ export function QuotaListModal({
 
   return (
     <Modal open={open} onClose={close} title={title} className={className}>
-      <div className="space-y-4">
-        <div className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeaderForm icon={Banknote} title="Listado de cuotas" />
-            <div className="text-xs text-black/60">
-              {loading ? "Cargando..." : `${rows.length} registros`}
-            </div>
-          </div>
+      <div className="space-y-4">  
+        <SectionHeaderForm icon={Banknote} title="Listado de cuotas" />
 
-          <DataTable
-            tableId={`purchase-quotas-table-${poId}`}
-            data={quotaRows}
-            columns={columns}
-            rowKey="id"
-            loading={loading}
-            emptyMessage="No hay cuotas registradas."
-            hoverable={false}
-            animated={false}
-          />
+        <DataTable
+          tableId={`purchase-quotas-table-${poId}`}
+          data={quotaRows}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          emptyMessage="No hay cuotas registradas."
+          hoverable={false}
+          animated={false}
+        />
 
-          {error && <div className="px-4 py-2 text-sm text-rose-600">{error}</div>}
-        </div>
       </div>
       <PaymentModal
         title="Formulario de Pago"

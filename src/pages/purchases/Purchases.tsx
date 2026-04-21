@@ -24,6 +24,7 @@ import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
 import { QuotaListModal } from "./components/QuotaListModal";
 import { PurchaseModal } from "./components/PurchaseModal";
+import { PurchaseDetailsModal } from "./components/PurchaseDetailsModal";
 import type {
     PurchaseOrder,
     PurchaseSearchFilters,
@@ -129,6 +130,7 @@ export default function Purchases() {
     const [paymentForm, setPaymentForm] = useState("");
     const [openPdfModal, setOpenPdfModal] = useState(false);
     const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
+    const [selectedPurchaseRow, setSelectedPurchaseRow] = useState<PurchaseRow | null>(null);
 
     const draftSnapshot = useMemo(
         () =>
@@ -486,6 +488,7 @@ export default function Purchases() {
             id: "actions",
             header: "acciones",
             headerClassName: "w-[50px] text-center [&>div]:justify-center",
+            stopRowClick: true,
             cell: (row) => (
                 <div className="flex justify-center">
                     <ActionsPopover
@@ -792,6 +795,10 @@ export default function Purchases() {
                         limit,
                         total: pagination.total,
                     }}
+                    onRowClick={(row) => {
+                        if (!row.purchase.poId) return;
+                        setSelectedPurchaseRow(row);
+                    }}
                     onPageChange={setPage}
                     tableClassName="text-[10px]"
                 />
@@ -812,6 +819,30 @@ export default function Purchases() {
                     setEditPoId(undefined);
                     setSelectedProductionId(poId);
                     setOpenPdfModal(true);
+                }}
+            />
+            <PurchaseDetailsModal
+                open={Boolean(selectedPurchaseRow)}
+                poId={selectedPurchaseRow?.purchase.poId ?? null}
+                purchase={
+                    selectedPurchaseRow
+                        ? {
+                              ...selectedPurchaseRow.purchase,
+                              supplierLabel: selectedPurchaseRow.supplierLabel,
+                              supplierDoc: selectedPurchaseRow.supplierDoc,
+                              warehouseLabel: selectedPurchaseRow.warehouseLabel,
+                              statusLabel: selectedPurchaseRow.statusLabel,
+                              docLabel: selectedPurchaseRow.docLabel,
+                              numero: selectedPurchaseRow.numero,
+                              date: selectedPurchaseRow.date,
+                              time: selectedPurchaseRow.time,
+                              dateEnter: selectedPurchaseRow.dateEnter,
+                              timeEnter: selectedPurchaseRow.timeEnter,
+                          }
+                        : null
+                }
+                onClose={() => {
+                    setSelectedPurchaseRow(null);
                 }}
             />
             <PaymentModal
