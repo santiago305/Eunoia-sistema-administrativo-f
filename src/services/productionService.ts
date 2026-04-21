@@ -6,6 +6,8 @@ import type {
   ListProductionOrdersQuery,
   ProductionOrder,
   ProductionOrderListResponse,
+  ProductionSearchSnapshot,
+  ProductionSearchStateResponse,
   UpdateProductionOrderDto,
   UpdateProductionOrderItemDto,
 } from "@/pages/production/types/production";
@@ -20,7 +22,43 @@ export const createProductionOrder = async (
 export const listProductionOrders = async (
   params: ListProductionOrdersQuery
 ): Promise<ProductionOrderListResponse> => {
-  const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.list, { params });
+  const requestParams = {
+    ...params,
+    filters:
+      Array.isArray(params.filters) && params.filters.length
+        ? JSON.stringify(params.filters)
+        : typeof params.filters === "string"
+          ? params.filters
+          : undefined,
+  };
+  const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.list, {
+    params: requestParams,
+  });
+  return response.data;
+};
+
+export const getProductionSearchState = async (): Promise<ProductionSearchStateResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.searchState);
+  return response.data;
+};
+
+export const saveProductionSearchMetric = async (
+  name: string,
+  snapshot: ProductionSearchSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PRODUCTION_ORDERS_GROUP.saveSearchMetric, {
+    name,
+    snapshot,
+  });
+  return response.data;
+};
+
+export const deleteProductionSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(
+    API_PRODUCTION_ORDERS_GROUP.deleteSearchMetric(metricId),
+  );
   return response.data;
 };
 

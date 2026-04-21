@@ -1,26 +1,35 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Menu, Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
-import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
 import type { DataTableColumn } from "@/components/table/types";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  type DataTableRecentSearchItem,
+  type DataTableSavedSearchItem,
+} from "@/components/table/search";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listActive } from "@/services/warehouseServices";
 import {
   cancelProductionOrder,
   closeProductionOrder,
+  deleteProductionSearchMetric,
+  getProductionSearchState,
   listProductionOrders,
+  saveProductionSearchMetric,
   startProductionOrder,
 } from "@/services/productionService";
 import { getProductionOrderPdf } from "@/services/pdfServices";
-import {
-  parseDateInputValue,
-  toLocalDateKey,
-} from "@/utils/functionPurchases";
-import type { Warehouse } from "@/pages/warehouse/types/warehouse";
-import { ProductionStatus, type ProductionOrder } from "@/pages/production/types/production";
+import { parseDateInputValue, toLocalDateKey } from "@/utils/functionPurchases";
+import type {
+  ProductionOrder,
+  ProductionSearchRule,
+  ProductionSearchSnapshot,
+  ProductionSearchStateResponse,
+} from "@/pages/production/types/production";
+import { ProductionStatus } from "@/pages/production/types/production";
 import TimerToEnd from "@/components/TimerToEnd";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
@@ -28,6 +37,17 @@ import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
 import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/hooks/useCompany";
+import { ProductionSmartSearchPanel } from "@/pages/production/components/ProductionSmartSearchPanel";
+import {
+  buildProductionSearchChips,
+  buildProductionSmartSearchColumns,
+  createEmptyProductionSearchFilters,
+  hasProductionSearchCriteria,
+  removeProductionSearchKey,
+  sanitizeProductionSearchSnapshot,
+  type ProductionSearchFilterKey,
+  upsertProductionSearchRule,
+} from "@/pages/production/utils/productionSmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -50,8 +70,6 @@ type ProductionRow = {
   estado?: ProductionStatus;
   tiempoProduccion?: ProductionStatus;
   termino: string;
-  productos: string[];
-  productIds: string[];
   original: ProductionOrder;
 };
 
@@ -70,39 +88,17 @@ const formatDateTime = (value?: string | null) => {
   });
 };
 
-const normalizeSearchText = (value?: string | null) => (value ?? "").toLowerCase().trim();
-
-const getProductionItemLabel = (item: NonNullable<ProductionOrder["items"]>[number]) => {
-  const finishedItem = item.finishedItem;
-  const productName = finishedItem?.variant?.productName ?? finishedItem?.product?.name ?? "";
-  const presentation =
-    (finishedItem?.variant?.attributes as { presentation?: string } | undefined)?.presentation ??
-    (finishedItem?.product?.attributes as { presentation?: string } | undefined)?.presentation ??
-    "";
-  const variant =
-    (finishedItem?.variant?.attributes as { variant?: string } | undefined)?.variant ??
-    (finishedItem?.product?.attributes as { variant?: string } | undefined)?.variant ??
-    "";
-  const color =
-    (finishedItem?.variant?.attributes as { color?: string } | undefined)?.color ??
-    (finishedItem?.product?.attributes as { color?: string } | undefined)?.color ??
-    "";
-  const sku = finishedItem?.variant?.sku ?? finishedItem?.product?.sku ?? "";
-
-  return [productName, presentation, variant, color, sku]
-    .map((value) => value?.trim())
-    .filter(Boolean)
-    .join(" ");
-};
-
 export default function Production() {
   const { showFlash, clearFlash } = useFlashMessage();
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
-  const [warehouseId, setWarehouseId] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | ProductionStatus>("all");
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState(() => createEmptyProductionSearchFilters());
+  const [searchState, setSearchState] = useState<ProductionSearchStateResponse | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [openPdfModal, setOpenPdfModal] = useState(false);
@@ -110,7 +106,6 @@ export default function Production() {
   const [openFormModal, setOpenFormModal] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingProductionId, setEditingProductionId] = useState<string | undefined>(undefined);
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
@@ -123,47 +118,52 @@ export default function Production() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [warehouseOptions, setWarehouseOptions] = useState<
-    { value: string; label: string; address?: string }[]
-  >([]);
-
   const [page, setPage] = useState(1);
   const limit = DEFAULT_LIMIT;
   const nowIso = useMemo(() => new Date().toISOString(), []);
 
-  const loadWarehouses = async () => {
+  const draftSnapshot = useMemo(
+    () =>
+      sanitizeProductionSearchSnapshot({
+        q: searchText,
+        filters: searchFilters,
+      }),
+    [searchFilters, searchText],
+  );
+
+  const executedSnapshot = useMemo(
+    () =>
+      sanitizeProductionSearchSnapshot({
+        q: appliedSearchText,
+        filters: searchFilters,
+      }),
+    [appliedSearchText, searchFilters],
+  );
+
+  const loadSearchState = useCallback(async () => {
     try {
-      const res = await listActive();
-      const options =
-        res?.map((warehouse: Warehouse) => {
-          const address = `${warehouse.department}-${warehouse.province}-${warehouse.district}`;
-          return {
-            value: warehouse.warehouseId,
-            label: warehouse.name,
-            address,
-          };
-        }) ?? [];
-
-      setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
+      const response = await getProductionSearchState();
+      setSearchState(response);
     } catch {
-      setWarehouseOptions([{ value: "", label: "Todos" }]);
-      showFlash(errorResponse("Error al cargar almacenes"));
+      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  };
+  }, [showFlash]);
 
-  const loadOrders = async () => {
-    if (loading) return;
+  const submitSearch = useCallback(() => {
+    setAppliedSearchText(searchText.trim());
+    setPage(1);
+  }, [searchText]);
 
+  const loadOrders = useCallback(async () => {
     clearFlash();
     setLoading(true);
 
     try {
-      const status = statusFilter === "all" ? undefined : statusFilter;
       const res = await listProductionOrders({
         page,
         limit,
-        warehouseId: warehouseId || undefined,
-        status,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
         from: fromDate || undefined,
         to: toDate || undefined,
       });
@@ -183,6 +183,10 @@ export default function Production() {
         hasPrev: nextPage > 1,
         hasNext: nextPage < nextTotalPages,
       });
+
+      if (hasProductionSearchCriteria(executedSnapshot)) {
+        void loadSearchState();
+      }
     } catch {
       setOrders([]);
       setPagination((prev) => ({
@@ -196,7 +200,7 @@ export default function Production() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearFlash, executedSnapshot, fromDate, limit, loadSearchState, page, showFlash, toDate]);
 
   const handleStart = async (id: string) => {
     clearFlash();
@@ -257,224 +261,29 @@ export default function Production() {
   };
 
   useEffect(() => {
-    void loadWarehouses();
-  }, []);
+    void loadOrders();
+  }, [loadOrders]);
 
   useEffect(() => {
-    void loadOrders();
-  }, [page, warehouseId, statusFilter, fromDate, toDate]);
-
-  const statusOptions = [
-    { value: "all", label: "Estado (todos)" },
-    { value: ProductionStatus.DRAFT, label: "Borrador" },
-    { value: ProductionStatus.IN_PROGRESS, label: "En proceso" },
-    { value: ProductionStatus.PARTIAL, label: "Parcial" },
-    { value: ProductionStatus.COMPLETED, label: "Completado" },
-    { value: ProductionStatus.CANCELLED, label: "Cancelado" },
-  ];
+    void loadSearchState();
+  }, [loadSearchState]);
 
   const rows = useMemo<ProductionRow[]>(() => {
-    return (orders ?? []).map((order) => {
-      const items = order.items ?? [];
-      const productos = items
-        .map((item) => getProductionItemLabel(item))
-        .filter(Boolean);
-      const productIds = items
-        .map((item) => item.finishedItemId)
-        .filter(Boolean);
-
-      return {
-        id:
-          order.productionId ??
-          `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt ?? ""}`,
-        registro: formatDateTime(order.manufactureDate),
-        serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
-        referencia: order.reference || "-",
-        almacenOrigen: order.fromWarehouse?.name ?? "-",
-        almacenDestino: order.toWarehouse?.name ?? "-",
-        estado: order.status ?? ProductionStatus.DRAFT,
-        tiempoProduccion: order.status ?? ProductionStatus.DRAFT,
-        termino: formatDateTime(order.manufactureDate),
-        productos,
-        productIds,
-        original: order,
-      };
-    });
-  }, [orders]);
-
-  const productOptions = useMemo(() => {
-    const options = new Map<string, { value: string; label: string }>();
-
-    rows.forEach((row) => {
-      row.productIds.forEach((productId, index) => {
-        if (!productId || options.has(productId)) return;
-
-        options.set(productId, {
-          value: productId,
-          label: row.productos[index] || `Producto ${index + 1}`,
-        });
-      });
-    });
-
-    return Array.from(options.values()).sort((a, b) =>
-      a.label.localeCompare(b.label, "es", { sensitivity: "base" }),
-    );
-  }, [rows]);
-
-  const productionTableFilters = useMemo<DataTableFilterTree>(() => {
-    const warehouseFilterOptions = warehouseOptions
-      .filter((option) => option.value)
-      .map((option) => ({
-        id: option.value,
-        label: option.label,
-      }));
-
-    const statusFilterOptions = statusOptions
-      .filter((option) => option.value !== "all")
-      .map((option) => ({
-        id: option.value,
-        label: option.label,
-      }));
-
-    const productFilterOptions = productOptions.map((option) => ({
-      id: option.value,
-      label: option.label,
+    return (orders ?? []).map((order) => ({
+      id:
+        order.productionId ??
+        `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt ?? ""}`,
+      registro: formatDateTime(order.manufactureDate),
+      serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
+      referencia: order.reference || "-",
+      almacenOrigen: order.fromWarehouse?.name ?? "-",
+      almacenDestino: order.toWarehouse?.name ?? "-",
+      estado: order.status ?? ProductionStatus.DRAFT,
+      tiempoProduccion: order.status ?? ProductionStatus.DRAFT,
+      termino: formatDateTime(order.manufactureDate),
+      original: order,
     }));
-
-    return [
-      {
-        id: "warehouse",
-        label: "Almacén",
-        modes: [
-          {
-            id: "select",
-            label: "Seleccionar",
-            groups: [
-              {
-                id: "options",
-                label: "Almacenes",
-                searchable: true,
-                options: warehouseFilterOptions,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "status",
-        label: "Estado",
-        modes: [
-          {
-            id: "select",
-            label: "Seleccionar",
-            groups: [
-              {
-                id: "options",
-                label: "Estados",
-                options: statusFilterOptions,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "product",
-        label: "Producto",
-        modes: [
-          {
-            id: "select",
-            label: "Seleccionar",
-            groups: [
-              {
-                id: "options",
-                label: "Productos",
-                searchable: true,
-                options: productFilterOptions,
-              },
-            ],
-          },
-        ],
-      },
-    ];
-  }, [productOptions, statusOptions, warehouseOptions]);
-
-  const productionAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => {
-    const filters: AppliedDataTableFilter[] = [];
-
-    if (warehouseId) {
-      filters.push({
-        id: "warehouse:select:options",
-        categoryId: "warehouse",
-        modeId: "select",
-        groupId: "options",
-        operator: "OR",
-        optionIds: [warehouseId],
-      });
-    }
-
-    if (statusFilter !== "all") {
-      filters.push({
-        id: "status:select:options",
-        categoryId: "status",
-        modeId: "select",
-        groupId: "options",
-        operator: "OR",
-        optionIds: [statusFilter],
-      });
-    }
-
-    if (selectedProductIds.length > 0) {
-      filters.push({
-        id: "product:select:options",
-        categoryId: "product",
-        modeId: "select",
-        groupId: "options",
-        operator: "OR",
-        optionIds: selectedProductIds,
-      });
-    }
-
-    return filters;
-  }, [selectedProductIds, statusFilter, warehouseId]);
-
-  const handleProductionFiltersChange = useCallback((next: AppliedDataTableFilter[]) => {
-    const getFirstOption = (categoryId: string) =>
-      next.find((item) => item.categoryId === categoryId)?.optionIds[0] ?? "";
-
-    const getOptionIds = (categoryId: string) =>
-      next.find((item) => item.categoryId === categoryId)?.optionIds ?? [];
-
-    setWarehouseId(getFirstOption("warehouse"));
-    setStatusFilter((getFirstOption("status") || "all") as "all" | ProductionStatus);
-    setSelectedProductIds(getOptionIds("product"));
-    setPage(1);
-  }, []);
-
-  const filteredRows = useMemo(() => {
-    if (selectedProductIds.length === 0) return rows;
-
-    return rows.filter((row) =>
-      row.productIds.some((productId) => selectedProductIds.includes(productId)),
-    );
-  }, [rows, selectedProductIds]);
-
-  const globalSearchFn = (row: ProductionRow, query: string) => {
-    const normalizedQuery = normalizeSearchText(query);
-    if (!normalizedQuery) return true;
-
-    const statusLabel = row.estado ? (statusLabels[row.estado] ?? "") : "";
-
-    return [
-      row.registro,
-      row.serie,
-      row.referencia,
-      row.almacenOrigen,
-      row.almacenDestino,
-      row.termino,
-      row.productos.join(" "),
-      statusLabel,
-    ].some((value) => normalizeSearchText(value).includes(normalizedQuery));
-  };
+  }, [orders]);
 
   const columns = useMemo<DataTableColumn<ProductionRow>[]>(() => {
     return [
@@ -563,6 +372,7 @@ export default function Production() {
         id: "actions",
         header: "ACCIONES",
         headerClassName: "text-center w-[70px]",
+        stopRowClick: true,
         cell: (row) => {
           const order = row.original;
 
@@ -579,6 +389,16 @@ export default function Production() {
                     disabled: companyActionDisabled,
                   },
                   {
+                    id: "close",
+                    label: "Cerrar",
+                    icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                    hidden:
+                      order.status !== ProductionStatus.IN_PROGRESS &&
+                      order.status !== ProductionStatus.PARTIAL,
+                    onClick: () => handleClose(order.productionId ?? ""),
+                    disabled: companyActionDisabled,
+                  },
+                  {
                     id: "edit",
                     label: "Editar",
                     icon: <Pencil className="h-4 w-4 text-black/60" />,
@@ -588,62 +408,143 @@ export default function Production() {
                   },
                   {
                     id: "pdf",
-                    label: "Abrir PDF",
+                    label: "PDF",
                     icon: <FileText className="h-4 w-4 text-black/60" />,
                     onClick: () => openProductionPdf(order.productionId ?? ""),
                   },
                   {
                     id: "cancel",
                     label: "Cancelar",
-                    icon: <Ban className="h-4 w-4" />,
-                    danger: true,
-                    className: "text-rose-700 hover:bg-rose-50",
-                    hidden: order.status !== ProductionStatus.DRAFT,
+                    icon: <Ban className="h-4 w-4 text-black/60" />,
+                    hidden:
+                      order.status === ProductionStatus.CANCELLED ||
+                      order.status === ProductionStatus.COMPLETED,
                     onClick: () => handleCancel(order.productionId ?? ""),
-                    disabled: companyActionDisabled,
-                  },
-                  {
-                    id: "close",
-                    label: "Ingresar a almacen",
-                    icon: <PackageCheck className="h-4 w-4 text-black/60" />,
-                    hidden: !(
-                      order.status === ProductionStatus.IN_PROGRESS ||
-                      order.status === ProductionStatus.PARTIAL
-                    ),
-                    onClick: () => handleClose(order.productionId ?? ""),
                     disabled: companyActionDisabled,
                   },
                 ]}
                 columns={1}
-                triggerIcon={<Menu className="h-4 w-4" />}
                 compact
                 showLabels
-                popoverClassName="min-w-35"
-                popoverBodyClassName="p-2"
-                renderAction={(action, helpers) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                      e.stopPropagation();
-                      helpers.onAction(action);
-                    }}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
-                    disabled={action.disabled}
-                  >
-                    {action.icon}
-                    {action.label}
-                  </button>
-                )}
               />
             </div>
           );
         },
-        className: "text-right",
-        hideable: false,
       },
     ];
-  }, [companyActionDisabled, nowIso]);
+  }, [companyActionDisabled, handleCancel, handleClose, handleEdit, handleStart, loadOrders, nowIso, openProductionPdf]);
+
+  const smartSearchColumns = useMemo(
+    () => buildProductionSmartSearchColumns(searchState),
+    [searchState],
+  );
+
+  const recentSearches = useMemo<DataTableRecentSearchItem<ProductionSearchSnapshot>[]>(
+    () =>
+      (searchState?.recent ?? []).map((item) => ({
+        id: item.recentId,
+        label: item.label,
+        snapshot: item.snapshot,
+      })),
+    [searchState],
+  );
+
+  const savedMetrics = useMemo<DataTableSavedSearchItem<ProductionSearchSnapshot>[]>(
+    () =>
+      (searchState?.saved ?? []).map((metric) => ({
+        id: metric.metricId,
+        name: metric.name,
+        label: metric.label,
+        snapshot: metric.snapshot,
+      })),
+    [searchState],
+  );
+
+  const searchChips = useMemo(
+    () => buildProductionSearchChips(executedSnapshot, searchState),
+    [executedSnapshot, searchState],
+  );
+
+  const applySmartSnapshot = useCallback((snapshot: ProductionSearchSnapshot) => {
+    const normalized = sanitizeProductionSearchSnapshot(snapshot);
+    setSearchText(normalized.q ?? "");
+    setAppliedSearchText(normalized.q ?? "");
+    setSearchFilters(normalized.filters);
+    setPage(1);
+  }, []);
+
+  const handleApplySearchRule = useCallback((rule: ProductionSearchRule) => {
+    setSearchFilters((current) => {
+      const next = upsertProductionSearchRule(
+        sanitizeProductionSearchSnapshot({ q: searchText, filters: current }),
+        rule,
+      );
+      return next.filters;
+    });
+    setPage(1);
+  }, [searchText]);
+
+  const handleRemoveSearchRule = useCallback((fieldId: ProductionSearchFilterKey) => {
+    setSearchFilters((current) => {
+      const next = removeProductionSearchKey(
+        sanitizeProductionSearchSnapshot({ q: searchText, filters: current }),
+        fieldId,
+      );
+      return next.filters;
+    });
+    setPage(1);
+  }, [searchText]);
+
+  const handleRemoveChip = useCallback((key: "q" | ProductionSearchFilterKey) => {
+    const nextSnapshot = removeProductionSearchKey(
+      sanitizeProductionSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+      key,
+    );
+    setSearchText(nextSnapshot.q ?? "");
+    setAppliedSearchText(nextSnapshot.q ?? "");
+    setSearchFilters(nextSnapshot.filters);
+    setPage(1);
+  }, [appliedSearchText, searchFilters]);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    const snapshot = sanitizeProductionSearchSnapshot({
+      q: appliedSearchText,
+      filters: searchFilters,
+    });
+    if (!hasProductionSearchCriteria(snapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const response = await saveProductionSearchMetric(name, snapshot);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+        return true;
+      }
+
+      showFlash(errorResponse(response.message));
+      return false;
+    } catch {
+      showFlash(errorResponse("Error al guardar la metrica"));
+      return false;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+
+  const handleDeleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deleteProductionSearchMetric(metricId);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch {
+      showFlash(errorResponse("Error al eliminar la metrica"));
+    }
+  }, [loadSearchState, showFlash]);
 
   return (
     <PageShell className="bg-white">
@@ -669,9 +570,14 @@ export default function Production() {
           </SystemButton>
         </div>
 
+        <DataTableSearchChips
+          chips={searchChips}
+          onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+        />
+
         <DataTable
           tableId="production-orders-table"
-          data={filteredRows}
+          data={rows}
           columns={columns}
           rowKey="id"
           loading={loading}
@@ -679,9 +585,31 @@ export default function Production() {
           hoverable={false}
           animated={false}
           selectableColumns
-          showSearch
-          searchPlaceholder="Buscar serie, referencia, almacén, producto o estado..."
-          globalSearchFn={globalSearchFn}
+          toolbarSearchContent={
+            <DataTableSearchBar
+              value={searchText}
+              onChange={setSearchText}
+              onSubmitSearch={submitSearch}
+              searchLabel="Busca tu orden"
+              searchName="production-smart-search"
+              canSaveMetric={hasProductionSearchCriteria(executedSnapshot)}
+              saveLoading={savingMetric}
+              onSaveMetric={handleSaveMetric}
+            >
+              <ProductionSmartSearchPanel
+                recent={recentSearches}
+                saved={savedMetrics}
+                columns={smartSearchColumns}
+                snapshot={draftSnapshot}
+                searchState={searchState}
+                filterQuery={searchText}
+                onApplySnapshot={applySmartSnapshot}
+                onApplyRule={handleApplySearchRule}
+                onRemoveRule={handleRemoveSearchRule}
+                onDeleteMetric={handleDeleteMetric}
+              />
+            </DataTableSearchBar>
+          }
           rangeDates={{
             startDate: parseDateInputValue(fromDate),
             endDate: parseDateInputValue(toDate),
@@ -690,12 +618,6 @@ export default function Production() {
               setToDate(endDate ? toLocalDateKey(endDate) : "");
               setPage(1);
             },
-          }}
-          filtersConfig={{
-            categories: productionTableFilters,
-            value: productionAppliedFilters,
-            onChange: handleProductionFiltersChange,
-            emptyMessage: "Sin resultados.",
           }}
           pagination={{
             page,

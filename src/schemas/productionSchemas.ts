@@ -30,6 +30,8 @@ export const updateProductionOrderItemSchema = z.object({
 export const listProductionOrdersQuerySchema = z.object({
   status: z.string().optional(),
   warehouseId: uuidSchema.optional(),
+  q: z.string().optional(),
+  filters: z.unknown().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
   page: z.number().int().min(1).optional(),

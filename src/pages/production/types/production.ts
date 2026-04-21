@@ -1,4 +1,9 @@
 import { z } from "zod";
+import type {
+  DataTableSearchOption,
+  SmartSearchRangeValue,
+  SmartSearchRuleMode,
+} from "@/components/table/search";
 import {
   addProductionOrderItemSchema,
   createProductionOrderSchema,
@@ -11,7 +16,80 @@ export type CreateProductionOrderDto = z.infer<typeof createProductionOrderSchem
 export type UpdateProductionOrderDto = z.infer<typeof updateProductionOrderSchema>;
 export type AddProductionOrderItemDto = z.infer<typeof addProductionOrderItemSchema>;
 export type UpdateProductionOrderItemDto = z.infer<typeof updateProductionOrderItemSchema>;
-export type ListProductionOrdersQuery = z.infer<typeof listProductionOrdersQuerySchema>;
+export type ListProductionOrdersQuery = Omit<z.infer<typeof listProductionOrdersQuerySchema>, "filters"> & {
+  q?: string;
+  filters?: ProductionSearchFilters | string;
+};
+
+export const ProductionSearchFields = {
+  MANUFACTURE_DATE: "manufactureDate",
+  SERIE: "serie",
+  REFERENCE: "reference",
+  FROM_WAREHOUSE_ID: "fromWarehouseId",
+  TO_WAREHOUSE_ID: "toWarehouseId",
+  STATUS: "status",
+  PRODUCT_ID: "productId",
+} as const;
+
+export type ProductionSearchField =
+  typeof ProductionSearchFields[keyof typeof ProductionSearchFields];
+
+export const ProductionSearchOperators = {
+  IN: "in",
+  CONTAINS: "contains",
+  EQ: "eq",
+  ON: "on",
+  AFTER: "after",
+  BEFORE: "before",
+  BETWEEN: "between",
+} as const;
+
+export type ProductionSearchOperator =
+  typeof ProductionSearchOperators[keyof typeof ProductionSearchOperators];
+
+export type ProductionSearchRule = {
+  field: ProductionSearchField;
+  operator: ProductionSearchOperator;
+  mode?: SmartSearchRuleMode;
+  value?: string;
+  values?: string[];
+  range?: SmartSearchRangeValue;
+};
+
+export type ProductionSearchFilters = ProductionSearchRule[];
+
+export type ProductionSearchSnapshot = {
+  q?: string;
+  filters: ProductionSearchFilters;
+};
+
+export type ProductionSearchOption = DataTableSearchOption;
+
+export type ProductionRecentSearch = {
+  recentId: string;
+  label: string;
+  snapshot: ProductionSearchSnapshot;
+  lastUsedAt: string;
+};
+
+export type ProductionSavedMetric = {
+  metricId: string;
+  name: string;
+  label: string;
+  snapshot: ProductionSearchSnapshot;
+  updatedAt: string;
+};
+
+export type ProductionSearchStateResponse = {
+  recent: ProductionRecentSearch[];
+  saved: ProductionSavedMetric[];
+  catalogs: {
+    fromWarehouses: ProductionSearchOption[];
+    toWarehouses: ProductionSearchOption[];
+    statuses: ProductionSearchOption[];
+    products: ProductionSearchOption[];
+  };
+};
 
 
 export enum ProductionStatus {
