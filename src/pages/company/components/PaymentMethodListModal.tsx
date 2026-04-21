@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/settings/modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -43,42 +43,48 @@ export function PaymentMethodListModal({
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
 
-  const loadCompanyMethods = async (options?: { silent?: boolean }) => {
-    if (!companyId) return;
-    if (!options?.silent) clearFlash();
-    setLoading(true);
+  const loadCompanyMethods = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!companyId) return;
+      if (!options?.silent) clearFlash();
+      setLoading(true);
 
-    try {
-      const data = await getPaymentMethodsByCompany(companyId);
-      setRows(data ?? []);
-    } catch {
-      setRows([]);
-      if (!options?.silent) {
-        showFlash(errorResponse("No se pudieron cargar los métodos de pago."));
+      try {
+        const data = await getPaymentMethodsByCompany(companyId);
+        setRows(data ?? []);
+      } catch {
+        setRows([]);
+        if (!options?.silent) {
+          showFlash(errorResponse("No se pudieron cargar los métodos de pago."));
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [clearFlash, companyId, showFlash],
+  );
 
-  const loadAllMethods = async (options?: { silent?: boolean }) => {
-    if (!options?.silent) clearFlash();
+  const loadAllMethods = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!options?.silent) clearFlash();
 
-    try {
-      const records = await getAllPaymentMethods();
-      setAllMethods(records);
-    } catch {
-      setAllMethods([]);
-      if (!options?.silent) {
-        showFlash(errorResponse("No se pudieron cargar los métodos de pago disponibles."));
+      try {
+        const records = await getAllPaymentMethods();
+        setAllMethods(records);
+      } catch {
+        setAllMethods([]);
+        if (!options?.silent) {
+          showFlash(errorResponse("No se pudieron cargar los métodos de pago disponibles."));
+        }
       }
-    }
-  };
+    },
+    [clearFlash, showFlash],
+  );
 
   useEffect(() => {
     void loadCompanyMethods();
     void loadAllMethods({ silent: true });
-  }, [companyId]);
+  }, [loadAllMethods, loadCompanyMethods]);
 
   const availableOptions = useMemo<PaymentMethodSelectOption[]>(() => {
     const selectedSet = new Set(rows.map((row) => row.methodId));
@@ -94,7 +100,7 @@ export function PaymentMethodListModal({
     }
   }, [availableOptions, selectedId]);
 
-  const addMethod = async () => {
+  const addMethod = useCallback(async () => {
     if (!companyId || !selectedId || adding) return;
 
     clearFlash();
@@ -111,20 +117,23 @@ export function PaymentMethodListModal({
     } finally {
       setAdding(false);
     }
-  };
+  }, [adding, clearFlash, companyId, loadCompanyMethods, number, selectedId, showFlash]);
 
-  const removeMethod = async (methodId?: string | null) => {
-    if (!companyId || !methodId) return;
+  const removeMethod = useCallback(
+    async (methodId?: string | null) => {
+      if (!companyId || !methodId) return;
 
-    clearFlash();
-    try {
-      await deleteCompanyMethod(companyId, methodId);
-      showFlash(successResponse("Método eliminado"));
-      await loadCompanyMethods({ silent: true });
-    } catch {
-      showFlash(errorResponse("No se pudo eliminar el método"));
-    }
-  };
+      clearFlash();
+      try {
+        await deleteCompanyMethod(companyId, methodId);
+        showFlash(successResponse("Método eliminado"));
+        await loadCompanyMethods({ silent: true });
+      } catch {
+        showFlash(errorResponse("No se pudo eliminar el método"));
+      }
+    },
+    [clearFlash, companyId, loadCompanyMethods, showFlash],
+  );
 
   const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
     () => [
@@ -161,22 +170,17 @@ export function PaymentMethodListModal({
         hideable: false,
       },
     ],
-    [removeMethod]
+    [removeMethod],
   );
 
-  return (
-    <Modal onClose={close} title={title} className={className}>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-xs text-black/60">
-            {loading ? "Cargando..." : `${rows.length} métodos`}
-          </div>
-        </div>
+  const modalClassName = ["w-full max-w-3xl", className].filter(Boolean).join(" ");
 
-        <div className="overflow-hidden rounded-2xl border border-black/10">
-          <div className="flex flex-col gap-3 border-b border-black/10 px-5 py-4 text-xs text-black/60">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="flex-1">
+  return (
+    <Modal onClose={close} title={title} className={modalClassName}>
+      <div className="space-y-3">
+          <div className="flex flex-col gap-3 text-xs text-black/60 mb-3">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(220px,1fr)_auto] lg:items-end">
+              <div className="min-w-0">
                 <PaymentMethodSelectComposed
                   label="Método de pago"
                   value={selectedId}
@@ -191,7 +195,7 @@ export function PaymentMethodListModal({
                 />
               </div>
 
-              <div className="ml-3 flex-1">
+              <div className="min-w-0">
                 <FloatingInput
                   label="Número"
                   name="company-payment-number"
@@ -204,7 +208,7 @@ export function PaymentMethodListModal({
 
               <SystemButton
                 size="sm"
-                className="mt-6"
+                className="h-10 lg:min-w-[120px]"
                 leftIcon={<Plus className="h-4 w-4" />}
                 disabled={!selectedId || adding}
                 onClick={addMethod}
@@ -218,19 +222,16 @@ export function PaymentMethodListModal({
             </div>
           </div>
 
-          <div className="p-4 sm:p-5">
-            <DataTable
-              tableId="company-methods-table"
-              data={rows}
-              columns={columns}
-              rowKey="methodId"
-              loading={loading}
-              emptyMessage="No hay métodos asignados."
-              hoverable={false}
-              animated={false}
-            />
-          </div>
-        </div>
+          <DataTable
+            tableId="company-methods-table"
+            data={rows}
+            columns={columns}
+            rowKey="methodId"
+            loading={loading}
+            emptyMessage="No hay métodos asignados."
+            hoverable={false}
+            animated={false}
+          />
       </div>
 
       <PaymentMethodFormModal
