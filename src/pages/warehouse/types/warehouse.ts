@@ -150,7 +150,8 @@ export enum DocType {
   OUT = 'OUT',
   TRANSFER = 'TRANSFER',
   ADJUSTMENT = 'ADJUSTMENT',
-  PRODUCTION = 'PRODUCTION'
+  PRODUCTION = 'PRODUCTION',
+  PURCHASE = 'PURCHASE',
 }
 export enum DocStatus {
   DRAFT = 'DRAFT',
