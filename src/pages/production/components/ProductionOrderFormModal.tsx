@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Boxes, FileText, Trash2 } from "lucide-react";
+import { Boxes, Trash2 } from "lucide-react";
 import { Modal } from "@/components/modales/Modal";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -11,7 +11,7 @@ import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
-import { searchProductAndVariant } from "@/services/catalogService";
+import { searchProductAndVariant, type CatalogSearchSkuResult } from "@/services/catalogService";
 import { createProductionOrder, getProductionOrder, updateProductionOrder } from "@/services/productionService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
 import { money } from "@/utils/functionPurchases";
@@ -21,7 +21,6 @@ import type {
   ProductionOrderItem,
 } from "@/pages/production/types/production";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import type { FinishedProducts } from "@/pages/catalog/types/variant";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 
 type ProductionOrderFormModalProps = {
@@ -62,6 +61,14 @@ const buildEmptyItem = (): AddProductionOrderItemDto => ({
   type: "",
 });
 
+function toSkuAttributes(attributes?: Record<string, unknown> | null) {
+  return {
+    presentation: typeof attributes?.presentation === "string" ? attributes.presentation : undefined,
+    variant: typeof attributes?.variant === "string" ? attributes.variant : undefined,
+    color: typeof attributes?.color === "string" ? attributes.color : undefined,
+  };
+}
+
 type ProductionItemRow = AddProductionOrderItemDto & {
   rowIndex: number;
   sku?: string;
@@ -91,8 +98,8 @@ export function ProductionOrderFormModal({
   const [form, setForm] = useState<CreateProductionOrderDto>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<AddProductionOrderItemDto>(() => buildEmptyItem());
   const [openItemModal, setOpenItemModal] = useState(false);
-  const [products, setProducts] = useState<FinishedProducts[]>([]);
-  const [searchResults, setSearchResults] = useState<FinishedProducts[]>([]);
+  const [products, setProducts] = useState<CatalogSearchSkuResult[]>([]);
+  const [searchResults, setSearchResults] = useState<CatalogSearchSkuResult[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
@@ -141,29 +148,37 @@ export function ProductionOrderFormModal({
   };
 
   const mapOrderProducts = (items: ProductionOrderItem[]) => {
-    const map = new Map<string, FinishedProducts>();
+    const map = new Map<string, CatalogSearchSkuResult>();
 
     items.forEach((item) => {
+      const sku = item.finishedItem?.sku;
       const product = item.finishedItem?.product;
       const variant = item.finishedItem?.variant;
       const stockItemId = item.finishedItemId;
-      const entityId = variant?.id ?? product?.id ?? stockItemId;
+      const entityId = sku?.id ?? variant?.id ?? product?.id ?? stockItemId;
       if (!stockItemId || map.has(stockItemId)) return;
 
       map.set(stockItemId, {
         id: entityId,
         itemId: stockItemId,
-        productId: item.finishedItem?.productId ?? variant?.productId ?? product?.id ?? undefined,
-        variantId: item.finishedItem?.variantId ?? variant?.id ?? null,
-        sku: variant?.sku ?? product?.sku ?? undefined,
-        productName: variant?.productName ?? product?.name ?? undefined,
-        productDescription: variant?.productDescription ?? product?.description ?? undefined,
-        unitName: variant?.unitName ?? product?.baseUnitName ?? undefined,
-        unitCode: variant?.unitCode ?? product?.baseUnitCode ?? undefined,
-        baseUnitId: variant?.baseUnitId ?? product?.baseUnitId ?? undefined,
-        isActive: variant?.isActive ?? product?.isActive ?? undefined,
-        type: item.finishedItem?.type ?? product?.type ?? undefined,
-        attributes: (variant?.attributes ?? product?.attributes ?? undefined) as FinishedProducts["attributes"],
+        productId:
+          item.finishedItem?.productId ??
+          sku?.productId ??
+          variant?.productId ??
+          product?.id ??
+          undefined,
+        sku: sku?.backendSku ?? variant?.sku ?? product?.sku ?? undefined,
+        productName: sku?.name ?? variant?.productName ?? product?.name ?? "SKU",
+        productDescription: product?.description ?? variant?.productDescription ?? undefined,
+        unitName: sku?.unitName ?? variant?.unitName ?? product?.baseUnitName ?? undefined,
+        unitCode: sku?.unitCode ?? variant?.unitCode ?? product?.baseUnitCode ?? undefined,
+        baseUnitId: sku?.baseUnitId ?? variant?.baseUnitId ?? product?.baseUnitId ?? undefined,
+        isActive: sku?.isActive ?? variant?.isActive ?? product?.isActive ?? undefined,
+        type: item.finishedItem?.type ?? sku?.type ?? product?.type ?? undefined,
+        attributes: toSkuAttributes(
+          sku?.attributes ?? variant?.attributes ?? product?.attributes ?? undefined,
+        ),
+        customSku: sku?.customSku ?? undefined,
       });
     });
 
@@ -461,62 +476,65 @@ export function ProductionOrderFormModal({
         open={open}
         onClose={onClose}
         title={mode === "edit" ? "Editar orden de producción" : "Nueva orden de producción"}
-        className="w-[1400px] max-w-[96vw] h-[92vh]"
-        bodyClassName="h-full p-4"
+        className="w-[min(92rem,calc(100vw-2rem))]"
+        bodyClassName="p-0"
       >
-        <div className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr]">
-          <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-            <div className="border-b border-black/10 p-3 sm:p-4">
-              <SectionHeaderForm icon={Boxes} title="Productos terminados" />
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                <FloatingSelect
-                  label="Producto terminado"
-                  name="production-finished-item"
-                  value={pendingItem.finishedItemId}
-                  options={productOptions}
-                  onChange={(value) => {
-                    setPendingItem((prev) => ({ ...prev, finishedItemId: value }));
-                    setOpenItemModal(Boolean(value));
-                  }}
-                  searchable
-                  searchPlaceholder="Buscar producto..."
-                  onSearchChange={(text) => setQuery(text)}
-                  className="h-9 text-xs"
-                  placeholder="Seleccionar producto"
-                  emptyMessage="Sin productos"
-                />
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-auto">
-              <DataTable
-                tableId="production-items"
-                data={itemRows}
-                columns={columns}
-                rowKey="finishedItemId"
-                emptyMessage="Aun no agregas items."
-                animated={false}
-                tableClassName="table-fixed text-[11px]"
-              />
-            </div>
-
-            <div className="border-t border-black/10 px-3 py-3 sm:px-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-[11px] text-black/60">Total costo items</div>
-                <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-                  <span className="font-semibold tabular-nums text-black">{money(totalCost, "PEN")}</span>
+        <div className="w-full">
+          <div className="grid h-[80vh] grid-cols-1 gap-3 py-4 lg:grid-cols-[6fr_2.5fr]">
+            <section className="flex flex-col gap-3 overflow-hidden">
+              <div className="p-3">
+                <SectionHeaderForm icon={Boxes} title="Productos terminados" />
+                <div className="mt-2 grid gap-2 xl:grid-cols-1">
+                  <FloatingSelect
+                    label="Producto terminado"
+                    name="production-finished-item"
+                    value={pendingItem.finishedItemId}
+                    options={productOptions}
+                    onChange={(value) => {
+                      setPendingItem((prev) => ({ ...prev, finishedItemId: value }));
+                      setOpenItemModal(Boolean(value));
+                    }}
+                    searchable
+                    searchPlaceholder="Buscar producto..."
+                    onSearchChange={(text) => setQuery(text)}
+                    className="h-12"
+                    placeholder="Seleccionar producto"
+                    emptyMessage="Sin productos"
+                  />
                 </div>
               </div>
-            </div>
-          </section>
 
-          <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-            <div className="border-b border-black/10 px-3 py-3 sm:px-4">
-              <SectionHeaderForm icon={FileText} title="Datos de documento" />
-            </div>
+              <div className="flex-1 overflow-auto p-3 py-0">
+                <DataTable
+                  tableId="production-items"
+                  data={itemRows}
+                  columns={columns}
+                  rowKey="finishedItemId"
+                  emptyMessage="Aun no agregas items."
+                  animated={false}
+                  hoverable={false}
+                />
+              </div>
 
-            <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
-              <div className="space-y-5">
+              <div className="border-t border-black/10 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-[11px] text-black/60">
+                    Nota: el costo total se calcula con la suma de las cantidades por costo unitario.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
+                      Items: <span className="font-semibold text-black">{itemRows.length}</span>
+                    </div>
+                    <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
+                      Total costo: <span className="font-semibold text-black">{money(totalCost, "PEN")}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <aside className="flex flex-col overflow-hidden border-0 border-black/10 lg:border-l">
+              <div className="flex-1 space-y-5 overflow-auto p-3 sm:p-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FloatingSelect
                     label="Almacen origen"
@@ -528,7 +546,7 @@ export function ProductionOrderFormModal({
                       void loadSeries(value);
                     }}
                     searchable
-                    className="h-9 text-xs"
+                    className="h-10"
                     emptyMessage="Sin almacenes"
                   />
                   <FloatingSelect
@@ -540,7 +558,7 @@ export function ProductionOrderFormModal({
                       setForm((prev) => ({ ...prev, toWarehouseId: value }));
                     }}
                     searchable
-                    className="h-9 text-xs"
+                    className="h-10"
                     emptyMessage="Sin almacenes"
                   />
                 </div>
@@ -551,14 +569,14 @@ export function ProductionOrderFormModal({
                     name="production-serie"
                     value={serie.label}
                     disabled
-                    className="h-9 text-xs text-black/90"
+                    className="h-10 text-black/90"
                   />
                   <FloatingInput
                     label="Referencia"
                     name="production-reference"
                     value={form.reference ?? ""}
                     onChange={(event) => setForm((prev) => ({ ...prev, reference: event.target.value }))}
-                    className="h-9 text-xs"
+                    className="h-10"
                   />
                 </div>
 
@@ -573,36 +591,36 @@ export function ProductionOrderFormModal({
                     }))
                   }
                   clearable={false}
-                  className="h-9 text-xs"
+                  className="h-10"
                 />
               </div>
-            </div>
 
-            <div className="border-t border-black/10 px-3 py-3 sm:px-4">
-              <div className="flex gap-2">
-                <SystemButton variant="outline" className="flex-1" onClick={onClose}>
-                  Cancelar
-                </SystemButton>
-                <SystemButton
-                  className="flex-1"
-                  style={{
-                    backgroundColor: accent,
-                    borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
-                  }}
-                  disabled={
-                    loading ||
-                    !form.fromWarehouseId ||
-                    !form.toWarehouseId ||
-                    !form.serieId ||
-                    !(form.items ?? []).length
-                  }
-                  onClick={saveOrder}
-                >
-                  {loading ? "Guardando..." : mode === "edit" ? "Actualizar" : "Guardar"}
-                </SystemButton>
+              <div className="p-3">
+                <div className="flex gap-2">
+                  <SystemButton variant="outline" className="flex-1" onClick={onClose}>
+                    Cancelar
+                  </SystemButton>
+                  <SystemButton
+                    className="flex-1"
+                    style={{
+                      backgroundColor: accent,
+                      borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                    }}
+                    disabled={
+                      loading ||
+                      !form.fromWarehouseId ||
+                      !form.toWarehouseId ||
+                      !form.serieId ||
+                      !(form.items ?? []).length
+                    }
+                    onClick={saveOrder}
+                  >
+                    {loading ? "Guardando..." : mode === "edit" ? "Actualizar" : "Guardar"}
+                  </SystemButton>
+                </div>
               </div>
-            </div>
-          </aside>
+            </aside>
+          </div>
         </div>
       </Modal>
 

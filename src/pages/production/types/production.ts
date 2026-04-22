@@ -100,11 +100,28 @@ export enum ProductionStatus {
 export type ProductionOrderItem = {
   itemId?: string;
   finishedItemId: string;
-  finishedItemType?: "PRODUCT" | "VARIANT" | null;
+  finishedItemType?: "PRODUCT" | "SKU" | "VARIANT" | null;
   finishedItem?: {
     type?: string | null;
     productId?: string | null;
+    skuId?: string | null;
     variantId?: string | null;
+    sku?: {
+      id: string;
+      productId?: string | null;
+      name?: string | null;
+      backendSku?: string | null;
+      customSku?: string | null;
+      barcode?: string | null;
+      baseUnitId?: string | null;
+      unitName?: string | null;
+      unitCode?: string | null;
+      attributes?: Record<string, unknown> | null;
+      isActive?: boolean | null;
+      type?: string | null;
+      createdAt?: string;
+      updatedAt?: string;
+    } | null;
     product?: {
       id: string;
       name?: string | null;
