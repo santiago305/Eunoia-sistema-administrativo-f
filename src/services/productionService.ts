@@ -5,12 +5,28 @@ import type {
   CreateProductionOrderDto,
   ListProductionOrdersQuery,
   ProductionOrder,
+  ProductionSearchOption,
   ProductionOrderListResponse,
   ProductionSearchSnapshot,
   ProductionSearchStateResponse,
   UpdateProductionOrderDto,
-  UpdateProductionOrderItemDto,
 } from "@/pages/production/types/production";
+
+type RawProductionSearchOption = {
+  value: string;
+  label: string;
+  keywords?: string[];
+};
+
+function normalizeProductionSearchOptions(
+  options?: RawProductionSearchOption[],
+): ProductionSearchOption[] {
+  return (options ?? []).map((item) => ({
+    id: item.value,
+    label: item.label,
+    keywords: item.keywords,
+  }));
+}
 
 export const createProductionOrder = async (
   payload: CreateProductionOrderDto
@@ -39,7 +55,14 @@ export const listProductionOrders = async (
 
 export const getProductionSearchState = async (): Promise<ProductionSearchStateResponse> => {
   const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.searchState);
-  return response.data;
+  return {
+    ...response.data,
+    catalogs: {
+      statuses: normalizeProductionSearchOptions(response.data?.catalogs?.statuses),
+      warehouses: normalizeProductionSearchOptions(response.data?.catalogs?.warehouses),
+      products: normalizeProductionSearchOptions(response.data?.catalogs?.products),
+    },
+  };
 };
 
 export const saveProductionSearchMetric = async (
@@ -96,18 +119,6 @@ export const addProductionOrderItem = async (
 ): Promise<ProductionOrder> => {
   const response = await axiosInstance.post(
     API_PRODUCTION_ORDERS_GROUP.addItem(productionId),
-    payload
-  );
-  return response.data;
-};
-
-export const updateProductionOrderItem = async (
-  productionId: string,
-  itemId: string,
-  payload: UpdateProductionOrderItemDto
-): Promise<ProductionOrder> => {
-  const response = await axiosInstance.patch(
-    API_PRODUCTION_ORDERS_GROUP.updateItem(productionId, itemId),
     payload
   );
   return response.data;

@@ -57,7 +57,7 @@ export function ProductionSmartSearchPanel({
       }
       getSelectionCount={getProductionSearchSelectionCount}
       fieldsSectionTitle="Columnas"
-      fieldsSectionDescription="Filtra producciones por serie, referencia, fecha, almacenes, estado o producto."
+      fieldsSectionDescription="Filtra producciones por serie o correlativo, referencia, fecha, almacenes, estado o SKU."
       initialVisibleFields={4}
       filterQuery={filterQuery}
     />

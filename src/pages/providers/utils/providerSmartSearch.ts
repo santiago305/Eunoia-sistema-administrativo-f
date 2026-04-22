@@ -31,14 +31,13 @@ type ProviderSearchOperatorOption = SmartSearchOperatorOption<ProviderSearchOper
 
 const FIELD_ORDER: ProviderSearchField[] = [
   ProviderSearchFields.DOCUMENT_TYPE,
+  ProviderSearchFields.IS_ACTIVE,
   ProviderSearchFields.DOCUMENT_NUMBER,
   ProviderSearchFields.NAME,
   ProviderSearchFields.LAST_NAME,
   ProviderSearchFields.TRADE_NAME,
   ProviderSearchFields.PHONE,
   ProviderSearchFields.EMAIL,
-  ProviderSearchFields.STATUS,
-  ProviderSearchFields.LEAD_TIME_DAYS,
 ];
 
 const FIELD_LABELS: Record<ProviderSearchField, string> = {
@@ -49,13 +48,12 @@ const FIELD_LABELS: Record<ProviderSearchField, string> = {
   [ProviderSearchFields.TRADE_NAME]: "Nombre comercial",
   [ProviderSearchFields.PHONE]: "Telefono",
   [ProviderSearchFields.EMAIL]: "Correo",
-  [ProviderSearchFields.STATUS]: "Estado",
-  [ProviderSearchFields.LEAD_TIME_DAYS]: "T. Espera",
+  [ProviderSearchFields.IS_ACTIVE]: "Estado",
 };
 
 const CATALOG_FIELDS = new Set<ProviderSearchField>([
   ProviderSearchFields.DOCUMENT_TYPE,
-  ProviderSearchFields.STATUS,
+  ProviderSearchFields.IS_ACTIVE,
 ]);
 
 const TEXT_FIELDS = new Set<ProviderSearchField>([
@@ -67,21 +65,9 @@ const TEXT_FIELDS = new Set<ProviderSearchField>([
   ProviderSearchFields.EMAIL,
 ]);
 
-const NUMERIC_FIELDS = new Set<ProviderSearchField>([
-  ProviderSearchFields.LEAD_TIME_DAYS,
-]);
-
 const TEXT_OPERATOR_OPTIONS: ProviderSearchOperatorOption[] = [
   { id: ProviderSearchOperators.CONTAINS, label: "Contiene" },
   { id: ProviderSearchOperators.EQ, label: "Es igual a" },
-];
-
-const NUMBER_OPERATOR_OPTIONS: ProviderSearchOperatorOption[] = [
-  { id: ProviderSearchOperators.EQ, label: "Igual a" },
-  { id: ProviderSearchOperators.GT, label: "Mayor que" },
-  { id: ProviderSearchOperators.GTE, label: "Mayor o igual" },
-  { id: ProviderSearchOperators.LT, label: "Menor que" },
-  { id: ProviderSearchOperators.LTE, label: "Menor o igual" },
 ];
 
 const DOCUMENT_TYPE_OPTIONS: DataTableSearchOption[] = [
@@ -99,10 +85,6 @@ const OPERATOR_LABELS: Record<ProviderSearchOperator, string> = {
   [ProviderSearchOperators.IN]: ":",
   [ProviderSearchOperators.CONTAINS]: "contiene",
   [ProviderSearchOperators.EQ]: "=",
-  [ProviderSearchOperators.GT]: ">",
-  [ProviderSearchOperators.GTE]: ">=",
-  [ProviderSearchOperators.LT]: "<",
-  [ProviderSearchOperators.LTE]: "<=",
 };
 
 function uniqueStrings(values: string[] | undefined) {
@@ -111,24 +93,33 @@ function uniqueStrings(values: string[] | undefined) {
   ) as string[];
 }
 
+function normalizeLegacyField(field?: string | null): ProviderSearchField | null {
+  if (field === "status") return ProviderSearchFields.IS_ACTIVE;
+  if (field === "leadTimeDays") return null;
+  return field && Object.values(ProviderSearchFields).includes(field as ProviderSearchField)
+    ? (field as ProviderSearchField)
+    : null;
+}
+
 function sanitizeRule(rule?: Partial<ProviderSearchRule> | null): ProviderSearchRule | null {
   if (!rule?.field || !rule.operator) return null;
-  if (!Object.values(ProviderSearchFields).includes(rule.field)) return null;
+  const field = normalizeLegacyField(rule.field);
+  if (!field) return null;
   if (!Object.values(ProviderSearchOperators).includes(rule.operator)) return null;
 
-  if (CATALOG_FIELDS.has(rule.field)) {
+  if (CATALOG_FIELDS.has(field)) {
     if (rule.operator !== ProviderSearchOperators.IN) return null;
     const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : undefined));
     if (!values.length) return null;
     return {
-      field: rule.field,
+      field,
       operator: rule.operator,
       mode: rule.mode === "exclude" ? "exclude" : "include",
       values,
     };
   }
 
-  if (TEXT_FIELDS.has(rule.field)) {
+  if (TEXT_FIELDS.has(field)) {
     if (
       rule.operator !== ProviderSearchOperators.CONTAINS &&
       rule.operator !== ProviderSearchOperators.EQ
@@ -138,26 +129,7 @@ function sanitizeRule(rule?: Partial<ProviderSearchRule> | null): ProviderSearch
     const value = rule.value?.trim();
     if (!value) return null;
     return {
-      field: rule.field,
-      operator: rule.operator,
-      value,
-    };
-  }
-
-  if (NUMERIC_FIELDS.has(rule.field)) {
-    if (
-      rule.operator !== ProviderSearchOperators.EQ &&
-      rule.operator !== ProviderSearchOperators.GT &&
-      rule.operator !== ProviderSearchOperators.GTE &&
-      rule.operator !== ProviderSearchOperators.LT &&
-      rule.operator !== ProviderSearchOperators.LTE
-    ) {
-      return null;
-    }
-    const value = rule.value?.trim();
-    if (!value || Number.isNaN(Number(value))) return null;
-    return {
-      field: rule.field,
+      field,
       operator: rule.operator,
       value,
     };
@@ -171,8 +143,8 @@ function getCatalogMaps(searchState?: ProviderSearchStateResponse | null) {
     documentType: new Map(
       (searchState?.catalogs.documentTypes ?? DOCUMENT_TYPE_OPTIONS).map((item) => [item.id, item.label]),
     ),
-    status: new Map(
-      (searchState?.catalogs.statuses ?? STATUS_OPTIONS).map((item) => [item.id, item.label]),
+    isActive: new Map(
+      (searchState?.catalogs.activeStates ?? STATUS_OPTIONS).map((item) => [item.id, item.label]),
     ),
   };
 }
@@ -186,8 +158,8 @@ function getCatalogLabels(
   const map =
     field === ProviderSearchFields.DOCUMENT_TYPE
       ? maps.documentType
-      : field === ProviderSearchFields.STATUS
-        ? maps.status
+      : field === ProviderSearchFields.IS_ACTIVE
+        ? maps.isActive
         : new Map<string, string>();
 
   return values.map((value) => map.get(value) ?? value);
@@ -401,21 +373,13 @@ export function buildProviderSmartSearchColumns(
       placeholder: "Ej. proveedor@correo.com",
     },
     {
-      id: ProviderSearchFields.STATUS,
+      id: ProviderSearchFields.IS_ACTIVE,
       label: "Estado",
       kind: "catalog",
       description: "Selecciona estados para incluir o excluir del resultado.",
       operators: [{ id: ProviderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: searchState?.catalogs.statuses ?? STATUS_OPTIONS,
-    },
-    {
-      id: ProviderSearchFields.LEAD_TIME_DAYS,
-      label: "T. Espera",
-      kind: "number",
-      description: "Compara los dias de espera con una condicion numerica.",
-      operators: NUMBER_OPERATOR_OPTIONS,
-      placeholder: "Ej. 7",
+      options: searchState?.catalogs.activeStates ?? STATUS_OPTIONS,
     },
   ];
 }

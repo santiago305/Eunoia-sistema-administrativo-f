@@ -34,8 +34,7 @@ const FIELD_ORDER: WarehouseSearchField[] = [
   WarehouseSearchFields.PROVINCE,
   WarehouseSearchFields.DISTRICT,
   WarehouseSearchFields.ADDRESS,
-  WarehouseSearchFields.STATUS,
-  WarehouseSearchFields.CREATED_AT,
+  WarehouseSearchFields.IS_ACTIVE,
 ];
 
 const FIELD_LABELS: Record<WarehouseSearchField, string> = {
@@ -44,15 +43,14 @@ const FIELD_LABELS: Record<WarehouseSearchField, string> = {
   [WarehouseSearchFields.PROVINCE]: "Provincia",
   [WarehouseSearchFields.DISTRICT]: "Distrito",
   [WarehouseSearchFields.ADDRESS]: "Direccion",
-  [WarehouseSearchFields.STATUS]: "Estado",
-  [WarehouseSearchFields.CREATED_AT]: "Creado",
+  [WarehouseSearchFields.IS_ACTIVE]: "Estado",
 };
 
 const CATALOG_FIELDS = new Set<WarehouseSearchField>([
   WarehouseSearchFields.DEPARTMENT,
   WarehouseSearchFields.PROVINCE,
   WarehouseSearchFields.DISTRICT,
-  WarehouseSearchFields.STATUS,
+  WarehouseSearchFields.IS_ACTIVE,
 ]);
 
 const TEXT_FIELDS = new Set<WarehouseSearchField>([
@@ -60,20 +58,9 @@ const TEXT_FIELDS = new Set<WarehouseSearchField>([
   WarehouseSearchFields.ADDRESS,
 ]);
 
-const DATE_FIELDS = new Set<WarehouseSearchField>([
-  WarehouseSearchFields.CREATED_AT,
-]);
-
 const TEXT_OPERATOR_OPTIONS: WarehouseSearchOperatorOption[] = [
   { id: WarehouseSearchOperators.CONTAINS, label: "Contiene" },
   { id: WarehouseSearchOperators.EQ, label: "Es igual a" },
-];
-
-const DATE_OPERATOR_OPTIONS: WarehouseSearchOperatorOption[] = [
-  { id: WarehouseSearchOperators.ON, label: "Es" },
-  { id: WarehouseSearchOperators.AFTER, label: "Despues de" },
-  { id: WarehouseSearchOperators.BEFORE, label: "Antes de" },
-  { id: WarehouseSearchOperators.BETWEEN, label: "Entre" },
 ];
 
 const STATUS_OPTIONS: DataTableSearchOption[] = [
@@ -85,10 +72,6 @@ const OPERATOR_LABELS: Record<WarehouseSearchOperator, string> = {
   [WarehouseSearchOperators.IN]: ":",
   [WarehouseSearchOperators.CONTAINS]: "contiene",
   [WarehouseSearchOperators.EQ]: "=",
-  [WarehouseSearchOperators.ON]: "=",
-  [WarehouseSearchOperators.AFTER]: ">",
-  [WarehouseSearchOperators.BEFORE]: "<",
-  [WarehouseSearchOperators.BETWEEN]: "entre",
 };
 
 function uniqueStrings(values: string[] | undefined) {
@@ -97,41 +80,33 @@ function uniqueStrings(values: string[] | undefined) {
   ) as string[];
 }
 
-function normalizeDateValue(value?: string | null) {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  const parsed = new Date(trimmed);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  return parsed.toISOString().slice(0, 10);
-}
-
-function formatRuleValueLabel(value?: string | null) {
-  const trimmed = value?.trim();
-  if (!trimmed) return "";
-  const parsed = new Date(trimmed);
-  if (Number.isNaN(parsed.getTime())) return trimmed;
-  return `${String(parsed.getDate()).padStart(2, "0")}/${String(parsed.getMonth() + 1).padStart(2, "0")}/${parsed.getFullYear()}`;
+function normalizeLegacyField(field?: string | null): WarehouseSearchField | null {
+  if (field === "status") return WarehouseSearchFields.IS_ACTIVE;
+  if (field === "createdAt") return null;
+  return field && Object.values(WarehouseSearchFields).includes(field as WarehouseSearchField)
+    ? (field as WarehouseSearchField)
+    : null;
 }
 
 function sanitizeRule(rule?: Partial<WarehouseSearchRule> | null): WarehouseSearchRule | null {
   if (!rule?.field || !rule.operator) return null;
-  if (!Object.values(WarehouseSearchFields).includes(rule.field)) return null;
+  const field = normalizeLegacyField(rule.field);
+  if (!field) return null;
   if (!Object.values(WarehouseSearchOperators).includes(rule.operator)) return null;
 
-  if (CATALOG_FIELDS.has(rule.field)) {
+  if (CATALOG_FIELDS.has(field)) {
     if (rule.operator !== WarehouseSearchOperators.IN) return null;
     const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : undefined));
     if (!values.length) return null;
     return {
-      field: rule.field,
+      field,
       operator: rule.operator,
       mode: rule.mode === "exclude" ? "exclude" : "include",
       values,
     };
   }
 
-  if (TEXT_FIELDS.has(rule.field)) {
+  if (TEXT_FIELDS.has(field)) {
     if (
       rule.operator !== WarehouseSearchOperators.CONTAINS &&
       rule.operator !== WarehouseSearchOperators.EQ
@@ -141,37 +116,7 @@ function sanitizeRule(rule?: Partial<WarehouseSearchRule> | null): WarehouseSear
     const value = rule.value?.trim();
     if (!value) return null;
     return {
-      field: rule.field,
-      operator: rule.operator,
-      value,
-    };
-  }
-
-  if (DATE_FIELDS.has(rule.field)) {
-    if (
-      rule.operator !== WarehouseSearchOperators.ON &&
-      rule.operator !== WarehouseSearchOperators.AFTER &&
-      rule.operator !== WarehouseSearchOperators.BEFORE &&
-      rule.operator !== WarehouseSearchOperators.BETWEEN
-    ) {
-      return null;
-    }
-
-    if (rule.operator === WarehouseSearchOperators.BETWEEN) {
-      const start = normalizeDateValue(rule.range?.start);
-      const end = normalizeDateValue(rule.range?.end);
-      if (!start || !end) return null;
-      return {
-        field: rule.field,
-        operator: rule.operator,
-        range: { start, end },
-      };
-    }
-
-    const value = normalizeDateValue(rule.value);
-    if (!value) return null;
-    return {
-      field: rule.field,
+      field,
       operator: rule.operator,
       value,
     };
@@ -185,7 +130,7 @@ function getCatalogMaps(catalogs?: WarehouseSearchCatalogs | null) {
     department: new Map(catalogs?.departments.map((item) => [item.id, item.label]) ?? []),
     province: new Map(catalogs?.provinces.map((item) => [item.id, item.label]) ?? []),
     district: new Map(catalogs?.districts.map((item) => [item.id, item.label]) ?? []),
-    status: new Map((catalogs?.statuses ?? STATUS_OPTIONS).map((item) => [item.id, item.label])),
+    isActive: new Map((catalogs?.activeStates ?? STATUS_OPTIONS).map((item) => [item.id, item.label])),
   };
 }
 
@@ -202,8 +147,8 @@ function getCatalogLabels(
         ? maps.province
         : field === WarehouseSearchFields.DISTRICT
           ? maps.district
-          : field === WarehouseSearchFields.STATUS
-            ? maps.status
+          : field === WarehouseSearchFields.IS_ACTIVE
+            ? maps.isActive
             : new Map<string, string>();
 
   return values.map((value) => map.get(value) ?? value);
@@ -230,16 +175,8 @@ function getRuleLabel(
     return `${prefix}${content}`;
   }
 
-  if (rule.operator === WarehouseSearchOperators.BETWEEN) {
-    if (!rule.range?.start || !rule.range?.end) return includeFieldLabel ? fieldLabel : "";
-    const content = `${formatRuleValueLabel(rule.range.start)} y ${formatRuleValueLabel(rule.range.end)}`;
-    return includeFieldLabel
-      ? `${fieldLabel} ${OPERATOR_LABELS[rule.operator]} ${content}`
-      : `${OPERATOR_LABELS[rule.operator]} ${content}`;
-  }
-
   if (!rule.value) return includeFieldLabel ? fieldLabel : "";
-  const content = `${OPERATOR_LABELS[rule.operator]} ${formatRuleValueLabel(rule.value)}`;
+  const content = `${OPERATOR_LABELS[rule.operator]} ${rule.value}`;
   return includeFieldLabel ? `${fieldLabel} ${content}` : content;
 }
 
@@ -419,31 +356,13 @@ export function buildWarehouseSmartSearchColumns(
       placeholder: "Ej. Av. Principal 123",
     },
     {
-      id: WarehouseSearchFields.STATUS,
+      id: WarehouseSearchFields.IS_ACTIVE,
       label: "Estado",
       kind: "catalog",
       description: "Selecciona estados para incluir o excluir del resultado.",
       operators: [{ id: WarehouseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: catalogs?.statuses ?? STATUS_OPTIONS,
-    },
-    {
-      id: WarehouseSearchFields.CREATED_AT,
-      label: "Creado",
-      kind: "date",
-      description: "Busca por fecha de creacion del almacen.",
-      operators: DATE_OPERATOR_OPTIONS,
-      operatorInputMode: {
-        [WarehouseSearchOperators.ON]: "date",
-        [WarehouseSearchOperators.AFTER]: "date",
-        [WarehouseSearchOperators.BEFORE]: "date",
-        [WarehouseSearchOperators.BETWEEN]: "date-range",
-      },
-      operatorPlaceholder: {
-        [WarehouseSearchOperators.ON]: "Selecciona una fecha",
-        [WarehouseSearchOperators.AFTER]: "Selecciona una fecha",
-        [WarehouseSearchOperators.BEFORE]: "Selecciona una fecha",
-      },
+      options: catalogs?.activeStates ?? STATUS_OPTIONS,
     },
   ];
 }

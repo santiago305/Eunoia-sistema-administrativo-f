@@ -63,7 +63,7 @@ const EMPTY_WAREHOUSE_SEARCH_CATALOGS: WarehouseSearchCatalogs = {
   departments: [],
   provinces: [],
   districts: [],
-  statuses: [],
+  activeStates: [],
 };
 
 function toSearchOptions(items: Array<{ id: string; name: string }>) {
@@ -158,10 +158,10 @@ export default function Warehouses() {
       departments: ubigeoCatalogs.departments,
       provinces: ubigeoCatalogs.provinces,
       districts: ubigeoCatalogs.districts,
-      statuses: searchState?.catalogs.statuses ?? EMPTY_WAREHOUSE_SEARCH_CATALOGS.statuses,
+      activeStates: searchState?.catalogs.activeStates ?? EMPTY_WAREHOUSE_SEARCH_CATALOGS.activeStates,
     }),
     [
-      searchState?.catalogs.statuses,
+      searchState?.catalogs.activeStates,
       ubigeoCatalogs.departments,
       ubigeoCatalogs.districts,
       ubigeoCatalogs.provinces,
@@ -267,11 +267,24 @@ export default function Warehouses() {
   useEffect(() => {
     let cancelled = false;
 
+    if (!selectedDepartmentIds.length) {
+      setUbigeoCatalogs((current) =>
+        current.provinces.length || current.districts.length
+          ? {
+              ...current,
+              provinces: [],
+              districts: [],
+            }
+          : current,
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void (async () => {
       try {
-        const response = await listUbigeoProvinces(
-          selectedDepartmentIds.length ? { departmentIds: selectedDepartmentIds } : undefined,
-        );
+        const response = await listUbigeoProvinces({ departmentIds: selectedDepartmentIds });
         if (!cancelled) {
           setUbigeoCatalogs((current) => ({
             ...current,
@@ -293,15 +306,23 @@ export default function Warehouses() {
   useEffect(() => {
     let cancelled = false;
 
+    if (!selectedProvinceIds.length) {
+      setUbigeoCatalogs((current) =>
+        current.districts.length
+          ? {
+              ...current,
+              districts: [],
+            }
+          : current,
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void (async () => {
       try {
-        const response = await listUbigeoDistricts(
-          selectedProvinceIds.length
-            ? { provinceIds: selectedProvinceIds }
-            : selectedDepartmentIds.length
-              ? { departmentIds: selectedDepartmentIds }
-              : undefined,
-        );
+        const response = await listUbigeoDistricts({ provinceIds: selectedProvinceIds });
         if (!cancelled) {
           setUbigeoCatalogs((current) => ({
             ...current,
@@ -318,7 +339,7 @@ export default function Warehouses() {
     return () => {
       cancelled = true;
     };
-  }, [selectedDepartmentIds, selectedProvinceIds, showFlash]);
+  }, [selectedProvinceIds, showFlash]);
 
   const sortedWarehouses = useMemo(
     () =>

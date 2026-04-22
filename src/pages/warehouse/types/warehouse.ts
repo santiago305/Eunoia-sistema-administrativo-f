@@ -17,8 +17,7 @@ export const WarehouseSearchFields = {
   PROVINCE: "province",
   DISTRICT: "district",
   ADDRESS: "address",
-  STATUS: "status",
-  CREATED_AT: "createdAt",
+  IS_ACTIVE: "isActive",
 } as const;
 
 export type WarehouseSearchField =
@@ -28,10 +27,6 @@ export const WarehouseSearchOperators = {
   IN: "in",
   CONTAINS: "contains",
   EQ: "eq",
-  ON: "on",
-  AFTER: "after",
-  BEFORE: "before",
-  BETWEEN: "between",
 } as const;
 
 export type WarehouseSearchOperator =
@@ -72,7 +67,7 @@ export type WarehouseSearchStateResponse = {
   recent: WarehouseRecentSearch[];
   saved: WarehouseSavedMetric[];
   catalogs: {
-    statuses: DataTableSearchOption[];
+    activeStates: DataTableSearchOption[];
   };
 };
 
@@ -80,7 +75,7 @@ export type WarehouseSearchCatalogs = {
   departments: DataTableSearchOption[];
   provinces: DataTableSearchOption[];
   districts: DataTableSearchOption[];
-  statuses: DataTableSearchOption[];
+  activeStates: DataTableSearchOption[];
 };
 
 export type ListWarehousesQuery = Omit<z.infer<typeof listWarehousesQuerySchema>, "filters"> & {

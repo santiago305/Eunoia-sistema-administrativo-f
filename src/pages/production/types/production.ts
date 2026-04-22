@@ -8,14 +8,12 @@ import {
   addProductionOrderItemSchema,
   createProductionOrderSchema,
   listProductionOrdersQuerySchema,
-  updateProductionOrderItemSchema,
   updateProductionOrderSchema,
 } from "@/schemas/productionSchemas";
 
 export type CreateProductionOrderDto = z.infer<typeof createProductionOrderSchema>;
 export type UpdateProductionOrderDto = z.infer<typeof updateProductionOrderSchema>;
 export type AddProductionOrderItemDto = z.infer<typeof addProductionOrderItemSchema>;
-export type UpdateProductionOrderItemDto = z.infer<typeof updateProductionOrderItemSchema>;
 export type ListProductionOrdersQuery = Omit<z.infer<typeof listProductionOrdersQuerySchema>, "filters"> & {
   q?: string;
   filters?: ProductionSearchFilters | string;
@@ -23,12 +21,12 @@ export type ListProductionOrdersQuery = Omit<z.infer<typeof listProductionOrders
 
 export const ProductionSearchFields = {
   MANUFACTURE_DATE: "manufactureDate",
-  SERIE: "serie",
+  NUMBER: "number",
   REFERENCE: "reference",
   FROM_WAREHOUSE_ID: "fromWarehouseId",
   TO_WAREHOUSE_ID: "toWarehouseId",
   STATUS: "status",
-  PRODUCT_ID: "productId",
+  SKU_ID: "skuId",
 } as const;
 
 export type ProductionSearchField =
@@ -84,8 +82,7 @@ export type ProductionSearchStateResponse = {
   recent: ProductionRecentSearch[];
   saved: ProductionSavedMetric[];
   catalogs: {
-    fromWarehouses: ProductionSearchOption[];
-    toWarehouses: ProductionSearchOption[];
+    warehouses: ProductionSearchOption[];
     statuses: ProductionSearchOption[];
     products: ProductionSearchOption[];
   };

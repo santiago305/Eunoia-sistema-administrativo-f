@@ -109,7 +109,6 @@ export const API_WAREHOUSES_GROUP = {
   base: "/warehouses",
   create: "/warehouses",
   list: "/warehouses",
-  listActive: "/warehouses/active",
   searchState: "/warehouses/search-state",
   saveSearchMetric: "/warehouses/search-metrics",
   deleteSearchMetric: (metricId: string) => `/warehouses/search-metrics/${metricId}`,
@@ -156,7 +155,6 @@ export const API_SUPPLIERS_GROUP = {
   base: "/suppliers",
   create: "/suppliers",
   list: "/suppliers",
-  listAll: "/suppliers/active",
   searchState: "/suppliers/search-state",
   saveSearchMetric: "/suppliers/search-metrics",
   deleteSearchMetric: (metricId: string) => `/suppliers/search-metrics/${metricId}`,
@@ -164,14 +162,6 @@ export const API_SUPPLIERS_GROUP = {
   update: (id: string) => `/suppliers/${id}`,
   updateActive: (id: string) => `/suppliers/${id}/active`,
   identityLookup: "/identity",
-};
-
-export const API_SUPPLIER_VARIANTS_GROUP = {
-  base: "/suppliers/variants",
-  create: "/suppliers/variants",
-  list: "/suppliers/variants/all",
-  byId: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
-  update: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
 };
 export const API_PURCHASE_GROUP = {
   base: "/purchases/orders",
@@ -205,7 +195,6 @@ export const API_PRODUCTION_ORDERS_GROUP = {
   close: (id: string) => `/production-orders/${id}/close`,
   cancel: (id: string) => `/production-orders/${id}/cancel`,
   addItem: (id: string) => `/production-orders/${id}/items`,
-  updateItem: (id: string, itemId: string) => `/production-orders/${id}/items/${itemId}`,
   removeItem: (id: string, itemId: string) => `/production-orders/${id}/items/${itemId}`,
 };
 

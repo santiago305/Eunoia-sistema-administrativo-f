@@ -20,7 +20,6 @@ type ListUbigeoProvincesParams = {
 type ListUbigeoDistrictsParams = {
   provinceId?: string;
   provinceIds?: string[];
-  departmentIds?: string[];
 };
 
 function normalizeIds(values?: string[]) {
@@ -67,9 +66,6 @@ export const listUbigeoDistricts = async (
         ...(params.provinceId ? { provinceId: params.provinceId } : {}),
         ...(normalizeIds(params.provinceIds)
           ? { provinceIds: normalizeIds(params.provinceIds) }
-          : {}),
-        ...(normalizeIds(params.departmentIds)
-          ? { departmentIds: normalizeIds(params.departmentIds) }
           : {}),
       },
     },
