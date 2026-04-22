@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import type { SecurityTopIpItem } from "../../types/security.api";
@@ -22,7 +22,7 @@ function formatLastViolation(item: SecurityTopIpItem) {
   });
 }
 
-export function TopIpsSection({
+export const TopIpsSection = memo(function TopIpsSection({
   loading,
   topIps,
 }: {
@@ -76,4 +76,4 @@ export function TopIpsSection({
       />
     </SectionCard>
   );
-}
+});

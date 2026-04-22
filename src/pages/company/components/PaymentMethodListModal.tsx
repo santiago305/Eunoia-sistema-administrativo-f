@@ -231,6 +231,7 @@ export function PaymentMethodListModal({
             emptyMessage="No hay métodos asignados."
             hoverable={false}
             animated={false}
+            responsiveMode="table"
           />
       </div>
 

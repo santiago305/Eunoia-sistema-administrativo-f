@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { CalendarRange } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -90,8 +89,7 @@ export function AnimatedDateRangePicker({
   return (
     <div ref={rootRef} className={cn("w-fit", containerClassName)}>
       <div className="relative">
-        <motion.button
-          layout="size"
+        <button
           ref={triggerRef}
           type="button"
           id={name}
@@ -101,16 +99,8 @@ export function AnimatedDateRangePicker({
             if (!canOpen) return;
             openPanel();
           }}
-          transition={{
-            layout: {
-              type: "spring",
-              stiffness: 180,
-              damping: 24,
-              mass: 0.9,
-            },
-          }}
           className={cn(
-            "peer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-lg border bg-background px-3 text-left text-sm text-foreground outline-none transition-all will-change-[width]",
+            "peer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-lg border bg-background px-3 text-left text-sm text-foreground outline-none transition-all",
             error
               ? "border-red-500 ring-2 ring-red-200/40"
               : open
@@ -129,28 +119,17 @@ export function AnimatedDateRangePicker({
         >
           <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
 
-          <AnimatePresence initial={false}>
-            {hasValue ? (
-              <motion.span
-                key="content"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0}}
-                transition={{
-                  duration: 0.18,
-                  delay: 0.06,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                className={cn(
-                  "truncate pr-1",
-                  hasValue ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {displayValue || placeholder}
-              </motion.span>
-            ) : null}
-          </AnimatePresence>
-        </motion.button>
+          {hasValue ? (
+            <span
+              className={cn(
+                "truncate pr-1",
+                hasValue ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {displayValue || placeholder}
+            </span>
+          ) : null}
+        </button>
 
         <label id={labelId} className="sr-only">
           {label}

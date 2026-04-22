@@ -1,10 +1,8 @@
-import { AnimatePresence, motion } from "framer-motion";
 import type { Dispatch, SetStateAction } from "react";
 import type { User, UserListStatus } from "../types/users.types";
 import { ROLE_LABELS } from "../types/roles.types";
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
-const fadeUp = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 8 } };
 
 function RoleChip({ role }: { role: User["role"] }) {
   const map: Record<User["role"], string> = {
@@ -12,6 +10,7 @@ function RoleChip({ role }: { role: User["role"] }) {
     moderator: "border-[rgba(33,184,166,.25)] bg-[rgba(33,184,166,.08)] text-[rgba(12,98,88,1)]",
     adviser: "border-indigo-200 bg-indigo-50 text-indigo-700",
   };
+
   return <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", map[role])}>{ROLE_LABELS[role]}</span>;
 }
 
@@ -62,7 +61,7 @@ export function UsersLeftPanel({
               onClick={() => setStatus(opt.key)}
               className={cn(
                 "rounded-lg px-2 py-1.5 text-[11px] font-medium transition 2xl:text-[12px]",
-                status === opt.key ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-600 hover:text-zinc-800"
+                status === opt.key ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-600 hover:text-zinc-800",
               )}
             >
               {opt.label}
@@ -80,7 +79,7 @@ export function UsersLeftPanel({
             className={cn(
               "w-full rounded-xl border border-zinc-200 bg-zinc-50 px-9 py-2.5 text-[13px] text-zinc-800",
               "outline-none focus:border-[rgba(33,184,166,.45)] focus:bg-white focus:ring-4 focus:ring-[rgba(33,184,166,.10)]",
-              "2xl:text-[14px]"
+              "2xl:text-[14px]",
             )}
           />
         </div>
@@ -97,7 +96,7 @@ export function UsersLeftPanel({
               disabled={!hasPrevPage}
               className={cn(
                 "rounded-lg border px-2.5 py-1.5 text-[12px] transition",
-                !hasPrevPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                !hasPrevPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
               )}
             >
               ←
@@ -107,7 +106,7 @@ export function UsersLeftPanel({
               disabled={!hasNextPage}
               className={cn(
                 "rounded-lg border px-2.5 py-1.5 text-[12px] transition",
-                !hasNextPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                !hasNextPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
               )}
             >
               →
@@ -119,54 +118,37 @@ export function UsersLeftPanel({
       <div className="min-h-0 flex-1">
         <div className="h-full overflow-auto p-2.5">
           <div className="grid gap-2">
-            <AnimatePresence initial={false}>
-              {loading ? (
-                Array.from({ length: 0 }).map((_, i) => (
-                  <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-zinc-200 bg-white p-3">
-                    <div className="h-3 w-40 animate-pulse rounded bg-zinc-100" />
-                    <div className="mt-2 h-3 w-56 animate-pulse rounded bg-zinc-100" />
-                  </motion.div>
-                ))
-              ) : (
-                <>
-                  {users.map((u) => {
-                    const active = u.id === selectedId;
-                    return (
-                      <motion.button
-                        key={u.id}
-                        layout
-                        {...fadeUp}
-                        whileHover={{ y: -1 }}
-                        whileTap={{ scale: 0.995 }}
-                        onClick={() => setSelectedId(u.id)}
-                        className={cn(
-                          "w-full rounded-xl border p-3 text-left transition",
-                          active
-                            ? "border-[rgba(33,184,166,.45)] bg-[rgba(33,184,166,.05)] shadow-[0_10px_22px_rgba(33,184,166,.10)]"
-                            : "border-zinc-200 bg-white hover:bg-zinc-50"
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="truncate text-[13px] font-medium text-zinc-900 2xl:text-[14px]">{u.name}</div>
-                            <div className="mt-1 truncate text-[12px] text-zinc-600 2xl:text-[13px]">{u.email}</div>
-                            <div className="mt-1 truncate text-[11px] text-zinc-500 2xl:text-[12px]">{u.phone}</div>
-                          </div>
-                          <RoleChip role={u.role} />
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-
-                  {!users.length && (
-                    <motion.div {...fadeUp} className="rounded-xl border border-zinc-200 bg-white p-6 text-center">
-                      <div className="text-[13px] font-medium text-zinc-900">Sin resultados</div>
-                      <div className="mt-1 text-[12px] text-zinc-600">{usersError || `No encontramos usuarios.`}</div>
-                    </motion.div>
+            {users.map((u) => {
+              const active = u.id === selectedId;
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => setSelectedId(u.id)}
+                  className={cn(
+                    "w-full rounded-xl border p-3 text-left transition-colors",
+                    active
+                      ? "border-[rgba(33,184,166,.45)] bg-[rgba(33,184,166,.05)] shadow-[0_10px_22px_rgba(33,184,166,.10)]"
+                      : "border-zinc-200 bg-white hover:bg-zinc-50",
                   )}
-                </>
-              )}
-            </AnimatePresence>
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-medium text-zinc-900 2xl:text-[14px]">{u.name}</div>
+                      <div className="mt-1 truncate text-[12px] text-zinc-600 2xl:text-[13px]">{u.email}</div>
+                      <div className="mt-1 truncate text-[11px] text-zinc-500 2xl:text-[12px]">{u.phone}</div>
+                    </div>
+                    <RoleChip role={u.role} />
+                  </div>
+                </button>
+              );
+            })}
+
+            {!loading && !users.length ? (
+              <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center">
+                <div className="text-[13px] font-medium text-zinc-900">Sin resultados</div>
+                <div className="mt-1 text-[12px] text-zinc-600">{usersError || "No encontramos usuarios."}</div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

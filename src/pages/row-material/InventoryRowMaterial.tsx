@@ -583,10 +583,9 @@ export default function CatalogInventory() {
       {
         id: "name",
         header: "SKU",
-        cell: (row, index) =>
+        cell: (row) =>
           buildSkuLabelFromItem({
-            skuItem: row.sku,        
-            index,
+            skuItem: row.sku,
             fallbackName: row.sku.sku.name ?? "",
           }),
       },

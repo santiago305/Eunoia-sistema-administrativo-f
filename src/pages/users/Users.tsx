@@ -1,7 +1,8 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
+import { Modal } from "@/components/modales/Modal";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import {
   countUsersByRole,
@@ -23,8 +24,8 @@ import type { Role, RoleOption, User, UserListStatus } from "./types/users.types
 
 const ROLES = Object.values(RoleType) as Role[];
 
-// ---------- Utils ----------
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
+
 const normalizeUser = (u: UserApiListItem): User => {
   const raw = u as UserApiListItem & {
     created_at?: string | null;
@@ -44,6 +45,7 @@ const normalizeUser = (u: UserApiListItem): User => {
     updatedAt: raw.updatedAt ?? raw.updated_at ?? raw.updateAt ?? null,
   };
 };
+
 const readError = (error: unknown) => {
   if (typeof error === "object" && error !== null && "response" in error) {
     const response = (error as { response?: { status?: number; data?: { message?: string | string[] } } }).response;
@@ -51,6 +53,7 @@ const readError = (error: unknown) => {
     const normalizedMessage = Array.isArray(message) ? message.join(" | ") : String(message ?? "");
     return { status: response?.status ?? 0, message: normalizedMessage };
   }
+
   return { status: 0, message: "" };
 };
 
@@ -64,6 +67,7 @@ export default function Users() {
   const [status, setStatus] = useState<UserListStatus>("active");
 
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query, 250);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<Pick<ListUsersResponse, "total" | "page" | "pageSize" | "totalPages" | "hasPrev" | "hasNext">>({
     total: 0,
@@ -84,16 +88,19 @@ export default function Users() {
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       setLoading(true);
       setUsersError("");
+
       try {
         const data = await listUsers({
           status,
           page,
-          q: query.trim() || undefined,
+          q: debouncedQuery.trim() || undefined,
         });
         const normalized = Array.isArray(data?.items) ? data.items.map(normalizeUser) : [];
+
         if (!cancelled) {
           setUsers(normalized);
           setPagination({
@@ -115,6 +122,7 @@ export default function Users() {
             : parsed.status === 403
               ? "Acceso denegado: rol insuficiente."
               : "No se pudo cargar la lista de usuarios.");
+
         if (!cancelled) {
           setUsers([]);
           setPagination((prev) => ({ ...prev, hasPrev: false, hasNext: false }));
@@ -125,13 +133,15 @@ export default function Users() {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [page, query, status]);
+  }, [debouncedQuery, page, status]);
 
   useEffect(() => {
     let cancelled = false;
+
     const loadRoles = async () => {
       try {
         const response = await findAllRoles();
@@ -150,29 +160,39 @@ export default function Users() {
         if (!cancelled) void 0;
       }
     };
+
     void loadRoles();
+
     return () => {
       cancelled = true;
     };
   }, []);
 
   const selected = useMemo(() => users.find((u) => u.id === selectedId) ?? null, [users, selectedId]);
+
   useEffect(() => {
     if (selected) setRoleDraft(selected.role);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => setPage(1), [query, status]);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, status]);
 
   const safePage = Math.max(1, pagination.page || page);
 
   const counts = useMemo(() => {
     const byRole = {} as Record<Role, number>;
-    for (const u of users) byRole[u.role] = (byRole[u.role] ?? 0) + 1;
+
+    for (const u of users) {
+      byRole[u.role] = (byRole[u.role] ?? 0) + 1;
+    }
+
     return byRole;
   }, [users]);
 
   useEffect(() => {
     let cancelled = false;
+
     const loadCountsByRole = async () => {
       try {
         const data = await countUsersByRole({ status: "all" });
@@ -181,7 +201,9 @@ export default function Users() {
         if (!cancelled) setCountsByRole(null);
       }
     };
+
     void loadCountsByRole();
+
     return () => {
       cancelled = true;
     };
@@ -191,6 +213,24 @@ export default function Users() {
     const apiRoles = Object.keys(countsByRole?.byRole ?? {}) as Role[];
     return apiRoles.length ? apiRoles : ROLES;
   }, [countsByRole]);
+
+  const handleQueryChange = useCallback((value: string) => {
+    startTransition(() => {
+      setQuery(value);
+    });
+  }, []);
+
+  const handleStatusChange = useCallback((nextStatus: UserListStatus) => {
+    startTransition(() => {
+      setStatus(nextStatus);
+    });
+  }, []);
+
+  const handleSelectUser = useCallback((id: string) => {
+    startTransition(() => {
+      setSelectedId(id);
+    });
+  }, []);
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
@@ -203,6 +243,7 @@ export default function Users() {
         }
       }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -212,12 +253,14 @@ export default function Users() {
     if (roleDraft === selected.role) return;
     clearFlash();
     setSavingRole(true);
+
     try {
       const roleId = roles.find((r) => r.description === roleDraft)?.id;
       if (!roleId) {
         showFlash(errorResponse("No se pudo resolver el rol seleccionado."));
         return;
       }
+
       const res = await updateUserRole(selected.id, { roleId });
       const nowIso = new Date().toISOString();
       setUsers((p) => p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft, updatedAt: nowIso } : u)));
@@ -234,11 +277,12 @@ export default function Users() {
     if (!selected) return;
     clearFlash();
     setTogglingStatus(true);
+
     try {
       const res = await deleteUserById(selected.id);
       const nowIso = new Date().toISOString();
       setUsers((prev) =>
-        prev.map((u) => (u.id === selected.id ? { ...u, deleted: true, deletedAt: u.deletedAt ?? nowIso, updatedAt: nowIso } : u))
+        prev.map((u) => (u.id === selected.id ? { ...u, deleted: true, deletedAt: u.deletedAt ?? nowIso, updatedAt: nowIso } : u)),
       );
       showFlash(successResponse((res as { message?: string })?.message || "Usuario desactivado"));
     } catch (error: unknown) {
@@ -253,6 +297,7 @@ export default function Users() {
     if (!selected) return;
     clearFlash();
     setTogglingStatus(true);
+
     try {
       const res = await restoreUserById(selected.id);
       const nowIso = new Date().toISOString();
@@ -272,12 +317,11 @@ export default function Users() {
         "w-full bg-gradient-to-b from-white via-white to-zinc-50",
         "h-[calc(100vh-var(--dashTop,0px))]",
         "flex flex-col",
-        "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12"
+        "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12",
       )}
     >
       <PageTitle title="Gestión de usuarios" />
       <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
-        {/* Top bar con referencias y resumen */}
         <UsersHeader
           onCreateClick={() => setModalOpen(true)}
           visibleRoles={visibleRoles}
@@ -288,7 +332,7 @@ export default function Users() {
         <div className={cn("mt-4 grid min-h-0 flex-1 gap-3", "lg:grid-cols-[420px_1fr]", "2xl:gap-4 3xl:gap-5")}>
           <UsersLeftPanel
             query={query}
-            setQuery={setQuery}
+            setQuery={handleQueryChange}
             safePage={safePage}
             setPage={setPage}
             hasPrevPage={pagination.hasPrev}
@@ -298,10 +342,10 @@ export default function Users() {
             loading={loading}
             users={users}
             selectedId={selectedId}
-            setSelectedId={setSelectedId}
+            setSelectedId={handleSelectUser}
             usersError={usersError}
             status={status}
-            setStatus={setStatus}
+            setStatus={handleStatusChange}
           />
           <UsersRightPanel
             selected={selected}
@@ -316,35 +360,15 @@ export default function Users() {
         </div>
       </div>
 
-      {/* âœ… Modal centrado: crear usuario */}
-      <AnimatePresence>
-        {modalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-3"
-            onMouseDown={(e) => e.target === e.currentTarget && setModalOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 14, scale: 0.99 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 14, scale: 0.99 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              <UserForm closeModal={() => setModalOpen(false)} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        hideHeader
+        className="w-full max-w-[740px]"
+        bodyClassName="p-0"
+      >
+        <UserForm closeModal={() => setModalOpen(false)} />
+      </Modal>
     </div>
   );
 }
-
-
-
-
-
-
-
-

@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/dashboard/SidebarProvider";
 import Sidebar from "@/components/dashboard/Sidebar";
@@ -16,7 +17,7 @@ const DashboardContent = () => {
   const { logout } = useAuth();
   const { userDetails } = useUserDetails();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
       toast({
@@ -29,32 +30,31 @@ const DashboardContent = () => {
         description: "No se ha cerrado sesion correctamente.",
       });
     }
-  };
+  }, [logout, toast]);
+
+  const sidebarUser = useMemo(
+    () => ({
+      id: userDetails?.data?.id ?? "unknown",
+      name: userDetails?.data?.name ?? "Usuario",
+      email: userDetails?.data?.email ?? "correo@ejemplo.com",
+      avatar: resolveProfileAvatarUrl(userDetails?.data?.avatarUrl) || undefined,
+    }),
+    [
+      userDetails?.data?.avatarUrl,
+      userDetails?.data?.email,
+      userDetails?.data?.id,
+      userDetails?.data?.name,
+    ],
+  );
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {isMobile ? null : (
-        <Sidebar
-          user={{
-            id: userDetails?.data?.id ?? "unknown",
-            name: userDetails?.data?.name ?? "Usuario",
-            email: userDetails?.data?.email ?? "correo@ejemplo.com",
-            avatar: resolveProfileAvatarUrl(userDetails?.data?.avatarUrl) || undefined,
-          }}
-          onLogout={handleLogout}
-        />
+        <Sidebar user={sidebarUser} onLogout={handleLogout} />
       )}
 
       {isMobile ? (
-        <MobileSidebar
-          user={{
-            id: userDetails?.data?.id ?? "unknown",
-            name: userDetails?.data?.name ?? "Usuario",
-            email: userDetails?.data?.email ?? "correo@ejemplo.com",
-            avatar: resolveProfileAvatarUrl(userDetails?.data?.avatarUrl) || undefined,
-          }}
-          onLogout={handleLogout}
-        />
+        <MobileSidebar user={sidebarUser} onLogout={handleLogout} />
       ) : null}
 
       <main className="scroll-area relative h-full flex-1 overflow-y-auto">

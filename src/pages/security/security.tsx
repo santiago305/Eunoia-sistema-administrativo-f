@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Activity, AlertTriangle, Ban, Clock } from "lucide-react";
 
@@ -38,6 +38,10 @@ import { AnalyticsSection } from "./components/sections/AnalyticsSection";
 import { QuickActionPanel } from "./components/sections/QuickActionPanel";
 import { TopIpsSection } from "./components/sections/TopIpsSection";
 
+type FetchSecurityOptions = {
+  preserveContent?: boolean;
+};
+
 export default function SecurityPage() {
   const navigate = useNavigate();
   const { showFlash } = useFlashMessage();
@@ -57,25 +61,35 @@ export default function SecurityPage() {
   const [summary, setSummary] = useState<SecuritySummary | null>(null);
   const [hours, setHours] = useState(24);
   const [topLimit, setTopLimit] = useState(20);
-  const [loading, setLoading] = useState(true);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [bansLoading, setBansLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [mutating, setMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [pollingPaused, setPollingPaused] = useState(false);
+  const [isDocumentVisible, setIsDocumentVisible] = useState(
+    () => (typeof document === "undefined" ? true : !document.hidden),
+  );
   const [reasonFilter, setReasonFilter] = useState("");
   const [auditExporting, setAuditExporting] = useState(false);
   const [ipRiskLoading, setIpRiskLoading] = useState(false);
   const [ipRiskResult, setIpRiskResult] = useState<SecurityRiskScoreByIpResponse | null>(null);
+  const [hasLoadedDashboard, setHasLoadedDashboard] = useState(false);
+  const [hasLoadedBans, setHasLoadedBans] = useState(false);
 
-  const fetchAll = useCallback(async () => {
+  const fetchDashboardData = useCallback(async ({ preserveContent = false }: FetchSecurityOptions = {}) => {
     try {
       setError(null);
-      setLoading(true);
+      if (preserveContent && hasLoadedDashboard) {
+        setRefreshing(true);
+      } else {
+        setDashboardLoading(true);
+      }
 
-      const [summaryData, ips, bans, activity, reasons, methods, routes, risk, catalog] = await Promise.all([
+      const [summaryData, ips, activity, reasons, methods, routes, risk, catalog] = await Promise.all([
         getSecuritySummary({ hours, reason: reasonFilter || undefined }),
         getSecurityTopIps({ hours, limit: topLimit, reason: reasonFilter || undefined }),
-        getSecurityActiveBans({ page: activeBansPage, limit: activeBansLimit }),
         getSecurityActivitySeries({ hours, reason: reasonFilter || undefined }),
         getSecurityReasonDistribution({ hours }),
         getSecurityMethodDistribution({ hours, reason: reasonFilter || undefined }),
@@ -86,10 +100,6 @@ export default function SecurityPage() {
 
       setSummary(summaryData);
       setTopIps(ips);
-      setActiveBans(bans.data);
-      setActiveBansPage(bans.pagination?.page ?? 1);
-      setActiveBansLimit(bans.pagination?.limit ?? Math.max(bans.data.length, 1));
-      setActiveBansTotal(bans.pagination?.total ?? bans.data.length);
       setActivitySeries(activity.data);
       setReasonDistribution(reasons.data);
       setMethodDistribution(methods.data);
@@ -97,33 +107,76 @@ export default function SecurityPage() {
       setRiskScore(risk);
       setReasonCatalog(catalog);
       setLastUpdated(new Date());
+      setHasLoadedDashboard(true);
     } catch (err) {
       console.error(err);
       setError("No se pudo cargar la informacion de seguridad.");
     } finally {
-      setLoading(false);
+      setDashboardLoading(false);
+      setRefreshing(false);
     }
-  }, [activeBansLimit, activeBansPage, hours, reasonFilter, topLimit]);
+  }, [hasLoadedDashboard, hours, reasonFilter, topLimit]);
+
+  const fetchActiveBansPage = useCallback(async ({ preserveContent = false }: FetchSecurityOptions = {}) => {
+    try {
+      setError(null);
+      if (!preserveContent || !hasLoadedBans) {
+        setBansLoading(true);
+      }
+
+      const bans = await getSecurityActiveBans({ page: activeBansPage, limit: activeBansLimit });
+      setActiveBans(bans.data);
+      setActiveBansPage(bans.pagination?.page ?? 1);
+      setActiveBansLimit(bans.pagination?.limit ?? Math.max(bans.data.length, 1));
+      setActiveBansTotal(bans.pagination?.total ?? bans.data.length);
+      setHasLoadedBans(true);
+    } catch (err) {
+      console.error(err);
+      setError("No se pudo cargar la informacion de seguridad.");
+    } finally {
+      setBansLoading(false);
+    }
+  }, [activeBansLimit, activeBansPage, hasLoadedBans]);
+
+  const fetchAll = useCallback(async (options: FetchSecurityOptions = {}) => {
+    await Promise.all([fetchDashboardData(options), fetchActiveBansPage(options)]);
+  }, [fetchActiveBansPage, fetchDashboardData]);
 
   useEffect(() => {
-    void fetchAll();
-  }, [fetchAll]);
+    void fetchDashboardData();
+  }, [fetchDashboardData]);
 
   useEffect(() => {
-    if (pollingPaused) return;
+    void fetchActiveBansPage();
+  }, [fetchActiveBansPage]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(!document.hidden);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
+    if (pollingPaused || !isDocumentVisible) return;
 
     const interval = window.setInterval(() => {
-      void fetchAll();
+      void fetchAll({ preserveContent: true });
     }, 20000);
 
     return () => window.clearInterval(interval);
-  }, [fetchAll, pollingPaused]);
+  }, [fetchAll, isDocumentVisible, pollingPaused]);
 
   const handleBlacklist = async (ip: string, notes?: string) => {
     try {
       setMutating(true);
       await blacklistSecurityIp({ ip, notes });
-      await fetchAll();
+      await Promise.all([
+        fetchDashboardData({ preserveContent: true }),
+        fetchActiveBansPage({ preserveContent: true }),
+      ]);
     } catch (err) {
       console.error(err);
       setError("No se pudo bloquear la IP manualmente.");
@@ -179,6 +232,17 @@ export default function SecurityPage() {
     }
   };
 
+  const handleRefresh = useCallback(() => {
+    if (refreshing) return;
+    void fetchAll({ preserveContent: true });
+  }, [fetchAll, refreshing]);
+
+  const handleReasonChange = useCallback((reason: string) => {
+    startTransition(() => {
+      setReasonFilter(reason);
+    });
+  }, []);
+
   const reasonOptions = useMemo(() => {
     if (reasonCatalog.length > 0) {
       return reasonCatalog
@@ -214,7 +278,8 @@ export default function SecurityPage() {
         setHours={setHours}
         topLimit={topLimit}
         setTopLimit={setTopLimit}
-        onRefresh={() => void fetchAll()}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
         lastUpdated={lastUpdated}
       />
 
@@ -269,7 +334,7 @@ export default function SecurityPage() {
         onTogglePolling={handleTogglePolling}
         reasonOptions={reasonOptions}
         selectedReason={reasonFilter}
-        onReasonChange={setReasonFilter}
+        onReasonChange={handleReasonChange}
         onExportAudit={handleExportAudit}
         exportLoading={auditExporting}
         onLookupIpRisk={handleLookupIpRisk}
@@ -279,12 +344,12 @@ export default function SecurityPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
         <TopIpsSection
-          loading={loading}
+          loading={dashboardLoading}
           topIps={topIps}
         />
 
         <ActiveBansSection
-          loading={loading}
+          loading={bansLoading}
           activeBans={activeBans}
           pagination={{ page: activeBansPage, limit: activeBansLimit, total: activeBansTotal }}
           onNavigate={navigate}

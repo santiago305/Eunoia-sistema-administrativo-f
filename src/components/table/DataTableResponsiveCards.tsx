@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import type { MouseEvent, ReactNode } from "react";
 import type { DataTableColumn } from "./types";
 
@@ -8,6 +7,7 @@ type Props<T> = {
   loading?: boolean;
   emptyMessage: string;
   animated?: boolean;
+  visibleOnDesktop?: boolean;
   rowClickable?: boolean;
   onRowClick?: (row: T, index: number) => void;
   rowClassName?: (row: T, index: number) => string | undefined;
@@ -36,14 +36,18 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
   loading,
   emptyMessage,
   animated = true,
+  visibleOnDesktop = false,
   rowClickable,
   onRowClick,
   rowClassName,
   resolveRowKey,
 }: Props<T>) {
-  if (loading) {
+  const responsiveClassName = visibleOnDesktop ? "" : "md:hidden";
+  const showSkeletonLoading = loading && data.length === 0;
+
+  if (showSkeletonLoading) {
     return (
-      <div className="space-y-3 md:hidden">
+      <div className={cn("space-y-3", responsiveClassName)}>
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
@@ -66,7 +70,7 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
 
   if (data.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground md:hidden">
+      <div className={cn("rounded-2xl border border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground", responsiveClassName)}>
         {emptyMessage}
       </div>
     );
@@ -75,7 +79,13 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
   const cardColumns = columns.filter((column) => column.showInCards !== false);
 
   return (
-    <div className="space-y-3 md:hidden">
+    <div className={cn("relative space-y-3", responsiveClassName)}>
+      {loading ? (
+        <div className="pointer-events-none absolute right-3 top-3 z-10 inline-flex items-center rounded-full border border-border/70 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+          Actualizando...
+        </div>
+      ) : null}
+
       {data.map((row, index) => {
         const titleColumn =
           cardColumns.find((column) => column.cardTitle) ?? cardColumns[0];
@@ -173,27 +183,16 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
           </div>
         );
 
-        if (!animated) {
-          return (
-            <div
-              key={resolveRowKey(row, index)}
-              onClick={handleCardClick}
-            >
-              {content}
-            </div>
-          );
-        }
-
         return (
-          <motion.div
+          <div
             key={resolveRowKey(row, index)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: index * 0.03 }}
             onClick={handleCardClick}
+            className={cn(
+              animated && "transition-transform duration-200 ease-out",
+            )}
           >
             {content}
-          </motion.div>
+          </div>
         );
       })}
     </div>

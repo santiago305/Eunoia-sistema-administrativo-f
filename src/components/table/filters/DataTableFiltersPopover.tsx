@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { Check, RotateCcw } from "lucide-react";
 import { createPortal } from "react-dom";
 import {
@@ -151,6 +150,19 @@ export function DataTableFiltersPopover({
     });
   }, [anchorRef, maxWidth]);
 
+  const scheduleUpdatePosition = useCallback(() => {
+    let frameId = 0;
+
+    return () => {
+      if (frameId) return;
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updatePosition();
+      });
+    };
+  }, [updatePosition]);
+
   useLayoutEffect(() => {
     if (!open) return;
 
@@ -165,24 +177,6 @@ export function DataTableFiltersPopover({
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
-    };
-  }, [open, updatePosition]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    let animationFrame = 0;
-
-    // Keep the popover attached while surrounding layout transitions move the anchor.
-    const trackAnchorPosition = () => {
-      updatePosition();
-      animationFrame = requestAnimationFrame(trackAnchorPosition);
-    };
-
-    animationFrame = requestAnimationFrame(trackAnchorPosition);
-
-    return () => {
-      cancelAnimationFrame(animationFrame);
     };
   }, [open, updatePosition]);
 
@@ -209,25 +203,29 @@ export function DataTableFiltersPopover({
       }
     };
 
+    const handleViewportChange = scheduleUpdatePosition();
     const resizeObserver = new ResizeObserver(() => {
-      updatePosition();
+      handleViewportChange();
     });
 
     resizeObserver.observe(anchor);
     resizeObserver.observe(panel);
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", handleViewportChange, { passive: true });
+    window.addEventListener("scroll", handleViewportChange, {
+      capture: true,
+      passive: true,
+    });
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [anchorRef, onClose, open, updatePosition]);
+  }, [anchorRef, onClose, open, scheduleUpdatePosition]);
 
   useEffect(() => {
     if (!open) {
@@ -321,17 +319,12 @@ export function DataTableFiltersPopover({
   }
 
   const panelContent = open ? (
-    <AnimatePresence>
-      <motion.div
+      <div
         ref={panelRef}
         role="dialog"
         aria-modal="false"
-        initial={{ opacity: 0, scale: 0.985, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.985, y: 6 }}
-        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "fixed origin-top-right overflow-hidden rounded-2xl border border-border/70 bg-background text-foreground shadow-2xl",
+          "fixed origin-top-right overflow-hidden rounded-2xl border border-border/70 bg-background text-foreground shadow-2xl transition-[opacity,transform] duration-150 ease-out",
           "flex max-h-[calc(100vh-1rem)] flex-col",
           isExpanded || draftFilters.length > 0 ? "min-h-[20rem]" : "min-h-[14rem]",
         )}
@@ -512,8 +505,7 @@ export function DataTableFiltersPopover({
             </div>
           </div>
         ) : null}
-      </motion.div>
-    </AnimatePresence>
+      </div>
   ) : null;
 
   if (typeof document === "undefined") return null;

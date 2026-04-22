@@ -1,11 +1,11 @@
 import {
+  memo,
   useState,
   cloneElement,
   isValidElement,
   ReactElement,
 } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import { IconChevronRight } from "./icons";
 import { useSidebarContext } from "./SidebarContext";
 import type { SidebarItem as SidebarItemType } from "./types";
@@ -85,16 +85,15 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
     );
 
   const caret = (
-    <motion.span
-      animate={{ rotate: isOpen ? 90 : 0 }}
-      transition={{ duration: 0.18 }}
+    <span
       className={cn(
-        "flex items-center justify-center text-sidebar-muted",
+        "flex items-center justify-center text-sidebar-muted transition-transform duration-200",
+        isOpen && "rotate-90",
         isParentHighlighted && "text-primary/80"
       )}
     >
       <IconChevronRight className="size-4" />
-    </motion.span>
+    </span>
   );
 
   const ParentInnerContent = () => (
@@ -262,53 +261,43 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
         </div>
       )}
 
-      <AnimatePresence initial={false}>
-        {hasChildren && isOpen && !isSidebarCollapsed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <motion.div
-              initial={{ y: -6 }}
-              animate={{ y: 0 }}
-              exit={{ y: -6 }}
-              transition={{ duration: 0.18 }}
-              className="relative ml-5 mt-1 pl-4"
-            >
-              {/* Línea lateral sutil */}
-              <div className="absolute bottom-1 left-0 top-1 w-px rounded-full bg-border/80" />
+      {hasChildren && !isSidebarCollapsed ? (
+        <div
+          className={cn(
+            "overflow-hidden transition-[max-height,opacity] duration-200 ease-out",
+            isOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          )}
+        >
+          <div className="relative ml-5 mt-1 pl-4">
+            <div className="absolute bottom-1 left-0 top-1 w-px rounded-full bg-border/80" />
 
-              <div className="space-y-1">
-                {item.children?.map((child, index) => {
-                  const childActive = child.href === location.pathname;
+            <div className="space-y-1">
+              {item.children?.map((child, index) => {
+                const childActive = child.href === location.pathname;
 
-                  return (
-                    <Link
-                      key={`${child.href ?? child.label}-${index}`}
-                      to={child.href || "#"}
-                      className={childLinkClass(childActive)}
+                return (
+                  <Link
+                    key={`${child.href ?? child.label}-${index}`}
+                    to={child.href || "#"}
+                    className={childLinkClass(childActive)}
+                  >
+                    <span
+                      className={cn(
+                        "truncate",
+                        childActive ? "text-primary" : ""
+                      )}
                     >
-                      <span
-                        className={cn(
-                          "truncate",
-                          childActive ? "text-primary" : ""
-                        )}
-                      >
-                        {child.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                      {child.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
 
-export default SidebarItemComponent;
+export default memo(SidebarItemComponent);

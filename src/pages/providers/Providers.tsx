@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Menu, Pencil, Plus, Timer, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { AlertModal } from "@/components/AlertModal";
@@ -116,12 +116,20 @@ export default function Providers() {
   }, [showFlash]);
 
   const submitSearch = useCallback(() => {
-    setAppliedSearchText(searchText.trim());
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setAppliedSearchText(searchText.trim());
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, [searchText]);
+
+  const handleSearchTextChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSearchText(value);
+    });
+  }, []);
 
   const getSupplierDisplayName = useCallback((supplier: Supplier) => {
     const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
@@ -399,41 +407,47 @@ export default function Providers() {
 
   const applySmartSnapshot = useCallback((snapshot: ProviderSearchSnapshot) => {
     const normalized = sanitizeProviderSearchSnapshot(snapshot);
-    setSearchText(normalized.q ?? "");
-    setAppliedSearchText(normalized.q ?? "");
-    setSearchFilters(normalized.filters);
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setSearchText(normalized.q ?? "");
+      setAppliedSearchText(normalized.q ?? "");
+      setSearchFilters(normalized.filters);
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, []);
 
   const handleApplySearchRule = useCallback((rule: ProviderSearchRule) => {
-    setSearchFilters((current) => {
-      const next = upsertProviderSearchRule(
-        sanitizeProviderSearchSnapshot({ q: searchText, filters: current }),
-        rule,
-      );
-      return next.filters;
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = upsertProviderSearchRule(
+          sanitizeProviderSearchSnapshot({ q: searchText, filters: current }),
+          rule,
+        );
+        return next.filters;
+      });
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
     });
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
   }, [searchText]);
 
   const handleRemoveSearchRule = useCallback((fieldId: ProviderSearchFilterKey) => {
-    setSearchFilters((current) => {
-      const next = removeProviderSearchKey(
-        sanitizeProviderSearchSnapshot({ q: searchText, filters: current }),
-        fieldId,
-      );
-      return next.filters;
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = removeProviderSearchKey(
+          sanitizeProviderSearchSnapshot({ q: searchText, filters: current }),
+          fieldId,
+        );
+        return next.filters;
+      });
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
     });
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
   }, [searchText]);
 
   const handleRemoveChip = useCallback((key: "q" | ProviderSearchFilterKey) => {
@@ -441,14 +455,22 @@ export default function Providers() {
       sanitizeProviderSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
       key,
     );
-    setSearchText(nextSnapshot.q ?? "");
-    setAppliedSearchText(nextSnapshot.q ?? "");
-    setSearchFilters(nextSnapshot.filters);
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setSearchText(nextSnapshot.q ?? "");
+      setAppliedSearchText(nextSnapshot.q ?? "");
+      setSearchFilters(nextSnapshot.filters);
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, [appliedSearchText, searchFilters]);
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    startTransition(() => {
+      setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+    });
+  }, []);
 
   const handleSaveMetric = useCallback(async (name: string) => {
     const snapshot = sanitizeProviderSearchSnapshot({
@@ -532,7 +554,7 @@ export default function Providers() {
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}
-            onChange={setSearchText}
+            onChange={handleSearchTextChange}
             onSubmitSearch={submitSearch}
             searchLabel="Busca tu proveedor"
             searchName="provider-smart-search"
@@ -559,9 +581,7 @@ export default function Providers() {
           limit: effectiveLimit,
           total: serverPagination.total,
         }}
-        onPageChange={(nextPage) => {
-          setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
-        }}
+        onPageChange={handlePageChange}
         tableClassName="text-[10px]"
       />
 

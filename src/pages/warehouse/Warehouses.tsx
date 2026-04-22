@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Boxes, Menu, Pencil, Plus, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { AlertModal } from "@/components/AlertModal";
@@ -56,7 +56,6 @@ import {
 import { WarehouseSearchFields } from "@/pages/warehouse/types/warehouse";
 
 const PRIMARY = "hsl(var(--primary))";
-const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
 
 const EMPTY_WAREHOUSE_SEARCH_CATALOGS: WarehouseSearchCatalogs = {
@@ -178,12 +177,20 @@ export default function Warehouses() {
   }, [showFlash]);
 
   const submitSearch = useCallback(() => {
-    setAppliedSearchText(searchText.trim());
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setAppliedSearchText(searchText.trim());
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, [searchText]);
+
+  const handleSearchTextChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSearchText(value);
+    });
+  }, []);
 
   const loadWarehouses = useCallback(async () => {
     clearFlash();
@@ -596,41 +603,47 @@ export default function Warehouses() {
 
   const applySmartSnapshot = useCallback((snapshot: WarehouseSearchSnapshot) => {
     const normalized = sanitizeWarehouseSearchSnapshot(snapshot);
-    setSearchText(normalized.q ?? "");
-    setAppliedSearchText(normalized.q ?? "");
-    setSearchFilters(normalized.filters);
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setSearchText(normalized.q ?? "");
+      setAppliedSearchText(normalized.q ?? "");
+      setSearchFilters(normalized.filters);
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, []);
 
   const handleApplySearchRule = useCallback((rule: WarehouseSearchRule) => {
-    setSearchFilters((current) => {
-      const next = applyWarehouseSearchRuleWithDependencies(
-        sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
-        rule,
-      );
-      return next.filters;
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = applyWarehouseSearchRuleWithDependencies(
+          sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
+          rule,
+        );
+        return next.filters;
+      });
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
     });
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
   }, [searchText]);
 
   const handleRemoveSearchRule = useCallback((fieldId: WarehouseSearchFilterKey) => {
-    setSearchFilters((current) => {
-      const next = removeWarehouseSearchKeyWithDependencies(
-        sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
-        fieldId,
-      );
-      return next.filters;
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = removeWarehouseSearchKeyWithDependencies(
+          sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
+          fieldId,
+        );
+        return next.filters;
+      });
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
     });
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
   }, [searchText]);
 
   const handleRemoveChip = useCallback((key: "q" | WarehouseSearchFilterKey) => {
@@ -638,14 +651,22 @@ export default function Warehouses() {
       sanitizeWarehouseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
       key,
     );
-    setSearchText(nextSnapshot.q ?? "");
-    setAppliedSearchText(nextSnapshot.q ?? "");
-    setSearchFilters(nextSnapshot.filters);
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setSearchText(nextSnapshot.q ?? "");
+      setAppliedSearchText(nextSnapshot.q ?? "");
+      setSearchFilters(nextSnapshot.filters);
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, [appliedSearchText, searchFilters]);
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    startTransition(() => {
+      setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+    });
+  }, []);
 
   const handleSaveMetric = useCallback(async (name: string) => {
     const snapshot = sanitizeWarehouseSearchSnapshot({
@@ -716,12 +737,6 @@ export default function Warehouses() {
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-          }}
           disabled={companyActionDisabled}
           title={companyActionTitle}
         >
@@ -747,7 +762,7 @@ export default function Warehouses() {
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}
-            onChange={setSearchText}
+            onChange={handleSearchTextChange}
             onSubmitSearch={submitSearch}
             searchLabel="Busca tu almacen"
             searchName="warehouse-smart-search"
@@ -780,9 +795,7 @@ export default function Warehouses() {
             name: row.name,
           })
         }
-        onPageChange={(nextPage) => {
-          setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
-        }}
+        onPageChange={handlePageChange}
       />
 
       <WarehouseFormModal
@@ -816,7 +829,7 @@ export default function Warehouses() {
         warehouse={selectedWarehouse}
         onClose={closeLocationsModal}
         primaryColor={PRIMARY}
-        primaryHover={PRIMARY_HOVER}
+        primaryHover="#1aa392"
       />
 
       <WarehouseStockModal

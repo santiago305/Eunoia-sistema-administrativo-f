@@ -20,6 +20,7 @@ import type {
   CreateProductionOrderDto,
   ProductionOrderItem,
 } from "@/pages/production/types/production";
+import { ProductTypes, type ProductType } from "@/pages/catalog/types/ProductTypes";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 
@@ -62,11 +63,22 @@ const buildEmptyItem = (): AddProductionOrderItemDto => ({
 });
 
 function toSkuAttributes(attributes?: Record<string, unknown> | null) {
-  return {
-    presentation: typeof attributes?.presentation === "string" ? attributes.presentation : undefined,
-    variant: typeof attributes?.variant === "string" ? attributes.variant : undefined,
-    color: typeof attributes?.color === "string" ? attributes.color : undefined,
-  };
+  return Object.fromEntries(
+    Object.entries({
+      presentation: typeof attributes?.presentation === "string" ? attributes.presentation : undefined,
+      variant: typeof attributes?.variant === "string" ? attributes.variant : undefined,
+      color: typeof attributes?.color === "string" ? attributes.color : undefined,
+    }).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
+function normalizeProductType(value?: string | null): ProductType | undefined {
+  if (!value) return undefined;
+
+  const normalized = value.toUpperCase();
+  return Object.values(ProductTypes).includes(normalized as ProductType)
+    ? (normalized as ProductType)
+    : undefined;
 }
 
 type ProductionItemRow = AddProductionOrderItemDto & {
@@ -174,7 +186,7 @@ export function ProductionOrderFormModal({
         unitCode: sku?.unitCode ?? variant?.unitCode ?? product?.baseUnitCode ?? undefined,
         baseUnitId: sku?.baseUnitId ?? variant?.baseUnitId ?? product?.baseUnitId ?? undefined,
         isActive: sku?.isActive ?? variant?.isActive ?? product?.isActive ?? undefined,
-        type: item.finishedItem?.type ?? sku?.type ?? product?.type ?? undefined,
+        type: normalizeProductType(item.finishedItem?.type ?? sku?.type ?? product?.type ?? undefined),
         attributes: toSkuAttributes(
           sku?.attributes ?? variant?.attributes ?? product?.attributes ?? undefined,
         ),

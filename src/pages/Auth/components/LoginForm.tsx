@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -84,7 +84,9 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
       const response = await login(data);
       if (response.success) {
         showFlash(successResponse(response.message));
-        navigate(RoutesPaths.dashboard, { replace: true });
+        startTransition(() => {
+          navigate(RoutesPaths.dashboard, { replace: true });
+        });
       } else {
         const retrySeconds = response.data?.retryAfterSeconds ?? 0;
         if (retrySeconds > 0) {

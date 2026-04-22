@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { Boxes, ClipboardList, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -49,14 +49,14 @@ export default function OutOrder() {
     setPendingItem(buildEmptyItemOutOrder());
   }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setForm(buildEmptyFormOutOrder());
     setPendingItem(buildEmptyItemOutOrder());
     setSerie({ value: "", label: "" });
     setProductsCache(undefined);
     setSearchResults(undefined);
     setQuery("");
-  };
+  }, []);
 
   const mergeSkuCache = (previous: ListSkusResponse | undefined, incoming: ListSkusResponse | undefined) => {
     const prevItems = previous?.items ?? [];
@@ -213,19 +213,23 @@ export default function OutOrder() {
     setPendingItem(buildEmptyItemOutOrder());
   };
 
-  const updateItem = (index: number, patch: Partial<AddOutOrderItemDto>) => {
-    setForm((prev) => ({
-      ...prev,
-      items: (prev.items ?? []).map((item, i) => (i === index ? { ...item, ...patch } : item)),
-    }));
-  };
+  const updateItem = useCallback((index: number, patch: Partial<AddOutOrderItemDto>) => {
+    startTransition(() => {
+      setForm((prev) => ({
+        ...prev,
+        items: (prev.items ?? []).map((item, i) => (i === index ? { ...item, ...patch } : item)),
+      }));
+    });
+  }, []);
 
-  const removeItem = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      items: (prev.items ?? []).filter((_, i) => i !== index),
-    }));
-  };
+  const removeItem = useCallback((index: number) => {
+    startTransition(() => {
+      setForm((prev) => ({
+        ...prev,
+        items: (prev.items ?? []).filter((_, i) => i !== index),
+      }));
+    });
+  }, []);
 
   const totalCost = useMemo(() => {
     return (form.items ?? []).reduce((acc, item) => acc + item.quantity * (item.unitCost ?? 0), 0);
@@ -306,7 +310,20 @@ export default function OutOrder() {
     });
   }, [form.items, productsCache]);
 
-  const columns: DataTableColumn<OutOrderItemRow>[] = [
+  const handleWarehouseChange = useCallback((value: string) => {
+    startTransition(() => {
+      setForm((prev) => ({ ...prev, warehouseId: value, serieId: "" }));
+    });
+    void loadSeries(value);
+  }, []);
+
+  const handleNoteChange = useCallback((value: string) => {
+    startTransition(() => {
+      setForm((prev) => ({ ...prev, note: value }));
+    });
+  }, []);
+
+  const columns = useMemo<DataTableColumn<OutOrderItemRow>[]>(() => [
     {
       id: "productName",
       header: "Producto",
@@ -395,7 +412,7 @@ export default function OutOrder() {
       sortable: false,
       hideable: false,
     },
-  ];
+  ], [itemRows, removeItem, updateItem]);
 
   return (
     <div className="w-full min-h-screen bg-white">
@@ -441,6 +458,7 @@ export default function OutOrder() {
                 emptyMessage="Aun no agregas items."
                 hoverable={false}
                 animated={false}
+                responsiveMode="table"
                 tableClassName="table-fixed text-[11px]"
               />
             </div>
@@ -468,10 +486,7 @@ export default function OutOrder() {
                   label="Almacén"
                   name="warehouseId"
                   value={form.warehouseId}
-                  onChange={(value) => {
-                    setForm((prev) => ({ ...prev, warehouseId: value, serieId: "" }));
-                    void loadSeries(value);
-                  }}
+                  onChange={handleWarehouseChange}
                   options={warehouseOptions}
                   searchable
                   searchPlaceholder="Buscar almacén..."
@@ -491,7 +506,7 @@ export default function OutOrder() {
                 label="Nota"
                 name="note"
                 value={form.note ?? ""}
-                onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
+                onChange={(e) => handleNoteChange(e.target.value)}
               />
             </div>
 

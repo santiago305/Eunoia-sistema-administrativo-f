@@ -10,7 +10,7 @@ import {
 import type { SidebarItem } from "@/components/dashboard/types";
 import { RoutesPaths } from "@/router/config/routesPaths";
 
-export const getSidebarItems = (): SidebarItem[] => [
+const SIDEBAR_ITEMS: SidebarItem[] = [
     {
         label: "Home",
         href: RoutesPaths.dashboard,
@@ -25,55 +25,6 @@ export const getSidebarItems = (): SidebarItem[] => [
         label: "Compras",
         icon: <IconPurchase className="text-sidebar-foreground" />,
         href: RoutesPaths.purchases,
-        // children: [
-        //     {
-        //         label: "Nueva Compra",
-        //         href: RoutesPaths.purchase,
-        //     },
-        //     {
-        //         label: "Comprobantes",
-        //         href: RoutesPaths.purchases,
-        //     },
-        // ],
-    },
-    {
-        label: "Stock",
-        href: RoutesPaths.stockSummary,
-        icon: <IconStock className="text-sidebar-foreground" />,
-        children: [
-            {
-                label: "Inventario",
-                href: "/stock/inventario/1",
-            },
-            {
-                label: "Movimientos",
-                href: RoutesPaths.stockMovements,
-            },
-            {
-                label: "Documentos",
-                href: RoutesPaths.stockDocuments,
-            },
-            {
-                label: "Transferencias",
-                href: RoutesPaths.stockTransfers,
-            },
-            {
-                label: "Ajustes",
-                href: RoutesPaths.stockAdjustments,
-            },
-            {
-                label: "Series y Tipos",
-                href: RoutesPaths.stockSeriesTypes,
-            },
-            {
-                label: "Reservas",
-                href: RoutesPaths.stockReservations,
-            },
-            {
-                label: "Reposicion",
-                href: RoutesPaths.stockReplenishment,
-            },
-        ],
     },
     {
         label: "Catalogo",
@@ -153,5 +104,7 @@ export const getSidebarItems = (): SidebarItem[] => [
         icon: <IconUsers className="text-sidebar-foreground" />,
     },
 ];
+
+export const getSidebarItems = (): SidebarItem[] => SIDEBAR_ITEMS;
 
 

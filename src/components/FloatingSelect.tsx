@@ -93,7 +93,9 @@ export function FloatingSelect({
     open && activeIndex >= 0 ? `${panelId}-option-${activeIndex}` : undefined;
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    if (!open) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
 
       if (!rootRef.current) return;
@@ -104,17 +106,17 @@ export function FloatingSelect({
       ) {
         closeSelect();
       }
-    }
+    };
 
-    function handleEscape(event: KeyboardEvent) {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeSelect();
       }
-    }
+    };
 
-    function handleCloseAll() {
+    const handleCloseAll = () => {
       closeSelect();
-    }
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
@@ -125,15 +127,15 @@ export function FloatingSelect({
       document.removeEventListener("keydown", handleEscape);
       window.removeEventListener(CLOSE_ALL_FLOATING_SELECTS_EVENT, handleCloseAll);
     };
-  }, [closeSelect]);
+  }, [closeSelect, open]);
 
   useEffect(() => {
     if (open && searchable) {
-      const timer = setTimeout(() => {
+      const frameId = window.requestAnimationFrame(() => {
         searchInputRef.current?.focus();
-      }, 50);
+      });
 
-      return () => clearTimeout(timer);
+      return () => window.cancelAnimationFrame(frameId);
     }
   }, [open, searchable]);
 
@@ -251,57 +253,29 @@ export function FloatingSelect({
       return;
     }
 
+    let frameId = 0;
+
     const handleViewportChange = () => {
-      updatePanelPosition();
-    };
-
-    const resizeObserver = new ResizeObserver(() => {
-      updatePanelPosition();
-    });
-
-    resizeObserver.observe(triggerEl);
-    resizeObserver.observe(panelEl);
-
-    let mutationRaf = 0;
-
-    const scheduleMutationUpdate = () => {
-      if (mutationRaf) return;
-      mutationRaf = window.requestAnimationFrame(() => {
-        mutationRaf = 0;
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
         updatePanelPosition();
       });
     };
 
-    const mutationObserver = new MutationObserver((mutations) => {
-      const currentTrigger = triggerRef.current;
-      if (!currentTrigger || !currentTrigger.isConnected) {
-        closeSelect();
-        return;
-      }
-
-      const panelNode = panelRef.current;
-      for (const mutation of mutations) {
-        const target = mutation.target as Node | null;
-        if (panelNode && target && panelNode.contains(target)) {
-          continue;
-        }
-        scheduleMutationUpdate();
-        break;
-      }
+    const resizeObserver = new ResizeObserver(() => {
+      handleViewportChange();
     });
 
-    mutationObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    resizeObserver.observe(triggerEl);
+    resizeObserver.observe(panelEl);
 
     window.addEventListener("resize", handleViewportChange);
     window.addEventListener("scroll", handleViewportChange, true);
 
     return () => {
       resizeObserver.disconnect();
-      mutationObserver.disconnect();
-      window.cancelAnimationFrame(mutationRaf);
+      window.cancelAnimationFrame(frameId);
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };

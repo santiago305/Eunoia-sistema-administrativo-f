@@ -1,4 +1,3 @@
-import { motion, AnimatePresence } from "framer-motion";
 import { Calendar } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -90,7 +89,7 @@ export function AnimatedDatePicker({
   return (
     <div ref={rootRef} className={cn("w-fit", containerClassName)}>
       <div className="relative">
-        <motion.button
+        <button
           ref={triggerRef}
           type="button"
           id={name}
@@ -101,8 +100,7 @@ export function AnimatedDatePicker({
             setExpanded(true);
             openPanel();
           }}
-          animate={{ width: expanded || hasValue ? expandedWidth : collapsedWidth }}
-          transition={{ type: "spring", stiffness: 340, damping: 28 }}
+          style={{ width: expanded || hasValue ? expandedWidth : collapsedWidth }}
           className={cn(
             "peer relative flex h-10 items-center gap-2 overflow-hidden rounded-lg border bg-background px-3 text-left text-sm text-foreground outline-none transition-all",
             error
@@ -122,24 +120,17 @@ export function AnimatedDatePicker({
         >
           <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
 
-          <AnimatePresence initial={false}>
-            {(expanded || hasValue) ? (
-              <motion.span
-                key="content"
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.16 }}
-                className={cn(
-                  "truncate pr-1",
-                  hasValue ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {displayValue || placeholder}
-              </motion.span>
-            ) : null}
-          </AnimatePresence>
-        </motion.button>
+          {(expanded || hasValue) ? (
+            <span
+              className={cn(
+                "truncate pr-1",
+                hasValue ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {displayValue || placeholder}
+            </span>
+          ) : null}
+        </button>
 
         <label
           id={labelId}

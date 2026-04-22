@@ -1,6 +1,5 @@
+import { lazy, memo, Suspense, useMemo } from "react";
 import { Activity } from "lucide-react";
-import { useMemo } from "react";
-
 import type {
   SecurityActivitySeriesItem,
   SecurityMethodDistributionItem,
@@ -9,14 +8,31 @@ import type {
   SecurityTopRouteItem,
 } from "../../types/security.api";
 import { ActivitySeriesChart } from "../charts/ActivitySeriesChart";
-import { MethodDistributionChart } from "../charts/MethodDistributionChart";
-import { ReasonDistributionChart } from "../charts/ReasonDistributionChart";
-import { RiskScoreChart } from "../charts/RiskScoreChart";
-import { TopRoutesChart } from "../charts/TopRoutesChart";
 import { SectionCard } from "../SectionCard";
 import { SystemButton } from "@/components/SystemButton";
 
-export function AnalyticsSection({
+const ReasonDistributionChart = lazy(async () => {
+  const module = await import("../charts/ReasonDistributionChart");
+  return { default: module.ReasonDistributionChart };
+});
+const MethodDistributionChart = lazy(async () => {
+  const module = await import("../charts/MethodDistributionChart");
+  return { default: module.MethodDistributionChart };
+});
+const TopRoutesChart = lazy(async () => {
+  const module = await import("../charts/TopRoutesChart");
+  return { default: module.TopRoutesChart };
+});
+const RiskScoreChart = lazy(async () => {
+  const module = await import("../charts/RiskScoreChart");
+  return { default: module.RiskScoreChart };
+});
+
+function ChartSkeleton() {
+  return <div className="h-[220px] animate-pulse rounded-2xl bg-zinc-100/80" />;
+}
+
+export const AnalyticsSection = memo(function AnalyticsSection({
   activitySeries,
   reasonDistribution,
   methodDistribution,
@@ -87,7 +103,9 @@ export function AnalyticsSection({
           }
         >
           <div className="flex items-center justify-center py-1">
-            <RiskScoreChart value={riskValue} label={riskLabel} />
+            <Suspense fallback={<ChartSkeleton />}>
+              <RiskScoreChart value={riskValue} label={riskLabel} />
+            </Suspense>
           </div>
 
           <div className="mt-2 rounded-2xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-white p-4">
@@ -106,7 +124,9 @@ export function AnalyticsSection({
               title="Causas principales"
               subtitle="Distribucion de alertas por tipo."
             >
-              <ReasonDistributionChart data={reasonDistribution} />
+              <Suspense fallback={<ChartSkeleton />}>
+                <ReasonDistributionChart data={reasonDistribution} />
+              </Suspense>
             </SectionCard>
           )}
 
@@ -115,7 +135,9 @@ export function AnalyticsSection({
               title="Metodos HTTP"
               subtitle="Distribucion de actividad sospechosa por metodo."
             >
-              <MethodDistributionChart data={methodDistribution} />
+              <Suspense fallback={<ChartSkeleton />}>
+                <MethodDistributionChart data={methodDistribution} />
+              </Suspense>
             </SectionCard>
           )}
 
@@ -124,11 +146,13 @@ export function AnalyticsSection({
               title="Top rutas atacadas"
               subtitle="Endpoints mas afectados por eventos sospechosos."
             >
-              <TopRoutesChart data={topRoutes} />
+              <Suspense fallback={<ChartSkeleton />}>
+                <TopRoutesChart data={topRoutes} />
+              </Suspense>
             </SectionCard>
           )}
         </div>
       )}
     </div>
   );
-}
+});

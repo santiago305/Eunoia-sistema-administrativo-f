@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useSidebarContext } from "./SidebarContext";
 import SidebarHeader from "./SidebarHeader";
 import SidebarBody from "./SidebarBody";
@@ -29,4 +30,4 @@ const Sidebar = ({ user, onLogout }: SidebarProps) => {
   );
 };
 
-export default Sidebar;
+export default memo(Sidebar);

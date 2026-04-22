@@ -1,3 +1,4 @@
+import { memo } from "react";
 import UserMenu from "./UserMenu";
 import type { User } from "./types";
 
@@ -14,6 +15,6 @@ const SidebarFooter = ({ user, onLogout }: SidebarFooterProps) => {
   );
 };
 
-export default SidebarFooter;
+export default memo(SidebarFooter);
 
 

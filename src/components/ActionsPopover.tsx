@@ -149,11 +149,20 @@ export function ActionsPopover({
   const handleAction = (action: ActionItem) => {
     if (action.disabled) return;
 
-    action.onClick?.();
-
     if (closeOnAction) {
       close();
     }
+
+    if (!action.onClick) return;
+
+    if (closeOnAction) {
+      window.requestAnimationFrame(() => {
+        action.onClick?.();
+      });
+      return;
+    }
+
+    action.onClick();
   };
 
   const helpers: RenderActionHelpers = {

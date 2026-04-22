@@ -111,6 +111,8 @@ export function FloatingMultiSelect({
     open && activeIndex >= 0 ? `${panelId}-option-${activeIndex}` : undefined;
 
   useEffect(() => {
+    if (!open) return;
+
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
       if (!rootRef.current) return;
@@ -142,15 +144,15 @@ export function FloatingMultiSelect({
       document.removeEventListener("keydown", handleEscape);
       window.removeEventListener(CLOSE_ALL_FLOATING_SELECTS_EVENT, handleCloseAll);
     };
-  }, [closeSelect]);
+  }, [closeSelect, open]);
 
   useEffect(() => {
     if (open && searchable) {
-      const timer = setTimeout(() => {
+      const frameId = window.requestAnimationFrame(() => {
         searchInputRef.current?.focus();
-      }, 50);
+      });
 
-      return () => clearTimeout(timer);
+      return () => window.cancelAnimationFrame(frameId);
     }
   }, [open, searchable]);
 
@@ -193,14 +195,26 @@ export function FloatingMultiSelect({
       Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
     );
 
-    setPanelStyle({
+    const nextStyle: CSSProperties = {
       position: "fixed",
       top,
       left,
       zIndex: UI_LAYERS.floatingSelect,
       ...widthStyle,
+    };
+    const nextMaxHeight = Math.max(96, Math.min(256, openAbove ? spaceAbove : spaceBelow));
+
+    setPanelStyle((previous) => {
+      const keys = Object.keys(nextStyle) as Array<keyof CSSProperties>;
+      const previousKeys = Object.keys(previous) as Array<keyof CSSProperties>;
+
+      if (previousKeys.length !== keys.length) return nextStyle;
+      for (const key of keys) {
+        if (previous[key] !== nextStyle[key]) return nextStyle;
+      }
+      return previous;
     });
-    setListMaxHeight(Math.max(96, Math.min(256, openAbove ? spaceAbove : spaceBelow)));
+    setListMaxHeight((previous) => (previous === nextMaxHeight ? previous : nextMaxHeight));
   }, [closeSelect, panelWidthMode]);
 
   const setPanelNode = useCallback((node: HTMLDivElement | null) => {
@@ -242,12 +256,18 @@ export function FloatingMultiSelect({
       return;
     }
 
+    let frameId = 0;
+
     const handleViewportChange = () => {
-      updatePanelPosition();
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updatePanelPosition();
+      });
     };
 
     const resizeObserver = new ResizeObserver(() => {
-      updatePanelPosition();
+      handleViewportChange();
     });
 
     resizeObserver.observe(triggerEl);
@@ -258,6 +278,7 @@ export function FloatingMultiSelect({
 
     return () => {
       resizeObserver.disconnect();
+      window.cancelAnimationFrame(frameId);
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };

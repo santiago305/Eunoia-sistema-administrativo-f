@@ -95,8 +95,8 @@ export default function SessionsUsers() {
     try {
       setRevokingId(id);
       const res = await revokeSession(id);
+      setSessions((prev) => prev.filter((session) => session.id !== id));
       showFlash(successResponse(res.message || "Sesion cerrada"));
-      await loadSessions();
     } catch {
       showFlash(errorResponse("No se pudo cerrar la sesion"));
     } finally {
@@ -109,8 +109,8 @@ export default function SessionsUsers() {
     try {
       setRevokingAll(true);
       const res = await revokeAllSessions();
+      setSessions((prev) => prev.filter((session) => session.isCurrent));
       showFlash(successResponse(res.message || "Todas las sesiones cerradas"));
-      await loadSessions();
     } catch {
       showFlash(errorResponse("No se pudieron cerrar las sesiones"));
     } finally {

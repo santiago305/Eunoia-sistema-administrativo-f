@@ -69,11 +69,9 @@ export const buildSkuLabel = ({
 
 export const buildSkuLabelFromItem = ({
   skuItem,
-  index,
   fallbackName
 }: {
   skuItem: ProductSkuWithAttributes;
-  index: number;
   fallbackName:string
 }) => {
   const baseName = skuItem.sku.name.trim()?? fallbackName;

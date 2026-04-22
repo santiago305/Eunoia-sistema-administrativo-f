@@ -22,6 +22,10 @@ type ListUbigeoDistrictsParams = {
   provinceIds?: string[];
 };
 
+let cachedDepartments: UbigeoDepartment[] | null = null;
+const provinceCache = new Map<string, UbigeoProvince[]>();
+const districtCache = new Map<string, UbigeoDistrict[]>();
+
 function normalizeIds(values?: string[]) {
   const uniqueValues = Array.from(
     new Set((values ?? []).map((value) => value?.trim()).filter(Boolean)),
@@ -31,16 +35,27 @@ function normalizeIds(values?: string[]) {
 }
 
 export const listUbigeoDepartments = async (): Promise<UbigeoDepartment[]> => {
+  if (cachedDepartments) {
+    return cachedDepartments;
+  }
+
   const response = await axiosInstance.get<ApiSuccessResponse<UbigeoDepartment[]>>(
     API_UBIGEO_GROUP.departments,
   );
 
-  return response.data.data ?? [];
+  cachedDepartments = response.data.data ?? [];
+  return cachedDepartments;
 };
 
 export const listUbigeoProvinces = async (
   params: ListUbigeoProvincesParams = {},
 ): Promise<UbigeoProvince[]> => {
+  const cacheKey = params.departmentId ?? normalizeIds(params.departmentIds) ?? "__all__";
+  const cached = provinceCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const response = await axiosInstance.get<ApiSuccessResponse<UbigeoProvince[]>>(
     API_UBIGEO_GROUP.provinces,
     {
@@ -53,12 +68,20 @@ export const listUbigeoProvinces = async (
     },
   );
 
-  return response.data.data ?? [];
+  const provinces = response.data.data ?? [];
+  provinceCache.set(cacheKey, provinces);
+  return provinces;
 };
 
 export const listUbigeoDistricts = async (
   params: ListUbigeoDistrictsParams = {},
 ): Promise<UbigeoDistrict[]> => {
+  const cacheKey = params.provinceId ?? normalizeIds(params.provinceIds) ?? "__all__";
+  const cached = districtCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const response = await axiosInstance.get<ApiSuccessResponse<UbigeoDistrict[]>>(
     API_UBIGEO_GROUP.districts,
     {
@@ -71,5 +94,7 @@ export const listUbigeoDistricts = async (
     },
   );
 
-  return response.data.data ?? [];
+  const districts = response.data.data ?? [];
+  districtCache.set(cacheKey, districts);
+  return districts;
 };
