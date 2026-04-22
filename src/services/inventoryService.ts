@@ -23,7 +23,43 @@ export const getStock = async (params: GetStockQuery): Promise<GetStockResponse>
 };
 
 export const listInventory = async (params: ListInventoryQuery): Promise<InventoryListResponse> => {
-  const response = await axiosInstance.get(API_INVENTORY_GROUP.list, { params });
+  const unique = (values: Array<string | undefined> | undefined) =>
+    Array.from(new Set((values ?? []).map((value) => value?.trim()).filter(Boolean))) as string[];
+
+  const mergeLists = (value?: string[] | string) => {
+    if (!value) return [];
+    if (Array.isArray(value)) return unique(value);
+    return unique(value.split(","));
+  };
+
+  const warehouseIdsIn = unique([
+    ...mergeLists((params as any).warehouseIdsIn),
+    ...(params.warehouseId ? [params.warehouseId] : []),
+  ]);
+
+  const warehouseIdsNotIn = mergeLists((params as any).warehouseIdsNotIn);
+
+  const skuIdsIn = unique([
+    ...mergeLists((params as any).skuIdsIn),
+    ...(params.skuId ? [params.skuId] : []),
+  ]);
+
+  const skuIdsNotIn = mergeLists((params as any).skuIdsNotIn);
+
+  const q = params.q?.trim() || params.search?.trim() || undefined;
+
+  const requestParams: Record<string, unknown> = {
+    ...params,
+    q,
+    warehouseIdsIn: warehouseIdsIn.length ? warehouseIdsIn.join(",") : undefined,
+    warehouseIdsNotIn: warehouseIdsNotIn.length ? warehouseIdsNotIn.join(",") : undefined,
+    skuIdsIn: skuIdsIn.length ? skuIdsIn.join(",") : undefined,
+    skuIdsNotIn: skuIdsNotIn.length ? skuIdsNotIn.join(",") : undefined,
+  };
+
+  const response = await axiosInstance.get(API_INVENTORY_GROUP.list, {
+    params: requestParams,
+  });
   return response.data;
 };
 

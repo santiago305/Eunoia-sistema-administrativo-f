@@ -2,7 +2,6 @@
 import * as echarts from "echarts";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingSelect } from "@/components/FloatingSelect";
-import { FloatingDateRangePicker } from "@/components/date-picker/FloatingDateRangePicker";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { SystemButton } from "@/components/SystemButton";
@@ -17,11 +16,11 @@ import type { KardexDailyTotal, KardexRow, LedgerEntry } from "@/pages/catalog/t
 import { DocType, type Warehouse } from "@/pages/warehouse/types/warehouse";
 import type { ProductSkuWithAttributes } from "@/pages/catalog/types/product";
 import { getDocumentInventoryPdf, getProductionOrderPdf, getPurchaseOrderPdf } from "@/services/pdfServices";
-import { FileText, Filter, LineChart } from "lucide-react";
+import { FileText, LineChart } from "lucide-react";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
-import { ProductTypes } from "./types/ProductTypes";
+import { ProductTypes } from "../catalog/types/ProductTypes";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -90,7 +89,7 @@ export default function KardexProduction() {
                 isActive: true,
                 page: 1,
                 limit: 100,
-                productType: ProductTypes.PRODUCT
+                productType: ProductTypes.PRODUCT,
             });
 
             setSkus(result.items ?? []);
@@ -452,52 +451,10 @@ export default function KardexProduction() {
                     </div>
                 </div>
             <div className="space-y-3">
-                <section className="rounded-sm border border-black/10 bg-gray-50 p-3 shadow-sm space-y-4">
-                    <SectionHeaderForm icon={Filter} title="Filtros" />
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.1fr_0.8fr_1fr]">
-                        <FloatingDateRangePicker
-                            label="Rango de fechas"
-                            name="kardex-finished-date-range"
-                            startDate={parseDateInputValue(fromDate)}
-                            endDate={parseDateInputValue(toDate)}
-                            onChange={({ startDate, endDate }) => {
-                                setFromDate(startDate ? toLocalDateKey(startDate) : "");
-                                setToDate(endDate ? toLocalDateKey(endDate) : "");
-                            }}
-                        />
-
-                        <FloatingSelect
-                            label="Almacén"
-                            name="warehouseId"
-                            value={warehouseId}
-                            onChange={(value) => {
-                                setWarehouseId(value);
-                            }}
-                            options={warehouseOptions}
-                            searchable
-                            searchPlaceholder="Buscar almacén..."
-                            emptyMessage="Sin almacenes"
-                        />
-
-                        <FloatingSelect
-                            label="Productos"
-                            name="skuId"
-                            value={skuId}
-                            onChange={(value) => {
-                                setSkuId(value);
-                            }}
-                            options={productOptions}
-                            searchable
-                            searchPlaceholder="Buscar producto..."
-                            emptyMessage="Sin productos"
-                            onSearchChange={(text) => setProductQuery(text)}
-                        />
-                    </div>
-                </section>
-
                 <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                    <div className="xl:col-span-2 overflow-hidden">
+                    <div className="xl:col-span-2">
                         <DataTable
+                            className="max-h-[80vh] overflow-hidden p-3"
                             tableId="kardex-production-table"
                             data={kardexRows}
                             columns={columns}
@@ -506,6 +463,47 @@ export default function KardexProduction() {
                             emptyMessage={!skuId ? "Seleccione un producto para ver el kardex." : "No hay movimientos para los filtros actuales."}
                             hoverable={false}
                             animated={false}
+                            toolbarSearchContent={
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.2fr_0.8fr] sm:items-end">
+                                    <FloatingSelect
+                                        label="Productos"
+                                        name="skuId"
+                                        value={skuId}
+                                        onChange={(value) => {
+                                            setSkuId(value);
+                                        }}
+                                        options={productOptions}
+                                        searchable
+                                        searchPlaceholder="Buscar producto..."
+                                        emptyMessage="Sin productos"
+                                        onSearchChange={(text) => setProductQuery(text)}
+                                       className="h-11 rounded-sm border-border shadow-sm"
+                                    />
+                                    <FloatingSelect
+                                        label="Almacén"
+                                        name="warehouseId"
+                                        value={warehouseId}
+                                        onChange={(value) => {
+                                            setWarehouseId(value);
+                                        }}
+                                        options={warehouseOptions}
+                                        searchable
+                                        searchPlaceholder="Buscar almacén..."
+                                        emptyMessage="Sin almacenes"
+                                        className="h-11 rounded-sm border-border shadow-sm"
+                                    />
+                                </div>
+                            }
+                            rangeDates={{
+                                startDate: parseDateInputValue(fromDate),
+                                endDate: parseDateInputValue(toDate),
+                                label: "Rango de fechas",
+                                name: "kardex-finished-date-range",
+                                onChange: ({ startDate, endDate }) => {
+                                    setFromDate(startDate ? toLocalDateKey(startDate) : "");
+                                    setToDate(endDate ? toLocalDateKey(endDate) : "");
+                                },
+                            }}
                             onRowClick={(row) => setSelectedRow(row.original)}
                             rowClassName={(row) => (selectedRow?.id === row.original.id ? "bg-primary/10 border-l-4 border-l-primary" : "")}
                         />
@@ -560,7 +558,7 @@ export default function KardexProduction() {
                                                 showFlash(errorResponse("No hay documento para este movimiento"));
                                             }}
                                         >
-                                            Ver documento
+                                            Ver pdf
                                         </SystemButton>
                                     )
                                 }
@@ -578,10 +576,19 @@ export default function KardexProduction() {
                                                 openPdfModalWith("Movimiento de inventario", () => getDocumentInventoryPdf(docId));
                                             }}
                                         >
-                                            Ver documento
+                                            Ver ticket
                                         </SystemButton>
                                     )
                                 }
+                                <SystemButton
+                                    variant="link"
+                                    type="button"
+                                    onClick={() => {
+                                        
+                                    }}
+                                >
+                                    Ver detalle
+                                </SystemButton>
                             </div>
                         </div>
 

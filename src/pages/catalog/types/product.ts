@@ -37,18 +37,18 @@ export type ProductCatalogUnit = {
 
 export type ProductCatalogSku = {
   id: string;
-  productId: string;
+  productId?: string;
   backendSku: string;
   customSku: string | null;
   name: string;
-  barcode: string | null;
-  price: number;
-  cost: number;
-  isSellable: boolean;
-  isPurchasable: boolean;
-  isManufacturable: boolean;
-  isStockTracked: boolean;
-  isActive: boolean;
+  barcode?: string | null;
+  price?: number;
+  cost?: number;
+  isSellable?: boolean;
+  isPurchasable?: boolean;
+  isManufacturable?: boolean;
+  isStockTracked?: boolean;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

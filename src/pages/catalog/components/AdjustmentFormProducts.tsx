@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, FileText, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
@@ -17,13 +16,12 @@ import { createOutOrder, getStockSku } from "@/services/documentService";
 import { listSkus } from "@/services/skuService";
 import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import { ProductType, ProductTypes } from "@/pages/catalog/types/ProductTypes";
+import { ProductType } from "@/pages/catalog/types/ProductTypes";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/pages/catalog/types/product";
-import { RoutesPaths } from "@/router/config/routesPaths";
 import { AdjustmentItemModal } from "@/pages/catalog/components/AdjustmentItemModal";
 import { AdjustmentResultModal } from "@/pages/catalog/components/AdjustmentResultModal";
 import type { skuStock } from "@/pages/catalog/types/documentInventory";
-import { buildSkuLabel, buildStockSummary, emptyStockDetail, type StockDetailState } from "@/pages/catalog/types/transfer";
+import { buildSkuLabelWithAttributes, buildStockSummary, emptyStockDetail, type StockDetailState } from "@/pages/catalog/types/transfer";
 import { CreateOutOrder } from "@/pages/out-orders/type/outOrder";
 
 const CURRENCY = "PEN";
@@ -79,23 +77,18 @@ export default function AdjustmentFormProducts({
   type,
 }: AdjustmentFormProductsProps) {
   const { showFlash, clearFlash } = useFlashMessage();
-  const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<PendingAdjustmentItem>(() => buildEmptyPendingItem());
-
   const [openItemModal, setOpenItemModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedAdjustmentId, setLastSavedAdjustmentId] = useState("");
-
   const [searchResults, setSearchResults] = useState<ListSkusResponse>();
   const [selectedSkus, setSelectedSkus] = useState<ProductSkuWithAttributes[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const skuSearchTimeoutRef = useRef<number | null>(null);
   const latestSkuQueryRef = useRef("");
-
   const [items, setItems] = useState<DraftAdjustmentItem[]>([]);
   const [stockDetail, setStockDetail] = useState<StockDetailState>(emptyStockDetail);
 
@@ -225,7 +218,7 @@ export default function AdjustmentFormProducts({
       { value: "", label: "Seleccionar SKU" },
       ...((searchResults?.items ?? []).map((item) => ({
         value: item.sku.id,
-        label: buildSkuLabel(item),
+        label: buildSkuLabelWithAttributes(item),
       }))),
     ],
     [searchResults],
@@ -299,7 +292,7 @@ export default function AdjustmentFormProducts({
         skuId: item.skuId,
         backendSku: skuData?.sku.backendSku ?? "-",
         customSku: skuData?.sku.customSku ?? null,
-        name: skuData?.sku.name ?? "-",
+        name: skuData ? buildSkuLabelWithAttributes(skuData) : "-",
         unit: skuData?.unit?.name ?? "-",
         adjustmentType: item.adjustmentType,
         quantity: item.quantity,
@@ -313,11 +306,7 @@ export default function AdjustmentFormProducts({
         id: "name",
         header: "Nombre",
         cell: (row) => (
-          <span className="text-black/70">
-            {row.name}
-            {row.backendSku && row.backendSku !== "-" ? `-${row.backendSku}` : ""}
-            {row.customSku ? `(${row.customSku})` : ""}
-          </span>
+          <span className="text-black/70">{row.name}</span>
         ),
         headerClassName: "text-left w-[240px]",
         className: "text-black/70",
@@ -519,7 +508,7 @@ export default function AdjustmentFormProducts({
                   searchable
                   searchPlaceholder="Buscar SKU..."
                   onSearchChange={handleSkuSearchChange}
-                  className="h-9 text-xs"
+                  className="h-11 text-xs"
                 />
               </div>
             </div>
@@ -568,7 +557,7 @@ export default function AdjustmentFormProducts({
                     setStockDetail(emptyStockDetail);
                     void loadSeries(value);
                   }}
-                  className="h-9 text-xs"
+                  className="h-11 text-xs"
                   searchable
                 />
 
@@ -577,7 +566,7 @@ export default function AdjustmentFormProducts({
                   name="adjustment-serie"
                   value={serie.label}
                   disabled
-                  className="h-9 text-xs text-black/90"
+                  className="h-11 text-xs text-black/90"
                 />
 
             </div>    
@@ -586,7 +575,7 @@ export default function AdjustmentFormProducts({
                   name="adjustment-note"
                   value={form.note ?? ""}
                   onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-                  className="h-9 text-xs"
+                  className="h-11 text-xs"
                 />
 
               <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">

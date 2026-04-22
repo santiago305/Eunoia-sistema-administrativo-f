@@ -1,9 +1,10 @@
 ﻿import { useEffect, useMemo, useState } from "react";
+import { useCallback } from "react";
 import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingSelect } from "@/components/FloatingSelect";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { formatDate } from "@/components/TimerToEnd";
@@ -16,7 +17,6 @@ import {
   endOfDayIso,
   parseDateInputValue,
   toLocalDateKey,
-  todayIso,
 } from "@/utils/functionPurchases";
 import type {
   InventoryDocument,
@@ -43,6 +43,7 @@ const docTypeLabels: Record<DocType, string> = {
   [DocType.IN]: "Ingreso",
   [DocType.OUT]: "Salida",
   [DocType.PRODUCTION]: "Producción",
+  [DocType.PURCHASE]: "Compra",
 };
 
 const buildNumero = (document: InventoryDocument) => {
@@ -87,6 +88,97 @@ export default function TransferenceProduts() {
     { value: DocStatus.POSTED, label: statusLabels[DocStatus.POSTED] },
     { value: DocStatus.CANCELLED, label: statusLabels[DocStatus.CANCELLED] },
   ];
+
+  const transferTableFilters = useMemo<DataTableFilterTree>(() => {
+    const warehouseFilterOptions = warehouseOptions
+      .filter((option) => option.value)
+      .map((option) => ({
+        id: option.value,
+        label: option.label,
+      }));
+
+    const statusFilterOptions = statusOptions
+      .filter((option) => option.value)
+      .map((option) => ({
+        id: String(option.value),
+        label: option.label,
+      }));
+
+    return [
+      {
+        id: "warehouse",
+        label: "Almacén",
+        modes: [
+          {
+            id: "select",
+            label: "Seleccionar",
+            groups: [
+              {
+                id: "options",
+                label: "Almacenes",
+                searchable: true,
+                options: warehouseFilterOptions,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "status",
+        label: "Estado",
+        modes: [
+          {
+            id: "select",
+            label: "Seleccionar",
+            groups: [
+              {
+                id: "options",
+                label: "Estados",
+                options: statusFilterOptions,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }, [statusOptions, warehouseOptions]);
+
+  const transferAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => {
+    const filters: AppliedDataTableFilter[] = [];
+
+    if (warehouseId) {
+      filters.push({
+        id: "warehouse:select:options",
+        categoryId: "warehouse",
+        modeId: "select",
+        groupId: "options",
+        operator: "OR",
+        optionIds: [warehouseId],
+      });
+    }
+
+    if (statusFilter) {
+      filters.push({
+        id: "status:select:options",
+        categoryId: "status",
+        modeId: "select",
+        groupId: "options",
+        operator: "OR",
+        optionIds: [statusFilter],
+      });
+    }
+
+    return filters;
+  }, [statusFilter, warehouseId]);
+
+  const handleTransferFiltersChange = useCallback((next: AppliedDataTableFilter[]) => {
+    const getFirstOption = (categoryId: string) =>
+      next.find((item) => item.categoryId === categoryId)?.optionIds[0] ?? "";
+
+    setWarehouseId(getFirstOption("warehouse"));
+    setStatusFilter(getFirstOption("status") as DocStatus | "");
+    setPage(1);
+  }, []);
 
   const loadWarehouses = async () => {
     clearFlash();
@@ -352,35 +444,11 @@ export default function TransferenceProduts() {
               setPage(1);
             },
           }}
-          filterPopoverContent={
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_0.6fr]">
-              <FloatingSelect
-                label="Almacén"
-                name="warehouse"
-                value={warehouseId}
-                onChange={(value) => {
-                  setWarehouseId(value);
-                  setPage(1);
-                }}
-                options={warehouseOptions}
-                searchable
-                className="h-11 rounded-sm border-border shadow-sm"
-              />
-
-              <FloatingSelect
-                label="Estado"
-                name="status"
-                value={statusFilter}
-                onChange={(value) => {
-                  setStatusFilter(value as DocStatus | "");
-                  setPage(1);
-                }}
-                options={statusOptions}
-                searchable
-                className="h-11 rounded-sm border-border shadow-sm"
-              />
-            </div>
-          }
+          filtersConfig={{
+            categories: transferTableFilters,
+            value: transferAppliedFilters,
+            onChange: handleTransferFiltersChange,
+          }}
           pagination={{
             page,
             limit,
