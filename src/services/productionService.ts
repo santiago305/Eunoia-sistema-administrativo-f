@@ -1,7 +1,6 @@
 import axiosInstance from "@/common/utils/axios";
 import { API_PRODUCTION_ORDERS_GROUP } from "@/services/APIs";
 import type {
-  AddProductionOrderItemDto,
   CreateProductionOrderDto,
   ListProductionOrdersQuery,
   ProductionOrder,
@@ -11,6 +10,12 @@ import type {
   ProductionSearchStateResponse,
   UpdateProductionOrderDto,
 } from "@/pages/production/types/production";
+
+type ProductionOrderEnvelope = {
+  type?: string;
+  message?: string;
+  order?: ProductionOrder;
+};
 
 type RawProductionSearchOption = {
   value: string;
@@ -28,11 +33,21 @@ function normalizeProductionSearchOptions(
   }));
 }
 
+const unwrapProductionOrder = (payload: ProductionOrder | ProductionOrderEnvelope): ProductionOrder => {
+  if (payload && typeof payload === "object" && "order" in payload && payload.order) {
+    return payload.order;
+  }
+  return payload as ProductionOrder;
+};
+
 export const createProductionOrder = async (
   payload: CreateProductionOrderDto
 ): Promise<ProductionOrder> => {
-  const response = await axiosInstance.post(API_PRODUCTION_ORDERS_GROUP.create, payload);
-  return response.data;
+  const response = await axiosInstance.post<ProductionOrder | ProductionOrderEnvelope>(
+    API_PRODUCTION_ORDERS_GROUP.create,
+    payload,
+  );
+  return unwrapProductionOrder(response.data);
 };
 
 export const listProductionOrders = async (
@@ -94,8 +109,11 @@ export const updateProductionOrder = async (
   id: string,
   payload: UpdateProductionOrderDto
 ): Promise<ProductionOrder> => {
-  const response = await axiosInstance.patch(API_PRODUCTION_ORDERS_GROUP.update(id), payload);
-  return response.data;
+  const response = await axiosInstance.patch<ProductionOrder | ProductionOrderEnvelope>(
+    API_PRODUCTION_ORDERS_GROUP.update(id),
+    payload,
+  );
+  return unwrapProductionOrder(response.data);
 };
 
 export const startProductionOrder = async (id: string): Promise<ProductionOrder> => {
@@ -113,23 +131,3 @@ export const cancelProductionOrder = async (id: string): Promise<ProductionOrder
   return response.data;
 };
 
-export const addProductionOrderItem = async (
-  productionId: string,
-  payload: AddProductionOrderItemDto
-): Promise<ProductionOrder> => {
-  const response = await axiosInstance.post(
-    API_PRODUCTION_ORDERS_GROUP.addItem(productionId),
-    payload
-  );
-  return response.data;
-};
-
-export const removeProductionOrderItem = async (
-  productionId: string,
-  itemId: string
-): Promise<ProductionOrder> => {
-  const response = await axiosInstance.delete(
-    API_PRODUCTION_ORDERS_GROUP.removeItem(productionId, itemId)
-  );
-  return response.data;
-};

@@ -171,8 +171,6 @@ export const API_PRODUCTION_ORDERS_GROUP = {
   start: (id: string) => `/production-orders/${id}/start`,
   close: (id: string) => `/production-orders/${id}/close`,
   cancel: (id: string) => `/production-orders/${id}/cancel`,
-  addItem: (id: string) => `/production-orders/${id}/items`,
-  removeItem: (id: string, itemId: string) => `/production-orders/${id}/items/${itemId}`,
 };
 
 export const API_PAYMENT_GROUP = {

@@ -10,6 +10,7 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/common/utils/response";
+import { getApiErrorMessage } from "@/common/utils/apiError";
 import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant, type CatalogSearchSkuResult } from "@/services/catalogService";
 import { createProductionOrder, getProductionOrder, updateProductionOrder } from "@/services/productionService";
@@ -146,7 +147,7 @@ export function ProductionOrderFormModal({
         page: 1,
         limit: 10,
       });
-      setSearchResults(res ?? []);
+      setSearchResults((res ?? []).filter((item) => Boolean(item.stockItemId)));
     } catch {
       setSearchResults([]);
       showFlash(errorResponse("Error al cargar productos terminados"));
@@ -167,6 +168,7 @@ export function ProductionOrderFormModal({
       map.set(stockItemId, {
         id: entityId,
         itemId: stockItemId,
+        stockItemId,
         productId:
           item.finishedItem?.productId ??
           sku?.productId ??
@@ -241,6 +243,10 @@ export function ProductionOrderFormModal({
       showFlash(errorResponse("Selecciona un producto"));
       return;
     }
+    if (!selected?.stockItemId) {
+      showFlash(errorResponse("El producto seleccionado no tiene item de stock valido para produccion"));
+      return;
+    }
     if ((form.items ?? []).some((item) => item.finishedItemId === finishedItemId)) {
       showFlash(errorResponse("El producto ya fue agregado"));
       return;
@@ -250,7 +256,12 @@ export function ProductionOrderFormModal({
       ...prev,
       items: [
         ...(prev.items ?? []),
-        { finishedItemId, quantity: 1, unitCost: 0, type: selected?.type ?? "" },
+        {
+          finishedItemId,
+          quantity: 1,
+          unitCost: 0,
+          type: selected?.type ?? ProductTypes.PRODUCT,
+        },
       ],
     }));
 
@@ -450,8 +461,8 @@ export function ProductionOrderFormModal({
       }
 
       await onSaved();
-    } catch {
-      showFlash(errorResponse("Error al guardar la orden de produccion"));
+    } catch (error) {
+      showFlash(errorResponse(getApiErrorMessage(error, "Error al guardar la orden de produccion")));
     } finally {
       setLoading(false);
     }

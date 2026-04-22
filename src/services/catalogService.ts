@@ -10,6 +10,7 @@ import {
 export type CatalogSearchSkuResult = {
   id: string;
   itemId: string;
+  stockItemId?: string;
   productId?: string;
   sku?: string;
   productName: string;
@@ -24,9 +25,11 @@ export type CatalogSearchSkuResult = {
 };
 
 function mapSkuSearchResult(item: ProductSkuWithAttributes, productType?: ProductType): CatalogSearchSkuResult {
+  const stockItemId = item.stockItemId ?? undefined;
   return {
-    id: item.sku.id,
-    itemId: item.sku.id,
+    id: stockItemId ?? item.sku.id,
+    itemId: stockItemId ?? item.sku.id,
+    stockItemId,
     productId: item.sku.productId ?? undefined,
     sku: item.sku.backendSku ?? undefined,
     productName: item.sku.name ?? "",

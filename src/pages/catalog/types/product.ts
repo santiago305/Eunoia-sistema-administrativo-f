@@ -62,6 +62,7 @@ export type ProductCatalogSkuAttribute = {
 export type ProductCatalogSkuResponse = {
   sku: ProductCatalogSku;
   attributes: ProductCatalogSkuAttribute[];
+  stockItemId?: string | null;
 };
 
 export type ProductCatalogProductDetailResponse = {
