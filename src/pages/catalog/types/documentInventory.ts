@@ -1,4 +1,5 @@
 import { DocStatus, DocType } from "@/pages/warehouse/types/warehouse";
+import { ProductSkuWithAttributes } from "./product";
 
 export enum InventoryDocumentProductType {
   MATERIAL = "MATERIAL",
@@ -49,6 +50,7 @@ export type InventoryDocument = {
 
   postedAt: string | null;
   createdAt: string;
+  items: ProductSkuWithAttributes[];
 };
 
 export type GetInventoryDocumentsParams = {
@@ -58,10 +60,16 @@ export type GetInventoryDocumentsParams = {
   to?: string | Date;
   warehouseId?: string;
   warehouseIds?: string[];
+  warehouseIdsIn?: string[];
+  warehouseIdsNotIn?: string[];
   docType?: DocType;
   productType?: InventoryDocumentProductType;
   status?: DocStatus;
   q?: string;
+  includeItems?: boolean;
+  createdById?: string;
+  createdByIdsIn?: string[];
+  createdByIdsNotIn?: string[];
 };
 
 export type InventoryDocumentListResponse = {

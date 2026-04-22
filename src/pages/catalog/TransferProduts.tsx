@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { FloatingSelect } from "@/components/FloatingSelect";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  DataTableSearchPanel,
+  type DataTableSearchChip,
+  type DataTableSearchColumn,
+  type DataTableRecentSearchItem,
+  type DataTableSearchSnapshot,
+} from "@/components/table/search";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { formatDate } from "@/components/TimerToEnd";
@@ -16,7 +24,6 @@ import {
   endOfDayIso,
   parseDateInputValue,
   toLocalDateKey,
-  todayIso,
 } from "@/utils/functionPurchases";
 import type {
   InventoryDocument,
@@ -30,6 +37,8 @@ import { SystemButton } from "@/components/SystemButton";
 import { getDocuments } from "@/services/documentService";
 import { TransferProductsModal } from "@/pages/catalog/components/TransferProductsModal";
 import { useCompany } from "@/hooks/useCompany";
+import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
+import { DocumentInventoryDetails } from "@/components/DocumentInventoryDetails";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -37,12 +46,15 @@ const statusLabels: Record<DocStatus, string> = {
   [DocStatus.CANCELLED]: "Anulado",
 };
 
+type TransferSearchFilterKey = "warehouse" | "status";
+
 const docTypeLabels: Record<DocType, string> = {
   [DocType.ADJUSTMENT]: "Ajuste",
   [DocType.TRANSFER]: "Transferencia",
   [DocType.IN]: "Ingreso",
   [DocType.OUT]: "Salida",
   [DocType.PRODUCTION]: "Producción",
+  [DocType.PURCHASE]: "Compra",
 };
 
 const buildNumero = (document: InventoryDocument) => {
@@ -52,6 +64,8 @@ const buildNumero = (document: InventoryDocument) => {
   const padded = document.seriePadding ? num.padStart(document.seriePadding, "0") : num;
   return [serie, padded].filter(Boolean).join(sep) || document.id;
 };
+
+const RECENT_STORAGE_KEY = "recent-search:inventory-documents-transfer-products";
 
 export default function TransferenceProduts() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -63,20 +77,24 @@ export default function TransferenceProduts() {
   const [toDate, setToDate] = useState(() => endOfDayIso());
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [executedSearchText, setExecutedSearchText] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 10;
-
+  const [openDetailsModal, setOpenDetailsModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<InventoryDocument | null>(null);
   const PRIMARY = "hsl(var(--primary))";
-
   const [warehouseOptions, setWarehouseOptions] = useState<
-    { value: string; label: string }[]
+  { value: string; label: string }[]
   >([]);
+  const limit = 10;
+  const [recentSearches, setRecentSearches] = useState<
+    DataTableRecentSearchItem<DataTableSearchSnapshot<TransferSearchFilterKey>>[]
+  >(() => loadLocalRecentSearches(RECENT_STORAGE_KEY));
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [openTransferModal, setOpenTransferModal] = useState(false);
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
+  
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +105,213 @@ export default function TransferenceProduts() {
     { value: DocStatus.POSTED, label: statusLabels[DocStatus.POSTED] },
     { value: DocStatus.CANCELLED, label: statusLabels[DocStatus.CANCELLED] },
   ];
+
+  const smartSearchColumns = useMemo<DataTableSearchColumn<TransferSearchFilterKey>[]>(() => {
+    const warehouseFilterOptions = warehouseOptions
+      .filter((option) => option.value)
+      .map((option) => ({ id: option.value, label: option.label }));
+
+    const statusFilterOptions = statusOptions
+      .filter((option) => option.value)
+      .map((option) => ({ id: String(option.value), label: option.label }));
+
+    return [
+      { id: "warehouse", label: "Almacén", options: warehouseFilterOptions, visible: true },
+      { id: "status", label: "Estado", options: statusFilterOptions, visible: true },
+    ];
+  }, [statusOptions, warehouseOptions]);
+
+  const executedSnapshot = useMemo<DataTableSearchSnapshot<TransferSearchFilterKey>>(
+    () => ({
+      q: executedSearchText || undefined,
+      filters: {
+        warehouse: warehouseId ? [warehouseId] : [],
+        status: statusFilter ? [String(statusFilter)] : [],
+      },
+    }),
+    [executedSearchText, statusFilter, warehouseId],
+  );
+
+  const buildRecentLabel = useCallback(
+    (snapshot: DataTableSearchSnapshot<TransferSearchFilterKey>) => {
+      const parts: string[] = [];
+
+      if (snapshot.q) {
+        parts.push(`Busqueda: ${snapshot.q}`);
+      }
+
+      const warehouseValue = snapshot.filters.warehouse?.[0];
+      if (warehouseValue) {
+        const label =
+          warehouseOptions.find((option) => option.value === warehouseValue)?.label ??
+          warehouseValue;
+        parts.push(`Almacén: ${label}`);
+      }
+
+      const statusValue = snapshot.filters.status?.[0];
+      if (statusValue) {
+        parts.push(`Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`);
+      }
+
+      return parts.join(" · ") || "Búsqueda";
+    },
+    [warehouseOptions],
+  );
+
+  const recordRecentSearch = useCallback(
+    (snapshot: DataTableSearchSnapshot<TransferSearchFilterKey>) => {
+      const hasFilters =
+        Boolean(snapshot.filters.warehouse?.length) || Boolean(snapshot.filters.status?.length);
+      const hasQuery = Boolean(snapshot.q);
+      if (!hasFilters && !hasQuery) return;
+
+      const id = JSON.stringify(snapshot);
+      const label = buildRecentLabel(snapshot);
+
+      setRecentSearches(
+        pushLocalRecentSearch(RECENT_STORAGE_KEY, {
+          id,
+          label,
+          snapshot,
+        }),
+      );
+    },
+    [buildRecentLabel],
+  );
+
+  const searchChips = useMemo<DataTableSearchChip<TransferSearchFilterKey>[]>(() => {
+    const chips: DataTableSearchChip<TransferSearchFilterKey>[] = [];
+
+    if (executedSnapshot.q) {
+      chips.push({
+        id: "q",
+        label: `Busqueda: ${executedSnapshot.q}`,
+        removeKey: "q",
+      });
+    }
+
+    const warehouseValue = executedSnapshot.filters.warehouse?.[0];
+    if (warehouseValue) {
+      const label = warehouseOptions.find((option) => option.value === warehouseValue)?.label ?? warehouseValue;
+      chips.push({
+        id: "warehouse",
+        label: `Almacén: ${label}`,
+        removeKey: "warehouse",
+      });
+    }
+
+    const statusValue = executedSnapshot.filters.status?.[0];
+    if (statusValue) {
+      chips.push({
+        id: "status",
+        label: `Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`,
+        removeKey: "status",
+      });
+    }
+
+    return chips;
+  }, [executedSnapshot.filters.status, executedSnapshot.filters.warehouse, executedSnapshot.q, warehouseOptions]);
+
+  const handleRemoveChip = useCallback((chip: DataTableSearchChip<TransferSearchFilterKey>) => {
+    if (chip.removeKey === "q") {
+      setSearchText("");
+      setExecutedSearchText("");
+      recordRecentSearch({
+        filters: {
+          warehouse: warehouseId ? [warehouseId] : [],
+          status: statusFilter ? [String(statusFilter)] : [],
+        },
+      });
+      setPage(1);
+      return;
+    }
+
+    if (chip.removeKey === "warehouse") {
+      setWarehouseId("");
+      recordRecentSearch({
+        q: executedSearchText || undefined,
+        filters: {
+          warehouse: [],
+          status: statusFilter ? [String(statusFilter)] : [],
+        },
+      });
+      setPage(1);
+      return;
+    }
+
+    if (chip.removeKey === "status") {
+      setStatusFilter("");
+      recordRecentSearch({
+        q: executedSearchText || undefined,
+        filters: {
+          warehouse: warehouseId ? [warehouseId] : [],
+          status: [],
+        },
+      });
+      setPage(1);
+    }
+  }, [executedSearchText, recordRecentSearch, statusFilter, warehouseId]);
+
+  const handleToggleSearchOption = useCallback((columnId: TransferSearchFilterKey, optionId: string) => {
+    if (columnId === "warehouse") {
+      setWarehouseId((prev) => {
+        const nextWarehouseId = prev === optionId ? "" : optionId;
+        recordRecentSearch({
+          q: executedSearchText || undefined,
+          filters: {
+            warehouse: nextWarehouseId ? [nextWarehouseId] : [],
+            status: statusFilter ? [String(statusFilter)] : [],
+          },
+        });
+        return nextWarehouseId;
+      });
+      setPage(1);
+      return;
+    }
+
+    if (columnId === "status") {
+      setStatusFilter((prev) => {
+        const nextStatus = String(prev) === optionId ? "" : (optionId as DocStatus);
+        recordRecentSearch({
+          q: executedSearchText || undefined,
+          filters: {
+            warehouse: warehouseId ? [warehouseId] : [],
+            status: nextStatus ? [String(nextStatus)] : [],
+          },
+        });
+        return nextStatus;
+      });
+      setPage(1);
+    }
+  }, [executedSearchText, recordRecentSearch, statusFilter, warehouseId]);
+
+  const applySnapshot = useCallback((snapshot: DataTableSearchSnapshot<TransferSearchFilterKey>) => {
+    recordRecentSearch({
+      ...snapshot,
+      q: snapshot.q?.trim() || undefined,
+    });
+    const nextWarehouseId = snapshot.filters.warehouse?.[0] ?? "";
+    const nextStatus = snapshot.filters.status?.[0] ?? "";
+    setWarehouseId(nextWarehouseId);
+    setStatusFilter(nextStatus as DocStatus | "");
+    setSearchText(snapshot.q ?? "");
+    setExecutedSearchText((snapshot.q ?? "").trim());
+    setPage(1);
+  }, [recordRecentSearch]);
+
+  const submitSearch = useCallback(() => {
+    const nextQ = searchText.trim();
+    recordRecentSearch({
+      q: nextQ || undefined,
+      filters: {
+        warehouse: warehouseId ? [warehouseId] : [],
+        status: statusFilter ? [String(statusFilter)] : [],
+      },
+    });
+
+    setExecutedSearchText(nextQ);
+    setPage(1);
+  }, [recordRecentSearch, searchText, statusFilter, warehouseId]);
 
   const loadWarehouses = async () => {
     clearFlash();
@@ -108,14 +333,6 @@ export default function TransferenceProduts() {
     void loadWarehouses();
   }, []);
 
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setDebouncedQuery(query.trim());
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(id);
-  }, [query]);
-
   const loadDocuments = async () => {
     clearFlash();
     setLoading(true);
@@ -131,7 +348,7 @@ export default function TransferenceProduts() {
         docType: DocType.TRANSFER,
         productType: InventoryDocumentProductType.PRODUCT,
         status: statusFilter || undefined,
-        q: debouncedQuery || undefined,
+        q: executedSearchText || undefined,
       });
 
       setDocuments(res.items ?? []);
@@ -148,7 +365,7 @@ export default function TransferenceProduts() {
 
   useEffect(() => {
     void loadDocuments();
-  }, [page, fromDate, toDate, warehouseId, statusFilter, debouncedQuery]);
+  }, [page, fromDate, toDate, warehouseId, statusFilter, executedSearchText]);
 
   const openDocumentPdf = (id: string) => {
     clearFlash();
@@ -328,6 +545,8 @@ export default function TransferenceProduts() {
           </div>
         </div>
 
+        <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
+
         <DataTable
           tableId="inventory-documents-transfer-products"
           data={documentRows}
@@ -338,11 +557,27 @@ export default function TransferenceProduts() {
           hoverable={false}
           animated={false}
           selectableColumns
-          showSearch
-          searchMode="server"
-          searchPlaceholder="Buscar documento"
-          searchValue={query}
-          onSearchChange={(value) => setQuery(value)}
+          onRowClick={(row) => {
+            setSelectedDocument(row.document);
+            setOpenDetailsModal(true);
+          }}
+          toolbarSearchContent={
+            <DataTableSearchBar
+              value={searchText}
+              onChange={setSearchText}
+              onSubmitSearch={submitSearch}
+              searchLabel="Buscar documento"
+              searchName="inventory-documents-transfer-products-search"
+            >
+              <DataTableSearchPanel
+                recent={recentSearches}
+                columns={smartSearchColumns}
+                snapshot={executedSnapshot}
+                onApplySnapshot={applySnapshot}
+                onToggleOption={handleToggleSearchOption}
+              />
+            </DataTableSearchBar>
+          }
           rangeDates={{
             startDate: parseDateInputValue(fromDate),
             endDate: parseDateInputValue(toDate),
@@ -352,35 +587,6 @@ export default function TransferenceProduts() {
               setPage(1);
             },
           }}
-          filterPopoverContent={
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_0.6fr]">
-              <FloatingSelect
-                label="Almacén"
-                name="warehouse"
-                value={warehouseId}
-                onChange={(value) => {
-                  setWarehouseId(value);
-                  setPage(1);
-                }}
-                options={warehouseOptions}
-                searchable
-                className="h-11 rounded-sm border-border shadow-sm"
-              />
-
-              <FloatingSelect
-                label="Estado"
-                name="status"
-                value={statusFilter}
-                onChange={(value) => {
-                  setStatusFilter(value as DocStatus | "");
-                  setPage(1);
-                }}
-                options={statusOptions}
-                searchable
-                className="h-11 rounded-sm border-border shadow-sm"
-              />
-            </div>
-          }
           pagination={{
             page,
             limit,
@@ -404,6 +610,16 @@ export default function TransferenceProduts() {
         loadWhen={Boolean(selectedDocumentId)}
         reloadKey={selectedDocumentId}
         getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
+      />
+      <DocumentInventoryDetails
+        open={openDetailsModal}
+        documentId={selectedDocument?.id ?? null}
+        document={selectedDocument}
+        items={[]}
+        onClose={() => {
+          setOpenDetailsModal(false);
+          setSelectedDocument(null);
+        }}
       />
 
       <TransferProductsModal

@@ -34,7 +34,7 @@ import {
     TransferItemRow,
     getSkuUnitName,
     buildStockSummary,
-    buildSkuLabel,
+    buildSkuLabelWithAttributes,
 } from "../types/transfer";
 import { skuStock } from "../types/documentInventory";
 
@@ -165,7 +165,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
             { value: "", label: "Seleccionar SKU" },
             ...(searchResults?.items ?? []).map((item) => ({
                 value: item.sku.id,
-                label: buildSkuLabel(item),
+                label: buildSkuLabelWithAttributes(item),
             })),
         ],
         [searchResults],
@@ -233,7 +233,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                 skuId: item.skuId,
                 backendSku: skuData?.sku.backendSku ?? "-",
                 customSku: skuData?.sku.customSku ?? null,
-                name: skuData?.sku.name ?? "-",
+                name: skuData ? buildSkuLabelWithAttributes(skuData) : "-",
                 unit: skuData ? getSkuUnitName(skuData) : "-",
                 quantity: item.quantity,
             };
@@ -246,11 +246,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                 id: "name",
                 header: "Nombre",
                 cell: (row) => (
-                    <span className="text-black/70">
-                        {row.name}
-                        {row.backendSku ? `-${row.backendSku}` : ""}
-                        {row.customSku ? `(${row.customSku})` : ""}
-                    </span>
+                    <span className="text-black/70">{row.name}</span>
                 ),
                 headerClassName: "text-left w-[240px]",
                 className: "text-black/70",
@@ -468,7 +464,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                                     searchable
                                     searchPlaceholder="Buscar SKU..."
                                     onSearchChange={(text) => setQuery(text)}
-                                    className="h-9 text-xs"
+                                    className="h-11 text-xs"
                                 />
                             </div>
                         </div>
@@ -514,7 +510,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                                         setStockDetail(emptyStockDetail);
                                         void loadSeries(value);
                                     }}
-                                    className="h-9 text-xs"
+                                    className="h-11 text-xs"
                                     searchable
                                 />
 
@@ -527,18 +523,18 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                                         setForm((prev) => ({ ...prev, toWarehouseId: value }));
                                         setStockDetail(emptyStockDetail);
                                     }}
-                                    className="h-9 text-xs"
+                                    className="h-11 text-xs"
                                     searchable
                                 />
 
-                                <FloatingInput label="Serie" name="transfer-serie" value={serie.label} disabled className="h-9 text-xs text-black/90" />
+                                <FloatingInput label="Serie" name="transfer-serie" value={serie.label} disabled className="h-11 text-xs text-black/90" />
 
                                 <FloatingInput
                                     label="Nota"
                                     name="transfer-note"
                                     value={form.note ?? ""}
                                     onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-                                    className="h-9 text-xs"
+                                    className="h-11 text-xs"
                                 />
                             </div>
 

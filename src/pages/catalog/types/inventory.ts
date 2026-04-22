@@ -80,11 +80,18 @@ export type ListInventoryQuery = {
   page?: number;
   limit?: number;
   warehouseId?: string;
+  skuId?: string;
+  warehouseIdsIn?: string[];
+  warehouseIdsNotIn?: string[];
+  skuIdsIn?: string[];
+  skuIdsNotIn?: string[];
   itemId?: string;
   stockItemId?: string;
   locationId?: string;
   search?: string;
+  q?: string;
   type?: string;
+  productType?: string;
 };
 
 export type InventoryRow = {

@@ -124,7 +124,7 @@ export function DataTableSearchPanel<
                   }
                   className={`flex w-full items-center justify-between rounded-sm px-3 py-2 text-left transition ${
                     selected
-                      ? "bg-slate-900 text-white shadow-sm"
+                      ? "bg-[hsl(var(--primary))] text-white shadow-sm"
                       : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                   }`}
                 >

@@ -13,6 +13,30 @@ const serializeInventoryDocumentsParam = (value: string | Date) =>
 export const getDocuments = async (
   params: GetInventoryDocumentsParams,
 ): Promise<InventoryDocumentListResponse> => {
+  const unique = (values: Array<string | undefined> | undefined) =>
+    Array.from(new Set((values ?? []).map((value) => value?.trim()).filter(Boolean))) as string[];
+
+  const mergeList = (value?: string[] | string) => {
+    if (!value) return [];
+    if (Array.isArray(value)) return unique(value);
+    return unique(value.split(","));
+  };
+
+  const warehouseIdsIn = unique([
+    ...mergeList((params as any).warehouseIdsIn),
+    ...mergeList(params.warehouseIds),
+    ...(params.warehouseId ? [params.warehouseId] : []),
+  ]);
+
+  const warehouseIdsNotIn = mergeList((params as any).warehouseIdsNotIn);
+
+  const createdByIdsIn = unique([
+    ...mergeList((params as any).createdByIdsIn),
+    ...(params.createdById ? [params.createdById] : []),
+  ]);
+
+  const createdByIdsNotIn = mergeList((params as any).createdByIdsNotIn);
+
   const requestParams: Record<string, unknown> = {
     ...params,
     from: params.from ? serializeInventoryDocumentsParam(params.from) : undefined,
@@ -21,6 +45,10 @@ export const getDocuments = async (
       params.warehouseIds && params.warehouseIds.length > 0
         ? params.warehouseIds.join(",")
         : undefined,
+    warehouseIdsIn: warehouseIdsIn.length ? warehouseIdsIn.join(",") : undefined,
+    warehouseIdsNotIn: warehouseIdsNotIn.length ? warehouseIdsNotIn.join(",") : undefined,
+    createdByIdsIn: createdByIdsIn.length ? createdByIdsIn.join(",") : undefined,
+    createdByIdsNotIn: createdByIdsNotIn.length ? createdByIdsNotIn.join(",") : undefined,
     q: params.q?.trim() || undefined,
   };
 

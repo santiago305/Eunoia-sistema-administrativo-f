@@ -1,5 +1,5 @@
-import { InventoryDocumentProductType, skuStock } from "./documentInventory";
-import { ProductSkuWithAttributes } from "./product";
+import { InventoryDocumentProductType, type skuStock } from "./documentInventory";
+import type { ProductSkuWithAttributes } from "./product";
 
 export type TransferItem = {
   skuId: string;
@@ -85,6 +85,21 @@ export const buildSkuLabel = (item: ProductSkuWithAttributes) => {
   ]
     .filter(Boolean)
     .join(" ");
+};
+
+export const buildSkuLabelWithAttributes = (item: ProductSkuWithAttributes) => {
+  const attrs = Object.fromEntries(
+    (item.attributes ?? []).map((attr) => [attr.code, attr.value]),
+  ) as Record<string, string>;
+  const presentation = attrs.presentation ?? "";
+  const variantLabel = attrs.variant ?? "";
+  const color = attrs.color ?? "";
+  const skuLabel = item.sku.backendSku ? ` - ${item.sku.backendSku}` : "";
+  const customSku = item.sku.customSku ?? "-";
+
+  return `${item.sku.name ?? "Producto"} ${presentation} ${variantLabel} ${color}${skuLabel} (${customSku})`
+    .trim()
+    .replace(/\s+/g, " ");
 };
 
 export const buildStockSummary = (

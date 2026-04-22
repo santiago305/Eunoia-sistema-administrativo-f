@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import * as echarts from "echarts";
 import { useReducedMotion } from "framer-motion";
 import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { Headed } from "@/components/Headed";
-import { FloatingInput } from "@/components/FloatingInput";
-import { FloatingSelect } from "@/components/FloatingSelect";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { ActionsPopover, type ActionItem } from "@/components/ActionsPopover";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  type DataTableRecentSearchItem,
+} from "@/components/table/search";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
@@ -27,11 +30,29 @@ import type { ProductSkuWithAttributes } from "@/pages/catalog/types/product";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import {  useEChart } from "./utils/inventoryUtils";
 import { useCompany } from "@/hooks/useCompany";
-import { FileText, Filter, LineChart, Menu, Wrench, ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, FileText, LineChart, Menu, Wrench } from "lucide-react";
+import { InventorySmartSearchPanel } from "@/pages/catalog/components/InventorySmartSearchPanel";
 import { buildSkuLabelFromItem } from "./utils/productCreateModal.helpers";
 import { normalizeQuantity  } from "@/utils/functionPurchases";
+import type {
+  InventorySearchFilterKey,
+  InventorySearchFilters,
+  InventorySearchRule,
+  InventorySearchSnapshot,
+} from "@/pages/catalog/utils/inventorySmartSearch";
+import {
+  buildInventorySearchChips,
+  buildInventorySmartSearchColumns,
+  createEmptyInventorySearchFilters,
+  findInventorySearchRule,
+  removeInventorySearchKey,
+  sanitizeInventorySearchSnapshot,
+  upsertInventorySearchRule,
+} from "@/pages/catalog/utils/inventorySmartSearch";
+import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
 
 const DEFAULT_LIMIT = 10;
+const RECENT_STORAGE_KEY = "recent-search:catalog-inventory";
 
 type InventorySnapshotRow = {
   sku: ProductSkuWithAttributes;
@@ -68,15 +89,20 @@ export default function CatalogInventory() {
     [shouldReduceMotion],
   );
 
-  const [warehouseId, setWarehouseId] = useState("all");
   const [warehouseOptions, setWarehouseOptions] = useState<
     { value: string; label: string }[]
   >([]);
 
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null);
-  const [tableSearch, setTableSearch] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState<InventorySearchFilters>(() =>
+    createEmptyInventorySearchFilters(),
+  );
+  const [recentSearches, setRecentSearches] = useState<
+    DataTableRecentSearchItem<InventorySearchSnapshot>[]
+  >(() => loadLocalRecentSearches(RECENT_STORAGE_KEY));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [inventoryRows, setInventoryRows] = useState<InventorySnapshotRow[]>([]);
@@ -91,7 +117,163 @@ export default function CatalogInventory() {
   const isActiveRow = (row: InventorySnapshotRow) =>
     selectedSku === row.sku.sku.id && selectedWarehouseId === row.warehouseId;
 
-  const warehouseFilter = warehouseId === "all" ? undefined : warehouseId || undefined;
+  const smartSearchCatalogs = useMemo(
+    () => ({
+      warehouses: warehouseOptions
+        .filter((option) => option.value !== "all")
+        .map((option) => ({ id: option.value, label: option.label })),
+    }),
+    [warehouseOptions],
+  );
+
+  const smartSearchColumns = useMemo(
+    () => buildInventorySmartSearchColumns(smartSearchCatalogs),
+    [smartSearchCatalogs],
+  );
+
+  const draftSnapshot = useMemo<InventorySearchSnapshot>(
+    () =>
+      sanitizeInventorySearchSnapshot({
+        q: searchText,
+        filters: searchFilters,
+      }),
+    [searchFilters, searchText],
+  );
+
+  const executedSnapshot = useMemo<InventorySearchSnapshot>(
+    () =>
+      sanitizeInventorySearchSnapshot({
+        q: appliedSearchText,
+        filters: searchFilters,
+      }),
+    [appliedSearchText, searchFilters],
+  );
+
+  const warehouseQuery = useMemo(() => {
+    const rule = findInventorySearchRule(executedSnapshot, "warehouse");
+    const values = (rule?.values ?? []).map((value) => value?.trim()).filter(Boolean) as string[];
+
+    if (rule?.mode === "exclude") {
+      return {
+        warehouseIdsIn: [] as string[],
+        warehouseIdsNotIn: values,
+        detailWarehouseId: undefined as string | undefined,
+      };
+    }
+
+    return {
+      warehouseIdsIn: values,
+      warehouseIdsNotIn: [] as string[],
+      detailWarehouseId: values.length === 1 ? values[0] : undefined,
+    };
+  }, [executedSnapshot]);
+
+  const searchChips = useMemo(
+    () => buildInventorySearchChips(executedSnapshot, smartSearchCatalogs),
+    [executedSnapshot, smartSearchCatalogs],
+  );
+
+  const buildRecentLabel = useCallback(
+    (snapshot: InventorySearchSnapshot) => {
+      const chips = buildInventorySearchChips(snapshot, smartSearchCatalogs);
+      return chips.map((chip) => chip.label).join(" · ") || "Búsqueda";
+    },
+    [smartSearchCatalogs],
+  );
+
+  const recordRecentSearch = useCallback(
+    (snapshot: InventorySearchSnapshot) => {
+      const hasFilters = Boolean(snapshot.filters.length);
+      const hasQuery = Boolean(snapshot.q);
+      if (!hasFilters && !hasQuery) return;
+
+      const normalized = sanitizeInventorySearchSnapshot(snapshot);
+      const id = JSON.stringify(normalized);
+      const label = buildRecentLabel(normalized);
+
+      setRecentSearches(
+        pushLocalRecentSearch(RECENT_STORAGE_KEY, {
+          id,
+          label,
+          snapshot: normalized,
+        }),
+      );
+    },
+    [buildRecentLabel],
+  );
+
+  const applySmartSnapshot = (snapshot: InventorySearchSnapshot) => {
+    const normalized = sanitizeInventorySearchSnapshot(snapshot);
+    setSearchText(normalized.q ?? "");
+    setAppliedSearchText(normalized.q ?? "");
+    setSearchFilters(normalized.filters);
+    recordRecentSearch(normalized);
+    setSelectedSku(null);
+    setSelectedWarehouseId(null);
+    setPage(1);
+  };
+
+  const submitSearch = () => {
+    const next = searchText.trim();
+    const nextSnapshot = sanitizeInventorySearchSnapshot({
+      q: next,
+      filters: searchFilters,
+    });
+
+    recordRecentSearch(nextSnapshot);
+    setAppliedSearchText(next);
+    setSelectedSku(null);
+    setSelectedWarehouseId(null);
+    setPage(1);
+  };
+
+  const handleApplySearchRule = (rule: InventorySearchRule) => {
+    const next = upsertInventorySearchRule(
+      sanitizeInventorySearchSnapshot({ q: searchText, filters: searchFilters }),
+      rule,
+    );
+    setSearchFilters(next.filters);
+    recordRecentSearch(
+      sanitizeInventorySearchSnapshot({
+        q: appliedSearchText,
+        filters: next.filters,
+      }),
+    );
+    setSelectedSku(null);
+    setSelectedWarehouseId(null);
+    setPage(1);
+  };
+
+  const handleRemoveSearchRule = (fieldId: InventorySearchFilterKey) => {
+    const next = removeInventorySearchKey(
+      sanitizeInventorySearchSnapshot({ q: searchText, filters: searchFilters }),
+      fieldId,
+    );
+    setSearchFilters(next.filters);
+    recordRecentSearch(
+      sanitizeInventorySearchSnapshot({
+        q: appliedSearchText,
+        filters: next.filters,
+      }),
+    );
+    setSelectedSku(null);
+    setSelectedWarehouseId(null);
+    setPage(1);
+  };
+
+  const handleRemoveChip = (key: "q" | InventorySearchFilterKey) => {
+    const nextSnapshot = removeInventorySearchKey(
+      sanitizeInventorySearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+      key,
+    );
+    setSearchText(nextSnapshot.q ?? "");
+    setAppliedSearchText(nextSnapshot.q ?? "");
+    setSearchFilters(nextSnapshot.filters);
+    recordRecentSearch(nextSnapshot);
+    setSelectedSku(null);
+    setSelectedWarehouseId(null);
+    setPage(1);
+  };
 
   useEffect(() => {
     if (!selectedSku) {
@@ -104,19 +286,6 @@ export default function CatalogInventory() {
       return;
     }
   }, [selectedSku]);
-
-
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setSearchTerm(tableSearch.trim());
-    }, 400);
-
-    return () => clearTimeout(id);
-  }, [tableSearch]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [warehouseId, tableSearch]);
 
   const availabilityChart = useMemo<echarts.EChartsOption>(() => {
     const warehouseNames = selectedAvailability.map(
@@ -275,8 +444,8 @@ export default function CatalogInventory() {
     try {
       const response = await listAvailableStockSkus({
         skuId,
-        ...(warehouseFilter ? { warehouseId: warehouseFilter } : {}),
-        ...(searchTerm ? { q: searchTerm } : {}),
+        ...(warehouseQuery.detailWarehouseId ? { warehouseId: warehouseQuery.detailWarehouseId } : {}),
+        ...(executedSnapshot.q ? { q: executedSnapshot.q } : {}),
         productType: ProductTypes.PRODUCT,
       });
 
@@ -306,7 +475,7 @@ export default function CatalogInventory() {
     try {
       const response = await getSkuStockSnapshots(
         skuId,
-        warehouseFilter ? { warehouseId: warehouseFilter } : undefined,
+        warehouseQuery.detailWarehouseId ? { warehouseId: warehouseQuery.detailWarehouseId } : undefined,
       );
 
       if (forecastRequestRef.current !== requestId) return;
@@ -347,8 +516,10 @@ export default function CatalogInventory() {
       const res = (await listInventory({
         page,
         limit: DEFAULT_LIMIT,
-        warehouseId: warehouseFilter,
-        q: searchTerm || undefined,
+        warehouseId: warehouseQuery.detailWarehouseId,
+        warehouseIdsIn: warehouseQuery.warehouseIdsIn.length ? warehouseQuery.warehouseIdsIn : undefined,
+        warehouseIdsNotIn: warehouseQuery.warehouseIdsNotIn.length ? warehouseQuery.warehouseIdsNotIn : undefined,
+        q: executedSnapshot.q || undefined,
         productType: ProductTypes.PRODUCT,
       } as unknown as Record<string, unknown>)) as unknown as {
         items?: InventorySnapshotRow[];
@@ -405,7 +576,7 @@ export default function CatalogInventory() {
 
   useEffect(() => {
     void loadInventory();
-  }, [page, warehouseId, searchTerm]);
+  }, [executedSnapshot, page, warehouseQuery]);
 
   const columns = useMemo<DataTableColumn<InventorySnapshotRow>[]>(
     () => [
@@ -487,47 +658,22 @@ export default function CatalogInventory() {
   return (
     <PageShell>
       <PageTitle title="Catalogo - Inventario" />
-      <div className="space-y-4">
+      <div className="space-y-2">
           <Headed
             title="Inventario de productos"
             subtitle="Explora el stock por SKU y almacén."
             size="lg"
           />
-        <section className="rounded-sm border border-black/10 bg-gray-50 p-5 shadow-sm space-y-4">
-          <SectionHeaderForm icon={Filter} title="Filtros" />
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[0.6fr_0.6fr_1fr]">
-            <FloatingSelect
-              label="Almacén"
-              name="warehouseId"
-              value={warehouseId}
-              onChange={(value) => {
-                setWarehouseId(value);
-                setSelectedSku(null);
-                setSelectedWarehouseId(null);
-              }}
-              options={warehouseOptions}
-              searchable
-              searchPlaceholder="Buscar almacén..."
-              emptyMessage="Sin almacenes"
-            />
-            <FloatingInput
-              label="SKU"
-              name="sku"
-              value={tableSearch}
-              onChange={(event) => {
-                setTableSearch(event.target.value);
-                setSelectedSku(null);
-                setSelectedWarehouseId(null);
-                setPage(1);
-              }}
-            />
-          </div>
-        </section>
 
         <section className="grid grid-cols-1 md:grid-cols-[3fr_1.7fr] gap-4">
           <div className="space-y-3">
              <div className="xl:col-span-2">
+                <DataTableSearchChips
+                  chips={searchChips}
+                  onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+                />
                 <DataTable
+                className="max-h-[85vh] overflow-hidden p-3"
                   tableId="catalog-inventory-table"
                   data={inventoryRows}
                   columns={columns}
@@ -540,13 +686,28 @@ export default function CatalogInventory() {
                   animated={!shouldReduceMotion}
                   showSearch={false}
                   selectableColumns
-                  searchValue={tableSearch}
-                  onSearchChange={(value) => {
-                    setTableSearch(value);
-                    setSelectedSku(null);
-                    setSelectedWarehouseId(null);
-                  }}
-                  globalSearchFn={() => true}
+                  toolbarSearchContent={
+                    <DataTableSearchBar
+                      value={searchText}
+                      onChange={(value) => {
+                        setSearchText(value);
+                      }}
+                      onSubmitSearch={submitSearch}
+                      searchLabel="Buscar producto"
+                      searchName="catalog-inventory-search"
+                    >
+                      <InventorySmartSearchPanel
+                        recent={recentSearches}
+                        columns={smartSearchColumns}
+                        snapshot={draftSnapshot}
+                        catalogs={smartSearchCatalogs}
+                        filterQuery={searchText}
+                        onApplySnapshot={applySmartSnapshot}
+                        onApplyRule={handleApplySearchRule}
+                        onRemoveRule={handleRemoveSearchRule}
+                      />
+                    </DataTableSearchBar>
+                  }
                   pagination={{
                     page,
                     limit: DEFAULT_LIMIT,
@@ -580,12 +741,12 @@ export default function CatalogInventory() {
                   <div
                     ref={refLarge}
                     className="mt-4 hidden lg:block"
-                    style={{ height: 180 }}
+                    style={{ height: 150 }}
                   />
                   <div
                     ref={refCompact}
                     className="mt-4 lg:hidden"
-                    style={{ height: 180 }}
+                    style={{ height: 150 }}
                   />
                 </>
               )}
@@ -638,12 +799,12 @@ export default function CatalogInventory() {
                   <div
                     ref={refForecastLarge}
                     className="mt-4 hidden lg:block"
-                    style={{ height: 180 }}
+                    style={{ height: 160 }}
                   />
                   <div
                     ref={refForecastCompact}
                     className="mt-4 lg:hidden"
-                    style={{ height: 180 }}
+                    style={{ height: 160 }}
                   />
                 </>
               )}
