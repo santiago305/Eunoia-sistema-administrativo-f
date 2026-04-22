@@ -1,36 +1,49 @@
-import { useCallback, useMemo, useState, type MouseEvent } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useReducedMotion } from "framer-motion";
 import { Download, Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusPill } from "@/components/StatusTag";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
+import {
+    DataTableSearchBar,
+    DataTableSearchChips,
+    DataTableSearchPanel,
+    type DataTableSearchChip,
+    type DataTableSearchColumn,
+    type DataTableRecentSearchItem,
+    type DataTableSearchSnapshot,
+} from "@/components/table/search";
 import type { DataTableColumn } from "@/components/table/types";
-import { useProducts } from "@/hooks/useProducts";
-import { listCatalogMaterials } from "@/services/productService";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { useProducts } from "@/hooks/useProducts";
 import { errorResponse, successResponse } from "@/common/utils/response";
+import { listCatalogProducts, updateProductActive } from "@/services/productService";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { Product } from "@/pages/catalog/types/product";
-import { ActionsPopover } from "@/components/ActionsPopover";
 import { Headed } from "@/components/Headed";
-import { getDropdownItemProducts } from "../catalog/data/getDropdownItemProducts";
+import { ActionsPopover } from "@/components/ActionsPopover";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
-import { ProductCreateModal } from "../catalog/components/ProductCreateModal";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCompany } from "@/hooks/useCompany";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
+import { ProductCreateModal } from "../catalog/components/ProductCreateModal";
+import { getDropdownItemProducts } from "../catalog/data/getDropdownItemProducts";
 
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.MATERIAL;
 
-export default function RowMaterial() {
-	    const shouldReduceMotion = useReducedMotion();
-	    const { showFlash, clearFlash } = useFlashMessage();
-        const { hasCompany } = useCompany();
-        const companyActionDisabled = !hasCompany;
-        const companyActionTitle = hasCompany ? "Nueva materia prima" : "Primero registra la empresa.";
+type ProductSearchFilterKey = "status";
+
+const RECENT_STORAGE_KEY = "recent-search:catalog-products";
+
+export default function CatalogProducts() {
+    const shouldReduceMotion = useReducedMotion();
+    const { showFlash, clearFlash } = useFlashMessage();
+    const { hasCompany } = useCompany();
+    const companyActionDisabled = !hasCompany;
 
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -38,18 +51,171 @@ export default function RowMaterial() {
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
     const [searchText, setSearchText] = useState("");
-    const debouncedSearch = useDebouncedValue(searchText.trim(), 400);
+    const [executedSearchText, setExecutedSearchText] = useState("");
+    const [statusFilter, setStatusFilter] = useState<"" | "true" | "false">("");
+    const debouncedSearchText = useDebouncedValue(searchText.trim(), 400);
+    const [recentSearches, setRecentSearches] = useState<
+        DataTableRecentSearchItem<DataTableSearchSnapshot<ProductSearchFilterKey>>[]
+    >(() => loadLocalRecentSearches(RECENT_STORAGE_KEY));
 
     const limit = 30;
 
     const queryParams = useMemo(
-        () => ({
-            page,
-            limit,
-            q: debouncedSearch || undefined
-        }),
-        [page, limit, debouncedSearch],
+    () => ({
+        page,
+        limit,
+        q: executedSearchText || undefined,
+        isActive: statusFilter || undefined,
+    }),
+    [page, limit, executedSearchText, statusFilter],
     );
+
+    useEffect(() => {
+        setExecutedSearchText(debouncedSearchText);
+    }, [debouncedSearchText]);
+
+    const smartSearchColumns = useMemo<DataTableSearchColumn<ProductSearchFilterKey>[]>(() => {
+        return [
+            {
+                id: "status",
+                label: "Estado",
+                visible: true,
+                options: [
+                    { id: "true", label: "Activo" },
+                    { id: "false", label: "Desactivado" },
+                ],
+            },
+        ];
+    }, []);
+
+    const executedSnapshot = useMemo<DataTableSearchSnapshot<ProductSearchFilterKey>>(
+        () => ({
+            q: executedSearchText || undefined,
+            filters: {
+                status: statusFilter ? [statusFilter] : [],
+            },
+        }),
+        [executedSearchText, statusFilter],
+    );
+
+    const buildRecentLabel = useCallback((snapshot: DataTableSearchSnapshot<ProductSearchFilterKey>) => {
+        const parts: string[] = [];
+        if (snapshot.q) parts.push(`Busqueda: ${snapshot.q}`);
+        const statusValue = snapshot.filters.status?.[0];
+        if (statusValue) {
+            parts.push(`Estado: ${statusValue === "true" ? "Activo" : "Desactivado"}`);
+        }
+        return parts.join(" · ") || "Búsqueda";
+    }, []);
+
+    const recordRecentSearch = useCallback(
+        (snapshot: DataTableSearchSnapshot<ProductSearchFilterKey>) => {
+            const hasFilters = Boolean(snapshot.filters.status?.length);
+            const hasQuery = Boolean(snapshot.q);
+            if (!hasFilters && !hasQuery) return;
+
+            const id = JSON.stringify(snapshot);
+            const label = buildRecentLabel(snapshot);
+
+            setRecentSearches(
+                pushLocalRecentSearch(RECENT_STORAGE_KEY, {
+                    id,
+                    label,
+                    snapshot,
+                }),
+            );
+        },
+        [buildRecentLabel],
+    );
+
+    const searchChips = useMemo<DataTableSearchChip<ProductSearchFilterKey>[]>(() => {
+        const chips: DataTableSearchChip<ProductSearchFilterKey>[] = [];
+
+        if (executedSnapshot.q) {
+            chips.push({
+                id: "q",
+                label: `Busqueda: ${executedSnapshot.q}`,
+                removeKey: "q",
+            });
+        }
+
+        const statusValue = executedSnapshot.filters.status?.[0];
+        if (statusValue) {
+            chips.push({
+                id: "status",
+                label: `Estado: ${statusValue === "true" ? "Activo" : "Desactivado"}`,
+                removeKey: "status",
+            });
+        }
+
+        return chips;
+    }, [executedSnapshot.filters.status, executedSnapshot.q]);
+
+    const handleRemoveChip = useCallback((chip: DataTableSearchChip<ProductSearchFilterKey>) => {
+        if (chip.removeKey === "q") {
+            setSearchText("");
+            setExecutedSearchText("");
+            recordRecentSearch({
+                filters: {
+                    status: statusFilter ? [statusFilter] : [],
+                },
+            });
+            setPage(1);
+            return;
+        }
+
+        if (chip.removeKey === "status") {
+            setStatusFilter("");
+            recordRecentSearch({
+                q: executedSearchText || undefined,
+                filters: {
+                    status: [],
+                },
+            });
+            setPage(1);
+        }
+    }, [executedSearchText, recordRecentSearch, statusFilter]);
+
+    const handleToggleSearchOption = useCallback((columnId: ProductSearchFilterKey, optionId: string) => {
+        if (columnId !== "status") return;
+        setStatusFilter((prev) => {
+            const nextStatus = prev === optionId ? "" : (optionId as "true" | "false");
+            recordRecentSearch({
+                q: executedSearchText || undefined,
+                filters: {
+                    status: nextStatus ? [nextStatus] : [],
+                },
+            });
+            return nextStatus;
+        });
+        setPage(1);
+    }, [executedSearchText, recordRecentSearch]);
+
+    const applySnapshot = useCallback((snapshot: DataTableSearchSnapshot<ProductSearchFilterKey>) => {
+        recordRecentSearch({
+            ...snapshot,
+            q: snapshot.q?.trim() || undefined,
+        });
+        const nextStatus = snapshot.filters.status?.[0] ?? "";
+        setStatusFilter(nextStatus as "" | "true" | "false");
+        setSearchText(snapshot.q ?? "");
+        setExecutedSearchText((snapshot.q ?? "").trim());
+        setPage(1);
+    }, [recordRecentSearch]);
+
+    const submitSearch = useCallback(() => {
+        const nextQ = searchText.trim();
+        recordRecentSearch({
+            q: nextQ || undefined,
+            filters: {
+                status: statusFilter ? [statusFilter] : [],
+            },
+        });
+
+        setExecutedSearchText(nextQ);
+        setPage(1);
+    }, [recordRecentSearch, searchText, statusFilter]);
+
 
     const {
         items: products,
@@ -57,9 +223,7 @@ export default function RowMaterial() {
         page: apiPage,
         limit: apiLimit,
         loading,
-        error,
         refresh,
-        setActive,
     } = useProducts(queryParams, { mode: "material" });
 
     const deletingProduct = useMemo(
@@ -77,21 +241,6 @@ export default function RowMaterial() {
         setEditingProductId(product.id);
     }, []);
 
-    const confirmDelete = async () => {
-        if (!deletingProductId) return;
-        clearFlash();
-        try {
-            const product = products.find((p) => p.id === deletingProductId);
-            if (product) await setActive(deletingProductId, !product.isActive);
-
-            setDeletingProductId(null);
-            showFlash(successResponse("Estado de materia prima actualizado"));
-            await refresh();
-        } catch {
-            showFlash(errorResponse("Error al cambiar estado de la materia prima"));
-        }
-    };
-
     const columns = useMemo<DataTableColumn<Product>[]>(
         () => [
             {
@@ -107,6 +256,7 @@ export default function RowMaterial() {
             {
                 id: "type",
                 header: "Tipo",
+                visible: false,
                 cell: (row) => <span className="text-black/70">{row.type || "-"}</span>,
             },
             {
@@ -132,17 +282,17 @@ export default function RowMaterial() {
             {
                 id: "actions",
                 header: "ACCIONES",
-                headerClassName: "text-center",
+                headerClassName: "text-center flex justify-center",
                 cell: (row) => (
                     <div className="flex justify-center">
                         <ActionsPopover
-	                            actions={getDropdownItemProducts(row, {
-	                                openEdit,
-	                                setDeletingProductId,
-	                            }).map((action) => ({
-                                    ...action,
-                                    disabled: companyActionDisabled || action.disabled,
-                                }))}
+                            actions={getDropdownItemProducts(row, {
+                                openEdit,
+                                setDeletingProductId,
+                            }).map((action) => ({
+                                ...action,
+                                disabled: companyActionDisabled || action.disabled,
+                            }))}
                             columns={1}
                             compact
                             showLabels
@@ -169,8 +319,26 @@ export default function RowMaterial() {
                 ),
             },
         ],
-	        [companyActionDisabled, openEdit],
-	    );
+        [companyActionDisabled, openEdit],
+    );
+
+    const confirmDelete = async () => {
+        if (!deletingProductId) return;
+        clearFlash();
+        try {
+            const product = products.find((p) => p.id === deletingProductId);
+            if (product) {
+            await updateProductActive(deletingProductId, {
+                isActive: !product.isActive,
+            });
+            }  
+            setDeletingProductId(null);
+            showFlash(successResponse("Estado de producto actualizado"));
+            await refresh();
+        } catch {
+            showFlash(errorResponse("Error al cambiar estado del producto"));
+        }
+    };
 
     const buildCsv = (
         rows: Array<{
@@ -223,12 +391,12 @@ export default function RowMaterial() {
         setExporting(true);
         try {
             const pageSize = 100;
-            const first = await listCatalogMaterials({ page: 1, limit: pageSize });
+            const first = await listCatalogProducts({ page: 1, limit: pageSize });
             const allItems = [...(first.items ?? [])];
             const pages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));
 
             for (let currentPage = 2; currentPage <= pages; currentPage += 1) {
-                const response = await listCatalogMaterials({ page: currentPage, limit: pageSize });
+                const response = await listCatalogProducts({ page: currentPage, limit: pageSize });
                 if (response.items?.length) allItems.push(...response.items);
             }
 
@@ -238,7 +406,7 @@ export default function RowMaterial() {
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = "materias_primas.csv";
+            link.download = "productos.csv";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -247,84 +415,84 @@ export default function RowMaterial() {
             setExporting(false);
         }
     };
+    
 
     return (
         <PageShell>
-            <PageTitle title="Catalogo - Materias primas" />
-            <div className="space-y-4">
-                <motion.div
-                    initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
-                    animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
-                    transition={{ duration: 0.18 }}
-                    className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
-                >
-                    <Headed title="Materias primas y materiales" size="lg" />
+            <PageTitle title="Catalogo - Productos" />
+            <div className="flex items-center justify-between">
+                <Headed title="Materiales" size="lg" />
+                <div className="flex flex-wrap items-center gap-2">
+                    <SystemButton
+                        variant="outline"
+                        size="sm"
+                        className="text-[11px]"
+                        onClick={downloadCsv}
+                        loading={exporting}
+                        leftIcon={<Download className="h-4 w-4" />}
+                        title="Exportar CSV"
+                    >
+                        {exporting ? "Exportando..." : "Exportar CSV"}
+                    </SystemButton>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-[11px]">
-                            Total: <span className="font-semibold text-black">{total}</span>
-                        </div>
-
-                        <SystemButton
-                            variant="outline"
-                            size="sm"
-                            className="text-[11px]"
-                            onClick={downloadCsv}
-                            loading={exporting}
-                            leftIcon={<Download className="h-4 w-4" />}
-                            title="Exportar CSV"
-                        >
-                            {exporting ? "Exportando..." : "Exportar CSV"}
-                        </SystemButton>
-
-	                        <SystemButton
-	                            size="sm"
-	                            className="text-[11px]"
-	                            onClick={startCreate}
-	                            leftIcon={<Plus className="h-4 w-4" />}
-	                            title={companyActionTitle}
-                                disabled={companyActionDisabled}
-	                        >
-	                            Nueva materia prima
-	                        </SystemButton>
-                    </div>
-                </motion.div>
-
-                <DataTable
-                    tableId="row-materials"
-                    data={products}
-                    columns={columns}
-                    rowKey="id"
-                    loading={loading}
-                    emptyMessage="No hay materias primas disponibles."
-                    showSearch
-                    searchMode="server"
-                    searchValue={searchText}
-                    onSearchChange={(value) => {
-                        setSearchText(value);
-                        setPage(1);
-                    }}
-                    searchPlaceholder="Buscar materias primas..."
-                    animated={!shouldReduceMotion}
-                    tableClassName="text-[11px]"
-                    pagination={{
-                        page: apiPage ?? page,
-                        limit: apiLimit ?? limit,
-                        total,
-                    }}
-                    selectableColumns
-                    onPageChange={(nextPage) => setPage(nextPage)}
-                />
-
-                {error && <div className="px-5 py-4 text-sm text-rose-600">{error}</div>}
+                    <SystemButton
+                        size="sm"
+                        className="text-[11px]"
+                        onClick={startCreate}
+                        leftIcon={<Plus className="h-4 w-4" />}
+                        title="Nuevo producto"
+                        disabled={companyActionDisabled}
+                    >
+                        Nuevo producto
+                    </SystemButton>
+                </div>
             </div>
+
+            <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
+
+            <DataTable
+                tableId="catalog-products"
+                data={products}
+                columns={columns}
+                rowKey="id"
+                loading={loading}
+                emptyMessage="No hay productos disponibles."
+                toolbarSearchContent={
+                    <DataTableSearchBar
+                        value={searchText}
+                        onChange={(value) => {
+                            setSearchText(value);
+                            setPage(1);
+                        }}
+                        onSubmitSearch={submitSearch}
+                        searchLabel="Buscar productos..."
+                        searchName="catalog-products-smart-search"
+                    >
+                        <DataTableSearchPanel
+                            recent={recentSearches}
+                            columns={smartSearchColumns}
+                            snapshot={executedSnapshot}
+                            onApplySnapshot={applySnapshot}
+                            onToggleOption={handleToggleSearchOption}
+                        />
+                    </DataTableSearchBar>
+                }
+                animated={!shouldReduceMotion}
+                tableClassName="text-[11px]"
+                pagination={{
+                    page: apiPage ?? page,
+                    limit: apiLimit ?? limit,
+                    total,
+                }}
+                selectableColumns
+                onPageChange={(nextPage) => setPage(nextPage)}
+            />
 
             <ProductCreateModal
                 open={openCreate}
-                mode="create"
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
-                entityLabel="materia prima"
+                entityLabel="producto"
                 onClose={() => setOpenCreate(false)}
                 onSaved={() => {
                     void refresh();
@@ -337,7 +505,7 @@ export default function RowMaterial() {
                 productId={editingProductId}
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
-                entityLabel="materia prima"
+                entityLabel="producto"
                 onClose={() => {
                     setEditingProductId(null);
                 }}
@@ -355,9 +523,9 @@ export default function RowMaterial() {
                 message={
                     <>
                         {deletingProduct?.isActive ? (
-                            <>Estas por eliminar una materia prima. Hazlo solo si estas seguro.</>
+                            <>Estas por eliminar un producto. Hazlo solo si estas seguro.</>
                         ) : (
-                            <>Estas por restaurar una materia prima. Hazlo solo si estas seguro.</>
+                            <>Estas por restaurar un producto. Hazlo solo si estas seguro.</>
                         )}
                     </>
                 }

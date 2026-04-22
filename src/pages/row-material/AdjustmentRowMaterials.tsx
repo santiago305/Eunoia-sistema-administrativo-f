@@ -3,6 +3,15 @@ import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  DataTableSearchPanel,
+  type DataTableSearchChip,
+  type DataTableSearchColumn,
+  type DataTableRecentSearchItem,
+  type DataTableSearchSnapshot,
+} from "@/components/table/search";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -14,7 +23,6 @@ import {
   endOfDayIso,
   parseDateInputValue,
   toLocalDateKey,
-  todayIso,
 } from "@/utils/functionPurchases";
 import type { InventoryDocument, InventoryDocumentRow } from "@/pages/catalog/types/documentInventory";
 import { InventoryDocumentProductType } from "@/pages/catalog/types/documentInventory";
@@ -24,16 +32,20 @@ import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
 import { getDocuments } from "@/services/documentService";
 import AdjustmentProductModal from "@/pages/catalog/components/AdjustmentFormProducts";
-import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
-import { ProductTypes } from "../catalog/types/ProductTypes";
-import { RoutesPaths } from "@/router/config/routesPaths";
 import { useCompany } from "@/hooks/useCompany";
+import { DocumentInventoryDetails } from "@/components/DocumentInventoryDetails";
+import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
+import { ProductTypes } from "../catalog/types/ProductTypes";
+
+type AdjustmentSearchFilterKey = "warehouse" | "status";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
   [DocStatus.POSTED]: "Contabilizado",
   [DocStatus.CANCELLED]: "Anulado",
 };
+
+const RECENT_STORAGE_KEY = "recent-search:inventory-documents-adjustment-products";
 
 const buildNumero = (document: InventoryDocument) => {
   const serie = document.serieCode || document.serie || "";
@@ -53,8 +65,8 @@ export default function AdjustmentProduts() {
   const [toDate, setToDate] = useState(() => endOfDayIso());
   const [warehouseId, setWarehouseId] = useState("");
   const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [executedSearchText, setExecutedSearchText] = useState("");
   const [page, setPage] = useState(1);
   const [refresh, setRefresh] = useState(0);
   const limit = 10;
@@ -64,8 +76,13 @@ export default function AdjustmentProduts() {
   const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>(
     [],
   );
+  const [recentSearches, setRecentSearches] = useState<
+    DataTableRecentSearchItem<DataTableSearchSnapshot<AdjustmentSearchFilterKey>>[]
+  >(() => loadLocalRecentSearches(RECENT_STORAGE_KEY));
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [openDetailsModal, setOpenDetailsModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<InventoryDocument | null>(null);
   const [openAdjustmentModal, setOpenAdjustmentModal] = useState(false);
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
   const [total, setTotal] = useState(0);
@@ -83,96 +100,212 @@ export default function AdjustmentProduts() {
     { value: DocStatus.CANCELLED, label: statusLabels[DocStatus.CANCELLED] },
   ];
 
-  const adjustmentTableFilters = useMemo<DataTableFilterTree>(() => {
+  const smartSearchColumns = useMemo<DataTableSearchColumn<AdjustmentSearchFilterKey>[]>(() => {
     const warehouseFilterOptions = warehouseOptions
       .filter((option) => option.value)
-      .map((option) => ({
-        id: option.value,
-        label: option.label,
-      }));
+      .map((option) => ({ id: option.value, label: option.label }));
 
     const statusFilterOptions = statusOptions
       .filter((option) => option.value)
-      .map((option) => ({
-        id: String(option.value),
-        label: option.label,
-      }));
+      .map((option) => ({ id: String(option.value), label: option.label }));
 
     return [
-      {
-        id: "warehouse",
-        label: "Almacén",
-        modes: [
-          {
-            id: "select",
-            label: "Seleccionar",
-            groups: [
-              {
-                id: "options",
-                label: "Almacenes",
-                searchable: true,
-                options: warehouseFilterOptions,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "status",
-        label: "Estado",
-        modes: [
-          {
-            id: "select",
-            label: "Seleccionar",
-            groups: [
-              {
-                id: "options",
-                label: "Estados",
-                options: statusFilterOptions,
-              },
-            ],
-          },
-        ],
-      },
+      { id: "warehouse", label: "Almacén", options: warehouseFilterOptions, visible: true },
+      { id: "status", label: "Estado", options: statusFilterOptions, visible: true },
     ];
   }, [statusOptions, warehouseOptions]);
 
-  const adjustmentAppliedFilters = useMemo<AppliedDataTableFilter[]>(() => {
-    const filters: AppliedDataTableFilter[] = [];
+  const executedSnapshot = useMemo<DataTableSearchSnapshot<AdjustmentSearchFilterKey>>(
+    () => ({
+      q: executedSearchText || undefined,
+      filters: {
+        warehouse: warehouseId ? [warehouseId] : [],
+        status: statusFilter ? [String(statusFilter)] : [],
+      },
+    }),
+    [executedSearchText, statusFilter, warehouseId],
+  );
 
-    if (warehouseId) {
-      filters.push({
-        id: "warehouse:select:options",
-        categoryId: "warehouse",
-        modeId: "select",
-        groupId: "options",
-        operator: "OR",
-        optionIds: [warehouseId],
+  const buildRecentLabel = useCallback(
+    (snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
+      const parts: string[] = [];
+
+      if (snapshot.q) {
+        parts.push(`Busqueda: ${snapshot.q}`);
+      }
+
+      const warehouseValue = snapshot.filters.warehouse?.[0];
+      if (warehouseValue) {
+        const label =
+          warehouseOptions.find((option) => option.value === warehouseValue)?.label ??
+          warehouseValue;
+        parts.push(`Almacén: ${label}`);
+      }
+
+      const statusValue = snapshot.filters.status?.[0];
+      if (statusValue) {
+        parts.push(`Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`);
+      }
+
+      return parts.join(" · ") || "Búsqueda";
+    },
+    [warehouseOptions],
+  );
+
+  const recordRecentSearch = useCallback(
+    (snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
+      const hasFilters =
+        Boolean(snapshot.filters.warehouse?.length) || Boolean(snapshot.filters.status?.length);
+      const hasQuery = Boolean(snapshot.q);
+      if (!hasFilters && !hasQuery) return;
+
+      const id = JSON.stringify(snapshot);
+      const label = buildRecentLabel(snapshot);
+
+      setRecentSearches(
+        pushLocalRecentSearch(RECENT_STORAGE_KEY, {
+          id,
+          label,
+          snapshot,
+        }),
+      );
+    },
+    [buildRecentLabel],
+  );
+
+  const searchChips = useMemo<DataTableSearchChip<AdjustmentSearchFilterKey>[]>(() => {
+    const chips: DataTableSearchChip<AdjustmentSearchFilterKey>[] = [];
+
+    if (executedSnapshot.q) {
+      chips.push({
+        id: "q",
+        label: `Busqueda: ${executedSnapshot.q}`,
+        removeKey: "q",
       });
     }
 
-    if (statusFilter) {
-      filters.push({
-        id: "status:select:options",
-        categoryId: "status",
-        modeId: "select",
-        groupId: "options",
-        operator: "OR",
-        optionIds: [statusFilter],
+    const warehouseValue = executedSnapshot.filters.warehouse?.[0];
+    if (warehouseValue) {
+      const label = warehouseOptions.find((option) => option.value === warehouseValue)?.label ?? warehouseValue;
+      chips.push({
+        id: "warehouse",
+        label: `Almacén: ${label}`,
+        removeKey: "warehouse",
       });
     }
 
-    return filters;
-  }, [statusFilter, warehouseId]);
+    const statusValue = executedSnapshot.filters.status?.[0];
+    if (statusValue) {
+      chips.push({
+        id: "status",
+        label: `Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`,
+        removeKey: "status",
+      });
+    }
 
-  const handleAdjustmentFiltersChange = useCallback((next: AppliedDataTableFilter[]) => {
-    const getFirstOption = (categoryId: string) =>
-      next.find((item) => item.categoryId === categoryId)?.optionIds[0] ?? "";
+    return chips;
+  }, [executedSnapshot.filters.status, executedSnapshot.filters.warehouse, executedSnapshot.q, warehouseOptions]);
 
-    setWarehouseId(getFirstOption("warehouse"));
-    setStatusFilter(getFirstOption("status") as DocStatus | "");
+  const handleRemoveChip = useCallback((chip: DataTableSearchChip<AdjustmentSearchFilterKey>) => {
+    if (chip.removeKey === "q") {
+      setSearchText("");
+      setExecutedSearchText("");
+      recordRecentSearch({
+        filters: {
+          warehouse: warehouseId ? [warehouseId] : [],
+          status: statusFilter ? [String(statusFilter)] : [],
+        },
+      });
+      setPage(1);
+      return;
+    }
+
+    if (chip.removeKey === "warehouse") {
+      setWarehouseId("");
+      recordRecentSearch({
+        q: executedSearchText || undefined,
+        filters: {
+          warehouse: [],
+          status: statusFilter ? [String(statusFilter)] : [],
+        },
+      });
+      setPage(1);
+      return;
+    }
+
+    if (chip.removeKey === "status") {
+      setStatusFilter("");
+      recordRecentSearch({
+        q: executedSearchText || undefined,
+        filters: {
+          warehouse: warehouseId ? [warehouseId] : [],
+          status: [],
+        },
+      });
+      setPage(1);
+    }
+  }, [executedSearchText, recordRecentSearch, statusFilter, warehouseId]);
+
+  const handleToggleSearchOption = useCallback((columnId: AdjustmentSearchFilterKey, optionId: string) => {
+    if (columnId === "warehouse") {
+      setWarehouseId((prev) => {
+        const nextWarehouseId = prev === optionId ? "" : optionId;
+        recordRecentSearch({
+          q: executedSearchText || undefined,
+          filters: {
+            warehouse: nextWarehouseId ? [nextWarehouseId] : [],
+            status: statusFilter ? [String(statusFilter)] : [],
+          },
+        });
+        return nextWarehouseId;
+      });
+      setPage(1);
+      return;
+    }
+
+    if (columnId === "status") {
+      setStatusFilter((prev) => {
+        const nextStatus = String(prev) === optionId ? "" : (optionId as DocStatus);
+        recordRecentSearch({
+          q: executedSearchText || undefined,
+          filters: {
+            warehouse: warehouseId ? [warehouseId] : [],
+            status: nextStatus ? [String(nextStatus)] : [],
+          },
+        });
+        return nextStatus;
+      });
+      setPage(1);
+    }
+  }, [executedSearchText, recordRecentSearch, statusFilter, warehouseId]);
+
+  const applySnapshot = useCallback((snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
+    recordRecentSearch({
+      ...snapshot,
+      q: snapshot.q?.trim() || undefined,
+    });
+    const nextWarehouseId = snapshot.filters.warehouse?.[0] ?? "";
+    const nextStatus = snapshot.filters.status?.[0] ?? "";
+    setWarehouseId(nextWarehouseId);
+    setStatusFilter(nextStatus as DocStatus | "");
+    setSearchText(snapshot.q ?? "");
+    setExecutedSearchText((snapshot.q ?? "").trim());
     setPage(1);
-  }, []);
+  }, [recordRecentSearch]);
+
+  const submitSearch = useCallback(() => {
+    const nextQ = searchText.trim();
+    recordRecentSearch({
+      q: nextQ || undefined,
+      filters: {
+        warehouse: warehouseId ? [warehouseId] : [],
+        status: statusFilter ? [String(statusFilter)] : [],
+      },
+    });
+
+    setExecutedSearchText(nextQ);
+    setPage(1);
+  }, [recordRecentSearch, searchText, statusFilter, warehouseId]);
 
   const loadWarehouses = async () => {
     clearFlash();
@@ -194,14 +327,6 @@ export default function AdjustmentProduts() {
     void loadWarehouses();
   }, []);
 
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setDebouncedQuery(query.trim());
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(id);
-  }, [query]);
-
   const loadDocuments = async () => {
     clearFlash();
     setLoading(true);
@@ -217,7 +342,7 @@ export default function AdjustmentProduts() {
         docType: DocType.ADJUSTMENT,
         productType: InventoryDocumentProductType.MATERIAL,
         status: statusFilter || undefined,
-        q: debouncedQuery || undefined,
+        q: executedSearchText || undefined,
       });
 
       setDocuments(res.items ?? []);
@@ -233,7 +358,7 @@ export default function AdjustmentProduts() {
 
   useEffect(() => {
     void loadDocuments();
-  }, [page, limit, fromDate, toDate, warehouseId, statusFilter, debouncedQuery, refresh]);
+  }, [page, limit, fromDate, toDate, warehouseId, statusFilter, executedSearchText, refresh]);
 
   const openDocumentPdf = (documentId: string) => {
     setSelectedDocumentId(documentId);
@@ -354,7 +479,8 @@ export default function AdjustmentProduts() {
       <PageTitle title="Ajustes" />
       <div className="space-y-4">
         <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
-          <Headed title="Ajustes (Materiales)" size="lg" />
+          <Headed title="Ajustes (Material)" size="lg" />
+
           <div className="flex justify-end">
             <SystemButton
               size="md"
@@ -373,6 +499,8 @@ export default function AdjustmentProduts() {
           </div>
         </div>
 
+        <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
+
         <DataTable
           tableId="inventory-documents-adjustment-products"
           data={documentRows}
@@ -383,11 +511,23 @@ export default function AdjustmentProduts() {
           hoverable={false}
           animated={false}
           selectableColumns
-          showSearch
-          searchMode="server"
-          searchPlaceholder="Buscar documento"
-          searchValue={query}
-          onSearchChange={(value) => setQuery(value)}
+          toolbarSearchContent={
+            <DataTableSearchBar
+              value={searchText}
+              onChange={setSearchText}
+              onSubmitSearch={submitSearch}
+              searchLabel="Buscar documento"
+              searchName="inventory-documents-adjustment-products-search"
+            >
+              <DataTableSearchPanel
+                recent={recentSearches}
+                columns={smartSearchColumns}
+                snapshot={executedSnapshot}
+                onApplySnapshot={applySnapshot}
+                onToggleOption={handleToggleSearchOption}
+              />
+            </DataTableSearchBar>
+          }
           rangeDates={{
             startDate: parseDateInputValue(fromDate),
             endDate: parseDateInputValue(toDate),
@@ -397,17 +537,16 @@ export default function AdjustmentProduts() {
               setPage(1);
             },
           }}
-          filtersConfig={{
-            categories: adjustmentTableFilters,
-            value: adjustmentAppliedFilters,
-            onChange: handleAdjustmentFiltersChange,
-          }}
           pagination={{
             page,
             limit,
             total,
           }}
           onPageChange={setPage}
+          onRowClick={(row) => {
+            setSelectedDocument(row.document);
+            setOpenDetailsModal(true);
+          }}
           tableClassName="text-[10px]"
         />
 
@@ -425,6 +564,17 @@ export default function AdjustmentProduts() {
         loadWhen={Boolean(selectedDocumentId)}
         reloadKey={selectedDocumentId}
         getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
+      />
+
+      <DocumentInventoryDetails
+        open={openDetailsModal}
+        documentId={selectedDocument?.id ?? null}
+        document={selectedDocument}
+        items={[]}
+        onClose={() => {
+          setOpenDetailsModal(false);
+          setSelectedDocument(null);
+        }}
       />
 
       <AdjustmentProductModal
