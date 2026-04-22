@@ -114,23 +114,6 @@ export const countUsersByRole = async (params?: CountUsersByRoleParams) => {
   return response.data;
 };
 
-// ----------------------------------------
-// USUARIOS (ADMIN) - AVATAR / PASSWORD POR ID
-// ----------------------------------------
-
-export const updateAvatar = async (id: string, file: File) => {
-  const formData = new FormData();
-  formData.append("avatar", file); 
-
-  const response = await axiosInstance.post(
-    API_USERS_GROUP.updateAvatar(id),
-    formData,
-  );
-
-  return response.data;
-};
-
-
 export const updateMyAvatar = async (file: File) => {
   const formData = new FormData();
   formData.append("avatar", file);

@@ -103,23 +103,25 @@ export default function OutOrder() {
       return;
     }
     try {
-      const res = await listDocumentSeries({
+      const seriesList = await listDocumentSeries({
         warehouseId,
         docType: DocType.OUT,
         isActive: true,
       });
-      if (!res) {
+      const nextSerie = seriesList[0];
+
+      if (!nextSerie) {
         setSerie({ value: "", label: "" });
         setForm((prev) => ({ ...prev, serieId: "" }));
         return;
       }
-      const nextNumber = Number(res.nextNumber ?? 0);
-      const paddedNumber = String(nextNumber).padStart(Number(res.padding ?? 0), "0");
+      const nextNumber = Number(nextSerie.nextNumber ?? 0);
+      const paddedNumber = String(nextNumber).padStart(Number(nextSerie.padding ?? 0), "0");
       setSerie({
-        value: res.id,
-        label: `${res.code}${res.separator ?? "-"}${paddedNumber}`,
+        value: nextSerie.id,
+        label: `${nextSerie.code}${nextSerie.separator ?? "-"}${paddedNumber}`,
       });
-      setForm((prev) => ({ ...prev, serieId: res.id }));
+      setForm((prev) => ({ ...prev, serieId: nextSerie.id }));
     } catch {
       setSerie({ value: "", label: "" });
       setForm((prev) => ({ ...prev, serieId: "" }));

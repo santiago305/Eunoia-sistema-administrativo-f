@@ -17,18 +17,13 @@ export const API_AUTH_GROUP = {
 export const API_USERS_GROUP = {
   list: "/users",
   createUser: '/users/create',
-  findAll: '/users/findAll',
   countByRole: '/users/count-by-role',
-  findActives: '/users/actives',
-  findDesactive: '/users/desactive',
   findOwnUser: '/users/me',
   findById: (id: string) => `/users/search/${id}`,
   findByEmail: (email: string) => `/users/email/${email}`,
   updateUserRole: (id: string) => `/users/${id}/role`,
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
-  updateAvatar: (id: string) => `/users/${id}/avatar`,
-  removeAvatar: (id: string) => `/users/remove-avatar/${id}`,
   changePassword: (id: string) => `/users/change-password/${id}`,
 };
 
@@ -84,26 +79,11 @@ export const API_PRODUCTS_GROUP = {
   items: "/products",
   create: "/products",
   createBase: "/products",
-  flat: "/catalog/products/flat",
-  productPrimasActive: "/catalog/products/prima/active",
-  byId: (id: string) => `/catalog/products/${id}/variants`,
   byIdP: (id: string) => `/products/${id}`,
-  byName: (name: string) => `/catalog/products/by-name/${encodeURIComponent(name)}`,
   update: (id: string) => `/products/${id}`,
   updateActive: (id: string) => `/products/${id}`,
   createSku: (id: string) => `/products/${id}/skus`,
 };
-
-export const API_VARIANTS_GROUP = {
-  base:"/catalog/variants",
-  create:"/catalog/variants",
-  list:"/catalog/variants",
-  searchProductAndVariant: (q: string, raw = true, withRecipes = false) =>
-  `/catalog/products/variants/search?q=${encodeURIComponent(q)}&raw=${raw}&withRecipes=${withRecipes}`,
-  byId: (id: string) => `/catalog/variants/${id}`,
-  update: (id: string) => `/catalog/variants/${id}`,
-  updateActive: (id: string) => `/catalog/variants/${id}/active`
-}
 
 export const API_WAREHOUSES_GROUP = {
   base: "/warehouses",
@@ -130,9 +110,6 @@ export const API_LOCATIONS_GROUP = {
 
 export const API_UNITS_GROUP = {
   list: "/units",
-  byId: (id: string) => `/units/${id}`,
-  byCode: (code: string) => `/units/code/${encodeURIComponent(code)}`,
-  create: "/units",
 };
 
 export const API_PRODUCT_EQUIVALENCES_GROUP = {
@@ -217,19 +194,12 @@ export const API_DOCUMENT_SERIES_GROUP = {
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
   totals: "/stock-items/ledger/daily-totals/by-sku",
-  totalsDailySales: "/inventory/ledger/totals/daily-sales",
-  totalsWeekday: "/inventory/ledger/totals/weekday",
-  totalsMonthly: "/inventory/ledger/totals/monthly",
-  demand: "/inventory/ledger/analytics/demand",
-  monthlyProjection: "/inventory/ledger/analytics/monthly-projection",
 };
 
 export const API_INVENTORY_GROUP = {
   list: "/inventory",
-  availability: "/inventory/availability",
   availableStockSkus: "/available-stock/skus",
   skuStockSnapshots: (skuId: string) => `/skus/${skuId}/stock/snapshots`,
-  getStock: "/inventory/get-stock",
   getStockQuery: (params: {
     warehouseId: string;
     itemId?: string;
@@ -250,11 +220,10 @@ export const API_INVENTORY_GROUP = {
 
 export const API_DOCUMENT_INVENTORY_GROUP = {
   outOrderCreated: "/stock-items/movements/create",
-  adjustmentCreated: "stock-items/movements/adjustment",
-  transfertCreated: "stock-items/movements/transfer",
+  adjustmentCreated: "/stock-items/movements/create",
+  transfertCreated: "/stock-items/movements/transfer",
   listDocuments: "/inventory-documents",
-  getStock: "skus/get-stock",
-  adjustmentAddItem: (id: string) => `/inventory/documents/${id}/items-adjustment`,
+  getStock: "/skus/get-stock",
 };
 
 export const API_PAYMENT_METHODS_GROUP = {
@@ -271,8 +240,7 @@ export const API_PAYMENT_METHODS_GROUP = {
 
 export const API_COMPANY_METHODS_GROUP = {
   create: "/company-methods",
-  byId: (companyId: string, methodId: string) => `/company-methods/${companyId}/${methodId}`,
-  remove: (companyId: string, methodId: string) => `/company-methods/${companyId}/${methodId}`,
+  remove: (companyMethodId: string) => `/company-methods/${companyMethodId}`,
 };
 
 export const API_SUPPLIER_METHODS_GROUP = {

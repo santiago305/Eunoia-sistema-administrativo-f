@@ -86,8 +86,7 @@ export const listProducts = async (params: ListProductsQuery): Promise<ProductLi
 };
 
 export const listProductsFlat = async (params: ListProductsQuery): Promise<ProductListResponse> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.flat, { params });
-  return normalizeProductList(response.data);
+  return listProducts(params);
 };
 
 export const listCatalogProducts = async (
@@ -127,11 +126,6 @@ export const getById = async (id: string): Promise<ProductDetailResponse> => {
     skus: data.skus ?? [],
     baseUnit: data.baseUnit ?? null,
   };
-};
-
-export const getProductByName = async (name: string): Promise<ProductListResponse> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.byName(name));
-  return response.data;
 };
 
 

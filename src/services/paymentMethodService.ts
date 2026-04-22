@@ -77,14 +77,16 @@ export const getAllPaymentMethods = async (): Promise<PaymentMethod[]> => {
   return response.data;
 };
 
-export const getPaymentMethodsByCompany = async (companyId: string): 
-Promise<PaymentMethod[]> => {
+export const getPaymentMethodsByCompany = async (
+  companyId: string,
+): Promise<PaymentMethodPivot[]> => {
   const response = await axiosInstance.get(API_PAYMENT_METHODS_GROUP.byCompany(companyId));
-  return response.data.data as PaymentMethod[];
+  return response.data.data as PaymentMethodPivot[];
 };
 
-export const getPaymentMethodsBySupplier = async (supplierId: string): 
-Promise<PaymentMethodPivot[]> => {
+export const getPaymentMethodsBySupplier = async (
+  supplierId: string,
+): Promise<PaymentMethodPivot[]> => {
   const response = await axiosInstance.get(API_PAYMENT_METHODS_GROUP.bySupplier(supplierId));
   return response.data.data as PaymentMethodPivot[];
 };
@@ -96,19 +98,10 @@ export const createCompanyMethod = async (
   return response.data;
 };
 
-export const getCompanyMethodById = async (
-  companyId: string,
-  methodId: string
-): Promise<CompanyMethod> => {
-  const response = await axiosInstance.get(API_COMPANY_METHODS_GROUP.byId(companyId, methodId));
-  return response.data;
-};
-
 export const deleteCompanyMethod = async (
-  companyId: string,
-  methodId: string
+  companyMethodId: string
 ): Promise<CompanyMethod> => {
-  const response = await axiosInstance.delete(API_COMPANY_METHODS_GROUP.remove(companyId, methodId));
+  const response = await axiosInstance.delete(API_COMPANY_METHODS_GROUP.remove(companyMethodId));
   return response.data;
 };
 
@@ -124,15 +117,6 @@ export const listSupplierMethodsBySupplier = async (
 ): Promise<SupplierMethodRelation[]> => {
   const response = await axiosInstance.get<ApiEnvelope<SupplierMethodRelation[]>>(
     API_SUPPLIER_METHODS_GROUP.listBySupplier(supplierId)
-  );
-  return unwrapApiData(response.data);
-};
-
-export const getSupplierMethodById = async (
-  supplierMethodId: string
-): Promise<SupplierMethodRelation> => {
-  const response = await axiosInstance.get<ApiEnvelope<SupplierMethodRelation>>(
-    API_SUPPLIER_METHODS_GROUP.byId(supplierMethodId)
   );
   return unwrapApiData(response.data);
 };
