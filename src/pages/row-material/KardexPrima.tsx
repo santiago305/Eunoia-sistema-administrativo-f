@@ -89,7 +89,7 @@ export default function KardexProduction() {
                 isActive: true,
                 page: 1,
                 limit: 100,
-                productType: ProductTypes.MATERIAL
+                productType: ProductTypes.MATERIAL,
             });
 
             setSkus(result.items ?? []);
@@ -466,7 +466,7 @@ export default function KardexProduction() {
                             toolbarSearchContent={
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.2fr_0.8fr] sm:items-end">
                                     <FloatingSelect
-                                        label="Productos"
+                                        label="Materiales"
                                         name="skuId"
                                         value={skuId}
                                         onChange={(value) => {
@@ -474,8 +474,8 @@ export default function KardexProduction() {
                                         }}
                                         options={productOptions}
                                         searchable
-                                        searchPlaceholder="Buscar producto..."
-                                        emptyMessage="Sin productos"
+                                        searchPlaceholder="Buscar material..."
+                                        emptyMessage="Sin materiales"
                                         onSearchChange={(text) => setProductQuery(text)}
                                        className="h-11 rounded-sm border-border shadow-sm"
                                     />
@@ -558,7 +558,7 @@ export default function KardexProduction() {
                                                 showFlash(errorResponse("No hay documento para este movimiento"));
                                             }}
                                         >
-                                            Ver documento
+                                            Ver pdf
                                         </SystemButton>
                                     )
                                 }
@@ -576,10 +576,19 @@ export default function KardexProduction() {
                                                 openPdfModalWith("Movimiento de inventario", () => getDocumentInventoryPdf(docId));
                                             }}
                                         >
-                                            Ver documento
+                                            Ver ticket
                                         </SystemButton>
                                     )
                                 }
+                                <SystemButton
+                                    variant="link"
+                                    type="button"
+                                    onClick={() => {
+                                        
+                                    }}
+                                >
+                                    Ver detalle
+                                </SystemButton>
                             </div>
                         </div>
 
