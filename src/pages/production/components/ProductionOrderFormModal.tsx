@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Trash2 } from "lucide-react";
 import { Modal } from "@/components/modales/Modal";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -14,7 +14,7 @@ import { listActive } from "@/services/warehouseServices";
 import { searchProductAndVariant, type CatalogSearchSkuResult } from "@/services/catalogService";
 import { createProductionOrder, getProductionOrder, updateProductionOrder } from "@/services/productionService";
 import { listDocumentSeries } from "@/services/documentSeriesService";
-import { money } from "@/utils/functionPurchases";
+import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import type {
   AddProductionOrderItemDto,
   CreateProductionOrderDto,
@@ -22,7 +22,6 @@ import type {
 } from "@/pages/production/types/production";
 import { ProductTypes, type ProductType } from "@/pages/catalog/types/ProductTypes";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
-import { ProductionItemModal } from "@/pages/production/components/ProductionItemModal";
 
 type ProductionOrderFormModalProps = {
   open: boolean;
@@ -53,13 +52,6 @@ const buildEmptyForm = (): CreateProductionOrderDto => ({
   reference: "",
   manufactureDate: toLocalDateTimeString(new Date()),
   items: [],
-});
-
-const buildEmptyItem = (): AddProductionOrderItemDto => ({
-  finishedItemId: "",
-  quantity: 1,
-  unitCost: 0,
-  type: "",
 });
 
 function toSkuAttributes(attributes?: Record<string, unknown> | null) {
@@ -108,26 +100,24 @@ export function ProductionOrderFormModal({
 
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateProductionOrderDto>(() => buildEmptyForm());
-  const [pendingItem, setPendingItem] = useState<AddProductionOrderItemDto>(() => buildEmptyItem());
-  const [openItemModal, setOpenItemModal] = useState(false);
   const [products, setProducts] = useState<CatalogSearchSkuResult[]>([]);
   const [searchResults, setSearchResults] = useState<CatalogSearchSkuResult[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
   const [serie, setSerie] = useState<{ value: string; label: string }>({ value: "", label: "" });
   const [query, setQuery] = useState("");
-
-  const ringStyle = {
-    "--tw-ring-color": `color-mix(in srgb, ${accent} 20%, transparent)`,
-  } as CSSProperties;
+  const quantityTextByItemIdRef = useRef<Record<string, string>>({});
+  const [, setQuantityTextByItemId] = useState<Record<string, string>>({});
+  const [editingQuantityItemId, setEditingQuantityItemId] = useState<string | null>(null);
 
   const resetForm = () => {
     setForm(buildEmptyForm());
-    setPendingItem(buildEmptyItem());
-    setOpenItemModal(false);
     setProducts([]);
     setSearchResults([]);
     setSerie({ value: "", label: "" });
     setQuery("");
+    quantityTextByItemIdRef.current = {};
+    setQuantityTextByItemId({});
+    setEditingQuantityItemId(null);
   };
 
   const loadWarehouses = async () => {
@@ -146,11 +136,15 @@ export function ProductionOrderFormModal({
   };
 
   const searchFinishedProducts = async () => {
+    const normalizedQuery = query.trim();
+
     try {
       const res = await searchProductAndVariant({
-        q: query,
-        raw: false,
-        withRecipes: true,
+        q: normalizedQuery,
+        productType: ProductTypes.PRODUCT,
+        isActive: true,
+        page: 1,
+        limit: 10,
       });
       setSearchResults(res ?? []);
     } catch {
@@ -238,22 +232,13 @@ export function ProductionOrderFormModal({
     [searchResults],
   );
 
-  const addItem = () => {
-    const { finishedItemId, quantity, unitCost } = pendingItem;
+  const addItem = (finishedItemId: string) => {
     const selected =
       searchResults.find((product) => (product.itemId ?? product.id) === finishedItemId) ??
       products.find((product) => (product.itemId ?? product.id) === finishedItemId);
 
     if (!finishedItemId) {
       showFlash(errorResponse("Selecciona un producto"));
-      return;
-    }
-    if (quantity <= 0) {
-      showFlash(errorResponse("La cantidad debe ser mayor a 0"));
-      return;
-    }
-    if (unitCost < 0) {
-      showFlash(errorResponse("El costo debe ser mayor o igual a 0"));
       return;
     }
     if ((form.items ?? []).some((item) => item.finishedItemId === finishedItemId)) {
@@ -265,7 +250,7 @@ export function ProductionOrderFormModal({
       ...prev,
       items: [
         ...(prev.items ?? []),
-        { finishedItemId, quantity, unitCost, type: selected?.type ?? "" },
+        { finishedItemId, quantity: 1, unitCost: 0, type: selected?.type ?? "" },
       ],
     }));
 
@@ -277,8 +262,6 @@ export function ProductionOrderFormModal({
       }
       return [...prev, selected];
     });
-
-    setPendingItem(buildEmptyItem());
   };
 
   const removeItem = (index: number) => {
@@ -319,6 +302,21 @@ export function ProductionOrderFormModal({
     [form.items, products],
   );
 
+  useEffect(() => {
+    setQuantityTextByItemId((previous) => {
+      const next: Record<string, string> = {};
+
+      for (const item of form.items ?? []) {
+        const itemId = item.finishedItemId;
+        const keepExisting = editingQuantityItemId === itemId && previous[itemId] !== undefined;
+        next[itemId] = keepExisting ? previous[itemId]! : String(item.quantity || 0);
+      }
+
+      quantityTextByItemIdRef.current = next;
+      return next;
+    });
+  }, [editingQuantityItemId, form.items]);
+
   const columns = useMemo<DataTableColumn<ProductionItemRow>[]>(
     () => [
       {
@@ -352,11 +350,48 @@ export function ProductionOrderFormModal({
         cell: (row) => (
           <FloatingInput
             label="Cantidad"
-            name={`qty-${row.rowIndex}`}
-            type="number"
-            min={1}
-            value={String(row.quantity === 0 ? 1 : row.quantity)}
-            onChange={(event) => updateItem(row.rowIndex, { quantity: Number(event.target.value) })}
+            name={`qty-${row.finishedItemId}`}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            value={quantityTextByItemIdRef.current[row.finishedItemId] ?? String(row.quantity)}
+            onFocus={(event) => {
+              setEditingQuantityItemId(row.finishedItemId);
+              event.currentTarget.select();
+            }}
+            onBlur={() => {
+              setEditingQuantityItemId((previous) =>
+                previous === row.finishedItemId ? null : previous,
+              );
+
+              const currentText =
+                quantityTextByItemIdRef.current[row.finishedItemId] ?? String(row.quantity);
+              const parsed = parseDecimalInput(currentText);
+              const nextQuantity = parsed <= 0 ? 1 : parsed;
+
+              setQuantityTextByItemId((previous) => {
+                const updated = { ...previous, [row.finishedItemId]: String(nextQuantity) };
+                quantityTextByItemIdRef.current = updated;
+                return updated;
+              });
+
+              updateItem(row.rowIndex, { quantity: nextQuantity });
+            }}
+            onChange={(event) => {
+              const nextText = event.target.value;
+
+              setQuantityTextByItemId((previous) => {
+                const updated = { ...previous, [row.finishedItemId]: nextText };
+                quantityTextByItemIdRef.current = updated;
+                return updated;
+              });
+
+              if (!nextText.trim()) return;
+
+              const parsed = parseDecimalInput(nextText);
+              if (parsed <= 0) return;
+              updateItem(row.rowIndex, { quantity: parsed });
+            }}
             className="h-8 text-[10px]"
           />
         ),
@@ -472,12 +507,8 @@ export function ProductionOrderFormModal({
     if (!open) return;
 
     const timeoutId = setTimeout(() => {
-      if (query.trim()) {
-        void searchFinishedProducts();
-      } else {
-        setSearchResults([]);
-      }
-    }, 500);
+      void searchFinishedProducts();
+    }, query.trim() ? 500 : 0);
 
     return () => clearTimeout(timeoutId);
   }, [open, query]);
@@ -500,11 +531,11 @@ export function ProductionOrderFormModal({
                   <FloatingSelect
                     label="Producto terminado"
                     name="production-finished-item"
-                    value={pendingItem.finishedItemId}
+                    value=""
                     options={productOptions}
                     onChange={(value) => {
-                      setPendingItem((prev) => ({ ...prev, finishedItemId: value }));
-                      setOpenItemModal(Boolean(value));
+                      if (!value) return;
+                      addItem(value);
                     }}
                     searchable
                     searchPlaceholder="Buscar producto..."
@@ -635,19 +666,6 @@ export function ProductionOrderFormModal({
           </div>
         </div>
       </Modal>
-
-      <ProductionItemModal
-        open={openItemModal}
-        pendingItem={pendingItem}
-        ringStyle={ringStyle}
-        primaryColor={accent}
-        onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
-        onClose={() => setOpenItemModal(false)}
-        onAdd={() => {
-          addItem();
-          setOpenItemModal(false);
-        }}
-      />
     </>
   );
 }
