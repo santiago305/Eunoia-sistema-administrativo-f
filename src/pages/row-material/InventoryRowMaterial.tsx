@@ -25,11 +25,10 @@ import { RoutesPaths } from "@/router/config/routesPaths";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
 import type { ProductSkuWithAttributes } from "@/pages/catalog/types/product";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
-import {  useEChart } from "./utils/inventoryUtils";
-import { useCompany } from "@/hooks/useCompany";
 import { FileText, Filter, LineChart, Menu, Wrench, ArrowLeftRight } from "lucide-react";
-import { buildSkuLabelFromItem } from "./utils/productCreateModal.helpers";
 import { normalizeQuantity  } from "@/utils/functionPurchases";
+import { useEChart } from "../catalog/utils/inventoryUtils";
+import { buildSkuLabelFromItem } from "../catalog/utils/productCreateModal.helpers";
 
 const DEFAULT_LIMIT = 10;
 
@@ -45,9 +44,7 @@ type InventorySnapshotRow = {
 export default function CatalogInventory() {
   const shouldReduceMotion = useReducedMotion();
   const { showFlash } = useFlashMessage();
-  const { hasCompany } = useCompany();
   const navigate = useNavigate();
-  const companyActionDisabled = !hasCompany;
   const animationConfig = useMemo<
     Pick<
       echarts.EChartsOption,
@@ -87,7 +84,6 @@ export default function CatalogInventory() {
   const [selectedForecast, setSelectedForecast] = useState<SkuStockForecast | null>(null);
   const [, setForecastLoading] = useState(false);
   const forecastRequestRef = useRef(0);
-
   const isActiveRow = (row: InventorySnapshotRow) =>
     selectedSku === row.sku.sku.id && selectedWarehouseId === row.warehouseId;
 
@@ -349,7 +345,7 @@ export default function CatalogInventory() {
         limit: DEFAULT_LIMIT,
         warehouseId: warehouseFilter,
         q: searchTerm || undefined,
-        productType: ProductTypes.PRODUCT,
+        productType: ProductTypes.MATERIAL,
       } as unknown as Record<string, unknown>)) as unknown as {
         items?: InventorySnapshotRow[];
         total?: number;
@@ -383,7 +379,6 @@ export default function CatalogInventory() {
       id: `transfer-${row.sku.sku.id}`,
       label: "Transferir",
       icon: <ArrowLeftRight className="h-4 w-4 text-black/60" />,
-      disabled: companyActionDisabled,
       onClick: () => {
         navigate(RoutesPaths.catalogTransfer);
       },
@@ -392,7 +387,6 @@ export default function CatalogInventory() {
       id: `adjust-${row.sku.sku.id}`,
       label: "Ajustar",
       icon: <Wrench className="h-4 w-4 text-black/60" />,
-      disabled: companyActionDisabled,
       onClick: () => {
         navigate(RoutesPaths.catalogAdjustments);
       },
@@ -480,8 +474,8 @@ export default function CatalogInventory() {
         ),
       },
     ],
-	    [companyActionDisabled, navigate],
-	  );
+    [navigate],
+  );
 
 
   return (
@@ -489,7 +483,7 @@ export default function CatalogInventory() {
       <PageTitle title="Catalogo - Inventario" />
       <div className="space-y-4">
           <Headed
-            title="Inventario de productos"
+            title="Inventario de materiales"
             subtitle="Explora el stock por SKU y almacén."
             size="lg"
           />

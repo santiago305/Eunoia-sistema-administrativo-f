@@ -14,7 +14,6 @@ import {
   endOfDayIso,
   parseDateInputValue,
   toLocalDateKey,
-  todayIso,
 } from "@/utils/functionPurchases";
 import type { InventoryDocument, InventoryDocumentRow } from "@/pages/catalog/types/documentInventory";
 import { InventoryDocumentProductType } from "@/pages/catalog/types/documentInventory";
@@ -26,7 +25,6 @@ import { getDocuments } from "@/services/documentService";
 import AdjustmentProductModal from "@/pages/catalog/components/AdjustmentFormProducts";
 import type { AppliedDataTableFilter, DataTableFilterTree } from "@/components/table/filters";
 import { ProductTypes } from "./types/ProductTypes";
-import { RoutesPaths } from "@/router/config/routesPaths";
 import { useCompany } from "@/hooks/useCompany";
 
 const statusLabels: Record<DocStatus, string> = {

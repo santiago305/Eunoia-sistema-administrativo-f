@@ -226,8 +226,8 @@ export const API_DOCUMENT_SERIES_GROUP = {
 };
 
 export const API_KARDEX_GROUP = {
-  list: "/inventory/ledger",
-  totals: "/inventory/ledger/totals/daily",
+  list: "/stock-items/ledger/by-sku",
+  totals: "/stock-items/ledger/daily-totals/by-sku",
   totalsDailySales: "/inventory/ledger/totals/daily-sales",
   totalsWeekday: "/inventory/ledger/totals/weekday",
   totalsMonthly: "/inventory/ledger/totals/monthly",
@@ -238,6 +238,8 @@ export const API_KARDEX_GROUP = {
 export const API_INVENTORY_GROUP = {
   list: "/inventory",
   availability: "/inventory/availability",
+  availableStockSkus: "/available-stock/skus",
+  skuStockSnapshots: (skuId: string) => `/skus/${skuId}/stock/snapshots`,
   getStock: "/inventory/get-stock",
   getStockQuery: (params: {
     warehouseId: string;

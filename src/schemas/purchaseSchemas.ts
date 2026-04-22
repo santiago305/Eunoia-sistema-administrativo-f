@@ -134,7 +134,10 @@ export const listPurchaseOrdersQuerySchema = z.object({
   paymentForms: z.array(paymentFormEnum).optional(),
   number: z.string().optional(),
   q: z.string().optional(),
+<<<<<<< Updated upstream
   filters: z.array(purchaseSearchRuleSchema).optional(),
+=======
+>>>>>>> Stashed changes
   from: z.string().optional(),
   to: z.string().optional(),
   page: z.number().int().min(1).optional(),

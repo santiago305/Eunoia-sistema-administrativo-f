@@ -110,10 +110,6 @@ export const getSidebarItems = (): SidebarItem[] => [
                 href: RoutesPaths.rowMaterial,
             },
             {
-                label: "Documentos",
-                href: RoutesPaths.rowMaterialDocuments,
-            },
-            {
                 label: "Transferencias",
                 href: RoutesPaths.rowMaterialTransfer,
             },
@@ -121,13 +117,13 @@ export const getSidebarItems = (): SidebarItem[] => [
                 label: "Ajustes",
                 href: RoutesPaths.rowMaterialAdjustments,
             },
-            // {
-            //     label: "Variantes",
-            //     href: RoutesPaths.rowVariant,
-            // },
             {
                 label: "Movimientos",
                 href: RoutesPaths.KardexPrima,
+            },
+            {
+                label: "Inventario",
+                href: RoutesPaths.rowMaterialDocuments,
             },
         ],
     },
