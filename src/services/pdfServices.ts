@@ -42,10 +42,34 @@ export const getPurchaseOrderPdf = async (id: string): Promise<Blob> => {
   }
 };
 export const getProductionOrderPdf = async (id: string): Promise<Blob> => {
-  const response = await axiosInstance.get<Blob>(API_PDF_GENERATED_GROUP.productionOrderPdf(id), {
-    responseType: "blob",
-  });
-  return response.data;
+  const requestUrl = API_PDF_GENERATED_GROUP.productionOrderPdf(id);
+
+  try {
+    const response = await axiosInstance.get<Blob>(requestUrl, {
+      responseType: "blob",
+    });
+    return response.data;
+  } catch (error: any) {
+    let responseData = error?.response?.data;
+
+    if (responseData instanceof Blob) {
+      try {
+        responseData = await responseData.text();
+      } catch {
+        responseData = "[blob unreadable]";
+      }
+    }
+
+    console.error("[getProductionOrderPdf] request failed", {
+      productionOrderId: id,
+      requestUrl,
+      status: error?.response?.status ?? null,
+      statusText: error?.response?.statusText ?? null,
+      data: responseData ?? null,
+    });
+
+    throw error;
+  }
 };
 export const getDocumentInventoryPdf = async (id: string): Promise<Blob> => {
   const response = await axiosInstance.get<Blob>(API_PDF_GENERATED_GROUP.documentInventoryPdf(id), {

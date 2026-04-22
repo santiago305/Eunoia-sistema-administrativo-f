@@ -150,7 +150,7 @@ export function ProductionOrderFormModal({
       setSearchResults((res ?? []).filter((item) => Boolean(item.stockItemId)));
     } catch {
       setSearchResults([]);
-      showFlash(errorResponse("Error al cargar productos terminados"));
+      showFlash(errorResponse("Error al cargar SKUs terminados"));
     }
   };
 
@@ -225,10 +225,10 @@ export function ProductionOrderFormModal({
 
   const productOptions = useMemo(
     () => [
-      { value: "", label: "Seleccionar producto" },
+      { value: "", label: "Seleccionar SKU" },
       ...(searchResults ?? []).map((product) => ({
         value: product.itemId ?? product.id ?? "",
-        label: `${product.productName ?? "Producto"} ${product.attributes?.presentation ?? ""} ${product.attributes?.variant ?? ""} ${product.attributes?.color ?? ""}${product.sku ? ` - ${product.sku}` : ""}${product.customSku ? ` (${product.customSku})` : ""}`,
+        label: `${product.productName ?? "SKU"} ${product.attributes?.presentation ?? ""} ${product.attributes?.variant ?? ""} ${product.attributes?.color ?? ""}${product.sku ? ` - ${product.sku}` : ""}${product.customSku ? ` (${product.customSku})` : ""}`,
       })),
     ],
     [searchResults],
@@ -240,15 +240,15 @@ export function ProductionOrderFormModal({
       products.find((product) => (product.itemId ?? product.id) === finishedItemId);
 
     if (!finishedItemId) {
-      showFlash(errorResponse("Selecciona un producto"));
+      showFlash(errorResponse("Selecciona un SKU"));
       return;
     }
     if (!selected?.stockItemId) {
-      showFlash(errorResponse("El producto seleccionado no tiene item de stock valido para produccion"));
+      showFlash(errorResponse("El SKU seleccionado no tiene item de stock valido para produccion"));
       return;
     }
     if ((form.items ?? []).some((item) => item.finishedItemId === finishedItemId)) {
-      showFlash(errorResponse("El producto ya fue agregado"));
+      showFlash(errorResponse("El SKU ya fue agregado"));
       return;
     }
 
@@ -260,7 +260,7 @@ export function ProductionOrderFormModal({
           finishedItemId,
           quantity: 1,
           unitCost: 0,
-          type: selected?.type ?? ProductTypes.PRODUCT,
+          type: "SKU",
         },
       ],
     }));
@@ -488,7 +488,9 @@ export function ProductionOrderFormModal({
         })),
       });
       setSerie({ value: data.serieId ?? "", label: data.serie?.code ?? "" });
-      setProducts(mapOrderProducts(data.items ?? []));
+      const mappedProducts = mapOrderProducts(data.items ?? []);
+      setProducts(mappedProducts);
+      setSearchResults(mappedProducts);
     } catch {
       showFlash(errorResponse("Error al cargar la orden de produccion"));
     } finally {
@@ -537,10 +539,10 @@ export function ProductionOrderFormModal({
           <div className="grid h-[80vh] grid-cols-1 gap-3 py-4 lg:grid-cols-[6fr_2.5fr]">
             <section className="flex flex-col gap-3 overflow-hidden">
               <div className="p-3">
-                <SectionHeaderForm icon={Boxes} title="Productos terminados" />
+                <SectionHeaderForm icon={Boxes} title="SKUs terminados" />
                 <div className="mt-2 grid gap-2 xl:grid-cols-1">
                   <FloatingSelect
-                    label="Producto terminado"
+                    label="SKU terminado"
                     name="production-finished-item"
                     value=""
                     options={productOptions}
@@ -549,11 +551,11 @@ export function ProductionOrderFormModal({
                       addItem(value);
                     }}
                     searchable
-                    searchPlaceholder="Buscar producto..."
+                    searchPlaceholder="Buscar SKU..."
                     onSearchChange={(text) => setQuery(text)}
                     className="h-12"
-                    placeholder="Seleccionar producto"
-                    emptyMessage="Sin productos"
+                    placeholder="Seleccionar SKU"
+                    emptyMessage="Sin SKUs"
                   />
                 </div>
               </div>

@@ -11,6 +11,7 @@ import {
 } from "@/components/table/search";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
+import { getApiErrorMessage } from "@/common/utils/apiError";
 import { errorResponse, successResponse } from "@/common/utils/response";
 import {
   cancelProductionOrder,
@@ -38,6 +39,7 @@ import { SystemButton } from "@/components/SystemButton";
 import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/hooks/useCompany";
 import { ProductionSmartSearchPanel } from "@/pages/production/components/ProductionSmartSearchPanel";
+import { AlertModal } from "@/components/AlertModal";
 import {
   buildProductionSearchChips,
   buildProductionSmartSearchColumns,
@@ -106,6 +108,9 @@ export default function Production() {
   const [openFormModal, setOpenFormModal] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingProductionId, setEditingProductionId] = useState<string | undefined>(undefined);
+  const [pendingStartOrder, setPendingStartOrder] = useState<ProductionOrder | null>(null);
+  const [pendingCancelOrder, setPendingCancelOrder] = useState<ProductionOrder | null>(null);
+  const [submittingAction, setSubmittingAction] = useState<"start" | "cancel" | null>(null);
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
@@ -120,7 +125,7 @@ export default function Production() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const limit = DEFAULT_LIMIT;
-  const nowIso = useMemo(() => new Date().toISOString(), []);
+  const currentNowIso = new Date().toISOString();
 
   const draftSnapshot = useMemo(
     () =>
@@ -204,34 +209,42 @@ export default function Production() {
 
   const handleStart = async (id: string) => {
     clearFlash();
+    setSubmittingAction("start");
     try {
-      await startProductionOrder(id);
-      showFlash(successResponse("Orden iniciada"));
+      const response = await startProductionOrder(id);
+      showFlash(successResponse(response.message ?? "Orden iniciada"));
+      setPendingStartOrder(null);
       await loadOrders();
-    } catch {
-      showFlash(errorResponse("Error al iniciar la orden"));
+    } catch (error) {
+      showFlash(errorResponse(getApiErrorMessage(error, "Error al iniciar la orden")));
+    } finally {
+      setSubmittingAction(null);
     }
   };
 
   const handleClose = async (id: string) => {
     clearFlash();
     try {
-      await closeProductionOrder(id);
-      showFlash(successResponse("Orden cerrada"));
+      const response = await closeProductionOrder(id);
+      showFlash(successResponse(response.message ?? "Orden cerrada"));
       await loadOrders();
-    } catch {
-      showFlash(errorResponse("Error al cerrar la orden"));
+    } catch (error) {
+      showFlash(errorResponse(getApiErrorMessage(error, "Error al cerrar la orden")));
     }
   };
 
   const handleCancel = async (id: string) => {
     clearFlash();
+    setSubmittingAction("cancel");
     try {
-      await cancelProductionOrder(id);
-      showFlash(successResponse("Orden cancelada"));
+      const response = await cancelProductionOrder(id);
+      showFlash(successResponse(response.message ?? "Orden cancelada"));
+      setPendingCancelOrder(null);
       await loadOrders();
-    } catch {
-      showFlash(errorResponse("Error al cancelar la orden"));
+    } catch (error) {
+      showFlash(errorResponse(getApiErrorMessage(error, "Error al cancelar la orden")));
+    } finally {
+      setSubmittingAction(null);
     }
   };
 
@@ -339,7 +352,7 @@ export default function Production() {
               {order.status === ProductionStatus.IN_PROGRESS ? (
                 <span className="inline-flex rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
                   <TimerToEnd
-                    from={nowIso}
+                    from={currentNowIso}
                     to={order.manufactureDate ?? ""}
                     loadProductionOrders={loadOrders}
                   />
@@ -385,7 +398,7 @@ export default function Production() {
                     label: "Procesar",
                     icon: <Play className="h-4 w-4 text-black/60" />,
                     hidden: order.status !== ProductionStatus.DRAFT,
-                    onClick: () => handleStart(order.productionId ?? ""),
+                    onClick: () => setPendingStartOrder(order),
                     disabled: companyActionDisabled,
                   },
                   {
@@ -419,7 +432,7 @@ export default function Production() {
                     hidden:
                       order.status === ProductionStatus.CANCELLED ||
                       order.status === ProductionStatus.COMPLETED,
-                    onClick: () => handleCancel(order.productionId ?? ""),
+                    onClick: () => setPendingCancelOrder(order),
                     disabled: companyActionDisabled,
                   },
                 ]}
@@ -432,7 +445,7 @@ export default function Production() {
         },
       },
     ];
-  }, [companyActionDisabled, handleCancel, handleClose, handleEdit, handleStart, loadOrders, nowIso, openProductionPdf]);
+  }, [companyActionDisabled, currentNowIso, handleClose, handleEdit, loadOrders, openProductionPdf]);
 
   const smartSearchColumns = useMemo(
     () => buildProductionSmartSearchColumns(searchState),
@@ -638,6 +651,48 @@ export default function Production() {
           reloadKey={selectedProductionId}
           getPdf={() => getProductionOrderPdf(selectedProductionId!)}
           primaryColor={PRIMARY}
+        />
+
+        <AlertModal
+          open={Boolean(pendingStartOrder)}
+          type="warning"
+          title="Procesar orden de producción"
+          message={
+            pendingStartOrder
+              ? `Estas seguro de procesar esta orden de produccion${pendingStartOrder.serie?.code ? ` ${pendingStartOrder.serie.code}-${pendingStartOrder.correlative ?? ""}` : ""}?`
+              : ""
+          }
+          confirmText="Procesar"
+          loading={submittingAction === "start"}
+          onClose={() => {
+            if (submittingAction === "start") return;
+            setPendingStartOrder(null);
+          }}
+          onConfirm={() => {
+            if (!pendingStartOrder?.productionId) return;
+            void handleStart(pendingStartOrder.productionId);
+          }}
+        />
+
+        <AlertModal
+          open={Boolean(pendingCancelOrder)}
+          type="warning"
+          title="Cancelar orden de producción"
+          message={
+            pendingCancelOrder
+              ? `Estas seguro de cancelar esta orden de produccion${pendingCancelOrder.serie?.code ? ` ${pendingCancelOrder.serie.code}-${pendingCancelOrder.correlative ?? ""}` : ""}?`
+              : ""
+          }
+          confirmText="Cancelar orden"
+          loading={submittingAction === "cancel"}
+          onClose={() => {
+            if (submittingAction === "cancel") return;
+            setPendingCancelOrder(null);
+          }}
+          onConfirm={() => {
+            if (!pendingCancelOrder?.productionId) return;
+            void handleCancel(pendingCancelOrder.productionId);
+          }}
         />
 
         <ProductionOrderFormModal

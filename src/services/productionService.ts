@@ -17,6 +17,10 @@ type ProductionOrderEnvelope = {
   order?: ProductionOrder;
 };
 
+type ProductionActionResponse = {
+  message: string;
+};
+
 type RawProductionSearchOption = {
   value: string;
   label: string;
@@ -102,7 +106,11 @@ export const deleteProductionSearchMetric = async (
 
 export const getProductionOrder = async (id: string): Promise<ProductionOrder> => {
   const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.byId(id));
-  return response.data;
+  const payload = response.data as ProductionOrder & { id?: string };
+  return {
+    ...payload,
+    productionId: payload.productionId ?? payload.id,
+  };
 };
 
 export const updateProductionOrder = async (
@@ -116,18 +124,18 @@ export const updateProductionOrder = async (
   return unwrapProductionOrder(response.data);
 };
 
-export const startProductionOrder = async (id: string): Promise<ProductionOrder> => {
-  const response = await axiosInstance.post(API_PRODUCTION_ORDERS_GROUP.start(id));
+export const startProductionOrder = async (id: string): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(API_PRODUCTION_ORDERS_GROUP.start(id));
   return response.data;
 };
 
-export const closeProductionOrder = async (id: string): Promise<ProductionOrder> => {
-  const response = await axiosInstance.post(API_PRODUCTION_ORDERS_GROUP.close(id));
+export const closeProductionOrder = async (id: string): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(API_PRODUCTION_ORDERS_GROUP.close(id));
   return response.data;
 };
 
-export const cancelProductionOrder = async (id: string): Promise<ProductionOrder> => {
-  const response = await axiosInstance.post(API_PRODUCTION_ORDERS_GROUP.cancel(id));
+export const cancelProductionOrder = async (id: string): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(API_PRODUCTION_ORDERS_GROUP.cancel(id));
   return response.data;
 };
 

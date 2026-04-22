@@ -98,6 +98,7 @@ export enum ProductionStatus {
 }
 
 export type ProductionOrderItem = {
+  id?: string;
   itemId?: string;
   finishedItemId: string;
   finishedItemType?: "PRODUCT" | "SKU" | "VARIANT" | null;
@@ -163,6 +164,7 @@ export type ProductionOrderItem = {
 };
 
 export type ProductionOrder = {
+  id?: string;
   productionId?: string;
   status?: ProductionStatus;
   serieId: string;
