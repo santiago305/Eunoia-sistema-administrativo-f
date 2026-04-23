@@ -88,7 +88,6 @@ export const API_WAREHOUSES_GROUP = {
   saveSearchMetric: "/warehouses/search-metrics",
   deleteSearchMetric: (metricId: string) => `/warehouses/search-metrics/${metricId}`,
   getById: (id: string) => `/warehouses/${id}`,
-  getWithLocations: (id: string) => `/warehouses/${id}/locations`,
   getStock: (id: string) => `/warehouses/${id}/stock`,
   update: (id: string) => `/warehouses/${id}`,
   updateActive: (id: string) => `/warehouses/${id}/active`,
@@ -147,11 +146,8 @@ export const API_PURCHASE_GROUP = {
   setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
-  setActive: (id: string) => `/purchases/orders/${id}/active`,
-  listItems: (id: string) => `/purchases/orders/${id}/items`,
   listPayments: (id: string) => `/payments/get-by-po/${id}`,
   listQuotas: (id: string) => `/payments/credit-quotas/get-by-po/${id}`,
-  removeItem: (id: string, itemId: string) => `/purchases/orders/${id}/items/${itemId}`,
 };
 
 export const API_PRODUCTION_ORDERS_GROUP = {

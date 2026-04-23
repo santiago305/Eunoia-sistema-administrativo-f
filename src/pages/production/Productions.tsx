@@ -17,6 +17,7 @@ import {
   cancelProductionOrder,
   closeProductionOrder,
   deleteProductionSearchMetric,
+  getProductionOrder,
   getProductionSearchState,
   listProductionOrders,
   saveProductionSearchMetric,
@@ -36,6 +37,7 @@ import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
+import { ProductionOrderDetailModal } from "@/pages/production/components/ProductionOrderDetailModal";
 import { ProductionOrderFormModal } from "@/pages/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/hooks/useCompany";
 import { ProductionSmartSearchPanel } from "@/pages/production/components/ProductionSmartSearchPanel";
@@ -111,6 +113,9 @@ export default function Production() {
   const [pendingStartOrder, setPendingStartOrder] = useState<ProductionOrder | null>(null);
   const [pendingCancelOrder, setPendingCancelOrder] = useState<ProductionOrder | null>(null);
   const [submittingAction, setSubmittingAction] = useState<"start" | "cancel" | null>(null);
+  const [openDetailModal, setOpenDetailModal] = useState(false);
+  const [detailOrder, setDetailOrder] = useState<ProductionOrder | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
@@ -222,7 +227,7 @@ export default function Production() {
     }
   };
 
-  const handleClose = async (id: string) => {
+  const handleClose = useCallback(async (id: string) => {
     clearFlash();
     try {
       const response = await closeProductionOrder(id);
@@ -231,7 +236,7 @@ export default function Production() {
     } catch (error) {
       showFlash(errorResponse(getApiErrorMessage(error, "Error al cerrar la orden")));
     }
-  };
+  }, [clearFlash, loadOrders, showFlash]);
 
   const handleCancel = async (id: string) => {
     clearFlash();
@@ -248,12 +253,12 @@ export default function Production() {
     }
   };
 
-  const handleEdit = (id: string) => {
+  const handleEdit = useCallback((id: string) => {
     if (!id) return;
     setFormMode("edit");
     setEditingProductionId(id);
     setOpenFormModal(true);
-  };
+  }, []);
 
   const handleCreate = () => {
     setFormMode("create");
@@ -267,11 +272,37 @@ export default function Production() {
     setFormMode("create");
   };
 
-  const openProductionPdf = (id: string) => {
+  const openProductionPdf = useCallback((id: string) => {
     clearFlash();
     setSelectedProductionId(id);
     setOpenPdfModal(true);
-  };
+  }, [clearFlash]);
+
+  const handleOpenDetail = useCallback(async (order: ProductionOrder) => {
+    const productionId = order.productionId ?? order.id;
+    if (!productionId) return;
+
+    clearFlash();
+    setOpenDetailModal(true);
+    setDetailLoading(true);
+    setDetailOrder(order);
+
+    try {
+      const response = await getProductionOrder(productionId);
+      setDetailOrder({
+        ...order,
+        ...response,
+        serie: response.serie ?? order.serie ?? null,
+        fromWarehouse: response.fromWarehouse ?? order.fromWarehouse ?? null,
+        toWarehouse: response.toWarehouse ?? order.toWarehouse ?? null,
+        items: response.items ?? order.items ?? [],
+      });
+    } catch (error) {
+      showFlash(errorResponse(getApiErrorMessage(error, "Error al cargar el detalle de la orden")));
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [clearFlash, showFlash]);
 
   useEffect(() => {
     void loadOrders();
@@ -638,6 +669,20 @@ export default function Production() {
             total: pagination.total,
           }}
           onPageChange={setPage}
+          onRowClick={(row) => {
+            void handleOpenDetail(row.original);
+          }}
+        />
+
+        <ProductionOrderDetailModal
+          open={openDetailModal}
+          onClose={() => {
+            setOpenDetailModal(false);
+            setDetailOrder(null);
+            setDetailLoading(false);
+          }}
+          loading={detailLoading}
+          order={detailOrder}
         />
 
         <PdfViewerModal

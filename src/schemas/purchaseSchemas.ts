@@ -118,10 +118,6 @@ export const createPurchaseOrderSchema = z.object({
 
 export const updatePurchaseOrderSchema = createPurchaseOrderSchema.partial();
 
-export const setPurchaseOrderActiveSchema = z.object({
-  isActive: z.boolean(),
-});
-
 export const listPurchaseOrdersQuerySchema = z.object({
   status: purchaseStatusEnum.optional(),
   statuses: z.array(purchaseStatusEnum).optional(),
