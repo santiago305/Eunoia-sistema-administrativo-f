@@ -18,7 +18,7 @@ import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useProducts } from "@/hooks/useProducts";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listCatalogProducts, updateProductActive } from "@/services/productService";
+import { listCatalogMaterials, updateProductActive } from "@/services/productService";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { Product } from "@/pages/catalog/types/product";
 import { Headed } from "@/components/Headed";
@@ -37,7 +37,7 @@ const PRODUCT_TYPE = ProductTypes.MATERIAL;
 
 type ProductSearchFilterKey = "status";
 
-const RECENT_STORAGE_KEY = "recent-search:catalog-products";
+const RECENT_STORAGE_KEY = "recent-search:row-material-products";
 
 export default function CatalogProducts() {
     const shouldReduceMotion = useReducedMotion();
@@ -333,10 +333,10 @@ export default function CatalogProducts() {
             });
             }  
             setDeletingProductId(null);
-            showFlash(successResponse("Estado de producto actualizado"));
+            showFlash(successResponse("Estado de material actualizado"));
             await refresh();
         } catch {
-            showFlash(errorResponse("Error al cambiar estado del producto"));
+            showFlash(errorResponse("Error al cambiar estado del material"));
         }
     };
 
@@ -391,12 +391,12 @@ export default function CatalogProducts() {
         setExporting(true);
         try {
             const pageSize = 100;
-            const first = await listCatalogProducts({ page: 1, limit: pageSize });
+            const first = await listCatalogMaterials({ page: 1, limit: pageSize });
             const allItems = [...(first.items ?? [])];
             const pages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));
 
             for (let currentPage = 2; currentPage <= pages; currentPage += 1) {
-                const response = await listCatalogProducts({ page: currentPage, limit: pageSize });
+                const response = await listCatalogMaterials({ page: currentPage, limit: pageSize });
                 if (response.items?.length) allItems.push(...response.items);
             }
 
@@ -406,7 +406,7 @@ export default function CatalogProducts() {
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = "productos.csv";
+            link.download = "materiales.csv";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -419,7 +419,7 @@ export default function CatalogProducts() {
 
     return (
         <PageShell>
-            <PageTitle title="Catalogo - Productos" />
+            <PageTitle title="Suministros - Materias primas" />
             <div className="flex items-center justify-between">
                 <Headed title="Materiales" size="lg" />
                 <div className="flex flex-wrap items-center gap-2">
@@ -440,10 +440,10 @@ export default function CatalogProducts() {
                         className="text-[11px]"
                         onClick={startCreate}
                         leftIcon={<Plus className="h-4 w-4" />}
-                        title="Nuevo producto"
+                        title="Nueva materia prima"
                         disabled={companyActionDisabled}
                     >
-                        Nuevo producto
+                        Nueva materia prima
                     </SystemButton>
                 </div>
             </div>
@@ -451,12 +451,12 @@ export default function CatalogProducts() {
             <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
 
             <DataTable
-                tableId="catalog-products"
+                tableId="row-material-products"
                 data={products}
                 columns={columns}
                 rowKey="id"
                 loading={loading}
-                emptyMessage="No hay productos disponibles."
+                emptyMessage="No hay materiales disponibles."
                 toolbarSearchContent={
                     <DataTableSearchBar
                         value={searchText}
@@ -465,8 +465,8 @@ export default function CatalogProducts() {
                             setPage(1);
                         }}
                         onSubmitSearch={submitSearch}
-                        searchLabel="Buscar productos..."
-                        searchName="catalog-products-smart-search"
+                        searchLabel="Buscar materiales..."
+                        searchName="row-material-products-smart-search"
                     >
                         <DataTableSearchPanel
                             recent={recentSearches}
@@ -492,7 +492,7 @@ export default function CatalogProducts() {
                 open={openCreate}
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
-                entityLabel="producto"
+                entityLabel="materia prima"
                 onClose={() => setOpenCreate(false)}
                 onSaved={() => {
                     void refresh();
@@ -505,7 +505,7 @@ export default function CatalogProducts() {
                 productId={editingProductId}
                 productType={PRODUCT_TYPE}
                 primaryColor={PRIMARY}
-                entityLabel="producto"
+                entityLabel="materia prima"
                 onClose={() => {
                     setEditingProductId(null);
                 }}
@@ -523,9 +523,9 @@ export default function CatalogProducts() {
                 message={
                     <>
                         {deletingProduct?.isActive ? (
-                            <>Estas por eliminar un producto. Hazlo solo si estas seguro.</>
+                            <>Estas por eliminar una materia prima. Hazlo solo si estas seguro.</>
                         ) : (
-                            <>Estas por restaurar un producto. Hazlo solo si estas seguro.</>
+                            <>Estas por restaurar una materia prima. Hazlo solo si estas seguro.</>
                         )}
                     </>
                 }

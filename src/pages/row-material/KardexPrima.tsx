@@ -460,7 +460,7 @@ export default function KardexProduction() {
                             columns={columns}
                             rowKey="id"
                             loading={loading}
-                            emptyMessage={!skuId ? "Seleccione un producto para ver el kardex." : "No hay movimientos para los filtros actuales."}
+                            emptyMessage={!skuId ? "Seleccione un material para ver el kardex." : "No hay movimientos para los filtros actuales."}
                             hoverable={false}
                             animated={false}
                             toolbarSearchContent={

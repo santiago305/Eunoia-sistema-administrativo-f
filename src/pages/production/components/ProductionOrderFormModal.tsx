@@ -223,32 +223,21 @@ export function ProductionOrderFormModal({
     }
   };
 
-  const productOptions = useMemo(
-    () => [
-      { value: "", label: "Seleccionar SKU" },
-      ...(searchResults ?? []).map((product) => ({
-        value: product.itemId ?? product.id ?? "",
-        label: `${product.productName ?? "SKU"} ${product.attributes?.presentation ?? ""} ${product.attributes?.variant ?? ""} ${product.attributes?.color ?? ""}${product.sku ? ` - ${product.sku}` : ""}${product.customSku ? ` (${product.customSku})` : ""}`,
-      })),
-    ],
-    [searchResults],
-  );
-
   const addItem = (finishedItemId: string) => {
     const selected =
       searchResults.find((product) => (product.itemId ?? product.id) === finishedItemId) ??
       products.find((product) => (product.itemId ?? product.id) === finishedItemId);
 
     if (!finishedItemId) {
-      showFlash(errorResponse("Selecciona un SKU"));
+      showFlash(errorResponse("Selecciona un producto"));
       return;
     }
     if (!selected?.stockItemId) {
-      showFlash(errorResponse("El SKU seleccionado no tiene item de stock valido para produccion"));
+      showFlash(errorResponse("El producto seleccionado no tiene item de stock valido para produccion"));
       return;
     }
     if ((form.items ?? []).some((item) => item.finishedItemId === finishedItemId)) {
-      showFlash(errorResponse("El SKU ya fue agregado"));
+      showFlash(errorResponse("El producto ya fue agregado"));
       return;
     }
 
@@ -542,10 +531,13 @@ export function ProductionOrderFormModal({
                 <SectionHeaderForm icon={Boxes} title="SKUs terminados" />
                 <div className="mt-2 grid gap-2 xl:grid-cols-1">
                   <FloatingSelect
-                    label="SKU terminado"
+                    label="Producto"
                     name="production-finished-item"
                     value=""
-                    options={productOptions}
+                    options={(searchResults ?? []).map((product) => ({
+                      value: product.itemId ?? product.id ?? "",
+                      label: `${product.productName ?? "SKU"} ${product.attributes?.presentation ?? ""} ${product.attributes?.variant ?? ""} ${product.attributes?.color ?? ""}${product.sku ? ` - ${product.sku}` : ""}${product.customSku ? ` (${product.customSku})` : ""}`,
+                    }))}
                     onChange={(value) => {
                       if (!value) return;
                       addItem(value);
@@ -554,7 +546,7 @@ export function ProductionOrderFormModal({
                     searchPlaceholder="Buscar SKU..."
                     onSearchChange={(text) => setQuery(text)}
                     className="h-12"
-                    placeholder="Seleccionar SKU"
+                    placeholder=""
                     emptyMessage="Sin SKUs"
                   />
                 </div>

@@ -58,18 +58,6 @@ export const userInfoAuth = async (
   return response.data;
 };
 
-export const checkTokenValidity = async () => {
-  try {
-    const response = await axiosInstance.get(API_AUTH_GROUP.validateToken);
-    const message = String(response.data?.message ?? "").toLowerCase();
-    return message.includes("valido") || message.includes("válido");
-  } catch (error: unknown) {
-    const message = getApiErrorMessage(error, "Token no valido o expirado");
-    console.error(message);
-    return false;
-  }
-};
-
 export const refresh_token = async () => {
   const response = await axiosInstance.post(API_AUTH_GROUP.refreshToken);
   return response.data;
@@ -85,5 +73,4 @@ export const logoutUser = async () => {
     return false;
   }
 };
-
 

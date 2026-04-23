@@ -65,7 +65,7 @@ const buildNumero = (document: InventoryDocument) => {
   return [serie, padded].filter(Boolean).join(sep) || document.id;
 };
 
-const RECENT_STORAGE_KEY = "recent-search:inventory-documents-transfer-products";
+const RECENT_STORAGE_KEY = "recent-search:inventory-documents-transfer-materials";
 
 export default function TransferenceProduts() {
   const { showFlash, clearFlash } = useFlashMessage();
@@ -525,7 +525,7 @@ export default function TransferenceProduts() {
       <PageTitle title="Transferencias" />
       <div className="space-y-4">
         <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
-          <Headed title="Transferencias (Productos)" size="lg" />
+          <Headed title="Transferencias (Materiales)" size="lg" />
           <div className="flex justify-end">
             <SystemButton
               size="md"
@@ -548,7 +548,7 @@ export default function TransferenceProduts() {
         <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
 
         <DataTable
-          tableId="inventory-documents-transfer-products"
+          tableId="inventory-documents-transfer-materials"
           data={documentRows}
           columns={columns}
           rowKey="id"
@@ -567,7 +567,7 @@ export default function TransferenceProduts() {
               onChange={setSearchText}
               onSubmitSearch={submitSearch}
               searchLabel="Buscar documento"
-              searchName="inventory-documents-transfer-products-search"
+              searchName="inventory-documents-transfer-materials-search"
             >
               <DataTableSearchPanel
                 recent={recentSearches}
@@ -629,7 +629,7 @@ export default function TransferenceProduts() {
           setPage(1);
           void loadDocuments();
         }}
-        type={InventoryDocumentProductType.PRODUCT}
+        type={InventoryDocumentProductType.MATERIAL}
       />
     </PageShell>
   );

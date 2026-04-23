@@ -45,7 +45,7 @@ const statusLabels: Record<DocStatus, string> = {
   [DocStatus.CANCELLED]: "Anulado",
 };
 
-const RECENT_STORAGE_KEY = "recent-search:inventory-documents-adjustment-products";
+const RECENT_STORAGE_KEY = "recent-search:inventory-documents-adjustment-materials";
 
 const buildNumero = (document: InventoryDocument) => {
   const serie = document.serieCode || document.serie || "";
@@ -479,7 +479,7 @@ export default function AdjustmentProduts() {
       <PageTitle title="Ajustes" />
       <div className="space-y-4">
         <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
-          <Headed title="Ajustes (Material)" size="lg" />
+          <Headed title="Ajustes (Materiales)" size="lg" />
 
           <div className="flex justify-end">
             <SystemButton
@@ -502,7 +502,7 @@ export default function AdjustmentProduts() {
         <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
 
         <DataTable
-          tableId="inventory-documents-adjustment-products"
+          tableId="inventory-documents-adjustment-materials"
           data={documentRows}
           columns={columns}
           rowKey="id"
@@ -517,7 +517,7 @@ export default function AdjustmentProduts() {
               onChange={setSearchText}
               onSubmitSearch={submitSearch}
               searchLabel="Buscar documento"
-              searchName="inventory-documents-adjustment-products-search"
+              searchName="inventory-documents-adjustment-materials-search"
             >
               <DataTableSearchPanel
                 recent={recentSearches}

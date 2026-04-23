@@ -262,7 +262,7 @@ export function RecipeFormFields({
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.65fr] pt-3">
           <FloatingSelect
-            label="Seleccionar SKU"
+            label=""
             name="selectedSku"
             value={selectedSkuId}
             onChange={onSelectSku}

@@ -6,9 +6,7 @@ export const API_AUTH_GROUP = {
   authentication: '/auth/login',
   logout: '/auth/logout',
   refreshToken: '/auth/refresh',
-  validateToken: '/auth/validate-token',
   userAuth: '/auth/me',
-  verifyPassword: `/auth/verify-password`,
 };
 
 /**
@@ -19,12 +17,9 @@ export const API_USERS_GROUP = {
   createUser: '/users/create',
   countByRole: '/users/count-by-role',
   findOwnUser: '/users/me',
-  findById: (id: string) => `/users/search/${id}`,
-  findByEmail: (email: string) => `/users/email/${email}`,
   updateUserRole: (id: string) => `/users/${id}/role`,
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
-  changePassword: (id: string) => `/users/change-password/${id}`,
 };
 
 export const API_PROFILE_GROUP = {
@@ -210,7 +205,7 @@ export const API_INVENTORY_GROUP = {
       ...(params.stockItemId ? { stockItemId: params.stockItemId } : {}),
       ...(params.locationId ? { locationId: params.locationId } : {}),
     });
-    return `/inventory/get-stock?${search.toString()}`;
+    return `/skus/get-stock?${search.toString()}`;
   },
 };
 
