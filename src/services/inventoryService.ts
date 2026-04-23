@@ -49,6 +49,7 @@ export const listInventory = async (params: ListInventoryQuery): Promise<Invento
   const requestParams: Record<string, unknown> = {
     ...params,
     q,
+    filters: params.filters,
     warehouseIdsIn: warehouseIdsIn.length ? warehouseIdsIn.join(",") : undefined,
     warehouseIdsNotIn: warehouseIdsNotIn.length ? warehouseIdsNotIn.join(",") : undefined,
     skuIdsIn: skuIdsIn.length ? skuIdsIn.join(",") : undefined,

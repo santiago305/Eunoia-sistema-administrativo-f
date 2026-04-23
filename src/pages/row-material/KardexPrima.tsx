@@ -4,6 +4,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
+import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchItem } from "@/components/table/search";
 import { SystemButton } from "@/components/SystemButton";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -21,8 +22,23 @@ import { PdfViewerModal } from "@/components/ModalOpenPdf";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductTypes } from "../catalog/types/ProductTypes";
+import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
+import { LedgerSmartSearchPanel } from "../catalog/components/LedgerSmartSearchPanel";
+import {
+    buildLedgerSearchChips,
+    buildLedgerSmartSearchColumns,
+    createEmptyLedgerSearchFilters,
+    filterLedgerRows,
+    removeLedgerSearchKey,
+    sanitizeLedgerSearchSnapshot,
+    upsertLedgerSearchRule,
+    type LedgerSearchFilterKey,
+    type LedgerSearchRule,
+    type LedgerSearchSnapshot,
+} from "../catalog/utils/ledgerSmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
+const RECENT_STORAGE_KEY = "recent-search:row-material-kardex";
 
 const useEChart = (options: echarts.EChartsOption) => {
     const ref = useRef<HTMLDivElement | null>(null);
@@ -63,6 +79,12 @@ export default function KardexProduction() {
     const [skus, setSkus] = useState<ProductSkuWithAttributes[]>([]);
     const [skuId, setSkuId] = useState("");
     const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>([]);
+    const [searchText, setSearchText] = useState("");
+    const [appliedSearchText, setAppliedSearchText] = useState("");
+    const [searchFilters, setSearchFilters] = useState(() => createEmptyLedgerSearchFilters());
+    const [recentSearches, setRecentSearches] = useState<DataTableRecentSearchItem<LedgerSearchSnapshot>[]>(() =>
+        loadLocalRecentSearches(RECENT_STORAGE_KEY),
+    );
     const [rows, setRows] = useState<LedgerEntry[]>([]);
     const [dailyTotals, setDailyTotals] = useState<KardexDailyTotal[]>([]);
     const [selectedRow, setSelectedRow] = useState<LedgerEntry | null>(null);
@@ -76,6 +98,29 @@ export default function KardexProduction() {
         setPdfTitle(title);
         setPdfLoader(() => loader);
         setOpenPdfModal(true);
+    };
+
+    const smartSearchColumns = useMemo(() => buildLedgerSmartSearchColumns(), []);
+    const draftSnapshot = useMemo(
+        () => sanitizeLedgerSearchSnapshot({ q: searchText, filters: searchFilters }),
+        [searchFilters, searchText],
+    );
+    const executedSnapshot = useMemo(
+        () => sanitizeLedgerSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+        [appliedSearchText, searchFilters],
+    );
+    const searchChips = useMemo(() => buildLedgerSearchChips(executedSnapshot), [executedSnapshot]);
+
+    const recordRecentSearch = (snapshot: LedgerSearchSnapshot) => {
+        const normalized = sanitizeLedgerSearchSnapshot(snapshot);
+        if (!normalized.q && !normalized.filters.length) return;
+        setRecentSearches(
+            pushLocalRecentSearch(RECENT_STORAGE_KEY, {
+                id: JSON.stringify(normalized),
+                label: buildLedgerSearchChips(normalized).map((chip) => chip.label).join(" · ") || "Búsqueda",
+                snapshot: normalized,
+            }),
+        );
     };
 
     const searchSkus = async () => {
@@ -259,9 +304,14 @@ export default function KardexProduction() {
         [skus],
     );
 
+    const filteredLedgerRows = useMemo(
+        () => filterLedgerRows(rows, executedSnapshot),
+        [executedSnapshot, rows],
+    );
+
     const kardexRows = useMemo<KardexRow[]>(
         () =>
-            rows.map((row) => {
+            filteredLedgerRows.map((row) => {
                 const date = row.createdAt ? new Date(row.createdAt) : null;
                 const entryQty = row.direction === "IN" ? row.quantity : 0;
                 const exitQty = row.direction === "OUT" ? row.quantity : 0;
@@ -300,7 +350,7 @@ export default function KardexProduction() {
                     original: row,
                 };
             }),
-        [rows],
+        [filteredLedgerRows],
     );
 
     const columns: DataTableColumn<KardexRow>[] = [
@@ -439,6 +489,36 @@ export default function KardexProduction() {
 
     const ref = useEChart(movementsChart);
 
+    const applySnapshot = (snapshot: LedgerSearchSnapshot) => {
+        const normalized = sanitizeLedgerSearchSnapshot(snapshot);
+        recordRecentSearch(normalized);
+        setSearchText(normalized.q ?? "");
+        setAppliedSearchText(normalized.q ?? "");
+        setSearchFilters(normalized.filters);
+    };
+
+    const handleApplySearchRule = (rule: LedgerSearchRule) => {
+        const next = upsertLedgerSearchRule(
+            sanitizeLedgerSearchSnapshot({ q: searchText, filters: searchFilters }),
+            rule,
+        );
+        setSearchFilters(next.filters);
+    };
+
+    const handleRemoveSearchRule = (fieldId: LedgerSearchFilterKey) => {
+        const next = removeLedgerSearchKey(
+            sanitizeLedgerSearchSnapshot({ q: searchText, filters: searchFilters }),
+            fieldId,
+        );
+        setSearchFilters(next.filters);
+    };
+
+    const submitSearch = () => {
+        const next = sanitizeLedgerSearchSnapshot({ q: searchText.trim(), filters: searchFilters });
+        recordRecentSearch(next);
+        setAppliedSearchText(next.q ?? "");
+    };
+
     return (
         <PageShell>
             <PageTitle title="Movimientos de materiales" />
@@ -453,6 +533,15 @@ export default function KardexProduction() {
             <div className="space-y-3">
                 <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                     <div className="xl:col-span-2">
+                        <DataTableSearchChips chips={searchChips} onRemove={(chip) => {
+                            const next = removeLedgerSearchKey(
+                                sanitizeLedgerSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+                                chip.removeKey,
+                            );
+                            setSearchText(next.q ?? "");
+                            setAppliedSearchText(next.q ?? "");
+                            setSearchFilters(next.filters);
+                        }} />
                         <DataTable
                             className="max-h-[80vh] overflow-hidden p-3"
                             tableId="kardex-production-table"
@@ -464,7 +553,25 @@ export default function KardexProduction() {
                             hoverable={false}
                             animated={false}
                             toolbarSearchContent={
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.2fr_0.8fr] sm:items-end">
+                                <div className="space-y-3">
+                                  <DataTableSearchBar
+                                    value={searchText}
+                                    onChange={setSearchText}
+                                    onSubmitSearch={submitSearch}
+                                    searchLabel="Buscar en movimientos"
+                                    searchName="row-material-kardex-smart-search"
+                                  >
+                                    <LedgerSmartSearchPanel
+                                      recent={recentSearches}
+                                      columns={smartSearchColumns}
+                                      snapshot={draftSnapshot}
+                                      filterQuery={searchText}
+                                      onApplySnapshot={applySnapshot}
+                                      onApplyRule={handleApplySearchRule}
+                                      onRemoveRule={handleRemoveSearchRule}
+                                    />
+                                  </DataTableSearchBar>
+                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.2fr_0.8fr] sm:items-end">
                                     <FloatingSelect
                                         label="Materiales"
                                         name="skuId"
@@ -492,6 +599,7 @@ export default function KardexProduction() {
                                         emptyMessage="Sin almacenes"
                                         className="h-11 rounded-sm border-border shadow-sm"
                                     />
+                                  </div>
                                 </div>
                             }
                             rangeDates={{

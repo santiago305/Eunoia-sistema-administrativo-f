@@ -90,6 +90,7 @@ export type ListInventoryQuery = {
   locationId?: string;
   search?: string;
   q?: string;
+  filters?: string;
   type?: string;
   productType?: string;
 };

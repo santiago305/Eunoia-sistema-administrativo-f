@@ -8,11 +8,7 @@ import { DataTable } from "@/components/table/DataTable";
 import {
     DataTableSearchBar,
     DataTableSearchChips,
-    DataTableSearchPanel,
-    type DataTableSearchChip,
-    type DataTableSearchColumn,
     type DataTableRecentSearchItem,
-    type DataTableSearchSnapshot,
 } from "@/components/table/search";
 import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
@@ -30,13 +26,22 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
 import { ProductCreateModal } from "../catalog/components/ProductCreateModal";
 import { getDropdownItemProducts } from "../catalog/data/getDropdownItemProducts";
+import { ProductSmartSearchPanel } from "../catalog/components/ProductSmartSearchPanel";
+import {
+    buildProductSearchChips,
+    buildProductSmartSearchColumns,
+    createEmptyProductSearchFilters,
+    removeProductSearchKey,
+    sanitizeProductSearchSnapshot,
+    upsertProductSearchRule,
+    type ProductSearchFilterKey,
+    type ProductSearchRule,
+    type ProductSearchSnapshot,
+} from "../catalog/utils/productSmartSearch";
 
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.MATERIAL;
-
-type ProductSearchFilterKey = "status";
-
 const RECENT_STORAGE_KEY = "recent-search:row-material-products";
 
 export default function CatalogProducts() {
@@ -52,10 +57,10 @@ export default function CatalogProducts() {
     const [exporting, setExporting] = useState(false);
     const [searchText, setSearchText] = useState("");
     const [executedSearchText, setExecutedSearchText] = useState("");
-    const [statusFilter, setStatusFilter] = useState<"" | "true" | "false">("");
+    const [searchFilters, setSearchFilters] = useState(() => createEmptyProductSearchFilters());
     const debouncedSearchText = useDebouncedValue(searchText.trim(), 400);
     const [recentSearches, setRecentSearches] = useState<
-        DataTableRecentSearchItem<DataTableSearchSnapshot<ProductSearchFilterKey>>[]
+        DataTableRecentSearchItem<ProductSearchSnapshot>[]
     >(() => loadLocalRecentSearches(RECENT_STORAGE_KEY));
 
     const limit = 30;
@@ -65,156 +70,99 @@ export default function CatalogProducts() {
         page,
         limit,
         q: executedSearchText || undefined,
-        isActive: statusFilter || undefined,
+        filters: searchFilters.length ? JSON.stringify(searchFilters) : undefined,
     }),
-    [page, limit, executedSearchText, statusFilter],
+    [page, limit, executedSearchText, searchFilters],
     );
 
     useEffect(() => {
         setExecutedSearchText(debouncedSearchText);
     }, [debouncedSearchText]);
 
-    const smartSearchColumns = useMemo<DataTableSearchColumn<ProductSearchFilterKey>[]>(() => {
-        return [
-            {
-                id: "status",
-                label: "Estado",
-                visible: true,
-                options: [
-                    { id: "true", label: "Activo" },
-                    { id: "false", label: "Desactivado" },
-                ],
-            },
-        ];
-    }, []);
+    const smartSearchColumns = useMemo(() => buildProductSmartSearchColumns(), []);
 
-    const executedSnapshot = useMemo<DataTableSearchSnapshot<ProductSearchFilterKey>>(
-        () => ({
-            q: executedSearchText || undefined,
-            filters: {
-                status: statusFilter ? [statusFilter] : [],
-            },
-        }),
-        [executedSearchText, statusFilter],
+    const draftSnapshot = useMemo<ProductSearchSnapshot>(
+        () => sanitizeProductSearchSnapshot({ q: searchText, filters: searchFilters }),
+        [searchFilters, searchText],
     );
 
-    const buildRecentLabel = useCallback((snapshot: DataTableSearchSnapshot<ProductSearchFilterKey>) => {
-        const parts: string[] = [];
-        if (snapshot.q) parts.push(`Busqueda: ${snapshot.q}`);
-        const statusValue = snapshot.filters.status?.[0];
-        if (statusValue) {
-            parts.push(`Estado: ${statusValue === "true" ? "Activo" : "Desactivado"}`);
-        }
-        return parts.join(" · ") || "Búsqueda";
+    const executedSnapshot = useMemo<ProductSearchSnapshot>(
+        () => sanitizeProductSearchSnapshot({ q: executedSearchText, filters: searchFilters }),
+        [executedSearchText, searchFilters],
+    );
+
+    const buildRecentLabel = useCallback((snapshot: ProductSearchSnapshot) => {
+        return buildProductSearchChips(snapshot).map((chip) => chip.label).join(" · ") || "Búsqueda";
     }, []);
 
     const recordRecentSearch = useCallback(
-        (snapshot: DataTableSearchSnapshot<ProductSearchFilterKey>) => {
-            const hasFilters = Boolean(snapshot.filters.status?.length);
+        (snapshot: ProductSearchSnapshot) => {
+            const hasFilters = Boolean(snapshot.filters.length);
             const hasQuery = Boolean(snapshot.q);
             if (!hasFilters && !hasQuery) return;
 
-            const id = JSON.stringify(snapshot);
-            const label = buildRecentLabel(snapshot);
+            const normalized = sanitizeProductSearchSnapshot(snapshot);
+            const id = JSON.stringify(normalized);
+            const label = buildRecentLabel(normalized);
 
             setRecentSearches(
                 pushLocalRecentSearch(RECENT_STORAGE_KEY, {
                     id,
                     label,
-                    snapshot,
+                    snapshot: normalized,
                 }),
             );
         },
         [buildRecentLabel],
     );
 
-    const searchChips = useMemo<DataTableSearchChip<ProductSearchFilterKey>[]>(() => {
-        const chips: DataTableSearchChip<ProductSearchFilterKey>[] = [];
+    const searchChips = useMemo(() => buildProductSearchChips(executedSnapshot), [executedSnapshot]);
 
-        if (executedSnapshot.q) {
-            chips.push({
-                id: "q",
-                label: `Busqueda: ${executedSnapshot.q}`,
-                removeKey: "q",
-            });
-        }
-
-        const statusValue = executedSnapshot.filters.status?.[0];
-        if (statusValue) {
-            chips.push({
-                id: "status",
-                label: `Estado: ${statusValue === "true" ? "Activo" : "Desactivado"}`,
-                removeKey: "status",
-            });
-        }
-
-        return chips;
-    }, [executedSnapshot.filters.status, executedSnapshot.q]);
-
-    const handleRemoveChip = useCallback((chip: DataTableSearchChip<ProductSearchFilterKey>) => {
-        if (chip.removeKey === "q") {
-            setSearchText("");
-            setExecutedSearchText("");
-            recordRecentSearch({
-                filters: {
-                    status: statusFilter ? [statusFilter] : [],
-                },
-            });
-            setPage(1);
-            return;
-        }
-
-        if (chip.removeKey === "status") {
-            setStatusFilter("");
-            recordRecentSearch({
-                q: executedSearchText || undefined,
-                filters: {
-                    status: [],
-                },
-            });
-            setPage(1);
-        }
-    }, [executedSearchText, recordRecentSearch, statusFilter]);
-
-    const handleToggleSearchOption = useCallback((columnId: ProductSearchFilterKey, optionId: string) => {
-        if (columnId !== "status") return;
-        setStatusFilter((prev) => {
-            const nextStatus = prev === optionId ? "" : (optionId as "true" | "false");
-            recordRecentSearch({
-                q: executedSearchText || undefined,
-                filters: {
-                    status: nextStatus ? [nextStatus] : [],
-                },
-            });
-            return nextStatus;
-        });
-        setPage(1);
-    }, [executedSearchText, recordRecentSearch]);
-
-    const applySnapshot = useCallback((snapshot: DataTableSearchSnapshot<ProductSearchFilterKey>) => {
-        recordRecentSearch({
-            ...snapshot,
-            q: snapshot.q?.trim() || undefined,
-        });
-        const nextStatus = snapshot.filters.status?.[0] ?? "";
-        setStatusFilter(nextStatus as "" | "true" | "false");
-        setSearchText(snapshot.q ?? "");
-        setExecutedSearchText((snapshot.q ?? "").trim());
+    const applySnapshot = useCallback((snapshot: ProductSearchSnapshot) => {
+        const normalized = sanitizeProductSearchSnapshot(snapshot);
+        recordRecentSearch(normalized);
+        setSearchText(normalized.q ?? "");
+        setExecutedSearchText(normalized.q ?? "");
+        setSearchFilters(normalized.filters);
         setPage(1);
     }, [recordRecentSearch]);
 
+    const handleApplySearchRule = useCallback((rule: ProductSearchRule) => {
+        const next = upsertProductSearchRule(
+            sanitizeProductSearchSnapshot({ q: searchText, filters: searchFilters }),
+            rule,
+        );
+        setSearchFilters(next.filters);
+        setPage(1);
+    }, [searchFilters, searchText]);
+
+    const handleRemoveSearchRule = useCallback((fieldId: ProductSearchFilterKey) => {
+        const next = removeProductSearchKey(
+            sanitizeProductSearchSnapshot({ q: searchText, filters: searchFilters }),
+            fieldId,
+        );
+        setSearchFilters(next.filters);
+        setPage(1);
+    }, [searchFilters, searchText]);
+
     const submitSearch = useCallback(() => {
         const nextQ = searchText.trim();
-        recordRecentSearch({
-            q: nextQ || undefined,
-            filters: {
-                status: statusFilter ? [statusFilter] : [],
-            },
-        });
+        recordRecentSearch(sanitizeProductSearchSnapshot({ q: nextQ, filters: searchFilters }));
 
         setExecutedSearchText(nextQ);
         setPage(1);
-    }, [recordRecentSearch, searchText, statusFilter]);
+    }, [recordRecentSearch, searchFilters, searchText]);
+
+    const handleRemoveChip = useCallback((key: "q" | ProductSearchFilterKey) => {
+        const nextSnapshot = removeProductSearchKey(
+            sanitizeProductSearchSnapshot({ q: executedSearchText, filters: searchFilters }),
+            key,
+        );
+        setSearchText(nextSnapshot.q ?? "");
+        setExecutedSearchText(nextSnapshot.q ?? "");
+        setSearchFilters(nextSnapshot.filters);
+        setPage(1);
+    }, [executedSearchText, searchFilters]);
 
 
     const {
@@ -448,7 +396,7 @@ export default function CatalogProducts() {
                 </div>
             </div>
 
-            <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
+            <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 
             <DataTable
                 tableId="row-material-products"
@@ -468,12 +416,14 @@ export default function CatalogProducts() {
                         searchLabel="Buscar materiales..."
                         searchName="row-material-products-smart-search"
                     >
-                        <DataTableSearchPanel
+                        <ProductSmartSearchPanel
                             recent={recentSearches}
                             columns={smartSearchColumns}
-                            snapshot={executedSnapshot}
+                            snapshot={draftSnapshot}
+                            filterQuery={searchText}
                             onApplySnapshot={applySnapshot}
-                            onToggleOption={handleToggleSearchOption}
+                            onApplyRule={handleApplySearchRule}
+                            onRemoveRule={handleRemoveSearchRule}
                         />
                     </DataTableSearchBar>
                 }
