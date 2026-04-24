@@ -6,11 +6,9 @@ import type {
   ListPurchaseOrdersQuery,
   Payment,
   PurchaseOrder,
-  PurchaseOrderItemsResponse,
   PurchaseOrderListResponse,
   PurchaseSearchSnapshot,
   PurchaseSearchStateResponse,
-  UpdatePurchaseOrderActiveDto,
   UpdatePurchaseOrderDto,
 } from "@/pages/purchases/types/purchase";
 import type { PurchaseOrderDetailOutput } from "@/pages/purchases/types/itemPurchaseEdit";
@@ -88,30 +86,8 @@ export const updatePurchaseOrder = async (
   return response.data;
 };
 
-export const setPurchaseOrderActive = async (
-  id: string,
-  payload: UpdatePurchaseOrderActiveDto
-): Promise<{ type:string, message:string }> => {
-  const response = await axiosInstance.patch(API_PURCHASE_GROUP.setActive(id), payload);
-  return response.data;
-};
-
-export const listPurchaseOrderItems = async (id: string): Promise<PurchaseOrderItemsResponse> => {
-  const response = await axiosInstance.get(API_PURCHASE_GROUP.listItems(id));
-  return response.data;
-};
-
 export const getById = async (id: string): Promise<PurchaseOrderDetailOutput> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.getById(id));
   return response.data;
 };
-
-export const removePurchaseOrderItem = async (
-  id: string,
-  itemId: string
-): Promise<{ type:string, message:string }> => {
-  const response = await axiosInstance.delete(API_PURCHASE_GROUP.removeItem(id, itemId));
-  return response.data;
-};
-
 

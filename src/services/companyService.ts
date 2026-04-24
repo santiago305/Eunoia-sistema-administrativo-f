@@ -19,16 +19,16 @@ export const getCompany = async (): Promise<Company> => {
 
 export const uploadCompanyLogo = async (file: File): Promise<Company> => {
   const formData = new FormData();
-  formData.append("logo", file);
+  formData.append("file", file);
 
-  const response = await axiosInstance.post(API_COMPANY_GROUP.uploadLogo, formData);
+  const response = await axiosInstance.patch(API_COMPANY_GROUP.uploadLogo, formData);
   return response.data;
 };
 
 export const uploadCompanyCert = async (file: File): Promise<Company> => {
   const formData = new FormData();
-  formData.append("cert", file);
+  formData.append("file", file);
 
-  const response = await axiosInstance.post(API_COMPANY_GROUP.uploadCert, formData);
+  const response = await axiosInstance.patch(API_COMPANY_GROUP.uploadCert, formData);
   return response.data;
 };

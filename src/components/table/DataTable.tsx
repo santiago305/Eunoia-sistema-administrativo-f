@@ -7,7 +7,8 @@ import {
   MinusSquare,
   Square,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { DataTableColumnManager } from "./DataTableColumnManager";
 import { DataTablePagination } from "./DataTablePagination";
@@ -78,6 +79,7 @@ export function DataTable<T extends Record<string, unknown>>({
   globalSearchFn,
   stickyHeader = true,
   responsiveCards = true,
+  responsiveMode = "auto",
   selectableRows = false,
   selectedRowKeys,
   defaultSelectedRowKeys = [],
@@ -86,11 +88,14 @@ export function DataTable<T extends Record<string, unknown>>({
   controlledSort,
   onSortChange,
   toolbarSearchContent,
+  animateRowsThreshold = 12,
 }: DataTableProps<T>) {
   const preferenceStorageKey = `data-table-preferences:${tableId}`;
   const controlledSearch = typeof searchValue === "string";
   const [internalSearch, setInternalSearch] = useState("");
   const activeSearch = controlledSearch ? searchValue : internalSearch;
+  const deferredSearch = useDeferredValue(activeSearch);
+  const isMobile = useIsMobile();
 
   const [columnPreferences, setColumnPreferences] =
     useLocalStorage<DataTableColumnPreference>(preferenceStorageKey, {
@@ -241,7 +246,7 @@ export function DataTable<T extends Record<string, unknown>>({
   const filteredData = useMemo(() => {
     if (searchMode === "server") return data;
 
-    const query = activeSearch.trim().toLowerCase();
+    const query = deferredSearch.trim().toLowerCase();
     if (!query) return data;
 
     return data.filter((row) => {
@@ -259,7 +264,7 @@ export function DataTable<T extends Record<string, unknown>>({
           return normalizeSearchText(value).includes(query);
         });
     });
-  }, [activeSearch, columns, data, globalSearchFn, searchMode]);
+  }, [columns, data, deferredSearch, globalSearchFn, searchMode]);
 
   const sortedData = useMemo(() => {
     if (!sort) return filteredData;
@@ -292,10 +297,12 @@ export function DataTable<T extends Record<string, unknown>>({
   }, [columns, filteredData, sort]);
 
   const setSortValue = (nextSort: DataTableSortState) => {
-    if (controlledSort === undefined) {
-      setInternalSort(nextSort);
-    }
-    onSortChange?.(nextSort);
+    startTransition(() => {
+      if (controlledSort === undefined) {
+        setInternalSort(nextSort);
+      }
+      onSortChange?.(nextSort);
+    });
   };
 
   const handleToggleSort = (columnId: string) => {
@@ -314,17 +321,19 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const updateSelectedRows = (nextKeys: string[]) => {
-    if (selectedRowKeys === undefined) {
-      setInternalSelectedRowKeys(nextKeys);
-    }
+    startTransition(() => {
+      if (selectedRowKeys === undefined) {
+        setInternalSelectedRowKeys(nextKeys);
+      }
 
-    const selectedRows = sortedData.filter((row, index) =>
-      nextKeys.includes(resolveRowKey(row, index)),
-    );
+      const selectedRows = sortedData.filter((row, index) =>
+        nextKeys.includes(resolveRowKey(row, index)),
+      );
 
-    onSelectedRowKeysChange?.(nextKeys, {
-      selectedKeys: nextKeys,
-      selectedRows,
+      onSelectedRowKeysChange?.(nextKeys, {
+        selectedKeys: nextKeys,
+        selectedRows,
+      });
     });
   };
 
@@ -363,6 +372,14 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const isRowClickable = !!onRowClick && rowClickable !== false;
+  const shouldRenderCards =
+    responsiveCards &&
+    (responsiveMode === "cards" || (responsiveMode === "auto" && isMobile));
+  const shouldRenderTable =
+    responsiveMode !== "cards" &&
+    (!responsiveCards || responsiveMode === "table" || !isMobile);
+  const enableRowAnimations = animated && sortedData.length <= animateRowsThreshold;
+  const showSkeletonLoading = loading && sortedData.length === 0;
   const resolvedRangeDates = rangeDates
     ? {
         ...rangeDates,
@@ -412,13 +429,14 @@ export function DataTable<T extends Record<string, unknown>>({
         }
       />
 
-      {responsiveCards ? (
+      {shouldRenderCards ? (
         <DataTableResponsiveCards
           data={sortedData}
           columns={visibleColumns}
           loading={loading}
           emptyMessage={emptyMessage}
-          animated={animated}
+          animated={enableRowAnimations}
+          visibleOnDesktop={responsiveMode === "cards"}
           rowClickable={isRowClickable}
           onRowClick={onRowClick}
           rowClassName={rowClassName}
@@ -426,7 +444,14 @@ export function DataTable<T extends Record<string, unknown>>({
         />
       ) : null}
 
-      <div className="relative hidden rounded-sm border border-border/70 bg-background shadow-sm md:block">
+      {shouldRenderTable ? (
+      <div className="relative rounded-sm border border-border/70 bg-background shadow-sm">
+        {loading && !showSkeletonLoading ? (
+          <div className="pointer-events-none absolute right-3 top-3 z-20 inline-flex items-center rounded-full border border-border/70 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+            Actualizando...
+          </div>
+        ) : null}
+
         <div className="scrollbar-panel max-h-[90vh] overflow-auto rounded-sm">
           <table className={cn("w-full min-w-full text-xs", tableClassName)}>
             <thead
@@ -496,7 +521,7 @@ export function DataTable<T extends Record<string, unknown>>({
             </thead>
 
             <tbody>
-              {loading ? (
+              {showSkeletonLoading ? (
                 Array.from({ length: 5 }).map((_, rowIndex) => (
                   <tr key={rowIndex} className="border-b border-border/50">
                     {selectableRows ? (
@@ -531,7 +556,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     rowClassName?.(row, index),
                   );
 
-                  const motionProps = animated
+                  const motionProps = enableRowAnimations
                     ? {
                         initial: { opacity: 0, y: 8 },
                         animate: { opacity: 1, y: 0 },
@@ -599,7 +624,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     </>
                   );
 
-                  if (animated) {
+                  if (enableRowAnimations) {
                     return (
                       <motion.tr
                         key={rowKeyValue}
@@ -631,6 +656,7 @@ export function DataTable<T extends Record<string, unknown>>({
           </table>
         </div>
       </div>
+      ) : null}
 
       {pagination && onPageChange && pagination.total > pagination.limit ? (
         <div className="flex flex-col gap-3 py-3 sm:items-end sm:justify-between">

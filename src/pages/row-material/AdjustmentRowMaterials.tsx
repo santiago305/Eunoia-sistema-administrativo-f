@@ -488,7 +488,7 @@ export default function AdjustmentProduts() {
       <PageTitle title="Ajustes" />
       <div className="space-y-4">
         <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
-          <Headed title="Ajustes (Material)" size="lg" />
+          <Headed title="Ajustes (Materiales)" size="lg" />
 
           <div className="flex justify-end">
             <SystemButton

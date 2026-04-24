@@ -273,6 +273,18 @@ export function   Popover({
     });
   }, [anchorRef, offset, placement]);
 
+  const scheduleUpdatePosition = useCallback(() => {
+    let frameId = 0;
+
+    return () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updatePosition();
+      });
+    };
+  }, [updatePosition]);
+
   useLayoutEffect(() => {
     if (!open) return;
 
@@ -323,17 +335,18 @@ export function   Popover({
       }
     };
 
+    const handleViewportChange = scheduleUpdatePosition();
     const resizeObserver = new ResizeObserver(() => {
-      updatePosition();
+      handleViewportChange();
     });
 
     resizeObserver.observe(anchor);
     resizeObserver.observe(popover);
-
-    const handleResize = () => updatePosition();
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", updatePosition);
+    window.addEventListener("resize", handleViewportChange, { passive: true });
+    window.addEventListener("scroll", handleViewportChange, {
+      capture: true,
+      passive: true,
+    });
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handlePointerDown);
 
@@ -345,8 +358,8 @@ export function   Popover({
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", updatePosition);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handlePointerDown);
     };
@@ -358,6 +371,7 @@ export function   Popover({
     initialFocusRef,
     onClose,
     open,
+    scheduleUpdatePosition,
     updatePosition,
   ]);
 

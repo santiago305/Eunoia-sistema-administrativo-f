@@ -29,33 +29,33 @@ type ProductionSearchOperatorOption = SmartSearchOperatorOption<ProductionSearch
 
 const FIELD_ORDER: ProductionSearchField[] = [
   ProductionSearchFields.MANUFACTURE_DATE,
-  ProductionSearchFields.SERIE,
+  ProductionSearchFields.NUMBER,
   ProductionSearchFields.REFERENCE,
   ProductionSearchFields.FROM_WAREHOUSE_ID,
   ProductionSearchFields.TO_WAREHOUSE_ID,
   ProductionSearchFields.STATUS,
-  ProductionSearchFields.PRODUCT_ID,
+  ProductionSearchFields.SKU_ID,
 ];
 
 const FIELD_LABELS: Record<ProductionSearchField, string> = {
   [ProductionSearchFields.MANUFACTURE_DATE]: "Registro",
-  [ProductionSearchFields.SERIE]: "Serie",
+  [ProductionSearchFields.NUMBER]: "Serie o correlativo",
   [ProductionSearchFields.REFERENCE]: "Referencia",
   [ProductionSearchFields.FROM_WAREHOUSE_ID]: "Almacen origen",
   [ProductionSearchFields.TO_WAREHOUSE_ID]: "Almacen destino",
   [ProductionSearchFields.STATUS]: "Estado",
-  [ProductionSearchFields.PRODUCT_ID]: "Producto",
+  [ProductionSearchFields.SKU_ID]: "Producto terminado (SKU)",
 };
 
 const CATALOG_FIELDS = new Set<ProductionSearchField>([
   ProductionSearchFields.FROM_WAREHOUSE_ID,
   ProductionSearchFields.TO_WAREHOUSE_ID,
   ProductionSearchFields.STATUS,
-  ProductionSearchFields.PRODUCT_ID,
+  ProductionSearchFields.SKU_ID,
 ]);
 
 const TEXT_FIELDS = new Set<ProductionSearchField>([
-  ProductionSearchFields.SERIE,
+  ProductionSearchFields.NUMBER,
   ProductionSearchFields.REFERENCE,
 ]);
 
@@ -108,24 +108,33 @@ function formatRuleValueLabel(value?: string | null) {
   return `${String(parsed.getDate()).padStart(2, "0")}/${String(parsed.getMonth() + 1).padStart(2, "0")}/${parsed.getFullYear()}`;
 }
 
+function normalizeLegacyField(field?: string | null): ProductionSearchField | null {
+  if (field === "productId") return ProductionSearchFields.SKU_ID;
+  if (field === "serie") return ProductionSearchFields.NUMBER;
+  return field && Object.values(ProductionSearchFields).includes(field as ProductionSearchField)
+    ? (field as ProductionSearchField)
+    : null;
+}
+
 function sanitizeRule(rule?: Partial<ProductionSearchRule> | null): ProductionSearchRule | null {
   if (!rule?.field || !rule.operator) return null;
-  if (!Object.values(ProductionSearchFields).includes(rule.field)) return null;
+  const field = normalizeLegacyField(rule.field);
+  if (!field) return null;
   if (!Object.values(ProductionSearchOperators).includes(rule.operator)) return null;
 
-  if (CATALOG_FIELDS.has(rule.field)) {
+  if (CATALOG_FIELDS.has(field)) {
     if (rule.operator !== ProductionSearchOperators.IN) return null;
     const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : undefined));
     if (!values.length) return null;
     return {
-      field: rule.field,
+      field,
       operator: rule.operator,
       mode: rule.mode === "exclude" ? "exclude" : "include",
       values,
     };
   }
 
-  if (TEXT_FIELDS.has(rule.field)) {
+  if (TEXT_FIELDS.has(field)) {
     if (
       rule.operator !== ProductionSearchOperators.CONTAINS &&
       rule.operator !== ProductionSearchOperators.EQ
@@ -135,13 +144,13 @@ function sanitizeRule(rule?: Partial<ProductionSearchRule> | null): ProductionSe
     const value = rule.value?.trim();
     if (!value) return null;
     return {
-      field: rule.field,
+      field,
       operator: rule.operator,
       value,
     };
   }
 
-  if (DATE_FIELDS.has(rule.field)) {
+  if (DATE_FIELDS.has(field)) {
     if (
       rule.operator !== ProductionSearchOperators.ON &&
       rule.operator !== ProductionSearchOperators.AFTER &&
@@ -156,7 +165,7 @@ function sanitizeRule(rule?: Partial<ProductionSearchRule> | null): ProductionSe
       const end = normalizeDateValue(rule.range?.end);
       if (!start || !end) return null;
       return {
-        field: rule.field,
+        field,
         operator: rule.operator,
         range: { start, end },
       };
@@ -165,7 +174,7 @@ function sanitizeRule(rule?: Partial<ProductionSearchRule> | null): ProductionSe
     const value = normalizeDateValue(rule.value);
     if (!value) return null;
     return {
-      field: rule.field,
+      field,
       operator: rule.operator,
       value,
     };
@@ -176,11 +185,8 @@ function sanitizeRule(rule?: Partial<ProductionSearchRule> | null): ProductionSe
 
 function getCatalogMaps(searchState?: ProductionSearchStateResponse | null) {
   return {
-    fromWarehouse: new Map(
-      (searchState?.catalogs.fromWarehouses ?? []).map((item) => [item.id, item.label]),
-    ),
-    toWarehouse: new Map(
-      (searchState?.catalogs.toWarehouses ?? []).map((item) => [item.id, item.label]),
+    warehouse: new Map(
+      (searchState?.catalogs.warehouses ?? []).map((item) => [item.id, item.label]),
     ),
     status: new Map(
       (searchState?.catalogs.statuses ?? []).map((item) => [item.id, item.label]),
@@ -199,12 +205,12 @@ function getCatalogLabels(
   const maps = getCatalogMaps(searchState);
   const map =
     field === ProductionSearchFields.FROM_WAREHOUSE_ID
-      ? maps.fromWarehouse
+      ? maps.warehouse
       : field === ProductionSearchFields.TO_WAREHOUSE_ID
-        ? maps.toWarehouse
+        ? maps.warehouse
         : field === ProductionSearchFields.STATUS
           ? maps.status
-          : field === ProductionSearchFields.PRODUCT_ID
+          : field === ProductionSearchFields.SKU_ID
             ? maps.product
             : new Map<string, string>();
 
@@ -385,8 +391,8 @@ export function buildProductionSmartSearchColumns(
       },
     },
     {
-      id: ProductionSearchFields.SERIE,
-      label: "Serie",
+      id: ProductionSearchFields.NUMBER,
+      label: "Serie o correlativo",
       kind: "text",
       description: "Busca por serie o correlativo mostrado en la tabla.",
       operators: TEXT_OPERATOR_OPTIONS,
@@ -407,7 +413,7 @@ export function buildProductionSmartSearchColumns(
       description: "Selecciona uno o varios almacenes de origen.",
       operators: [{ id: ProductionSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: searchState?.catalogs.fromWarehouses ?? [],
+      options: searchState?.catalogs.warehouses ?? [],
     },
     {
       id: ProductionSearchFields.TO_WAREHOUSE_ID,
@@ -416,7 +422,7 @@ export function buildProductionSmartSearchColumns(
       description: "Selecciona uno o varios almacenes de destino.",
       operators: [{ id: ProductionSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: searchState?.catalogs.toWarehouses ?? [],
+      options: searchState?.catalogs.warehouses ?? [],
     },
     {
       id: ProductionSearchFields.STATUS,
@@ -428,10 +434,10 @@ export function buildProductionSmartSearchColumns(
       options: searchState?.catalogs.statuses ?? [],
     },
     {
-      id: ProductionSearchFields.PRODUCT_ID,
-      label: "Producto",
+      id: ProductionSearchFields.SKU_ID,
+      label: "Producto terminado (SKU)",
       kind: "catalog",
-      description: "Selecciona productos terminados incluidos en la orden.",
+      description: "Selecciona SKUs terminados incluidos en la orden.",
       operators: [{ id: ProductionSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: searchState?.catalogs.products ?? [],

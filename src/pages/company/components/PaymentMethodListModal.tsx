@@ -50,7 +50,7 @@ export function PaymentMethodListModal({
       setLoading(true);
 
       try {
-        const data = await getPaymentMethodsByCompany(companyId);
+        const data: PaymentMethodPivot[] = await getPaymentMethodsByCompany(companyId);
         setRows(data ?? []);
       } catch {
         setRows([]);
@@ -70,7 +70,7 @@ export function PaymentMethodListModal({
 
       try {
         const records = await getAllPaymentMethods();
-        setAllMethods(records);
+        setAllMethods(records ?? []);
       } catch {
         setAllMethods([]);
         if (!options?.silent) {
@@ -91,7 +91,10 @@ export function PaymentMethodListModal({
 
     return allMethods
       .filter((method) => !selectedSet.has(method.methodId))
-      .map((method) => ({ value: method.methodId, label: method.name }));
+      .map((method) => ({
+        value: method.methodId,
+        label: method.name,
+      }));
   }, [allMethods, rows]);
 
   useEffect(() => {
@@ -107,7 +110,12 @@ export function PaymentMethodListModal({
     setAdding(true);
 
     try {
-      await createCompanyMethod({ companyId, methodId: selectedId, number });
+      await createCompanyMethod({
+        companyId,
+        methodId: selectedId,
+        number,
+      });
+
       showFlash(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
@@ -120,19 +128,19 @@ export function PaymentMethodListModal({
   }, [adding, clearFlash, companyId, loadCompanyMethods, number, selectedId, showFlash]);
 
   const removeMethod = useCallback(
-    async (methodId?: string | null) => {
-      if (!companyId || !methodId) return;
+    async (companyMethodId?: string | null) => {
+      if (!companyMethodId) return;
 
       clearFlash();
       try {
-        await deleteCompanyMethod(companyId, methodId);
+        await deleteCompanyMethod(companyMethodId);
         showFlash(successResponse("Método eliminado"));
         await loadCompanyMethods({ silent: true });
       } catch {
         showFlash(errorResponse("No se pudo eliminar el método"));
       }
     },
-    [clearFlash, companyId, loadCompanyMethods, showFlash],
+    [clearFlash, loadCompanyMethods, showFlash],
   );
 
   const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
@@ -158,7 +166,7 @@ export function PaymentMethodListModal({
               variant="danger"
               size="custom"
               className="h-7 w-7 rounded-lg p-0"
-              onClick={() => removeMethod(row.methodId)}
+              onClick={() => removeMethod(row.companyMethodId)}
               title="Eliminar método"
             >
               <Trash2 className="h-4 w-4" />
@@ -178,60 +186,61 @@ export function PaymentMethodListModal({
   return (
     <Modal onClose={close} title={title} className={modalClassName}>
       <div className="space-y-3">
-          <div className="flex flex-col gap-3 text-xs text-black/60 mb-3">
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(220px,1fr)_auto] lg:items-end">
-              <div className="min-w-0">
-                <PaymentMethodSelectComposed
-                  label="Método de pago"
-                  value={selectedId}
-                  onChange={setSelectedId}
-                  options={availableOptions}
-                  onCreate={() => setOpenCreateMethod(true)}
-                  onEdit={(methodId) => setEditingMethodId(methodId)}
-                  className="h-10"
-                  textSize="text-xs"
-                  disabled={adding}
-                  emptyLabel="Sin resultados"
-                />
-              </div>
-
-              <div className="min-w-0">
-                <FloatingInput
-                  label="Número"
-                  name="company-payment-number"
-                  value={number}
-                  onChange={(event) => setNumber(event.target.value)}
-                  disabled={adding}
-                  className="h-10 text-xs"
-                />
-              </div>
-
-              <SystemButton
-                size="sm"
-                className="h-10 lg:min-w-[120px]"
-                leftIcon={<Plus className="h-4 w-4" />}
-                disabled={!selectedId || adding}
-                onClick={addMethod}
-                style={{
-                  backgroundColor: PRIMARY,
-                  borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                }}
-              >
-                {adding ? "Añadiendo..." : "Añadir"}
-              </SystemButton>
+        <div className="mb-3 flex flex-col gap-3 text-xs text-black/60">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(220px,1fr)_auto] lg:items-end">
+            <div className="min-w-0">
+              <PaymentMethodSelectComposed
+                label="Método de pago"
+                value={selectedId}
+                onChange={setSelectedId}
+                options={availableOptions}
+                onCreate={() => setOpenCreateMethod(true)}
+                onEdit={(methodId) => setEditingMethodId(methodId)}
+                className="h-10"
+                textSize="text-xs"
+                disabled={adding}
+                emptyLabel="Sin resultados"
+              />
             </div>
-          </div>
 
-          <DataTable
-            tableId="company-methods-table"
-            data={rows}
-            columns={columns}
-            rowKey="methodId"
-            loading={loading}
-            emptyMessage="No hay métodos asignados."
-            hoverable={false}
-            animated={false}
-          />
+            <div className="min-w-0">
+              <FloatingInput
+                label="Número"
+                name="company-payment-number"
+                value={number}
+                onChange={(event) => setNumber(event.target.value)}
+                disabled={adding}
+                className="h-10 text-xs"
+              />
+            </div>
+
+            <SystemButton
+              size="sm"
+              className="h-10 lg:min-w-[120px]"
+              leftIcon={<Plus className="h-4 w-4" />}
+              disabled={!selectedId || adding}
+              onClick={addMethod}
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              }}
+            >
+              {adding ? "Añadiendo..." : "Añadir"}
+            </SystemButton>
+          </div>
+        </div>
+
+        <DataTable
+          tableId="company-methods-table"
+          data={rows}
+          columns={columns}
+          rowKey="companyMethodId"
+          loading={loading}
+          emptyMessage="No hay métodos asignados."
+          hoverable={false}
+          animated={false}
+          responsiveMode="table"
+        />
       </div>
 
       <PaymentMethodFormModal

@@ -57,7 +57,7 @@ export function WarehouseSmartSearchPanel({
       }
       getSelectionCount={getWarehouseSearchSelectionCount}
       fieldsSectionTitle="Columnas"
-      fieldsSectionDescription="Filtra almacenes por ubicacion, estado o fecha de creacion."
+      fieldsSectionDescription="Filtra almacenes por ubicacion, nombre, direccion o estado."
       initialVisibleFields={4}
       filterQuery={filterQuery}
     />

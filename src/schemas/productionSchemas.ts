@@ -20,13 +20,6 @@ export const createProductionOrderSchema = z.object({
 
 export const updateProductionOrderSchema = createProductionOrderSchema.partial();
 
-export const updateProductionOrderItemSchema = z.object({
-  finishedItemId: uuidSchema.optional(),
-  quantity: z.number().int().min(1).optional(),
-  unitCost: z.number().int().min(0).optional(),
-  type: z.string().optional()
-});
-
 export const listProductionOrdersQuerySchema = z.object({
   status: z.string().optional(),
   warehouseId: uuidSchema.optional(),

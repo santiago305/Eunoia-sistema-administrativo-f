@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import type { Role, User } from "../types/users.types";
 import { ROLE_LABELS, RoleType } from "../types/roles.types";
 import { formatDateTimeLabel } from "../utils/dateFormat";
@@ -26,7 +25,7 @@ function StatusChip({ inactive }: { inactive: boolean }) {
     <span
       className={cn(
         "inline-flex h-6 items-center rounded-full border px-2 text-[10px] font-medium",
-        inactive ? "border-rose-200 bg-rose-50 text-rose-600" : "border-emerald-200 bg-emerald-50 text-emerald-600"
+        inactive ? "border-rose-200 bg-rose-50 text-rose-600" : "border-emerald-200 bg-emerald-50 text-emerald-600",
       )}
     >
       <span className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", inactive ? "bg-rose-500" : "bg-emerald-500")} />
@@ -90,13 +89,7 @@ export function UsersRightPanel({
               </div>
             </div>
           ) : (
-            <motion.div
-              key={selected.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.18 }}
-              className="flex h-full flex-col gap-4"
-            >
+            <div key={selected.id} className="flex h-full flex-col gap-4">
               <div className="rounded-2xl border border-zinc-200 bg-zinc-50/40 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -114,7 +107,7 @@ export function UsersRightPanel({
                         disabled={togglingStatus}
                         className={cn(
                           "h-7 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-medium text-rose-600 transition",
-                          togglingStatus ? "cursor-not-allowed opacity-60" : "hover:bg-rose-100 active:scale-[.99]"
+                          togglingStatus ? "cursor-not-allowed opacity-60" : "hover:bg-rose-100 active:scale-[.99]",
                         )}
                       >
                         {togglingStatus ? "..." : "Eliminar"}
@@ -125,7 +118,7 @@ export function UsersRightPanel({
                         disabled={togglingStatus}
                         className={cn(
                           "h-7 rounded-lg px-2.5 text-[11px] font-medium text-white transition",
-                          togglingStatus ? "cursor-not-allowed opacity-60" : "hover:opacity-90 active:scale-[.99]"
+                          togglingStatus ? "cursor-not-allowed opacity-60" : "hover:opacity-90 active:scale-[.99]",
                         )}
                         style={{ background: "hsl(var(--primary))" }}
                       >
@@ -136,7 +129,7 @@ export function UsersRightPanel({
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Telefono" value={selected.phone} /> 
+                  <Field label="Telefono" value={selected.phone} />
                   <Field label="Creado" value={formatDateTimeLabel(selected.createdAt)} />
                   <Field label="Ult. actualizado" value={formatDateTimeLabel(selected.updatedAt)} />
                 </div>
@@ -149,11 +142,11 @@ export function UsersRightPanel({
                     <p className="mt-1 text-[12px] font-medium text-zinc-800">Editar rol del usuario</p>
                   </div>
 
-                  {roleDraft !== selected.role && (
+                  {roleDraft !== selected.role ? (
                     <span className="rounded-full border border-primary/20 bg-primary/8 px-2 py-1 text-[10px] text-[#16897d]">
                       Pendiente
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -162,7 +155,7 @@ export function UsersRightPanel({
                     onChange={(e) => setRoleDraft(e.target.value as Role)}
                     className={cn(
                       "h-9 flex-1 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition",
-                      "focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                      "focus:border-primary/40 focus:ring-4 focus:ring-primary/10",
                     )}
                   >
                     {ROLES.map((r) => (
@@ -177,7 +170,7 @@ export function UsersRightPanel({
                     disabled={savingRole || roleDraft === selected.role}
                     className={cn(
                       "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
-                      savingRole || roleDraft === selected.role ? "cursor-not-allowed opacity-60" : "active:scale-[.99]"
+                      savingRole || roleDraft === selected.role ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
                     )}
                     style={{ background: "hsl(var(--primary))" }}
                   >
@@ -185,7 +178,7 @@ export function UsersRightPanel({
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>

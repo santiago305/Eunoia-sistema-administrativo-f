@@ -1,5 +1,5 @@
 ﻿import axiosInstance from "@/common/utils/axios"
-import { API_AUTH_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
+import { API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
 import type {
   CountUsersByRoleData,
   CreateUserRequest,
@@ -71,32 +71,6 @@ export const createUser = async (payload: CreateUserPayload) => {
   return response.data
 }
 
-/**
- * Obtiene todos los usuarios segÃºn filtros.
- * @param {Object} params - ParÃ¡metros de bÃºsqueda.
- * @returns {Promise<any>} Lista de usuarios.
- */
-export const findAll = async (params: {
-  page?: number;
-  role?: string;
-  sortBy?: string;
-  order?: 'ASC' | 'DESC';
-}) => {
-  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list,{ params: { ...params, status: "all" } })
-  return response.data
-  
-}
-
-export const findDesactive = async (params: {
-  page?: number;
-  role?: string;
-  sortBy?: string;
-  order?: "ASC" | "DESC";
-}) => {
-  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list, { params: { ...params, status: "inactive" } });
-  return response.data;
-};
-
 export const listUsers = async (params?: ListUsersParams) => {
   const response = await axiosInstance.get<ListUsersResponse>(API_USERS_GROUP.list, {
     params: { status: "all", ...params },
@@ -113,23 +87,6 @@ export const countUsersByRole = async (params?: CountUsersByRoleParams) => {
   const response = await axiosInstance.get<CountUsersByRoleResponse>(API_USERS_GROUP.countByRole, { params });
   return response.data;
 };
-
-// ----------------------------------------
-// USUARIOS (ADMIN) - AVATAR / PASSWORD POR ID
-// ----------------------------------------
-
-export const updateAvatar = async (id: string, file: File) => {
-  const formData = new FormData();
-  formData.append("avatar", file); 
-
-  const response = await axiosInstance.post(
-    API_USERS_GROUP.updateAvatar(id),
-    formData,
-  );
-
-  return response.data;
-};
-
 
 export const updateMyAvatar = async (file: File) => {
   const formData = new FormData();
@@ -148,17 +105,6 @@ export const removeMyAvatar = async () => {
   return response.data;
 };
 
-export const changePassword = async (
-  id: string,
-  payload: { currentPassword: string; newPassword: string }
-) => {
-  const response = await axiosInstance.patch(
-    API_USERS_GROUP.changePassword(id),
-    payload
-  );
-  return response.data;
-};
-
 // ----------------------------------------
 // PERFIL (ME)
 // ----------------------------------------
@@ -170,61 +116,6 @@ export const changeMyPassword = async (
     API_PROFILE_GROUP.changePasswordMe,
     payload
   );
-  return response.data;
-};
-
-// ----------------------------------------
-// AUTH (VERIFICACION)
-// ----------------------------------------
-
-export const verifyPassword = async (
-  payload: { currentPassword: string; }
-) => {
-  const response = await axiosInstance.post(
-    API_AUTH_GROUP.verifyPassword,
-    payload
-  );
-  return response.data;
-};
-
-// ----------------------------------------
-// USUARIOS (ADMIN)
-// ----------------------------------------
-
-
-/**
- * Obtiene usuarios activos.
- * @param {Object} params - ParÃ¡metros de bÃºsqueda.
- * @returns {Promise<any>} Lista de usuarios activos.
- */
-export const findActives = async (params: {
-  page?: number;
-  role?: string;
-  sortBy?: string;
-  order?: 'ASC' | 'DESC';
-}) => {
-  const response = await axiosInstance.get<UserApiListItem[]>(API_USERS_GROUP.list,{ params: { ...params, status: "active" } })
-  return response.data
-}
-
-/**
- * Busca un usuario por ID.
- * @param {string} id - ID del usuario.
- * @returns {Promise<any>} Datos del usuario.
- */
-export const findById = async (id: string) => {
-  const response = await axiosInstance.get(API_USERS_GROUP.findById(id))
-  return response.data
-}
-
-/**
- * Busca un usuario por su email.
- * 
- * @param {string} email - Email del usuario.
- * @returns {Promise<any>} Datos del usuario correspondiente.
- */
-export const findByEmail = async (email: string) => {
-  const response = await axiosInstance.get(API_USERS_GROUP.findByEmail(email));
   return response.data;
 };
 
@@ -285,6 +176,3 @@ export const restoreUser = async (id: string) => {
   const response = await axiosInstance.patch(API_USERS_GROUP.restoreUser(id))
   return response.data
 }
-
-
-

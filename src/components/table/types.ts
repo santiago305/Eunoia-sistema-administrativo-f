@@ -65,6 +65,7 @@ export type DataTableSelectionChangeMeta<T> = {
 export type DataTableSortDirection = 'asc' | 'desc';
 
 export type DataTableSearchMode = 'client' | 'server';
+export type DataTableResponsiveMode = 'auto' | 'table' | 'cards';
 
 export type DataTableSortState =
     | {
@@ -101,6 +102,7 @@ export type DataTableProps<T> = {
     globalSearchFn?: (row: T, query: string) => boolean;
     stickyHeader?: boolean;
     responsiveCards?: boolean;
+    responsiveMode?: DataTableResponsiveMode;
     selectableRows?: boolean;
     selectedRowKeys?: string[];
     defaultSelectedRowKeys?: string[];
@@ -109,6 +111,7 @@ export type DataTableProps<T> = {
     controlledSort?: DataTableSortState;
     onSortChange?: (sort: DataTableSortState) => void;
     toolbarSearchContent?: ReactNode;
+    animateRowsThreshold?: number;
 };
 
 export type DataTableColumnPreference = {

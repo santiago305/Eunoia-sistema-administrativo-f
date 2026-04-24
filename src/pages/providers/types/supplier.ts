@@ -24,8 +24,7 @@ export const ProviderSearchFields = {
   TRADE_NAME: "tradeName",
   PHONE: "phone",
   EMAIL: "email",
-  STATUS: "status",
-  LEAD_TIME_DAYS: "leadTimeDays",
+  IS_ACTIVE: "isActive",
 } as const;
 
 export type ProviderSearchField =
@@ -35,10 +34,6 @@ export const ProviderSearchOperators = {
   IN: "in",
   CONTAINS: "contains",
   EQ: "eq",
-  GT: "gt",
-  GTE: "gte",
-  LT: "lt",
-  LTE: "lte",
 } as const;
 
 export type ProviderSearchOperator =
@@ -80,7 +75,7 @@ export type ProviderSearchStateResponse = {
   saved: ProviderSavedMetric[];
   catalogs: {
     documentTypes: DataTableSearchOption[];
-    statuses: DataTableSearchOption[];
+    activeStates: DataTableSearchOption[];
   };
 };
 

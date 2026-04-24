@@ -4,6 +4,12 @@ import axiosInstance from "@/common/utils/axios";
 import type { AdjustmentResponse, CreateAdjustment } from "@/pages/catalog/types/adjustment";
 import type { GetInventoryDocumentsParams, InventoryDocumentListResponse, skuStock } from "@/pages/catalog/types/documentInventory";
 import { CreateTransfer } from "@/pages/catalog/types/transfer";
+import type {
+  InventoryDocumentsSearchSnapshot,
+  InventoryDocumentsSearchStateResponse,
+} from "@/pages/catalog/types/inventoryDocumentsSearch";
+import type { DocType } from "@/pages/warehouse/types/warehouse";
+import type { InventoryDocumentProductType } from "@/pages/catalog/types/documentInventory";
 
 
 
@@ -54,6 +60,40 @@ export const getDocuments = async (
 
   const response = await axiosInstance.get(API_DOCUMENT_INVENTORY_GROUP.listDocuments, {
     params: requestParams,
+  });
+  return response.data;
+};
+
+export const getInventoryDocumentsSearchState = async (params: {
+  docType: DocType;
+  productType?: InventoryDocumentProductType;
+}): Promise<InventoryDocumentsSearchStateResponse> => {
+  const response = await axiosInstance.get(API_DOCUMENT_INVENTORY_GROUP.searchState, {
+    params,
+  });
+  return response.data;
+};
+
+export const saveInventoryDocumentsSearchMetric = async (payload: {
+  name: string;
+  docType: DocType;
+  productType?: InventoryDocumentProductType;
+  snapshot: InventoryDocumentsSearchSnapshot;
+}): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.saveSearchMetric, payload);
+  return response.data;
+};
+
+export const deleteInventoryDocumentsSearchMetric = async (params: {
+  metricId: string;
+  docType: DocType;
+  productType?: InventoryDocumentProductType;
+}): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_DOCUMENT_INVENTORY_GROUP.deleteSearchMetric(params.metricId), {
+    params: {
+      docType: params.docType,
+      ...(params.productType ? { productType: params.productType } : {}),
+    },
   });
   return response.data;
 };

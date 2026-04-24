@@ -6,14 +6,13 @@ import type {
   KardexListQuery,
   KardexTotalsQuery,
 } from "@/pages/catalog/types/kardex";
+import type { InventoryLedgerMovementListResponse } from "@/pages/catalog/types/inventoryLedgerMovements";
 import type {
-  DemandSummaryOutput,
-  DemandSummaryQuery,
-  MonthlyProjectionOutput,
-  SalesDailyTotal,
-  SalesMonthlyTotal,
-  SalesTotalsQuery,
-  SalesWeekdayTotal,
+  InventoryLedgerSearchSnapshot,
+  InventoryLedgerSearchStateResponse,
+} from "@/pages/catalog/types/inventoryLedgerSearch";
+import type { ProductCatalogProductType } from "@/pages/catalog/types/product";
+import type {
 } from "@/pages/catalog/types/inventory";
 
 export const getInventoryLedgerBySku = async (
@@ -28,29 +27,43 @@ export const getDailyTotals = async (params: KardexTotalsQuery): Promise<KardexD
   return response.data;
 };
 
-export const getDailySalesTotals = async (params: SalesTotalsQuery): Promise<SalesDailyTotal[]> => {
-  const response = await axiosInstance.get(API_KARDEX_GROUP.totalsDailySales, { params });
+export const getInventoryLedgerMovements = async (params: {
+  page: number;
+  limit: number;
+  from?: string;
+  to?: string;
+  productType?: ProductCatalogProductType;
+  q?: string;
+  filters?: string;
+}): Promise<InventoryLedgerMovementListResponse> => {
+  const response = await axiosInstance.get(API_KARDEX_GROUP.movements, { params });
   return response.data;
 };
 
-export const getSalesWeekdayTotals = async (params: SalesTotalsQuery): Promise<SalesWeekdayTotal[]> => {
-  const response = await axiosInstance.get(API_KARDEX_GROUP.totalsWeekday, { params });
+export const getInventoryLedgerSearchState = async (params: {
+  productType?: ProductCatalogProductType;
+}): Promise<InventoryLedgerSearchStateResponse> => {
+  const response = await axiosInstance.get(API_KARDEX_GROUP.searchState, { params });
   return response.data;
 };
 
-export const getSalesMonthlyTotals = async (params: SalesTotalsQuery): Promise<SalesMonthlyTotal[]> => {
-  const response = await axiosInstance.get(API_KARDEX_GROUP.totalsMonthly, { params });
+export const saveInventoryLedgerSearchMetric = async (payload: {
+  name: string;
+  productType?: ProductCatalogProductType;
+  snapshot: InventoryLedgerSearchSnapshot;
+}): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_KARDEX_GROUP.saveSearchMetric, payload);
   return response.data;
 };
 
-export const getDemandSummary = async (params: DemandSummaryQuery): Promise<DemandSummaryOutput> => {
-  const response = await axiosInstance.get(API_KARDEX_GROUP.demand, { params });
-  return response.data;
-};
-
-export const getMonthlyProjection = async (
-  params: SalesTotalsQuery & { months?: number },
-): Promise<MonthlyProjectionOutput> => {
-  const response = await axiosInstance.get(API_KARDEX_GROUP.monthlyProjection, { params });
+export const deleteInventoryLedgerSearchMetric = async (params: {
+  metricId: string;
+  productType?: ProductCatalogProductType;
+}): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_KARDEX_GROUP.deleteSearchMetric(params.metricId), {
+    params: {
+      ...(params.productType ? { productType: params.productType } : {}),
+    },
+  });
   return response.data;
 };

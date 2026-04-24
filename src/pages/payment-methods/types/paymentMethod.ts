@@ -24,6 +24,7 @@ export type PaymentMethod = {
 };
 
 export type PaymentMethodPivot = {
+  companyMethodId: string;
   methodId: string;
   name: string;
   number?: string;

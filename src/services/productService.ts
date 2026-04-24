@@ -17,6 +17,8 @@ import type {
   ProductDetailResponse,
 } from "@/pages/catalog/types/product";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
+import type { ProductSearchStateResponse } from "@/pages/catalog/types/productSearch";
+import type { ProductSearchSnapshot } from "@/pages/catalog/utils/productSmartSearch";
 
 export const createProduct = async (payload: CreateProductDto): Promise<Product> => {
   const response = await axiosInstance.post(API_PRODUCTS_GROUP.create, payload);
@@ -86,8 +88,7 @@ export const listProducts = async (params: ListProductsQuery): Promise<ProductLi
 };
 
 export const listProductsFlat = async (params: ListProductsQuery): Promise<ProductListResponse> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.flat, { params });
-  return normalizeProductList(response.data);
+  return listProducts(params);
 };
 
 export const listCatalogProducts = async (
@@ -100,6 +101,36 @@ export const listCatalogProducts = async (
     },
   });
   return normalizeProductList(response.data);
+};
+
+export const getProductSearchState = async (params?: { type?: string }): Promise<ProductSearchStateResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.searchState, {
+    params: params?.type ? { type: params.type } : undefined,
+  });
+  return response.data;
+};
+
+export const saveProductSearchMetric = async (
+  name: string,
+  snapshot: ProductSearchSnapshot,
+  params?: { type?: string },
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(
+    API_PRODUCTS_GROUP.saveSearchMetric,
+    { name, snapshot },
+    { params: params?.type ? { type: params.type } : undefined },
+  );
+  return response.data;
+};
+
+export const deleteProductSearchMetric = async (
+  metricId: string,
+  params?: { type?: string },
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_PRODUCTS_GROUP.deleteSearchMetric(metricId), {
+    params: params?.type ? { type: params.type } : undefined,
+  });
+  return response.data;
 };
 
 export const listCatalogMaterials = async (
@@ -127,11 +158,6 @@ export const getById = async (id: string): Promise<ProductDetailResponse> => {
     skus: data.skus ?? [],
     baseUnit: data.baseUnit ?? null,
   };
-};
-
-export const getProductByName = async (name: string): Promise<ProductListResponse> => {
-  const response = await axiosInstance.get(API_PRODUCTS_GROUP.byName(name));
-  return response.data;
 };
 
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
 import {
@@ -160,9 +160,17 @@ export default function Purchases() {
     }, [showFlash]);
 
     const submitSearch = useCallback(() => {
-        setAppliedSearchText(searchText.trim());
-        setPage(1);
+        startTransition(() => {
+            setAppliedSearchText(searchText.trim());
+            setPage(1);
+        });
     }, [searchText]);
+
+    const handleSearchTextChange = useCallback((value: string) => {
+        startTransition(() => {
+            setSearchText(value);
+        });
+    }, []);
 
     const loadPurchases = useCallback(async () => {
         clearFlash();
@@ -227,7 +235,7 @@ export default function Purchases() {
             }
             if (res.type === "success") {
                 showFlash(successResponse(res.message));
-                loadPurchases();
+                void loadPurchases();
             }
         } catch {
             showFlash(errorResponse("Error al iniciar espera de mercaderia"));
@@ -242,7 +250,7 @@ export default function Purchases() {
             }
             if (res.type === "success") {
                 showFlash(successResponse(res.message));
-                loadPurchases();
+                void loadPurchases();
             }
         } catch {
             showFlash(errorResponse("Error al iniciar espera de mercaderia"));
@@ -260,15 +268,15 @@ export default function Purchases() {
             const res = await enterPurchaseOrder(id);
             if (res.type === "error") {
                 showFlash(errorResponse(res.message));
-                loadPurchases();
+                void loadPurchases();
             }
             if (res.type === "success") {
                 showFlash(successResponse(res.message));
-                loadPurchases();
+                void loadPurchases();
             }
         } catch {
             showFlash(errorResponse("Error al ingresar a almacen"));
-            loadPurchases();
+            void loadPurchases();
         }
     };
 
@@ -280,7 +288,7 @@ export default function Purchases() {
         void loadSearchState();
     }, [loadSearchState]);
 
-    const now = new Date().toISOString();
+    const now = useMemo(() => new Date().toISOString(), []);
 
     const purchaseRows = useMemo<PurchaseRow[]>(
         () =>
@@ -323,7 +331,7 @@ export default function Purchases() {
         [purchases],
     );
 
-    const columns: DataTableColumn<PurchaseRow>[] = [
+    const columns = useMemo<DataTableColumn<PurchaseRow>[]>(() => [
         {
             id: "dateIssue",
             header: "Emisión",
@@ -597,7 +605,7 @@ export default function Purchases() {
             hideable: true,
             sortable: false,
         },
-    ];
+    ], [companyActionDisabled, loadPurchases, now]);
 
     const smartSearchColumns = useMemo(
         () => buildPurchaseSmartSearchColumns(searchState),
@@ -632,32 +640,38 @@ export default function Purchases() {
 
     const applySmartSnapshot = useCallback((snapshot: PurchaseSearchSnapshot) => {
         const normalized = sanitizePurchaseSearchSnapshot(snapshot);
-        setSearchText(normalized.q ?? "");
-        setAppliedSearchText(normalized.q ?? "");
-        setSearchFilters(normalized.filters);
-        setPage(1);
+        startTransition(() => {
+            setSearchText(normalized.q ?? "");
+            setAppliedSearchText(normalized.q ?? "");
+            setSearchFilters(normalized.filters);
+            setPage(1);
+        });
     }, []);
 
     const handleApplySearchRule = useCallback((rule: PurchaseSearchRule) => {
-        setSearchFilters((current) => {
-            const next = upsertPurchaseSearchRule(
-                sanitizePurchaseSearchSnapshot({ q: searchText, filters: current }),
-                rule,
-            );
-            return next.filters;
+        startTransition(() => {
+            setSearchFilters((current) => {
+                const next = upsertPurchaseSearchRule(
+                    sanitizePurchaseSearchSnapshot({ q: searchText, filters: current }),
+                    rule,
+                );
+                return next.filters;
+            });
+            setPage(1);
         });
-        setPage(1);
     }, [searchText]);
 
     const handleRemoveSearchRule = useCallback((fieldId: PurchaseSearchFilterKey) => {
-        setSearchFilters((current) => {
-            const next = removePurchaseSearchKey(
-                sanitizePurchaseSearchSnapshot({ q: searchText, filters: current }),
-                fieldId,
-            );
-            return next.filters;
+        startTransition(() => {
+            setSearchFilters((current) => {
+                const next = removePurchaseSearchKey(
+                    sanitizePurchaseSearchSnapshot({ q: searchText, filters: current }),
+                    fieldId,
+                );
+                return next.filters;
+            });
+            setPage(1);
         });
-        setPage(1);
     }, [searchText]);
 
     const handleRemoveChip = useCallback((key: "q" | PurchaseSearchFilterKey) => {
@@ -665,11 +679,27 @@ export default function Purchases() {
             sanitizePurchaseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
             key,
         );
-        setSearchText(nextSnapshot.q ?? "");
-        setAppliedSearchText(nextSnapshot.q ?? "");
-        setSearchFilters(nextSnapshot.filters);
-        setPage(1);
+        startTransition(() => {
+            setSearchText(nextSnapshot.q ?? "");
+            setAppliedSearchText(nextSnapshot.q ?? "");
+            setSearchFilters(nextSnapshot.filters);
+            setPage(1);
+        });
     }, [appliedSearchText, searchFilters]);
+
+    const handleDateRangeChange = useCallback(({ startDate, endDate }: { startDate: Date | null; endDate: Date | null }) => {
+        startTransition(() => {
+            setFromDate(startDate ? toLocalDateKey(startDate) : "");
+            setToDate(endDate ? toLocalDateKey(endDate) : "");
+            setPage(1);
+        });
+    }, []);
+
+    const handlePageChange = useCallback((nextPage: number) => {
+        startTransition(() => {
+            setPage(nextPage);
+        });
+    }, []);
 
     const handleSaveMetric = useCallback(async (name: string) => {
         const snapshot = sanitizePurchaseSearchSnapshot({ q: appliedSearchText, filters: searchFilters });
@@ -757,9 +787,7 @@ export default function Purchases() {
                     toolbarSearchContent={
                         <DataTableSearchBar
                             value={searchText}
-                            onChange={(value) => {
-                                setSearchText(value);
-                            }}
+                            onChange={handleSearchTextChange}
                             onSubmitSearch={submitSearch}
                             searchLabel="Busca tu compra"
                             searchName="purchase-smart-search"
@@ -784,11 +812,7 @@ export default function Purchases() {
                     rangeDates={{
                         startDate: parseDateInputValue(fromDate),
                         endDate: parseDateInputValue(toDate),
-                        onChange: ({ startDate, endDate }) => {
-                            setFromDate(startDate ? toLocalDateKey(startDate) : "");
-                            setToDate(endDate ? toLocalDateKey(endDate) : "");
-                            setPage(1);
-                        },
+                        onChange: handleDateRangeChange,
                     }}
                     pagination={{
                         page,
@@ -799,7 +823,7 @@ export default function Purchases() {
                         if (!row.purchase.poId) return;
                         setSelectedPurchaseRow(row);
                     }}
-                    onPageChange={setPage}
+                    onPageChange={handlePageChange}
                     tableClassName="text-[10px]"
                 />
 

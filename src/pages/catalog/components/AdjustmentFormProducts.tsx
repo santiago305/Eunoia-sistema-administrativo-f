@@ -213,17 +213,6 @@ export default function AdjustmentFormProducts({
     }, 500);
   };
 
-  const productOptions = useMemo(
-    () => [
-      { value: "", label: "Seleccionar SKU" },
-      ...((searchResults?.items ?? []).map((item) => ({
-        value: item.sku.id,
-        label: buildSkuLabelWithAttributes(item),
-      }))),
-    ],
-    [searchResults],
-  );
-
   const addItem = () => {
     clearFlash();
 
@@ -492,10 +481,13 @@ export default function AdjustmentFormProducts({
 
               <div className="mt-3 grid grid-cols-1 gap-2">
                 <FloatingSelect
-                  label="Seleccionar SKU"
+                  label=""
                   name="adjustment-sku"
                   value={pendingItem.skuId}
-                  options={productOptions}
+                  options={(searchResults?.items ?? []).map((item) => ({
+                    value: item.sku.id,
+                    label: buildSkuLabelWithAttributes(item),
+                  }))}
                   onChange={(value) => {
                     if (!value) {
                       setPendingItem(buildEmptyPendingItem());

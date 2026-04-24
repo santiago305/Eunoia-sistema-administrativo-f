@@ -1,12 +1,23 @@
+import { useController } from "react-hook-form";
 import { Card, CardHeader } from "@/components/AppCard";
 import { FloatingInput } from "@/components/FloatingInput";
 import { PrimaryButton } from "./ProfilePrimitives";
 import type { ProfileInfoFormCardProps } from "../types/components.types";
 export function ProfileInfoFormCard({ form, onSubmit, saving, loading, hasSession }: ProfileInfoFormCardProps) {
-  const nameField = form.register("name");
-  const telefonoField = form.register("telefono");
-  const nameValue = form.watch("name") ?? "";
-  const telefonoValue = form.watch("telefono") ?? "";
+  const {
+    field: nameField,
+    fieldState: { error: nameError },
+  } = useController({
+    control: form.control,
+    name: "name",
+  });
+  const {
+    field: telefonoField,
+    fieldState: { error: telefonoError },
+  } = useController({
+    control: form.control,
+    name: "telefono",
+  });
 
   return (
     <Card>
@@ -15,31 +26,21 @@ export function ProfileInfoFormCard({ form, onSubmit, saving, loading, hasSessio
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FloatingInput
             label="Nombre"
-            ref={nameField.ref}
             name={nameField.name}
             onBlur={nameField.onBlur}
-            value={nameValue}
-            onChange={(event) => {
-              form.setValue("name", event.target.value, {
-                shouldDirty: true,
-                shouldValidate: true,
-              });
-            }}
-            error={form.formState.errors.name?.message}
+            ref={nameField.ref}
+            value={nameField.value ?? ""}
+            onChange={nameField.onChange}
+            error={nameError?.message}
           />
           <FloatingInput
             label="Telefono"
-            ref={telefonoField.ref}
             name={telefonoField.name}
             onBlur={telefonoField.onBlur}
-            value={telefonoValue}
-            onChange={(event) => {
-              form.setValue("telefono", event.target.value, {
-                shouldDirty: true,
-                shouldValidate: true,
-              });
-            }}
-            error={form.formState.errors.telefono?.message}
+            ref={telefonoField.ref}
+            value={telefonoField.value ?? ""}
+            onChange={telefonoField.onChange}
+            error={telefonoError?.message}
           />
         </div>
 

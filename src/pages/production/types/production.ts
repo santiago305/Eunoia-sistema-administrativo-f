@@ -8,14 +8,12 @@ import {
   addProductionOrderItemSchema,
   createProductionOrderSchema,
   listProductionOrdersQuerySchema,
-  updateProductionOrderItemSchema,
   updateProductionOrderSchema,
 } from "@/schemas/productionSchemas";
 
 export type CreateProductionOrderDto = z.infer<typeof createProductionOrderSchema>;
 export type UpdateProductionOrderDto = z.infer<typeof updateProductionOrderSchema>;
 export type AddProductionOrderItemDto = z.infer<typeof addProductionOrderItemSchema>;
-export type UpdateProductionOrderItemDto = z.infer<typeof updateProductionOrderItemSchema>;
 export type ListProductionOrdersQuery = Omit<z.infer<typeof listProductionOrdersQuerySchema>, "filters"> & {
   q?: string;
   filters?: ProductionSearchFilters | string;
@@ -23,12 +21,12 @@ export type ListProductionOrdersQuery = Omit<z.infer<typeof listProductionOrders
 
 export const ProductionSearchFields = {
   MANUFACTURE_DATE: "manufactureDate",
-  SERIE: "serie",
+  NUMBER: "number",
   REFERENCE: "reference",
   FROM_WAREHOUSE_ID: "fromWarehouseId",
   TO_WAREHOUSE_ID: "toWarehouseId",
   STATUS: "status",
-  PRODUCT_ID: "productId",
+  SKU_ID: "skuId",
 } as const;
 
 export type ProductionSearchField =
@@ -84,8 +82,7 @@ export type ProductionSearchStateResponse = {
   recent: ProductionRecentSearch[];
   saved: ProductionSavedMetric[];
   catalogs: {
-    fromWarehouses: ProductionSearchOption[];
-    toWarehouses: ProductionSearchOption[];
+    warehouses: ProductionSearchOption[];
     statuses: ProductionSearchOption[];
     products: ProductionSearchOption[];
   };
@@ -101,13 +98,31 @@ export enum ProductionStatus {
 }
 
 export type ProductionOrderItem = {
+  id?: string;
   itemId?: string;
   finishedItemId: string;
-  finishedItemType?: "PRODUCT" | "VARIANT" | null;
+  finishedItemType?: "PRODUCT" | "SKU" | "VARIANT" | null;
   finishedItem?: {
     type?: string | null;
     productId?: string | null;
+    skuId?: string | null;
     variantId?: string | null;
+    sku?: {
+      id: string;
+      productId?: string | null;
+      name?: string | null;
+      backendSku?: string | null;
+      customSku?: string | null;
+      barcode?: string | null;
+      baseUnitId?: string | null;
+      unitName?: string | null;
+      unitCode?: string | null;
+      attributes?: Record<string, unknown> | null;
+      isActive?: boolean | null;
+      type?: string | null;
+      createdAt?: string;
+      updatedAt?: string;
+    } | null;
     product?: {
       id: string;
       name?: string | null;
@@ -149,6 +164,7 @@ export type ProductionOrderItem = {
 };
 
 export type ProductionOrder = {
+  id?: string;
   productionId?: string;
   status?: ProductionStatus;
   serieId: string;

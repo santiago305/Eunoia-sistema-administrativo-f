@@ -520,6 +520,7 @@ export default function CatalogInventory() {
         warehouseIdsIn: warehouseQuery.warehouseIdsIn.length ? warehouseQuery.warehouseIdsIn : undefined,
         warehouseIdsNotIn: warehouseQuery.warehouseIdsNotIn.length ? warehouseQuery.warehouseIdsNotIn : undefined,
         q: executedSnapshot.q || undefined,
+        filters: executedSnapshot.filters.length ? JSON.stringify(executedSnapshot.filters) : undefined,
         productType: ProductTypes.PRODUCT,
       } as unknown as Record<string, unknown>)) as unknown as {
         items?: InventorySnapshotRow[];
@@ -583,10 +584,9 @@ export default function CatalogInventory() {
       {
         id: "name",
         header: "SKU",
-        cell: (row, index) =>
+        cell: (row) =>
           buildSkuLabelFromItem({
-            skuItem: row.sku,        
-            index,
+            skuItem: row.sku,
             fallbackName: row.sku.sku.name ?? "",
           }),
       },

@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn, DataTablePaginationMeta } from "@/components/table/types";
 import type { SecurityActiveBanItem } from "../../types/security.api";
 import { SectionCard } from "../SectionCard";
 import { buildIpDetailPath, cn, formatDate, getBanBadgeStyles } from "../security.utils";
 
-export function ActiveBansSection({
+export const ActiveBansSection = memo(function ActiveBansSection({
   loading,
   activeBans,
   pagination,
@@ -83,4 +83,4 @@ export function ActiveBansSection({
       />
     </SectionCard>
   );
-}
+});

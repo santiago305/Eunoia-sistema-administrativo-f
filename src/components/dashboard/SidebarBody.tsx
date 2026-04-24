@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { getSidebarItems } from "@/config/sidebarConfig";
 import SidebarItemComponent from "./SidebarItem";
 import { getRouteMetaByUrl } from "@/router/config/routesConfig";
@@ -25,9 +25,7 @@ const SidebarBody = () => {
   const { userRole } = useAuth();
 
   const items = useMemo(() => {
-    const initialItems = getSidebarItems();
-
-    const filtered = initialItems
+    const filtered = getSidebarItems()
       .map((item): SidebarItem => {
         const children = item.children?.filter((child) =>
           canAccessHref(child.href, userRole)
@@ -51,14 +49,14 @@ const SidebarBody = () => {
   return (
     <div className="scroll-area flex-1 overflow-y-auto px-3 py-4 select-none">
       <nav>
-        {items.map((item, index) => (
-          <SidebarItemComponent key={item.label + index} item={item} />
+        {items.map((item) => (
+          <SidebarItemComponent key={item.href ?? item.label} item={item} />
         ))}
       </nav>
     </div>
   );
 };
 
-export default SidebarBody;
+export default memo(SidebarBody);
 
 

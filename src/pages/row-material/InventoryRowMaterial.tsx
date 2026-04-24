@@ -52,7 +52,7 @@ import { useEChart } from "../catalog/utils/inventoryUtils";
 import { buildSkuLabelFromItem } from "../catalog/utils/productCreateModal.helpers";
 
 const DEFAULT_LIMIT = 10;
-const RECENT_STORAGE_KEY = "recent-search:catalog-inventory";
+const RECENT_STORAGE_KEY = "recent-search:row-material-inventory";
 
 type InventorySnapshotRow = {
   sku: ProductSkuWithAttributes;
@@ -520,6 +520,7 @@ export default function CatalogInventory() {
         warehouseIdsIn: warehouseQuery.warehouseIdsIn.length ? warehouseQuery.warehouseIdsIn : undefined,
         warehouseIdsNotIn: warehouseQuery.warehouseIdsNotIn.length ? warehouseQuery.warehouseIdsNotIn : undefined,
         q: executedSnapshot.q || undefined,
+        filters: executedSnapshot.filters.length ? JSON.stringify(executedSnapshot.filters) : undefined,
         productType: ProductTypes.MATERIAL,
       } as unknown as Record<string, unknown>)) as unknown as {
         items?: InventorySnapshotRow[];
@@ -547,7 +548,7 @@ export default function CatalogInventory() {
       label: "Ver kardex",
       icon: <FileText className="h-4 w-4 text-black/60" />,
       onClick: () => {
-        navigate(RoutesPaths.KardexFinished);
+        navigate(RoutesPaths.KardexPrima);
       },
     },
     {
@@ -556,7 +557,7 @@ export default function CatalogInventory() {
       icon: <ArrowLeftRight className="h-4 w-4 text-black/60" />,
       disabled: companyActionDisabled,
       onClick: () => {
-        navigate(RoutesPaths.catalogTransfer);
+        navigate(RoutesPaths.rowMaterialTransfer);
       },
     },
     {
@@ -565,7 +566,7 @@ export default function CatalogInventory() {
       icon: <Wrench className="h-4 w-4 text-black/60" />,
       disabled: companyActionDisabled,
       onClick: () => {
-        navigate(RoutesPaths.catalogAdjustments);
+        navigate(RoutesPaths.rowMaterialAdjustments);
       },
     },
   ];
@@ -583,10 +584,9 @@ export default function CatalogInventory() {
       {
         id: "name",
         header: "SKU",
-        cell: (row, index) =>
+        cell: (row) =>
           buildSkuLabelFromItem({
-            skuItem: row.sku,        
-            index,
+            skuItem: row.sku,
             fallbackName: row.sku.sku.name ?? "",
           }),
       },
@@ -693,8 +693,8 @@ export default function CatalogInventory() {
                         setSearchText(value);
                       }}
                       onSubmitSearch={submitSearch}
-                      searchLabel="Buscar producto"
-                      searchName="catalog-inventory-search"
+                      searchLabel="Buscar material"
+                      searchName="row-material-inventory-search"
                     >
                       <InventorySmartSearchPanel
                         recent={recentSearches}

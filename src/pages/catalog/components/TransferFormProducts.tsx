@@ -160,17 +160,6 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
         }
     };
 
-    const productOptions = useMemo(
-        () => [
-            { value: "", label: "Seleccionar SKU" },
-            ...(searchResults?.items ?? []).map((item) => ({
-                value: item.sku.id,
-                label: buildSkuLabelWithAttributes(item),
-            })),
-        ],
-        [searchResults],
-    );
-
     const addItem = () => {
         const { skuId, quantity } = pendingItem;
         const selected = (searchResults?.items ?? []).find((s) => s.sku.id === skuId) ?? selectedSkus.find((s) => s.sku.id === skuId);
@@ -453,10 +442,13 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                             <SectionHeaderForm icon={Boxes} title="Productos" />
                             <div className="mt-3 grid grid-cols-1 gap-2">
                                 <FloatingSelect
-                                    label="Seleccionar SKU"
+                                    label=""
                                     name="transfer-sku"
                                     value={pendingItem.skuId}
-                                    options={productOptions}
+                                    options={(searchResults?.items ?? []).map((item) => ({
+                                        value: item.sku.id,
+                                        label: buildSkuLabelWithAttributes(item),
+                                    }))}
                                     onChange={(value) => {
                                         setPendingItem((prev) => ({ ...prev, skuId: value }));
                                         setOpenItemModal(Boolean(value));

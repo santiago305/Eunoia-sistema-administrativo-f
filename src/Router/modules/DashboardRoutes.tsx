@@ -23,15 +23,6 @@ const ProfilePage = lazy(() => import("@/pages/profile/Profile"));
 const Sessions = lazy(() => import("@/pages/sessions/Sessions"));
 const Securitypage = lazy(() => import("@/pages/security/security"));
 const IpsDetails = lazy(() => import("@/pages/security/IpDetailPage"));
-const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
-const StockInventory = lazy(() => import("@/pages/stock/Inventory"));
-const StockMovements = lazy(() => import("@/pages/stock/Movements"));
-const StockDocuments = lazy(() => import("@/pages/stock/Documents"));
-const StockTransfers = lazy(() => import("@/pages/stock/Transfers"));
-const StockAdjustments = lazy(() => import("@/pages/stock/Adjustments"));
-const StockSeriesTypes = lazy(() => import("@/pages/stock/SeriesTypes"));
-const StockReservations = lazy(() => import("@/pages/stock/Reservations"));
-const StockReplenishment = lazy(() => import("@/pages/stock/Replenishment"));
 const CatalogSummary = lazy(() => import("@/pages/catalog/Summary"));
 const CatalogProducts = lazy(() => import("@/pages/catalog/Products"));
 const CatalogTransferences = lazy(() => import("@/pages/catalog/TransferProduts"));
@@ -87,42 +78,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.sessions,
                 element: withRouteGuard(RoutesPaths.sessions, <Sessions />),
-            },
-            {
-                path: RoutesPaths.stockSummary,
-                element: withRouteGuard(RoutesPaths.stockSummary, <StockSummary />),
-            },
-            {
-                path: RoutesPaths.stockInventory,
-                element: withRouteGuard(RoutesPaths.stockInventory, <StockInventory />),
-            },
-            {
-                path: RoutesPaths.stockMovements,
-                element: withRouteGuard(RoutesPaths.stockMovements, <StockMovements />),
-            },
-            {
-                path: RoutesPaths.stockDocuments,
-                element: withRouteGuard(RoutesPaths.stockDocuments, <StockDocuments />),
-            },
-            {
-                path: RoutesPaths.stockTransfers,
-                element: withRouteGuard(RoutesPaths.stockTransfers, <StockTransfers />),
-            },
-            {
-                path: RoutesPaths.stockAdjustments,
-                element: withRouteGuard(RoutesPaths.stockAdjustments, <StockAdjustments />),
-            },
-            {
-                path: RoutesPaths.stockSeriesTypes,
-                element: withRouteGuard(RoutesPaths.stockSeriesTypes, <StockSeriesTypes />),
-            },
-            {
-                path: RoutesPaths.stockReservations,
-                element: withRouteGuard(RoutesPaths.stockReservations, <StockReservations />),
-            },
-            {
-                path: RoutesPaths.stockReplenishment,
-                element: withRouteGuard(RoutesPaths.stockReplenishment, <StockReplenishment />),
             },
             {
                 path: RoutesPaths.catalogProducts,

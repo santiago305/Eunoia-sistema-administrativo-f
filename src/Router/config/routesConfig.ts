@@ -23,31 +23,6 @@ export const routesConfig: RouteMetadata[] = [
     rolesAllowed: ["admin"],
   },
 
-  { path: RoutesPaths.stockSummary, name: "stockSummary", isProtected: true },
-  { path: RoutesPaths.stockInventory, name: "stockInventory", isProtected: true },
-  { path: RoutesPaths.stockMovements, name: "stockMovements", isProtected: true },
-  { path: RoutesPaths.stockDocuments, name: "stockDocuments", isProtected: true },
-  { path: RoutesPaths.stockTransfers, name: "stockTransfers", isProtected: true },
-  {
-    path: RoutesPaths.stockAdjustments,
-    name: "stockAdjustments",
-    isProtected: true,
-    rolesAllowed: ["admin", "supervisor"],
-  },
-  {
-    path: RoutesPaths.stockSeriesTypes,
-    name: "stockSeriesTypes",
-    isProtected: true,
-    rolesAllowed: ["admin", "supervisor"],
-  },
-  {
-    path: RoutesPaths.stockReservations,
-    name: "stockReservations",
-    isProtected: true,
-    rolesAllowed: ["admin", "supervisor"],
-  },
-  { path: RoutesPaths.stockReplenishment, name: "stockReplenishment", isProtected: true },
-
   { path: RoutesPaths.catalogSummary, name: "catalogSummary", isProtected: true },
   { path: RoutesPaths.catalogProducts, name: "catalogProducts", isProtected: true },
   { path: RoutesPaths.catalogVariants, name: "catalogVariants", isProtected: true },

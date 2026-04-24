@@ -9,7 +9,6 @@ import {
   createPaymentSchema,
   createPurchaseOrderSchema,
   listPurchaseOrdersQuerySchema,
-  setPurchaseOrderActiveSchema,
   updatePurchaseOrderSchema,
 } from "@/schemas/purchaseSchemas";
 import type {
@@ -26,7 +25,6 @@ export type CreateCreditQuotaDto = z.infer<typeof createCreditQuotaSchema>;
 export type CreatePaymentDto = z.infer<typeof createPaymentSchema>;
 export type CreatePurchaseOrderDto = z.infer<typeof createPurchaseOrderSchema>;
 export type UpdatePurchaseOrderDto = z.infer<typeof updatePurchaseOrderSchema>;
-export type UpdatePurchaseOrderActiveDto = z.infer<typeof setPurchaseOrderActiveSchema>;
 export type ListPurchaseOrdersQuery = z.infer<typeof listPurchaseOrdersQuerySchema>;
 
 export const PurchaseSearchFields = {
@@ -209,7 +207,4 @@ export type PurchaseOrderListResponse = {
   page: number;
   limit: number;
 };
-
-export type PurchaseOrderItemsResponse = PurchaseOrderItem[];
-
 

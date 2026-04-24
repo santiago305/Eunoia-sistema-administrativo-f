@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Boxes, Menu, Pencil, Plus, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { AlertModal } from "@/components/AlertModal";
@@ -56,14 +56,13 @@ import {
 import { WarehouseSearchFields } from "@/pages/warehouse/types/warehouse";
 
 const PRIMARY = "hsl(var(--primary))";
-const PRIMARY_HOVER = "#1aa392";
 const DEFAULT_LIMIT = 10;
 
 const EMPTY_WAREHOUSE_SEARCH_CATALOGS: WarehouseSearchCatalogs = {
   departments: [],
   provinces: [],
   districts: [],
-  statuses: [],
+  activeStates: [],
 };
 
 function toSearchOptions(items: Array<{ id: string; name: string }>) {
@@ -158,10 +157,10 @@ export default function Warehouses() {
       departments: ubigeoCatalogs.departments,
       provinces: ubigeoCatalogs.provinces,
       districts: ubigeoCatalogs.districts,
-      statuses: searchState?.catalogs.statuses ?? EMPTY_WAREHOUSE_SEARCH_CATALOGS.statuses,
+      activeStates: searchState?.catalogs.activeStates ?? EMPTY_WAREHOUSE_SEARCH_CATALOGS.activeStates,
     }),
     [
-      searchState?.catalogs.statuses,
+      searchState?.catalogs.activeStates,
       ubigeoCatalogs.departments,
       ubigeoCatalogs.districts,
       ubigeoCatalogs.provinces,
@@ -178,12 +177,20 @@ export default function Warehouses() {
   }, [showFlash]);
 
   const submitSearch = useCallback(() => {
-    setAppliedSearchText(searchText.trim());
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setAppliedSearchText(searchText.trim());
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, [searchText]);
+
+  const handleSearchTextChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSearchText(value);
+    });
+  }, []);
 
   const loadWarehouses = useCallback(async () => {
     clearFlash();
@@ -267,11 +274,24 @@ export default function Warehouses() {
   useEffect(() => {
     let cancelled = false;
 
+    if (!selectedDepartmentIds.length) {
+      setUbigeoCatalogs((current) =>
+        current.provinces.length || current.districts.length
+          ? {
+              ...current,
+              provinces: [],
+              districts: [],
+            }
+          : current,
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void (async () => {
       try {
-        const response = await listUbigeoProvinces(
-          selectedDepartmentIds.length ? { departmentIds: selectedDepartmentIds } : undefined,
-        );
+        const response = await listUbigeoProvinces({ departmentIds: selectedDepartmentIds });
         if (!cancelled) {
           setUbigeoCatalogs((current) => ({
             ...current,
@@ -293,15 +313,23 @@ export default function Warehouses() {
   useEffect(() => {
     let cancelled = false;
 
+    if (!selectedProvinceIds.length) {
+      setUbigeoCatalogs((current) =>
+        current.districts.length
+          ? {
+              ...current,
+              districts: [],
+            }
+          : current,
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void (async () => {
       try {
-        const response = await listUbigeoDistricts(
-          selectedProvinceIds.length
-            ? { provinceIds: selectedProvinceIds }
-            : selectedDepartmentIds.length
-              ? { departmentIds: selectedDepartmentIds }
-              : undefined,
-        );
+        const response = await listUbigeoDistricts({ provinceIds: selectedProvinceIds });
         if (!cancelled) {
           setUbigeoCatalogs((current) => ({
             ...current,
@@ -318,7 +346,7 @@ export default function Warehouses() {
     return () => {
       cancelled = true;
     };
-  }, [selectedDepartmentIds, selectedProvinceIds, showFlash]);
+  }, [selectedProvinceIds, showFlash]);
 
   const sortedWarehouses = useMemo(
     () =>
@@ -575,41 +603,47 @@ export default function Warehouses() {
 
   const applySmartSnapshot = useCallback((snapshot: WarehouseSearchSnapshot) => {
     const normalized = sanitizeWarehouseSearchSnapshot(snapshot);
-    setSearchText(normalized.q ?? "");
-    setAppliedSearchText(normalized.q ?? "");
-    setSearchFilters(normalized.filters);
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setSearchText(normalized.q ?? "");
+      setAppliedSearchText(normalized.q ?? "");
+      setSearchFilters(normalized.filters);
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, []);
 
   const handleApplySearchRule = useCallback((rule: WarehouseSearchRule) => {
-    setSearchFilters((current) => {
-      const next = applyWarehouseSearchRuleWithDependencies(
-        sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
-        rule,
-      );
-      return next.filters;
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = applyWarehouseSearchRuleWithDependencies(
+          sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
+          rule,
+        );
+        return next.filters;
+      });
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
     });
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
   }, [searchText]);
 
   const handleRemoveSearchRule = useCallback((fieldId: WarehouseSearchFilterKey) => {
-    setSearchFilters((current) => {
-      const next = removeWarehouseSearchKeyWithDependencies(
-        sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
-        fieldId,
-      );
-      return next.filters;
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = removeWarehouseSearchKeyWithDependencies(
+          sanitizeWarehouseSearchSnapshot({ q: searchText, filters: current }),
+          fieldId,
+        );
+        return next.filters;
+      });
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
     });
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
   }, [searchText]);
 
   const handleRemoveChip = useCallback((key: "q" | WarehouseSearchFilterKey) => {
@@ -617,14 +651,22 @@ export default function Warehouses() {
       sanitizeWarehouseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
       key,
     );
-    setSearchText(nextSnapshot.q ?? "");
-    setAppliedSearchText(nextSnapshot.q ?? "");
-    setSearchFilters(nextSnapshot.filters);
-    setPaginationState((prev) => ({
-      ...prev,
-      pageIndex: 0,
-    }));
+    startTransition(() => {
+      setSearchText(nextSnapshot.q ?? "");
+      setAppliedSearchText(nextSnapshot.q ?? "");
+      setSearchFilters(nextSnapshot.filters);
+      setPaginationState((prev) => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    });
   }, [appliedSearchText, searchFilters]);
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    startTransition(() => {
+      setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
+    });
+  }, []);
 
   const handleSaveMetric = useCallback(async (name: string) => {
     const snapshot = sanitizeWarehouseSearchSnapshot({
@@ -695,12 +737,6 @@ export default function Warehouses() {
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY_HOVER;
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = PRIMARY;
-          }}
           disabled={companyActionDisabled}
           title={companyActionTitle}
         >
@@ -726,7 +762,7 @@ export default function Warehouses() {
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}
-            onChange={setSearchText}
+            onChange={handleSearchTextChange}
             onSubmitSearch={submitSearch}
             searchLabel="Busca tu almacen"
             searchName="warehouse-smart-search"
@@ -759,9 +795,7 @@ export default function Warehouses() {
             name: row.name,
           })
         }
-        onPageChange={(nextPage) => {
-          setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(0, nextPage - 1) }));
-        }}
+        onPageChange={handlePageChange}
       />
 
       <WarehouseFormModal
@@ -795,7 +829,7 @@ export default function Warehouses() {
         warehouse={selectedWarehouse}
         onClose={closeLocationsModal}
         primaryColor={PRIMARY}
-        primaryHover={PRIMARY_HOVER}
+        primaryHover="#1aa392"
       />
 
       <WarehouseStockModal

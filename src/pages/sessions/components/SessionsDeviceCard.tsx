@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { SystemButton} from "@/components/SystemButton";
 import type { SessionsDeviceCardProps } from "../types/components.types";
 
@@ -82,6 +83,6 @@ const SessionsDeviceCard = ({ session, revokingId, onRevoke, onOpenDetails }: Se
   );
 };
 
-export default SessionsDeviceCard;
+export default memo(SessionsDeviceCard);
 
 

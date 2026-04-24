@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useState } from 'react';
 
 const LOCAL_STORAGE_EVENT = "codex:local-storage-change";
+const LOCAL_STORAGE_WRITE_DELAY_MS = 150;
 
 export function useLocalStorage<T>(key: string, initialValue: T): readonly [T, Dispatch<SetStateAction<T>>] {
     const [value, setValue] = useState<T>(() => {
@@ -18,16 +19,20 @@ export function useLocalStorage<T>(key: string, initialValue: T): readonly [T, D
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        try {
-            window.localStorage.setItem(key, JSON.stringify(value));
-            window.dispatchEvent(
-                new CustomEvent(LOCAL_STORAGE_EVENT, {
-                    detail: { key, value },
-                }),
-            );
-        } catch {
-            // Evita romper la app si localStorage falla.
-        }
+        const timeoutId = window.setTimeout(() => {
+            try {
+                window.localStorage.setItem(key, JSON.stringify(value));
+                window.dispatchEvent(
+                    new CustomEvent(LOCAL_STORAGE_EVENT, {
+                        detail: { key, value },
+                    }),
+                );
+            } catch {
+                // Evita romper la app si localStorage falla.
+            }
+        }, LOCAL_STORAGE_WRITE_DELAY_MS);
+
+        return () => window.clearTimeout(timeoutId);
     }, [key, value]);
 
     useEffect(() => {

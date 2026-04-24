@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { RefreshCcw, ShieldCheck } from "lucide-react";
-import { motion } from "framer-motion";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { formatDate, formatRelativeTime } from "./security.utils";
 import { SystemButton } from "@/components/SystemButton";
@@ -11,6 +10,7 @@ type HeaderPanelProps = {
   topLimit: number;
   setTopLimit: (value: number) => void;
   onRefresh: () => void;
+  refreshing: boolean;
   lastUpdated: Date | null;
 };
 
@@ -30,12 +30,13 @@ const TOP_LIMIT_OPTIONS = [
   { value: "100", label: "Top 100" },
 ];
 
-export function HeaderPanel({
+export const HeaderPanel = memo(function HeaderPanel({
   hours,
   setHours,
   topLimit,
   setTopLimit,
   onRefresh,
+  refreshing,
   lastUpdated,
 }: HeaderPanelProps) {
   const [now, setNow] = useState(() => Date.now());
@@ -59,11 +60,7 @@ export function HeaderPanel({
   }, [lastUpdated]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="mb-5 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
-    >
+    <div className="mb-5 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
       <div className="flex items-center gap-2.5">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
           <ShieldCheck className="h-4 w-4 text-primary-foreground" />
@@ -73,7 +70,10 @@ export function HeaderPanel({
           <h1 className="text-sm font-semibold leading-tight text-foreground">
             Security Dashboard
           </h1>
-          <p className="text-xs text-muted-foreground" title={lastUpdatedTooltip}>
+          <p
+            className="min-h-4 text-xs text-muted-foreground tabular-nums"
+            title={lastUpdatedTooltip}
+          >
             Monitoreo en tiempo real · Última actualización {lastUpdatedLabel}
           </p>
         </div>
@@ -101,14 +101,15 @@ export function HeaderPanel({
         />
 
         <SystemButton
-          variant="warning" 
+          variant="warning"
           onClick={onRefresh}
-          className="h-10"
+          loading={refreshing}
+          className="h-10 min-w-[122px]"
           leftIcon={<RefreshCcw className="h-4 w-4" />}
-        > 
+        >
           Refrescar
         </SystemButton>
       </div>
-    </motion.div>
+    </div>
   );
-}
+});

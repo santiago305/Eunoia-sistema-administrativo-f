@@ -6,9 +6,7 @@ export const API_AUTH_GROUP = {
   authentication: '/auth/login',
   logout: '/auth/logout',
   refreshToken: '/auth/refresh',
-  validateToken: '/auth/validate-token',
   userAuth: '/auth/me',
-  verifyPassword: `/auth/verify-password`,
 };
 
 /**
@@ -17,19 +15,11 @@ export const API_AUTH_GROUP = {
 export const API_USERS_GROUP = {
   list: "/users",
   createUser: '/users/create',
-  findAll: '/users/findAll',
   countByRole: '/users/count-by-role',
-  findActives: '/users/actives',
-  findDesactive: '/users/desactive',
   findOwnUser: '/users/me',
-  findById: (id: string) => `/users/search/${id}`,
-  findByEmail: (email: string) => `/users/email/${email}`,
   updateUserRole: (id: string) => `/users/${id}/role`,
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
-  updateAvatar: (id: string) => `/users/${id}/avatar`,
-  removeAvatar: (id: string) => `/users/remove-avatar/${id}`,
-  changePassword: (id: string) => `/users/change-password/${id}`,
 };
 
 export const API_PROFILE_GROUP = {
@@ -84,37 +74,23 @@ export const API_PRODUCTS_GROUP = {
   items: "/products",
   create: "/products",
   createBase: "/products",
-  flat: "/catalog/products/flat",
-  productPrimasActive: "/catalog/products/prima/active",
-  byId: (id: string) => `/catalog/products/${id}/variants`,
   byIdP: (id: string) => `/products/${id}`,
-  byName: (name: string) => `/catalog/products/by-name/${encodeURIComponent(name)}`,
   update: (id: string) => `/products/${id}`,
   updateActive: (id: string) => `/products/${id}`,
   createSku: (id: string) => `/products/${id}/skus`,
+  searchState: "/products/search-state",
+  saveSearchMetric: "/products/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/products/search-metrics/${metricId}`,
 };
-
-export const API_VARIANTS_GROUP = {
-  base:"/catalog/variants",
-  create:"/catalog/variants",
-  list:"/catalog/variants",
-  searchProductAndVariant: (q: string, raw = true, withRecipes = false) =>
-  `/catalog/products/variants/search?q=${encodeURIComponent(q)}&raw=${raw}&withRecipes=${withRecipes}`,
-  byId: (id: string) => `/catalog/variants/${id}`,
-  update: (id: string) => `/catalog/variants/${id}`,
-  updateActive: (id: string) => `/catalog/variants/${id}/active`
-}
 
 export const API_WAREHOUSES_GROUP = {
   base: "/warehouses",
   create: "/warehouses",
   list: "/warehouses",
-  listActive: "/warehouses/active",
   searchState: "/warehouses/search-state",
   saveSearchMetric: "/warehouses/search-metrics",
   deleteSearchMetric: (metricId: string) => `/warehouses/search-metrics/${metricId}`,
   getById: (id: string) => `/warehouses/${id}`,
-  getWithLocations: (id: string) => `/warehouses/${id}/locations`,
   getStock: (id: string) => `/warehouses/${id}/stock`,
   update: (id: string) => `/warehouses/${id}`,
   updateActive: (id: string) => `/warehouses/${id}/active`,
@@ -131,9 +107,6 @@ export const API_LOCATIONS_GROUP = {
 
 export const API_UNITS_GROUP = {
   list: "/units",
-  byId: (id: string) => `/units/${id}`,
-  byCode: (code: string) => `/units/code/${encodeURIComponent(code)}`,
-  create: "/units",
 };
 
 export const API_PRODUCT_EQUIVALENCES_GROUP = {
@@ -156,7 +129,6 @@ export const API_SUPPLIERS_GROUP = {
   base: "/suppliers",
   create: "/suppliers",
   list: "/suppliers",
-  listAll: "/suppliers/active",
   searchState: "/suppliers/search-state",
   saveSearchMetric: "/suppliers/search-metrics",
   deleteSearchMetric: (metricId: string) => `/suppliers/search-metrics/${metricId}`,
@@ -164,14 +136,6 @@ export const API_SUPPLIERS_GROUP = {
   update: (id: string) => `/suppliers/${id}`,
   updateActive: (id: string) => `/suppliers/${id}/active`,
   identityLookup: "/identity",
-};
-
-export const API_SUPPLIER_VARIANTS_GROUP = {
-  base: "/suppliers/variants",
-  create: "/suppliers/variants",
-  list: "/suppliers/variants/all",
-  byId: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
-  update: (supplierId: string, variantId: string) => `/suppliers/variants/${supplierId}/${variantId}`,
 };
 export const API_PURCHASE_GROUP = {
   base: "/purchases/orders",
@@ -185,11 +149,8 @@ export const API_PURCHASE_GROUP = {
   setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
-  setActive: (id: string) => `/purchases/orders/${id}/active`,
-  listItems: (id: string) => `/purchases/orders/${id}/items`,
   listPayments: (id: string) => `/payments/get-by-po/${id}`,
   listQuotas: (id: string) => `/payments/credit-quotas/get-by-po/${id}`,
-  removeItem: (id: string, itemId: string) => `/purchases/orders/${id}/items/${itemId}`,
 };
 
 export const API_PRODUCTION_ORDERS_GROUP = {
@@ -204,9 +165,6 @@ export const API_PRODUCTION_ORDERS_GROUP = {
   start: (id: string) => `/production-orders/${id}/start`,
   close: (id: string) => `/production-orders/${id}/close`,
   cancel: (id: string) => `/production-orders/${id}/cancel`,
-  addItem: (id: string) => `/production-orders/${id}/items`,
-  updateItem: (id: string, itemId: string) => `/production-orders/${id}/items/${itemId}`,
-  removeItem: (id: string, itemId: string) => `/production-orders/${id}/items/${itemId}`,
 };
 
 export const API_PAYMENT_GROUP = {
@@ -228,19 +186,16 @@ export const API_DOCUMENT_SERIES_GROUP = {
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
   totals: "/stock-items/ledger/daily-totals/by-sku",
-  totalsDailySales: "/inventory/ledger/totals/daily-sales",
-  totalsWeekday: "/inventory/ledger/totals/weekday",
-  totalsMonthly: "/inventory/ledger/totals/monthly",
-  demand: "/inventory/ledger/analytics/demand",
-  monthlyProjection: "/inventory/ledger/analytics/monthly-projection",
+  movements: "/inventory-ledger",
+  searchState: "/inventory-ledger/search-state",
+  saveSearchMetric: "/inventory-ledger/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/inventory-ledger/search-metrics/${metricId}`,
 };
 
 export const API_INVENTORY_GROUP = {
   list: "/inventory",
-  availability: "/inventory/availability",
   availableStockSkus: "/available-stock/skus",
   skuStockSnapshots: (skuId: string) => `/skus/${skuId}/stock/snapshots`,
-  getStock: "/inventory/get-stock",
   getStockQuery: (params: {
     warehouseId: string;
     itemId?: string;
@@ -253,7 +208,7 @@ export const API_INVENTORY_GROUP = {
       ...(params.stockItemId ? { stockItemId: params.stockItemId } : {}),
       ...(params.locationId ? { locationId: params.locationId } : {}),
     });
-    return `/inventory/get-stock?${search.toString()}`;
+    return `/skus/get-stock?${search.toString()}`;
   },
 };
 
@@ -261,11 +216,13 @@ export const API_INVENTORY_GROUP = {
 
 export const API_DOCUMENT_INVENTORY_GROUP = {
   outOrderCreated: "/stock-items/movements/create",
-  adjustmentCreated: "stock-items/movements/adjustment",
-  transfertCreated: "stock-items/movements/transfer",
+  adjustmentCreated: "/stock-items/movements/create",
+  transfertCreated: "/stock-items/movements/transfer",
   listDocuments: "/inventory-documents",
-  getStock: "skus/get-stock",
-  adjustmentAddItem: (id: string) => `/inventory/documents/${id}/items-adjustment`,
+  searchState: "/inventory-documents/search-state",
+  saveSearchMetric: "/inventory-documents/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/inventory-documents/search-metrics/${metricId}`,
+  getStock: "/skus/get-stock",
 };
 
 export const API_PAYMENT_METHODS_GROUP = {
@@ -282,8 +239,7 @@ export const API_PAYMENT_METHODS_GROUP = {
 
 export const API_COMPANY_METHODS_GROUP = {
   create: "/company-methods",
-  byId: (companyId: string, methodId: string) => `/company-methods/${companyId}/${methodId}`,
-  remove: (companyId: string, methodId: string) => `/company-methods/${companyId}/${methodId}`,
+  remove: (companyMethodId: string) => `/company-methods/${companyMethodId}`,
 };
 
 export const API_SUPPLIER_METHODS_GROUP = {

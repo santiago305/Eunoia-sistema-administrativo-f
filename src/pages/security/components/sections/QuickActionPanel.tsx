@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { memo, useCallback, useMemo, useState } from "react";
 import { Ban, FileDown, Play, Search, Shield } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -35,7 +34,7 @@ type QuickActionPanelProps = {
 
 const ALL_REASON_OPTIONS = [{ value: "__all__", label: "Todos" }];
 
-export function QuickActionPanel({
+export const QuickActionPanel = memo(function QuickActionPanel({
   onBlacklist,
   loading,
   pollingPaused,
@@ -69,11 +68,24 @@ export function QuickActionPanel({
     await onLookupIpRisk(riskIp.trim());
   };
 
-  const getRiskColor = (score: number) => {
+  const handleExportAudit = useCallback(() => {
+    void onExportAudit();
+  }, [onExportAudit]);
+
+  const handleReasonSelect = useCallback(
+    (value: string) => {
+      onReasonChange(value === "__all__" ? "" : value);
+    },
+    [onReasonChange],
+  );
+
+  const riskColorClassName = useMemo(() => {
+    const score = ipRiskResult?.score ?? 0;
+
     if (score > 80) return "bg-destructive/10 text-destructive";
     if (score > 50) return "bg-warning/10 text-warning";
     return "bg-success/10 text-success";
-  };
+  }, [ipRiskResult?.score]);
 
   return (
     <SectionCard
@@ -118,7 +130,7 @@ export function QuickActionPanel({
           <SystemButton
             size="custom"
             variant="outline"
-            onClick={() => void onExportAudit()}
+            onClick={handleExportAudit}
             loading={exportLoading}
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs"
             leftIcon={!exportLoading && <FileDown className="h-3 w-3" />}
@@ -149,9 +161,7 @@ export function QuickActionPanel({
                 name="security-reason-filter"
                 value={selectedReason || "__all__"}
                 options={[...ALL_REASON_OPTIONS, ...reasonOptions]}
-                onChange={(value) =>
-                  onReasonChange(value === "__all__" ? "" : value)
-                }
+                onChange={handleReasonSelect}
                 className="mt-2 h-8 w-36 text-xs"
                 containerClassName="w-36"
               />
@@ -181,40 +191,30 @@ export function QuickActionPanel({
           </div>
         </div>
 
-        <AnimatePresence>
-          {ipRiskResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
-            >
-              <div className="flex flex-col">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                  IP analizada
-                </span>
-                <span className="font-semibold text-foreground text-xs">
-                  {ipRiskResult.ip}
-                </span>
-              </div>
+        {ipRiskResult ? (
+          <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+            <div className="flex flex-col">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                IP analizada
+              </span>
+              <span className="font-semibold text-foreground text-xs">
+                {ipRiskResult.ip}
+              </span>
+            </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Riesgo
-                </span>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${getRiskColor(
-                    ipRiskResult.score,
-                  )}`}
-                >
-                  {ipRiskResult.label} · {ipRiskResult.score}
-                </span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <div className="flex items-center gap-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Riesgo
+              </span>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${riskColorClassName}`}
+              >
+                {ipRiskResult.label} · {ipRiskResult.score}
+              </span>
+            </div>
+          </div>
+        ) : null}
       </div>
     </SectionCard>
   );
-}
+});
