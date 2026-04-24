@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { PropsUrl } from "@/router/guards/typeGuards";
@@ -21,7 +22,16 @@ import { RoutesPaths } from "../config/routesPaths";
  * </RedirectIfAuth>
  */
 const RedirectIfAuth = ({ children }: PropsUrl) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authChecked, loading, checkAuth } = useAuth();
+
+  useEffect(() => {
+    if (authChecked || loading || isAuthenticated) return;
+    void checkAuth();
+  }, [authChecked, checkAuth, isAuthenticated, loading]);
+
+  if (loading || (!authChecked && !isAuthenticated)) {
+    return <div>Cargando sesion...</div>;
+  }
 
   if (isAuthenticated) return <Navigate to={RoutesPaths.dashboard} replace />;
 

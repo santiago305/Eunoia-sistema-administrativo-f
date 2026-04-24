@@ -66,6 +66,7 @@ export type GetInventoryDocumentsParams = {
   productType?: InventoryDocumentProductType;
   status?: DocStatus;
   q?: string;
+  filters?: string;
   includeItems?: boolean;
   createdById?: string;
   createdByIdsIn?: string[];

@@ -186,6 +186,10 @@ export const API_DOCUMENT_SERIES_GROUP = {
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
   totals: "/stock-items/ledger/daily-totals/by-sku",
+  movements: "/inventory-ledger",
+  searchState: "/inventory-ledger/search-state",
+  saveSearchMetric: "/inventory-ledger/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/inventory-ledger/search-metrics/${metricId}`,
 };
 
 export const API_INVENTORY_GROUP = {
@@ -215,6 +219,9 @@ export const API_DOCUMENT_INVENTORY_GROUP = {
   adjustmentCreated: "/stock-items/movements/create",
   transfertCreated: "/stock-items/movements/transfer",
   listDocuments: "/inventory-documents",
+  searchState: "/inventory-documents/search-state",
+  saveSearchMetric: "/inventory-documents/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/inventory-documents/search-metrics/${metricId}`,
   getStock: "/skus/get-stock",
 };
 
