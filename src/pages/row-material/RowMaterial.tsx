@@ -451,7 +451,7 @@ export default function CatalogProducts() {
             <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
 
             <DataTable
-                tableId="catalog-products"
+                tableId="catalog-products-materiales"
                 data={products}
                 columns={columns}
                 rowKey="id"
@@ -466,7 +466,7 @@ export default function CatalogProducts() {
                         }}
                         onSubmitSearch={submitSearch}
                         searchLabel="Buscar productos..."
-                        searchName="catalog-products-smart-search"
+                        searchName="catalog-products-materiales-smart-search"
                     >
                         <DataTableSearchPanel
                             recent={recentSearches}

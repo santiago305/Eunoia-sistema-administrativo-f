@@ -674,7 +674,7 @@ export default function CatalogInventory() {
                 />
                 <DataTable
                 className="max-h-[85vh] overflow-hidden p-3"
-                  tableId="catalog-inventory-table"
+                  tableId="catalog-inventory-table-materiales"
                   data={inventoryRows}
                   columns={columns}
                   rowKey={(row, index) =>

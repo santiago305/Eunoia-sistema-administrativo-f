@@ -383,19 +383,29 @@ export default function AdjustmentProduts() {
   const columns = useMemo<DataTableColumn<InventoryDocumentRow>[]>(() => {
     return [
       {
-        id: "numero",
-        header: "Número",
-        accessorKey: "numero",
-        headerClassName: "text-left w-[150px]",
-        className: "text-left",
+        id: "date",
+        header: "Emisión",
+        cell: (row) => (
+          <div className="text-black/70">
+            {row.date}
+            {row.time ? (
+              <>
+                <br />
+                {row.time}
+              </>
+            ) : null}
+          </div>
+        ),
+        headerClassName: "text-left w-[70px]",
+        className: "text-black/70",
         sortable: false,
       },
       {
-        id: "status",
-        header: "Estado",
-        accessorKey: "statusLabel",
-        headerClassName: "text-left w-[140px]",
-        className: "text-left",
+        id: "numero",
+        header: "Documento",
+        accessorKey: "numero",
+        headerClassName: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
@@ -403,7 +413,7 @@ export default function AdjustmentProduts() {
         header: "Almacén",
         accessorKey: "fromWarehouse",
         headerClassName: "text-left",
-        className: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
@@ -411,27 +421,26 @@ export default function AdjustmentProduts() {
         header: "Usuario",
         accessorKey: "createdBy",
         headerClassName: "text-left",
-        className: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
-        id: "date",
-        header: "Fecha",
+        id: "status",
+        header: "Estado",
+        headerClassName: "text-left",
         cell: (row) => (
-          <div className="text-black/70 tabular-nums">
-            <div>{row.date}</div>
-            <div className="text-[10px] text-black/50">{row.time}</div>
-          </div>
+          <span className="inline-flex rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
+            {row.statusLabel}
+          </span>
         ),
-        headerClassName: "text-left w-[140px]",
-        className: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
         id: "actions",
-        header: "",
+        header: "Acciones",
         stopRowClick: true,
-        headerClassName: "text-center w-[70px]",
+        headerClassName: "w-[50px] text-center [&>div]:justify-center",
         cell: (row) => (
           <div className="flex justify-center">
             <ActionsPopover

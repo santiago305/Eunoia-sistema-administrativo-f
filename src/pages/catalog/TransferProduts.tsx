@@ -466,7 +466,7 @@ export default function TransferenceProduts() {
       id: "status",
       header: "Estado",
       cell: (row) => (
-        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+        <span className="inline-flex rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
           {row.statusLabel}
         </span>
       ),
@@ -478,7 +478,8 @@ export default function TransferenceProduts() {
     {
       id: "actions",
       header: "ACCIONES",
-      headerClassName: "text-center w-[70px]",
+      stopRowClick: true,
+      headerClassName: "w-[70px] text-center [&>div]:justify-center",
       cell: (row) => (
         <div className="flex justify-center">
           <ActionsPopover

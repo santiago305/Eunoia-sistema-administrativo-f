@@ -455,7 +455,7 @@ export default function KardexProduction() {
                     <div className="xl:col-span-2">
                         <DataTable
                             className="max-h-[80vh] overflow-hidden p-3"
-                            tableId="kardex-production-table"
+                            tableId="kardex-materiales-table"
                             data={kardexRows}
                             columns={columns}
                             rowKey="id"
@@ -498,7 +498,7 @@ export default function KardexProduction() {
                                 startDate: parseDateInputValue(fromDate),
                                 endDate: parseDateInputValue(toDate),
                                 label: "Rango de fechas",
-                                name: "kardex-finished-date-range",
+                                name: "kardex-materiales-date-range",
                                 onChange: ({ startDate, endDate }) => {
                                     setFromDate(startDate ? toLocalDateKey(startDate) : "");
                                     setToDate(endDate ? toLocalDateKey(endDate) : "");

@@ -45,7 +45,7 @@ const statusLabels: Record<DocStatus, string> = {
   [DocStatus.CANCELLED]: "Anulado",
 };
 
-const RECENT_STORAGE_KEY = "recent-search:inventory-documents-adjustment-products";
+const RECENT_STORAGE_KEY = "recent-search:inventory-documents-adjustment-materiales";
 
 const buildNumero = (document: InventoryDocument) => {
   const serie = document.serieCode || document.serie || "";
@@ -387,15 +387,19 @@ export default function AdjustmentProduts() {
         header: "Número",
         accessorKey: "numero",
         headerClassName: "text-left w-[150px]",
-        className: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
         id: "status",
         header: "Estado",
-        accessorKey: "statusLabel",
         headerClassName: "text-left w-[140px]",
-        className: "text-left",
+        cell: (row) => (
+          <span className="inline-flex rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
+            {row.statusLabel}
+          </span>
+        ),
+        className: "text-black/70",
         sortable: false,
       },
       {
@@ -403,7 +407,7 @@ export default function AdjustmentProduts() {
         header: "Almacén",
         accessorKey: "fromWarehouse",
         headerClassName: "text-left",
-        className: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
@@ -411,7 +415,7 @@ export default function AdjustmentProduts() {
         header: "Usuario",
         accessorKey: "createdBy",
         headerClassName: "text-left",
-        className: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
@@ -424,14 +428,14 @@ export default function AdjustmentProduts() {
           </div>
         ),
         headerClassName: "text-left w-[140px]",
-        className: "text-left",
+        className: "text-black/70",
         sortable: false,
       },
       {
         id: "actions",
         header: "",
         stopRowClick: true,
-        headerClassName: "text-center w-[70px]",
+        headerClassName: "w-[50px] text-center [&>div]:justify-center",
         cell: (row) => (
           <div className="flex justify-center">
             <ActionsPopover
@@ -502,7 +506,7 @@ export default function AdjustmentProduts() {
         <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
 
         <DataTable
-          tableId="inventory-documents-adjustment-products"
+          tableId="inventory-documents-adjustment-materiales"
           data={documentRows}
           columns={columns}
           rowKey="id"
@@ -517,7 +521,7 @@ export default function AdjustmentProduts() {
               onChange={setSearchText}
               onSubmitSearch={submitSearch}
               searchLabel="Buscar documento"
-              searchName="inventory-documents-adjustment-products-search"
+              searchName="inventory-documents-adjustment-materiales-search"
             >
               <DataTableSearchPanel
                 recent={recentSearches}
