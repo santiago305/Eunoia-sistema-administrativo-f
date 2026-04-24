@@ -421,7 +421,7 @@ export default function TransferenceProduts() {
           ) : null}
         </div>
       ),
-      headerClassName: "text-left w-[70px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -430,7 +430,7 @@ export default function TransferenceProduts() {
       id: "numero",
       header: "Documento",
       accessorKey: "numero",
-      headerClassName: "text-left w-[100px] py-4",
+      headerClassName: "text-left py-4",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -439,7 +439,7 @@ export default function TransferenceProduts() {
       id: "fromWarehouse",
       header: "Origen",
       accessorKey: "fromWarehouse",
-      headerClassName: "text-left w-[140px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -448,7 +448,7 @@ export default function TransferenceProduts() {
       id: "toWarehouse",
       header: "Destino",
       accessorKey: "toWarehouse",
-      headerClassName: "text-left w-[140px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -457,7 +457,7 @@ export default function TransferenceProduts() {
       id: "createdBy",
       header: "Usuario",
       accessorKey: "createdBy",
-      headerClassName: "text-left w-[140px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -470,7 +470,7 @@ export default function TransferenceProduts() {
           {row.statusLabel}
         </span>
       ),
-      headerClassName: "text-left w-[90px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -479,7 +479,7 @@ export default function TransferenceProduts() {
       id: "actions",
       header: "ACCIONES",
       stopRowClick: true,
-      headerClassName: "w-[70px] text-center [&>div]:justify-center",
+      headerClassName: "text-center [&>div]:justify-center",
       cell: (row) => (
         <div className="flex justify-center">
           <ActionsPopover

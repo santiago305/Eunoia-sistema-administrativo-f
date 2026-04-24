@@ -396,7 +396,7 @@ export default function AdjustmentProduts() {
             ) : null}
           </div>
         ),
-        headerClassName: "text-left w-[70px]",
+        headerClassName: "text-left",
         className: "text-black/70",
         sortable: false,
       },
@@ -440,7 +440,7 @@ export default function AdjustmentProduts() {
         id: "actions",
         header: "Acciones",
         stopRowClick: true,
-        headerClassName: "w-[50px] text-center [&>div]:justify-center",
+        headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => (
           <div className="flex justify-center">
             <ActionsPopover
