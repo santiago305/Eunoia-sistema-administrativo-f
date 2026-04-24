@@ -1,4 +1,8 @@
-import { SmartSearchPanel, type DataTableRecentSearchItem } from "@/components/table/search";
+import {
+  SmartSearchPanel,
+  type DataTableRecentSearchItem,
+  type DataTableSavedSearchItem,
+} from "@/components/table/search";
 import type {
   ProductSearchFilterKey,
   ProductSearchRule,
@@ -13,31 +17,37 @@ import {
 
 type Props = {
   recent?: DataTableRecentSearchItem<ProductSearchSnapshot>[];
+  saved?: DataTableSavedSearchItem<ProductSearchSnapshot>[];
   columns: ProductSmartSearchColumn[];
   snapshot: ProductSearchSnapshot;
   filterQuery?: string;
   onApplySnapshot: (snapshot: ProductSearchSnapshot) => void;
   onApplyRule: (rule: ProductSearchRule) => void;
   onRemoveRule: (fieldId: ProductSearchFilterKey) => void;
+  onDeleteMetric?: (metricId: string) => void;
 };
 
 export function ProductSmartSearchPanel({
   recent = [],
+  saved = [],
   columns,
   snapshot,
   filterQuery,
   onApplySnapshot,
   onApplyRule,
   onRemoveRule,
+  onDeleteMetric,
 }: Props) {
   return (
     <SmartSearchPanel
       recent={recent}
+      saved={saved}
       fields={columns}
       snapshot={snapshot}
       onApplySnapshot={onApplySnapshot}
       onApplyRule={onApplyRule}
       onRemoveRule={onRemoveRule}
+      onDeleteMetric={onDeleteMetric}
       getRule={findProductSearchRule}
       getRuleSummary={getProductSearchRuleSummary}
       getSelectionCount={getProductSearchSelectionCount}

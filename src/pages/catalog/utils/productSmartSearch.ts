@@ -138,6 +138,11 @@ export function sanitizeProductSearchSnapshot(
   };
 }
 
+export function hasProductSearchCriteria(snapshot?: Partial<ProductSearchSnapshot> | null) {
+  const normalized = sanitizeProductSearchSnapshot(snapshot);
+  return Boolean(normalized.q || normalized.filters.length);
+}
+
 export function findProductSearchRule(snapshot: ProductSearchSnapshot, key: ProductSearchFilterKey) {
   return sanitizeProductSearchSnapshot(snapshot).filters.find((rule) => rule.field === key) ?? null;
 }

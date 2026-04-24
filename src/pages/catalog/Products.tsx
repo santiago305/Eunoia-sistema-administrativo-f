@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useReducedMotion } from "framer-motion";
 import { Download, Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
@@ -9,14 +9,22 @@ import {
     DataTableSearchBar,
     DataTableSearchChips,
     type DataTableRecentSearchItem,
+    type DataTableSavedSearchItem,
 } from "@/components/table/search";
 import type { DataTableColumn } from "@/components/table/types";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { useProducts } from "@/hooks/useProducts";
 import { errorResponse, successResponse } from "@/common/utils/response";
-import { listCatalogProducts, updateProductActive } from "@/services/productService";
+import {
+    deleteProductSearchMetric,
+    getProductSearchState,
+    listCatalogProducts,
+    saveProductSearchMetric,
+    updateProductActive,
+} from "@/services/productService";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { Product } from "@/pages/catalog/types/product";
+import type { ProductSearchStateResponse } from "@/pages/catalog/types/productSearch";
 import { Headed } from "@/components/Headed";
 import { getDropdownItemProducts } from "./data/getDropdownItemProducts";
 import { ActionsPopover } from "@/components/ActionsPopover";
@@ -25,12 +33,12 @@ import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
 import { useCompany } from "@/hooks/useCompany";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
 import { ProductSmartSearchPanel } from "./components/ProductSmartSearchPanel";
 import {
     buildProductSearchChips,
     buildProductSmartSearchColumns,
     createEmptyProductSearchFilters,
+    hasProductSearchCriteria,
     removeProductSearchKey,
     sanitizeProductSearchSnapshot,
     upsertProductSearchRule,
@@ -42,8 +50,6 @@ import {
 
 const PRIMARY = "hsl(var(--primary))";
 const PRODUCT_TYPE = ProductTypes.PRODUCT;
-
-const RECENT_STORAGE_KEY = "recent-search:catalog-products";
 
 export default function CatalogProducts() {
     const shouldReduceMotion = useReducedMotion();
@@ -60,9 +66,8 @@ export default function CatalogProducts() {
     const [executedSearchText, setExecutedSearchText] = useState("");
     const [searchFilters, setSearchFilters] = useState(() => createEmptyProductSearchFilters());
     const debouncedSearchText = useDebouncedValue(searchText.trim(), 400);
-    const [recentSearches, setRecentSearches] = useState<
-        DataTableRecentSearchItem<ProductSearchSnapshot>[]
-    >(() => loadLocalRecentSearches(RECENT_STORAGE_KEY));
+    const [searchState, setSearchState] = useState<ProductSearchStateResponse | null>(null);
+    const [savingMetric, setSavingMetric] = useState(false);
 
     const limit = 30;
 
@@ -92,77 +97,59 @@ export default function CatalogProducts() {
         [executedSearchText, searchFilters],
     );
 
-    const buildRecentLabel = useCallback((snapshot: ProductSearchSnapshot) => {
-        return buildProductSearchChips(snapshot).map((chip) => chip.label).join(" · ") || "Búsqueda";
-    }, []);
-
-    const recordRecentSearch = useCallback(
-        (snapshot: ProductSearchSnapshot) => {
-            const hasFilters = Boolean(snapshot.filters.length);
-            const hasQuery = Boolean(snapshot.q);
-            if (!hasFilters && !hasQuery) return;
-
-            const normalized = sanitizeProductSearchSnapshot(snapshot);
-            const id = JSON.stringify(normalized);
-            const label = buildRecentLabel(normalized);
-
-            setRecentSearches(
-                pushLocalRecentSearch(RECENT_STORAGE_KEY, {
-                    id,
-                    label,
-                    snapshot: normalized,
-                }),
-            );
-        },
-        [buildRecentLabel],
-    );
-
     const searchChips = useMemo(() => buildProductSearchChips(executedSnapshot), [executedSnapshot]);
 
     const applySnapshot = useCallback((snapshot: ProductSearchSnapshot) => {
         const normalized = sanitizeProductSearchSnapshot(snapshot);
-        recordRecentSearch(normalized);
-        setSearchText(normalized.q ?? "");
-        setExecutedSearchText(normalized.q ?? "");
-        setSearchFilters(normalized.filters);
-        setPage(1);
-    }, [recordRecentSearch]);
+        startTransition(() => {
+            setSearchText(normalized.q ?? "");
+            setExecutedSearchText(normalized.q ?? "");
+            setSearchFilters(normalized.filters);
+            setPage(1);
+        });
+    }, []);
 
     const handleApplySearchRule = useCallback((rule: ProductSearchRule) => {
-        const next = upsertProductSearchRule(
-            sanitizeProductSearchSnapshot({ q: searchText, filters: searchFilters }),
-            rule,
-        );
-        setSearchFilters(next.filters);
-        setPage(1);
+        startTransition(() => {
+            const next = upsertProductSearchRule(
+                sanitizeProductSearchSnapshot({ q: searchText, filters: searchFilters }),
+                rule,
+            );
+            setSearchFilters(next.filters);
+            setPage(1);
+        });
     }, [searchFilters, searchText]);
 
     const handleRemoveSearchRule = useCallback((fieldId: ProductSearchFilterKey) => {
-        const next = removeProductSearchKey(
-            sanitizeProductSearchSnapshot({ q: searchText, filters: searchFilters }),
-            fieldId,
-        );
-        setSearchFilters(next.filters);
-        setPage(1);
+        startTransition(() => {
+            const next = removeProductSearchKey(
+                sanitizeProductSearchSnapshot({ q: searchText, filters: searchFilters }),
+                fieldId,
+            );
+            setSearchFilters(next.filters);
+            setPage(1);
+        });
     }, [searchFilters, searchText]);
 
     const submitSearch = useCallback(() => {
         const nextQ = searchText.trim();
-        recordRecentSearch(sanitizeProductSearchSnapshot({ q: nextQ, filters: searchFilters }));
-
-        setExecutedSearchText(nextQ);
-        setPage(1);
-    }, [recordRecentSearch, searchFilters, searchText]);
+        startTransition(() => {
+            setExecutedSearchText(nextQ);
+            setPage(1);
+        });
+    }, [searchText]);
 
     const handleRemoveChip = useCallback((key: "q" | ProductSearchFilterKey) => {
         const nextSnapshot = removeProductSearchKey(
             sanitizeProductSearchSnapshot({ q: executedSearchText, filters: searchFilters }),
             key,
         );
-        setSearchText(nextSnapshot.q ?? "");
-        setExecutedSearchText(nextSnapshot.q ?? "");
-        setSearchFilters(nextSnapshot.filters);
-        setPage(1);
+        startTransition(() => {
+            setSearchText(nextSnapshot.q ?? "");
+            setExecutedSearchText(nextSnapshot.q ?? "");
+            setSearchFilters(nextSnapshot.filters);
+            setPage(1);
+        });
     }, [executedSearchText, searchFilters]);
 
 
@@ -174,6 +161,85 @@ export default function CatalogProducts() {
         loading,
         refresh,
     } = useProducts(queryParams, { mode: "product" });
+
+    const executedSnapshotKey = useMemo(() => JSON.stringify(executedSnapshot), [executedSnapshot]);
+
+    const loadSearchState = useCallback(async () => {
+        try {
+            const response = await getProductSearchState({ type: PRODUCT_TYPE });
+            setSearchState(response);
+        } catch {
+            showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+        }
+    }, [showFlash]);
+
+    useEffect(() => {
+        void loadSearchState();
+    }, [loadSearchState]);
+
+    useEffect(() => {
+        if (loading) return;
+        if (!hasProductSearchCriteria(executedSnapshot)) return;
+        void loadSearchState();
+    }, [executedSnapshotKey, loading, loadSearchState]);
+
+    const recentSearches = useMemo<DataTableRecentSearchItem<ProductSearchSnapshot>[]>(
+        () =>
+            (searchState?.recent ?? []).map((item) => ({
+                id: item.recentId,
+                label: item.label,
+                snapshot: item.snapshot,
+            })),
+        [searchState],
+    );
+
+    const savedMetrics = useMemo<DataTableSavedSearchItem<ProductSearchSnapshot>[]>(
+        () =>
+            (searchState?.saved ?? []).map((metric) => ({
+                id: metric.metricId,
+                name: metric.name,
+                label: metric.label,
+                snapshot: metric.snapshot,
+            })),
+        [searchState],
+    );
+
+    const handleSaveMetric = useCallback(async (name: string) => {
+        const snapshot = sanitizeProductSearchSnapshot({ q: executedSearchText, filters: searchFilters });
+        if (!hasProductSearchCriteria(snapshot)) return false;
+
+        setSavingMetric(true);
+        try {
+            const response = await saveProductSearchMetric(name, snapshot, { type: PRODUCT_TYPE });
+            if (response.type === "success") {
+                showFlash(successResponse(response.message));
+                await loadSearchState();
+                return true;
+            } else {
+                showFlash(errorResponse(response.message));
+                return false;
+            }
+        } catch {
+            showFlash(errorResponse("Error al guardar la metrica"));
+            return false;
+        } finally {
+            setSavingMetric(false);
+        }
+    }, [executedSearchText, loadSearchState, searchFilters, showFlash]);
+
+    const handleDeleteMetric = useCallback(async (metricId: string) => {
+        try {
+            const response = await deleteProductSearchMetric(metricId, { type: PRODUCT_TYPE });
+            if (response.type === "success") {
+                showFlash(successResponse(response.message));
+                await loadSearchState();
+            } else {
+                showFlash(errorResponse(response.message));
+            }
+        } catch {
+            showFlash(errorResponse("Error al eliminar la metrica"));
+        }
+    }, [loadSearchState, showFlash]);
 
     const deletingProduct = useMemo(
         () => products.find((product) => product.id === deletingProductId) ?? null,
@@ -416,15 +482,20 @@ export default function CatalogProducts() {
                         onSubmitSearch={submitSearch}
                         searchLabel="Buscar productos..."
                         searchName="catalog-products-smart-search"
+                        canSaveMetric={hasProductSearchCriteria(executedSnapshot)}
+                        saveLoading={savingMetric}
+                        onSaveMetric={handleSaveMetric}
                     >
                         <ProductSmartSearchPanel
                             recent={recentSearches}
+                            saved={savedMetrics}
                             columns={smartSearchColumns}
                             snapshot={draftSnapshot}
                             filterQuery={searchText}
                             onApplySnapshot={applySnapshot}
                             onApplyRule={handleApplySearchRule}
                             onRemoveRule={handleRemoveSearchRule}
+                            onDeleteMetric={handleDeleteMetric}
                         />
                     </DataTableSearchBar>
                 }

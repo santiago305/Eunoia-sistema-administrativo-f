@@ -78,6 +78,9 @@ export const API_PRODUCTS_GROUP = {
   update: (id: string) => `/products/${id}`,
   updateActive: (id: string) => `/products/${id}`,
   createSku: (id: string) => `/products/${id}/skus`,
+  searchState: "/products/search-state",
+  saveSearchMetric: "/products/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/products/search-metrics/${metricId}`,
 };
 
 export const API_WAREHOUSES_GROUP = {
