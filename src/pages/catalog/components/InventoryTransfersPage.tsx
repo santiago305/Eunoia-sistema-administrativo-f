@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Menu } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
@@ -82,6 +82,18 @@ type InventoryTransfersPageConfig = {
   searchName: string;
 };
 
+
+const normalizePaginatedDocuments = (
+  items: InventoryDocument[],
+  currentPage: number,
+  pageSize: number,
+) => {
+  if (items.length <= pageSize) return items;
+
+  const start = (currentPage - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+};
+
 type InventoryTransfersPageProps = {
   config: InventoryTransfersPageConfig;
 };
@@ -112,6 +124,11 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const showFlashRef = useRef(showFlash);
+
+  useEffect(() => {
+    showFlashRef.current = showFlash;
+  }, [showFlash]);
 
   const [openDetailsModal, setOpenDetailsModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<InventoryDocument | null>(null);
@@ -134,9 +151,9 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       });
       setSearchState(response);
     } catch {
-      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, [config.productType, showFlash]);
+  }, [config.productType]);
 
   useEffect(() => {
     void loadSearchState();
@@ -277,7 +294,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   }, [config.productType, loadSearchState, showFlash]);
 
   const loadDocuments = useCallback(async () => {
-    clearFlash();
     setLoading(true);
     setError(null);
 
@@ -290,11 +306,14 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         docType: DocType.TRANSFER,
         productType: config.productType,
         q: executedSnapshot.q,
-        filters: executedSnapshot.filters.length ? JSON.stringify(executedSnapshot.filters) : undefined,
+        filters: executedSnapshot.filters.length
+          ? JSON.stringify(executedSnapshot.filters)
+          : undefined,
       });
 
-      setDocuments(res.items ?? []);
-      setTotal(res.total ?? 0);
+      const responseItems = res.items ?? [];
+      setDocuments(normalizePaginatedDocuments(responseItems, page, limit));
+      setTotal(res.total ?? responseItems.length);
 
       if (hasInventoryDocumentsSearchCriteria(executedSnapshot)) {
         void loadSearchState();
@@ -303,11 +322,18 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       setDocuments([]);
       setTotal(0);
       setError("Error al listar documentos");
-      showFlash(errorResponse("Error al listar documentos"));
+      showFlashRef.current(errorResponse("Error al listar documentos"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, config.productType, executedSnapshot, fromDate, loadSearchState, page, showFlash, toDate]);
+  }, [
+    page,
+    fromDate,
+    toDate,
+    config.productType,
+    executedSnapshot,
+    loadSearchState,
+  ]);
 
   useEffect(() => {
     void loadDocuments();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
@@ -18,13 +18,17 @@ import { useFlashMessage } from "@/hooks/useFlashMessage";
 import { errorResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import { getDocumentInventoryPdf } from "@/services/pdfServices";
-import {
-  parseDateInputValue,
-  toLocalDateKey,
-} from "@/utils/functionPurchases";
-import type { InventoryDocument, InventoryDocumentRow } from "@/pages/catalog/types/documentInventory";
+import { parseDateInputValue, toLocalDateKey } from "@/utils/functionPurchases";
+import type {
+  InventoryDocument,
+  InventoryDocumentRow,
+} from "@/pages/catalog/types/documentInventory";
 import { InventoryDocumentProductType } from "@/pages/catalog/types/documentInventory";
-import { DocStatus, DocType, type Warehouse } from "@/pages/warehouse/types/warehouse";
+import {
+  DocStatus,
+  DocType,
+  type Warehouse,
+} from "@/pages/warehouse/types/warehouse";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
@@ -33,7 +37,10 @@ import AdjustmentProductModal from "@/pages/catalog/products/components/Adjustme
 import type { ProductType } from "@/pages/catalog/types/ProductTypes";
 import { useCompany } from "@/hooks/useCompany";
 import { DocumentInventoryDetails } from "@/components/DocumentInventoryDetails";
-import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
+import {
+  loadLocalRecentSearches,
+  pushLocalRecentSearch,
+} from "@/utils/localRecentSearches";
 
 type AdjustmentSearchFilterKey = "warehouse" | "status";
 
@@ -56,19 +63,45 @@ const buildNumero = (document: InventoryDocument) => {
   const serie = document.serieCode || document.serie || "";
   const sep = document.serieSeparator || "-";
   const num = document.correlative != null ? String(document.correlative) : "";
-  const padded = document.seriePadding ? num.padStart(document.seriePadding, "0") : num;
+  const padded = document.seriePadding
+    ? num.padStart(document.seriePadding, "0")
+    : num;
   return [serie, padded].filter(Boolean).join(sep) || document.id;
+};
+
+
+const normalizePaginatedDocuments = (
+  items: InventoryDocument[],
+  currentPage: number,
+  pageSize: number,
+) => {
+  if (items.length <= pageSize) return items;
+
+  const start = (currentPage - 1) * pageSize;
+  return items.slice(start, start + pageSize);
 };
 
 type InventoryAdjustmentsPageProps = {
   config: InventoryAdjustmentsPageConfig;
 };
 
-export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPageProps) {
+export function InventoryAdjustmentsPage({
+  config,
+}: InventoryAdjustmentsPageProps) {
   const { showFlash, clearFlash } = useFlashMessage();
+  const showFlashRef = useRef(showFlash);
+  const clearFlashRef = useRef(clearFlash);
+
+  useEffect(() => {
+    showFlashRef.current = showFlash;
+    clearFlashRef.current = clearFlash;
+  }, [showFlash, clearFlash]);
+
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
-  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
+  const companyActionTitle = hasCompany
+    ? undefined
+    : "Primero registra la empresa.";
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -82,16 +115,21 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
 
   const PRIMARY = "hsl(var(--primary))";
 
-  const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>(
-    [],
-  );
+  const [warehouseOptions, setWarehouseOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
   const [recentSearches, setRecentSearches] = useState<
-    DataTableRecentSearchItem<DataTableSearchSnapshot<AdjustmentSearchFilterKey>>[]
+    DataTableRecentSearchItem<
+      DataTableSearchSnapshot<AdjustmentSearchFilterKey>
+    >[]
   >(() => loadLocalRecentSearches(config.recentStorageKey));
   const [openPdfModal, setOpenPdfModal] = useState(false);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    null,
+  );
   const [openDetailsModal, setOpenDetailsModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<InventoryDocument | null>(null);
+  const [selectedDocument, setSelectedDocument] =
+    useState<InventoryDocument | null>(null);
   const [openAdjustmentModal, setOpenAdjustmentModal] = useState(false);
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
   const [total, setTotal] = useState(0);
@@ -102,14 +140,19 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
     setOpenAdjustmentModal(false);
   }, []);
 
-  const statusOptions = [
-    { value: "", label: "Todos" },
-    { value: DocStatus.DRAFT, label: statusLabels[DocStatus.DRAFT] },
-    { value: DocStatus.POSTED, label: statusLabels[DocStatus.POSTED] },
-    { value: DocStatus.CANCELLED, label: statusLabels[DocStatus.CANCELLED] },
-  ];
+  const statusOptions = useMemo(
+    () => [
+      { value: "", label: "Todos" },
+      { value: DocStatus.DRAFT, label: statusLabels[DocStatus.DRAFT] },
+      { value: DocStatus.POSTED, label: statusLabels[DocStatus.POSTED] },
+      { value: DocStatus.CANCELLED, label: statusLabels[DocStatus.CANCELLED] },
+    ],
+    [],
+  );
 
-  const smartSearchColumns = useMemo<DataTableSearchColumn<AdjustmentSearchFilterKey>[]>(() => {
+  const smartSearchColumns = useMemo<
+    DataTableSearchColumn<AdjustmentSearchFilterKey>[]
+  >(() => {
     const warehouseFilterOptions = warehouseOptions
       .filter((option) => option.value)
       .map((option) => ({ id: option.value, label: option.label }));
@@ -119,12 +162,24 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
       .map((option) => ({ id: String(option.value), label: option.label }));
 
     return [
-      { id: "warehouse", label: "Almacén", options: warehouseFilterOptions, visible: true },
-      { id: "status", label: "Estado", options: statusFilterOptions, visible: true },
+      {
+        id: "warehouse",
+        label: "Almacén",
+        options: warehouseFilterOptions,
+        visible: true,
+      },
+      {
+        id: "status",
+        label: "Estado",
+        options: statusFilterOptions,
+        visible: true,
+      },
     ];
   }, [statusOptions, warehouseOptions]);
 
-  const executedSnapshot = useMemo<DataTableSearchSnapshot<AdjustmentSearchFilterKey>>(
+  const executedSnapshot = useMemo<
+    DataTableSearchSnapshot<AdjustmentSearchFilterKey>
+  >(
     () => ({
       q: executedSearchText || undefined,
       filters: {
@@ -146,14 +201,16 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
       const warehouseValue = snapshot.filters.warehouse?.[0];
       if (warehouseValue) {
         const label =
-          warehouseOptions.find((option) => option.value === warehouseValue)?.label ??
-          warehouseValue;
+          warehouseOptions.find((option) => option.value === warehouseValue)
+            ?.label ?? warehouseValue;
         parts.push(`Almacén: ${label}`);
       }
 
       const statusValue = snapshot.filters.status?.[0];
       if (statusValue) {
-        parts.push(`Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`);
+        parts.push(
+          `Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`,
+        );
       }
 
       return parts.join(" · ") || "Búsqueda";
@@ -164,7 +221,8 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
   const recordRecentSearch = useCallback(
     (snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
       const hasFilters =
-        Boolean(snapshot.filters.warehouse?.length) || Boolean(snapshot.filters.status?.length);
+        Boolean(snapshot.filters.warehouse?.length) ||
+        Boolean(snapshot.filters.status?.length);
       const hasQuery = Boolean(snapshot.q);
       if (!hasFilters && !hasQuery) return;
 
@@ -182,7 +240,9 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
     [buildRecentLabel, config.recentStorageKey],
   );
 
-  const searchChips = useMemo<DataTableSearchChip<AdjustmentSearchFilterKey>[]>(() => {
+  const searchChips = useMemo<
+    DataTableSearchChip<AdjustmentSearchFilterKey>[]
+  >(() => {
     const chips: DataTableSearchChip<AdjustmentSearchFilterKey>[] = [];
 
     if (executedSnapshot.q) {
@@ -195,7 +255,9 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
 
     const warehouseValue = executedSnapshot.filters.warehouse?.[0];
     if (warehouseValue) {
-      const label = warehouseOptions.find((option) => option.value === warehouseValue)?.label ?? warehouseValue;
+      const label =
+        warehouseOptions.find((option) => option.value === warehouseValue)
+          ?.label ?? warehouseValue;
       chips.push({
         id: "warehouse",
         label: `Almacén: ${label}`,
@@ -213,94 +275,109 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
     }
 
     return chips;
-  }, [executedSnapshot.filters.status, executedSnapshot.filters.warehouse, executedSnapshot.q, warehouseOptions]);
+  }, [
+    executedSnapshot.filters.status,
+    executedSnapshot.filters.warehouse,
+    executedSnapshot.q,
+    warehouseOptions,
+  ]);
 
-  const handleRemoveChip = useCallback((chip: DataTableSearchChip<AdjustmentSearchFilterKey>) => {
-    if (chip.removeKey === "q") {
-      setSearchText("");
-      setExecutedSearchText("");
-      recordRecentSearch({
-        filters: {
-          warehouse: warehouseId ? [warehouseId] : [],
-          status: statusFilter ? [String(statusFilter)] : [],
-        },
-      });
-      setPage(1);
-      return;
-    }
-
-    if (chip.removeKey === "warehouse") {
-      setWarehouseId("");
-      recordRecentSearch({
-        q: executedSearchText || undefined,
-        filters: {
-          warehouse: [],
-          status: statusFilter ? [String(statusFilter)] : [],
-        },
-      });
-      setPage(1);
-      return;
-    }
-
-    if (chip.removeKey === "status") {
-      setStatusFilter("");
-      recordRecentSearch({
-        q: executedSearchText || undefined,
-        filters: {
-          warehouse: warehouseId ? [warehouseId] : [],
-          status: [],
-        },
-      });
-      setPage(1);
-    }
-  }, [executedSearchText, recordRecentSearch, statusFilter, warehouseId]);
-
-  const handleToggleSearchOption = useCallback((columnId: AdjustmentSearchFilterKey, optionId: string) => {
-    if (columnId === "warehouse") {
-      setWarehouseId((prev) => {
-        const nextWarehouseId = prev === optionId ? "" : optionId;
+  const handleRemoveChip = useCallback(
+    (chip: DataTableSearchChip<AdjustmentSearchFilterKey>) => {
+      if (chip.removeKey === "q") {
+        setSearchText("");
+        setExecutedSearchText("");
         recordRecentSearch({
-          q: executedSearchText || undefined,
           filters: {
-            warehouse: nextWarehouseId ? [nextWarehouseId] : [],
+            warehouse: warehouseId ? [warehouseId] : [],
             status: statusFilter ? [String(statusFilter)] : [],
           },
         });
-        return nextWarehouseId;
-      });
-      setPage(1);
-      return;
-    }
+        setPage(1);
+        return;
+      }
 
-    if (columnId === "status") {
-      setStatusFilter((prev) => {
-        const nextStatus = String(prev) === optionId ? "" : (optionId as DocStatus);
+      if (chip.removeKey === "warehouse") {
+        setWarehouseId("");
+        recordRecentSearch({
+          q: executedSearchText || undefined,
+          filters: {
+            warehouse: [],
+            status: statusFilter ? [String(statusFilter)] : [],
+          },
+        });
+        setPage(1);
+        return;
+      }
+
+      if (chip.removeKey === "status") {
+        setStatusFilter("");
         recordRecentSearch({
           q: executedSearchText || undefined,
           filters: {
             warehouse: warehouseId ? [warehouseId] : [],
-            status: nextStatus ? [String(nextStatus)] : [],
+            status: [],
           },
         });
-        return nextStatus;
-      });
-      setPage(1);
-    }
-  }, [executedSearchText, recordRecentSearch, statusFilter, warehouseId]);
+        setPage(1);
+      }
+    },
+    [executedSearchText, recordRecentSearch, statusFilter, warehouseId],
+  );
 
-  const applySnapshot = useCallback((snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
-    recordRecentSearch({
-      ...snapshot,
-      q: snapshot.q?.trim() || undefined,
-    });
-    const nextWarehouseId = snapshot.filters.warehouse?.[0] ?? "";
-    const nextStatus = snapshot.filters.status?.[0] ?? "";
-    setWarehouseId(nextWarehouseId);
-    setStatusFilter(nextStatus as DocStatus | "");
-    setSearchText(snapshot.q ?? "");
-    setExecutedSearchText((snapshot.q ?? "").trim());
-    setPage(1);
-  }, [recordRecentSearch]);
+  const handleToggleSearchOption = useCallback(
+    (columnId: AdjustmentSearchFilterKey, optionId: string) => {
+      if (columnId === "warehouse") {
+        setWarehouseId((prev) => {
+          const nextWarehouseId = prev === optionId ? "" : optionId;
+          recordRecentSearch({
+            q: executedSearchText || undefined,
+            filters: {
+              warehouse: nextWarehouseId ? [nextWarehouseId] : [],
+              status: statusFilter ? [String(statusFilter)] : [],
+            },
+          });
+          return nextWarehouseId;
+        });
+        setPage(1);
+        return;
+      }
+
+      if (columnId === "status") {
+        setStatusFilter((prev) => {
+          const nextStatus =
+            String(prev) === optionId ? "" : (optionId as DocStatus);
+          recordRecentSearch({
+            q: executedSearchText || undefined,
+            filters: {
+              warehouse: warehouseId ? [warehouseId] : [],
+              status: nextStatus ? [String(nextStatus)] : [],
+            },
+          });
+          return nextStatus;
+        });
+        setPage(1);
+      }
+    },
+    [executedSearchText, recordRecentSearch, statusFilter, warehouseId],
+  );
+
+  const applySnapshot = useCallback(
+    (snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
+      recordRecentSearch({
+        ...snapshot,
+        q: snapshot.q?.trim() || undefined,
+      });
+      const nextWarehouseId = snapshot.filters.warehouse?.[0] ?? "";
+      const nextStatus = snapshot.filters.status?.[0] ?? "";
+      setWarehouseId(nextWarehouseId);
+      setStatusFilter(nextStatus as DocStatus | "");
+      setSearchText(snapshot.q ?? "");
+      setExecutedSearchText((snapshot.q ?? "").trim());
+      setPage(1);
+    },
+    [recordRecentSearch],
+  );
 
   const submitSearch = useCallback(() => {
     const nextQ = searchText.trim();
@@ -316,8 +393,7 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
     setPage(1);
   }, [recordRecentSearch, searchText, statusFilter, warehouseId]);
 
-  const loadWarehouses = async () => {
-    clearFlash();
+  const loadWarehouses = useCallback(async () => {
     try {
       const res = await listActive();
       const options =
@@ -328,16 +404,15 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
       setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
     } catch {
       setWarehouseOptions([{ value: "", label: "Todos" }]);
-      showFlash(errorResponse("Error al cargar almacenes"));
+      showFlashRef.current(errorResponse("Error al cargar almacenes"));
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadWarehouses();
-  }, []);
+  }, [loadWarehouses]);
 
-  const loadDocuments = async () => {
-    clearFlash();
+  const loadDocuments = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -354,20 +429,32 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
         q: executedSearchText || undefined,
       });
 
-      setDocuments(res.items ?? []);
-      setTotal(res.total ?? 0);
+      const responseItems = res.items ?? [];
+      setDocuments(normalizePaginatedDocuments(responseItems, page, limit));
+      setTotal(res.total ?? responseItems.length);
     } catch {
       setError("No se pudieron cargar los documentos.");
       setDocuments([]);
       setTotal(0);
+      showFlashRef.current(
+        errorResponse("No se pudieron cargar los documentos."),
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    page,
+    fromDate,
+    toDate,
+    warehouseId,
+    statusFilter,
+    executedSearchText,
+    config.documentProductType,
+  ]);
 
   useEffect(() => {
     void loadDocuments();
-  }, [page, limit, fromDate, toDate, warehouseId, statusFilter, executedSearchText, refresh]);
+  }, [loadDocuments]);
 
   const openDocumentPdf = (documentId: string) => {
     setSelectedDocumentId(documentId);
@@ -381,11 +468,16 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
       numero: buildNumero(document),
       docLabel: "Ajuste",
       statusLabel: statusLabels[document.status],
-      fromWarehouse: document.fromWarehouseName ?? document.fromWarehouse?.name ?? "-",
-      toWarehouse: document.toWarehouseName ?? document.toWarehouse?.name ?? "-",
+      fromWarehouse:
+        document.fromWarehouseName ?? document.fromWarehouse?.name ?? "-",
+      toWarehouse:
+        document.toWarehouseName ?? document.toWarehouse?.name ?? "-",
       createdBy: document.createdBy?.name ?? document.createdBy?.email ?? "-",
       date: new Date(document.createdAt).toLocaleDateString("es-PE"),
-      time: new Date(document.createdAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date(document.createdAt).toLocaleTimeString("es-PE", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     }));
   }, [documents]);
 
@@ -559,7 +651,9 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
           tableClassName="text-[10px]"
         />
 
-        {error ? <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div> : null}
+        {error ? (
+          <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>
+        ) : null}
       </div>
 
       <PdfViewerModal
@@ -589,8 +683,8 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
       <AdjustmentProductModal
         open={openAdjustmentModal}
         onClose={handleClose}
-        onSaved={() => setRefresh(prev => prev + 1)}
-        loadDocuments={() => setRefresh(prev => prev + 1)}
+        onSaved={() => setRefresh((prev) => prev + 1)}
+        loadDocuments={() => setRefresh((prev) => prev + 1)}
         type={config.productType}
       />
     </PageShell>
