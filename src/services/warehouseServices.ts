@@ -76,7 +76,7 @@ export const listActiveWarehouses = async (
     params: {
       ...params,
       page: params.page ?? 1,
-      limit: params.limit ?? 100,
+      limit: params.limit ?? 20,
       isActive: "true",
     },
   });
@@ -84,7 +84,7 @@ export const listActiveWarehouses = async (
 };
 
 export const listActive = async (): Promise<Warehouse[]> => {
-  const response = await listActiveWarehouses({ page: 1, limit: 100 });
+  const response = await listActiveWarehouses({ page: 1, limit: 20 });
   return response.items ?? [];
 };
 

@@ -159,9 +159,9 @@ export default function PurchaseCreateLocal({
     } catch {
       setSearchResults(undefined);
       if (!isEdit) setProducts([]);
-      showFlash(errorResponse("Error al cargar SKUs de materia prima"));
+      showFlashRef.current(errorResponse("Error al cargar SKUs de materia prima"));
     }
-  }, [isEdit, showFlash]);
+  }, [isEdit]);
 
   
     const handleClosePayment = useCallback(()=>{
@@ -193,9 +193,9 @@ export default function PurchaseCreateLocal({
       setSupplierOptions(options);
     } catch {
       setSupplierOptions([]);
-      showFlash(errorResponse("Error al cargar proveedores"));
+      showFlashRef.current(errorResponse("Error al cargar proveedores"));
     }
-  }, [clearFlash, showFlash]);
+  }, []);
 
   const loadWarehouses = useCallback(async () => {
     clearFlash();
@@ -209,9 +209,9 @@ export default function PurchaseCreateLocal({
       setWarehouseOptions(options);
     } catch {
       setWarehouseOptions([]);
-      showFlash(errorResponse("Error al cargar almacenes"));
+      showFlashRef.current(errorResponse("Error al cargar almacenes"));
     }
-  }, [clearFlash, showFlash]);
+  }, []);
 
   const productOptions = useMemo(
     () =>
@@ -419,9 +419,9 @@ export default function PurchaseCreateLocal({
         quotas: data.quotas ?? [],
       }));
     } catch {
-      showFlash(errorResponse("Error al cargar la compra."));
+      showFlashRef.current(errorResponse("Error al cargar la compra."));
     }
-  }, [showFlash]);
+  }, []);
 
   useEffect(() => {
     if (!effectivePoId) return;

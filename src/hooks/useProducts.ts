@@ -46,7 +46,7 @@ export function useProducts(
     items: [],
     total: 0,
     page: params.page ?? 1,
-    limit: params.limit ?? 25,
+    limit: params.limit ?? 20,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

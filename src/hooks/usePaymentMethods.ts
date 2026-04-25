@@ -37,7 +37,7 @@ export function usePaymentMethods(params: ListPaymentMethodsQuery & { name?: str
     items: [],
     total: 0,
     page: params.page ?? 1,
-    limit: params.limit ?? 10,
+    limit: params.limit ?? 20,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function usePaymentMethods(params: ListPaymentMethodsQuery & { name?: str
         items: res.items ?? [],
         total: res.total ?? 0,
         page: res.page ?? query.page ?? 1,
-        limit: res.limit ?? query.limit ?? 10,
+        limit: res.limit ?? query.limit ?? 20,
       });
     } catch (e: any) {
       setError(e?.response?.data?.message ?? "Error al cargar los m\u00e9todos de pago.");

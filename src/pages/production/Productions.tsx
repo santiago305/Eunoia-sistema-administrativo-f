@@ -154,9 +154,9 @@ export default function Production() {
       const response = await getProductionSearchState();
       setSearchState(response);
     } catch {
-      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, [showFlash]);
+  }, []);
 
   const submitSearch = useCallback(() => {
     setAppliedSearchText(searchText.trim());
@@ -205,11 +205,11 @@ export default function Production() {
         hasPrev: false,
         hasNext: false,
       }));
-      showFlash(errorResponse("Error al listar producciones"));
+      showFlashRef.current(errorResponse("Error al listar producciones"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, executedSnapshot, fromDate, limit, loadSearchState, page, showFlash, toDate]);
+  }, [executedSnapshot, fromDate, limit, loadSearchState, page, toDate]);
 
   const handleStart = async (id: string) => {
     clearFlash();

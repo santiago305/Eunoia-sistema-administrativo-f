@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Menu, Pencil, Plus, Timer, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { AlertModal } from "@/components/AlertModal";
@@ -51,7 +51,13 @@ const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
 
 export default function Providers() {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFlash } = useFlashMessage();
+  const showFlashRef = useRef(showFlash);
+
+  useEffect(() => {
+    showFlashRef.current = showFlash;
+  }, [showFlash]);
+
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
@@ -111,9 +117,9 @@ export default function Providers() {
       const response = await getProviderSearchState();
       setSearchState(response);
     } catch {
-      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, [showFlash]);
+  }, []);
 
   const submitSearch = useCallback(() => {
     startTransition(() => {
@@ -137,7 +143,6 @@ export default function Providers() {
   }, []);
 
   const loadSuppliers = useCallback(async () => {
-    clearFlash();
     setLoading(true);
 
     try {
@@ -177,11 +182,11 @@ export default function Providers() {
         hasPrev: false,
         hasNext: false,
       });
-      showFlash(errorResponse("Error al listar proveedores"));
+      showFlashRef.current(errorResponse("Error al listar proveedores"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, executedSnapshot, loadSearchState, page, paginationState.pageSize, showFlash]);
+  }, [executedSnapshot, loadSearchState, page, paginationState.pageSize]);
 
   useEffect(() => {
     void loadSuppliers();

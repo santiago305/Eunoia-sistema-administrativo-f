@@ -172,9 +172,9 @@ export default function Warehouses() {
       const response = await getWarehouseSearchState();
       setSearchState(response);
     } catch {
-      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, [showFlash]);
+  }, []);
 
   const submitSearch = useCallback(() => {
     startTransition(() => {
@@ -233,11 +233,11 @@ export default function Warehouses() {
         hasPrev: false,
         hasNext: false,
       });
-      showFlash(errorResponse("Error al listar almacenes"));
+      showFlashRef.current(errorResponse("Error al listar almacenes"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, executedSnapshot, loadSearchState, page, paginationState.pageSize, showFlash]);
+  }, [executedSnapshot, loadSearchState, page, paginationState.pageSize]);
 
   useEffect(() => {
     void loadWarehouses();
@@ -261,7 +261,7 @@ export default function Warehouses() {
         }
       } catch {
         if (!cancelled) {
-          showFlash(errorResponse("Error al cargar departamentos"));
+          showFlashRef.current(errorResponse("Error al cargar departamentos"));
         }
       }
     })();
@@ -269,7 +269,7 @@ export default function Warehouses() {
     return () => {
       cancelled = true;
     };
-  }, [showFlash]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -300,7 +300,7 @@ export default function Warehouses() {
         }
       } catch {
         if (!cancelled) {
-          showFlash(errorResponse("Error al cargar provincias"));
+          showFlashRef.current(errorResponse("Error al cargar provincias"));
         }
       }
     })();
@@ -308,7 +308,7 @@ export default function Warehouses() {
     return () => {
       cancelled = true;
     };
-  }, [selectedDepartmentIds, showFlash]);
+  }, [selectedDepartmentIds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -338,7 +338,7 @@ export default function Warehouses() {
         }
       } catch {
         if (!cancelled) {
-          showFlash(errorResponse("Error al cargar distritos"));
+          showFlashRef.current(errorResponse("Error al cargar distritos"));
         }
       }
     })();
@@ -346,7 +346,7 @@ export default function Warehouses() {
     return () => {
       cancelled = true;
     };
-  }, [selectedProvinceIds, showFlash]);
+  }, [selectedProvinceIds]);
 
   const sortedWarehouses = useMemo(
     () =>

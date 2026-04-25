@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
 import {
@@ -155,9 +155,9 @@ export default function Purchases() {
             const response = await getPurchaseSearchState();
             setSearchState(response);
         } catch {
-            showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+            showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
         }
-    }, [showFlash]);
+    }, []);
 
     const submitSearch = useCallback(() => {
         startTransition(() => {
@@ -211,7 +211,7 @@ export default function Purchases() {
                 hasNext: false,
             }));
             setError("Error al listar compras");
-            showFlash(errorResponse("Error al listar compras"));
+            showFlashRef.current(errorResponse("Error al listar compras"));
         } finally {
             setLoading(false);
         }

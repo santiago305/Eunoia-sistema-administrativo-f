@@ -361,18 +361,28 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       {
         id: "direction",
         header: "E/S",
-        cell: (row) => (
-          <div className="flex justify-center">
-            <span className="text-black/70 text-center">
-              {statusLabel[row.direction] ?? row.direction}
-            </span>
-          </div>
-        ),
+        cell: (row) => {
+          const isIn = row.direction === "IN";
+
+          return (
+            <div className="flex justify-center">
+              <span
+                className={`inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-medium ${
+                  isIn
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-rose-50 text-rose-700"
+                }`}
+              >
+                {statusLabel[row.direction] ?? row.direction}
+              </span>
+            </div>
+          );
+        },
         headerClassName: "text-center [&>div]:justify-center",
         className: "text-black/70 text-center",
         hideable: true,
         sortable: false,
-      },
+      }
     ],
     [],
   );
