@@ -326,10 +326,9 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         const date = document.createdAt ? formatDate(new Date(document.createdAt)) : "-";
         const time = document.createdAt
           ? new Date(document.createdAt).toLocaleTimeString("es-PE", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
+            hour: "2-digit",
+            minute: "2-digit",
+          })
           : undefined;
 
         const createdBy = document.createdBy?.name || document.createdBy?.email || "-";
@@ -358,13 +357,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       header: "Emisión",
       cell: (row) => (
         <div className="text-black/70">
-          {row.date}
-          {row.time ? (
-            <>
-              <br />
-              {row.time}
-            </>
-          ) : null}
+          {row.date} {row.time}
         </div>
       ),
       headerClassName: "text-left w-[70px]",

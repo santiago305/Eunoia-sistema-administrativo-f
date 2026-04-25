@@ -46,6 +46,7 @@ type MovementRow = {
   createdAt: string;
   date: string;
   time: string;
+  documentNumber: string;
   skuLabel: string;
   warehouse: string;
   quantity: number;
@@ -283,8 +284,9 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           ? createdAt.toLocaleDateString("es-PE", { year: "numeric", month: "2-digit", day: "2-digit" })
           : "-";
         const time = createdAt
-          ? createdAt.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+          ? createdAt.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
           : "-";
+        const documentNumber = item.documentNumber || "-";
         const skuLabel = item.sku.name || "-";
         const warehouse = item.warehouseName || item.warehouseId || "-";
         const user = item.user?.name || item.user?.email || "-";
@@ -294,6 +296,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           createdAt: item.createdAt,
           date,
           time,
+          documentNumber,
           skuLabel,
           warehouse,
           quantity: item.quantity ?? 0,
@@ -311,12 +314,10 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         header: "Fecha y hora",
         cell: (row) => (
           <div className="text-black/70">
-            {row.date}
-            <br />
-            {row.time}
+            {row.date} {row.time}
           </div>
         ),
-        headerClassName: "text-left w-[110px]",
+        headerClassName: "text-left",
         className: "text-black/70",
         hideable: true,
         sortable: false,
@@ -325,7 +326,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         id: "skuLabel",
         header: "Producto",
         accessorKey: "skuLabel",
-        headerClassName: "text-left w-[140px]",
+        headerClassName: "text-left",
         className: "text-black/70",
         hideable: true,
         sortable: false,
@@ -334,7 +335,16 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         id: "warehouse",
         header: "Almacén",
         accessorKey: "warehouse",
-        headerClassName: "text-left w-[140px]",
+        headerClassName: "text-left",
+        className: "text-black/70",
+        hideable: true,
+        sortable: false,
+      },
+      {
+        id: "user",
+        header: "Usuario",
+        accessorKey: "user",
+        headerClassName: "text-left",
         className: "text-black/70",
         hideable: true,
         sortable: false,
@@ -343,17 +353,8 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         id: "quantity",
         header: "Cantidad",
         accessorKey: "quantity",
-        headerClassName: "text-center w-[90px] [&>div]:justify-center",
+        headerClassName: "text-center [&>div]:justify-center",
         className: "text-black/70 text-center",
-        hideable: true,
-        sortable: false,
-      },
-      {
-        id: "user",
-        header: "Usuario",
-        accessorKey: "user",
-        headerClassName: "text-left w-[140px]",
-        className: "text-black/70",
         hideable: true,
         sortable: false,
       },
@@ -362,12 +363,12 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         header: "E/S",
         cell: (row) => (
           <div className="flex justify-center">
-            <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+            <span className="text-black/70 text-center">
               {statusLabel[row.direction] ?? row.direction}
             </span>
           </div>
         ),
-        headerClassName: "text-center w-[70px] [&>div]:justify-center",
+        headerClassName: "text-center [&>div]:justify-center",
         className: "text-black/70 text-center",
         hideable: true,
         sortable: false,

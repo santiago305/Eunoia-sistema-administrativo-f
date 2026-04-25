@@ -299,18 +299,16 @@ export default function Purchases() {
                 const date = formatDate(new Date(purchase.dateIssue ?? ""));
                 const time = purchase.dateIssue
                     ? new Date(purchase.dateIssue).toLocaleTimeString("es-PE", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                      })
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    })
                     : undefined;
                 const dateEnter = formatDate(new Date(purchase.expectedAt ?? ""));
                 const timeEnter = purchase.expectedAt
                     ? new Date(purchase.expectedAt).toLocaleTimeString("es-PE", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                      })
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    })
                     : undefined;
 
                 return {
@@ -337,13 +335,7 @@ export default function Purchases() {
             header: "Emisión",
             cell: (row) => (
                 <div className="text-black/70">
-                    {row.date}
-                    {row.time ? (
-                        <>
-                            <br />
-                            {row.time}
-                        </>
-                    ) : null}
+                    {row.date} {row.time}
                 </div>
             ),
             headerClassName: "text-left w-[70px]",
@@ -448,13 +440,7 @@ export default function Purchases() {
             header: "Ing. Almacen",
             cell: (row) => (
                 <div className="text-black/70">
-                    {row.dateEnter}
-                    {row.timeEnter ? (
-                        <>
-                            <br />
-                            {row.timeEnter}
-                        </>
-                    ) : null}
+                    {row.dateEnter} {row.timeEnter}
                 </div>
             ),
             headerClassName: "text-left w-[50px]",
@@ -491,7 +477,7 @@ export default function Purchases() {
             hideable: true,
             sortable: false,
         },
-        
+
         {
             id: "actions",
             header: "acciones",
@@ -500,8 +486,8 @@ export default function Purchases() {
             cell: (row) => (
                 <div className="flex justify-center">
                     <ActionsPopover
-                    actions={[
-                        (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
+                        actions={[
+                            (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
                                 id: "enter-warehouse",
                                 label: "Ingresar Almacen",
                                 icon: <PackageCheck className="h-4 w-4 text-black/60" />,
@@ -577,28 +563,28 @@ export default function Purchases() {
                                 disabled: companyActionDisabled,
                             },
                         ].filter(Boolean) as ActionItem[]}
-                    columns={1}
-                    compact
-                    showLabels
-                    triggerIcon={<Menu className="h-4 w-4" />}
-                    popoverClassName="min-w-35"
-                    popoverBodyClassName="p-2"
-                    renderAction={(action, helpers) => (
-                        <button
-                            key={action.id}
-                            type="button"
-                            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                                e.stopPropagation();
-                                helpers.onAction(action);
-                            }}
-                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
-                            disabled={action.disabled}
-                        >
-                            {action.icon}
-                            {action.label}
-                        </button>
-                    )}
-                />
+                        columns={1}
+                        compact
+                        showLabels
+                        triggerIcon={<Menu className="h-4 w-4" />}
+                        popoverClassName="min-w-35"
+                        popoverBodyClassName="p-2"
+                        renderAction={(action, helpers) => (
+                            <button
+                                key={action.id}
+                                type="button"
+                                onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                                    e.stopPropagation();
+                                    helpers.onAction(action);
+                                }}
+                                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
+                                disabled={action.disabled}
+                            >
+                                {action.icon}
+                                {action.label}
+                            </button>
+                        )}
+                    />
                 </div>
             ),
             className: "text-left",
@@ -743,8 +729,8 @@ export default function Purchases() {
             <PageTitle title="Compras" />
             <div className="space-y-4">
                 <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
-                    <Headed 
-                        title="Compras" 
+                    <Headed
+                        title="Compras"
                         size="lg"
                     />
                     <div className="flex justify-end">
@@ -753,9 +739,9 @@ export default function Purchases() {
                             className="w-full lg:w-auto"
                             leftIcon={<Plus className="h-4 w-4" />}
                             style={{
-                            backgroundColor: PRIMARY,
-                            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+                                backgroundColor: PRIMARY,
+                                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
                             }}
                             onClick={() => {
                                 setEditPoId(undefined);
@@ -851,18 +837,18 @@ export default function Purchases() {
                 purchase={
                     selectedPurchaseRow
                         ? {
-                              ...selectedPurchaseRow.purchase,
-                              supplierLabel: selectedPurchaseRow.supplierLabel,
-                              supplierDoc: selectedPurchaseRow.supplierDoc,
-                              warehouseLabel: selectedPurchaseRow.warehouseLabel,
-                              statusLabel: selectedPurchaseRow.statusLabel,
-                              docLabel: selectedPurchaseRow.docLabel,
-                              numero: selectedPurchaseRow.numero,
-                              date: selectedPurchaseRow.date,
-                              time: selectedPurchaseRow.time,
-                              dateEnter: selectedPurchaseRow.dateEnter,
-                              timeEnter: selectedPurchaseRow.timeEnter,
-                          }
+                            ...selectedPurchaseRow.purchase,
+                            supplierLabel: selectedPurchaseRow.supplierLabel,
+                            supplierDoc: selectedPurchaseRow.supplierDoc,
+                            warehouseLabel: selectedPurchaseRow.warehouseLabel,
+                            statusLabel: selectedPurchaseRow.statusLabel,
+                            docLabel: selectedPurchaseRow.docLabel,
+                            numero: selectedPurchaseRow.numero,
+                            date: selectedPurchaseRow.date,
+                            time: selectedPurchaseRow.time,
+                            dateEnter: selectedPurchaseRow.dateEnter,
+                            timeEnter: selectedPurchaseRow.timeEnter,
+                        }
                         : null
                 }
                 onClose={() => {

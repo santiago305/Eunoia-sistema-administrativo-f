@@ -170,8 +170,8 @@ export function DataTable<T extends Record<string, unknown>>({
     const ids = selectableColumns
       ? columnPreferences.visibleColumnIds
       : columns
-          .filter((column) => column.visible !== false)
-          .map((column) => column.id);
+        .filter((column) => column.visible !== false)
+        .map((column) => column.id);
 
     return orderedColumns.filter((column) => ids.includes(column.id));
   }, [
@@ -382,10 +382,10 @@ export function DataTable<T extends Record<string, unknown>>({
   const showSkeletonLoading = loading && sortedData.length === 0;
   const resolvedRangeDates = rangeDates
     ? {
-        ...rangeDates,
-        name: rangeDates.name ?? `data-table:${tableId}:rangeDates`,
-        label: rangeDates.label ?? "Rango de fechas",
-      }
+      ...rangeDates,
+      name: rangeDates.name ?? `data-table:${tableId}:rangeDates`,
+      label: rangeDates.label ?? "Rango de fechas",
+    }
     : undefined;
 
   return (
@@ -445,217 +445,217 @@ export function DataTable<T extends Record<string, unknown>>({
       ) : null}
 
       {shouldRenderTable ? (
-      <div className="relative rounded-sm border border-border/70 bg-background shadow-sm">
-        {loading && !showSkeletonLoading ? (
-          <div className="pointer-events-none absolute right-3 top-3 z-20 inline-flex items-center rounded-full border border-border/70 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
-            Actualizando...
-          </div>
-        ) : null}
+        <div className="relative rounded-sm border border-border/70 bg-background shadow-sm">
+          {loading && !showSkeletonLoading ? (
+            <div className="pointer-events-none absolute right-3 top-3 z-20 inline-flex items-center rounded-full border border-border/70 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+              Actualizando...
+            </div>
+          ) : null}
 
-        <div className="scrollbar-panel max-h-[90vh] overflow-auto rounded-sm">
-          <table className={cn("w-full min-w-full text-xs", tableClassName)}>
-            <thead
-              className={cn(
-                stickyHeader && "sticky top-0 z-10 bg-background/95 backdrop-blur",
-              )}
-            >
-              <tr className="border-b border-border/70 bg-muted/40">
-                {selectableRows ? (
-                  <th className="w-12 px-4 py-3 text-left">
-                    <button
-                      type="button"
-                      onClick={handleToggleAllRows}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
-                    >
-                      {allSelected ? (
-                        <CheckSquare className="h-4 w-4" />
-                      ) : someSelected ? (
-                        <MinusSquare className="h-4 w-4" />
-                      ) : (
-                        <Square className="h-4 w-4" />
-                      )}
-                    </button>
-                  </th>
-                ) : null}
-
-                {visibleColumns.map((column) => {
-                  const isSorted = sort?.columnId === column.id;
-                  const canSort =
-                    column.sortable !== false &&
-                    (!!column.accessorKey || !!column.sortAccessor);
-
-                  return (
-                    <th
-                      key={column.id}
-                      style={column.width ? { width: column.width } : undefined}
-                      className={cn(
-                        "px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
-                        column.headerClassName,
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{column.header}</span>
-
-                        {canSort ? (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleSort(column.id)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground"
-                          >
-                            {isSorted ? (
-                              sort?.direction === "asc" ? (
-                                <ArrowUp className="h-4 w-4" />
-                              ) : (
-                                <ArrowDown className="h-4 w-4" />
-                              )
-                            ) : (
-                              <ArrowUpDown className="h-4 w-4" />
-                            )}
-                          </button>
-                        ) : null}
-                      </div>
+          <div className="scrollbar-panel max-h-[90vh] overflow-auto rounded-sm">
+            <table className={cn("w-full min-w-full text-xs", tableClassName)}>
+              <thead
+                className={cn(
+                  stickyHeader && "sticky top-0 z-10 bg-background/95 backdrop-blur",
+                )}
+              >
+                <tr className="border-b border-border/70 bg-muted/40">
+                  {selectableRows ? (
+                    <th className="w-12 px-4 py-3 text-left">
+                      <button
+                        type="button"
+                        onClick={handleToggleAllRows}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
+                      >
+                        {allSelected ? (
+                          <CheckSquare className="h-4 w-4" />
+                        ) : someSelected ? (
+                          <MinusSquare className="h-4 w-4" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                      </button>
                     </th>
-                  );
-                })}
-              </tr>
-            </thead>
+                  ) : null}
 
-            <tbody>
-              {showSkeletonLoading ? (
-                Array.from({ length: 5 }).map((_, rowIndex) => (
-                  <tr key={rowIndex} className="border-b border-border/50">
-                    {selectableRows ? (
-                      <td className="px-4 py-4">
-                        <div className="h-4 w-4 animate-pulse rounded bg-muted" />
-                      </td>
-                    ) : null}
+                  {visibleColumns.map((column) => {
+                    const isSorted = sort?.columnId === column.id;
+                    const canSort =
+                      column.sortable !== false &&
+                      (!!column.accessorKey || !!column.sortAccessor);
 
-                    {visibleColumns.map((column) => (
-                      <td key={column.id} className="px-4 py-4">
-                        <div className="h-4 w-full animate-pulse rounded bg-muted" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : sortedData.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={visibleColumns.length + (selectableRows ? 1 : 0) || 1}
-                    className="px-4 py-12 text-center text-sm text-muted-foreground"
-                  >
-                    {emptyMessage}
-                  </td>
+                    return (
+                      <th
+                        key={column.id}
+                        style={column.width ? { width: column.width } : undefined}
+                        className={cn(
+                          "px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                          column.headerClassName,
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{column.header}</span>
+
+                          {canSort ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSort(column.id)}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground"
+                            >
+                              {isSorted ? (
+                                sort?.direction === "asc" ? (
+                                  <ArrowUp className="h-4 w-4" />
+                                ) : (
+                                  <ArrowDown className="h-4 w-4" />
+                                )
+                              ) : (
+                                <ArrowUpDown className="h-4 w-4" />
+                              )}
+                            </button>
+                          ) : null}
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
-              ) : (
-                sortedData.map((row, index) => {
-                  const rowClasses = cn(
-                    "border-b border-border/50 transition-colors",
-                    hoverable && "hover:bg-muted/30",
-                    striped && index % 2 !== 0 && "bg-muted/[0.16]",
-                    isRowClickable && "cursor-pointer",
-                    rowClassName?.(row, index),
-                  );
+              </thead>
 
-                  const motionProps = enableRowAnimations
-                    ? {
+              <tbody>
+                {showSkeletonLoading ? (
+                  Array.from({ length: 5 }).map((_, rowIndex) => (
+                    <tr key={rowIndex} className="border-b border-border/50">
+                      {selectableRows ? (
+                        <td className="px-4 py-4">
+                          <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                        </td>
+                      ) : null}
+
+                      {visibleColumns.map((column) => (
+                        <td key={column.id} className="px-4 py-4">
+                          <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : sortedData.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={visibleColumns.length + (selectableRows ? 1 : 0) || 1}
+                      className="px-4 py-12 text-center text-sm text-muted-foreground"
+                    >
+                      {emptyMessage}
+                    </td>
+                  </tr>
+                ) : (
+                  sortedData.map((row, index) => {
+                    const rowClasses = cn(
+                      "border-b border-border/50 transition-colors",
+                      hoverable && "hover:bg-muted/30",
+                      striped && index % 2 !== 0 && "bg-muted/[0.16]",
+                      isRowClickable && "cursor-pointer",
+                      rowClassName?.(row, index),
+                    );
+
+                    const motionProps = enableRowAnimations
+                      ? {
                         initial: { opacity: 0, y: 8 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.2, delay: index * 0.03 },
                       }
-                    : {};
+                      : {};
 
-                  const rowKeyValue = resolveRowKey(row, index);
-                  const isSelected = activeSelectedRowKeys.includes(rowKeyValue);
+                    const rowKeyValue = resolveRowKey(row, index);
+                    const isSelected = activeSelectedRowKeys.includes(rowKeyValue);
 
-                  const rowCells = (
-                    <>
-                      {selectableRows ? (
-                        <td
-                          className="px-2.5 py-2"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleToggleRow(row, index)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
-                          >
-                            {isSelected ? (
-                              <CheckSquare className="h-4 w-4" />
-                            ) : (
-                              <Square className="h-4 w-4" />
-                            )}
-                          </button>
-                        </td>
-                      ) : null}
-
-                      {visibleColumns.map((column) => {
-                        const isCellClickable =
-                          !!column.onCellClick && column.clickable !== false;
-                        const shouldStopRowClick =
-                          column.stopRowClick || isCellClickable;
-
-                        return (
+                    const rowCells = (
+                      <>
+                        {selectableRows ? (
                           <td
-                            key={column.id}
-                            onClick={
-                              shouldStopRowClick
-                                ? (event) => {
+                            className="px-2.5 py-2"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRow(row, index)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background transition hover:bg-muted"
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="h-4 w-4" />
+                              ) : (
+                                <Square className="h-4 w-4" />
+                              )}
+                            </button>
+                          </td>
+                        ) : null}
+
+                        {visibleColumns.map((column) => {
+                          const isCellClickable =
+                            !!column.onCellClick && column.clickable !== false;
+                          const shouldStopRowClick =
+                            column.stopRowClick || isCellClickable;
+
+                          return (
+                            <td
+                              key={column.id}
+                              onClick={
+                                shouldStopRowClick
+                                  ? (event) => {
                                     event.stopPropagation();
                                     if (isCellClickable) {
                                       column.onCellClick?.(row, index, event);
                                     }
                                   }
-                                : undefined
-                            }
-                            className={cn(
-                              "px-2.5 py-2 align-middle text-foreground",
-                              column.className,
-                              isCellClickable && "cursor-pointer hover:underline",
-                            )}
-                          >
-                            {column.cell
-                              ? column.cell(row, index)
-                              : column.accessorKey
-                                ? String(row[column.accessorKey] ?? "")
-                                : null}
-                          </td>
-                        );
-                      })}
-                    </>
-                  );
+                                  : undefined
+                              }
+                              className={cn(
+                                "px-2 py-1 align-middle text-foregroun",
+                                column.className,
+                                isCellClickable && "cursor-pointer hover:underline",
+                              )}
+                            >
+                              {column.cell
+                                ? column.cell(row, index)
+                                : column.accessorKey
+                                  ? String(row[column.accessorKey] ?? "")
+                                  : null}
+                            </td>
+                          );
+                        })}
+                      </>
+                    );
 
-                  if (enableRowAnimations) {
+                    if (enableRowAnimations) {
+                      return (
+                        <motion.tr
+                          key={rowKeyValue}
+                          {...motionProps}
+                          onClick={
+                            isRowClickable ? () => onRowClick?.(row, index) : undefined
+                          }
+                          className={cn(rowClasses, isSelected && "bg-primary/5")}
+                        >
+                          {rowCells}
+                        </motion.tr>
+                      );
+                    }
+
                     return (
-                      <motion.tr
+                      <tr
                         key={rowKeyValue}
-                        {...motionProps}
                         onClick={
                           isRowClickable ? () => onRowClick?.(row, index) : undefined
                         }
                         className={cn(rowClasses, isSelected && "bg-primary/5")}
                       >
                         {rowCells}
-                      </motion.tr>
+                      </tr>
                     );
-                  }
-
-                  return (
-                    <tr
-                      key={rowKeyValue}
-                      onClick={
-                        isRowClickable ? () => onRowClick?.(row, index) : undefined
-                      }
-                      className={cn(rowClasses, isSelected && "bg-primary/5")}
-                    >
-                      {rowCells}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       ) : null}
 
       {pagination && onPageChange && pagination.total > pagination.limit ? (
