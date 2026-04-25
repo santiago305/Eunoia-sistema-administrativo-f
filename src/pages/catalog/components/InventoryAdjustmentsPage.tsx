@@ -395,7 +395,7 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
         id: "numero",
         header: "Número",
         accessorKey: "numero",
-        headerClassName: "text-left w-[150px]",
+        headerClassName: "text-left",
         className: "text-left",
         sortable: false,
       },
@@ -403,7 +403,7 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
         id: "status",
         header: "Estado",
         accessorKey: "statusLabel",
-        headerClassName: "text-left w-[140px]",
+        headerClassName: "text-left",
         className: "text-left",
         sortable: false,
       },
@@ -432,7 +432,7 @@ export function InventoryAdjustmentsPage({ config }: InventoryAdjustmentsPagePro
             <div className="text-[10px] text-black/50">{row.time}</div>
           </div>
         ),
-        headerClassName: "text-left w-[140px]",
+        headerClassName: " w-[140px]",
         className: "text-left",
         sortable: false,
       },

@@ -70,8 +70,8 @@ export function useProducts(
       setState({
         items: res.items ?? [],
         total: res.total ?? 0,
-        page: res.page ?? query.page ?? 1,
-        limit: res.limit ?? query.limit ?? 25,
+        page: Number(res.page ?? query.page ?? 1),
+        limit: Number(res.limit ?? query.limit ?? 25),
       });
     } catch {
       setError("Error al cargar productos.");
@@ -103,8 +103,8 @@ export function useProducts(
         setState({
           items: res.items ?? [],
           total: res.total ?? 0,
-          page: res.page ?? 1,
-          limit: res.limit ?? query.limit ?? 25,
+          page: Number(res.page ?? 1),
+          limit: Number(res.limit ?? query.limit ?? 25),
         });
       } catch {
         setError("Error al cargar productos.");

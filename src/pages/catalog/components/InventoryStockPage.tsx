@@ -473,7 +473,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         q: executedSnapshot.q || undefined,
         filters: executedSnapshot.filters.length ? JSON.stringify(executedSnapshot.filters) : undefined,
         productType: config.productType,
-      } as any)) as {
+      } as any)) as unknown as {
         items?: InventorySnapshotRow[];
         total?: number;
         page?: number;
@@ -482,7 +482,11 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       const items = res.items ?? [];
       setInventoryRows(items);
       setInventoryTotal(res.total ?? items.length);
-      if (res.page && res.page !== page) setPage(res.page);
+      
+      const resPage = Number(res.page);
+      if (!isNaN(resPage) && resPage > 0 && resPage !== page) {
+        setPage(resPage);
+      }
 
       if (hasInventorySearchCriteria(executedSnapshot)) {
         void loadSearchState();
@@ -529,9 +533,21 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     void loadWarehouses();
   }, []);
 
+  // Referencia para evitar dobles peticiones consecutivas o loops
+  const fetchLockRef = useRef(false);
+
   useEffect(() => {
-    void loadInventory();
-  }, [loadInventory]);
+    if (fetchLockRef.current) return;
+    fetchLockRef.current = true;
+    
+    void loadInventory().finally(() => {
+      // Liberar el lock después de un corto tiempo para permitir futuras peticiones
+      setTimeout(() => {
+        fetchLockRef.current = false;
+      }, 100);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, executedSnapshot, warehouseQuery, config.productType]);
 
   const handleSaveMetric = useCallback(async (name: string) => {
     if (!hasInventorySearchCriteria(executedSnapshot)) return false;
