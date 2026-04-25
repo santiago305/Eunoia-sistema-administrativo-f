@@ -343,8 +343,8 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         id: "quantity",
         header: "Cantidad",
         accessorKey: "quantity",
-        headerClassName: "text-right w-[90px]",
-        className: "text-black/70 text-right",
+        headerClassName: "text-center w-[90px] [&>div]:justify-center",
+        className: "text-black/70 text-center",
         hideable: true,
         sortable: false,
       },
@@ -361,12 +361,14 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         id: "direction",
         header: "E/S",
         cell: (row) => (
-          <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-            {statusLabel[row.direction] ?? row.direction}
-          </span>
+          <div className="flex justify-center">
+            <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+              {statusLabel[row.direction] ?? row.direction}
+            </span>
+          </div>
         ),
-        headerClassName: "text-left w-[70px]",
-        className: "text-black/70",
+        headerClassName: "text-center w-[70px] [&>div]:justify-center",
+        className: "text-black/70 text-center",
         hideable: true,
         sortable: false,
       },

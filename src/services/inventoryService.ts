@@ -7,6 +7,11 @@ import type {
   ListInventoryQuery,
 } from "@/pages/catalog/types/inventory";
 import type { ProductType } from "@/pages/catalog/types/ProductTypes";
+import type {
+  InventorySearchSnapshot,
+  InventorySearchStateResponse,
+} from "@/pages/catalog/types/inventorySearch";
+import type { ProductCatalogProductType } from "@/pages/catalog/types/product";
 
 export const getStock = async (params: GetStockQuery): Promise<GetStockResponse> => {
   const response = await axiosInstance.get(
@@ -58,6 +63,34 @@ export const listInventory = async (params: ListInventoryQuery): Promise<Invento
 
   const response = await axiosInstance.get(API_INVENTORY_GROUP.list, {
     params: requestParams,
+  });
+  return response.data;
+};
+
+export const getInventorySearchState = async (params: {
+  productType?: ProductCatalogProductType;
+}): Promise<InventorySearchStateResponse> => {
+  const response = await axiosInstance.get(API_INVENTORY_GROUP.searchState, { params });
+  return response.data;
+};
+
+export const saveInventorySearchMetric = async (payload: {
+  name: string;
+  productType?: ProductCatalogProductType;
+  snapshot: InventorySearchSnapshot;
+}): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_INVENTORY_GROUP.saveSearchMetric, payload);
+  return response.data;
+};
+
+export const deleteInventorySearchMetric = async (params: {
+  metricId: string;
+  productType?: ProductCatalogProductType;
+}): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_INVENTORY_GROUP.deleteSearchMetric(params.metricId), {
+    params: {
+      ...(params.productType ? { productType: params.productType } : {}),
+    },
   });
   return response.data;
 };

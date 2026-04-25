@@ -6,6 +6,7 @@ import {
 import type {
   InventorySearchCatalogs,
   InventorySearchFilterKey,
+  InventorySearchLabels,
   InventorySearchRule,
   InventorySearchSnapshot,
   InventorySmartSearchColumn,
@@ -22,6 +23,7 @@ type Props = {
   columns: InventorySmartSearchColumn[];
   snapshot: InventorySearchSnapshot;
   catalogs?: InventorySearchCatalogs | null;
+  labels?: InventorySearchLabels;
   filterQuery?: string;
   onApplySnapshot: (snapshot: InventorySearchSnapshot) => void;
   onApplyRule: (rule: InventorySearchRule) => void;
@@ -35,6 +37,7 @@ export function InventorySmartSearchPanel({
   columns,
   snapshot,
   catalogs,
+  labels,
   filterQuery,
   onApplySnapshot,
   onApplyRule,
@@ -57,10 +60,9 @@ export function InventorySmartSearchPanel({
       }
       getSelectionCount={getInventorySearchSelectionCount}
       fieldsSectionTitle="Columnas"
-      fieldsSectionDescription="Filtra inventario por almacén."
+      fieldsSectionDescription={`Filtra inventario por ${labels?.item?.toLowerCase() ?? "producto"}, almacen y stock.`}
       initialVisibleFields={4}
       filterQuery={filterQuery}
     />
   );
 }
-

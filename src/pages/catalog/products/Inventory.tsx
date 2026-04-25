@@ -9,7 +9,7 @@ export default function CatalogInventory() {
         productType: ProductTypes.PRODUCT,
         pageTitle: "Catalogo - Inventario",
         headingTitle: "Inventario de productos",
-        recentStorageKey: "recent-search:catalog-inventory",
+        itemLabel: "Producto (SKU)",
         tableId: "catalog-inventory-table",
         searchLabel: "Buscar producto",
         searchName: "catalog-inventory-search",

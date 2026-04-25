@@ -302,17 +302,27 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             {
                 id: "skuCount",
                 header: "Variantes",
+                headerClassName: "text-center [&>div]:justify-center",
+                className: "text-center",
                 cell: (row) => <span className="text-black/70">{row.skuCount ?? 0}</span>,
             },
             {
                 id: "inventoryTotal",
                 header: "Stock",
+                headerClassName: "text-center [&>div]:justify-center",
+                className: "text-center",
                 cell: (row) => <span className="text-black/70">{row.inventoryTotal ?? 0}</span>,
             },
             {
                 id: "status",
                 header: "Estado",
-                cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
+                headerClassName: "text-center [&>div]:justify-center",
+                className: "text-center",
+                cell: (row) => (
+                    <div className="flex justify-center">
+                        <StatusPill active={row.isActive} PRIMARY={PRIMARY} />
+                    </div>
+                ),
             },
             {
                 id: "actions",

@@ -3,29 +3,31 @@ import type {
   DataTableSearchOption,
   SmartSearchFieldConfig,
   SmartSearchOperatorOption,
-  SmartSearchRule,
 } from "@/components/table/search";
+import {
+  InventorySearchFields,
+  type InventorySearchField,
+  type InventorySearchOperator,
+  type InventorySearchRule,
+  type InventorySearchSnapshot,
+} from "@/pages/catalog/types/inventorySearch";
 
-export type InventoryNumericSearchField = "onHand" | "reserved" | "available";
-export type InventorySearchField = "warehouse" | InventoryNumericSearchField;
+export type { InventorySearchRule, InventorySearchSnapshot } from "@/pages/catalog/types/inventorySearch";
+
+export type InventoryNumericSearchField =
+  | typeof InventorySearchFields.ON_HAND
+  | typeof InventorySearchFields.RESERVED
+  | typeof InventorySearchFields.AVAILABLE;
+
 export type InventorySearchFilterKey = InventorySearchField;
-
-export type InventorySearchOperator = "IN" | "EQ" | "GT" | "GTE" | "LT" | "LTE";
-
-export type InventorySearchRule = SmartSearchRule<
-  InventorySearchField,
-  InventorySearchOperator
->;
-
 export type InventorySearchFilters = InventorySearchRule[];
-
-export type InventorySearchSnapshot = {
-  q?: string;
-  filters: InventorySearchFilters;
-};
 
 export type InventorySearchCatalogs = {
   warehouses: DataTableSearchOption[];
+};
+
+export type InventorySearchLabels = {
+  item: string;
 };
 
 export type InventorySearchChip = DataTableSearchChip<InventorySearchFilterKey>;
@@ -38,25 +40,29 @@ export type InventorySmartSearchColumn = SmartSearchFieldConfig<
 type InventorySearchOperatorOption =
   SmartSearchOperatorOption<InventorySearchOperator>;
 
-const InventorySearchOperators = {
-  IN: "IN",
-  EQ: "EQ",
-  GT: "GT",
-  GTE: "GTE",
-  LT: "LT",
-  LTE: "LTE",
-} as const;
+const IN_OPERATOR_OPTIONS: InventorySearchOperatorOption[] = [
+  { id: "IN", label: "Es alguno de" },
+];
 
-const OPERATOR_OPTIONS: InventorySearchOperatorOption[] = [
-  { id: InventorySearchOperators.IN, label: "Es alguno de" },
+const TEXT_OPERATOR_OPTIONS: InventorySearchOperatorOption[] = [
+  { id: "CONTAINS", label: "Contiene" },
+  { id: "EQ", label: "Es igual a" },
 ];
 
 const NUMBER_OPERATOR_OPTIONS: InventorySearchOperatorOption[] = [
-  { id: InventorySearchOperators.EQ, label: "Igual a" },
-  { id: InventorySearchOperators.GT, label: "Mayor que" },
-  { id: InventorySearchOperators.GTE, label: "Mayor o igual" },
-  { id: InventorySearchOperators.LT, label: "Menor que" },
-  { id: InventorySearchOperators.LTE, label: "Menor o igual" },
+  { id: "EQ", label: "Igual a" },
+  { id: "GT", label: "Mayor que" },
+  { id: "GTE", label: "Mayor o igual" },
+  { id: "LT", label: "Menor que" },
+  { id: "LTE", label: "Menor o igual" },
+];
+
+const FIELD_ORDER: InventorySearchField[] = [
+  InventorySearchFields.SKU,
+  InventorySearchFields.WAREHOUSE,
+  InventorySearchFields.ON_HAND,
+  InventorySearchFields.RESERVED,
+  InventorySearchFields.AVAILABLE,
 ];
 
 function uniqueStrings(values: string[] | undefined) {
@@ -69,8 +75,9 @@ function sanitizeRule(
   rule?: Partial<InventorySearchRule> | null,
 ): InventorySearchRule | null {
   if (!rule?.field || !rule.operator) return null;
-  if (rule.field === "warehouse") {
-    if (rule.operator !== InventorySearchOperators.IN) return null;
+
+  if (rule.field === InventorySearchFields.WAREHOUSE) {
+    if (rule.operator !== "IN") return null;
 
     const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : []))
       .filter((value) => value !== "all");
@@ -78,17 +85,34 @@ function sanitizeRule(
     if (!values.length) return null;
 
     return {
-      field: "warehouse",
-      operator: InventorySearchOperators.IN,
+      field: InventorySearchFields.WAREHOUSE,
+      operator: "IN",
       mode: rule.mode === "exclude" ? "exclude" : "include",
       values,
     };
   }
 
-  if (rule.field === "onHand" || rule.field === "reserved" || rule.field === "available") {
+  if (rule.field === InventorySearchFields.SKU) {
+    const value = rule.value?.trim();
+    if (!value) return null;
+    if (rule.operator !== "CONTAINS" && rule.operator !== "EQ") return null;
+
+    return {
+      field: InventorySearchFields.SKU,
+      operator: rule.operator,
+      value,
+    };
+  }
+
+  if (
+    rule.field === InventorySearchFields.ON_HAND ||
+    rule.field === InventorySearchFields.RESERVED ||
+    rule.field === InventorySearchFields.AVAILABLE
+  ) {
     const value = rule.value?.trim();
     if (!value || Number.isNaN(Number(value))) return null;
     if (!["EQ", "GT", "GTE", "LT", "LTE"].includes(rule.operator)) return null;
+
     return {
       field: rule.field,
       operator: rule.operator,
@@ -97,6 +121,18 @@ function sanitizeRule(
   }
 
   return null;
+}
+
+function getCatalogMaps(catalogs?: InventorySearchCatalogs | null) {
+  return {
+    warehouses: new Map(
+      (catalogs?.warehouses ?? []).map((option) => [option.id, option.label]),
+    ),
+  };
+}
+
+function getItemLabel(labels?: InventorySearchLabels | null) {
+  return labels?.item ?? "Producto (SKU)";
 }
 
 export function createEmptyInventorySearchFilters(): InventorySearchFilters {
@@ -127,8 +163,15 @@ export function sanitizeInventorySearchSnapshot(
 
   return {
     q: q || undefined,
-    filters: Array.from(merged.values()),
+    filters: FIELD_ORDER.map((field) => merged.get(field)).filter(Boolean) as InventorySearchRule[],
   };
+}
+
+export function hasInventorySearchCriteria(
+  snapshot?: Partial<InventorySearchSnapshot> | null,
+) {
+  const normalized = sanitizeInventorySearchSnapshot(snapshot);
+  return Boolean(normalized.q || normalized.filters.length);
 }
 
 export function findInventorySearchRule(
@@ -180,21 +223,13 @@ export function removeInventorySearchKey(
   });
 }
 
-function getCatalogMaps(catalogs?: InventorySearchCatalogs | null) {
-  return {
-    warehouses: new Map(
-      (catalogs?.warehouses ?? []).map((option) => [option.id, option.label]),
-    ),
-  };
-}
-
 export function getInventorySearchSelectionCount(
   snapshot: InventorySearchSnapshot,
   key: InventorySearchFilterKey,
 ) {
   const rule = findInventorySearchRule(snapshot, key);
   if (!rule) return 0;
-  return rule.operator === InventorySearchOperators.IN ? rule.values?.length ?? 0 : 1;
+  return rule.operator === "IN" ? rule.values?.length ?? 0 : 1;
 }
 
 export function getInventorySearchRuleSummary(
@@ -205,11 +240,16 @@ export function getInventorySearchRuleSummary(
   const rule = findInventorySearchRule(snapshot, key);
   if (!rule) return null;
 
-  if (rule.operator === InventorySearchOperators.IN) {
+  if (rule.operator === "IN") {
     const map = getCatalogMaps(catalogs).warehouses;
     const labels = (rule.values ?? []).map((value) => map.get(value) ?? value);
     const content = labels.join(" - ");
     return rule.mode === "exclude" ? `Excluye: ${content}` : content;
+  }
+
+  if (rule.field === InventorySearchFields.SKU) {
+    const operatorLabel = rule.operator === "CONTAINS" ? "contiene" : "=";
+    return `${operatorLabel} ${rule.value ?? ""}`.trim();
   }
 
   return `${rule.operator} ${rule.value ?? ""}`.trim();
@@ -218,6 +258,7 @@ export function getInventorySearchRuleSummary(
 export function buildInventorySearchChips(
   snapshot: InventorySearchSnapshot,
   catalogs?: InventorySearchCatalogs | null,
+  labels?: InventorySearchLabels,
 ): InventorySearchChip[] {
   const normalized = sanitizeInventorySearchSnapshot(snapshot);
   const chips: InventorySearchChip[] = [];
@@ -230,24 +271,49 @@ export function buildInventorySearchChips(
     });
   }
 
-  const warehouseRule = findInventorySearchRule(normalized, "warehouse");
-  if (warehouseRule?.values?.length) {
-    const label = getInventorySearchRuleSummary(normalized, "warehouse", catalogs);
+  const skuRule = findInventorySearchRule(normalized, InventorySearchFields.SKU);
+  if (skuRule?.value) {
+    const label = getInventorySearchRuleSummary(normalized, InventorySearchFields.SKU, catalogs);
     if (label) {
       chips.push({
-        id: "warehouse",
-        label: `Almacén: ${label}`,
-        removeKey: "warehouse",
+        id: InventorySearchFields.SKU,
+        label: `${getItemLabel(labels)}: ${label}`,
+        removeKey: InventorySearchFields.SKU,
       });
     }
   }
 
-  (["onHand", "reserved", "available"] as InventoryNumericSearchField[]).forEach((field) => {
+  const warehouseRule = findInventorySearchRule(normalized, InventorySearchFields.WAREHOUSE);
+  if (warehouseRule?.values?.length) {
+    const label = getInventorySearchRuleSummary(normalized, InventorySearchFields.WAREHOUSE, catalogs);
+    if (label) {
+      chips.push({
+        id: InventorySearchFields.WAREHOUSE,
+        label: `Almacen: ${label}`,
+        removeKey: InventorySearchFields.WAREHOUSE,
+      });
+    }
+  }
+
+  (
+    [
+      InventorySearchFields.ON_HAND,
+      InventorySearchFields.RESERVED,
+      InventorySearchFields.AVAILABLE,
+    ] as InventoryNumericSearchField[]
+  ).forEach((field) => {
     const label = getInventorySearchRuleSummary(normalized, field, catalogs);
     if (!label) return;
+
     chips.push({
       id: field,
-      label: `${field === "onHand" ? "Stock" : field === "reserved" ? "Reservado" : "Disponible"}: ${label}`,
+      label: `${
+        field === InventorySearchFields.ON_HAND
+          ? "Stock"
+          : field === InventorySearchFields.RESERVED
+            ? "Reservado"
+            : "Disponible"
+      }: ${label}`,
       removeKey: field,
     });
   });
@@ -257,19 +323,28 @@ export function buildInventorySearchChips(
 
 export function buildInventorySmartSearchColumns(
   catalogs?: InventorySearchCatalogs | null,
+  labels?: InventorySearchLabels,
 ): InventorySmartSearchColumn[] {
   return [
     {
-      id: "warehouse",
-      label: "Almacén",
+      id: InventorySearchFields.SKU,
+      label: getItemLabel(labels),
+      kind: "text",
+      description: "Busca por nombre del SKU o codigo.",
+      operators: TEXT_OPERATOR_OPTIONS,
+      placeholder: "Ej. Arcilla verde",
+    },
+    {
+      id: InventorySearchFields.WAREHOUSE,
+      label: "Almacen",
       kind: "catalog",
       description: "Selecciona uno o varios almacenes y define si se incluyen o excluyen.",
-      operators: OPERATOR_OPTIONS,
+      operators: IN_OPERATOR_OPTIONS,
       supportsExclude: true,
       options: catalogs?.warehouses ?? [],
     },
     {
-      id: "onHand",
+      id: InventorySearchFields.ON_HAND,
       label: "Stock",
       kind: "number",
       description: "Compara el stock total del registro.",
@@ -277,7 +352,7 @@ export function buildInventorySmartSearchColumns(
       placeholder: "Ej. 50",
     },
     {
-      id: "reserved",
+      id: InventorySearchFields.RESERVED,
       label: "Reservado",
       kind: "number",
       description: "Compara la cantidad reservada.",
@@ -285,7 +360,7 @@ export function buildInventorySmartSearchColumns(
       placeholder: "Ej. 10",
     },
     {
-      id: "available",
+      id: InventorySearchFields.AVAILABLE,
       label: "Disponible",
       kind: "number",
       description: "Compara el disponible del inventario.",

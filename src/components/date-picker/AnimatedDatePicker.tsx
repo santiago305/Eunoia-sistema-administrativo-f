@@ -61,7 +61,7 @@ export function AnimatedDatePicker({
     panelRef,
     canOpen,
     closePanel,
-    openPanel,
+    togglePanel,
   } = useFloatingDatePanel({
     disabled,
     readOnly,
@@ -98,7 +98,7 @@ export function AnimatedDatePicker({
           onClick={() => {
             if (!canOpen) return;
             setExpanded(true);
-            openPanel();
+            togglePanel();
           }}
           style={{ width: expanded || hasValue ? expandedWidth : collapsedWidth }}
           className={cn(

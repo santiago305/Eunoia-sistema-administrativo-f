@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import * as echarts from "echarts";
 import { useReducedMotion } from "framer-motion";
+import { ArrowLeftRight, FileText, Menu, Wrench } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { PageShell } from "@/components/layout/PageShell";
 import { Headed } from "@/components/Headed";
@@ -13,13 +14,17 @@ import {
   DataTableSearchBar,
   DataTableSearchChips,
   type DataTableRecentSearchItem,
+  type DataTableSavedSearchItem,
 } from "@/components/table/search";
 import { useFlashMessage } from "@/hooks/useFlashMessage";
-import { errorResponse } from "@/common/utils/response";
+import { errorResponse, successResponse } from "@/common/utils/response";
 import { listActive } from "@/services/warehouseServices";
 import {
+  deleteInventorySearchMetric,
+  getInventorySearchState,
   getSkuStockSnapshots,
   listInventory,
+  saveInventorySearchMetric,
   type SkuStockForecast,
 } from "@/services/inventoryService";
 import type { Warehouse } from "@/pages/warehouse/types/warehouse";
@@ -27,12 +32,12 @@ import type {
   ProductCatalogProductType,
   ProductSkuWithAttributes,
 } from "@/pages/catalog/types/product";
-import {  useEChart } from "../utils/inventoryUtils";
+import type { InventorySearchStateResponse } from "@/pages/catalog/types/inventorySearch";
+import { useEChart } from "../utils/inventoryUtils";
 import { useCompany } from "@/hooks/useCompany";
-import { ArrowLeftRight, FileText, Menu, Wrench } from "lucide-react";
 import { InventorySmartSearchPanel } from "@/pages/catalog/components/InventorySmartSearchPanel";
 import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
-import { normalizeQuantity  } from "@/utils/functionPurchases";
+import { normalizeQuantity } from "@/utils/functionPurchases";
 import type {
   InventorySearchFilterKey,
   InventorySearchFilters,
@@ -44,19 +49,19 @@ import {
   buildInventorySmartSearchColumns,
   createEmptyInventorySearchFilters,
   findInventorySearchRule,
+  hasInventorySearchCriteria,
   removeInventorySearchKey,
   sanitizeInventorySearchSnapshot,
   upsertInventorySearchRule,
 } from "@/pages/catalog/utils/inventorySmartSearch";
-import { loadLocalRecentSearches, pushLocalRecentSearch } from "@/utils/localRecentSearches";
 
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 25;
 
 type InventoryStockPageConfig = {
   productType: ProductCatalogProductType;
   pageTitle: string;
   headingTitle: string;
-  recentStorageKey: string;
+  itemLabel: string;
   tableId: string;
   searchLabel: string;
   searchName: string;
@@ -82,6 +87,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const { hasCompany } = useCompany();
   const navigate = useNavigate();
   const companyActionDisabled = !hasCompany;
+
   const animationConfig = useMemo<
     Pick<
       echarts.EChartsOption,
@@ -105,7 +111,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [warehouseOptions, setWarehouseOptions] = useState<
     { value: string; label: string }[]
   >([]);
-
+  const [searchState, setSearchState] = useState<InventorySearchStateResponse | null>(null);
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -113,11 +119,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [searchFilters, setSearchFilters] = useState<InventorySearchFilters>(() =>
     createEmptyInventorySearchFilters(),
   );
-  const [recentSearches, setRecentSearches] = useState<
-    DataTableRecentSearchItem<InventorySearchSnapshot>[]
-  >(() => loadLocalRecentSearches(config.recentStorageKey));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [savingMetric, setSavingMetric] = useState(false);
   const [inventoryRows, setInventoryRows] = useState<InventorySnapshotRow[]>([]);
   const [inventoryTotal, setInventoryTotal] = useState(0);
   const [forecastModalOpen, setForecastModalOpen] = useState(false);
@@ -130,16 +134,18 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
 
   const smartSearchCatalogs = useMemo(
     () => ({
-      warehouses: warehouseOptions
-        .filter((option) => option.value !== "all")
-        .map((option) => ({ id: option.value, label: option.label })),
+      warehouses:
+        searchState?.catalogs.warehouses ??
+        warehouseOptions
+          .filter((option) => option.value !== "all")
+          .map((option) => ({ id: option.value, label: option.label })),
     }),
-    [warehouseOptions],
+    [searchState, warehouseOptions],
   );
 
   const smartSearchColumns = useMemo(
-    () => buildInventorySmartSearchColumns(smartSearchCatalogs),
-    [smartSearchCatalogs],
+    () => buildInventorySmartSearchColumns(smartSearchCatalogs, { item: config.itemLabel }),
+    [config.itemLabel, smartSearchCatalogs],
   );
 
   const draftSnapshot = useMemo<InventorySearchSnapshot>(
@@ -158,6 +164,27 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         filters: searchFilters,
       }),
     [appliedSearchText, searchFilters],
+  );
+
+  const recentSearches = useMemo<DataTableRecentSearchItem<InventorySearchSnapshot>[]>(
+    () =>
+      (searchState?.recent ?? []).map((item) => ({
+        id: item.recentId,
+        label: item.label,
+        snapshot: item.snapshot,
+      })),
+    [searchState],
+  );
+
+  const savedMetrics = useMemo<DataTableSavedSearchItem<InventorySearchSnapshot>[]>(
+    () =>
+      (searchState?.saved ?? []).map((metric) => ({
+        id: metric.metricId,
+        name: metric.name,
+        label: metric.label,
+        snapshot: metric.snapshot,
+      })),
+    [searchState],
   );
 
   const warehouseQuery = useMemo(() => {
@@ -180,111 +207,86 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   }, [executedSnapshot]);
 
   const searchChips = useMemo(
-    () => buildInventorySearchChips(executedSnapshot, smartSearchCatalogs),
-    [executedSnapshot, smartSearchCatalogs],
+    () => buildInventorySearchChips(executedSnapshot, smartSearchCatalogs, { item: config.itemLabel }),
+    [config.itemLabel, executedSnapshot, smartSearchCatalogs],
   );
 
-  const buildRecentLabel = useCallback(
-    (snapshot: InventorySearchSnapshot) => {
-      const chips = buildInventorySearchChips(snapshot, smartSearchCatalogs);
-      return chips.map((chip) => chip.label).join(" · ") || "Búsqueda";
-    },
-    [smartSearchCatalogs],
-  );
+  const loadSearchState = useCallback(async () => {
+    try {
+      const response = await getInventorySearchState({ productType: config.productType });
+      setSearchState(response);
+    } catch {
+      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+    }
+  }, [config.productType, showFlash]);
 
-  const recordRecentSearch = useCallback(
-    (snapshot: InventorySearchSnapshot) => {
-      const hasFilters = Boolean(snapshot.filters.length);
-      const hasQuery = Boolean(snapshot.q);
-      if (!hasFilters && !hasQuery) return;
-
-      const normalized = sanitizeInventorySearchSnapshot(snapshot);
-      const id = JSON.stringify(normalized);
-      const label = buildRecentLabel(normalized);
-
-      setRecentSearches(
-        pushLocalRecentSearch(config.recentStorageKey, {
-          id,
-          label,
-          snapshot: normalized,
-        }),
-      );
-    },
-    [buildRecentLabel, config.recentStorageKey],
-  );
-
-  const applySmartSnapshot = (snapshot: InventorySearchSnapshot) => {
+  const applySmartSnapshot = useCallback((snapshot: InventorySearchSnapshot) => {
     const normalized = sanitizeInventorySearchSnapshot(snapshot);
-    setSearchText(normalized.q ?? "");
-    setAppliedSearchText(normalized.q ?? "");
-    setSearchFilters(normalized.filters);
-    recordRecentSearch(normalized);
-    setSelectedSku(null);
-    setSelectedWarehouseId(null);
-    setPage(1);
-  };
-
-  const submitSearch = () => {
-    const next = searchText.trim();
-    const nextSnapshot = sanitizeInventorySearchSnapshot({
-      q: next,
-      filters: searchFilters,
+    startTransition(() => {
+      setSearchText(normalized.q ?? "");
+      setAppliedSearchText(normalized.q ?? "");
+      setSearchFilters(normalized.filters);
+      setSelectedSku(null);
+      setSelectedWarehouseId(null);
+      setPage(1);
     });
+  }, []);
 
-    recordRecentSearch(nextSnapshot);
-    setAppliedSearchText(next);
-    setSelectedSku(null);
-    setSelectedWarehouseId(null);
-    setPage(1);
-  };
+  const submitSearch = useCallback(() => {
+    const next = searchText.trim();
+    startTransition(() => {
+      setAppliedSearchText(next);
+      setSelectedSku(null);
+      setSelectedWarehouseId(null);
+      setPage(1);
+    });
+  }, [searchText]);
 
-  const handleApplySearchRule = (rule: InventorySearchRule) => {
-    const next = upsertInventorySearchRule(
-      sanitizeInventorySearchSnapshot({ q: searchText, filters: searchFilters }),
-      rule,
-    );
-    setSearchFilters(next.filters);
-    recordRecentSearch(
-      sanitizeInventorySearchSnapshot({
-        q: appliedSearchText,
-        filters: next.filters,
-      }),
-    );
-    setSelectedSku(null);
-    setSelectedWarehouseId(null);
-    setPage(1);
-  };
+  const handleApplySearchRule = useCallback((rule: InventorySearchRule) => {
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = upsertInventorySearchRule(
+          sanitizeInventorySearchSnapshot({ q: searchText, filters: current }),
+          rule,
+        );
+        return next.filters;
+      });
+      setSelectedSku(null);
+      setSelectedWarehouseId(null);
+      setPage(1);
+    });
+  }, [searchText]);
 
-  const handleRemoveSearchRule = (fieldId: InventorySearchFilterKey) => {
-    const next = removeInventorySearchKey(
-      sanitizeInventorySearchSnapshot({ q: searchText, filters: searchFilters }),
-      fieldId,
-    );
-    setSearchFilters(next.filters);
-    recordRecentSearch(
-      sanitizeInventorySearchSnapshot({
-        q: appliedSearchText,
-        filters: next.filters,
-      }),
-    );
-    setSelectedSku(null);
-    setSelectedWarehouseId(null);
-    setPage(1);
-  };
+  const handleRemoveSearchRule = useCallback((fieldId: InventorySearchFilterKey) => {
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = removeInventorySearchKey(
+          sanitizeInventorySearchSnapshot({ q: searchText, filters: current }),
+          fieldId,
+        );
+        return next.filters;
+      });
+      setSelectedSku(null);
+      setSelectedWarehouseId(null);
+      setPage(1);
+    });
+  }, [searchText]);
 
-  const handleRemoveChip = (key: "q" | InventorySearchFilterKey) => {
+  const handleRemoveChip = useCallback((key: "q" | InventorySearchFilterKey) => {
     const nextSnapshot = removeInventorySearchKey(
       sanitizeInventorySearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
       key,
     );
-    setSearchText(nextSnapshot.q ?? "");
-    setAppliedSearchText(nextSnapshot.q ?? "");
-    setSearchFilters(nextSnapshot.filters);
-    recordRecentSearch(nextSnapshot);
-    setSelectedSku(null);
-    setSelectedWarehouseId(null);
-    setPage(1);
-  };
+
+    startTransition(() => {
+      setSearchText(nextSnapshot.q ?? "");
+      setAppliedSearchText(nextSnapshot.q ?? "");
+      setSearchFilters(nextSnapshot.filters);
+      setSelectedSku(null);
+      setSelectedWarehouseId(null);
+      setPage(1);
+    });
+  }, [appliedSearchText, searchFilters]);
 
   useEffect(() => {
     if (!selectedSku) {
@@ -294,6 +296,10 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       return;
     }
   }, [selectedSku]);
+
+  useEffect(() => {
+    void loadSearchState();
+  }, [loadSearchState]);
 
   const forecastChart = useMemo<echarts.EChartsOption>(() => {
     const categories = ["S1", "S2", "S3", "S4", "S5"];
@@ -321,9 +327,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       const start = formatDateLabel(from);
       const end = formatDateLabel(toExclusive);
       if (!start && !end) return "";
-      if (!end) return `${start} →`;
-      if (!start) return `→ ${end}`;
-      return `${start} → ${end}`;
+      if (!end) return `${start} ->`;
+      if (!start) return `-> ${end}`;
+      return `${start} -> ${end}`;
     };
 
     const weekRangesByCategory = new Map<string, string>();
@@ -372,7 +378,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     return {
       ...animationConfig,
       tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, formatter: tooltipFormatter },
-      legend: { top: 0, left: "center", data: ["Salidas", "Proyección", "Stock"] },
+      legend: { top: 0, left: "center", data: ["Salidas", "Proyeccion", "Stock"] },
       grid: { left: 20, right: 16, top: 24, bottom: 20, containLabel: true },
       xAxis: { type: "category", data: categories, axisLabel: { color: "#111" } },
       yAxis: { type: "value", axisLabel: { color: "#111" } },
@@ -393,7 +399,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
           barWidth: 18,
         },
         {
-          name: "Proyección",
+          name: "Proyeccion",
           type: "line",
           data: forecastLine,
           symbol: "circle",
@@ -454,8 +460,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     }
   };
 
-  const loadInventory = async () => {
-    if (loading) return;
+  const loadInventory = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -468,7 +473,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         q: executedSnapshot.q || undefined,
         filters: executedSnapshot.filters.length ? JSON.stringify(executedSnapshot.filters) : undefined,
         productType: config.productType,
-      } as unknown as Record<string, unknown>)) as unknown as {
+      } as any)) as {
         items?: InventorySnapshotRow[];
         total?: number;
         page?: number;
@@ -478,6 +483,10 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       setInventoryRows(items);
       setInventoryTotal(res.total ?? items.length);
       if (res.page && res.page !== page) setPage(res.page);
+
+      if (hasInventorySearchCriteria(executedSnapshot)) {
+        void loadSearchState();
+      }
     } catch {
       setInventoryRows([]);
       setInventoryTotal(0);
@@ -485,8 +494,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [config.productType, executedSnapshot, loadSearchState, page, showFlash, warehouseQuery]);
 
   const buildInventoryActions = (row: InventorySnapshotRow): ActionItem[] => [
     {
@@ -523,13 +531,58 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
 
   useEffect(() => {
     void loadInventory();
-  }, [config.productType, executedSnapshot, page, warehouseQuery]);
+  }, [loadInventory]);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    if (!hasInventorySearchCriteria(executedSnapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const response = await saveInventorySearchMetric({
+        name,
+        productType: config.productType,
+        snapshot: executedSnapshot,
+      });
+
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+        return true;
+      }
+
+      showFlash(errorResponse(response.message));
+      return false;
+    } catch {
+      showFlash(errorResponse("Error al guardar la metrica"));
+      return false;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [config.productType, executedSnapshot, loadSearchState, showFlash]);
+
+  const handleDeleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deleteInventorySearchMetric({
+        metricId,
+        productType: config.productType,
+      });
+
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch {
+      showFlash(errorResponse("Error al eliminar la metrica"));
+    }
+  }, [config.productType, loadSearchState, showFlash]);
 
   const columns = useMemo<DataTableColumn<InventorySnapshotRow>[]>(
     () => [
       {
         id: "name",
-        header: "SKU",
+        header: config.itemLabel,
         cell: (row) =>
           buildSkuLabelFromItem({
             skuItem: row.sku,
@@ -538,7 +591,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       },
       {
         id: "warehouse",
-        header: "Almacén",
+        header: "Almacen",
         sortAccessor: (row) => row.warehouseName,
         cell: (row) => <span className="text-black/70">{row.warehouseName}</span>,
       },
@@ -599,84 +652,87 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         ),
       },
     ],
-	    [companyActionDisabled, config.routes.adjustments, config.routes.kardex, config.routes.transfer, navigate],
-	  );
-
+    [companyActionDisabled, config.itemLabel, config.routes.adjustments, config.routes.kardex, config.routes.transfer, navigate],
+  );
 
   return (
     <PageShell>
       <PageTitle title={config.pageTitle} />
       <div className="space-y-2">
-          <Headed
-            title={config.headingTitle}
-            subtitle="Explora el stock por SKU y almacén."
-            size="lg"
-          />
+        <Headed
+          title={config.headingTitle}
+          subtitle="Explora el stock por producto, material y almacen."
+          size="lg"
+        />
 
         <section>
           <div className="space-y-3">
-             <div className="xl:col-span-2">
-                <DataTableSearchChips
-                  chips={searchChips}
-                  onRemove={(chip) => handleRemoveChip(chip.removeKey)}
-                />
-                <DataTable
-                  tableId={config.tableId}
-                  data={inventoryRows}
-                  columns={columns}
-                  rowKey={(row, index) =>
-                    `${row.sku.sku.id}-${row.warehouseId}-${index}`
-                  }
-                  loading={loading}
-                  emptyMessage="No hay registros con los filtros actuales."
-                  hoverable
-                  animated={!shouldReduceMotion}
-                  showSearch={false}
-                  selectableColumns
-                  toolbarSearchContent={
-                    <DataTableSearchBar
-                      value={searchText}
-                      onChange={(value) => {
-                        setSearchText(value);
-                      }}
-                      onSubmitSearch={submitSearch}
-                      searchLabel={config.searchLabel}
-                      searchName={config.searchName}
-                    >
-                      <InventorySmartSearchPanel
-                        recent={recentSearches}
-                        columns={smartSearchColumns}
-                        snapshot={draftSnapshot}
-                        catalogs={smartSearchCatalogs}
-                        filterQuery={searchText}
-                        onApplySnapshot={applySmartSnapshot}
-                        onApplyRule={handleApplySearchRule}
-                        onRemoveRule={handleRemoveSearchRule}
-                      />
-                    </DataTableSearchBar>
-                  }
-                  pagination={{
-                    page,
-                    limit: DEFAULT_LIMIT,
-                    total: inventoryTotal,
-                  }}
-                  onPageChange={(nextPage) => setPage(nextPage)}
-                  onRowClick={(row) => {
-                    setSelectedSku(row.sku.sku.id);
-                    setSelectedWarehouseId(row.warehouseId);
-                    setForecastModalOpen(true);
-                    void loadForecast(row.sku.sku.id);
-                  }}
-                  rowClassName={(row) =>
-                    isActiveRow(row)
-                      ? "bg-black/5 hover:bg-black/5"
-                      : "hover:bg-black/[0.03]"
-                  }
-                />
+            <div className="xl:col-span-2">
+              <DataTableSearchChips
+                chips={searchChips}
+                onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+              />
+              <DataTable
+                tableId={config.tableId}
+                data={inventoryRows}
+                columns={columns}
+                rowKey={(row, index) =>
+                  `${row.sku.sku.id}-${row.warehouseId}-${index}`
+                }
+                loading={loading}
+                emptyMessage="No hay registros con los filtros actuales."
+                hoverable
+                animated={!shouldReduceMotion}
+                showSearch={false}
+                selectableColumns
+                toolbarSearchContent={
+                  <DataTableSearchBar
+                    value={searchText}
+                    onChange={setSearchText}
+                    onSubmitSearch={submitSearch}
+                    searchLabel={config.searchLabel}
+                    searchName={config.searchName}
+                    canSaveMetric={hasInventorySearchCriteria(executedSnapshot)}
+                    saveLoading={savingMetric}
+                    onSaveMetric={handleSaveMetric}
+                  >
+                    <InventorySmartSearchPanel
+                      recent={recentSearches}
+                      saved={savedMetrics}
+                      columns={smartSearchColumns}
+                      snapshot={draftSnapshot}
+                      catalogs={smartSearchCatalogs}
+                      labels={{ item: config.itemLabel }}
+                      filterQuery={searchText}
+                      onApplySnapshot={applySmartSnapshot}
+                      onApplyRule={handleApplySearchRule}
+                      onRemoveRule={handleRemoveSearchRule}
+                      onDeleteMetric={handleDeleteMetric}
+                    />
+                  </DataTableSearchBar>
+                }
+                pagination={{
+                  page,
+                  limit: DEFAULT_LIMIT,
+                  total: inventoryTotal,
+                }}
+                onPageChange={(nextPage) => setPage(nextPage)}
+                onRowClick={(row) => {
+                  setSelectedSku(row.sku.sku.id);
+                  setSelectedWarehouseId(row.warehouseId);
+                  setForecastModalOpen(true);
+                  void loadForecast(row.sku.sku.id);
+                }}
+                rowClassName={(row) =>
+                  isActiveRow(row)
+                    ? "bg-black/5 hover:bg-black/5"
+                    : "hover:bg-black/[0.03]"
+                }
+              />
             </div>
-
           </div>
         </section>
+
         <Modal
           open={forecastModalOpen}
           onClose={() => {
@@ -684,19 +740,19 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
             setSelectedSku(null);
             setSelectedWarehouseId(null);
           }}
-          title="Proyección semanal"
+          title="Proyeccion semanal"
           className="w-[min(56rem,calc(100vw-2rem))]"
           bodyClassName="p-5"
         >
           {forecastLoading ? (
             <div className="flex h-[320px] items-center justify-center text-sm text-black/60">
-              Cargando proyección...
+              Cargando proyeccion...
             </div>
           ) : selectedForecast ? (
             <div ref={refForecast} className="h-[320px] w-full" />
           ) : (
             <div className="flex h-[320px] items-center justify-center text-sm text-black/60">
-              No hay datos de proyección para este SKU.
+              No hay datos de proyeccion para este SKU.
             </div>
           )}
         </Modal>

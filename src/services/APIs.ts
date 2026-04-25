@@ -194,6 +194,9 @@ export const API_KARDEX_GROUP = {
 
 export const API_INVENTORY_GROUP = {
   list: "/inventory",
+  searchState: "/inventory/search-state",
+  saveSearchMetric: "/inventory/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/inventory/search-metrics/${metricId}`,
   availableStockSkus: "/available-stock/skus",
   skuStockSnapshots: (skuId: string) => `/skus/${skuId}/stock/snapshots`,
   getStockQuery: (params: {

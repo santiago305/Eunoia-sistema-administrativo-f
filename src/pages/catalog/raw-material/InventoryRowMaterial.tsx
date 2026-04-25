@@ -9,7 +9,7 @@ export default function InventoryRowMaterial() {
         productType: ProductTypes.MATERIAL,
         pageTitle: "Suministros - Inventario",
         headingTitle: "Inventario de materiales",
-        recentStorageKey: "recent-search:row-material-inventory",
+        itemLabel: "Material",
         tableId: "row-material-inventory-table",
         searchLabel: "Buscar material",
         searchName: "row-material-inventory-search",

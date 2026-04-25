@@ -61,7 +61,7 @@ export function AnimatedDateRangePicker({
     panelRef,
     canOpen,
     closePanel,
-    openPanel,
+    togglePanel,
   } = useFloatingDatePanel({
     disabled,
     readOnly,
@@ -97,7 +97,7 @@ export function AnimatedDateRangePicker({
           disabled={disabled}
           onClick={() => {
             if (!canOpen) return;
-            openPanel();
+            togglePanel();
           }}
           className={cn(
             "peer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-lg border bg-background px-3 text-left text-sm text-foreground outline-none transition-all",
