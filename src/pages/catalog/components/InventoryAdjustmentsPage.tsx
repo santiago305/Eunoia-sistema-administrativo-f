@@ -29,7 +29,7 @@ import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import { SystemButton } from "@/components/SystemButton";
 import { getDocuments } from "@/services/documentService";
-import AdjustmentProductModal from "@/pages/catalog/components/AdjustmentFormProducts";
+import AdjustmentProductModal from "@/pages/catalog/products/components/AdjustmentFormProducts";
 import type { ProductType } from "@/pages/catalog/types/ProductTypes";
 import { useCompany } from "@/hooks/useCompany";
 import { DocumentInventoryDetails } from "@/components/DocumentInventoryDetails";

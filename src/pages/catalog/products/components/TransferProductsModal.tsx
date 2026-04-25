@@ -1,6 +1,6 @@
 import { Modal } from "@/components/modales/Modal";
-import TransferProducts from "@/pages/catalog/components/TransferFormProducts";
-import { InventoryDocumentProductType } from "../types/documentInventory";
+import TransferProducts from "@/pages/catalog/products/components/TransferFormProducts";
+import { InventoryDocumentProductType } from "@/pages/catalog/types/documentInventory";
 
 type Props = {
     open: boolean;

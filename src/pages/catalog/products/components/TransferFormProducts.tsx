@@ -18,8 +18,8 @@ import { money, parseDecimalInput } from "@/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/pages/warehouse/types/warehouse";
 import { RoutesPaths } from "@/router/config/routesPaths";
 import { useNavigate } from "react-router-dom";
-import { TransferItemModal } from "@/pages/catalog/components/TransferItemModal";
-import { TransferResultModal } from "@/pages/catalog/components/TransferResultModal";
+import { TransferItemModal } from "@/pages/catalog/products/components/TransferItemModal";
+import { TransferResultModal } from "@/pages/catalog/products/components/TransferResultModal";
 import { Headed } from "@/components/Headed";
 import { PageShell } from "@/components/layout/PageShell";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/pages/catalog/types/product";
@@ -35,8 +35,8 @@ import {
     getSkuUnitName,
     buildStockSummary,
     buildSkuLabelWithAttributes,
-} from "../types/transfer";
-import { skuStock } from "../types/documentInventory";
+} from "@/pages/catalog/types/transfer";
+import { skuStock } from "@/pages/catalog/types/documentInventory";
 
 const CURRENCY = "PEN";
 

@@ -31,7 +31,7 @@ import {
   getInventoryDocumentsSearchState,
   saveInventoryDocumentsSearchMetric,
 } from "@/services/documentService";
-import { TransferProductsModal } from "@/pages/catalog/components/TransferProductsModal";
+import { TransferProductsModal } from "@/pages/catalog/products/components/TransferProductsModal";
 import { useCompany } from "@/hooks/useCompany";
 import { DocumentInventoryDetails } from "@/components/DocumentInventoryDetails";
 import type {

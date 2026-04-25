@@ -545,31 +545,32 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       {
         id: "onHand",
         header: "Stock",
-        className: "text-right tabular-nums",
-        headerClassName: "text-left",
+        className: "text-center tabular-nums",
+        headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => row.onHand,
       },
       {
         id: "reserved",
         header: "Reservado",
-        className: "text-right tabular-nums",
-        headerClassName: "text-left",
+        className: "text-center tabular-nums",
+        headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => row.reserved,
       },
       {
         id: "available",
         header: "Disponible",
-        className: "text-right tabular-nums font-semibold",
-        headerClassName: "text-left",
+        className: "text-center tabular-nums font-semibold",
+        headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => row.available,
       },
       {
         id: "actions",
         header: "Acciones",
-        headerClassName: "text-right",
-        className: "text-right",
+        headerClassName: "text-center [&>div]:justify-center",
+        className: "text-center",
+        stopRowClick: true,
         cell: (row) => (
-          <div className="flex justify-end">
+          <div className="flex justify-center">
             <ActionsPopover
               actions={buildInventoryActions(row)}
               columns={1}
@@ -620,7 +621,6 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
                   onRemove={(chip) => handleRemoveChip(chip.removeKey)}
                 />
                 <DataTable
-                className="max-h-[85vh] overflow-hidden p-3"
                   tableId={config.tableId}
                   data={inventoryRows}
                   columns={columns}
