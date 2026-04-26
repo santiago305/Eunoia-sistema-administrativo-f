@@ -112,6 +112,7 @@ export type DataTableProps<T> = {
     onSortChange?: (sort: DataTableSortState) => void;
     toolbarSearchContent?: ReactNode;
     animateRowsThreshold?: number;
+    maxHeight?: string;
 };
 
 export type DataTableColumnPreference = {

@@ -89,6 +89,7 @@ export function DataTable<T extends Record<string, unknown>>({
   onSortChange,
   toolbarSearchContent,
   animateRowsThreshold = 12,
+  maxHeight,
 }: DataTableProps<T>) {
   const preferenceStorageKey = `data-table-preferences:${tableId}`;
   const controlledSearch = typeof searchValue === "string";
@@ -452,7 +453,10 @@ export function DataTable<T extends Record<string, unknown>>({
             </div>
           ) : null}
 
-          <div className="scrollbar-panel max-h-[90vh] overflow-auto rounded-sm">
+          <div
+            className="scrollbar-panel overflow-auto rounded-sm"
+            style={{ maxHeight: maxHeight ?? "90vh" }}
+          >
             <table className={cn("w-full min-w-full text-xs", tableClassName)}>
               <thead
                 className={cn(

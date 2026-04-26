@@ -344,6 +344,7 @@ export function RecipeFormFields({
         animated={false}
         className="text-xs"
         tableClassName="text-xs"
+        maxHeight="300px"
       />
 
     </div>
