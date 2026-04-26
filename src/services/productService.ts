@@ -15,6 +15,7 @@ import type {
   ProductCatalogProductDetailResponse,
   ProductCatalogSkuResponse,
   ProductDetailResponse,
+  ProductInventoryDetail,
 } from "@/pages/catalog/types/product";
 import { ProductTypes } from "@/pages/catalog/types/ProductTypes";
 import type { ProductSearchStateResponse } from "@/pages/catalog/types/productSearch";
@@ -45,6 +46,13 @@ export const updateProductSku = async (
   payload: UpdateProductSkuDto,
 ): Promise<ProductCatalogSkuResponse> => {
   const response = await axiosInstance.patch(API_SKUS_GROUP.update(skuId), payload);
+  return response.data;
+};
+
+export const getProductInventoryDetail = async (id: string, type: string): Promise<ProductInventoryDetail> => {
+  const response = await axiosInstance.get<ProductInventoryDetail>(`/products/${id}/detail`, {
+    params: { type },
+  });
   return response.data;
 };
 

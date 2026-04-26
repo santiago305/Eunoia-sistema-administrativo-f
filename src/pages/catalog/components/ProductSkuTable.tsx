@@ -237,13 +237,14 @@ export function ProductSkuTable({
           loading={false}
           emptyMessage="No hay SKUs configurados."
           responsiveCards={true}
-          stickyHeader={false}
+          stickyHeader={true}
           hoverable={false}
           animated={false}
           rowClickable={false}
           showSearch={false}
           selectableColumns={false}
           tableClassName="text-[11px]"
+          maxHeight="300px"
         />
       </div>
     </div>

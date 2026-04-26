@@ -94,6 +94,30 @@ export type Product = Omit<ProductCatalogProduct, "createdAt" | "updatedAt" | "t
   type?: ProductCatalogProductType | ProductType | string;
 };
 
+export interface ProductSkuInventory {
+  warehouseId: string;
+  warehouseName: string;
+  onHand: number;
+}
+
+export interface ProductSkuDetail {
+  id: string;
+  sku: string;
+  name: string;
+  total: number;
+  inventory: ProductSkuInventory[];
+}
+
+export interface ProductInventoryDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  brand: string | null;
+  isActive: boolean;
+  skus: ProductSkuDetail[];
+}
+
 export type ProductBaseUnit = ProductCatalogUnit;
 
 export type ProductSku = ProductCatalogSku;

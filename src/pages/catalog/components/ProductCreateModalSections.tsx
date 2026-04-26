@@ -81,7 +81,6 @@ export function ProductDetailsSection({
             value={form.baseUnitId}
             onChange={(value) => onChangeFormField("baseUnitId", value)}
             options={unitOptions}
-            placeholder="Seleccionar unidad"
             searchable
             searchPlaceholder="Buscar unidad..."
             emptyMessage="Sin unidades"

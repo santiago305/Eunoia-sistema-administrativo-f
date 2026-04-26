@@ -21,13 +21,15 @@ import {
     listCatalogProducts,
     saveProductSearchMetric,
     updateProductActive,
+    getProductInventoryDetail,
 } from "@/services/productService";
-import type { Product, ProductCatalogProductType } from "@/pages/catalog/types/product";
+import type { Product, ProductCatalogProductType, ProductInventoryDetail } from "@/pages/catalog/types/product";
 import type { ProductSearchStateResponse } from "@/pages/catalog/types/productSearch";
 import { Headed } from "@/components/Headed";
 import { getDropdownItemProducts } from "../data/getDropdownItemProducts";
 import { ActionsPopover } from "@/components/ActionsPopover";
 import { ProductCreateModal } from "./ProductCreateModal";
+import { ProductDetailsModal } from "./ProductDetailsModal";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlertModal } from "@/components/AlertModal";
 import { useCompany } from "@/hooks/useCompany";
@@ -80,6 +82,8 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+    const [selectedProductForDetails, setSelectedProductForDetails] = useState<Product | null>(null);
+    const [openDetails, setOpenDetails] = useState(false);
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
     const [searchText, setSearchText] = useState("");
@@ -320,8 +324,9 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             },
             {
                 id: "actions",
-                header: "Acciones",
+                header: "ACCIONES",
                 headerClassName: "text-center flex justify-center",
+                stopRowClick: true,
                 cell: (row) => (
                     <div className="flex justify-center">
                         <ActionsPopover
@@ -505,7 +510,8 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                         />
                     </DataTableSearchBar>
                 }
-                animated={!shouldReduceMotion}
+                hoverable={false}
+                animated={false}
                 tableClassName="text-[11px]"
                 pagination={{
                     page: apiPage ?? page,
@@ -513,6 +519,10 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                     total,
                 }}
                 selectableColumns
+                onRowClick={(row) => {
+                    setSelectedProductForDetails(row);
+                    setOpenDetails(true);
+                }}
                 onPageChange={(nextPage) => setPage(nextPage)}
             />
 
@@ -522,9 +532,17 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 primaryColor={PRIMARY}
                 entityLabel={config.entityLabel}
                 onClose={() => setOpenCreate(false)}
-                onSaved={() => {
-                    void refresh();
+                onSaved={refresh}
+            />
+
+            <ProductDetailsModal
+                open={openDetails}
+                productType={config.productType}
+                onClose={() => {
+                    setOpenDetails(false);
+                    setSelectedProductForDetails(null);
                 }}
+                product={selectedProductForDetails}
             />
 
             <ProductCreateModal
@@ -534,12 +552,8 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 productType={config.productType}
                 primaryColor={PRIMARY}
                 entityLabel={config.entityLabel}
-                onClose={() => {
-                    setEditingProductId(null);
-                }}
-                onSaved={() => {
-                    void refresh();
-                }}
+                onClose={() => setEditingProductId(null)}
+                onSaved={refresh}
             />
 
             <AlertModal

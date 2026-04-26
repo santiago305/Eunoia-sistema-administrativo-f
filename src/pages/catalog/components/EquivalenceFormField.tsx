@@ -178,7 +178,6 @@ export function EquivalenceFormFields({
             value={fromUnitId}
             onChange={(value) => setFromUnitId(value)}
             options={unitOptions}
-            placeholder="Seleccionar unidad"
             searchable
             searchPlaceholder="Buscar unidad..."
             emptyMessage="Sin unidades de medida"
@@ -208,6 +207,7 @@ export function EquivalenceFormFields({
             emptyMessage="No hay equivalencias registradas."
             hoverable={false}
             animated={false}
+            maxHeight="300px"
           />
         </div>  
     </div>
