@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
@@ -40,6 +40,18 @@ import {
   sanitizeInventoryLedgerSearchSnapshot,
   upsertInventoryLedgerSearchRule,
 } from "@/pages/catalog/utils/inventoryLedgerSmartSearch";
+import { listSkus } from "@/services/skuService";
+import type { DataTableSearchOption } from "@/components/table/search";
+import { useDebouncedCallback } from "use-debounce";
+import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
+
+function useDebouncedCallback<T extends (...args: any[]) => void>(callback: T, delay: number) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  return useCallback((...args: Parameters<T>) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => callback(...args), delay);
+  }, [callback, delay]);
+}
 
 type MovementRow = {
   id: string;
@@ -82,10 +94,35 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   const [searchFilters, setSearchFilters] = useState(() => createEmptyInventoryLedgerSearchFilters());
   const [page, setPage] = useState(1);
 
-  const limit = 25;
+  const limit = 30;
 
   const [searchState, setSearchState] = useState<InventoryLedgerSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
+
+  const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
+  const loadSkus = useCallback(async (q?: string) => {
+    try {
+      const res = await listSkus({ limit: 20, q, productType: config.productType });
+      const opts = (res.items ?? []).map((item: any) => ({
+        id: item.sku.id,
+        label: item.sku.name || item.sku.backendSku,
+      }));
+      setSkuOptions((prev) => {
+        const next = [...prev];
+        opts.forEach((opt: any) => {
+          if (!next.some((n) => n.id === opt.id)) next.push(opt);
+        });
+        return next;
+      });
+      return opts;
+    } catch {
+      return [];
+    }
+  }, [config.productType]);
+
+  const handleSearchSku = useDebouncedCallback((q: string) => {
+    void loadSkus(q);
+  }, 1000);
 
   const [items, setItems] = useState<InventoryLedgerMovementListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -113,11 +150,15 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
 
   useEffect(() => {
     void loadSearchState();
-  }, [loadSearchState]);
+    void loadSkus();
+  }, [loadSearchState, loadSkus]);
 
   const smartSearchColumns = useMemo(
-    () => buildInventoryLedgerSmartSearchColumns(searchState),
-    [searchState],
+    () => buildInventoryLedgerSmartSearchColumns(searchState, {
+      skuOptions,
+      onSearchSku: handleSearchSku,
+    }),
+    [searchState, skuOptions, handleSearchSku],
   );
 
   const recentSearches = useMemo<DataTableRecentSearchItem<InventoryLedgerSearchSnapshot>[]>(
@@ -142,8 +183,8 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   );
 
   const searchChips = useMemo(
-    () => buildInventoryLedgerSearchChips(executedSnapshot, searchState),
-    [executedSnapshot, searchState],
+    () => buildInventoryLedgerSearchChips(executedSnapshot, searchState, { skuOptions }),
+    [executedSnapshot, searchState, skuOptions],
   );
 
   const submitSearch = useCallback(() => {
@@ -286,8 +327,11 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         const time = createdAt
           ? createdAt.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
           : "-";
-        const documentNumber = item.documentNumber || "-";
-        const skuLabel = item.sku.name || "-";
+        const documentNumber = "-";
+        const skuLabel = buildSkuLabelFromItem({
+          skuItem: { sku: item.sku as any, attributes: (item.sku as any).attributes ?? [] } as any,
+          fallbackName: item.sku.name || "-",
+        });
         const warehouse = item.warehouseName || item.warehouseId || "-";
         const user = item.user?.name || item.user?.email || "-";
 
@@ -324,7 +368,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       },
       {
         id: "skuLabel",
-        header: "Producto",
+        header: "Producto (SKU)",
         accessorKey: "skuLabel",
         headerClassName: "text-left",
         className: "text-black/70",
@@ -430,6 +474,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
                 onApplyRule={handleApplySearchRule}
                 onRemoveRule={handleRemoveSearchRule}
                 onDeleteMetric={handleDeleteMetric}
+                skuOptions={skuOptions}
               />
             </DataTableSearchBar>
           }

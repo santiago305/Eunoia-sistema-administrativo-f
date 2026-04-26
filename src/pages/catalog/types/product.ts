@@ -82,16 +82,16 @@ export type Product = Omit<ProductCatalogProduct, "createdAt" | "updatedAt" | "t
   minStock?: number | null;
   baseUnitName?: string;
   baseUnitCode?: string;
-  baseUnit?: ProductCatalogUnit | null;
+  baseUnit?: string | null;
   attributes?: {
     presentation: string,
     variant:string,
     color:string
   };
-  createdAt: string;
-  updatedAt: string | null;
+  createdAt?: string;
+  updatedAt?: string | null;
   customSku?: string;
-  type: ProductCatalogProductType | ProductType | string;
+  type?: ProductCatalogProductType | ProductType | string;
 };
 
 export type ProductBaseUnit = ProductCatalogUnit;

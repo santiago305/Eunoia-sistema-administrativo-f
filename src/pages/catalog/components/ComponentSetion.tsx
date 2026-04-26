@@ -100,34 +100,32 @@ export function ProductWorkspaceTabs({
   onChange: (tab: WorkspaceTab) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-2">
-      <div className="flex flex-wrap items-center gap-2">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
-                active ? "text-white shadow-sm" : "text-black/70 hover:bg-black/[0.04]"
-              }`}
-              style={
-                active
-                  ? {
-                      backgroundColor: primaryColor,
-                      borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                    }
-                  : undefined
-              }
-            >
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex flex-wrap items-center gap-2">
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const active = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
+              active ? "text-white shadow-sm" : "text-black/70 hover:bg-black/[0.04]"
+            }`}
+            style={
+              active
+                ? {
+                    backgroundColor: primaryColor,
+                    borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                  }
+                : undefined
+            }
+          >
+            <Icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

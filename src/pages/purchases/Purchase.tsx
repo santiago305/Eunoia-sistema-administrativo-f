@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, type CSSProperties } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { DataTableColumn } from "@/components/table/types";
 import {
@@ -101,6 +101,8 @@ export default function PurchaseCreateLocal({
   onSaved,
 }: PurchaseCreateLocalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
+  const showFlashRef = useRef(showFlash);
+  useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
   const { hasCompany } = useCompany();
   const navigate = useNavigate();
   const companyActionDisabled = !hasCompany;

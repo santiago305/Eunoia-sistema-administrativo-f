@@ -92,6 +92,8 @@ type PurchaseRow = {
 
 export default function Purchases() {
     const { showFlash, clearFlash } = useFlashMessage();
+    const showFlashRef = useRef(showFlash);
+    useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
     const { hasCompany } = useCompany();
     const companyActionDisabled = !hasCompany;
     const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";

@@ -85,4 +85,5 @@ export type SmartSearchFieldConfig<
   operatorInputMode?: Partial<Record<TOperator, SmartSearchInputMode>>;
   operatorPlaceholder?: Partial<Record<TOperator, string>>;
   placeholder?: string;
+  onSearch?: (query: string) => void;
 };

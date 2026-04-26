@@ -3,6 +3,7 @@ import type {
   SmartSearchFieldConfig,
   SmartSearchOperatorOption,
   SmartSearchRule,
+  DataTableSearchOption,
 } from "@/components/table/search";
 import type {
   InventoryLedgerSearchField,
@@ -44,11 +45,6 @@ const FIELD_LABELS: Record<InventoryLedgerSearchField, string> = {
 
 const IN_OPERATOR: OperatorOption[] = [{ id: "IN", label: "Es alguno de" }];
 
-const TEXT_OPERATORS: OperatorOption[] = [
-  { id: "CONTAINS", label: "Contiene" },
-  { id: "EQ", label: "Es igual a" },
-];
-
 function uniqueStrings(values: string[] | undefined) {
   return Array.from(new Set((values ?? []).map((value) => value?.trim()).filter(Boolean))) as string[];
 }
@@ -60,19 +56,13 @@ function sanitizeRule(rule?: Partial<InventoryLedgerSearchRule> | null): Invento
   if (
     rule.field === InventoryLedgerSearchFields.WAREHOUSE_ID ||
     rule.field === InventoryLedgerSearchFields.USER_ID ||
-    rule.field === InventoryLedgerSearchFields.DIRECTION
+    rule.field === InventoryLedgerSearchFields.DIRECTION ||
+    rule.field === InventoryLedgerSearchFields.SKU
   ) {
     if (rule.operator !== "IN") return null;
     const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : undefined));
     if (!values.length) return null;
     return { field: rule.field, operator: "IN", values };
-  }
-
-  if (rule.field === InventoryLedgerSearchFields.SKU) {
-    if (rule.operator !== "CONTAINS" && rule.operator !== "EQ") return null;
-    const value = String(rule.value ?? "").trim();
-    if (!value) return null;
-    return { field: rule.field, operator: rule.operator, value };
   }
 
   return null;
@@ -155,6 +145,7 @@ export function getInventoryLedgerSearchRuleSummary(
   snapshot: InventoryLedgerSearchSnapshot,
   key: InventoryLedgerSearchFilterKey,
   searchState?: InventoryLedgerSearchStateResponse | null,
+  options?: { skuOptions?: DataTableSearchOption[] },
 ) {
   const rule = findInventoryLedgerSearchRule(snapshot, key);
   if (!rule) return null;
@@ -163,14 +154,18 @@ export function getInventoryLedgerSearchRuleSummary(
     const values = rule.values ?? [];
     if (!values.length) return null;
 
-    const options =
+    const availableOptions =
       key === InventoryLedgerSearchFields.WAREHOUSE_ID
         ? searchState?.catalogs.warehouses
         : key === InventoryLedgerSearchFields.USER_ID
           ? searchState?.catalogs.users
-          : searchState?.catalogs.directions;
+          : key === InventoryLedgerSearchFields.DIRECTION
+            ? searchState?.catalogs.directions
+            : key === InventoryLedgerSearchFields.SKU
+              ? options?.skuOptions
+              : [];
 
-    const map = new Map((options ?? []).map((option) => [option.id, option.label]));
+    const map = new Map((availableOptions ?? []).map((option) => [option.id, option.label]));
     return values.map((value) => map.get(value) ?? value).join(" - ");
   }
 
@@ -181,6 +176,7 @@ export function getInventoryLedgerSearchRuleSummary(
 export function buildInventoryLedgerSearchChips(
   snapshot: InventoryLedgerSearchSnapshot,
   searchState?: InventoryLedgerSearchStateResponse | null,
+  options?: { skuOptions?: DataTableSearchOption[] },
 ): InventoryLedgerSearchChip[] {
   const normalized = sanitizeInventoryLedgerSearchSnapshot(snapshot);
   const chips: InventoryLedgerSearchChip[] = [];
@@ -190,7 +186,7 @@ export function buildInventoryLedgerSearchChips(
   }
 
   normalized.filters.forEach((rule) => {
-    const label = getInventoryLedgerSearchRuleSummary(normalized, rule.field, searchState);
+    const label = getInventoryLedgerSearchRuleSummary(normalized, rule.field, searchState, options);
     if (!label) return;
     chips.push({
       id: rule.field,
@@ -204,15 +200,20 @@ export function buildInventoryLedgerSearchChips(
 
 export function buildInventoryLedgerSmartSearchColumns(
   searchState?: InventoryLedgerSearchStateResponse | null,
+  options?: {
+    skuOptions?: DataTableSearchOption[];
+    onSearchSku?: (query: string) => void;
+  }
 ): InventoryLedgerSmartSearchColumn[] {
   return [
     {
       id: InventoryLedgerSearchFields.SKU,
       label: "Producto (SKU)",
-      kind: "text",
+      kind: "catalog",
       description: "Busca por nombre del SKU o código.",
-      operators: TEXT_OPERATORS,
-      placeholder: "Ej. Arcilla verde",
+      operators: IN_OPERATOR,
+      options: options?.skuOptions ?? [],
+      onSearch: options?.onSearchSku,
     },
     {
       id: InventoryLedgerSearchFields.WAREHOUSE_ID,

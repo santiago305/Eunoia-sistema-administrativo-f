@@ -1123,12 +1123,12 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     if (!open) return null;
 
     return (
-        <Modal title={isEditMode ? `Editar ${label}` : `Nuevo ${label}`} onClose={handleClose} open={open} className="w-[1180px] max-w-[96vw] max-h-[90vh]">
+        <Modal title={isEditMode ? `Editar ${label}` : `Nuevo ${label}`} onClose={handleClose} open={open}>
             <div className="space-y-4">
                 <ProductWorkspaceTabs tabs={tabs} activeTab={workspaceTab} primaryColor={primaryColor} onChange={setWorkspaceTab} />
 
                 {isBusy ? (
-                    <div className="rounded-2xl border border-black/10 bg-white px-4 py-8 text-sm text-black/60">Cargando...</div>
+                    <div className="rounded-2xl bg-white px-4 py-8 text-sm text-black/60">Cargando...</div>
                 ) : (
                     <>
                         {workspaceTab === "details" && (
@@ -1190,7 +1190,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     </>
                 )}
 
-                <div className="flex items-center justify-end gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3">
+                <div className="flex items-center justify-end gap-2">
                     <SystemButton variant="ghost" className="bg-gray-200" onClick={handleClose}>
                         Cancelar
                     </SystemButton>

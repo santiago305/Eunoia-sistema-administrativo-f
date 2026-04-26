@@ -112,7 +112,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [page, setPage] = useState(1);
 
   const PRIMARY = "hsl(var(--primary))";
-  const limit = 10;
+  const limit = 30;
 
   const [searchState, setSearchState] = useState<InventoryDocumentsSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
@@ -431,12 +431,14 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       id: "status",
       header: "Estado",
       cell: (row) => (
-        <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-          {row.statusLabel}
-        </span>
+        <div className="flex justify-center">
+          <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+            {row.statusLabel}
+          </span>
+        </div>
       ),
-      headerClassName: "text-left w-[90px]",
-      className: "text-black/70",
+      headerClassName: "text-center w-[90px]",
+      className: "text-center text-black/70",
       hideable: true,
       sortable: false,
     },
@@ -479,7 +481,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
           />
         </div>
       ),
-      className: "text-left",
+      className: "text-center",
       hideable: true,
       sortable: false,
     },

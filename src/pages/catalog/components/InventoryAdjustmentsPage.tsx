@@ -110,8 +110,7 @@ export function InventoryAdjustmentsPage({
   const [searchText, setSearchText] = useState("");
   const [executedSearchText, setExecutedSearchText] = useState("");
   const [page, setPage] = useState(1);
-  const [refresh, setRefresh] = useState(0);
-  const limit = 10;
+  const limit = 30;
 
   const PRIMARY = "hsl(var(--primary))";
 
@@ -683,8 +682,14 @@ export function InventoryAdjustmentsPage({
       <AdjustmentProductModal
         open={openAdjustmentModal}
         onClose={handleClose}
-        onSaved={() => setRefresh((prev) => prev + 1)}
-        loadDocuments={() => setRefresh((prev) => prev + 1)}
+        onSaved={() => {
+          setPage(1);
+          void loadDocuments();
+        }}
+        loadDocuments={() => {
+          setPage(1);
+          void loadDocuments();
+        }}
         type={config.productType}
       />
     </PageShell>

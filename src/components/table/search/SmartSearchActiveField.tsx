@@ -183,6 +183,7 @@ export function SmartSearchActiveField<
                 label: option.label,
               }))}
               onChange={setDraftValues}
+              onSearchChange={field.onSearch}
               searchable
               searchPlaceholder={`Buscar ${field.label.toLowerCase()}...`}
               emptyMessage="Sin resultados"

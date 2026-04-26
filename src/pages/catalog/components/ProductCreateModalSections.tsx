@@ -9,7 +9,7 @@ import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import { EquivalenceFormFields } from "./EquivalenceFormField";
 import { ProductSkuTable, type ProductSkuDraft } from "./ProductSkuTable";
 import { RecipeFormFields, type RecipeDraft } from "./RecipeFormFields";
-import { SelectOption, SectionCard, EquivalenceLike, PendingNotice } from "./ComponentSetion";
+import { SelectOption, EquivalenceLike, PendingNotice } from "./ComponentSetion";
 
 
 
@@ -42,11 +42,17 @@ export function ProductDetailsSection({
 
   return (
     <div className="space-y-4">
-      <SectionCard
-        title="Datos principales"
-        description="Configura la informacion base del producto antes de trabajar sus SKUs."
-        icon={PackageCheck}
-      >
+      <section className="space-y-4 rounded-2xl bg-white/80 px-1 py-1">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-black/70">
+            <PackageCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-black">Datos principales</h3>
+            <p className="text-sm text-black/60">Configura la informacion base del producto antes de trabajar sus SKUs.</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1fr_1fr_180px]">
           <FloatingInput
             label="Nombre"
@@ -81,7 +87,7 @@ export function ProductDetailsSection({
             emptyMessage="Sin unidades"
             disabled={createFlowLocked}
           />
-          <label className="flex min-h-10 items-center gap-2 rounded-xl border border-black/10 px-3 text-sm text-black/70">
+          <label className="flex min-h-10 items-center gap-2 rounded-xl bg-black/[0.03] px-3 text-sm text-black/70">
             <input
               type="checkbox"
               checked={form.isActive}
@@ -91,41 +97,44 @@ export function ProductDetailsSection({
             Activo
           </label>
         </div>
-      </SectionCard>
+      </section>
 
-      <SectionCard
-        title="SKUs"
-        description={
-          isEditMode
-            ? "Edita los SKUs ya creados para este producto."
-            : "Define uno o varios SKUs operativos para este producto."
-        }
-        aside={
-            <div className="flex flex-wrap items-center gap-4 rounded-xl border border-black/10 px-3 py-2 text-sm text-black/70">
-              <span className="font-medium text-black">Variantes</span>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="wantsVariants"
-                  checked={form.wantsVariants === "no"}
-                  disabled={createFlowLocked}
-                  onChange={() => onChangeFormField("wantsVariants", "no")}
-                />
-                No
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="wantsVariants"
-                  checked={form.wantsVariants === "yes"}
-                  disabled={createFlowLocked}
-                  onChange={() => onChangeFormField("wantsVariants", "yes")}
-                />
-                Si
-              </label>
-            </div>
-        }
-      >
+      <section className="space-y-4 rounded-2xl bg-white/80 px-1 py-1">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-black">SKUs</h3>
+            <p className="text-sm text-black/60">
+              {isEditMode
+                ? "Edita los SKUs ya creados para este producto."
+                : "Define uno o varios SKUs operativos para este producto."}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 rounded-xl bg-black/[0.03] px-3 py-2 text-sm text-black/70">
+            <span className="font-medium text-black">Variantes</span>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="wantsVariants"
+                checked={form.wantsVariants === "no"}
+                disabled={createFlowLocked}
+                onChange={() => onChangeFormField("wantsVariants", "no")}
+              />
+              No
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="wantsVariants"
+                checked={form.wantsVariants === "yes"}
+                disabled={createFlowLocked}
+                onChange={() => onChangeFormField("wantsVariants", "yes")}
+              />
+              Si
+            </label>
+          </div>
+        </div>
+
         <div className="space-y-4">
           {createFlowLocked ? (
             <PendingNotice>
@@ -144,7 +153,7 @@ export function ProductDetailsSection({
             tableId={isEditMode ? `product-sku-edit-${productId ?? "draft"}` : "product-sku-create"}
           />
         </div>
-      </SectionCard>
+      </section>
     </div>
   );
 }
@@ -254,11 +263,17 @@ export function ProductRecipesSection({
 }) {
   return (
     <div className="space-y-4">
-      <SectionCard
-        title="Recetas"
-        description="Configura el rendimiento y los componentes necesarios por SKU."
-        icon={Boxes}
-      >
+      <section className="space-y-4 rounded-2xl bg-white/80 px-1 py-1">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-black/70">
+            <Boxes className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-black">Recetas</h3>
+            <p className="text-sm text-black/60">Configura el rendimiento y los componentes necesarios por SKU.</p>
+          </div>
+        </div>
+
         <div className="space-y-4">
           {isEditMode && selectedSkuIsDraft ? (
             <PendingNotice>
@@ -267,7 +282,7 @@ export function ProductRecipesSection({
           ) : null}
 
           {isCreateLocked && (recipeFailures.length > 0 || nonPersistedDrafts.length > 0) ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <div className="space-y-2">
                 {recipeFailures.length > 0 ? (
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -308,7 +323,7 @@ export function ProductRecipesSection({
             onSelectSku={onSelectSku}
           />
         </div>
-      </SectionCard>
+      </section>
     </div>
   );
 }

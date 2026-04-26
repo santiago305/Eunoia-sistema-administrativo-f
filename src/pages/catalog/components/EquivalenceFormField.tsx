@@ -157,7 +157,7 @@ export function EquivalenceFormFields({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-black/10 bg-white p-4 sm:p-5 ">
+      
         <SectionHeaderForm icon={Scale} title="Nueva equivalencia" />
 
         <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_100px] ">
@@ -209,8 +209,7 @@ export function EquivalenceFormFields({
             hoverable={false}
             animated={false}
           />
-        </div>
-      </div>
+        </div>  
     </div>
   );
 }

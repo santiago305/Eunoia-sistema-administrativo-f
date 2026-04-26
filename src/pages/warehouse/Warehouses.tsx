@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, useRef, type MouseEvent } from "react";
 import { Boxes, Menu, Pencil, Plus, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { AlertModal } from "@/components/AlertModal";
@@ -74,6 +74,8 @@ function toSearchOptions(items: Array<{ id: string; name: string }>) {
 
 export default function Warehouses() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const showFlashRef = useRef(showFlash);
+  useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";

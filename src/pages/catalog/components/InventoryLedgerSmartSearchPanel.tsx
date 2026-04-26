@@ -2,6 +2,7 @@ import {
   SmartSearchPanel,
   type DataTableRecentSearchItem,
   type DataTableSavedSearchItem,
+  type DataTableSearchOption,
 } from "@/components/table/search";
 import type {
   InventoryLedgerSearchSnapshot,
@@ -29,6 +30,7 @@ type Props = {
   onApplyRule: (rule: InventoryLedgerSearchRule) => void;
   onRemoveRule: (fieldId: InventoryLedgerSearchFilterKey) => void;
   onDeleteMetric?: (metricId: string) => void;
+  skuOptions?: DataTableSearchOption[];
 };
 
 export function InventoryLedgerSmartSearchPanel({
@@ -42,6 +44,7 @@ export function InventoryLedgerSmartSearchPanel({
   onApplyRule,
   onRemoveRule,
   onDeleteMetric,
+  skuOptions = [],
 }: Props) {
   return (
     <SmartSearchPanel
@@ -55,7 +58,7 @@ export function InventoryLedgerSmartSearchPanel({
       onDeleteMetric={onDeleteMetric}
       getRule={findInventoryLedgerSearchRule}
       getRuleSummary={(currentSnapshot, fieldId) =>
-        getInventoryLedgerSearchRuleSummary(currentSnapshot, fieldId, searchState)
+        getInventoryLedgerSearchRuleSummary(currentSnapshot, fieldId, searchState, { skuOptions })
       }
       getSelectionCount={getInventoryLedgerSearchSelectionCount}
       fieldsSectionTitle="Columnas"

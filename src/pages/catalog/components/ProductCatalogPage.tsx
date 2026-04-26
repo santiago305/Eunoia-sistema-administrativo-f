@@ -289,12 +289,6 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 cell: (row) => <p className="line-clamp-2 text-black/70">{row.description || "-"}</p>,
             },
             {
-                id: "type",
-                header: "Tipo",
-                visible: false,
-                cell: (row) => <span className="text-black/70">{row.type || "-"}</span>,
-            },
-            {
                 id: "brand",
                 header: "Marca",
                 cell: (row) => <span className="text-black/70">{row.brand || "-"}</span>,
@@ -326,7 +320,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             },
             {
                 id: "actions",
-                header: "ACCIONES",
+                header: "Acciones",
                 headerClassName: "text-center flex justify-center",
                 cell: (row) => (
                     <div className="flex justify-center">
@@ -391,29 +385,14 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             name: string;
             description: string | null;
             brand?: string | null;
-            type: string;
             isActive: boolean;
-            createdAt: string;
-            updatedAt: string | null;
+            baseUnitName?: string;
         }>,
     ) => {
-        const header = ["id", "name", "description", "type", "brand", "isActive", "createdAt", "updatedAt"];
+        const header = ["id", "name", "description", "brand", "isActive"];
         const escape = (value: string) => {
             if (value.includes('"') || value.includes(",") || value.includes("\n")) return `"${value.replace(/"/g, '""')}"`;
             return value;
-        };
-        const formatDate = (value: string | null) => {
-            if (!value) return "-";
-            const date = new Date(value);
-            if (Number.isNaN(date.getTime())) return value;
-            return date.toLocaleString("es-PE", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-            });
         };
         const lines = rows.map((row, index) => {
             const csvId = String(index + 1).padStart(5, "0");
@@ -421,11 +400,8 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 csvId,
                 row.name,
                 row.description ?? "",
-                row.type ?? "",
                 row.brand ?? "",
                 String(row.isActive),
-                formatDate(row.createdAt),
-                formatDate(row.updatedAt),
             ].map((value) => escape(String(value))).join(",");
         });
         return [header.join(","), ...lines].join("\n");
@@ -569,7 +545,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             <AlertModal
                 open={!!deletingProductId}
                 type={deletingProduct?.isActive ? "deleted" : "restore"}
-                title="Confirmar acción"
+                title="Confirmar acciÃ³n"
                 onClose={() => setDeletingProductId(null)}
                 onConfirm={confirmDelete}
                 message={

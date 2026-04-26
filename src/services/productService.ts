@@ -48,11 +48,10 @@ export const updateProductSku = async (
   return response.data;
 };
 
-const attachBaseUnit = (product: Product & { baseUnit?: ProductBaseUnit | null }) => ({
+const attachBaseUnit = (product: Product) => ({
   ...product,
-  baseUnitId: product.baseUnitId ?? product.baseUnit?.id ?? null,
-  baseUnitName: product.baseUnitName ?? product.baseUnit?.name,
-  baseUnitCode: product.baseUnitCode ?? product.baseUnit?.code,
+  baseUnitId: product.baseUnitId ?? null,
+  baseUnitName: product.baseUnitName ?? (product.baseUnit as string),
 });
 
 const normalizeProductList = (response: ProductListResponse): ProductListResponse => ({

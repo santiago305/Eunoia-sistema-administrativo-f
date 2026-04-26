@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
@@ -93,6 +93,8 @@ const formatDateTime = (value?: string | null) => {
 
 export default function Production() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const showFlashRef = useRef(showFlash);
+  useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
