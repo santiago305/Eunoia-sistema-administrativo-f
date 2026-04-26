@@ -1,5 +1,4 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { useReducedMotion } from "framer-motion";
 import { Download, Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusPill } from "@/components/StatusTag";
@@ -21,9 +20,8 @@ import {
     listCatalogProducts,
     saveProductSearchMetric,
     updateProductActive,
-    getProductInventoryDetail,
 } from "@/services/productService";
-import type { Product, ProductCatalogProductType, ProductInventoryDetail } from "@/pages/catalog/types/product";
+import type { Product, ProductCatalogProductType} from "@/pages/catalog/types/product";
 import type { ProductSearchStateResponse } from "@/pages/catalog/types/productSearch";
 import { Headed } from "@/components/Headed";
 import { getDropdownItemProducts } from "../data/getDropdownItemProducts";
@@ -74,7 +72,6 @@ type ProductCatalogPageConfig = {
 };
 
 export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfig }) {
-    const shouldReduceMotion = useReducedMotion();
     const { showFlash, clearFlash } = useFlashMessage();
     const { hasCompany } = useCompany();
     const companyActionDisabled = !hasCompany;
@@ -93,8 +90,6 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const debouncedSearchText = useDebouncedValue(searchText.trim(), 400);
     const [searchState, setSearchState] = useState<ProductSearchStateResponse | null>(null);
     const [savingMetric, setSavingMetric] = useState(false);
-
-    const limit = 30;
 
     const queryParams = useMemo(
     () => ({
