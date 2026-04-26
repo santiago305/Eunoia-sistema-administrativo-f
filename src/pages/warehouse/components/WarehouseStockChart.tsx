@@ -7,18 +7,8 @@ import {
   Sector,
   Tooltip,
 } from "recharts";
+import { CHART_COLORS } from "@/utils/chartColors";
 import type { WarehouseStockItem } from "@/pages/warehouse/types/warehouse";
-
-const STOCK_CHART_COLORS = [
-  "#0f766e",
-  "#f59e0b",
-  "#22c55e",
-  "#ef4444",
-  "#2563eb",
-  "#f97316",
-  "#14b8a6",
-  "#84cc16",
-];
 
 type WarehouseStockChartEntry = {
   label: string;
@@ -99,7 +89,7 @@ export function WarehouseStockChart({ items }: Props) {
             {chartData.map((_, index) => (
               <Cell
                 key={`warehouse-stock-chart-${index}`}
-                fill={STOCK_CHART_COLORS[index % STOCK_CHART_COLORS.length]}
+                fill={CHART_COLORS[index % CHART_COLORS.length]}
                 style={{ cursor: "pointer" }}
               />
             ))}

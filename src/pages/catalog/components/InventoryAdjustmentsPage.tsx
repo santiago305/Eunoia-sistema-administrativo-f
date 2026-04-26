@@ -110,7 +110,7 @@ export function InventoryAdjustmentsPage({
   const [searchText, setSearchText] = useState("");
   const [executedSearchText, setExecutedSearchText] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 30;
+  const limit = 25;
 
   const PRIMARY = "hsl(var(--primary))";
 

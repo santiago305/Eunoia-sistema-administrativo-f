@@ -15,17 +15,7 @@ import {
 } from "../types/product";
 import { getProductInventoryDetail } from "@/services/productService";
 import { Modal } from "@/components/modales/Modal";
-
-const CHART_COLORS = [
-  "#0f766e",
-  "#f59e0b",
-  "#22c55e",
-  "#ef4444",
-  "#2563eb",
-  "#f97316",
-  "#14b8a6",
-  "#84cc16",
-];
+import { CHART_COLORS } from "@/utils/chartColors";
 
 interface ProductDetailsModalProps {
   open: boolean;

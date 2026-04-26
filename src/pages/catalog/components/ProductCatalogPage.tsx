@@ -84,6 +84,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [selectedProductForDetails, setSelectedProductForDetails] = useState<Product | null>(null);
     const [openDetails, setOpenDetails] = useState(false);
+    const limit = 25;
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
     const [searchText, setSearchText] = useState("");

@@ -112,7 +112,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [page, setPage] = useState(1);
 
   const PRIMARY = "hsl(var(--primary))";
-  const limit = 30;
+  const limit = 25;
 
   const [searchState, setSearchState] = useState<InventoryDocumentsSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);

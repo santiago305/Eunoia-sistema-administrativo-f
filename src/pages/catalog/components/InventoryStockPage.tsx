@@ -55,7 +55,7 @@ import {
   upsertInventorySearchRule,
 } from "@/pages/catalog/utils/inventorySmartSearch";
 
-const DEFAULT_LIMIT = 30;
+const DEFAULT_LIMIT = 25;
 
 type InventoryStockPageConfig = {
   productType: ProductCatalogProductType;

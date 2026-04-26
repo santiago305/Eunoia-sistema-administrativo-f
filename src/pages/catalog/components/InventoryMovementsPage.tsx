@@ -94,7 +94,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   const [searchFilters, setSearchFilters] = useState(() => createEmptyInventoryLedgerSearchFilters());
   const [page, setPage] = useState(1);
 
-  const limit = 30;
+  const limit = 25;
 
   const [searchState, setSearchState] = useState<InventoryLedgerSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
