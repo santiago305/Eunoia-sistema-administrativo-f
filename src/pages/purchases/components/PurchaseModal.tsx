@@ -13,7 +13,7 @@ export function PurchaseModal({ open, poId, onClose, onSaved }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      closeOnOverlayClick={false}
+      
       title={poId ? "Editar compra" : "Nueva compra"}
       className="w-[min(92rem,calc(100vw-2rem))]"
       bodyClassName="p-0"

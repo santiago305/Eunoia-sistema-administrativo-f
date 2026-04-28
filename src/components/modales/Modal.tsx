@@ -73,15 +73,20 @@ export function  Modal({
   const canClose = !preventClose;
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusedElementRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
   const titleId = useId();
   const descriptionId = useId();
   const overlayTransition = { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const };
 
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   const handleRequestClose = useCallback(() => {
     if (!canClose) return;
     dispatchCloseAllFloatingSelects();
-    onClose();
-  }, [canClose, onClose]);
+    onCloseRef.current();
+  }, [canClose]);
 
   useEffect(() => {
     if (!open) return;

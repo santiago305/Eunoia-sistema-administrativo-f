@@ -699,7 +699,7 @@ export default function AdjustmentFormProducts({
     <Modal
       open={open}
       onClose={handleClose}
-      closeOnOverlayClick={false}
+      
       title="Nuevo ajuste"
       className="w-[min(92rem,calc(100vw-2rem))]"
       bodyClassName="p-0"

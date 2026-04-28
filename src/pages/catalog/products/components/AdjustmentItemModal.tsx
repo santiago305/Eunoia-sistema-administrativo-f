@@ -76,7 +76,7 @@ export function AdjustmentItemModal({
             open={open}
             title={title}
             onClose={handleClose}
-            closeOnOverlayClick={false}
+            
             className="w-[400px] max-h-90 space-y-3"
         >
             <div className="grid grid-cols-1 gap-3">
