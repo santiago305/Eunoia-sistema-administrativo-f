@@ -677,7 +677,6 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       <div className="space-y-2">
         <Headed
           title={config.headingTitle}
-          subtitle="Explora el stock por producto, material y almacen."
           size="lg"
         />
 

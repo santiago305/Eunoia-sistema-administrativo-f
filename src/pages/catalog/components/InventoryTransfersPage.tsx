@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
@@ -123,7 +123,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const showFlashRef = useRef(showFlash);
 
   useEffect(() => {
@@ -295,8 +294,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
-    setError(null);
-
     try {
       const res = await getDocuments({
         page,
@@ -321,7 +318,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     } catch {
       setDocuments([]);
       setTotal(0);
-      setError("Error al listar documentos");
       showFlashRef.current(errorResponse("Error al listar documentos"));
     } finally {
       setLoading(false);
@@ -386,7 +382,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
           {row.date} {row.time}
         </div>
       ),
-      headerClassName: "text-left w-[70px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -395,7 +391,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       id: "numero",
       header: "Documento",
       accessorKey: "numero",
-      headerClassName: "text-left w-[100px] py-4",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -404,7 +400,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       id: "fromWarehouse",
       header: "Origen",
       accessorKey: "fromWarehouse",
-      headerClassName: "text-left w-[140px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -413,7 +409,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       id: "toWarehouse",
       header: "Destino",
       accessorKey: "toWarehouse",
-      headerClassName: "text-left w-[140px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -422,7 +418,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       id: "createdBy",
       header: "Usuario",
       accessorKey: "createdBy",
-      headerClassName: "text-left w-[140px]",
+      headerClassName: "text-left",
       className: "text-black/70",
       hideable: true,
       sortable: false,
@@ -437,15 +433,15 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
           </span>
         </div>
       ),
-      headerClassName: "text-center w-[90px]",
+      headerClassName: "text-center [&>div]:justify-center",
       className: "text-center text-black/70",
       hideable: true,
       sortable: false,
     },
     {
       id: "actions",
-      header: "ACCIONES",
-      headerClassName: "text-center w-[70px]",
+      header: "Acciones",
+      headerClassName: "text-center [&>div]:justify-center",
       cell: (row) => (
         <div className="flex justify-center">
           <ActionsPopover
@@ -490,13 +486,12 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   return (
     <PageShell>
       <PageTitle title={config.pageTitle} />
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
+        <div className="flex items-center justify-between">
           <Headed title={config.headingTitle} size="lg" />
           <div className="flex justify-end">
             <SystemButton
               size="md"
-              className="w-full lg:w-auto"
+              leftIcon={<Plus className="h-4 w-4" />}
               style={{
                 backgroundColor: PRIMARY,
                 borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
@@ -506,7 +501,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
               disabled={companyActionDisabled}
               title={companyActionTitle}
             >
-              Crear nueva transferencia
+              Crear transferencia
             </SystemButton>
           </div>
         </div>
@@ -571,9 +566,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
           onPageChange={(nextPage) => startTransition(() => setPage(nextPage))}
           tableClassName="text-[10px]"
         />
-
-        {error ? <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div> : null}
-      </div>
 
       <PdfViewerModal
         open={openPdfModal}

@@ -316,7 +316,7 @@ export default function Providers() {
       },
       {
         id: "actions",
-        header: "ACCIONES",
+        header: "Acciones",
         cell: (row) => (
           <ActionsPopover
             actions={[

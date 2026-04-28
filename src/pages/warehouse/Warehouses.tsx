@@ -505,7 +505,7 @@ export default function Warehouses() {
       },
       {
         id: "actions",
-        header: "ACCIONES",
+        header: "Acciones",
         stopRowClick: true,
         cell: (row) => (
           <ActionsPopover

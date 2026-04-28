@@ -197,7 +197,7 @@ export default function PurchaseCreateLocal({
       setSupplierOptions([]);
       showFlashRef.current(errorResponse("Error al cargar proveedores"));
     }
-  }, []);
+  }, [clearFlash]);
 
   const loadWarehouses = useCallback(async () => {
     clearFlash();
@@ -213,7 +213,7 @@ export default function PurchaseCreateLocal({
       setWarehouseOptions([]);
       showFlashRef.current(errorResponse("Error al cargar almacenes"));
     }
-  }, []);
+  }, [clearFlash]);
 
   const productOptions = useMemo(
     () =>
@@ -323,14 +323,16 @@ export default function PurchaseCreateLocal({
       expectedAt: form.expectedAt?.trim() ? form.expectedAt : undefined,
       dateIssue: form.dateIssue?.trim() ? form.dateIssue : undefined,
       dateExpiration: form.dateExpiration?.trim() ? form.dateExpiration : undefined,
-      items: (form.items ?? []).map(({ sku: _sku, name: _name, ...rest }) => ({
-        ...rest,
-        quantity: normalizeQuantity(rest.quantity),
-        unitPrice: normalizePrice(rest.unitPrice),
-        unitValue: normalizePrice(rest.unitValue),
-        baseWithoutIgv: normalizeMoney(rest.baseWithoutIgv),
-        amountIgv: normalizeMoney(rest.amountIgv),
-        purchaseValue: normalizeMoney(rest.purchaseValue),
+      items: (form.items ?? []).map((item) => ({
+        skuId: item.skuId,
+        afectType: item.afectType,
+        quantity: normalizeQuantity(item.quantity),
+        porcentageIgv: item.porcentageIgv ?? IGV,
+        baseWithoutIgv: normalizeMoney(item.baseWithoutIgv),
+        amountIgv: normalizeMoney(item.amountIgv),
+        unitValue: normalizePrice(item.unitValue),
+        unitPrice: normalizePrice(item.unitPrice),
+        purchaseValue: normalizeMoney(item.purchaseValue),
       })),
       payments: (form.payments ?? []).map((p) => ({
         currency: p.currency,

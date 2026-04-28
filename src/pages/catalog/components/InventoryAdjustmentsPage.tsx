@@ -133,7 +133,6 @@ export function InventoryAdjustmentsPage({
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleClose = useCallback(() => {
     setOpenAdjustmentModal(false);
@@ -413,7 +412,6 @@ export function InventoryAdjustmentsPage({
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
-    setError(null);
 
     try {
       const res = await getDocuments({
@@ -432,7 +430,6 @@ export function InventoryAdjustmentsPage({
       setDocuments(normalizePaginatedDocuments(responseItems, page, limit));
       setTotal(res.total ?? responseItems.length);
     } catch {
-      setError("No se pudieron cargar los documentos.");
       setDocuments([]);
       setTotal(0);
       showFlashRef.current(
@@ -483,17 +480,19 @@ export function InventoryAdjustmentsPage({
   const columns = useMemo<DataTableColumn<InventoryDocumentRow>[]>(() => {
     return [
       {
-        id: "numero",
-        header: "Número",
-        accessorKey: "numero",
-        headerClassName: "text-left",
-        className: "text-left",
+        id: "date",
+        header: "Emisiòn",
+        cell: (row) => (
+          <div className="text-black/70">
+           {row.date} {row.time}
+          </div>
+        ),
         sortable: false,
       },
       {
-        id: "status",
-        header: "Estado",
-        accessorKey: "statusLabel",
+        id: "numero",
+        header: "N. Documento",
+        accessorKey: "numero",
         headerClassName: "text-left",
         className: "text-left",
         sortable: false,
@@ -515,23 +514,24 @@ export function InventoryAdjustmentsPage({
         sortable: false,
       },
       {
-        id: "date",
-        header: "Fecha",
+        id: "status",
+        header: "Estado",
         cell: (row) => (
-          <div className="text-black/70 tabular-nums">
-            <div>{row.date}</div>
-            <div className="text-[10px] text-black/50">{row.time}</div>
-          </div>
-        ),
-        headerClassName: " w-[140px]",
-        className: "text-left",
+        <div className="flex justify-center">
+          <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+            {row.statusLabel}
+          </span>
+        </div>
+      ),
+        accessorKey: "statusLabel",
+        headerClassName: "text-center [&>div]:justify-center",
         sortable: false,
       },
       {
         id: "actions",
-        header: "",
+        header: "Acciones",
         stopRowClick: true,
-        headerClassName: "text-center w-[70px]",
+        headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => (
           <div className="flex justify-center">
             <ActionsPopover
@@ -577,8 +577,7 @@ export function InventoryAdjustmentsPage({
   return (
     <PageShell className="bg-white">
       <PageTitle title="Ajustes" />
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
+        <div className="flex items-center justify-between">
           <Headed title={config.headingTitle} size="lg" />
 
           <div className="flex justify-end">
@@ -594,7 +593,7 @@ export function InventoryAdjustmentsPage({
               disabled={companyActionDisabled}
               title={companyActionTitle}
             >
-              Crear nuevo ajuste
+              Crear ajuste
             </SystemButton>
           </div>
         </div>
@@ -649,11 +648,6 @@ export function InventoryAdjustmentsPage({
           }}
           tableClassName="text-[10px]"
         />
-
-        {error ? (
-          <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div>
-        ) : null}
-      </div>
 
       <PdfViewerModal
         open={openPdfModal}

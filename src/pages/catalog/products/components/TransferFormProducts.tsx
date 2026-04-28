@@ -1,10 +1,9 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
-import { Boxes, FileText, Trash2 } from "lucide-react";
+import { Boxes, Trash2 } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
-import { SectionHeaderForm } from "@/components/SectionHederForm";
 import { SystemButton } from "@/components/SystemButton";
 import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
@@ -37,6 +36,7 @@ import {
     buildSkuLabelWithAttributes,
 } from "@/pages/catalog/types/transfer";
 import { skuStock } from "@/pages/catalog/types/documentInventory";
+import { SectionHeaderForm } from "@/components/SectionHederForm";
 
 const CURRENCY = "PEN";
 
@@ -87,7 +87,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
         setStockDetail(emptyStockDetail);
     };
 
-    const loadWarehouses = async () => {
+    const loadWarehouses = useCallback(async () => {
         clearFlash();
         try {
             const res = await listActive();
@@ -101,7 +101,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
             setWarehouseOptions([]);
             showFlash(errorResponse("Error al cargar almacenes"));
         }
-    };
+    }, [clearFlash, showFlash]);
 
     const loadSeries = async (warehouseId: string) => {
         if (!warehouseId) {
@@ -143,7 +143,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
         }
     };
 
-    const searchSkus = async () => {
+    const searchSkus = useCallback(async () => {
         try {
             const res = await listSkus({
                 q: query,
@@ -158,7 +158,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
             setSearchResults(undefined);
             showFlash(errorResponse("Error al cargar SKUs"));
         }
-    };
+    }, [query, showFlash, type]);
 
     const addItem = () => {
         const { skuId, quantity } = pendingItem;
@@ -419,30 +419,39 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
         }, 500);
 
         return () => clearTimeout(id);
-    }, [query]);
+    }, [query, searchSkus]);
 
     useEffect(() => {
         resetForm();
         void loadWarehouses();
-    }, []);
+    }, [loadWarehouses]);
 
     const summaryBase = stockDetail.from ?? stockDetail.to;
     const selectedRowId = stockDetail.selectedSkuId;
 
-    const viewportHeightClasses = inModal ? "h-[80vh]" : "max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]";
+    const viewportHeightClasses = inModal ? "h-[80vh]" : "h-[calc(100vh-64px)]";
 
     const content = (
         <>
-            <div className="space-y-4">
-                {!inModal ? <Headed title="Transferencia entre almacenes" subtitle="El almacén de origen debe tener un stock mayor a (0)." size="lg" /> : null}
+            <div className={inModal ? "w-full" : "h-screen w-full py-0"}>
+                {!inModal ? (
+                    <div className="pt-2">
+                        <Headed
+                            title="Transferencia entre almacenes"
+                            subtitle="El almacén de origen debe tener un stock mayor a (0)."
+                            size="lg"
+                        />
+                    </div>
+                ) : null}
 
-                <div className={`grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] mt-3 ${viewportHeightClasses}`}>
-                    <section className="rounded-2xl border border-black/10 bg-white shadow-sm flex flex-col">
-                        <div className="border-b border-black/10 p-3 sm:p-4">
+                <div className={`py-4 grid grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr] ${viewportHeightClasses}`}>
+                    <section className="overflow-hidden flex flex-col gap-3">
+                        <div className="p-3">
                             <SectionHeaderForm icon={Boxes} title="Productos" />
+                            
                             <div className="mt-3 grid grid-cols-1 gap-2">
                                 <FloatingSelect
-                                    label=""
+                                    label="Buscar SKU"
                                     name="transfer-sku"
                                     value={pendingItem.skuId}
                                     options={(searchResults?.items ?? []).map((item) => ({
@@ -461,7 +470,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto">
+                        <div className="flex-1 overflow-auto p-3 py-0">
                             <DataTable
                                 tableId="transfer-products-items"
                                 data={itemRows}
@@ -475,23 +484,19 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                             />
                         </div>
 
-                        <div className="border-t border-black/10 px-3 sm:px-4 py-3">
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="text-[11px] text-black/60">Total costo items</div>
-                                <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
+                        <div className="px-3 sm:px-4 py-3">
+                            <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-black/70">
+                                    <span>Total costo items</span>
                                     <span className="font-semibold text-black tabular-nums">{money(totalCost, CURRENCY)}</span>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <aside className={`rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto flex flex-col ${viewportHeightClasses}`}>
-                        <div className="border-b border-black/10 px-3 sm:px-4 py-2 mt-2">
-                            <SectionHeaderForm icon={FileText} title="Datos de documento" />
-                        </div>
-
-                        <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-3">
-                            <div className="grid grid-cols-2 gap-4">
+                    <aside className="overflow-hidden flex flex-col border-0 border-black/10 lg:border-l">
+                        <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
+                            <div className="grid grid-cols-2 gap-3">
                                 <FloatingSelect
                                     label="Almacén de origen"
                                     name="transfer-warehouse-from"
@@ -530,7 +535,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                                 />
                             </div>
 
-                            <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
+                            <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3 mt-2">
                                 <p className="text-[11px] font-semibold text-black">Resumen</p>
 
                                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
@@ -599,12 +604,8 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                             </div>
                         </div>
 
-                        <div className="border-t border-black/10 px-3 sm:px-4 py-3">
+                        <div className="p-3">
                             <div className="flex gap-2">
-                                <SystemButton variant="outline" className="flex-1" onClick={onClose}>
-                                    Cerrar
-                                </SystemButton>
-
                                 <SystemButton
                                     className="flex-1"
                                     disabled={loading || !form.fromWarehouseId || !form.toWarehouseId || !form.serieId || !(form.items ?? []).length}

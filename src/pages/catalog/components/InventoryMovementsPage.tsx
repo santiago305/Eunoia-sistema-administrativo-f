@@ -42,7 +42,6 @@ import {
 } from "@/pages/catalog/utils/inventoryLedgerSmartSearch";
 import { listSkus } from "@/services/skuService";
 import type { DataTableSearchOption } from "@/components/table/search";
-import { useDebouncedCallback } from "use-debounce";
 import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
 
 function useDebouncedCallback<T extends (...args: any[]) => void>(callback: T, delay: number) {
@@ -355,7 +354,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     () => [
       {
         id: "createdAt",
-        header: "Fecha y hora",
+        header: "Emisiòn",
         cell: (row) => (
           <div className="text-black/70">
             {row.date} {row.time}
@@ -436,7 +435,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       <PageTitle title={config.pageTitle} />
 
       <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
-        <Headed title={config.headingTitle} subtitle="Auditoría interna del inventario." size="lg" />
+        <Headed title={config.headingTitle} size="lg" />
       </div>
 
       <div className="space-y-3">

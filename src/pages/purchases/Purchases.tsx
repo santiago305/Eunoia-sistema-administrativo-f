@@ -224,11 +224,10 @@ export default function Purchases() {
         limit,
         loadSearchState,
         page,
-        showFlash,
         toDate,
     ]);
 
-    const setSent = async (id: string) => {
+    const setSent = useCallback(async (id: string) => {
         clearFlash();
         try {
             const res = await setSentPurchase(id);
@@ -242,8 +241,9 @@ export default function Purchases() {
         } catch {
             showFlash(errorResponse("Error al iniciar espera de mercaderia"));
         }
-    };
-    const cancelOrder = async (id: string) => {
+    }, [clearFlash, loadPurchases, showFlash]);
+
+    const cancelOrder = useCallback(async (id: string) => {
         clearFlash();
         try {
             const res = await setCancelPurchase(id);
@@ -257,14 +257,15 @@ export default function Purchases() {
         } catch {
             showFlash(errorResponse("Error al iniciar espera de mercaderia"));
         }
-    };
-    const openPurchasePdf = (id: string) => {
+    }, [clearFlash, loadPurchases, showFlash]);
+
+    const openPurchasePdf = useCallback((id: string) => {
         clearFlash();
         setSelectedProductionId(id);
         setOpenPdfModal(true);
-    };
+    }, [clearFlash]);
 
-    const EnterToWarehouse = async (id: string) => {
+    const EnterToWarehouse = useCallback(async (id: string) => {
         clearFlash();
         try {
             const res = await enterPurchaseOrder(id);
@@ -280,7 +281,7 @@ export default function Purchases() {
             showFlash(errorResponse("Error al ingresar a almacen"));
             void loadPurchases();
         }
-    };
+    }, [clearFlash, loadPurchases, showFlash]);
 
     useEffect(() => {
         void loadPurchases();
@@ -340,7 +341,7 @@ export default function Purchases() {
                     {row.date} {row.time}
                 </div>
             ),
-            headerClassName: "text-left w-[70px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -349,7 +350,7 @@ export default function Purchases() {
             id: "docLabel",
             header: "Documento",
             accessorKey: "docLabel",
-            headerClassName: "text-left w-[80px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -359,7 +360,7 @@ export default function Purchases() {
             id: "numero",
             header: "Numero",
             accessorKey: "numero",
-            headerClassName: "text-left w-[70px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -370,10 +371,9 @@ export default function Purchases() {
             cell: (row) => (
                 <div className="text-black/70">
                     <div>{row.supplierLabel}</div>
-                    {row.supplierDoc ? <div className="text-[10px] text-black/50">{row.supplierDoc}</div> : null}
                 </div>
             ),
-            headerClassName: "text-left w-[80px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -382,7 +382,7 @@ export default function Purchases() {
             id: "warehouse",
             header: "Almacen",
             accessorKey: "warehouseLabel",
-            headerClassName: "text-left w-[80px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -391,7 +391,7 @@ export default function Purchases() {
             id: "paymentForm",
             header: "Forma",
             cell: (row) => <span className="text-black/70">{paymentFormLabels[row.purchase.paymentForm ?? ""] ?? row.purchase.paymentForm}</span>,
-            headerClassName: "text-left w-[50px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -400,7 +400,7 @@ export default function Purchases() {
             id: "total",
             header: "Total",
             cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.total ?? 0, row.purchase.currency)}</span>,
-            headerClassName: "text-left w-[60px]",
+            headerClassName: "text-left",
             className: "text-left",
             hideable: true,
             sortable: false,
@@ -409,7 +409,7 @@ export default function Purchases() {
             id: "totalPaid",
             header: "Pag.",
             cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.totalPaid ?? 0, row.purchase.currency)}</span>,
-            headerClassName: "text-left w-[60px]",
+            headerClassName: "text-left",
             className: "text-left",
             hideable: true,
             sortable: false,
@@ -419,7 +419,7 @@ export default function Purchases() {
             id: "totalToPay",
             header: "Pend.",
             cell: (row) => <span className="text-black/70 tabular-nums">{money(row.purchase.totalToPay ?? 0, row.purchase.currency)}</span>,
-            headerClassName: "text-left w-[60px]",
+            headerClassName: "text-left",
             className: "text-left",
             hideable: true,
             sortable: false,
@@ -432,7 +432,7 @@ export default function Purchases() {
                     {row.statusLabel}
                 </span>
             ),
-            headerClassName: "text-left w-[60px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -445,7 +445,7 @@ export default function Purchases() {
                     {row.dateEnter} {row.timeEnter}
                 </div>
             ),
-            headerClassName: "text-left w-[50px]",
+            headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,
             sortable: false,
@@ -467,14 +467,14 @@ export default function Purchases() {
                         </span>
                     )}
                     {row.purchase.status === PurchaseOrderStatuses.RECEIVED && (
-                        <span className="flex flex-col items-center rounded-lg p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                        <span className="flex items-center rounded-lg gap-2 p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
                             <Timer className="h-4 w-4" />
                             <span className="mt-1">Completado</span>
                         </span>
                     )}
                 </div>
             ),
-            headerClassName: "w-[60px] text-center [&>div]:justify-center",
+            headerClassName: "text-center [&>div]:justify-center",
             className: "text-center",
             hideable: true,
             sortable: false,
@@ -483,7 +483,7 @@ export default function Purchases() {
         {
             id: "actions",
             header: "acciones",
-            headerClassName: "w-[50px] text-center [&>div]:justify-center",
+            headerClassName: "text-center [&>div]:justify-center",
             stopRowClick: true,
             cell: (row) => (
                 <div className="flex justify-center">
@@ -593,7 +593,15 @@ export default function Purchases() {
             hideable: true,
             sortable: false,
         },
-    ], [companyActionDisabled, loadPurchases, now]);
+    ], [
+        EnterToWarehouse,
+        cancelOrder,
+        companyActionDisabled,
+        loadPurchases,
+        now,
+        openPurchasePdf,
+        setSent,
+    ]);
 
     const smartSearchColumns = useMemo(
         () => buildPurchaseSmartSearchColumns(searchState),

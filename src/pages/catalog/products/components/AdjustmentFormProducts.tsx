@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, FileText, Trash2 } from "lucide-react";
+import { Boxes, Trash2 } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
 import { SectionHeaderForm } from "@/components/SectionHederForm";
@@ -92,7 +92,7 @@ export default function AdjustmentFormProducts({
   const [items, setItems] = useState<DraftAdjustmentItem[]>([]);
   const [stockDetail, setStockDetail] = useState<StockDetailState>(emptyStockDetail);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     if (skuSearchTimeoutRef.current) {
       window.clearTimeout(skuSearchTimeoutRef.current);
       skuSearchTimeoutRef.current = null;
@@ -109,15 +109,15 @@ export default function AdjustmentFormProducts({
     setSelectedSkus([]);
     setItems([]);
     setStockDetail(emptyStockDetail);
-  };
+  }, []);
 
   const handleClose = useCallback(() => {
     resetForm();
     onClose?.();
     loadDocuments?.();
-  },[]);
+  }, [loadDocuments, onClose, resetForm]);
 
-  const loadWarehouses = async () => {
+  const loadWarehouses = useCallback(async () => {
     clearFlash();
     try {
       const res = await listActive();
@@ -131,7 +131,7 @@ export default function AdjustmentFormProducts({
       setWarehouseOptions([]);
       showFlash(errorResponse("Error al cargar almacenes"));
     }
-  };
+  }, [clearFlash, showFlash]);
 
   const loadSeries = async (warehouseId: string) => {
     if (!warehouseId) {
@@ -173,7 +173,7 @@ export default function AdjustmentFormProducts({
     }
   };
 
-  const searchSkus = async (skuQuery: string) => {
+  const searchSkus = useCallback(async (skuQuery: string) => {
     const requestQuery = skuQuery.trim();
     try {
       const res = await listSkus({
@@ -191,9 +191,9 @@ export default function AdjustmentFormProducts({
       setSearchResults(undefined);
       showFlash(errorResponse("Error al cargar SKUs"));
     }
-  };
+  }, [showFlash, type]);
 
-  const handleSkuSearchChange = (text: string) => {
+  const handleSkuSearchChange = useCallback((text: string) => {
     latestSkuQueryRef.current = text;
 
     if (skuSearchTimeoutRef.current) {
@@ -211,7 +211,7 @@ export default function AdjustmentFormProducts({
 
       void searchSkus(trimmed);
     }, 500);
-  };
+  }, [searchSkus]);
 
   const addItem = () => {
     clearFlash();
@@ -454,34 +454,34 @@ export default function AdjustmentFormProducts({
     if (!open) return;
     resetForm();
     void loadWarehouses();
-  }, [open]);
+  }, [loadWarehouses, open, resetForm]);
 
   const summaryBase = stockDetail.from;
   const selectedRowId = stockDetail.selectedSkuId;
 
-  const viewportHeightClasses = inModal
-    ? "h-[80vh]"
-    : "max-h-[calc(100vh-100px)] min-h-[calc(100vh-100px)]";
+  const viewportHeightClasses = inModal ? "h-[80vh]" : "h-[calc(100vh-64px)]";
 
   const content = (
     <>
-      <div className="space-y-4">
+      <div className={inModal ? "w-full" : "h-screen w-full py-0"}>
         {!inModal ? (
-          <Headed
-            title="Ajuste de productos terminados"
-            subtitle="Al reducir stock solo puedes reducir hasta dejarlo en (0)."
-            size="lg"
-          />
+          <div className="pt-2">
+            <Headed
+              title="Ajuste de productos terminados"
+              subtitle="Al reducir stock solo puedes reducir hasta dejarlo en (0)."
+              size="lg"
+            />
+          </div>
         ) : null}
 
-        <div className={`grid grid-cols-1 gap-3 lg:grid-cols-[4fr_2.5fr] mt-3 ${viewportHeightClasses}`}>
-          <section className="rounded-2xl border border-black/10 bg-white shadow-sm flex flex-col">
-            <div className="border-b border-black/10 p-3 sm:p-4">
+        <div className={`py-4 grid grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr] ${viewportHeightClasses}`}>
+          <section className="overflow-hidden flex flex-col gap-3">
+            <div className="p-3">
               <SectionHeaderForm icon={Boxes} title="Productos" />
 
               <div className="mt-3 grid grid-cols-1 gap-2">
                 <FloatingSelect
-                  label=""
+                  label="Buscar SKU"
                   name="adjustment-sku"
                   value={pendingItem.skuId}
                   options={(searchResults?.items ?? []).map((item) => ({
@@ -505,7 +505,7 @@ export default function AdjustmentFormProducts({
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto p-3 py-0">
               <DataTable
                 tableId="adjustment-products-items"
                 data={itemRows}
@@ -520,10 +520,10 @@ export default function AdjustmentFormProducts({
               />
             </div>
 
-            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-[11px] text-black/60">Total costo items</div>
-                <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
+            <div className="px-3 sm:px-4 py-3">
+              <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-black/70">
+                  <span>Total costo items</span>
                   <span className="font-semibold text-black tabular-nums">
                     {money(totalCost, CURRENCY)}
                   </span>
@@ -532,24 +532,24 @@ export default function AdjustmentFormProducts({
             </div>
           </section>
 
-          <aside className={`rounded-2xl border border-black/10 bg-white shadow-sm overflow-auto flex flex-col ${viewportHeightClasses}`}>
-            <div className="border-b border-black/10 px-3 sm:px-4 py-2 mt-2">
-              <SectionHeaderForm icon={FileText} title="Datos de documento" />
-            </div>
-
-            <div className="flex-1 overflow-hidden p-3 sm:p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-4">
+          <aside className="overflow-hidden flex flex-col border-0 border-black/10 lg:border-l">
+            <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
+              <div className="grid grid-cols-2 gap-3">
                 <FloatingSelect
                   label="Almacén"
                   name="adjustment-warehouse"
                   value={form.warehouseId ?? ""}
                   options={warehouseOptions}
                   onChange={(value) => {
-                    setForm((prev) => ({ ...prev, warehouseId: value, serieId: "" }));
+                    setForm((prev) => ({
+                      ...prev,
+                      warehouseId: value,
+                      serieId: "",
+                    }));
                     setStockDetail(emptyStockDetail);
                     void loadSeries(value);
                   }}
-                  className="h-11 text-xs"
+                  className="h-11 w-full text-xs"
                   searchable
                 />
 
@@ -558,19 +558,26 @@ export default function AdjustmentFormProducts({
                   name="adjustment-serie"
                   value={serie.label}
                   disabled
-                  className="h-11 text-xs text-black/90"
+                  className="h-11 w-full text-xs text-black/90"
                 />
 
-            </div>    
-                <FloatingInput
-                  label="Nota"
-                  name="adjustment-note"
-                  value={form.note ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-                  className="h-11 text-xs"
-                />
+                <div className="col-span-2 w-full">
+                  <FloatingInput
+                    label="Nota"
+                    name="adjustment-note"
+                    value={form.note ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        note: e.target.value,
+                      }))
+                    }
+                    className="h-11 w-full text-xs"
+                  />
+                </div>
+              </div>
 
-              <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 mt-2">
+              <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3 mt-2">
                 <p className="text-[11px] font-semibold text-black">Resumen</p>
 
                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
@@ -634,16 +641,8 @@ export default function AdjustmentFormProducts({
               </div>
             </div>
 
-            <div className="border-t border-black/10 px-3 sm:px-4 py-3">
+            <div className="p-3">
               <div className="flex gap-2">
-                <SystemButton
-                  variant="outline"
-                  className="flex-1"
-                  onClick={handleClose}
-                >
-                  Cerrar
-                </SystemButton>
-
                 <SystemButton
                   className="flex-1"
                   disabled={loading}
@@ -705,7 +704,7 @@ export default function AdjustmentFormProducts({
       className="w-[min(92rem,calc(100vw-2rem))]"
       bodyClassName="p-0"
     >
-      <div className="px-4 pb-4">{content}</div>
+      {content}
     </Modal>
   );
 }

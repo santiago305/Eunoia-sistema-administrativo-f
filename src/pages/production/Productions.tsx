@@ -415,7 +415,7 @@ export default function Production() {
       },
       {
         id: "actions",
-        header: "ACCIONES",
+        header: "Acciones",
         headerClassName: "text-center w-[70px]",
         stopRowClick: true,
         cell: (row) => {

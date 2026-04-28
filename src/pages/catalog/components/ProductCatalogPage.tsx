@@ -182,7 +182,6 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         refresh,
     } = useProducts(queryParams, { mode: config.mode });
 
-    const executedSnapshotKey = useMemo(() => JSON.stringify(executedSnapshot), [executedSnapshot]);
 
     const loadSearchState = useCallback(async () => {
         try {
@@ -201,7 +200,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         if (loading) return;
         if (!hasProductSearchCriteria(executedSnapshot)) return;
         void loadSearchState();
-    }, [executedSnapshotKey, loading, loadSearchState]);
+    }, [executedSnapshot, loading, loadSearchState]);
 
     const recentSearches = useMemo<DataTableRecentSearchItem<ProductSearchSnapshot>[]>(
         () =>
@@ -320,7 +319,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             },
             {
                 id: "actions",
-                header: "ACCIONES",
+                header: "Acciones",
                 headerClassName: "text-center flex justify-center",
                 stopRowClick: true,
                 cell: (row) => (
@@ -422,7 +421,12 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 if (response.items?.length) allItems.push(...response.items);
             }
 
-            const sorted = [...allItems].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            const sorted = [...allItems].sort((a, b) => {
+            const dateA = new Date(a.createdAt ?? 0).getTime();
+            const dateB = new Date(b.createdAt ?? 0).getTime();
+
+            return dateA - dateB;
+            });
             const csv = `\uFEFF${buildCsv(sorted)}`;
             const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
