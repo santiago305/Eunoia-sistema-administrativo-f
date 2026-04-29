@@ -69,10 +69,12 @@ export const buildSkuLabel = ({
 
 export const buildSkuLabelFromItem = ({
   skuItem,
-  fallbackName
+  fallbackName,
+  withCode = true,
 }: {
   skuItem: ProductSkuWithAttributes;
-  fallbackName:string
+  fallbackName:string;
+  withCode?: boolean;
 }) => {
   const baseName = skuItem.sku.name.trim()?? fallbackName;
   const attrMap = new Map(skuItem.attributes.map((attr) => [attr.code, attr.value]));
@@ -84,6 +86,9 @@ export const buildSkuLabelFromItem = ({
     .map((value) => (value ?? "").trim())
     .filter(Boolean)
     .join(" ");
+  if (!withCode) {
+    return `${baseName} ${attributes}`.trim();
+  }
   const skuCode = skuItem.sku.customSku
     ? `(${skuItem.sku.customSku})`
     : skuItem.sku.backendSku

@@ -8,6 +8,7 @@ export default function KardexPrima() {
         productType: ProductTypes.MATERIAL,
         pageTitle: "Movimientos de materia prima",
         headingTitle: "Movimientos de materia prima",
+        itemLabel: "Material",
         tableId: "inventory-ledger-materials",
         searchName: "inventory-ledger-materials-search",
         dateRangeName: "inventory-ledger-materials-date-range",

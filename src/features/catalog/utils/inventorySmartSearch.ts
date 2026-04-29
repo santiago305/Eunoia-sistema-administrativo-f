@@ -24,6 +24,7 @@ export type InventorySearchFilters = InventorySearchRule[];
 
 export type InventorySearchCatalogs = {
   warehouses: DataTableSearchOption[];
+  skus?: DataTableSearchOption[];
 };
 
 export type InventorySearchLabels = {
@@ -42,11 +43,6 @@ type InventorySearchOperatorOption =
 
 const IN_OPERATOR_OPTIONS: InventorySearchOperatorOption[] = [
   { id: "IN", label: "Es alguno de" },
-];
-
-const TEXT_OPERATOR_OPTIONS: InventorySearchOperatorOption[] = [
-  { id: "CONTAINS", label: "Contiene" },
-  { id: "EQ", label: "Es igual a" },
 ];
 
 const NUMBER_OPERATOR_OPTIONS: InventorySearchOperatorOption[] = [
@@ -93,10 +89,19 @@ function sanitizeRule(
   }
 
   if (rule.field === InventorySearchFields.SKU) {
+    if (rule.operator === "IN") {
+      const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : []));
+      if (!values.length) return null;
+      return {
+        field: InventorySearchFields.SKU,
+        operator: "IN",
+        values,
+      };
+    }
+
     const value = rule.value?.trim();
     if (!value) return null;
     if (rule.operator !== "CONTAINS" && rule.operator !== "EQ") return null;
-
     return {
       field: InventorySearchFields.SKU,
       operator: rule.operator,
@@ -241,7 +246,10 @@ export function getInventorySearchRuleSummary(
   if (!rule) return null;
 
   if (rule.operator === "IN") {
-    const map = getCatalogMaps(catalogs).warehouses;
+    const map =
+      key === InventorySearchFields.SKU
+        ? new Map((catalogs?.skus ?? []).map((option) => [option.id, option.label]))
+        : getCatalogMaps(catalogs).warehouses;
     const labels = (rule.values ?? []).map((value) => map.get(value) ?? value);
     const content = labels.join(" - ");
     return rule.mode === "exclude" ? `Excluye: ${content}` : content;
@@ -272,7 +280,7 @@ export function buildInventorySearchChips(
   }
 
   const skuRule = findInventorySearchRule(normalized, InventorySearchFields.SKU);
-  if (skuRule?.value) {
+  if ((skuRule?.values?.length ?? 0) > 0 || Boolean(skuRule?.value)) {
     const label = getInventorySearchRuleSummary(normalized, InventorySearchFields.SKU, catalogs);
     if (label) {
       chips.push({
@@ -324,15 +332,17 @@ export function buildInventorySearchChips(
 export function buildInventorySmartSearchColumns(
   catalogs?: InventorySearchCatalogs | null,
   labels?: InventorySearchLabels,
+  options?: { onSearchSku?: (query: string) => void },
 ): InventorySmartSearchColumn[] {
   return [
     {
       id: InventorySearchFields.SKU,
       label: getItemLabel(labels),
-      kind: "text",
-      description: "Busca por nombre del SKU o codigo.",
-      operators: TEXT_OPERATOR_OPTIONS,
-      placeholder: "Ej. Arcilla verde",
+      kind: "catalog",
+      description: "Selecciona uno o varios productos.",
+      operators: IN_OPERATOR_OPTIONS,
+      options: catalogs?.skus ?? [],
+      onSearch: options?.onSearchSku,
     },
     {
       id: InventorySearchFields.WAREHOUSE,

@@ -38,6 +38,8 @@ import { useCompany } from "@/shared/hooks/useCompany";
 import { InventorySmartSearchPanel } from "@/features/catalog/components/InventorySmartSearchPanel";
 import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
 import { normalizeQuantity } from "@/shared/utils/functionPurchases";
+import { listSkus } from "@/shared/services/skuService";
+import type { DataTableSearchOption } from "@/shared/components/table/search";
 import type {
   InventorySearchFilterKey,
   InventorySearchFilters,
@@ -128,6 +130,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [selectedForecast, setSelectedForecast] = useState<SkuStockForecast | null>(null);
   const [forecastLoading, setForecastLoading] = useState(false);
   const forecastRequestRef = useRef(0);
+  const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
 
   const isActiveRow = (row: InventorySnapshotRow) =>
     selectedSku === row.sku.sku.id && selectedWarehouseId === row.warehouseId;
@@ -139,13 +142,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         warehouseOptions
           .filter((option) => option.value !== "all")
           .map((option) => ({ id: option.value, label: option.label })),
+      skus: skuOptions,
     }),
-    [searchState, warehouseOptions],
-  );
-
-  const smartSearchColumns = useMemo(
-    () => buildInventorySmartSearchColumns(smartSearchCatalogs, { item: config.itemLabel }),
-    [config.itemLabel, smartSearchCatalogs],
+    [searchState, skuOptions, warehouseOptions],
   );
 
   const draftSnapshot = useMemo<InventorySearchSnapshot>(
@@ -219,6 +218,47 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
   }, [config.productType, showFlash]);
+
+  const loadSkus = useCallback(
+    async (q?: string) => {
+      try {
+        const res = await listSkus({ limit: 20, q, productType: config.productType });
+        const options = (res.items ?? []).map((item: any) => ({
+          id: item.sku.id,
+          label: item.sku.name || item.sku.backendSku,
+        }));
+
+        setSkuOptions((prev) => {
+          const next = [...prev];
+          options.forEach((option: DataTableSearchOption) => {
+            if (!next.some((entry) => entry.id === option.id)) next.push(option);
+          });
+          return next;
+        });
+      } catch {
+        // silent fallback
+      }
+    },
+    [config.productType],
+  );
+
+  const skuSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchSku = useCallback((q: string) => {
+    if (skuSearchDebounceRef.current) clearTimeout(skuSearchDebounceRef.current);
+    skuSearchDebounceRef.current = setTimeout(() => {
+      void loadSkus(q);
+    }, 500);
+  }, [loadSkus]);
+
+  const smartSearchColumns = useMemo(
+    () =>
+      buildInventorySmartSearchColumns(
+        smartSearchCatalogs,
+        { item: config.itemLabel },
+        { onSearchSku: handleSearchSku },
+      ),
+    [config.itemLabel, handleSearchSku, smartSearchCatalogs],
+  );
 
   const applySmartSnapshot = useCallback((snapshot: InventorySearchSnapshot) => {
     const normalized = sanitizeInventorySearchSnapshot(snapshot);
@@ -300,6 +340,10 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  useEffect(() => {
+    void loadSkus();
+  }, [loadSkus]);
 
   const forecastChart = useMemo<echarts.EChartsOption>(() => {
     const categories = ["S1", "S2", "S3", "S4", "S5"];
@@ -506,7 +550,12 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       label: "Ver kardex",
       icon: <FileText className="h-4 w-4 text-black/60" />,
       onClick: () => {
-        navigate(config.routes.kardex);
+        const skuId = row.sku.sku.id;
+        const skuName = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
+        const params = new URLSearchParams();
+        params.set("skuId", skuId);
+        if (skuName) params.set("skuName", skuName);
+        navigate(`${config.routes.kardex}?${params.toString()}`);
       },
     },
     {
@@ -515,7 +564,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       icon: <ArrowLeftRight className="h-4 w-4 text-black/60" />,
       disabled: companyActionDisabled,
       onClick: () => {
-        navigate(config.routes.transfer);
+        const q = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
+        navigate(`${config.routes.transfer}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
       },
     },
     {
@@ -524,7 +574,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       icon: <Wrench className="h-4 w-4 text-black/60" />,
       disabled: companyActionDisabled,
       onClick: () => {
-        navigate(config.routes.adjustments);
+        const q = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
+        navigate(`${config.routes.adjustments}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
       },
     },
   ];
@@ -603,6 +654,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
           buildSkuLabelFromItem({
             skuItem: row.sku,
             fallbackName: row.sku.sku.name ?? "",
+            withCode: false,
           }),
       },
       {

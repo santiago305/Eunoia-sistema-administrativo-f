@@ -1,4 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -100,6 +101,7 @@ type InventoryTransfersPageProps = {
 
 export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) {
   const { showFlash, clearFlash } = useFlashMessage();
+  const [searchParams] = useSearchParams();
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
@@ -157,6 +159,17 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  useEffect(() => {
+    const prefilledQuery = searchParams.get("q")?.trim();
+    if (!prefilledQuery) return;
+
+    startTransition(() => {
+      setSearchText(prefilledQuery);
+      setAppliedSearchText(prefilledQuery);
+      setPage(1);
+    });
+  }, [searchParams]);
 
   const smartSearchColumns = useMemo(
     () => buildInventoryDocumentsSmartSearchColumns(searchState),

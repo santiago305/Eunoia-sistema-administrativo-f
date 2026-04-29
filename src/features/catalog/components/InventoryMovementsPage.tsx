@@ -1,4 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -18,11 +19,12 @@ import {
 } from "@/shared/utils/functionPurchases";
 import type { ProductCatalogProductType } from "@/features/catalog/types/product";
 import type { InventoryLedgerMovementListItem } from "@/features/catalog/types/inventoryLedgerMovements";
-import type {
-  InventoryLedgerSearchField,
-  InventoryLedgerSearchRule,
-  InventoryLedgerSearchSnapshot,
-  InventoryLedgerSearchStateResponse,
+import {
+  InventoryLedgerSearchFields,
+  type InventoryLedgerSearchField,
+  type InventoryLedgerSearchRule,
+  type InventoryLedgerSearchSnapshot,
+  type InventoryLedgerSearchStateResponse,
 } from "@/features/catalog/types/inventoryLedgerSearch";
 import {
   deleteInventoryLedgerSearchMetric,
@@ -74,6 +76,7 @@ type InventoryMovementsPageConfig = {
   productType: ProductCatalogProductType;
   pageTitle: string;
   headingTitle: string;
+  itemLabel: string;
   tableId: string;
   searchName: string;
   dateRangeName: string;
@@ -85,6 +88,7 @@ type InventoryMovementsPageProps = {
 
 export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) {
   const { showFlash, clearFlash } = useFlashMessage();
+  const [searchParams] = useSearchParams();
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -152,12 +156,43 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     void loadSkus();
   }, [loadSearchState, loadSkus]);
 
+  useEffect(() => {
+    const prefilledSkuId = searchParams.get("skuId")?.trim();
+    const prefilledSkuName = searchParams.get("skuName")?.trim();
+    const prefilledQuery = searchParams.get("q")?.trim();
+    if (!prefilledSkuId && !prefilledQuery) return;
+
+    startTransition(() => {
+      if (prefilledSkuId) {
+        if (prefilledSkuName) {
+          setSkuOptions((prev) =>
+            prev.some((entry) => entry.id === prefilledSkuId)
+              ? prev
+              : [...prev, { id: prefilledSkuId, label: prefilledSkuName }],
+          );
+        }
+        setSearchFilters([
+          {
+            field: InventoryLedgerSearchFields.SKU,
+            operator: "IN",
+            values: [prefilledSkuId],
+          } as InventoryLedgerSearchRule,
+        ]);
+      }
+      const nextQuery = prefilledSkuId ? (prefilledSkuName || "") : (prefilledQuery || "");
+      setSearchText(nextQuery);
+      setAppliedSearchText(prefilledSkuId ? "" : nextQuery);
+      setPage(1);
+    });
+  }, [searchParams]);
+
   const smartSearchColumns = useMemo(
     () => buildInventoryLedgerSmartSearchColumns(searchState, {
       skuOptions,
       onSearchSku: handleSearchSku,
+      itemLabel: config.itemLabel,
     }),
-    [searchState, skuOptions, handleSearchSku],
+    [config.itemLabel, searchState, skuOptions, handleSearchSku],
   );
 
   const recentSearches = useMemo<DataTableRecentSearchItem<InventoryLedgerSearchSnapshot>[]>(
@@ -182,8 +217,8 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   );
 
   const searchChips = useMemo(
-    () => buildInventoryLedgerSearchChips(executedSnapshot, searchState, { skuOptions }),
-    [executedSnapshot, searchState, skuOptions],
+    () => buildInventoryLedgerSearchChips(executedSnapshot, searchState, { skuOptions, itemLabel: config.itemLabel }),
+    [config.itemLabel, executedSnapshot, searchState, skuOptions],
   );
 
   const submitSearch = useCallback(() => {
@@ -330,6 +365,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         const skuLabel = buildSkuLabelFromItem({
           skuItem: { sku: item.sku as any, attributes: (item.sku as any).attributes ?? [] } as any,
           fallbackName: item.sku.name || "-",
+          withCode: false,
         });
         const warehouse = item.warehouseName || item.warehouseId || "-";
         const user = item.user?.name || item.user?.email || "-";
@@ -367,7 +403,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       },
       {
         id: "skuLabel",
-        header: "Producto (SKU)",
+        header: config.itemLabel,
         accessorKey: "skuLabel",
         headerClassName: "text-left",
         className: "text-black/70",
@@ -427,7 +463,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         sortable: false,
       }
     ],
-    [],
+    [config.itemLabel],
   );
 
   return (

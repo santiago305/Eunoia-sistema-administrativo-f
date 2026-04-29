@@ -176,7 +176,7 @@ export function getInventoryLedgerSearchRuleSummary(
 export function buildInventoryLedgerSearchChips(
   snapshot: InventoryLedgerSearchSnapshot,
   searchState?: InventoryLedgerSearchStateResponse | null,
-  options?: { skuOptions?: DataTableSearchOption[] },
+  options?: { skuOptions?: DataTableSearchOption[]; itemLabel?: string },
 ): InventoryLedgerSearchChip[] {
   const normalized = sanitizeInventoryLedgerSearchSnapshot(snapshot);
   const chips: InventoryLedgerSearchChip[] = [];
@@ -188,9 +188,12 @@ export function buildInventoryLedgerSearchChips(
   normalized.filters.forEach((rule) => {
     const label = getInventoryLedgerSearchRuleSummary(normalized, rule.field, searchState, options);
     if (!label) return;
+    const fieldLabel = rule.field === InventoryLedgerSearchFields.SKU
+      ? options?.itemLabel ?? FIELD_LABELS[rule.field]
+      : FIELD_LABELS[rule.field];
     chips.push({
       id: rule.field,
-      label: `${FIELD_LABELS[rule.field]}: ${label}`,
+      label: `${fieldLabel}: ${label}`,
       removeKey: rule.field,
     });
   });
@@ -203,12 +206,13 @@ export function buildInventoryLedgerSmartSearchColumns(
   options?: {
     skuOptions?: DataTableSearchOption[];
     onSearchSku?: (query: string) => void;
+    itemLabel?: string;
   }
 ): InventoryLedgerSmartSearchColumn[] {
   return [
     {
       id: InventoryLedgerSearchFields.SKU,
-      label: "Producto (SKU)",
+      label: options?.itemLabel ?? "Producto (SKU)",
       kind: "catalog",
       description: "Busca por nombre del SKU o código.",
       operators: IN_OPERATOR,

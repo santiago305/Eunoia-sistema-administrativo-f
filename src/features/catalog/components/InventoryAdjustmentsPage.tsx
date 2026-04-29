@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -89,6 +90,7 @@ export function InventoryAdjustmentsPage({
   config,
 }: InventoryAdjustmentsPageProps) {
   const { showFlash, clearFlash } = useFlashMessage();
+  const [searchParams] = useSearchParams();
   const showFlashRef = useRef(showFlash);
   const clearFlashRef = useRef(clearFlash);
 
@@ -451,6 +453,15 @@ export function InventoryAdjustmentsPage({
   useEffect(() => {
     void loadDocuments();
   }, [loadDocuments]);
+
+  useEffect(() => {
+    const prefilledQuery = searchParams.get("q")?.trim();
+    if (!prefilledQuery) return;
+
+    setSearchText(prefilledQuery);
+    setExecutedSearchText(prefilledQuery);
+    setPage(1);
+  }, [searchParams]);
 
   const openDocumentPdf = (documentId: string) => {
     setSelectedDocumentId(documentId);

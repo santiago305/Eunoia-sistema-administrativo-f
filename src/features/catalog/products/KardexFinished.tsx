@@ -8,6 +8,7 @@ export default function KardexFinished() {
         productType: ProductTypes.PRODUCT,
         pageTitle: "Movimientos de productos",
         headingTitle: "Movimientos de productos",
+        itemLabel: "Producto (SKU)",
         tableId: "inventory-ledger-products",
         searchName: "inventory-ledger-products-search",
         dateRangeName: "inventory-ledger-products-date-range",
