@@ -550,12 +550,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       label: "Ver kardex",
       icon: <FileText className="h-4 w-4 text-black/60" />,
       onClick: () => {
-        const skuId = row.sku.sku.id;
-        const skuName = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
-        const params = new URLSearchParams();
-        params.set("skuId", skuId);
-        if (skuName) params.set("skuName", skuName);
-        navigate(`${config.routes.kardex}?${params.toString()}`);
+        const q = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
+        navigate(`${config.routes.kardex}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
       },
     },
     {

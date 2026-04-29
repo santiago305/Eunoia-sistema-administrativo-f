@@ -41,7 +41,6 @@ const Company = lazy(() => import("@/features/company/Company"));
 const Production = lazy(() => import("@/features/production/Productions"));
 const KardexPrima = lazy(() => import("@/features/catalog/raw-material/KardexPrima"));
 const KardexFinished = lazy(() => import("@/features/catalog/products/KardexFinished"));
-const TransferProduct = lazy(() => import("@/features/catalog/products/components/TransferFormProducts"));
 const TransferRowMaterial = lazy(() => import("@/features/catalog/raw-material/TransferRowMaterial"));
 const OutOrder = lazy(() => import("@/features/out-orders/OutOrder"));
 const CatalogInventory = lazy(() => import("@/features/catalog/products/Inventory"));
@@ -174,10 +173,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.outOrder,
                 element: withCompanyRouteGuard(RoutesPaths.outOrder, <OutOrder />),
-            },
-            {
-                path: RoutesPaths.catalogTransfer,
-                element: withCompanyRouteGuard(RoutesPaths.catalogTransfer, <TransferProduct />),
             },
             {
                 path: RoutesPaths.catalogInventory,

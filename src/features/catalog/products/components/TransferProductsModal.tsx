@@ -12,7 +12,7 @@ type Props = {
 export function TransferProductsModal({ open, onClose, onSaved, type }: Props) {
     return (
         <Modal open={open} onClose={onClose}  title="Nueva transferencia" className="w-[min(92rem,calc(100vw-2rem))]" bodyClassName="p-0">
-            <TransferProducts inModal onClose={onClose} onSaved={onSaved} type={type} />
+            <TransferProducts onClose={onClose} onSaved={onSaved} type={type} />
         </Modal>
     );
 }

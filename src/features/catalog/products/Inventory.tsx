@@ -15,7 +15,7 @@ export default function CatalogInventory() {
         searchName: "catalog-inventory-search",
         routes: {
           kardex: RoutesPaths.KardexFinished,
-          transfer: RoutesPaths.catalogTransfer,
+          transfer: RoutesPaths.catalogTransferences,
           adjustments: RoutesPaths.catalogAdjustments,
         },
       }}

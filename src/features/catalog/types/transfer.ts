@@ -45,7 +45,6 @@ export type StockDetailState = {
 };
 
 export type TransferProductsProps = {
-  inModal?: boolean;
   onClose?: () => void;
   onSaved?: (transferId: string) => void | Promise<void>;
   type?: InventoryDocumentProductType

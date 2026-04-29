@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
 import { Boxes, Trash2 } from "lucide-react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -16,12 +15,8 @@ import { listSkus } from "@/shared/services/skuService";
 import { money, parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductTypes } from "@/features/catalog/types/ProductTypes";
-import { RoutesPaths } from "@/routes/config/routesPaths";
-import { useNavigate } from "react-router-dom";
 import { TransferItemModal } from "@/features/catalog/products/components/TransferItemModal";
 import { TransferResultModal } from "@/features/catalog/products/components/TransferResultModal";
-import { Headed } from "@/shared/components/components/Headed";
-import { PageShell } from "@/shared/layouts/PageShell";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import {
     TransferProductsProps,
@@ -41,10 +36,8 @@ import { SectionHeaderForm } from "@/shared/components/components/SectionHederFo
 
 const CURRENCY = "PEN";
 
-export default function TransferProducts({ inModal = false, onClose, onSaved, type }: TransferProductsProps) {
+export default function TransferProducts({ onClose, onSaved, type }: TransferProductsProps) {
     const { showFlash, clearFlash } = useFlashMessage();
-    const navigate = useNavigate();
-
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState<CreateTransfer>(() => buildEmptyFormTransfer());
     const [pendingItem, setPendingItem] = useState<TransferItem>(() => buildEmptyItemTransfer());
@@ -429,21 +422,11 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
     const summaryBase = stockDetail.from ?? stockDetail.to;
     const selectedRowId = stockDetail.selectedSkuId;
 
-    const viewportHeightClasses = inModal ? "h-[80vh]" : "h-[calc(100vh-64px)]";
+    const viewportHeightClasses = "h-[80vh]";
 
     const content = (
         <>
-            <div className={inModal ? "w-full" : "h-screen w-full py-0"}>
-                {!inModal ? (
-                    <div className="pt-2">
-                        <Headed
-                            title="Transferencia entre almacenes"
-                            subtitle="El almacén de origen debe tener un stock mayor a (0)."
-                            size="lg"
-                        />
-                    </div>
-                ) : null}
-
+            <div className="w-full">
                 <div className={`py-4 grid grid-cols-1 gap-3 lg:grid-cols-[6fr_2.5fr] ${viewportHeightClasses}`}>
                     <section className="overflow-hidden flex flex-col gap-3">
                         <div className="p-3">
@@ -641,31 +624,18 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                     setOpenNavigateModal(false);
                     resetForm();
                     setLastSavedTransferId("");
-                    if (!inModal) {
-                        navigate(RoutesPaths.catalogTransfer);
-                    }
+                    
                 }}
                 onGoToList={() => {
                     setOpenNavigateModal(false);
-                    if (inModal) {
-                        onClose?.();
-                        return;
-                    }
-                    navigate(RoutesPaths.KardexFinished);
+                    onClose?.();
                 }}
                 transferId={lastSavedTransferId}
                 title="Transferencia de inventario procesada"
-                goToLabel={inModal ? "Volver al listado" : "Ir a kardex de productos terminados"}
+                goToLabel="Volver al listado"
             />
         </>
     );
-
-    if (inModal) return content;
-
-    return (
-        <PageShell className="bg-white">
-            <PageTitle title="Transferencia de productos" />
-            {content}
-        </PageShell>
-    );
+    return content;
 }
+
