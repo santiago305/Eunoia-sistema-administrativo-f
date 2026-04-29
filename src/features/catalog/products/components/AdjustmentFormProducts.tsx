@@ -14,6 +14,8 @@ import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
 import { createOutOrder, getStockSku } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
+import { findOwnUser } from "@/shared/services/userService";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductType, ProductTypes } from "@/features/catalog/types/ProductTypes";
@@ -78,6 +80,7 @@ export default function AdjustmentFormProducts({
   type,
   initialSku,
 }: AdjustmentFormProductsProps) {
+  const { userId } = useAuth();
   const { showFlash, clearFlash } = useFlashMessage();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
@@ -93,6 +96,16 @@ export default function AdjustmentFormProducts({
   const [items, setItems] = useState<DraftAdjustmentItem[]>([]);
   const [stockDetail, setStockDetail] = useState<StockDetailState>(emptyStockDetail);
   const seededSkuRef = useRef<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState("-");
+  const [adjustmentCheck, setAdjustmentCheck] = useState<{
+    loading: boolean;
+    possible: boolean;
+    reasons: string[];
+  }>({
+    loading: false,
+    possible: false,
+    reasons: [],
+  });
 
   const resetForm = useCallback(() => {
     if (skuSearchTimeoutRef.current) {
@@ -343,6 +356,14 @@ export default function AdjustmentFormProducts({
       showFlash(errorResponse("Agrega al menos un item"));
       return;
     }
+    if (adjustmentCheck.loading) {
+      showFlash(errorResponse("Validando ajuste..."));
+      return;
+    }
+    if (!adjustmentCheck.possible) {
+      showFlash(errorResponse(adjustmentCheck.reasons[0] ?? "No es posible realizar el ajuste"));
+      return;
+    }
 
     setLoading(true);
     try {
@@ -441,6 +462,97 @@ export default function AdjustmentFormProducts({
   }, [loadWarehouses, open, resetForm, searchSkus]);
 
   useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const loadCurrentUser = async () => {
+      try {
+        const response = await findOwnUser();
+        const user = "data" in response ? response.data : response;
+        const name = user?.name?.trim() || "-";
+        if (!cancelled) {
+          setCurrentUserName(name);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentUserName("-");
+        }
+      }
+    };
+
+    void loadCurrentUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, userId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const validateAdjustment = async () => {
+      if (!form.warehouseId) {
+        setAdjustmentCheck({
+          loading: false,
+          possible: false,
+          reasons: ["Selecciona almacén"],
+        });
+        return;
+      }
+      if (!items.length) {
+        setAdjustmentCheck({
+          loading: false,
+          possible: false,
+          reasons: ["Agrega al menos un SKU"],
+        });
+        return;
+      }
+
+      setAdjustmentCheck((prev) => ({ ...prev, loading: true }));
+      const reasons: string[] = [];
+
+      await Promise.all(
+        items.map(async (item) => {
+          const skuData = selectedSkus.find((s) => s.sku.id === item.skuId);
+          const skuLabel = skuData?.sku.name || skuData?.sku.backendSku || item.skuId;
+          const qty = Number(item.quantity) || 0;
+
+          if (qty === 0) {
+            reasons.push(`La cantidad para ${skuLabel} no puede ser 0`);
+            return;
+          }
+
+          if (qty < 0) {
+            try {
+              const stock = await getStockSku({
+                warehouseId: form.warehouseId,
+                skuId: item.skuId,
+              });
+              const available = Number(stock?.available ?? 0);
+              const requested = Math.abs(qty);
+              if (available <= 0 || available < requested) {
+                reasons.push(`Stock de ${skuLabel} no es suficiente para el ajuste`);
+              }
+            } catch {
+              reasons.push(`No se pudo validar stock de ${skuLabel}`);
+            }
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setAdjustmentCheck({
+          loading: false,
+          possible: reasons.length === 0,
+          reasons,
+        });
+      }
+    };
+
+    void validateAdjustment();
+    return () => {
+      cancelled = true;
+    };
+  }, [form.warehouseId, items, selectedSkus]);
+
+  useEffect(() => {
     if (!open || !initialSku?.skuId) return;
     if (seededSkuRef.current === initialSku.skuId) return;
     seededSkuRef.current = initialSku.skuId;
@@ -468,7 +580,7 @@ export default function AdjustmentFormProducts({
     });
   }, [initialSku, open]);
 
-  const summaryBase = stockDetail.from;
+  const warehouseName = warehouseOptions.find((option) => option.value === form.warehouseId)?.label ?? "-";
   const selectedRowId = stockDetail.selectedSkuId;
 
   const viewportHeightClasses = inModal ? "h-[80vh]" : "h-[calc(100vh-64px)]";
@@ -609,46 +721,26 @@ export default function AdjustmentFormProducts({
 
                   <div className="flex items-center justify-between gap-3">
                     <span>Usuario</span>
-                    <span className="font-semibold text-right">{summaryBase?.name ?? "-"}</span>
+                    <span className="font-semibold text-right">{currentUserName}</span>
                   </div>
 
                   <div className="flex items-center justify-between gap-3">
-                    <span>Unidad</span>
-                    <span className="font-semibold text-right">{summaryBase?.unit ?? "-"}</span>
+                    <span>Almacén</span>
+                    <span className="font-semibold text-right">{warehouseName}</span>
                   </div>
 
                   <div className="flex items-center justify-between gap-3">
-                    <span>Stock físico</span>
+                    <span>Ajuste</span>
                     <span className="font-semibold tabular-nums text-right">
-                      {stockDetail.loading
-                        ? "Cargando..."
-                        : stockDetail.error
-                        ? "-"
-                        : summaryBase?.onHand ?? "-"}
+                      {adjustmentCheck.loading ? "Validando..." : adjustmentCheck.possible ? "Posible" : "No posible"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3">
-                    <span>Stock reservado</span>
-                    <span className="font-semibold tabular-nums text-right">
-                      {stockDetail.loading
-                        ? "Cargando..."
-                        : stockDetail.error
-                        ? "-"
-                        : summaryBase?.reserved ?? "-"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3">
-                    <span>Stock disponible</span>
-                    <span className="font-semibold tabular-nums text-right">
-                      {stockDetail.loading
-                        ? "Cargando..."
-                        : stockDetail.error
-                        ? "-"
-                        : summaryBase?.available ?? "-"}
-                    </span>
-                  </div>
+                  {!adjustmentCheck.loading && adjustmentCheck.reasons.length > 0 ? (
+                    <div className="rounded border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] text-rose-700">
+                      {adjustmentCheck.reasons[0]}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -657,7 +749,14 @@ export default function AdjustmentFormProducts({
               <div className="flex gap-2">
                 <SystemButton
                   className="flex-1"
-                  disabled={loading}
+                  disabled={
+                    loading ||
+                    adjustmentCheck.loading ||
+                    !adjustmentCheck.possible ||
+                    !form.warehouseId ||
+                    !form.serieId ||
+                    !items.length
+                  }
                   onClick={saveAdjustment}
                 >
                   {loading ? "Guardando..." : "Guardar"}
