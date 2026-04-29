@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Plus, Scale, Trash2 } from "lucide-react";
 import { createProductEquivalence, deleteProductEquivalence } from "@/services/equivalenceService";
 import { FloatingInput } from "@/components/FloatingInput";
@@ -47,16 +47,23 @@ export function EquivalenceFormFields({
   const [fromUnitId, setFromUnitId] = useState("");
   const [factor, setFactor] = useState("1");
 
-  const unitOptions = (units ?? []).map((u) => ({
-    value: u.id,
-    label: `${u.name} (${u.code})`,
-  }));
+  const unitOptions = useMemo(
+    () =>
+      (units ?? []).map((u) => ({
+        value: u.id,
+        label: `${u.name} (${u.code})`,
+      })),
+    [units],
+  );
 
-  const baseUnitLabel =
-    (units ?? []).find((u) => u.id === baseUnitId)?.name ??
-    (baseUnitId ? baseUnitId : "Sin unidad base");
+  const baseUnitLabel = useMemo(
+    () =>
+      (units ?? []).find((u) => u.id === baseUnitId)?.name ??
+      (baseUnitId ? baseUnitId : "Sin unidad base"),
+    [units, baseUnitId],
+  );
 
-  const handleCreate = async () => {
+  const handleCreate = useCallback(async () => {
     if (!baseUnitId || !fromUnitId || !factor) return;
 
     const payload = {
@@ -74,28 +81,29 @@ export function EquivalenceFormFields({
 
     setFromUnitId("");
     setFactor("1");
-  };
+  }, [baseUnitId, factor, fromUnitId, onCreateEquivalence, onCreated, productId]);
 
-  const deleteEquivalence = async (id: string) => {
-    try {
-      if (onDeleteEquivalence) {
-        await onDeleteEquivalence(id);
-      } else {
-        await deleteProductEquivalence(id);
-        await onCreated?.();
+  const deleteEquivalence = useCallback(
+    async (id: string) => {
+      try {
+        if (onDeleteEquivalence) {
+          await onDeleteEquivalence(id);
+        } else {
+          await deleteProductEquivalence(id);
+          await onCreated?.();
+        }
+      } catch {
+        return;
       }
-    } catch {
-      return;
-    }
-  };
+    },
+    [onDeleteEquivalence, onCreated],
+  );
 
   const rows = useMemo<EquivalenceRow[]>(
     () =>
       equivalences.map((eq) => {
-        const fromUnit =
-          eq.fromUnit ?? (units ?? []).find((u) => u.id === eq.fromUnitId);
-        const toUnit =
-          eq.toUnit ?? (units ?? []).find((u) => u.id === eq.toUnitId);
+        const fromUnit = eq.fromUnit ?? (units ?? []).find((u) => u.id === eq.fromUnitId);
+        const toUnit = eq.toUnit ?? (units ?? []).find((u) => u.id === eq.toUnitId);
         const fromLabel = fromUnit ? `${fromUnit.name} (${fromUnit.code})` : eq.fromUnitId;
         const toLabel = toUnit ? `${toUnit.name} (${toUnit.code})` : eq.toUnitId;
 
@@ -152,64 +160,62 @@ export function EquivalenceFormFields({
 
   const canPersist = Boolean(onCreateEquivalence || productId);
   const canCreate = Boolean(baseUnitId && fromUnitId && factor && canPersist);
-  const resolvedTableId =
-    tableId ?? (productId ? `product-equivalences-${productId}` : "product-equivalences-draft");
+  const resolvedTableId = tableId ?? (productId ? `product-equivalences-${productId}` : "product-equivalences-draft");
 
   return (
     <div className="space-y-4">
-      
-        <SectionHeaderForm icon={Scale} title="Nueva equivalencia" />
+      <SectionHeaderForm icon={Scale} title="Nueva equivalencia" />
 
-        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_100px] ">
-          <FloatingInput label="Unidad origen" value={baseUnitLabel} name="origin" disabled />
+      <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_100px] ">
+        <FloatingInput label="Unidad origen" value={baseUnitLabel} name="origin" disabled />
 
-          <FloatingInput
-            label="Factor"
-            type="number"
-            name="factor"
-            value={factor}
-            min={1}
-            onChange={(e) => setFactor(e.target.value)}
-          />
+        <FloatingInput
+          label="Factor"
+          type="number"
+          name="factor"
+          value={factor}
+          min={1}
+          onChange={(e) => setFactor(e.target.value)}
+        />
 
-          <FloatingSelect
-            label="Unidad de destino"
-            name="destino"
-            value={fromUnitId}
-            onChange={(value) => setFromUnitId(value)}
-            options={unitOptions}
-            searchable
-            searchPlaceholder="Buscar unidad..."
-            emptyMessage="Sin unidades de medida"
-          />
+        <FloatingSelect
+          label="Unidad de destino"
+          name="destino"
+          value={fromUnitId}
+          onChange={(value) => setFromUnitId(value)}
+          options={unitOptions}
+          searchable
+          searchPlaceholder="Buscar unidad..."
+          emptyMessage="Sin unidades de medida"
+        />
 
-          <SystemButton
-            leftIcon={<Plus className="h-4 w-4" />}
-            className="h-10"
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-            }}
-            onClick={() => void handleCreate()}
-            disabled={!canCreate}
-          >
-            Agregar
-          </SystemButton>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm
-        mt-3">
-          <DataTable
-            tableId={resolvedTableId}
-            data={rows}
-            columns={columns}
-            rowKey="id"
-            loading={loading}
-            emptyMessage="No hay equivalencias registradas."
-            hoverable={false}
-            animated={false}
-            maxHeight="300px"
-          />
-        </div>  
+        <SystemButton
+          leftIcon={<Plus className="h-4 w-4" />}
+          className="h-10"
+          style={{
+            backgroundColor: PRIMARY,
+            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+          }}
+          onClick={() => void handleCreate()}
+          disabled={!canCreate}
+        >
+          Agregar
+        </SystemButton>
+      </div>
+
+      <div className="mt-3 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+        <DataTable
+          tableId={resolvedTableId}
+          data={rows}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          emptyMessage="No hay equivalencias registradas."
+          hoverable={false}
+          animated={false}
+          maxHeight="300px"
+        />
+      </div>
     </div>
   );
 }

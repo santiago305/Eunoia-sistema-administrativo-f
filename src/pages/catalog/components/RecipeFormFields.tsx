@@ -1,5 +1,4 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Power } from "lucide-react";
 import { FloatingInput } from "@/components/FloatingInput";
 import { FloatingSelect } from "@/components/FloatingSelect";
@@ -8,31 +7,24 @@ import { DataTable } from "@/components/table/DataTable";
 import type { DataTableColumn } from "@/components/table/types";
 import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
-
-export type RecipeDraftItem = {
-  id: string;
-  materialSkuId: string;
-  quantity: string;
-  unitId: string;
-};
-
-export type RecipeDraft = {
-  yieldQuantity: string;
-  notes: string;
-  items: RecipeDraftItem[];
-};
-
-export const createEmptyRecipeDraft = (): RecipeDraft => ({
-  yieldQuantity: "1",
-  notes: "",
-  items: [],
-});
+import {
+  buildRecipeRowId,
+  getPrimaUnitId,
+  getPrimaUnitName,
+  type RecipeDraft,
+  type RecipeDraftItem,
+} from "./recipeFormFields.helpers";
 
 type RecipeRow = {
   id: string;
   materialSkuId: string;
   quantity: string;
   unitId: string;
+};
+
+type RecipeSkuOption = {
+  value: string;
+  label: string;
 };
 
 type RecipeFormFieldsProps = {
@@ -45,21 +37,10 @@ type RecipeFormFieldsProps = {
   saving?: boolean;
   primaryColor?: string;
   tableId: string;
-  recipeSkuOptions: any;
-  onSelectSku: (skuId:string)=> void;
-  selectedSkuId:string;
+  recipeSkuOptions: RecipeSkuOption[];
+  onSelectSku: (skuId: string) => void;
+  selectedSkuId: string;
 };
-
-const buildRowId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `recipe-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const getPrimaUnitId = (prima?: PrimaVariant) => prima?.unit?.id ?? prima?.baseUnitId ?? "";
-
-const getPrimaUnitName = (prima?: PrimaVariant) => prima?.unit?.name ?? prima?.unitName ?? "SIN UNIDAD DE MEDIDA";
 
 export function RecipeFormFields({
   units,
@@ -73,40 +54,40 @@ export function RecipeFormFields({
   tableId,
   recipeSkuOptions,
   onSelectSku,
-  selectedSkuId
+  selectedSkuId,
 }: RecipeFormFieldsProps) {
   const [materialSkuId, setMaterialSkuId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [unitId, setUnitId] = useState("");
 
   const activePrimaVariants = useMemo(
-    () => (primaVariants ?? []).filter((v) => v.isActive !== false),
+    () => (primaVariants ?? []).filter((variant) => variant.isActive !== false),
     [primaVariants],
   );
 
   useEffect(() => {
-    const selected = activePrimaVariants.find((v) => v.id === materialSkuId);
-    const nextUnitId = getPrimaUnitId(selected);
-    setUnitId(nextUnitId);
+    const selected = activePrimaVariants.find((variant) => variant.id === materialSkuId);
+    setUnitId(getPrimaUnitId(selected));
   }, [materialSkuId, activePrimaVariants]);
 
   const primaVariantOptions = useMemo(
     () =>
-      (activePrimaVariants ?? []).map((v) => ({
-        value: v.id ?? "",
-        label: `${v.productName ?? "Producto"} ${v.attributes?.presentation ?? ""} ${
-          v.attributes?.variant ?? ""
-        } ${v.attributes?.color ?? ""} ${v.sku ? ` - ${v.sku}` : ""} ${
-          v.customSku ? `(${v.customSku})` : ""
+      activePrimaVariants.map((variant) => ({
+        value: variant.id ?? "",
+        label: `${variant.productName ?? "Producto"} ${variant.attributes?.presentation ?? ""} ${
+          variant.attributes?.variant ?? ""
+        } ${variant.attributes?.color ?? ""} ${variant.sku ? ` - ${variant.sku}` : ""} ${
+          variant.customSku ? `(${variant.customSku})` : ""
         }`.trim(),
       })),
     [activePrimaVariants],
   );
 
   const selectedPrimaVariant = useMemo(
-    () => activePrimaVariants.find((v) => v.id === materialSkuId),
+    () => activePrimaVariants.find((variant) => variant.id === materialSkuId),
     [activePrimaVariants, materialSkuId],
   );
+
   const baseUnitLabel = getPrimaUnitName(selectedPrimaVariant);
 
   const recipeRows = useMemo<RecipeRow[]>(
@@ -120,27 +101,30 @@ export function RecipeFormFields({
     [recipe.items],
   );
 
-  const removeItem = async (id: string) => {
-    if (onDeleteItem) {
-      await onDeleteItem(id);
-      return;
-    }
+  const removeItem = useCallback(
+    async (id: string) => {
+      if (onDeleteItem) {
+        await onDeleteItem(id);
+        return;
+      }
 
-    onChange({
-      ...recipe,
-      items: recipe.items.filter((item) => item.id !== id),
-    });
-  };
+      onChange({
+        ...recipe,
+        items: recipe.items.filter((item) => item.id !== id),
+      });
+    },
+    [onDeleteItem, onChange, recipe],
+  );
 
-  const updateItem = (
-    id: string,
-    patch: Partial<Pick<RecipeDraftItem, "materialSkuId" | "quantity" | "unitId">>,
-  ) => {
-    onChange({
-      ...recipe,
-      items: recipe.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    });
-  };
+  const updateItem = useCallback(
+    (id: string, patch: Partial<Pick<RecipeDraftItem, "materialSkuId" | "quantity" | "unitId">>) => {
+      onChange({
+        ...recipe,
+        items: recipe.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      });
+    },
+    [onChange, recipe],
+  );
 
   const unitOptions = useMemo(
     () =>
@@ -236,66 +220,66 @@ export function RecipeFormFields({
 
   const canAddItem = Boolean(materialSkuId && unitId && Number(quantity) > 0);
 
-  const handleAddItem = async () => {
+  const handleAddItem = useCallback(async () => {
     if (!canAddItem) return;
 
     const nextItem: RecipeDraftItem = {
-      id: buildRowId(),
+      id: buildRecipeRowId(),
       materialSkuId,
       quantity,
       unitId,
     };
 
-    const nextRecipe: RecipeDraft = {
+    onChange({
       ...recipe,
       items: [...recipe.items, nextItem],
-    };
-
-    onChange(nextRecipe);
+    });
 
     setMaterialSkuId("");
     setQuantity("1");
     setUnitId("");
-  };
+  }, [canAddItem, materialSkuId, quantity, unitId, onChange, recipe]);
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.65fr] pt-3">
-          <FloatingSelect
-            label=""
-            name="selectedSku"
-            value={selectedSkuId}
-            onChange={onSelectSku}
-            options={recipeSkuOptions}
-            searchable
-            searchPlaceholder="Buscar producto..."
-            emptyMessage="Sin productos"
-          />
-          <FloatingInput
-              label="Nota"
-              name="notes"
-              value={recipe.notes}
-              onChange={(event) =>
-                onChange({
-                  ...recipe,
-                  notes: event.target.value,
-                })
-              }
-            />
-          <FloatingInput
-            label="Rendimiento"
-            type="number"
-            name="yield"
-            min={0}
-            value={recipe.yieldQuantity}
-            onChange={(event) =>
-              onChange({
-                ...recipe,
-                yieldQuantity: event.target.value,
-              })
-            }
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-3 pt-3 md:grid-cols-[1.8fr_1fr_0.65fr]">
+        <FloatingSelect
+          label=""
+          name="selectedSku"
+          value={selectedSkuId}
+          onChange={onSelectSku}
+          options={recipeSkuOptions}
+          searchable
+          searchPlaceholder="Buscar producto..."
+          emptyMessage="Sin productos"
+        />
+
+        <FloatingInput
+          label="Nota"
+          name="notes"
+          value={recipe.notes}
+          onChange={(event) =>
+            onChange({
+              ...recipe,
+              notes: event.target.value,
+            })
+          }
+        />
+
+        <FloatingInput
+          label="Rendimiento"
+          type="number"
+          name="yield"
+          min={0}
+          value={recipe.yieldQuantity}
+          onChange={(event) =>
+            onChange({
+              ...recipe,
+              yieldQuantity: event.target.value,
+            })
+          }
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.5fr_45px]">
         <FloatingSelect
@@ -319,7 +303,7 @@ export function RecipeFormFields({
           value={quantity}
           min="0"
           step="1"
-          onChange={(e) => setQuantity(e.target.value)}
+          onChange={(event) => setQuantity(event.target.value)}
         />
 
         <SystemButton
@@ -333,6 +317,7 @@ export function RecipeFormFields({
           disabled={!canAddItem || Boolean(saving)}
         />
       </div>
+
       <DataTable
         tableId={tableId}
         data={recipeRows}
@@ -346,7 +331,6 @@ export function RecipeFormFields({
         tableClassName="text-xs"
         maxHeight="300px"
       />
-
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlaskConical, PackageCheck, Save, Scale } from "lucide-react";
 import { Modal } from "@/components/modales/Modal";
 import { SystemButton } from "@/components/SystemButton";
@@ -17,7 +17,7 @@ import type { RecipeResponse, UpdateRecipePayload } from "@/pages/catalog/types/
 import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import type { ProductSkuDraft } from "./ProductSkuTable";
-import { createEmptyRecipeDraft, type RecipeDraft } from "./RecipeFormFields";
+
 import { ProductDetailsSection, ProductEquivalencesSection, ProductRecipesSection } from "./ProductCreateModalSections";
 import {
     buildSkuUpdatePayload,
@@ -45,6 +45,7 @@ import {
     formatFailedSkuLabels,
 } from "../utils/productCreateModal.helpers";
 import { ProductWorkspaceTabs } from "./ComponentSetion";
+import { createEmptyRecipeDraft, RecipeDraft } from "./recipeFormFields.helpers";
 const DEFAULT_DRAFT: ProductCreateDraft = createEmptyProductCreateDraft();
 
 export function ProductCreateModal({ open, mode = "create", productId, productType, primaryColor = DEFAULT_PRIMARY, entityLabel, onClose, onSaved }: ProductCreateModalProps) {
@@ -81,19 +82,19 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const activeProductId = isEditMode ? (productId ?? null) : createdProductId;
     const createFlowLocked = !isEditMode && Boolean(createdProductId);
 
-    const parseEditRecipeSelectionKey = (key: string) => {
+    const parseEditRecipeSelectionKey = useCallback((key: string) => {
         const [kind, id] = key.split(":");
         if (!id) return null;
         if (kind !== "sku" && kind !== "draft") return null;
         return { kind, id } as const;
-    };
+    }, []);
 
-    const clearDraftStorage = () => {
+    const clearDraftStorage = useCallback(() => {
         if (typeof window === "undefined") return;
         window.localStorage.removeItem(draftStorageKey);
-    };
+    }, [draftStorageKey]);
 
-    const resetCreateDraftState = () => {
+    const resetCreateDraftState = useCallback(() => {
         const pendingState = createEmptyPendingCreateState();
         setDraft(createEmptyProductCreateDraft());
         setCreatedProductId(pendingState.createdProductId);
@@ -102,14 +103,14 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         setNonPersistedDrafts(pendingState.nonPersistedDrafts);
         setEquivalenceFailures(pendingState.equivalenceFailures);
         clearDraftStorage();
-    };
+    }, [clearDraftStorage]);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         if (!isEditMode) {
             resetCreateDraftState();
         }
         onClose();
-    };
+    }, [isEditMode, onClose, resetCreateDraftState]);
 
     useEffect(() => {
         if (!open) return;
@@ -134,7 +135,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         }
         resetCreateDraftState();
         setSkuRows([createDefaultSkuRow()]);
-    }, [open, isEditMode]);
+    }, [open, isEditMode, resetCreateDraftState]);
 
     useEffect(() => {
         if (!open) return;
@@ -184,9 +185,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 showFlash(errorResponse("Error al cargar unidades"));
             })
             .finally(() => setLoadingUnits(false));
-    }, [open, units, loadingUnits]);
+    }, [open, units, loadingUnits, showFlash]);
 
-    const loadEquivalences = async (id: string) => {
+    const loadEquivalences = useCallback(async (id: string) => {
         setLoadingEquivalences(true);
         try {
             const response = await listProductEquivalences(id);
@@ -197,9 +198,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         } finally {
             setLoadingEquivalences(false);
         }
-    };
+    }, [showFlash]);
 
-    const mapRecipeResponseToDraft = (response?: RecipeResponse | null): RecipeDraft => {
+    const mapRecipeResponseToDraft = useCallback((response?: RecipeResponse | null): RecipeDraft => {
         if (!response?.recipe) return createEmptyRecipeDraft();
 
         return {
@@ -212,7 +213,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 unitId: item.unitId,
             })),
         };
-    };
+    }, []);
 
     const applyRecipeResponseToState = (skuId: string, response?: RecipeResponse | null) => {
         const nextDraft = mapRecipeResponseToDraft(response);
@@ -220,7 +221,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         setEditedRecipesBySkuId((prev) => ({ ...prev, [skuId]: nextDraft }));
     };
 
-    const loadRecipe = async (skuId: string) => {
+    const loadRecipe = useCallback(async (skuId: string) => {
         setLoadingRecipe(true);
         try {
             const response = await getSkuRecipe(skuId);
@@ -239,7 +240,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         } finally {
             setLoadingRecipe(false);
         }
-    };
+    }, [mapRecipeResponseToDraft, showFlash]);
 
     useEffect(() => {
         if (!open || !isEditMode) return;
@@ -286,9 +287,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             .finally(() => {
                 setLoadingProduct(false);
             });
-    }, [open, isEditMode, productId, label]);
+    }, [open, isEditMode, productId, label, clearFlash, loadEquivalences, showFlash]);
 
-    const loadMaterials = async () => {
+    const loadMaterials = useCallback(async () => {
         setLoadingPrimaVariants(true);
         try {
             const response = await listSkus({
@@ -316,12 +317,12 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         } finally {
             setLoadingPrimaVariants(false);
         }
-    };
+    }, [showFlash]);
 
     useEffect(() => {
         if (!open || isMaterial || loadingPrimaVariants || primaVariants.length > 0) return;
         void loadMaterials();
-    }, [open, isMaterial, loadingPrimaVariants, primaVariants.length]);
+    }, [open, isMaterial, loadingPrimaVariants, primaVariants.length, loadMaterials]);
 
     useEffect(() => {
         if (!open || !isEditMode) return;
@@ -330,7 +331,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         if (parsed.kind !== "sku") return;
         if (persistedRecipesBySkuId[parsed.id] || editedRecipesBySkuId[parsed.id]) return;
         void loadRecipe(parsed.id);
-    }, [open, isEditMode, selectedSkuId, persistedRecipesBySkuId, editedRecipesBySkuId]);
+    }, [open, isEditMode, selectedSkuId, persistedRecipesBySkuId, editedRecipesBySkuId, loadRecipe, parseEditRecipeSelectionKey]);
 
     useEffect(() => {
         if (isEditMode) return;
@@ -509,13 +510,13 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             return editedRecipesBySkuId[parsed.id] ?? createEmptyRecipeDraft();
         }
         return draft.recipesBySku[selectedSkuId] ?? createEmptyRecipeDraft();
-    }, [draft.recipesBySku, selectedSkuId, isEditMode, editedRecipesBySkuId]);
+    }, [draft.recipesBySku, selectedSkuId, isEditMode, editedRecipesBySkuId, parseEditRecipeSelectionKey]);
 
     const selectedSkuIsDraft = useMemo(() => {
         if (!isEditMode) return false;
         const parsed = selectedSkuId ? parseEditRecipeSelectionKey(selectedSkuId) : null;
         return parsed?.kind === "draft";
-    }, [isEditMode, selectedSkuId]);
+    }, [isEditMode, selectedSkuId, parseEditRecipeSelectionKey]);
 
     const draftLabelForId = (draftId: string) =>
         buildDraftSkuLabel({

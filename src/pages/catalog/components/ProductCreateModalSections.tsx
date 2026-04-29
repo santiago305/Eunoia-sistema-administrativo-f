@@ -8,8 +8,9 @@ import type { ListUnitResponse } from "@/pages/catalog/types/unit";
 import type { PrimaVariant } from "@/pages/catalog/types/variant";
 import { EquivalenceFormFields } from "./EquivalenceFormField";
 import { ProductSkuTable, type ProductSkuDraft } from "./ProductSkuTable";
-import { RecipeFormFields, type RecipeDraft } from "./RecipeFormFields";
 import { SelectOption, EquivalenceLike, PendingNotice } from "./ComponentSetion";
+import { RecipeDraft } from "./recipeFormFields.helpers";
+import { RecipeFormFields } from "./RecipeFormFields";
 
 
 
