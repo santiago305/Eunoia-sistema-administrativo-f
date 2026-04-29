@@ -11,17 +11,30 @@ import {
 import { Modal } from "@/shared/components/modales/Modal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import type { InventoryDocument } from "@/features/catalog/types/documentInventory";
-import type { ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 
 export type InventoryDocumentDetailItem = {
   id?: string | null;
+  docId?: string | null;
   skuId?: string | null;
-  sku?: ProductSkuWithAttributes | null;
+  sku?: {
+    id?: string | null;
+    name?: string | null;
+    backendSku?: string | null;
+    customSku?: string | null;
+    sku?: {
+      name?: string | null;
+      backendSku?: string | null;
+      customSku?: string | null;
+    } | null;
+  } | null;
   name?: string | null;
   backendSku?: string | null;
   customSku?: string | null;
   unitName?: string | null;
+  unit?: {
+    name?: string | null;
+  } | null;
   quantity?: number | null;
 };
 
@@ -155,12 +168,16 @@ const buildNumero = (document?: InventoryDocument | null) => {
 const getItemLabel = (item: InventoryDocumentDetailItem) => {
   return (
     item.name ??
+    item.sku?.name ??
     item.sku?.sku?.name ??
     item.backendSku ??
     item.customSku ??
+    item.sku?.backendSku ??
+    item.sku?.customSku ??
     item.sku?.sku?.backendSku ??
     item.sku?.sku?.customSku ??
     item.skuId ??
+    item.sku?.id ??
     "Item"
   );
 };
@@ -169,9 +186,12 @@ const getItemCode = (item: InventoryDocumentDetailItem) => {
   return (
     item.backendSku ??
     item.customSku ??
+    item.sku?.backendSku ??
+    item.sku?.customSku ??
     item.sku?.sku?.backendSku ??
     item.sku?.sku?.customSku ??
     item.skuId ??
+    item.sku?.id ??
     "-"
   );
 };
@@ -314,11 +334,11 @@ export function DocumentInventoryDetails({
       open={open}
       onClose={onClose}
       title={config.title}
-      className="w-[min(48rem,calc(100vw-1rem))]"
+      className="w-[min(48rem,calc(100vw-1rem))] max-h-[70vh]"
       bodyClassName="p-0"
       description={numero && numero !== "-" ? `${docTypeLabel} ${numero}` : undefined}
     >
-      <div className="max-h-[78vh] overflow-auto">
+      
         {resolvedDocument ? (
           <div className="bg-white">
             <div className={`px-4 py-4 sm:px-5 ${config.headerClassName}`}>
@@ -434,7 +454,7 @@ export function DocumentInventoryDetails({
                             </p>
                             <p className="mt-1 text-[10px] text-black/45">
                               {getItemCode(item)}{" "}
-                              {item.unitName ? `· ${item.unitName}` : ""}
+                              {(item.unitName ?? item.unit?.name) ? `· ${item.unitName ?? item.unit?.name}` : ""}
                             </p>
                           </div>
 
@@ -461,7 +481,6 @@ export function DocumentInventoryDetails({
             No hay documento seleccionado.
           </div>
         )}
-      </div>
     </Modal>
   );
 }

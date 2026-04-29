@@ -431,6 +431,7 @@ export function InventoryAdjustmentsPage({
         warehouseId: warehouseId || undefined,
         docType: DocType.ADJUSTMENT,
         productType: config.documentProductType,
+        includeItems: true,
         status: statusFilter || undefined,
         q: executedSearchText || undefined,
       });
@@ -691,7 +692,7 @@ export function InventoryAdjustmentsPage({
         open={openDetailsModal}
         documentId={selectedDocument?.id ?? null}
         document={selectedDocument}
-        items={[]}
+        items={selectedDocument?.items ?? []}
         onClose={() => {
           setOpenDetailsModal(false);
           setSelectedDocument(null);

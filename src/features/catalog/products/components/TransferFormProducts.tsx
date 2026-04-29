@@ -16,6 +16,8 @@ import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductTypes } from "@/features/catalog/types/ProductTypes";
 import { TransferResultModal } from "@/features/catalog/products/components/TransferResultModal";
+import { findOwnUser } from "@/shared/services/userService";
+import { useAuth } from "@/shared/hooks/useAuth";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import {
     TransferProductsProps,
@@ -34,6 +36,7 @@ import { skuStock } from "@/features/catalog/types/documentInventory";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 
 export default function TransferProducts({ onClose, onSaved, type, open, initialSku }: TransferProductsProps) {
+    const { userId } = useAuth();
     const { showFlash, clearFlash } = useFlashMessage();
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState<CreateTransfer>(() => buildEmptyFormTransfer());
@@ -53,6 +56,16 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     const [editingQuantitySkuId, setEditingQuantitySkuId] = useState<string | null>(null);
     const seededSkuRef = useRef<string | null>(null);
     const wasOpenRef = useRef(false);
+    const [currentUserName, setCurrentUserName] = useState("-");
+    const [transferCheck, setTransferCheck] = useState<{
+        loading: boolean;
+        possible: boolean;
+        reasons: string[];
+    }>({
+        loading: false,
+        possible: false,
+        reasons: [],
+    });
 
     useEffect(() => {
         setQuantityTextBySkuId((previous) => {
@@ -321,6 +334,14 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
             showFlash(errorResponse("Agrega al menos un item"));
             return;
         }
+        if (transferCheck.loading) {
+            showFlash(errorResponse("Validando stock de transferencia..."));
+            return;
+        }
+        if (!transferCheck.possible) {
+            showFlash(errorResponse(transferCheck.reasons[0] ?? "No es posible realizar la transferencia"));
+            return;
+        }
 
         setLoading(true);
         try {
@@ -424,6 +445,108 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     }, [open, loadWarehouses, searchSkus]);
 
     useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        const loadCurrentUser = async () => {
+            try {
+                const response = await findOwnUser();
+                const user = "data" in response ? response.data : response;
+                const name = user?.name?.trim() || "-";
+                if (!cancelled) {
+                    setCurrentUserName(name);
+                }
+            } catch {
+                if (!cancelled) {
+                    setCurrentUserName("-");
+                }
+            }
+        };
+
+        void loadCurrentUser();
+        return () => {
+            cancelled = true;
+        };
+    }, [open, userId]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const validateTransfer = async () => {
+            if (!form.fromWarehouseId || !form.toWarehouseId) {
+                setTransferCheck({
+                    loading: false,
+                    possible: false,
+                    reasons: ["Selecciona almacén de origen y destino"],
+                });
+                return;
+            }
+            if (!form.items?.length) {
+                setTransferCheck({
+                    loading: false,
+                    possible: false,
+                    reasons: ["Agrega al menos un SKU"],
+                });
+                return;
+            }
+            if (form.fromWarehouseId === form.toWarehouseId) {
+                setTransferCheck({
+                    loading: false,
+                    possible: false,
+                    reasons: ["El almacén de origen y destino no pueden ser iguales"],
+                });
+                return;
+            }
+
+            setTransferCheck((prev) => ({ ...prev, loading: true }));
+
+            const reasons: string[] = [];
+
+            await Promise.all(
+                (form.items ?? []).map(async (item) => {
+                    const skuData = selectedSkus.find((s) => s.sku.id === item.skuId);
+                    const skuLabel = skuData?.sku.name || skuData?.sku.backendSku || item.skuId;
+                    const qty = Number(item.quantity) || 0;
+
+                    if (qty <= 0) {
+                        reasons.push(`La cantidad para ${skuLabel} debe ser mayor a 0`);
+                        return;
+                    }
+
+                    try {
+                        const stock = await getStockSku({
+                            warehouseId: form.fromWarehouseId,
+                            skuId: item.skuId,
+                        });
+
+                        const available = Number(stock?.available ?? 0);
+                        if (available <= 0) {
+                            reasons.push(`Stock de ${skuLabel} no es suficiente para la transferencia`);
+                            return;
+                        }
+                        if (available < qty) {
+                            reasons.push(`Stock de ${skuLabel} no es suficiente para transferir ${qty}. Disponible: ${available}`);
+                        }
+                    } catch {
+                        reasons.push(`No se pudo validar stock de ${skuLabel}`);
+                    }
+                }),
+            );
+
+            if (!cancelled) {
+                setTransferCheck({
+                    loading: false,
+                    possible: reasons.length === 0,
+                    reasons,
+                });
+            }
+        };
+
+        void validateTransfer();
+        return () => {
+            cancelled = true;
+        };
+    }, [form.fromWarehouseId, form.toWarehouseId, form.items, selectedSkus]);
+
+    useEffect(() => {
         if (!open || !initialSku?.skuId) return;
         if (seededSkuRef.current === initialSku.skuId) return;
 
@@ -455,7 +578,8 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
         });
     }, [initialSku, open]);
 
-    const summaryBase = stockDetail.from ?? stockDetail.to;
+    const fromWarehouseName = warehouseOptions.find((option) => option.value === form.fromWarehouseId)?.label ?? "-";
+    const toWarehouseName = warehouseOptions.find((option) => option.value === form.toWarehouseId)?.label ?? "-";
     const selectedRowId = stockDetail.selectedSkuId;
 
     const viewportHeightClasses = "h-[80vh]";
@@ -581,55 +705,31 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
                                     <div className="flex items-center justify-between gap-3">
                                         <span>Usuario</span>
-                                        <span className="font-semibold text-right">{summaryBase?.name ?? "-"}</span>
+                                        <span className="font-semibold text-right">{currentUserName}</span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
-                                        <span>Unidad</span>
-                                        <span className="font-semibold text-right">{summaryBase?.unit ?? "-"}</span>
+                                        <span>Almacén origen</span>
+                                        <span className="font-semibold text-right">{fromWarehouseName}</span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
-                                        <span>Origen físico</span>
+                                        <span>Almacén destino</span>
+                                        <span className="font-semibold text-right">{toWarehouseName}</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Transferencia</span>
                                         <span className="font-semibold tabular-nums text-right">
-                                            {stockDetail.loading ? "Cargando..." : stockDetail.error ? "-" : (stockDetail.from?.onHand ?? "-")}
+                                            {transferCheck.loading ? "Validando..." : transferCheck.possible ? "Posible" : "No posible"}
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Origen reservado</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {stockDetail.loading ? "Cargando..." : stockDetail.error ? "-" : (stockDetail.from?.reserved ?? "-")}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Origen disponible</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {stockDetail.loading ? "Cargando..." : stockDetail.error ? "-" : (stockDetail.from?.available ?? "-")}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Destino físico</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {!form.toWarehouseId ? "-" : stockDetail.loading ? "Cargando..." : stockDetail.error ? "-" : (stockDetail.to?.onHand ?? "-")}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Destino reservado</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {!form.toWarehouseId ? "-" : stockDetail.loading ? "Cargando..." : stockDetail.error ? "-" : (stockDetail.to?.reserved ?? "-")}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>Destino disponible</span>
-                                        <span className="font-semibold tabular-nums text-right">
-                                            {!form.toWarehouseId ? "-" : stockDetail.loading ? "Cargando..." : stockDetail.error ? "-" : (stockDetail.to?.available ?? "-")}
-                                        </span>
-                                    </div>
+                                    {!transferCheck.loading && transferCheck.reasons.length > 0 ? (
+                                        <div className="rounded border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] text-rose-700">
+                                            {transferCheck.reasons[0]}
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -638,7 +738,15 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
                             <div className="flex gap-2">
                                 <SystemButton
                                     className="flex-1"
-                                    disabled={loading || !form.fromWarehouseId || !form.toWarehouseId || !form.serieId || !(form.items ?? []).length}
+                                    disabled={
+                                        loading ||
+                                        transferCheck.loading ||
+                                        !transferCheck.possible ||
+                                        !form.fromWarehouseId ||
+                                        !form.toWarehouseId ||
+                                        !form.serieId ||
+                                        !(form.items ?? []).length
+                                    }
                                     onClick={saveTransfer}
                                 >
                                     {loading ? "Guardando..." : "Guardar"}

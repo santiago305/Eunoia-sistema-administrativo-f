@@ -23,7 +23,6 @@ import type {
 } from "@/features/purchases/types/purchase";
 import { SupplierFormModal } from "../providers/components/SupplierFormModal";
 import { WarehouseFormModal } from "../warehouse/components/WarehouseFormModal";
-import { ProductTypes } from "@/features/catalog/types/ProductTypes";
 import { createPurchaseOrder, updatePurchaseOrder } from "@/shared/services/purchaseService";
 import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import { EquivalenceModal } from "./components/EquivalenceModal";
@@ -33,7 +32,6 @@ import { ModalNavegate } from "./components/ModalNavegate";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
   buildEmptyForm,
-  recalcItem,
   money,
   addDaysToIsoDate,
   clampQuotas,
@@ -44,7 +42,6 @@ import {
   normalizePrice,
   normalizeQuantity,
   parseDecimalInput,
-  lineTotalFromItem,
 } from "@/shared/utils/functionPurchases";
 import { useNavigate, useParams } from "react-router-dom";
 import { getById } from "@/shared/services/purchaseService";
@@ -74,6 +71,57 @@ const parseDateValue = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const getIgvRate = (item?: Partial<PurchaseOrderItem>) => {
+  const rate = Number(item?.porcentageIgv ?? IGV);
+  return Number.isFinite(rate) && rate > 0 ? rate : IGV;
+};
+
+const splitTotalWithIgv = (totalWithIgv: number, igvRate = IGV) => {
+  const safeTotal = normalizeMoney(totalWithIgv);
+  const safeRate = Number.isFinite(igvRate) && igvRate > 0 ? igvRate : IGV;
+
+  // Fórmula correcta cuando el precio/total ingresado YA incluye IGV:
+  // subtotal = total / 1.18
+  // igv = total - subtotal
+  const subtotalWithoutIgv = normalizeMoney(safeTotal / (1 + safeRate));
+  const amountIgv = normalizeMoney(safeTotal - subtotalWithoutIgv);
+
+  return {
+    totalWithIgv: safeTotal,
+    subtotalWithoutIgv,
+    amountIgv,
+  };
+};
+
+const getItemTotalWithIgv = (item: PurchaseOrderItem) => {
+  const quantity = normalizeQuantity(item.quantity ?? 0);
+  const unitPriceWithIgv = normalizePrice(item.unitPrice ?? 0);
+
+  // El precio unitario del formulario incluye IGV.
+  // Total visible = cantidad × precio unitario CON IGV.
+  return normalizeMoney(quantity * unitPriceWithIgv);
+};
+
+const recalcItem = (item: PurchaseOrderItem): PurchaseOrderItem => {
+  const quantity = normalizeQuantity(item.quantity ?? 0);
+  const unitPriceWithIgv = normalizePrice(item.unitPrice ?? 0);
+  const igvRate = getIgvRate(item);
+  const totalWithIgv = normalizeMoney(quantity * unitPriceWithIgv);
+  const { subtotalWithoutIgv, amountIgv } = splitTotalWithIgv(totalWithIgv, igvRate);
+  const unitValueWithoutIgv = quantity > 0 ? normalizePrice(subtotalWithoutIgv / quantity) : 0;
+
+  return {
+    ...item,
+    quantity,
+    unitPrice: unitPriceWithIgv, // precio unitario CON IGV
+    unitValue: unitValueWithoutIgv, // precio unitario SIN IGV
+    baseWithoutIgv: subtotalWithoutIgv,
+    purchaseValue: subtotalWithoutIgv,
+    amountIgv,
+    porcentageIgv: igvRate,
+    afectType: AfectType.TAXED,
+  };
+};
 type PurchaseItemRow = {
   id: string;
   skuId: string;
@@ -258,16 +306,14 @@ export default function PurchaseCreateLocal({
 
     return items.reduce(
       (acc, item) => {
-        const lineTotal = normalizeMoney(lineTotalFromItem(item));
-        const lineValue = normalizeMoney(item.purchaseValue ?? 0);
-        const lineIgv = normalizeMoney(item.amountIgv ?? 0);
-        const isTaxed = item.afectType === AfectType.TAXED;
+        const lineTotal = getItemTotalWithIgv(item);
+        const { subtotalWithoutIgv, amountIgv } = splitTotalWithIgv(lineTotal, getIgvRate(item));
 
         acc.totalPrice = normalizeMoney(acc.totalPrice + lineTotal);
-        acc.totalValue = normalizeMoney(acc.totalValue + lineValue);
-        acc.totalIgv = normalizeMoney(acc.totalIgv + lineIgv);
-        acc.totalTaxed = normalizeMoney(acc.totalTaxed + (isTaxed ? lineValue : 0));
-        acc.totalExempted = normalizeMoney(acc.totalExempted + (!isTaxed ? lineValue : 0));
+        acc.totalValue = normalizeMoney(acc.totalValue + subtotalWithoutIgv);
+        acc.totalIgv = normalizeMoney(acc.totalIgv + amountIgv);
+        acc.totalTaxed = normalizeMoney(acc.totalTaxed + subtotalWithoutIgv);
+        acc.totalExempted = 0;
 
         return acc;
       },
@@ -289,7 +335,7 @@ export default function PurchaseCreateLocal({
         factor: Number(item.factor ?? 1),
         quantity: normalizeQuantity(item.quantity ?? 0),
         unitPrice: normalizePrice(item.unitPrice ?? 0),
-        totalPrice: normalizeMoney(lineTotalFromItem(item)),
+        totalPrice: getItemTotalWithIgv(item),
       };
     });
   }, [form.items, products]);
@@ -322,17 +368,21 @@ export default function PurchaseCreateLocal({
       expectedAt: form.expectedAt?.trim() ? form.expectedAt : undefined,
       dateIssue: form.dateIssue?.trim() ? form.dateIssue : undefined,
       dateExpiration: form.dateExpiration?.trim() ? form.dateExpiration : undefined,
-      items: (form.items ?? []).map((item) => ({
-        skuId: item.skuId,
-        afectType: item.afectType,
-        quantity: normalizeQuantity(item.quantity),
-        porcentageIgv: item.porcentageIgv ?? IGV,
-        baseWithoutIgv: normalizeMoney(item.baseWithoutIgv),
-        amountIgv: normalizeMoney(item.amountIgv),
-        unitValue: normalizePrice(item.unitValue),
-        unitPrice: normalizePrice(item.unitPrice),
-        purchaseValue: normalizeMoney(item.purchaseValue),
-      })),
+      items: (form.items ?? []).map((item) => {
+        const calculatedItem = recalcItem(item);
+
+        return {
+          skuId: calculatedItem.skuId,
+          afectType: calculatedItem.afectType,
+          quantity: normalizeQuantity(calculatedItem.quantity),
+          porcentageIgv: calculatedItem.porcentageIgv ?? IGV,
+          baseWithoutIgv: normalizeMoney(calculatedItem.baseWithoutIgv),
+          amountIgv: normalizeMoney(calculatedItem.amountIgv),
+          unitValue: normalizePrice(calculatedItem.unitValue),
+          unitPrice: normalizePrice(calculatedItem.unitPrice),
+          purchaseValue: normalizeMoney(calculatedItem.purchaseValue),
+        };
+      }),
       payments: (form.payments ?? []).map((p) => ({
         currency: p.currency,
         date: p.date,
@@ -798,11 +848,15 @@ export default function PurchaseCreateLocal({
                     <span className="font-semibold tabular-nums">{itemRows.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Total valor</span>
+                    <span>Sub total</span>
                     <span className="font-semibold tabular-nums">{money(totals.totalValue, currency)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Total precio</span>
+                    <span>IGV ({Math.round(IGV * 100)}%)</span>
+                    <span className="font-semibold tabular-nums">{money(totals.totalIgv, currency)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Total</span>
                     <span className="font-semibold tabular-nums">{money(totals.totalPrice, currency)}</span>
                   </div>
                 </div>

@@ -42,14 +42,14 @@ function SkuInventoryChart({ sku }: { sku: ProductSkuDetail }) {
 
   if (chartData.length === 0) {
     return (
-      <div className="flex h-[280px] w-[240px] shrink-0 flex-col items-center justify-center rounded-2xl bg-zinc-50 p-6 shadow-sm ring-1 ring-black/5">
+      <div className="flex h-[280px] w-[240px] shrink-0 flex-col items-center justify-center bg-zinc-50 p-6">
         <p className="text-xs text-zinc-500">Sin stock disponible</p>
       </div>
     );
   }
 
   return (
-    <div className="flex w-[240px] shrink-0 flex-col rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+    <div className="flex w-[240px] shrink-0 flex-col">
       <div className="mb-2 text-center">
         <p className="text-[10px] uppercase tracking-wider text-zinc-500">
           {sku.name}

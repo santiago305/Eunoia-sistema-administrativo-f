@@ -328,6 +328,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         to: toDate || undefined,
         docType: DocType.TRANSFER,
         productType: config.productType,
+        includeItems: true,
         q: executedSnapshot.q,
         filters: executedSnapshot.filters.length
           ? JSON.stringify(executedSnapshot.filters)
@@ -611,7 +612,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         open={openDetailsModal}
         documentId={selectedDocument?.id ?? null}
         document={selectedDocument}
-        items={[]}
+        items={selectedDocument?.items ?? []}
         onClose={() => {
           setOpenDetailsModal(false);
           setSelectedDocument(null);

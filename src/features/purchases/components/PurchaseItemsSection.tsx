@@ -85,10 +85,10 @@ export function PurchaseItemsSection({
           </div>
           <div className="flex items-center gap-2">
             <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-              Total valor: <span className="font-semibold text-black">{totalValueLabel}</span>
+              Sub total: <span className="font-semibold text-black">{totalValueLabel}</span>
             </div>
             <div className="rounded-lg border border-black/10 bg-black/[0.02] px-2 py-1 text-[11px]">
-              Total precio: <span className="font-semibold text-black">{totalPriceLabel}</span>
+              Total: <span className="font-semibold text-black">{totalPriceLabel}</span>
             </div>
           </div>
         </div>

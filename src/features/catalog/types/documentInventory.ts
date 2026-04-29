@@ -1,5 +1,4 @@
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
-import { ProductSkuWithAttributes } from "./product";
 
 export enum InventoryDocumentProductType {
   MATERIAL = "MATERIAL",
@@ -15,6 +14,33 @@ export type InventoryDocumentUserRef = {
   id: string;
   name: string | null;
   email: string | null;
+};
+
+export type InventoryDocumentListItemSkuRef = {
+  id: string;
+  productId: string;
+  backendSku: string;
+  customSku: string | null;
+  name: string;
+};
+
+export type InventoryDocumentListItemUnitRef = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+export type InventoryDocumentListItem = {
+  id: string;
+  docId: string;
+  quantity: number;
+  wasteQty: number;
+  fromLocationId: string | null;
+  toLocationId: string | null;
+  unitCost: number | null;
+  sku: InventoryDocumentListItemSkuRef | null;
+  unit: InventoryDocumentListItemUnitRef | null;
+  attributes: Array<{ code: string; name: string | null; value: string }>;
 };
 
 export type InventoryDocument = {
@@ -50,7 +76,7 @@ export type InventoryDocument = {
 
   postedAt: string | null;
   createdAt: string;
-  items: ProductSkuWithAttributes[];
+  items?: InventoryDocumentListItem[];
 };
 
 export type GetInventoryDocumentsParams = {
