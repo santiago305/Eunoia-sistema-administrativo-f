@@ -560,8 +560,13 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       icon: <ArrowLeftRight className="h-4 w-4 text-black/60" />,
       disabled: companyActionDisabled,
       onClick: () => {
-        const q = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
-        navigate(`${config.routes.transfer}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+        const params = new URLSearchParams();
+        params.set("openTransferModal", "1");
+        params.set("skuId", row.sku.sku.id);
+        if (row.sku.sku.name?.trim()) params.set("skuName", row.sku.sku.name.trim());
+        if (row.sku.sku.backendSku?.trim()) params.set("backendSku", row.sku.sku.backendSku.trim());
+        if (row.sku.sku.customSku?.trim()) params.set("customSku", row.sku.sku.customSku.trim());
+        navigate(`${config.routes.transfer}?${params.toString()}`);
       },
     },
     {
@@ -570,8 +575,13 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       icon: <Wrench className="h-4 w-4 text-black/60" />,
       disabled: companyActionDisabled,
       onClick: () => {
-        const q = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
-        navigate(`${config.routes.adjustments}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+        const params = new URLSearchParams();
+        params.set("openAdjustmentModal", "1");
+        params.set("skuId", row.sku.sku.id);
+        if (row.sku.sku.name?.trim()) params.set("skuName", row.sku.sku.name.trim());
+        if (row.sku.sku.backendSku?.trim()) params.set("backendSku", row.sku.sku.backendSku.trim());
+        if (row.sku.sku.customSku?.trim()) params.set("customSku", row.sku.sku.customSku.trim());
+        navigate(`${config.routes.adjustments}?${params.toString()}`);
       },
     },
   ];

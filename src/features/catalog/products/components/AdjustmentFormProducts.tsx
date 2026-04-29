@@ -14,17 +14,14 @@ import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
 import { createOutOrder, getStockSku } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
-import { money, parseDecimalInput } from "@/shared/utils/functionPurchases";
+import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductType, ProductTypes } from "@/features/catalog/types/ProductTypes";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
-import { AdjustmentItemModal } from "@/features/catalog/products/components/AdjustmentItemModal";
 import { AdjustmentResultModal } from "@/features/catalog/products/components/AdjustmentResultModal";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { buildSkuLabelWithAttributes, buildStockSummary, emptyStockDetail, type StockDetailState } from "@/features/catalog/types/transfer";
-import { CreateOutOrder } from "@/features/out-orders/type/outOrder";
-
-const CURRENCY = "PEN";
+import { CreateOutOrder, Direction } from "@/features/out-orders/type/outOrder";
 
 export type AdjustmentFormProductsProps = {
   inModal?: boolean;
@@ -32,16 +29,23 @@ export type AdjustmentFormProductsProps = {
   onClose?: () => void;
   loadDocuments?: () => void;
   onSaved?: (adjustmentId: string) => void | Promise<void>;
-  type?: ProductType,
+  type?: ProductType;
+  initialSku?: {
+    skuId: string;
+    name?: string;
+    backendSku?: string;
+    customSku?: string | null;
+  } | null;
 };
 
 type PendingAdjustmentItem = {
   skuId: string;
-  quantity: number;
-  adjustmentType?: string;
 };
 
-type DraftAdjustmentItem = PendingAdjustmentItem;
+type DraftAdjustmentItem = {
+  skuId: string;
+  quantity: number;
+};
 
 type AdjustmentItemRow = {
   rowIndex: number;
@@ -50,7 +54,6 @@ type AdjustmentItemRow = {
   customSku: string | null;
   name: string;
   unit: string;
-  adjustmentType?: string;
   quantity: number;
 };
 
@@ -64,8 +67,6 @@ const buildEmptyForm = (): CreateOutOrder => ({
 
 const buildEmptyPendingItem = (): PendingAdjustmentItem => ({
   skuId: "",
-  quantity: 0,
-  adjustmentType: "",
 });
 
 export default function AdjustmentFormProducts({
@@ -75,12 +76,12 @@ export default function AdjustmentFormProducts({
   onSaved,
   loadDocuments,
   type,
+  initialSku,
 }: AdjustmentFormProductsProps) {
   const { showFlash, clearFlash } = useFlashMessage();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<PendingAdjustmentItem>(() => buildEmptyPendingItem());
-  const [openItemModal, setOpenItemModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedAdjustmentId, setLastSavedAdjustmentId] = useState("");
   const [searchResults, setSearchResults] = useState<ListSkusResponse>();
@@ -91,6 +92,7 @@ export default function AdjustmentFormProducts({
   const latestSkuQueryRef = useRef("");
   const [items, setItems] = useState<DraftAdjustmentItem[]>([]);
   const [stockDetail, setStockDetail] = useState<StockDetailState>(emptyStockDetail);
+  const seededSkuRef = useRef<string | null>(null);
 
   const resetForm = useCallback(() => {
     if (skuSearchTimeoutRef.current) {
@@ -101,7 +103,6 @@ export default function AdjustmentFormProducts({
     setLoading(false);
     setForm(buildEmptyForm());
     setPendingItem(buildEmptyPendingItem());
-    setOpenItemModal(false);
     setOpenNavigateModal(false);
     setLastSavedAdjustmentId("");
     setSerie({ value: "", label: "" });
@@ -207,24 +208,17 @@ export default function AdjustmentFormProducts({
     }, delay);
   }, [searchSkus]);
 
-  const addItem = () => {
+  const addItem = (skuId: string, quantity = 1) => {
     clearFlash();
-
-    const { skuId, quantity, adjustmentType } = pendingItem;
 
     if (!skuId) {
       showFlash(errorResponse("Selecciona un SKU"));
-      return false;
-    }
-
-    if (!adjustmentType) {
-      showFlash(errorResponse("Selecciona el tipo de ajuste"));
-      return false;
+      return;
     }
 
     if (quantity === 0) {
       showFlash(errorResponse("La cantidad no puede ser 0"));
-      return false;
+      return;
     }
 
     const selected =
@@ -233,16 +227,16 @@ export default function AdjustmentFormProducts({
 
     if (!selected) {
       showFlash(errorResponse("SKU no encontrado"));
-      return false;
+      return;
     }
 
     const alreadyAdded = items.some((item) => item.skuId === skuId);
     if (alreadyAdded) {
       showFlash(errorResponse("El SKU ya fue agregado"));
-      return false;
+      return;
     }
 
-    setItems((prev) => [...prev, { skuId, quantity, adjustmentType }]);
+    setItems((prev) => [...prev, { skuId, quantity }]);
 
     setSelectedSkus((prev) => {
       const exists = prev.some((s) => s.sku.id === selected.sku.id);
@@ -250,7 +244,6 @@ export default function AdjustmentFormProducts({
     });
 
     setPendingItem(buildEmptyPendingItem());
-    return true;
   };
 
   const removeItem = (skuId: string) => {
@@ -262,9 +255,11 @@ export default function AdjustmentFormProducts({
     setItems((prev) => prev.map((item) => (item.skuId === skuId ? { ...item, ...patch } : item)));
   };
 
-  const totalCost = useMemo(() => {
-    return 0;
-  }, []);
+  const totalItems = useMemo(() => items.length, [items]);
+  const totalQuantity = useMemo(
+    () => items.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0),
+    [items],
+  );
 
   const itemRows = useMemo<AdjustmentItemRow[]>(() => {
     return items.map((item, index) => {
@@ -277,7 +272,6 @@ export default function AdjustmentFormProducts({
         customSku: skuData?.sku.customSku ?? null,
         name: skuData ? buildSkuLabelWithAttributes(skuData) : "-",
         unit: skuData?.unit?.name ?? "-",
-        adjustmentType: item.adjustmentType,
         quantity: item.quantity,
       };
     });
@@ -292,13 +286,6 @@ export default function AdjustmentFormProducts({
           <span className="text-black/70">{row.name}</span>
         ),
         headerClassName: "text-left w-[240px]",
-        className: "text-black/70",
-      },
-      {
-        id: "type",
-        header: "Tipo",
-        cell: (row) => <span className="text-black/70">{row.adjustmentType || "-"}</span>,
-        headerClassName: "text-left w-[110px]",
         className: "text-black/70",
       },
       {
@@ -364,7 +351,7 @@ export default function AdjustmentFormProducts({
         items: items.map(item => ({
           skuId: item.skuId,
           quantity: Math.abs(item.quantity),
-          direction: item.adjustmentType
+          direction: item.quantity < 0 ? Direction.OUT : Direction.IN,
         }))
       };
 
@@ -446,11 +433,40 @@ export default function AdjustmentFormProducts({
 
   useEffect(() => {
     if (!open) return;
+    seededSkuRef.current = null;
     resetForm();
     void loadWarehouses();
     latestSkuQueryRef.current = "";
     void searchSkus("");
   }, [loadWarehouses, open, resetForm, searchSkus]);
+
+  useEffect(() => {
+    if (!open || !initialSku?.skuId) return;
+    if (seededSkuRef.current === initialSku.skuId) return;
+    seededSkuRef.current = initialSku.skuId;
+
+    setSelectedSkus((prev) => {
+      if (prev.some((item) => item.sku.id === initialSku.skuId)) return prev;
+      return [
+        ...prev,
+        {
+          sku: {
+            id: initialSku.skuId,
+            name: initialSku.name ?? initialSku.backendSku ?? "Producto",
+            backendSku: initialSku.backendSku ?? "",
+            customSku: initialSku.customSku ?? null,
+          },
+          attributes: [],
+          unit: null,
+        },
+      ];
+    });
+
+    setItems((prev) => {
+      if (prev.some((item) => item.skuId === initialSku.skuId)) return prev;
+      return [...prev, { skuId: initialSku.skuId, quantity: 1 }];
+    });
+  }, [initialSku, open]);
 
   const summaryBase = stockDetail.from;
   const selectedRowId = stockDetail.selectedSkuId;
@@ -484,15 +500,14 @@ export default function AdjustmentFormProducts({
                     value: item.sku.id,
                     label: buildSkuLabelWithAttributes(item),
                   }))}
-                  onChange={(value) => {
-                    if (!value) {
-                      setPendingItem(buildEmptyPendingItem());
-                      setOpenItemModal(false);
-                      return;
-                    }
-                    setPendingItem({ ...buildEmptyPendingItem(), skuId: value });
-                    setOpenItemModal(true);
-                  }}
+	                  onChange={(value) => {
+	                    if (!value) {
+	                      setPendingItem(buildEmptyPendingItem());
+	                      return;
+	                    }
+	                    setPendingItem({ skuId: value });
+	                    addItem(value, 1);
+	                  }}
                   searchable
                   searchPlaceholder="Buscar producto..."
                   emptyMessage="Sin productos"
@@ -519,11 +534,15 @@ export default function AdjustmentFormProducts({
 
             <div className="px-3 sm:px-4 py-3">
               <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-black/70">
-                  <span>Total costo items</span>
-                  <span className="font-semibold text-black tabular-nums">
-                    {money(totalCost, CURRENCY)}
-                  </span>
+                <div className="space-y-1 text-[11px] text-black/70">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span>Items</span>
+                    <span className="font-semibold text-black tabular-nums">{totalItems}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span>Cantidad total</span>
+                    <span className="font-semibold text-black tabular-nums">{totalQuantity}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -579,22 +598,18 @@ export default function AdjustmentFormProducts({
 
                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
                   <div className="flex items-center justify-between gap-3">
-                    <span>Nombre</span>
+                    <span>Items</span>
+                    <span className="font-semibold tabular-nums text-right">{totalItems}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Cantidad total</span>
+                    <span className="font-semibold tabular-nums text-right">{totalQuantity}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Usuario</span>
                     <span className="font-semibold text-right">{summaryBase?.name ?? "-"}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3">
-                    <span>SKU backend</span>
-                    <span className="font-semibold tabular-nums text-right">
-                      {summaryBase?.backendSku ?? "-"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3">
-                    <span>SKU interno</span>
-                    <span className="font-semibold tabular-nums text-right">
-                      {summaryBase?.customSku ?? "-"}
-                    </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-3">
@@ -652,26 +667,6 @@ export default function AdjustmentFormProducts({
           </aside>
         </div>
       </div>
-
-      <AdjustmentItemModal
-        open={openItemModal}
-        pendingItem={pendingItem}
-        sectionTitle="Productos"
-        messages={{
-          missingType: "Debe ingresar el tipo de ajuste",
-          zeroQuantity: "La cantidad no puede ser cero",
-        }}
-        onChange={(patch) => setPendingItem((prev) => ({ ...prev, ...patch }))}
-        onClose={() => {
-          setOpenItemModal(false);
-          setPendingItem(buildEmptyPendingItem());
-        }}
-        onAdd={() => {
-          const ok = addItem();
-          if (!ok) return;
-          setOpenItemModal(false);
-        }}
-      />
 
       <AdjustmentResultModal
         open={openNavigateModal}

@@ -132,6 +132,13 @@ export function InventoryAdjustmentsPage({
   const [selectedDocument, setSelectedDocument] =
     useState<InventoryDocument | null>(null);
   const [openAdjustmentModal, setOpenAdjustmentModal] = useState(false);
+  const [initialAdjustmentSku, setInitialAdjustmentSku] = useState<{
+    skuId: string;
+    name?: string;
+    backendSku?: string;
+    customSku?: string | null;
+  } | null>(null);
+  const prefillHandledRef = useRef(false);
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -455,12 +462,19 @@ export function InventoryAdjustmentsPage({
   }, [loadDocuments]);
 
   useEffect(() => {
-    const prefilledQuery = searchParams.get("q")?.trim();
-    if (!prefilledQuery) return;
+    if (prefillHandledRef.current) return;
+    const shouldOpen = searchParams.get("openAdjustmentModal") === "1";
+    const skuId = searchParams.get("skuId")?.trim();
+    if (!shouldOpen || !skuId) return;
 
-    setSearchText(prefilledQuery);
-    setExecutedSearchText(prefilledQuery);
-    setPage(1);
+    prefillHandledRef.current = true;
+    setInitialAdjustmentSku({
+      skuId,
+      name: searchParams.get("skuName")?.trim() || undefined,
+      backendSku: searchParams.get("backendSku")?.trim() || undefined,
+      customSku: searchParams.get("customSku")?.trim() || undefined,
+    });
+    setOpenAdjustmentModal(true);
   }, [searchParams]);
 
   const openDocumentPdf = (documentId: string) => {
@@ -686,7 +700,10 @@ export function InventoryAdjustmentsPage({
 
       <AdjustmentProductModal
         open={openAdjustmentModal}
-        onClose={handleClose}
+        onClose={() => {
+          handleClose();
+          setInitialAdjustmentSku(null);
+        }}
         onSaved={() => {
           setPage(1);
           void loadDocuments();
@@ -696,6 +713,7 @@ export function InventoryAdjustmentsPage({
           void loadDocuments();
         }}
         type={config.productType}
+        initialSku={initialAdjustmentSku}
       />
     </PageShell>
   );

@@ -47,7 +47,14 @@ export type StockDetailState = {
 export type TransferProductsProps = {
   onClose?: () => void;
   onSaved?: (transferId: string) => void | Promise<void>;
-  type?: InventoryDocumentProductType
+  type?: InventoryDocumentProductType;
+  open?: boolean;
+  initialSku?: {
+    skuId: string;
+    name?: string;
+    backendSku?: string;
+    customSku?: string | null;
+  } | null;
 };
 
 export const emptyStockDetail: StockDetailState = {

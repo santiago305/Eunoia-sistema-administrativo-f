@@ -12,10 +12,9 @@ import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
 import { createTransfer, getStockSku } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
-import { money, parseDecimalInput } from "@/shared/utils/functionPurchases";
+import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductTypes } from "@/features/catalog/types/ProductTypes";
-import { TransferItemModal } from "@/features/catalog/products/components/TransferItemModal";
 import { TransferResultModal } from "@/features/catalog/products/components/TransferResultModal";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import {
@@ -34,15 +33,12 @@ import {
 import { skuStock } from "@/features/catalog/types/documentInventory";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 
-const CURRENCY = "PEN";
-
-export default function TransferProducts({ onClose, onSaved, type }: TransferProductsProps) {
+export default function TransferProducts({ onClose, onSaved, type, open, initialSku }: TransferProductsProps) {
     const { showFlash, clearFlash } = useFlashMessage();
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState<CreateTransfer>(() => buildEmptyFormTransfer());
     const [pendingItem, setPendingItem] = useState<TransferItem>(() => buildEmptyItemTransfer());
 
-    const [openItemModal, setOpenItemModal] = useState(false);
     const [openNavigateModal, setOpenNavigateModal] = useState(false);
     const [lastSavedTransferId, setLastSavedTransferId] = useState("");
 
@@ -55,6 +51,8 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
     const quantityTextBySkuIdRef = useRef<Record<string, string>>({});
     const [, setQuantityTextBySkuId] = useState<Record<string, string>>({});
     const [editingQuantitySkuId, setEditingQuantitySkuId] = useState<string | null>(null);
+    const seededSkuRef = useRef<string | null>(null);
+    const wasOpenRef = useRef(false);
 
     useEffect(() => {
         setQuantityTextBySkuId((previous) => {
@@ -155,8 +153,7 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
         }
     }, [query, showFlash, type]);
 
-    const addItem = () => {
-        const { skuId, quantity } = pendingItem;
+    const addItem = (skuId: string, quantity = 1) => {
         const selected = (searchResults?.items ?? []).find((s) => s.sku.id === skuId) ?? selectedSkus.find((s) => s.sku.id === skuId);
 
         if (!skuId) {
@@ -204,9 +201,11 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
         }));
     };
 
-    const totalCost = useMemo(() => {
-        return (form.items ?? []).reduce((acc, item) => acc + item.quantity * (item.unitCost ?? 0), 0);
-    }, [form.items]);
+    const totalItems = useMemo(() => (form.items ?? []).length, [form.items]);
+    const totalQuantity = useMemo(
+        () => (form.items ?? []).reduce((acc, item) => acc + (Number(item.quantity) || 0), 0),
+        [form.items],
+    );
 
     const itemRows = useMemo<TransferItemRow[]>(() => {
         return (form.items ?? []).map((item, index) => {
@@ -414,10 +413,47 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
     }, [query, searchSkus]);
 
     useEffect(() => {
+        const justOpened = Boolean(open) && !wasOpenRef.current;
+        wasOpenRef.current = Boolean(open);
+        if (!justOpened) return;
+
+        seededSkuRef.current = null;
         resetForm();
         void loadWarehouses();
         void searchSkus();
-    }, [loadWarehouses, searchSkus]);
+    }, [open, loadWarehouses, searchSkus]);
+
+    useEffect(() => {
+        if (!open || !initialSku?.skuId) return;
+        if (seededSkuRef.current === initialSku.skuId) return;
+
+        seededSkuRef.current = initialSku.skuId;
+
+        setSelectedSkus((prev) => {
+            if (prev.some((item) => item.sku.id === initialSku.skuId)) return prev;
+            return [
+                ...prev,
+                {
+                    sku: {
+                        id: initialSku.skuId,
+                        name: initialSku.name ?? initialSku.backendSku ?? "Producto",
+                        backendSku: initialSku.backendSku ?? "",
+                        customSku: initialSku.customSku ?? null,
+                    },
+                    attributes: [],
+                    unit: null,
+                },
+            ];
+        });
+
+        setForm((prev) => {
+            if ((prev.items ?? []).some((item) => item.skuId === initialSku.skuId)) return prev;
+            return {
+                ...prev,
+                items: [...(prev.items ?? []), { skuId: initialSku.skuId, quantity: 1, unitCost: 0 }],
+            };
+        });
+    }, [initialSku, open]);
 
     const summaryBase = stockDetail.from ?? stockDetail.to;
     const selectedRowId = stockDetail.selectedSkuId;
@@ -442,8 +478,12 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
                                         label: buildSkuLabelWithAttributes(item),
                                     }))}
                                     onChange={(value) => {
+                                        if (!value) {
+                                            setPendingItem(buildEmptyItemTransfer());
+                                            return;
+                                        }
                                         setPendingItem((prev) => ({ ...prev, skuId: value }));
-                                        setOpenItemModal(Boolean(value));
+                                        addItem(value, 1);
                                     }}
                                     searchable
                                     searchPlaceholder="Buscar producto..."
@@ -470,9 +510,15 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
 
                         <div className="px-3 sm:px-4 py-3">
                             <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3">
-                                <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-black/70">
-                                    <span>Total costo items</span>
-                                    <span className="font-semibold text-black tabular-nums">{money(totalCost, CURRENCY)}</span>
+                                <div className="space-y-1 text-[11px] text-black/70">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <span>Items</span>
+                                        <span className="font-semibold text-black tabular-nums">{totalItems}</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <span>Cantidad total</span>
+                                        <span className="font-semibold text-black tabular-nums">{totalQuantity}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -524,18 +570,18 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
 
                                 <div className="mt-2 space-y-1 text-[11px] text-black/70">
                                     <div className="flex items-center justify-between gap-3">
-                                        <span>Nombre</span>
+                                        <span>Items</span>
+                                        <span className="font-semibold tabular-nums text-right">{totalItems}</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Cantidad total</span>
+                                        <span className="font-semibold tabular-nums text-right">{totalQuantity}</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Usuario</span>
                                         <span className="font-semibold text-right">{summaryBase?.name ?? "-"}</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>SKU backend</span>
-                                        <span className="font-semibold tabular-nums text-right">{summaryBase?.backendSku ?? "-"}</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span>SKU interno</span>
-                                        <span className="font-semibold tabular-nums text-right">{summaryBase?.customSku ?? "-"}</span>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3">
@@ -602,20 +648,6 @@ export default function TransferProducts({ onClose, onSaved, type }: TransferPro
                     </aside>
                 </div>
             </div>
-
-            <TransferItemModal
-                open={openItemModal}
-                pendingItem={pendingItem}
-                onChange={(patch: Partial<TransferItem>) => setPendingItem((prev) => ({ ...prev, ...patch }))}
-                onClose={() => {
-                    setOpenItemModal(false);
-                    setPendingItem(buildEmptyItemTransfer());
-                }}
-                onAdd={() => {
-                    addItem();
-                    setOpenItemModal(false);
-                }}
-            />
 
             <TransferResultModal
                 open={openNavigateModal}

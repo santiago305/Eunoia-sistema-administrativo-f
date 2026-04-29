@@ -160,15 +160,28 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     void loadSearchState();
   }, [loadSearchState]);
 
-  useEffect(() => {
-    const prefilledQuery = searchParams.get("q")?.trim();
-    if (!prefilledQuery) return;
+  const [initialTransferSku, setInitialTransferSku] = useState<{
+    skuId: string;
+    name?: string;
+    backendSku?: string;
+    customSku?: string | null;
+  } | null>(null);
+  const prefillHandledRef = useRef(false);
 
-    startTransition(() => {
-      setSearchText(prefilledQuery);
-      setAppliedSearchText(prefilledQuery);
-      setPage(1);
+  useEffect(() => {
+    if (prefillHandledRef.current) return;
+    const shouldOpen = searchParams.get("openTransferModal") === "1";
+    const skuId = searchParams.get("skuId")?.trim();
+    if (!shouldOpen || !skuId) return;
+
+    prefillHandledRef.current = true;
+    setInitialTransferSku({
+      skuId,
+      name: searchParams.get("skuName")?.trim() || undefined,
+      backendSku: searchParams.get("backendSku")?.trim() || undefined,
+      customSku: searchParams.get("customSku")?.trim() || undefined,
     });
+    setOpenTransferModal(true);
   }, [searchParams]);
 
   const smartSearchColumns = useMemo(
@@ -607,8 +620,12 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
 
       <TransferProductsModal
         open={openTransferModal}
-        onClose={() => setOpenTransferModal(false)}
+        onClose={() => {
+          setOpenTransferModal(false);
+          setInitialTransferSku(null);
+        }}
         type={config.productType}
+        initialSku={initialTransferSku}
         onSaved={() => {
           setPage(1);
           void loadDocuments();
