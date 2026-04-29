@@ -1,4 +1,5 @@
-import { PageTitle } from "@/components/PageTitle";
+import { PageTitle } from "@/shared/components/components/PageTitle";
+
 
 export default function ErrorPage() {
     return (

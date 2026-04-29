@@ -1,6 +1,0 @@
-export {default as DashboardLayout } from '../layouts/DashboardLayout'
-export {default as Login } from './Auth/Login'
-// export {default as Profile } from './Profile'
-// export {default as Order } from './Order'
-// export {default as NotFound } from './NotFound'
-
