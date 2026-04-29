@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Check, ChevronDown } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type WheelEvent as ReactWheelEvent } from "react";
 import {
   CLOSE_ALL_FLOATING_SELECTS_EVENT,
   dispatchCloseAllFloatingSelects,
@@ -313,6 +313,12 @@ export function FloatingSelect({
     });
   }, [filteredOptions.length]);
 
+  const handleListWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!open || filteredOptions.length === 0) return;
+    event.preventDefault();
+    moveActiveIndex(event.deltaY > 0 ? 1 : -1);
+  }, [filteredOptions.length, moveActiveIndex, open]);
+
   const selectActiveOption = useCallback(() => {
     if (activeIndex < 0) return;
     const option = filteredOptions[activeIndex];
@@ -356,8 +362,15 @@ export function FloatingSelect({
 
     if (event.key === "Escape") {
       event.preventDefault();
+      event.stopPropagation();
+
       closeSelect();
-      triggerRef.current?.focus();
+
+      requestAnimationFrame(() => {
+        searchInputRef.current?.blur();
+        triggerRef.current?.blur();
+      });
+
       return;
     }
 
@@ -394,7 +407,10 @@ export function FloatingSelect({
               setQuery(next);
               onSearchChange?.(next);
             }}
-            onKeyDown={handleKeyboardNavigation}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              handleKeyboardNavigation(event);
+            }}
             placeholder={searchPlaceholder}
             aria-label={`Buscar ${label}`}
             aria-controls={panelId}
@@ -406,6 +422,7 @@ export function FloatingSelect({
       <div
         className="scrollbar-panel overflow-y-auto py-1"
         style={{ maxHeight: listMaxHeight }}
+        onWheel={handleListWheel}
       >
         {filteredOptions.length === 0 ? (
           <div className="px-3 py-2 text-xs text-muted-foreground">

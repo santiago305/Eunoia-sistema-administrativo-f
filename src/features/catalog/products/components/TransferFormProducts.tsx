@@ -15,6 +15,7 @@ import { createTransfer, getStockSku } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
 import { money, parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
+import { ProductTypes } from "@/features/catalog/types/ProductTypes";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useNavigate } from "react-router-dom";
 import { TransferItemModal } from "@/features/catalog/products/components/TransferItemModal";
@@ -144,13 +145,14 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
     };
 
     const searchSkus = useCallback(async () => {
+        const requestQuery = query.trim();
         try {
             const res = await listSkus({
-                q: query,
-                productType: type,
+                q: requestQuery || undefined,
+                productType: type ?? ProductTypes.PRODUCT,
                 isActive: true,
                 page: 1,
-                limit: 50,
+                limit: 10,
             });
 
             setSearchResults(res);
@@ -410,13 +412,10 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
     };
 
     useEffect(() => {
+        const delay = query.trim() ? 350 : 0;
         const id = setTimeout(() => {
-            if (query.trim()) {
-                void searchSkus();
-            } else {
-                setSearchResults(undefined);
-            }
-        }, 500);
+            void searchSkus();
+        }, delay);
 
         return () => clearTimeout(id);
     }, [query, searchSkus]);
@@ -424,7 +423,8 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
     useEffect(() => {
         resetForm();
         void loadWarehouses();
-    }, [loadWarehouses]);
+        void searchSkus();
+    }, [loadWarehouses, searchSkus]);
 
     const summaryBase = stockDetail.from ?? stockDetail.to;
     const selectedRowId = stockDetail.selectedSkuId;
@@ -451,7 +451,7 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                             
                             <div className="mt-3 grid grid-cols-1 gap-2">
                                 <FloatingSelect
-                                    label="Buscar SKU"
+                                    label="Producto"
                                     name="transfer-sku"
                                     value={pendingItem.skuId}
                                     options={(searchResults?.items ?? []).map((item) => ({
@@ -463,9 +463,10 @@ export default function TransferProducts({ inModal = false, onClose, onSaved, ty
                                         setOpenItemModal(Boolean(value));
                                     }}
                                     searchable
-                                    searchPlaceholder="Buscar SKU..."
+                                    searchPlaceholder="Buscar producto..."
+                                    emptyMessage="Sin productos"
                                     onSearchChange={(text) => setQuery(text)}
-                                    className="h-11 text-xs"
+                                    className="h-12"
                                 />
                             </div>
                         </div>

@@ -11,6 +11,7 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
+  type WheelEvent as ReactWheelEvent,
 } from "react";
 import {
   CLOSE_ALL_FLOATING_SELECTS_EVENT,
@@ -301,6 +302,12 @@ export function FloatingMultiSelect({
     });
   }, [filteredOptions.length]);
 
+  const handleListWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!open || filteredOptions.length === 0) return;
+    event.preventDefault();
+    moveActiveIndex(event.deltaY > 0 ? 1 : -1);
+  }, [filteredOptions.length, moveActiveIndex, open]);
+
   const toggleActiveOption = useCallback(() => {
     if (activeIndex < 0) return;
     const option = filteredOptions[activeIndex];
@@ -382,7 +389,10 @@ export function FloatingMultiSelect({
               setQuery(next);
               onSearchChange?.(next);
             }}
-            onKeyDown={handleKeyboardNavigation}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              handleKeyboardNavigation(event);
+            }}
             placeholder={searchPlaceholder}
             aria-label={`Buscar ${label}`}
             aria-controls={panelId}
@@ -394,6 +404,7 @@ export function FloatingMultiSelect({
       <div
         className="scrollbar-panel overflow-y-auto py-1"
         style={{ maxHeight: listMaxHeight }}
+        onWheel={handleListWheel}
       >
         {filteredOptions.length === 0 ? (
           <div className="px-3 py-2 text-xs text-muted-foreground">

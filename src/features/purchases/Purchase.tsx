@@ -149,7 +149,6 @@ export default function PurchaseCreateLocal({
     try {
       const response = await listSkus({
         q: normalizedQuery || undefined,
-        productType: ProductTypes.MATERIAL,
         isActive: true,
         page: 1,
         limit: 10,

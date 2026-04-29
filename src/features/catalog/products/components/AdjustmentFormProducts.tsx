@@ -16,7 +16,7 @@ import { createOutOrder, getStockSku } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
 import { money, parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
-import { ProductType } from "@/features/catalog/types/ProductTypes";
+import { ProductType, ProductTypes } from "@/features/catalog/types/ProductTypes";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import { AdjustmentItemModal } from "@/features/catalog/products/components/AdjustmentItemModal";
 import { AdjustmentResultModal } from "@/features/catalog/products/components/AdjustmentResultModal";
@@ -177,11 +177,11 @@ export default function AdjustmentFormProducts({
     const requestQuery = skuQuery.trim();
     try {
       const res = await listSkus({
-        q: requestQuery,
-        productType: type,
+        q: requestQuery || undefined,
+        productType: type ?? ProductTypes.PRODUCT,
         isActive: true,
         page: 1,
-        limit: 50,
+        limit: 10,
       });
 
       if (latestSkuQueryRef.current.trim() !== requestQuery) return;
@@ -200,17 +200,11 @@ export default function AdjustmentFormProducts({
       window.clearTimeout(skuSearchTimeoutRef.current);
     }
 
+    const delay = text.trim() ? 350 : 0;
     skuSearchTimeoutRef.current = window.setTimeout(() => {
       skuSearchTimeoutRef.current = null;
-
-      const trimmed = latestSkuQueryRef.current.trim();
-      if (!trimmed) {
-        setSearchResults(undefined);
-        return;
-      }
-
-      void searchSkus(trimmed);
-    }, 500);
+      void searchSkus(latestSkuQueryRef.current);
+    }, delay);
   }, [searchSkus]);
 
   const addItem = () => {
@@ -454,7 +448,9 @@ export default function AdjustmentFormProducts({
     if (!open) return;
     resetForm();
     void loadWarehouses();
-  }, [loadWarehouses, open, resetForm]);
+    latestSkuQueryRef.current = "";
+    void searchSkus("");
+  }, [loadWarehouses, open, resetForm, searchSkus]);
 
   const summaryBase = stockDetail.from;
   const selectedRowId = stockDetail.selectedSkuId;
@@ -481,7 +477,7 @@ export default function AdjustmentFormProducts({
 
               <div className="mt-3 grid grid-cols-1 gap-2">
                 <FloatingSelect
-                  label="Buscar SKU"
+                  label="Producto"
                   name="adjustment-sku"
                   value={pendingItem.skuId}
                   options={(searchResults?.items ?? []).map((item) => ({
@@ -498,9 +494,10 @@ export default function AdjustmentFormProducts({
                     setOpenItemModal(true);
                   }}
                   searchable
-                  searchPlaceholder="Buscar SKU..."
+                  searchPlaceholder="Buscar producto..."
+                  emptyMessage="Sin productos"
                   onSearchChange={handleSkuSearchChange}
-                  className="h-11 text-xs"
+                  className="h-12"
                 />
               </div>
             </div>
