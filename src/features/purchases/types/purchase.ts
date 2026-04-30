@@ -174,6 +174,7 @@ export type PurchaseOrder = {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  imageProdution?: string[];
   items?: PurchaseOrderItem[];
   payments?: Payment[];
   quotas?: CreditQuota[];

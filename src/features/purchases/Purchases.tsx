@@ -10,6 +10,7 @@ import {
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
+import { parseApiError } from "@/shared/common/utils/handleApiError";
 import {
     deletePurchaseSearchMetric,
     enterPurchaseOrder,
@@ -53,8 +54,12 @@ import {
 } from "./utils/purchaseSmartSearch";
 import { PurchaseSmartSearchPanel } from "./components/PurchaseSmartSearchPanel";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { ExtraTimeModal } from "./components/ExtraTimeModal";
+import { PurchaseCompletionPhotoModal } from "./components/PurchaseCompletionPhotoModal";
+import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "./utils/purchaseActions";
 
 const PRIMARY = "hsl(var(--primary))";
+const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
@@ -133,6 +138,34 @@ export default function Purchases() {
     const [openPdfModal, setOpenPdfModal] = useState(false);
     const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
     const [selectedPurchaseRow, setSelectedPurchaseRow] = useState<PurchaseRow | null>(null);
+    const [extraTimePoId, setExtraTimePoId] = useState<string | null>(null);
+    const [extraTimeLoading, setExtraTimeLoading] = useState(false);
+    const [completedPhotoPo, setCompletedPhotoPo] = useState<PurchaseOrder | null>(null);
+    const [completedPhotoLoading, setCompletedPhotoLoading] = useState(false);
+    const skippedPhotoRef = useRef<Set<string>>(new Set());
+    const isPhotoPromptSkipped = useCallback((poId?: string) => {
+        if (!poId) return false;
+        try {
+            const raw = localStorage.getItem(PHOTO_MODAL_SKIP_KEY);
+            if (!raw) return false;
+            const parsed = JSON.parse(raw) as Record<string, boolean>;
+            return Boolean(parsed[poId]);
+        } catch {
+            return false;
+        }
+    }, []);
+
+    const markPhotoPromptSkipped = useCallback((poId?: string) => {
+        if (!poId) return;
+        try {
+            const raw = localStorage.getItem(PHOTO_MODAL_SKIP_KEY);
+            const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+            parsed[poId] = true;
+            localStorage.setItem(PHOTO_MODAL_SKIP_KEY, JSON.stringify(parsed));
+        } catch {
+            // no-op
+        }
+    }, []);
 
     const draftSnapshot = useMemo(
         () =>
@@ -283,6 +316,56 @@ export default function Purchases() {
         }
     }, [clearFlash, loadPurchases, showFlash]);
 
+    const addExtraTime = useCallback(async (values: { days: number; hours: number; minutes: number }) => {
+        if (!extraTimePoId) return;
+        setExtraTimeLoading(true);
+        try {
+            const res = await addPurchaseExtraTime(extraTimePoId, values);
+            if (res.type === "success") {
+                showFlash(successResponse(res.message));
+                setExtraTimePoId(null);
+                await loadPurchases();
+            } else {
+                showFlash(errorResponse(res.message));
+            }
+        } catch {
+            showFlash(errorResponse("Error al agregar tiempo extra"));
+        } finally {
+            setExtraTimeLoading(false);
+        }
+    }, [extraTimePoId, loadPurchases, showFlash]);
+
+    const uploadCompletedPhoto = useCallback(async (file: File) => {
+        const poId = completedPhotoPo?.poId;
+        if (!poId) return;
+        setCompletedPhotoLoading(true);
+        try {
+            const res = await uploadPurchaseImageProdution(poId, file);
+            if (res.type === "success") {
+                skippedPhotoRef.current.add(poId);
+                showFlash(successResponse(res.message));
+                setCompletedPhotoPo(null);
+                await loadPurchases();
+            } else {
+                showFlash(errorResponse(res.message));
+            }
+        } catch (err) {
+            showFlash(errorResponse(parseApiError(err, "No se pudo subir la foto de la compra")));
+        } finally {
+            setCompletedPhotoLoading(false);
+        }
+    }, [completedPhotoPo?.poId, loadPurchases, showFlash]);
+
+    const skipCompletedPhoto = useCallback(async () => {
+        const poId = completedPhotoPo?.poId;
+        if (poId) {
+            skippedPhotoRef.current.add(poId);
+            markPhotoPromptSkipped(poId);
+        }
+        setCompletedPhotoPo(null);
+        showFlash(successResponse("Compra ingresada sin foto. Se puede subir luego desde detalle (admin)."));
+    }, [completedPhotoPo?.poId, markPhotoPromptSkipped, showFlash]);
+
     useEffect(() => {
         void loadPurchases();
     }, [loadPurchases]);
@@ -290,6 +373,18 @@ export default function Purchases() {
     useEffect(() => {
         void loadSearchState();
     }, [loadSearchState]);
+
+    useEffect(() => {
+        if (completedPhotoPo) return;
+        const candidate = purchases.find((purchase) =>
+            purchase.status === PurchaseOrderStatuses.RECEIVED &&
+            (!purchase.imageProdution || purchase.imageProdution.length === 0) &&
+            purchase.poId &&
+            !skippedPhotoRef.current.has(purchase.poId) &&
+            !isPhotoPromptSkipped(purchase.poId),
+        );
+        if (candidate) setCompletedPhotoPo(candidate);
+    }, [completedPhotoPo, isPhotoPromptSkipped, purchases]);
 
     const now = useMemo(() => new Date().toISOString(), []);
 
@@ -494,6 +589,13 @@ export default function Purchases() {
                                 label: "Ingresar Almacen",
                                 icon: <PackageCheck className="h-4 w-4 text-black/60" />,
                                 onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
+                            },
+                            row.purchase.status === PurchaseOrderStatuses.SENT && {
+                                id: "extra-time",
+                                label: "Tiempo extra",
+                                icon: <Timer className="h-4 w-4 text-black/60" />,
+                                onClick: () => setExtraTimePoId(row.purchase.poId ?? ""),
                                 disabled: companyActionDisabled,
                             },
                             row.purchase.status === PurchaseOrderStatuses.DRAFT && {
@@ -909,6 +1011,19 @@ export default function Purchases() {
                 loadWhen={Boolean(selectedProductionId)}
                 reloadKey={selectedProductionId}
                 getPdf={() => getPurchaseOrderPdf(selectedProductionId!)}
+            />
+            <ExtraTimeModal
+                open={Boolean(extraTimePoId)}
+                loading={extraTimeLoading}
+                onClose={() => setExtraTimePoId(null)}
+                onConfirm={addExtraTime}
+            />
+            <PurchaseCompletionPhotoModal
+                open={Boolean(completedPhotoPo)}
+                loading={completedPhotoLoading}
+                onClose={() => setCompletedPhotoPo(null)}
+                onConfirm={uploadCompletedPhoto}
+                onCancelWithoutPhoto={skipCompletedPhoto}
             />
         </PageShell>
     );

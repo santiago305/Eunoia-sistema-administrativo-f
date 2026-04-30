@@ -243,7 +243,7 @@ export function InventoryForecastModal({
         const item = entry as {
           marker?: string;
           seriesName?: string;
-          value?: unknown;
+          value?: string | number | null | undefined;
         };
 
         if (item.value === null || item.value === undefined) return;

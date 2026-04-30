@@ -55,6 +55,7 @@ export type PurchaseOrderDetailOutput = {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  imageProdution?: string[];
 
   items?: PurchaseOrderItemEditOutput[];
   payments?: Payment[];

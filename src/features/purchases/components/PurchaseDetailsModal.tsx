@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   CreditCard,
   Package,
   ReceiptText,
   Wallet,
 } from "lucide-react";
+import { env } from "@/env";
 import { Modal } from "@/shared/components/modales/Modal";
 import { getById } from "@/shared/services/purchaseService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { money } from "@/shared/utils/functionPurchases";
+import { uploadPurchaseImageProdution } from "../utils/purchaseActions";
+import { errorResponse, successResponse } from "@/shared/common/utils/response";
+import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
+
 import type {
   PaymentFormType,
   PurchaseOrderStatus,
@@ -174,6 +183,13 @@ export function PurchaseDetailsModal({
   const [detail, setDetail] = useState<PurchaseOrderDetailOutput | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(
+    null,
+  );
+  const { userRole } = useAuth();
+  const { showFlash } = useFlashMessage();
 
   useEffect(() => {
     if (!open || !poId) {
@@ -247,6 +263,87 @@ export function PurchaseDetailsModal({
   const metaResumen = `${itemCountLabel} · ${paymentCountLabel}${
     paymentForm === "CREDITO" ? ` · ${quotaCountLabel}` : ""
   }`;
+
+  const images = useMemo(
+    () => detail?.imageProdution ?? purchase?.imageProdution ?? [],
+    [detail?.imageProdution, purchase?.imageProdution],
+  );
+
+  const isAdmin = (userRole ?? "").toLowerCase() === "admin";
+  const canAdminUploadMissingPhoto =
+    isAdmin && images.length === 0 && Boolean(poId);
+
+  const resolveImageUrl = (rawUrl?: string | null) => {
+    const raw = rawUrl?.trim();
+    if (!raw) return "";
+    if (/^https?:\/\//i.test(raw)) return raw;
+
+    try {
+      return new URL(raw, env.apiBaseUrl).toString();
+    } catch {
+      return raw;
+    }
+  };
+
+  const normalizedImages = useMemo(
+    () => images.map((url) => resolveImageUrl(url)).filter(Boolean),
+    [images],
+  );
+
+  const hasMultipleImages = normalizedImages.length > 1;
+  const activeImage = normalizedImages[activeImageIndex] ?? normalizedImages[0];
+
+  const showPreviousImage = () => {
+    setActiveImageIndex((currentIndex) =>
+      currentIndex === 0 ? normalizedImages.length - 1 : currentIndex - 1,
+    );
+  };
+
+  const showNextImage = () => {
+    setActiveImageIndex((currentIndex) =>
+      currentIndex === normalizedImages.length - 1 ? 0 : currentIndex + 1,
+    );
+  };
+
+  const showPreviousPreviewImage = () => {
+    setPreviewImageIndex((currentIndex) => {
+      if (currentIndex === null) return 0;
+      return currentIndex === 0 ? normalizedImages.length - 1 : currentIndex - 1;
+    });
+  };
+
+  const showNextPreviewImage = () => {
+    setPreviewImageIndex((currentIndex) => {
+      if (currentIndex === null) return 0;
+      return currentIndex === normalizedImages.length - 1 ? 0 : currentIndex + 1;
+    });
+  };
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+    setPreviewImageIndex(null);
+  }, [open, poId, images.length]);
+
+  const handleUploadFromDetail = async (file?: File | null) => {
+    if (!poId || !file) return;
+    setUploadingPhoto(true);
+    try {
+      const response = await uploadPurchaseImageProdution(poId, file);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        const refreshed = await getById(poId);
+        setDetail(refreshed);
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch (err) {
+      showFlash(
+        errorResponse(parseApiError(err, "No se pudo subir la foto de compra")),
+      );
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   return (
     <Modal
@@ -343,7 +440,9 @@ export function PurchaseDetailsModal({
                     value={
                       detail?.dateIssue
                         ? formatDateTime(detail.dateIssue)
-                        : `${purchase.date}${purchase.time ? ` ${purchase.time}` : ""}`
+                        : `${purchase.date}${
+                            purchase.time ? ` ${purchase.time}` : ""
+                          }`
                     }
                   />
 
@@ -533,7 +632,9 @@ export function PurchaseDetailsModal({
                               <p className="mt-0.5 truncate text-[10px] text-black/40">
                                 Vence: {formatDateOnly(quota.expirationDate)}
                                 {quota.paymentDate
-                                  ? ` · Pago: ${formatDateOnly(quota.paymentDate)}`
+                                  ? ` · Pago: ${formatDateOnly(
+                                      quota.paymentDate,
+                                    )}`
                                   : ""}
                               </p>
                             </div>
@@ -590,6 +691,114 @@ export function PurchaseDetailsModal({
                   </div>
                 </section>
               ) : null}
+
+              <section>
+                <SectionHeader
+                  icon={<Package className="h-3.5 w-3.5" />}
+                  title="Foto de compra"
+                />
+
+                {normalizedImages.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="relative h-35 w-full overflow-hidden rounded-md border border-black/10 bg-slate-50">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImageIndex(activeImageIndex)}
+                        className="block h-full w-full"
+                        aria-label="Ver imagen grande"
+                      >
+                        <img
+                          src={activeImage}
+                          alt={`Compra ${activeImageIndex + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+
+                      {hasMultipleImages ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={showPreviousImage}
+                            className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black/65 shadow transition hover:bg-white hover:text-black"
+                            aria-label="Imagen anterior"
+                          >
+                            <ChevronLeft className="h-5 w-5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={showNextImage}
+                            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black/65 shadow transition hover:bg-white hover:text-black"
+                            aria-label="Imagen siguiente"
+                          >
+                            <ChevronRight className="h-5 w-5" />
+                          </button>
+
+                          <span className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-black/55">
+                            {activeImageIndex + 1} / {normalizedImages.length}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+
+                    {hasMultipleImages ? (
+                      <div className="flex gap-1.5 overflow-x-auto pb-1">
+                        {normalizedImages.map((url, index) => (
+                          <button
+                            key={`${url}-${index}`}
+                            type="button"
+                            onClick={() => setActiveImageIndex(index)}
+                            className={`h-12 w-14 shrink-0 overflow-hidden rounded-md border transition ${
+                              activeImageIndex === index
+                                ? "border-black/45"
+                                : "border-black/10 opacity-70 hover:opacity-100"
+                            }`}
+                            aria-label={`Seleccionar imagen ${index + 1}`}
+                          >
+                            <img
+                              src={url}
+                              alt={`Compra miniatura ${index + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <ImagePreviewModal
+                      open={previewImageIndex !== null}
+                      images={normalizedImages}
+                      currentIndex={previewImageIndex ?? 0}
+                      onClose={() => setPreviewImageIndex(null)}
+                      onPrevious={showPreviousPreviewImage}
+                      onNext={showNextPreviewImage}
+                      altPrefix="Imagen de compra"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <EmptySection message="Esta compra no tiene foto." />
+                    {canAdminUploadMissingPhoto ? (
+                      <label className="block text-xs text-black/60">
+                        <span className="mb-1 block">
+                          Subir foto (solo admin)
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={uploadingPhoto}
+                          onChange={(e) =>
+                            void handleUploadFromDetail(
+                              e.target.files?.[0] ?? null,
+                            )
+                          }
+                          className="w-full rounded-md border border-black/10 px-2 py-1.5"
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                )}
+              </section>
             </div>
           )}
         </div>
