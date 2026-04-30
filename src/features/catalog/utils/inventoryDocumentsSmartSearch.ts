@@ -10,6 +10,7 @@ import type {
   InventoryDocumentsSearchSnapshot,
   InventoryDocumentsSearchStateResponse,
 } from "@/features/catalog/types/inventoryDocumentsSearch";
+import type { DocType } from "@/features/warehouse/types/warehouse";
 import { InventoryDocumentsSearchFields } from "@/features/catalog/types/inventoryDocumentsSearch";
 
 export type InventoryDocumentsSearchFilterKey = InventoryDocumentsSearchField;
@@ -46,6 +47,35 @@ const FIELD_LABELS: Record<InventoryDocumentsSearchField, string> = {
 
 const IN_OPERATOR: OperatorOption[] = [{ id: "IN", label: "Es alguno de" }];
 
+type InventoryDocumentsSearchMode = "default" | "adjustment" | "transfer";
+
+function resolveModeFromDocType(docType?: DocType) {
+  if (docType === "ADJUSTMENT") return "adjustment";
+  if (docType === "TRANSFER") return "transfer";
+  return "default";
+}
+
+function allowedFieldsByMode(mode: InventoryDocumentsSearchMode) {
+  if (mode === "adjustment") {
+    return new Set<InventoryDocumentsSearchField>([
+      InventoryDocumentsSearchFields.WAREHOUSE_ID,
+      InventoryDocumentsSearchFields.CREATED_BY_ID,
+      InventoryDocumentsSearchFields.STATUS,
+    ]);
+  }
+
+  if (mode === "transfer") {
+    return new Set<InventoryDocumentsSearchField>([
+      InventoryDocumentsSearchFields.FROM_WAREHOUSE_ID,
+      InventoryDocumentsSearchFields.TO_WAREHOUSE_ID,
+      InventoryDocumentsSearchFields.CREATED_BY_ID,
+      InventoryDocumentsSearchFields.STATUS,
+    ]);
+  }
+
+  return new Set(FIELD_ORDER);
+}
+
 function uniqueStrings(values: string[] | undefined) {
   return Array.from(new Set((values ?? []).map((value) => value?.trim()).filter(Boolean))) as string[];
 }
@@ -58,9 +88,11 @@ function allowedStatusIds(searchState?: InventoryDocumentsSearchStateResponse | 
 function sanitizeRule(
   rule?: Partial<InventoryDocumentsSearchRule> | null,
   searchState?: InventoryDocumentsSearchStateResponse | null,
+  mode: InventoryDocumentsSearchMode = "default",
 ): InventoryDocumentsSearchRule | null {
   if (!rule?.field || !rule.operator) return null;
   if (!FIELD_ORDER.includes(rule.field)) return null;
+  if (!allowedFieldsByMode(mode).has(rule.field)) return null;
   if (rule.operator !== "IN") return null;
 
   const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : undefined));
@@ -83,13 +115,15 @@ export function createEmptyInventoryDocumentsSearchFilters(): InventoryDocuments
 export function sanitizeInventoryDocumentsSearchSnapshot(
   snapshot?: Partial<InventoryDocumentsSearchSnapshot> | { q?: string; filters?: unknown } | null,
   searchState?: InventoryDocumentsSearchStateResponse | null,
+  options?: { mode?: InventoryDocumentsSearchMode; docType?: DocType },
 ): InventoryDocumentsSearchSnapshot {
+  const mode = options?.mode ?? resolveModeFromDocType(options?.docType);
   const q = snapshot?.q?.trim();
   const rawFilters = Array.isArray(snapshot?.filters) ? snapshot.filters : [];
   const merged = new Map<InventoryDocumentsSearchField, InventoryDocumentsSearchRule>();
 
   rawFilters.forEach((rule) => {
-    const normalized = sanitizeRule(rule as InventoryDocumentsSearchRule, searchState);
+    const normalized = sanitizeRule(rule as InventoryDocumentsSearchRule, searchState, mode);
     if (!normalized) return;
 
     const existing = merged.get(normalized.field);
@@ -107,7 +141,10 @@ export function sanitizeInventoryDocumentsSearchSnapshot(
 
   return {
     q: q || undefined,
-    filters: FIELD_ORDER.map((field) => merged.get(field)).filter(Boolean) as InventoryDocumentsSearchRule[],
+    filters: FIELD_ORDER
+      .filter((field) => allowedFieldsByMode(mode).has(field))
+      .map((field) => merged.get(field))
+      .filter(Boolean) as InventoryDocumentsSearchRule[],
   };
 }
 
@@ -124,9 +161,11 @@ export function upsertInventoryDocumentsSearchRule(
   snapshot: InventoryDocumentsSearchSnapshot,
   rule: InventoryDocumentsSearchRule,
   searchState?: InventoryDocumentsSearchStateResponse | null,
+  options?: { mode?: InventoryDocumentsSearchMode; docType?: DocType },
 ) {
-  const normalized = sanitizeInventoryDocumentsSearchSnapshot(snapshot, searchState);
-  const nextRule = sanitizeRule(rule, searchState);
+  const normalized = sanitizeInventoryDocumentsSearchSnapshot(snapshot, searchState, options);
+  const mode = options?.mode ?? resolveModeFromDocType(options?.docType);
+  const nextRule = sanitizeRule(rule, searchState, mode);
 
   if (!nextRule) {
     return removeInventoryDocumentsSearchKey(normalized, rule.field);
@@ -138,6 +177,7 @@ export function upsertInventoryDocumentsSearchRule(
       filters: [...normalized.filters.filter((item) => item.field !== nextRule.field), nextRule],
     },
     searchState,
+    options,
   );
 }
 
@@ -173,6 +213,12 @@ export function getInventoryDocumentsSearchRuleSummary(
   const options =
     key === InventoryDocumentsSearchFields.WAREHOUSE_ID
       ? searchState?.catalogs.warehouses
+      : key === InventoryDocumentsSearchFields.FROM_WAREHOUSE_ID
+      ? searchState?.catalogs.warehouses
+      : key === InventoryDocumentsSearchFields.TO_WAREHOUSE_ID
+      ? searchState?.catalogs.warehouses
+      : key === InventoryDocumentsSearchFields.CREATED_BY_ID
+      ? searchState?.catalogs.users
       : searchState?.catalogs.statuses;
   const map = new Map((options ?? []).map((option) => [option.id, option.label]));
   return values.map((value) => map.get(value) ?? value).join(" - ");
@@ -181,8 +227,9 @@ export function getInventoryDocumentsSearchRuleSummary(
 export function buildInventoryDocumentsSearchChips(
   snapshot: InventoryDocumentsSearchSnapshot,
   searchState?: InventoryDocumentsSearchStateResponse | null,
+  options?: { mode?: InventoryDocumentsSearchMode; docType?: DocType },
 ): InventoryDocumentsSearchChip[] {
-  const normalized = sanitizeInventoryDocumentsSearchSnapshot(snapshot, searchState);
+  const normalized = sanitizeInventoryDocumentsSearchSnapshot(snapshot, searchState, options);
   const chips: InventoryDocumentsSearchChip[] = [];
 
   if (normalized.q) {
@@ -204,8 +251,12 @@ export function buildInventoryDocumentsSearchChips(
 
 export function buildInventoryDocumentsSmartSearchColumns(
   searchState?: InventoryDocumentsSearchStateResponse | null,
+  options?: { mode?: InventoryDocumentsSearchMode; docType?: DocType },
 ): InventoryDocumentsSmartSearchColumn[] {
-  return [
+  const mode = options?.mode ?? resolveModeFromDocType(options?.docType);
+  const allowed = allowedFieldsByMode(mode);
+
+  const allColumns: InventoryDocumentsSmartSearchColumn[] = [
     {
       id: InventoryDocumentsSearchFields.WAREHOUSE_ID,
       label: "Almacén",
@@ -247,4 +298,6 @@ export function buildInventoryDocumentsSmartSearchColumns(
       options: searchState?.catalogs.statuses ?? [],
     },
   ];
+
+  return allColumns.filter((column) => allowed.has(column.id));
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Menu, Plus } from "lucide-react";
 import { PageTitle } from "@/shared/components/components/PageTitle";
@@ -7,17 +7,13 @@ import type { DataTableColumn } from "@/shared/components/table/types";
 import {
   DataTableSearchBar,
   DataTableSearchChips,
-  DataTableSearchPanel,
-  type DataTableSearchChip,
-  type DataTableSearchColumn,
   type DataTableRecentSearchItem,
-  type DataTableSearchSnapshot,
+  type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
-import { errorResponse } from "@/shared/common/utils/response";
-import { listActive } from "@/shared/services/warehouseServices";
+import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { getDocumentInventoryPdf } from "@/shared/services/pdfServices";
 import { parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import type {
@@ -25,25 +21,36 @@ import type {
   InventoryDocumentRow,
 } from "@/features/catalog/types/documentInventory";
 import { InventoryDocumentProductType } from "@/features/catalog/types/documentInventory";
-import {
-  DocStatus,
-  DocType,
-  type Warehouse,
-} from "@/features/warehouse/types/warehouse";
+import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 import { Headed } from "@/shared/components/components/Headed";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { getDocuments } from "@/shared/services/documentService";
+import {
+  deleteInventoryDocumentsSearchMetric,
+  getDocuments,
+  getInventoryDocumentsSearchState,
+  saveInventoryDocumentsSearchMetric,
+} from "@/shared/services/documentService";
 import AdjustmentProductModal from "@/features/catalog/products/components/AdjustmentFormProducts";
 import type { ProductType } from "@/features/catalog/types/ProductTypes";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { DocumentInventoryDetails } from "@/shared/components/components/DocumentInventoryDetails";
+import type {
+  InventoryDocumentsSearchField,
+  InventoryDocumentsSearchRule,
+  InventoryDocumentsSearchSnapshot,
+  InventoryDocumentsSearchStateResponse,
+} from "@/features/catalog/types/inventoryDocumentsSearch";
 import {
-  loadLocalRecentSearches,
-  pushLocalRecentSearch,
-} from "@/shared/utils/localRecentSearches";
-
-type AdjustmentSearchFilterKey = "warehouse" | "status";
+  buildInventoryDocumentsSearchChips,
+  buildInventoryDocumentsSmartSearchColumns,
+  createEmptyInventoryDocumentsSearchFilters,
+  hasInventoryDocumentsSearchCriteria,
+  removeInventoryDocumentsSearchKey,
+  sanitizeInventoryDocumentsSearchSnapshot,
+  upsertInventoryDocumentsSearchRule,
+} from "@/features/catalog/utils/inventoryDocumentsSmartSearch";
+import { InventoryDocumentsSmartSearchPanel } from "@/features/catalog/components/InventoryDocumentsSmartSearchPanel";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -70,7 +77,6 @@ const buildNumero = (document: InventoryDocument) => {
   return [serie, padded].filter(Boolean).join(sep) || document.id;
 };
 
-
 const normalizePaginatedDocuments = (
   items: InventoryDocument[],
   currentPage: number,
@@ -89,15 +95,13 @@ type InventoryAdjustmentsPageProps = {
 export function InventoryAdjustmentsPage({
   config,
 }: InventoryAdjustmentsPageProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFlash } = useFlashMessage();
   const [searchParams] = useSearchParams();
   const showFlashRef = useRef(showFlash);
-  const clearFlashRef = useRef(clearFlash);
 
   useEffect(() => {
     showFlashRef.current = showFlash;
-    clearFlashRef.current = clearFlash;
-  }, [showFlash, clearFlash]);
+  }, [showFlash]);
 
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
@@ -107,23 +111,16 @@ export function InventoryAdjustmentsPage({
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
-  const [statusFilter, setStatusFilter] = useState<DocStatus | "">("");
   const [searchText, setSearchText] = useState("");
-  const [executedSearchText, setExecutedSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState(() => createEmptyInventoryDocumentsSearchFilters());
   const [page, setPage] = useState(1);
   const limit = 25;
 
   const PRIMARY = "hsl(var(--primary))";
 
-  const [warehouseOptions, setWarehouseOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [recentSearches, setRecentSearches] = useState<
-    DataTableRecentSearchItem<
-      DataTableSearchSnapshot<AdjustmentSearchFilterKey>
-    >[]
-  >(() => loadLocalRecentSearches(config.recentStorageKey));
+  const [searchState, setSearchState] = useState<InventoryDocumentsSearchStateResponse | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null,
@@ -147,320 +144,41 @@ export function InventoryAdjustmentsPage({
     setOpenAdjustmentModal(false);
   }, []);
 
-  const statusOptions = useMemo(
-    () => [
-      { value: "", label: "Todos" },
-      { value: DocStatus.DRAFT, label: statusLabels[DocStatus.DRAFT] },
-      { value: DocStatus.POSTED, label: statusLabels[DocStatus.POSTED] },
-      { value: DocStatus.CANCELLED, label: statusLabels[DocStatus.CANCELLED] },
-    ],
-    [],
+  const draftSnapshot = useMemo<InventoryDocumentsSearchSnapshot>(
+    () =>
+      sanitizeInventoryDocumentsSearchSnapshot(
+        { q: searchText, filters: searchFilters },
+        searchState,
+        { docType: DocType.ADJUSTMENT },
+      ),
+    [searchFilters, searchState, searchText],
   );
 
-  const smartSearchColumns = useMemo<
-    DataTableSearchColumn<AdjustmentSearchFilterKey>[]
-  >(() => {
-    const warehouseFilterOptions = warehouseOptions
-      .filter((option) => option.value)
-      .map((option) => ({ id: option.value, label: option.label }));
-
-    const statusFilterOptions = statusOptions
-      .filter((option) => option.value)
-      .map((option) => ({ id: String(option.value), label: option.label }));
-
-    return [
-      {
-        id: "warehouse",
-        label: "Almacén",
-        options: warehouseFilterOptions,
-        visible: true,
-      },
-      {
-        id: "status",
-        label: "Estado",
-        options: statusFilterOptions,
-        visible: true,
-      },
-    ];
-  }, [statusOptions, warehouseOptions]);
-
-  const executedSnapshot = useMemo<
-    DataTableSearchSnapshot<AdjustmentSearchFilterKey>
-  >(
-    () => ({
-      q: executedSearchText || undefined,
-      filters: {
-        warehouse: warehouseId ? [warehouseId] : [],
-        status: statusFilter ? [String(statusFilter)] : [],
-      },
-    }),
-    [executedSearchText, statusFilter, warehouseId],
+  const executedSnapshot = useMemo<InventoryDocumentsSearchSnapshot>(
+    () =>
+      sanitizeInventoryDocumentsSearchSnapshot(
+        { q: appliedSearchText, filters: searchFilters },
+        searchState,
+        { docType: DocType.ADJUSTMENT },
+      ),
+    [appliedSearchText, searchFilters],
   );
 
-  const buildRecentLabel = useCallback(
-    (snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
-      const parts: string[] = [];
-
-      if (snapshot.q) {
-        parts.push(`Busqueda: ${snapshot.q}`);
-      }
-
-      const warehouseValue = snapshot.filters.warehouse?.[0];
-      if (warehouseValue) {
-        const label =
-          warehouseOptions.find((option) => option.value === warehouseValue)
-            ?.label ?? warehouseValue;
-        parts.push(`Almacén: ${label}`);
-      }
-
-      const statusValue = snapshot.filters.status?.[0];
-      if (statusValue) {
-        parts.push(
-          `Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`,
-        );
-      }
-
-      return parts.join(" · ") || "Búsqueda";
-    },
-    [warehouseOptions],
-  );
-
-  const recordRecentSearch = useCallback(
-    (snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
-      const hasFilters =
-        Boolean(snapshot.filters.warehouse?.length) ||
-        Boolean(snapshot.filters.status?.length);
-      const hasQuery = Boolean(snapshot.q);
-      if (!hasFilters && !hasQuery) return;
-
-      const id = JSON.stringify(snapshot);
-      const label = buildRecentLabel(snapshot);
-
-      setRecentSearches(
-        pushLocalRecentSearch(config.recentStorageKey, {
-          id,
-          label,
-          snapshot,
-        }),
-      );
-    },
-    [buildRecentLabel, config.recentStorageKey],
-  );
-
-  const searchChips = useMemo<
-    DataTableSearchChip<AdjustmentSearchFilterKey>[]
-  >(() => {
-    const chips: DataTableSearchChip<AdjustmentSearchFilterKey>[] = [];
-
-    if (executedSnapshot.q) {
-      chips.push({
-        id: "q",
-        label: `Busqueda: ${executedSnapshot.q}`,
-        removeKey: "q",
-      });
-    }
-
-    const warehouseValue = executedSnapshot.filters.warehouse?.[0];
-    if (warehouseValue) {
-      const label =
-        warehouseOptions.find((option) => option.value === warehouseValue)
-          ?.label ?? warehouseValue;
-      chips.push({
-        id: "warehouse",
-        label: `Almacén: ${label}`,
-        removeKey: "warehouse",
-      });
-    }
-
-    const statusValue = executedSnapshot.filters.status?.[0];
-    if (statusValue) {
-      chips.push({
-        id: "status",
-        label: `Estado: ${statusLabels[statusValue as DocStatus] ?? statusValue}`,
-        removeKey: "status",
-      });
-    }
-
-    return chips;
-  }, [
-    executedSnapshot.filters.status,
-    executedSnapshot.filters.warehouse,
-    executedSnapshot.q,
-    warehouseOptions,
-  ]);
-
-  const handleRemoveChip = useCallback(
-    (chip: DataTableSearchChip<AdjustmentSearchFilterKey>) => {
-      if (chip.removeKey === "q") {
-        setSearchText("");
-        setExecutedSearchText("");
-        recordRecentSearch({
-          filters: {
-            warehouse: warehouseId ? [warehouseId] : [],
-            status: statusFilter ? [String(statusFilter)] : [],
-          },
-        });
-        setPage(1);
-        return;
-      }
-
-      if (chip.removeKey === "warehouse") {
-        setWarehouseId("");
-        recordRecentSearch({
-          q: executedSearchText || undefined,
-          filters: {
-            warehouse: [],
-            status: statusFilter ? [String(statusFilter)] : [],
-          },
-        });
-        setPage(1);
-        return;
-      }
-
-      if (chip.removeKey === "status") {
-        setStatusFilter("");
-        recordRecentSearch({
-          q: executedSearchText || undefined,
-          filters: {
-            warehouse: warehouseId ? [warehouseId] : [],
-            status: [],
-          },
-        });
-        setPage(1);
-      }
-    },
-    [executedSearchText, recordRecentSearch, statusFilter, warehouseId],
-  );
-
-  const handleToggleSearchOption = useCallback(
-    (columnId: AdjustmentSearchFilterKey, optionId: string) => {
-      if (columnId === "warehouse") {
-        setWarehouseId((prev) => {
-          const nextWarehouseId = prev === optionId ? "" : optionId;
-          recordRecentSearch({
-            q: executedSearchText || undefined,
-            filters: {
-              warehouse: nextWarehouseId ? [nextWarehouseId] : [],
-              status: statusFilter ? [String(statusFilter)] : [],
-            },
-          });
-          return nextWarehouseId;
-        });
-        setPage(1);
-        return;
-      }
-
-      if (columnId === "status") {
-        setStatusFilter((prev) => {
-          const nextStatus =
-            String(prev) === optionId ? "" : (optionId as DocStatus);
-          recordRecentSearch({
-            q: executedSearchText || undefined,
-            filters: {
-              warehouse: warehouseId ? [warehouseId] : [],
-              status: nextStatus ? [String(nextStatus)] : [],
-            },
-          });
-          return nextStatus;
-        });
-        setPage(1);
-      }
-    },
-    [executedSearchText, recordRecentSearch, statusFilter, warehouseId],
-  );
-
-  const applySnapshot = useCallback(
-    (snapshot: DataTableSearchSnapshot<AdjustmentSearchFilterKey>) => {
-      recordRecentSearch({
-        ...snapshot,
-        q: snapshot.q?.trim() || undefined,
-      });
-      const nextWarehouseId = snapshot.filters.warehouse?.[0] ?? "";
-      const nextStatus = snapshot.filters.status?.[0] ?? "";
-      setWarehouseId(nextWarehouseId);
-      setStatusFilter(nextStatus as DocStatus | "");
-      setSearchText(snapshot.q ?? "");
-      setExecutedSearchText((snapshot.q ?? "").trim());
-      setPage(1);
-    },
-    [recordRecentSearch],
-  );
-
-  const submitSearch = useCallback(() => {
-    const nextQ = searchText.trim();
-    recordRecentSearch({
-      q: nextQ || undefined,
-      filters: {
-        warehouse: warehouseId ? [warehouseId] : [],
-        status: statusFilter ? [String(statusFilter)] : [],
-      },
-    });
-
-    setExecutedSearchText(nextQ);
-    setPage(1);
-  }, [recordRecentSearch, searchText, statusFilter, warehouseId]);
-
-  const loadWarehouses = useCallback(async () => {
+  const loadSearchState = useCallback(async () => {
     try {
-      const res = await listActive();
-      const options =
-        res?.map((warehouse: Warehouse) => ({
-          value: warehouse.warehouseId,
-          label: warehouse.name,
-        })) ?? [];
-      setWarehouseOptions([{ value: "", label: "Todos" }, ...options]);
-    } catch {
-      setWarehouseOptions([{ value: "", label: "Todos" }]);
-      showFlashRef.current(errorResponse("Error al cargar almacenes"));
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadWarehouses();
-  }, [loadWarehouses]);
-
-  const loadDocuments = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const res = await getDocuments({
-        page,
-        limit,
-        from: fromDate || undefined,
-        to: toDate || undefined,
-        warehouseId: warehouseId || undefined,
+      const response = await getInventoryDocumentsSearchState({
         docType: DocType.ADJUSTMENT,
         productType: config.documentProductType,
-        includeItems: true,
-        status: statusFilter || undefined,
-        q: executedSearchText || undefined,
       });
-
-      const responseItems = res.items ?? [];
-      setDocuments(normalizePaginatedDocuments(responseItems, page, limit));
-      setTotal(res.total ?? responseItems.length);
+      setSearchState(response);
     } catch {
-      setDocuments([]);
-      setTotal(0);
-      showFlashRef.current(
-        errorResponse("No se pudieron cargar los documentos."),
-      );
-    } finally {
-      setLoading(false);
+      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, [
-    page,
-    fromDate,
-    toDate,
-    warehouseId,
-    statusFilter,
-    executedSearchText,
-    config.documentProductType,
-  ]);
+  }, [config.documentProductType]);
 
   useEffect(() => {
-    void loadDocuments();
-  }, [loadDocuments]);
+    void loadSearchState();
+  }, [loadSearchState]);
 
   useEffect(() => {
     if (prefillHandledRef.current) return;
@@ -477,6 +195,205 @@ export function InventoryAdjustmentsPage({
     });
     setOpenAdjustmentModal(true);
   }, [searchParams]);
+
+  const smartSearchColumns = useMemo(
+    () => buildInventoryDocumentsSmartSearchColumns(searchState, { docType: DocType.ADJUSTMENT }),
+    [searchState],
+  );
+
+  const recentSearches = useMemo<DataTableRecentSearchItem<InventoryDocumentsSearchSnapshot>[]>(
+    () =>
+      (searchState?.recent ?? []).map((item) => ({
+        id: item.recentId,
+        label: item.label,
+        snapshot: item.snapshot,
+      })),
+    [searchState],
+  );
+
+  const savedMetrics = useMemo<DataTableSavedSearchItem<InventoryDocumentsSearchSnapshot>[]>(
+    () =>
+      (searchState?.saved ?? []).map((metric) => ({
+        id: metric.metricId,
+        name: metric.name,
+        label: metric.label,
+        snapshot: metric.snapshot,
+      })),
+    [searchState],
+  );
+
+  const searchChips = useMemo(
+    () => buildInventoryDocumentsSearchChips(executedSnapshot, searchState, { docType: DocType.ADJUSTMENT }),
+    [executedSnapshot, searchState],
+  );
+
+  const submitSearch = useCallback(() => {
+    startTransition(() => {
+      setAppliedSearchText(searchText.trim());
+      setPage(1);
+    });
+  }, [searchText]);
+
+  const handleApplySnapshot = useCallback((snapshot: InventoryDocumentsSearchSnapshot) => {
+    const normalized = sanitizeInventoryDocumentsSearchSnapshot(snapshot, searchState, { docType: DocType.ADJUSTMENT });
+    startTransition(() => {
+      setSearchText(normalized.q ?? "");
+      setAppliedSearchText(normalized.q ?? "");
+      setSearchFilters(normalized.filters);
+      setPage(1);
+    });
+  }, [searchState]);
+
+  const handleApplySearchRule = useCallback((rule: InventoryDocumentsSearchRule) => {
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = upsertInventoryDocumentsSearchRule(
+          sanitizeInventoryDocumentsSearchSnapshot(
+            { q: searchText, filters: current },
+            searchState,
+            { docType: DocType.ADJUSTMENT },
+          ),
+          rule,
+          searchState,
+          { docType: DocType.ADJUSTMENT },
+        );
+        return next.filters;
+      });
+      setPage(1);
+    });
+  }, [searchState, searchText]);
+
+  const handleRemoveSearchRule = useCallback((fieldId: InventoryDocumentsSearchField) => {
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = removeInventoryDocumentsSearchKey(
+          sanitizeInventoryDocumentsSearchSnapshot(
+            { q: searchText, filters: current },
+            searchState,
+            { docType: DocType.ADJUSTMENT },
+          ),
+          fieldId,
+        );
+        return next.filters;
+      });
+      setPage(1);
+    });
+  }, [searchState, searchText]);
+
+  const handleRemoveChip = useCallback((key: "q" | InventoryDocumentsSearchField) => {
+    const nextSnapshot = removeInventoryDocumentsSearchKey(
+      sanitizeInventoryDocumentsSearchSnapshot(
+        { q: appliedSearchText, filters: searchFilters },
+        searchState,
+        { docType: DocType.ADJUSTMENT },
+      ),
+      key,
+    );
+    startTransition(() => {
+      setSearchText(nextSnapshot.q ?? "");
+      setAppliedSearchText(nextSnapshot.q ?? "");
+      setSearchFilters(nextSnapshot.filters);
+      setPage(1);
+    });
+  }, [appliedSearchText, searchFilters, searchState]);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    const snapshot = sanitizeInventoryDocumentsSearchSnapshot(
+      { q: appliedSearchText, filters: searchFilters },
+      searchState,
+      { docType: DocType.ADJUSTMENT },
+    );
+    if (!hasInventoryDocumentsSearchCriteria(snapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const response = await saveInventoryDocumentsSearchMetric({
+        name,
+        docType: DocType.ADJUSTMENT,
+        productType: config.documentProductType,
+        snapshot,
+      });
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+        return true;
+      }
+
+      showFlash(errorResponse(response.message));
+      return false;
+    } catch {
+      showFlash(errorResponse("Error al guardar la metrica"));
+      return false;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [appliedSearchText, config.documentProductType, loadSearchState, searchFilters, searchState, showFlash]);
+
+  const handleDeleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deleteInventoryDocumentsSearchMetric({
+        metricId,
+        docType: DocType.ADJUSTMENT,
+        productType: config.documentProductType,
+      });
+
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadSearchState();
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch {
+      showFlash(errorResponse("Error al eliminar la metrica"));
+    }
+  }, [config.documentProductType, loadSearchState, showFlash]);
+
+  const loadDocuments = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const res = await getDocuments({
+        page,
+        limit,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+        docType: DocType.ADJUSTMENT,
+        productType: config.documentProductType,
+        includeItems: true,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters.length
+          ? JSON.stringify(executedSnapshot.filters)
+          : undefined,
+      });
+
+      const responseItems = res.items ?? [];
+      setDocuments(normalizePaginatedDocuments(responseItems, page, limit));
+      setTotal(res.total ?? responseItems.length);
+
+      if (hasInventoryDocumentsSearchCriteria(executedSnapshot)) {
+        void loadSearchState();
+      }
+    } catch {
+      setDocuments([]);
+      setTotal(0);
+      showFlashRef.current(
+        errorResponse("No se pudieron cargar los documentos."),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    page,
+    fromDate,
+    toDate,
+    config.documentProductType,
+    executedSnapshot,
+    loadSearchState,
+  ]);
+
+  useEffect(() => {
+    void loadDocuments();
+  }, [loadDocuments]);
 
   const openDocumentPdf = (documentId: string) => {
     setSelectedDocumentId(documentId);
@@ -510,9 +427,10 @@ export function InventoryAdjustmentsPage({
         header: "Emisiòn",
         cell: (row) => (
           <div className="text-black/70">
-           {row.date} {row.time}
+            {row.date} {row.time}
           </div>
         ),
+        hideable: true,
         sortable: false,
       },
       {
@@ -521,6 +439,7 @@ export function InventoryAdjustmentsPage({
         accessorKey: "numero",
         headerClassName: "text-left",
         className: "text-left",
+        hideable: true,
         sortable: false,
       },
       {
@@ -529,6 +448,7 @@ export function InventoryAdjustmentsPage({
         accessorKey: "fromWarehouse",
         headerClassName: "text-left",
         className: "text-left",
+        hideable: true,
         sortable: false,
       },
       {
@@ -537,20 +457,23 @@ export function InventoryAdjustmentsPage({
         accessorKey: "createdBy",
         headerClassName: "text-left",
         className: "text-left",
+        hideable: true,
         sortable: false,
       },
       {
         id: "status",
         header: "Estado",
         cell: (row) => (
-        <div className="flex justify-center">
-          <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
-            {row.statusLabel}
-          </span>
-        </div>
-      ),
+          <div className="flex justify-center">
+            <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+              {row.statusLabel}
+            </span>
+          </div>
+        ),
         accessorKey: "statusLabel",
         headerClassName: "text-center [&>div]:justify-center",
+        className: "text-center",
+        hideable: true,
         sortable: false,
       },
       {
@@ -603,77 +526,87 @@ export function InventoryAdjustmentsPage({
   return (
     <PageShell className="bg-white">
       <PageTitle title="Ajustes" />
-        <div className="flex items-center justify-between">
-          <Headed title={config.headingTitle} size="lg" />
+      <div className="flex items-center justify-between">
+        <Headed title={config.headingTitle} size="lg" />
 
-          <div className="flex justify-end">
-            <SystemButton
-              size="md"
-              leftIcon={<Plus className="h-4 w-4" />}
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-              }}
-              onClick={() => setOpenAdjustmentModal(true)}
-              disabled={companyActionDisabled}
-              title={companyActionTitle}
-            >
-              Crear ajuste
-            </SystemButton>
-          </div>
+        <div className="flex justify-end">
+          <SystemButton
+            size="md"
+            leftIcon={<Plus className="h-4 w-4" />}
+            style={{
+              backgroundColor: PRIMARY,
+              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+            }}
+            onClick={() => setOpenAdjustmentModal(true)}
+            disabled={companyActionDisabled}
+            title={companyActionTitle}
+          >
+            Crear ajuste
+          </SystemButton>
         </div>
+      </div>
 
-        <DataTableSearchChips chips={searchChips} onRemove={handleRemoveChip} />
+      <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 
-        <DataTable
-          tableId={config.tableId}
-          data={documentRows}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          emptyMessage="No hay documentos con los filtros actuales."
-          hoverable={false}
-          animated={false}
-          selectableColumns
-          toolbarSearchContent={
-            <DataTableSearchBar
-              value={searchText}
-              onChange={setSearchText}
-              onSubmitSearch={submitSearch}
-              searchLabel="Buscar documento"
-              searchName={config.searchName}
-            >
-              <DataTableSearchPanel
-                recent={recentSearches}
-                columns={smartSearchColumns}
-                snapshot={executedSnapshot}
-                onApplySnapshot={applySnapshot}
-                onToggleOption={handleToggleSearchOption}
-              />
-            </DataTableSearchBar>
-          }
-          rangeDates={{
-            startDate: parseDateInputValue(fromDate),
-            endDate: parseDateInputValue(toDate),
-            onChange: ({ startDate, endDate }) => {
+      <DataTable
+        tableId={config.tableId}
+        data={documentRows}
+        columns={columns}
+        rowKey="id"
+        loading={loading}
+        emptyMessage="No hay documentos con los filtros actuales."
+        hoverable={false}
+        animated={false}
+        selectableColumns
+        toolbarSearchContent={
+          <DataTableSearchBar
+            value={searchText}
+            onChange={(value) => startTransition(() => setSearchText(value))}
+            onSubmitSearch={submitSearch}
+            searchLabel="Buscar documento"
+            searchName={config.searchName}
+            canSaveMetric={hasInventoryDocumentsSearchCriteria(executedSnapshot)}
+            saveLoading={savingMetric}
+            onSaveMetric={handleSaveMetric}
+          >
+            <InventoryDocumentsSmartSearchPanel
+              recent={recentSearches}
+              saved={savedMetrics}
+              columns={smartSearchColumns}
+              snapshot={draftSnapshot}
+              searchState={searchState}
+              filterQuery={searchText}
+              onApplySnapshot={handleApplySnapshot}
+              onApplyRule={handleApplySearchRule}
+              onRemoveRule={handleRemoveSearchRule}
+              onDeleteMetric={handleDeleteMetric}
+            />
+          </DataTableSearchBar>
+        }
+        rangeDates={{
+          startDate: parseDateInputValue(fromDate),
+          endDate: parseDateInputValue(toDate),
+          onChange: ({ startDate, endDate }) => {
+            startTransition(() => {
               setFromDate(startDate ? toLocalDateKey(startDate) : "");
               setToDate(endDate ? toLocalDateKey(endDate) : "");
               setPage(1);
-            },
-          }}
-          pagination={{
-            page,
-            limit,
-            total,
-          }}
-          onPageChange={setPage}
-          onRowClick={(row) => {
-            setSelectedDocument(row.document);
-            setOpenDetailsModal(true);
-          }}
-          tableClassName="text-[10px]"
-        />
+            });
+          },
+        }}
+        pagination={{
+          page,
+          limit,
+          total,
+        }}
+        onPageChange={(nextPage) => startTransition(() => setPage(nextPage))}
+        onRowClick={(row) => {
+          setSelectedDocument(row.document);
+          setOpenDetailsModal(true);
+        }}
+        tableClassName="text-[10px]"
+      />
 
       <PdfViewerModal
         open={openPdfModal}

@@ -135,12 +135,22 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [selectedDocument, setSelectedDocument] = useState<InventoryDocument | null>(null);
 
   const draftSnapshot = useMemo<InventoryDocumentsSearchSnapshot>(
-    () => sanitizeInventoryDocumentsSearchSnapshot({ q: searchText, filters: searchFilters }, searchState),
+    () =>
+      sanitizeInventoryDocumentsSearchSnapshot(
+        { q: searchText, filters: searchFilters },
+        searchState,
+        { docType: DocType.TRANSFER },
+      ),
     [searchFilters, searchState, searchText],
   );
 
   const executedSnapshot = useMemo<InventoryDocumentsSearchSnapshot>(
-    () => sanitizeInventoryDocumentsSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+    () =>
+      sanitizeInventoryDocumentsSearchSnapshot(
+        { q: appliedSearchText, filters: searchFilters },
+        searchState,
+        { docType: DocType.TRANSFER },
+      ),
     [appliedSearchText, searchFilters],
   );
 
@@ -185,7 +195,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   }, [searchParams]);
 
   const smartSearchColumns = useMemo(
-    () => buildInventoryDocumentsSmartSearchColumns(searchState),
+    () => buildInventoryDocumentsSmartSearchColumns(searchState, { docType: DocType.TRANSFER }),
     [searchState],
   );
 
@@ -211,7 +221,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   );
 
   const searchChips = useMemo(
-    () => buildInventoryDocumentsSearchChips(executedSnapshot, searchState),
+    () => buildInventoryDocumentsSearchChips(executedSnapshot, searchState, { docType: DocType.TRANSFER }),
     [executedSnapshot, searchState],
   );
 
@@ -223,7 +233,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   }, [searchText]);
 
   const handleApplySnapshot = useCallback((snapshot: InventoryDocumentsSearchSnapshot) => {
-    const normalized = sanitizeInventoryDocumentsSearchSnapshot(snapshot, searchState);
+    const normalized = sanitizeInventoryDocumentsSearchSnapshot(snapshot, searchState, { docType: DocType.TRANSFER });
     startTransition(() => {
       setSearchText(normalized.q ?? "");
       setAppliedSearchText(normalized.q ?? "");
@@ -236,9 +246,14 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     startTransition(() => {
       setSearchFilters((current) => {
         const next = upsertInventoryDocumentsSearchRule(
-          sanitizeInventoryDocumentsSearchSnapshot({ q: searchText, filters: current }, searchState),
+          sanitizeInventoryDocumentsSearchSnapshot(
+            { q: searchText, filters: current },
+            searchState,
+            { docType: DocType.TRANSFER },
+          ),
           rule,
           searchState,
+          { docType: DocType.TRANSFER },
         );
         return next.filters;
       });
@@ -250,7 +265,11 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     startTransition(() => {
       setSearchFilters((current) => {
         const next = removeInventoryDocumentsSearchKey(
-          sanitizeInventoryDocumentsSearchSnapshot({ q: searchText, filters: current }, searchState),
+          sanitizeInventoryDocumentsSearchSnapshot(
+            { q: searchText, filters: current },
+            searchState,
+            { docType: DocType.TRANSFER },
+          ),
           fieldId,
         );
         return next.filters;
@@ -261,7 +280,11 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
 
   const handleRemoveChip = useCallback((key: "q" | InventoryDocumentsSearchField) => {
     const nextSnapshot = removeInventoryDocumentsSearchKey(
-      sanitizeInventoryDocumentsSearchSnapshot({ q: appliedSearchText, filters: searchFilters }, searchState),
+      sanitizeInventoryDocumentsSearchSnapshot(
+        { q: appliedSearchText, filters: searchFilters },
+        searchState,
+        { docType: DocType.TRANSFER },
+      ),
       key,
     );
     startTransition(() => {
@@ -273,7 +296,11 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   }, [appliedSearchText, searchFilters, searchState]);
 
   const handleSaveMetric = useCallback(async (name: string) => {
-    const snapshot = sanitizeInventoryDocumentsSearchSnapshot({ q: appliedSearchText, filters: searchFilters }, searchState);
+    const snapshot = sanitizeInventoryDocumentsSearchSnapshot(
+      { q: appliedSearchText, filters: searchFilters },
+      searchState,
+      { docType: DocType.TRANSFER },
+    );
     if (!hasInventoryDocumentsSearchCriteria(snapshot)) return false;
 
     setSavingMetric(true);
