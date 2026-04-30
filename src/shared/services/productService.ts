@@ -49,9 +49,13 @@ export const updateProductSku = async (
   return response.data;
 };
 
-export const getProductInventoryDetail = async (id: string, type: string): Promise<ProductInventoryDetail> => {
+export const getProductInventoryDetail = async (
+  id: string,
+  type: string,
+  warehouseId?: string,
+): Promise<ProductInventoryDetail> => {
   const response = await axiosInstance.get<ProductInventoryDetail>(`/products/${id}/detail`, {
-    params: { type },
+    params: { type, warehouseId },
   });
   return response.data;
 };

@@ -22,6 +22,7 @@ interface ProductDetailsModalProps {
   onClose: () => void;
   product: Product | null;
   productType: string;
+  warehouseId?: string;
 }
 
 function SkuInventoryChart({ sku }: { sku: ProductSkuDetail }) {
@@ -145,6 +146,7 @@ export function ProductDetailsModal({
   onClose,
   product,
   productType,
+  warehouseId,
 }: ProductDetailsModalProps) {
   const [detail, setDetail] = useState<ProductInventoryDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -153,13 +155,13 @@ export function ProductDetailsModal({
     if (open && product?.id) {
       setLoading(true);
 
-      getProductInventoryDetail(product.id, productType)
+      getProductInventoryDetail(product.id, productType, warehouseId)
         .then(setDetail)
         .finally(() => setLoading(false));
     } else if (!open) {
       setDetail(null);
     }
-  }, [open, product?.id, productType]);
+  }, [open, product?.id, productType, warehouseId]);
 
   if (!product) return null;
 
