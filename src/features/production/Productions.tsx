@@ -40,8 +40,12 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { ProductionOrderDetailModal } from "@/features/production/components/ProductionOrderDetailModal";
 import { ProductionOrderFormModal } from "@/features/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { ProductionSmartSearchPanel } from "@/features/production/components/ProductionSmartSearchPanel";
 import { AlertModal } from "@/shared/components/components/AlertModal";
+import { ExtraTimeModal } from "@/features/production/components/ExtraTimeModal";
+import { ProductionCompletionPhotoModal } from "@/features/production/components/ProductionCompletionPhotoModal";
+import { addProductionExtraTime, uploadProductionImageProdution } from "@/features/production/utils/productionActions";
 import {
   buildProductionSearchChips,
   buildProductionSmartSearchColumns,
@@ -55,6 +59,7 @@ import {
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
+const PHOTO_MODAL_SKIP_KEY = "production-photo-modal-skipped";
 
 const statusLabels: Record<ProductionStatus, string> = {
   [ProductionStatus.DRAFT]: "Borrador",
@@ -96,6 +101,7 @@ export default function Production() {
   const showFlashRef = useRef(showFlash);
   useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
   const { hasCompany } = useCompany();
+  const { userRole } = useAuth();
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -117,6 +123,11 @@ export default function Production() {
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [detailOrder, setDetailOrder] = useState<ProductionOrder | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [extraTimeProductionId, setExtraTimeProductionId] = useState<string | null>(null);
+  const [extraTimeLoading, setExtraTimeLoading] = useState(false);
+  const [completedPhotoOrder, setCompletedPhotoOrder] = useState<ProductionOrder | null>(null);
+  const [completedPhotoLoading, setCompletedPhotoLoading] = useState(false);
+  const skippedPhotoRef = useRef<Set<string>>(new Set());
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [pagination, setPagination] = useState({
@@ -132,6 +143,30 @@ export default function Production() {
   const [page, setPage] = useState(1);
   const limit = DEFAULT_LIMIT;
   const currentNowIso = new Date().toISOString();
+
+  const isPhotoPromptSkipped = useCallback((productionId?: string) => {
+    if (!productionId) return false;
+    try {
+      const raw = localStorage.getItem(PHOTO_MODAL_SKIP_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as Record<string, boolean>;
+      return Boolean(parsed[productionId]);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const markPhotoPromptSkipped = useCallback((productionId?: string) => {
+    if (!productionId) return;
+    try {
+      const raw = localStorage.getItem(PHOTO_MODAL_SKIP_KEY);
+      const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+      parsed[productionId] = true;
+      localStorage.setItem(PHOTO_MODAL_SKIP_KEY, JSON.stringify(parsed));
+    } catch {
+      // no-op
+    }
+  }, []);
 
   const draftSnapshot = useMemo(
     () =>
@@ -239,6 +274,25 @@ export default function Production() {
     }
   }, [clearFlash, loadOrders, showFlash]);
 
+  const handleAddExtraTime = useCallback(async (values: { days: number; hours: number; minutes: number }) => {
+    if (!extraTimeProductionId) return;
+    setExtraTimeLoading(true);
+    try {
+      const res = await addProductionExtraTime(extraTimeProductionId, values);
+      if (res.type === "success") {
+        showFlash(successResponse(res.message));
+        setExtraTimeProductionId(null);
+        await loadOrders();
+      } else {
+        showFlash(errorResponse(res.message));
+      }
+    } catch (error) {
+      showFlash(errorResponse(getApiErrorMessage(error, "Error al agregar tiempo extra")));
+    } finally {
+      setExtraTimeLoading(false);
+    }
+  }, [extraTimeProductionId, loadOrders, showFlash]);
+
   const handleCancel = async (id: string) => {
     clearFlash();
     setSubmittingAction("cancel");
@@ -305,6 +359,36 @@ export default function Production() {
     }
   }, [clearFlash, showFlash]);
 
+  const handleUploadCompletedPhoto = useCallback(async (file: File) => {
+    const productionId = completedPhotoOrder?.productionId ?? completedPhotoOrder?.id;
+    if (!productionId) return;
+    setCompletedPhotoLoading(true);
+    try {
+      const res = await uploadProductionImageProdution(productionId, file);
+      if (res.type === "success") {
+        showFlash(successResponse(res.message));
+        setCompletedPhotoOrder(null);
+        await loadOrders();
+      } else {
+        showFlash(errorResponse(res.message));
+      }
+    } catch (error) {
+      showFlash(errorResponse(getApiErrorMessage(error, "No se pudo subir la foto de producción")));
+    } finally {
+      setCompletedPhotoLoading(false);
+    }
+  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, loadOrders, showFlash]);
+
+  const handleSkipCompletedPhoto = useCallback(async () => {
+    const productionId = completedPhotoOrder?.productionId ?? completedPhotoOrder?.id;
+    if (productionId) {
+      skippedPhotoRef.current.add(productionId);
+      markPhotoPromptSkipped(productionId);
+    }
+    setCompletedPhotoOrder(null);
+    showFlash(successResponse("Producción ingresada sin foto. Se puede subir luego desde detalle (admin)."));
+  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, markPhotoPromptSkipped, showFlash]);
+
   useEffect(() => {
     void loadOrders();
   }, [loadOrders]);
@@ -312,6 +396,21 @@ export default function Production() {
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  useEffect(() => {
+    if (completedPhotoOrder) return;
+    const candidate = orders.find((order) => {
+      const productionId = order.productionId ?? order.id;
+      return (
+        order.status === ProductionStatus.COMPLETED &&
+        (!order.imageProdution || order.imageProdution.length === 0) &&
+        !!productionId &&
+        !skippedPhotoRef.current.has(productionId) &&
+        !isPhotoPromptSkipped(productionId)
+      );
+    });
+    if (candidate) setCompletedPhotoOrder(candidate);
+  }, [completedPhotoOrder, isPhotoPromptSkipped, orders]);
 
   const rows = useMemo<ProductionRow[]>(() => {
     return (orders ?? []).map((order) => ({
@@ -435,12 +534,20 @@ export default function Production() {
                   },
                   {
                     id: "close",
-                    label: "Cerrar",
+                    label: "Ingresar Almacen",
                     icon: <PackageCheck className="h-4 w-4 text-black/60" />,
                     hidden:
                       order.status !== ProductionStatus.IN_PROGRESS &&
                       order.status !== ProductionStatus.PARTIAL,
                     onClick: () => handleClose(order.productionId ?? ""),
+                    disabled: companyActionDisabled,
+                  },
+                  {
+                    id: "extra-time",
+                    label: "Tiempo extra",
+                    icon: <Timer className="h-4 w-4 text-black/60" />,
+                    hidden: order.status !== ProductionStatus.IN_PROGRESS,
+                    onClick: () => setExtraTimeProductionId(order.productionId ?? ""),
                     disabled: companyActionDisabled,
                   },
                   {
@@ -684,6 +791,14 @@ export default function Production() {
           }}
           loading={detailLoading}
           order={detailOrder}
+          canAdminUploadMissingPhoto={(userRole ?? "").toLowerCase() === "admin"}
+          onUploadedPhoto={async () => {
+            const id = detailOrder?.productionId ?? detailOrder?.id;
+            if (!id) return;
+            const response = await getProductionOrder(id);
+            setDetailOrder((prev) => prev ? { ...prev, ...response, items: response.items ?? prev.items } : response);
+            await loadOrders();
+          }}
         />
 
         <PdfViewerModal
@@ -751,6 +866,19 @@ export default function Production() {
             await loadOrders();
           }}
           primaryColor={PRIMARY}
+        />
+        <ExtraTimeModal
+          open={Boolean(extraTimeProductionId)}
+          loading={extraTimeLoading}
+          onClose={() => setExtraTimeProductionId(null)}
+          onConfirm={handleAddExtraTime}
+        />
+        <ProductionCompletionPhotoModal
+          open={Boolean(completedPhotoOrder)}
+          loading={completedPhotoLoading}
+          onClose={() => setCompletedPhotoOrder(null)}
+          onConfirm={handleUploadCompletedPhoto}
+          onCancelWithoutPhoto={handleSkipCompletedPhoto}
         />
       </div>
     </PageShell>

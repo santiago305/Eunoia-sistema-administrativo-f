@@ -175,6 +175,7 @@ export type ProductionOrder = {
   toWarehouseId: string;
   createdAt?: string;
   updatedAt?: string;
+  imageProdution?: string[];
   items?: ProductionOrderItem[];
   fromWarehouse?: ProductionOrderWarehouse | null;
   toWarehouse?: ProductionOrderWarehouse | null;

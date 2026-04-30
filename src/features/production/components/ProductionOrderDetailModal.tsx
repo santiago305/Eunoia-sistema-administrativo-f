@@ -1,11 +1,17 @@
 import { Boxes } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { ProductionStatus, type ProductionOrder } from "@/features/production/types/production";
+import { useState } from "react";
+import { uploadProductionImageProdution } from "@/features/production/utils/productionActions";
+import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { errorResponse, successResponse } from "@/shared/common/utils/response";
 
 type ProductionOrderDetailModalProps = {
   open: boolean;
   loading: boolean;
   order: ProductionOrder | null;
+  canAdminUploadMissingPhoto?: boolean;
+  onUploadedPhoto?: () => Promise<void> | void;
   onClose: () => void;
 };
 
@@ -29,10 +35,42 @@ export function ProductionOrderDetailModal({
   open,
   loading,
   order,
+  canAdminUploadMissingPhoto = false,
+  onUploadedPhoto,
   onClose,
 }: ProductionOrderDetailModalProps) {
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const { showFlash } = useFlashMessage();
   const fromWarehouseLabel = order?.fromWarehouse?.name ?? order?.fromWarehouseId ?? "-";
   const toWarehouseLabel = order?.toWarehouse?.name ?? order?.toWarehouseId ?? "-";
+  const images = order?.imageProdution ?? [];
+
+  const resolveImageUrl = (url: string) => {
+    if (!url) return url;
+    if (url.includes("/api/assets//api/assets/")) {
+      return url.replace("/api/assets//api/assets/", "/api/assets/");
+    }
+    return url;
+  };
+
+  const handleUploadFromDetail = async (file?: File | null) => {
+    const productionId = order?.productionId ?? order?.id;
+    if (!productionId || !file) return;
+    setUploadingPhoto(true);
+    try {
+      const response = await uploadProductionImageProdution(productionId, file);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await onUploadedPhoto?.();
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch {
+      showFlash(errorResponse("No se pudo subir la foto de producción"));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   return (
     <Modal
@@ -112,6 +150,40 @@ export function ProductionOrderDetailModal({
               </div>
             )}
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-neutral-900">Foto de producción</p>
+          {images.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {images.map((url, index) => {
+                const normalizedUrl = resolveImageUrl(url);
+                return (
+                  <a key={`${url}-${index}`} href={normalizedUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border border-black/10">
+                    <img src={normalizedUrl} alt={`Producción ${index + 1}`} className="h-24 w-full object-cover" />
+                  </a>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="rounded-md bg-slate-50 px-3 py-4 text-center text-xs text-black/45">
+                Esta producción no tiene foto.
+              </div>
+              {canAdminUploadMissingPhoto ? (
+                <label className="block text-xs text-black/60">
+                  <span className="mb-1 block">Subir foto (solo admin)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingPhoto}
+                    onChange={(e) => void handleUploadFromDetail(e.target.files?.[0] ?? null)}
+                    className="w-full rounded-md border border-black/10 px-2 py-1.5"
+                  />
+                </label>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </Modal>
