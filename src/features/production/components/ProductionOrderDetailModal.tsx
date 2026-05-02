@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Factory } from "lucide-react";
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 import { DocumentDetailsModal } from "@/shared/components/components/DocumentDetailsModal";
@@ -41,7 +41,7 @@ export function ProductionOrderDetailModal({
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const { showFlash } = useFlashMessage();
 
-  const handleUploadFromDetail = async (file?: File | null) => {
+  const handleUploadFromDetail = useCallback(async (file?: File | null) => {
     const productionId = order?.productionId ?? order?.id;
     if (!productionId || !file) return;
 
@@ -61,7 +61,7 @@ export function ProductionOrderDetailModal({
     } finally {
       setUploadingPhoto(false);
     }
-  };
+  }, [order, showFlash, onUploadedPhoto]);
 
   const extendedDetails = useMemo(() => {
     if (!order) return undefined;
@@ -112,8 +112,7 @@ export function ProductionOrderDetailModal({
       uploadingImage: uploadingPhoto,
       onUploadImage: handleUploadFromDetail,
     };
-  }, [order, loading, canAdminUploadMissingPhoto, uploadingPhoto]);
-
+  }, [order, loading, canAdminUploadMissingPhoto, uploadingPhoto, handleUploadFromDetail]);
   return (
     <DocumentDetailsModal
       open={open}
