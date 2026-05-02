@@ -66,7 +66,7 @@ export function WarehouseStockModal({ open, warehouse, onClose }: Props) {
       open={open}
       title={`Detalle de stock - ${warehouse.name}`}
       onClose={onClose}
-      className="w-[350px] max-h-[78vh]"
+      className="max-h-[78vh]"
       bodyClassName="py-5"
     >
       {loading && !stockData ? (

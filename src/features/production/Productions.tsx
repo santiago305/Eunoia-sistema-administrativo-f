@@ -421,7 +421,7 @@ export default function Production() {
       id:
         order.productionId ??
         `${order.fromWarehouseId}-${order.toWarehouseId}-${order.createdAt ?? ""}`,
-      registro: formatDateTime(order.manufactureDate),
+      registro: formatDateTime(order.createdAt),
       serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
       referencia: order.reference || "-",
       usuario: order.createdByName ?? order.createdBy ?? "-",
@@ -438,7 +438,7 @@ export default function Production() {
     return [
       {
         id: "registro",
-        header: "Registro",
+        header: "Emision",
         accessorKey: "registro",
         hideable: false,
       },
@@ -512,9 +512,9 @@ export default function Production() {
               ) : null}
 
               {order.status === ProductionStatus.COMPLETED ? (
-                <span className="flex flex-col items-center rounded-lg bg-slate-50 p-1 text-[10px] font-medium text-slate-700">
-                  <Timer className="h-4 w-4" />
-                  <span className="mt-1">Completado</span>
+                <span className="flex items-center rounded-lg gap-2 p-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+                    <Timer className="h-4 w-4" />
+                    <span className="mt-1">Completado</span>
                 </span>
               ) : null}
             </div>

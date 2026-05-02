@@ -164,6 +164,7 @@ export type WarehouseStockItem = {
   skuId: string;
   skuName: string;
   productName: string;
+  productType: "PRODUCT" | "MATERIAL";
   onHand: number;
   locationCodes: string[];
 };
