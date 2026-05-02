@@ -1,11 +1,11 @@
-import { Boxes } from "lucide-react";
-import { Modal } from "@/shared/components/modales/Modal";
-import { ProductionStatus, type ProductionOrder } from "@/features/production/types/production";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Factory } from "lucide-react";
+import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
+import { DocumentDetailsModal } from "@/shared/components/components/DocumentDetailsModal";
 import { uploadProductionImageProdution } from "@/features/production/utils/productionActions";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { OperationImageGallery } from "@/shared/components/components/OperationImageGallery";
+import { ProductionStatus, type ProductionOrder } from "@/features/production/types/production";
 
 type ProductionOrderDetailModalProps = {
   open: boolean;
@@ -24,12 +24,10 @@ const statusLabels: Record<ProductionStatus, string> = {
   [ProductionStatus.CANCELLED]: "Cancelado",
 };
 
-const statusStyles: Record<ProductionStatus, string> = {
-  [ProductionStatus.DRAFT]: "bg-neutral-100 text-neutral-700",
-  [ProductionStatus.IN_PROGRESS]: "bg-amber-100 text-amber-700",
-  [ProductionStatus.PARTIAL]: "bg-sky-100 text-sky-700",
-  [ProductionStatus.COMPLETED]: "bg-emerald-100 text-emerald-700",
-  [ProductionStatus.CANCELLED]: "bg-rose-100 text-rose-700",
+const mapProductionStatusToDocStatus = (status?: ProductionStatus): DocStatus => {
+  if (status === ProductionStatus.CANCELLED) return DocStatus.CANCELLED;
+  if (status === ProductionStatus.COMPLETED) return DocStatus.POSTED;
+  return DocStatus.DRAFT;
 };
 
 export function ProductionOrderDetailModal({
@@ -42,9 +40,6 @@ export function ProductionOrderDetailModal({
 }: ProductionOrderDetailModalProps) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const { showFlash } = useFlashMessage();
-
-  const fromWarehouseLabel = order?.fromWarehouse?.name ?? order?.fromWarehouseId ?? "-";
-  const toWarehouseLabel = order?.toWarehouse?.name ?? order?.toWarehouseId ?? "-";
 
   const handleUploadFromDetail = async (file?: File | null) => {
     const productionId = order?.productionId ?? order?.id;
@@ -68,101 +63,97 @@ export function ProductionOrderDetailModal({
     }
   };
 
+  const extendedDetails = useMemo(() => {
+    if (!order) return undefined;
+
+    const number = order.serie?.code
+      ? `${order.serie.code} - ${order.correlative ?? ""}`
+      : "-";
+
+    const items = (order.items ?? []).map((item, index) => ({
+      id: item.id ?? item.itemId ?? `${item.finishedItemId}-${index}`,
+      label:
+        item.finishedItem?.sku?.name ??
+        item.finishedItem?.variant?.productName ??
+        item.finishedItem?.product?.name ??
+        `Producto ${index + 1}`,
+      code:
+        item.finishedItem?.sku?.backendSku ??
+        item.finishedItem?.sku?.customSku ??
+        item.finishedItemId,
+      unit: item.finishedItem?.sku?.unitName ?? item.finishedItem?.variant?.unitName ?? undefined,
+      quantity: item.quantity,
+    }));
+
+    return {
+      title: "Detalle de orden de produccion",
+      loading,
+      headerIcon: <Factory className="h-3.5 w-3.5" />,
+      headerIconClassName: "bg-violet-100 text-violet-700",
+      headerLabel: "Produccion",
+      headerBadge: order.status ? statusLabels[order.status] ?? order.status : null,
+      headerBadgeClassName: "bg-violet-50 text-violet-700",
+      headerNumber: number,
+      headerSubLabel: `${order.fromWarehouse?.name ?? order.fromWarehouseId ?? "-"} -> ${order.toWarehouse?.name ?? order.toWarehouseId ?? "-"}`,
+      summaryTopFields: [
+        { label: "Usuario", value: order.createdByName ?? order.createdBy ?? "-" },
+        { label: "Origen", value: order.fromWarehouse?.name ?? order.fromWarehouseId ?? "-" },
+        { label: "Destino", value: order.toWarehouse?.name ?? order.toWarehouseId ?? "-" },
+      ],
+      itemsTitle: "Items producidos",
+      itemsMeta: `${items.length} registrados en la orden`,
+      items,
+      itemsEmptyMessage: "Esta orden no tiene items para mostrar.",
+      images: order.imageProdution ?? [],
+      imageTitle: "Foto de produccion",
+      imageAltPrefix: "Imagen de produccion",
+      imageEmptyMessage: "Esta produccion no tiene foto.",
+      canUploadImage: canAdminUploadMissingPhoto,
+      uploadingImage: uploadingPhoto,
+      onUploadImage: handleUploadFromDetail,
+    };
+  }, [order, loading, canAdminUploadMissingPhoto, uploadingPhoto]);
+
   return (
-    <Modal
+    <DocumentDetailsModal
       open={open}
       onClose={onClose}
-      title="Detalle de orden de produccion"
-      className="w-[min(36rem,calc(100vw-2rem))]"
-      bodyClassName="p-0"
-    >
-      <div className="space-y-5 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-neutral-900">
-              {order?.serie?.code ? `${order.serie.code} - ${order.correlative ?? ""}` : "-"}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-500">
-              <span>
-                <span className="text-neutral-400">Usuario:</span> {order?.createdByName ?? order?.createdBy ?? "-"}
-              </span>
-              <span>
-                <span className="text-neutral-400">Origen:</span> {fromWarehouseLabel}
-              </span>
-              <span>
-                <span className="text-neutral-400">Destino:</span> {toWarehouseLabel}
-              </span>
-            </div>
-          </div>
-
-          <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-              order?.status
-                ? statusStyles[order.status] ?? "bg-neutral-100 text-neutral-700"
-                : "bg-neutral-100 text-neutral-700"
-            }`}
-          >
-            {order?.status ? statusLabels[order.status] ?? order.status : "-"}
-          </span>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Boxes className="h-4 w-4 text-neutral-500" />
-            <div>
-              <p className="text-sm font-medium text-neutral-900">Items producidos</p>
-              <p className="text-xs text-neutral-500">
-                {loading ? "Cargando detalle..." : `${order?.items?.length ?? 0} registrados en la orden`}
-              </p>
-            </div>
-          </div>
-
-          <div className="max-h-[18rem] divide-y divide-neutral-100 overflow-auto rounded-xl bg-neutral-50/70">
-            {loading ? (
-              <div className="px-4 py-3 text-sm text-neutral-500">Cargando items...</div>
-            ) : order?.items?.length ? (
-              order.items.map((item, index) => {
-                const itemName =
-                  item.finishedItem?.sku?.name ??
-                  item.finishedItem?.variant?.productName ??
-                  item.finishedItem?.product?.name ??
-                  `Producto ${index + 1}`;
-
-                return (
-                  <div
-                    key={item.id ?? item.itemId ?? `${item.finishedItemId}-${index}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-neutral-900">{itemName}</p>
-                    </div>
-
-                    <div className="shrink-0 text-sm text-neutral-600">
-                      <span className="font-medium text-neutral-900">{item.quantity}</span> unidades
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="px-4 py-3 text-sm text-neutral-500">
-                Esta orden no tiene items para mostrar.
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-neutral-900">Foto de produccion</p>
-          <OperationImageGallery
-            images={order?.imageProdution ?? []}
-            altPrefix="Imagen de produccion"
-            emptyMessage="Esta produccion no tiene foto."
-            canUpload={canAdminUploadMissingPhoto}
-            uploading={uploadingPhoto}
-            onUpload={handleUploadFromDetail}
-          />
-        </div>
-      </div>
-    </Modal>
+      documentId={null}
+      document={
+        order
+          ? {
+              id: order.productionId ?? order.id ?? "production-detail",
+              docType: DocType.PRODUCTION,
+              productType: null,
+              status: mapProductionStatusToDocStatus(order.status),
+              serieId: order.serieId,
+              serie: order.serie?.code ?? null,
+              serieCode: order.serie?.code ?? null,
+              serieSeparator: "-",
+              seriePadding: null,
+              correlative: order.correlative ?? null,
+              fromWarehouseId: order.fromWarehouseId,
+              fromWarehouseName: order.fromWarehouse?.name ?? null,
+              fromWarehouse: null,
+              toWarehouseId: order.toWarehouseId,
+              toWarehouseName: order.toWarehouse?.name ?? null,
+              toWarehouse: null,
+              referenceId: order.reference ?? null,
+              referenceType: null,
+              note: null,
+              createdById: null,
+              createdBy: order.createdBy
+                ? { id: order.createdBy, name: order.createdByName ?? null, email: null }
+                : null,
+              postedById: null,
+              postedBy: null,
+              postedAt: null,
+              createdAt: order.createdAt ?? new Date().toISOString(),
+            }
+          : null
+      }
+      items={[]}
+      extendedDetails={extendedDetails}
+    />
   );
 }

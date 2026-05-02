@@ -34,7 +34,7 @@ import {
 import AdjustmentProductModal from "@/features/catalog/products/components/AdjustmentFormProducts";
 import type { ProductType } from "@/features/catalog/types/ProductTypes";
 import { useCompany } from "@/shared/hooks/useCompany";
-import { DocumentInventoryDetails } from "@/shared/components/components/DocumentInventoryDetails";
+import { DocumentDetailsModal } from "@/shared/components/components/DocumentDetailsModal";
 import type {
   InventoryDocumentsSearchField,
   InventoryDocumentsSearchRule,
@@ -621,7 +621,7 @@ export function InventoryAdjustmentsPage({
         getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
       />
 
-      <DocumentInventoryDetails
+      <DocumentDetailsModal
         open={openDetailsModal}
         documentId={selectedDocument?.id ?? null}
         document={selectedDocument}

@@ -17,7 +17,7 @@ import type { InventoryDocument } from "@/features/catalog/types/documentInvento
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 import { OperationImageGallery } from "@/shared/components/components/OperationImageGallery";
 import type {
-  DocumentInventoryDetailsProps,
+  DocumentDetailsModalProps,
   InventoryDocumentDetail,
   InventoryDocumentDetailItem,
 } from "@/shared/components/components/types/documentInventoryDetails";
@@ -207,7 +207,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-export function DocumentInventoryDetails({
+export function DocumentDetailsModal({
   open,
   documentId,
   document,
@@ -215,7 +215,7 @@ export function DocumentInventoryDetails({
   onClose,
   loadDetail,
   extendedDetails,
-}: DocumentInventoryDetailsProps) {
+}: DocumentDetailsModalProps) {
   const [detail, setDetail] = useState<InventoryDocumentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

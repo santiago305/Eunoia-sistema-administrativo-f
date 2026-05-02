@@ -106,7 +106,7 @@ export type ExtendedDetailsConfig = {
   imageAltPrefix?: string;
 };
 
-export type DocumentInventoryDetailsProps = {
+export type DocumentDetailsModalProps = {
   open: boolean;
   documentId?: string | null;
   document: InventoryDocument | null;

@@ -5,7 +5,7 @@ import { uploadPurchaseImageProdution } from "../utils/purchaseActions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { DocumentInventoryDetails } from "@/shared/components/components/DocumentInventoryDetails";
+import { DocumentDetailsModal } from "@/shared/components/components/DocumentDetailsModal";
 import { DocType, DocStatus } from "@/features/warehouse/types/warehouse";
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
 import type { PurchaseDetailsModalProps } from "@/features/purchases/types/purchaseDetails";
@@ -94,7 +94,7 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
     : undefined;
 
   return (
-    <DocumentInventoryDetails
+    <DocumentDetailsModal
       open={open}
       onClose={onClose}
       documentId={null}

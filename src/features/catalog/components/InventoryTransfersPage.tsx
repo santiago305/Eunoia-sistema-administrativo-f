@@ -34,7 +34,7 @@ import {
 } from "@/shared/services/documentService";
 import { TransferProductsModal } from "@/features/catalog/products/components/TransferProductsModal";
 import { useCompany } from "@/shared/hooks/useCompany";
-import { DocumentInventoryDetails } from "@/shared/components/components/DocumentInventoryDetails";
+import { DocumentDetailsModal } from "@/shared/components/components/DocumentDetailsModal";
 import type {
   InventoryDocumentsSearchField,
   InventoryDocumentsSearchRule,
@@ -635,7 +635,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         getPdf={() => getDocumentInventoryPdf(selectedDocumentId!)}
       />
 
-      <DocumentInventoryDetails
+      <DocumentDetailsModal
         open={openDetailsModal}
         documentId={selectedDocument?.id ?? null}
         document={selectedDocument}
