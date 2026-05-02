@@ -840,7 +840,7 @@ export default function Purchases() {
         <PageShell className="bg-white">
             <PageTitle title="Compras" />
             <div className="space-y-4">
-                <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
+                <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
                     <Headed
                         title="Compras"
                         size="lg"

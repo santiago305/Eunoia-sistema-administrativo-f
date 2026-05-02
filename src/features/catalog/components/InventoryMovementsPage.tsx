@@ -470,7 +470,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     <PageShell>
       <PageTitle title={config.pageTitle} />
 
-      <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 pt-2 items-center">
+      <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
         <Headed title={config.headingTitle} size="lg" />
       </div>
 
