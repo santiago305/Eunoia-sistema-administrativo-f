@@ -221,6 +221,7 @@ export const API_DOCUMENT_INVENTORY_GROUP = {
   outOrderCreated: "/stock-items/movements/create",
   adjustmentCreated: "/stock-items/movements/create",
   transfertCreated: "/stock-items/movements/transfer",
+  processDocument: (id: string) => `/inventory-documents/${id}/process`,
   listDocuments: "/inventory-documents",
   searchState: "/inventory-documents/search-state",
   saveSearchMetric: "/inventory-documents/search-metrics",

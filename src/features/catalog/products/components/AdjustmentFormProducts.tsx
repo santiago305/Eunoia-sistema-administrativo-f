@@ -20,7 +20,6 @@ import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductType, ProductTypes } from "@/features/catalog/types/ProductTypes";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
-import { AdjustmentResultModal } from "@/features/catalog/products/components/AdjustmentResultModal";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { buildSkuLabelWithAttributes, buildStockSummary, emptyStockDetail, type StockDetailState } from "@/features/catalog/types/transfer";
 import { CreateOutOrder, Direction } from "@/features/out-orders/type/outOrder";
@@ -85,8 +84,6 @@ export default function AdjustmentFormProducts({
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<PendingAdjustmentItem>(() => buildEmptyPendingItem());
-  const [openNavigateModal, setOpenNavigateModal] = useState(false);
-  const [lastSavedAdjustmentId, setLastSavedAdjustmentId] = useState("");
   const [searchResults, setSearchResults] = useState<ListSkusResponse>();
   const [selectedSkus, setSelectedSkus] = useState<ProductSkuWithAttributes[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
@@ -116,8 +113,6 @@ export default function AdjustmentFormProducts({
     setLoading(false);
     setForm(buildEmptyForm());
     setPendingItem(buildEmptyPendingItem());
-    setOpenNavigateModal(false);
-    setLastSavedAdjustmentId("");
     setSerie({ value: "", label: "" });
     setSearchResults(undefined);
     setSelectedSkus([]);
@@ -378,15 +373,12 @@ export default function AdjustmentFormProducts({
 
       const res = await createOutOrder(payload);
       const adjustmentId = res?.documentId ?? res.docId ?? "";
-
-      setLastSavedAdjustmentId(adjustmentId);
-      showFlash(successResponse("Ajuste registrado"));
+      showFlash(successResponse("Ajuste registrado en borrador"));
 
       if (adjustmentId) {
         await onSaved?.(adjustmentId);
       }
-
-      setOpenNavigateModal(true);
+      handleClose();
     } catch {
       showFlash(errorResponse("Error al guardar el ajuste"));
     } finally {
@@ -766,23 +758,6 @@ export default function AdjustmentFormProducts({
           </aside>
         </div>
       </div>
-
-      <AdjustmentResultModal
-        open={openNavigateModal}
-        onClose={() => setOpenNavigateModal(false)}
-        onNew={() => {
-          setOpenNavigateModal(false);
-          resetForm();
-          setLastSavedAdjustmentId("");
-        }}
-        onGoToList={() => {
-          setOpenNavigateModal(false);
-          handleClose();
-        }}
-        adjustmentId={lastSavedAdjustmentId}
-        title="Ajuste de inventario procesado"
-        goToLabel={inModal ? "Volver al listado" : "Ir a listado de ajustes"}
-      />
     </>
   );
 

@@ -1,6 +1,6 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Menu, Plus } from "lucide-react";
+import { Menu, Play, Plus } from "lucide-react";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -31,6 +31,7 @@ import {
   getDocuments,
   getInventoryDocumentsSearchState,
   saveInventoryDocumentsSearchMetric,
+  processInventoryDocument,
 } from "@/shared/services/documentService";
 import { TransferProductsModal } from "@/features/catalog/products/components/TransferProductsModal";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -125,6 +126,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [processingDocumentId, setProcessingDocumentId] = useState<string | null>(null);
   const showFlashRef = useRef(showFlash);
 
   useEffect(() => {
@@ -395,6 +397,24 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     setOpenPdfModal(true);
   };
 
+  const handleProcessDocument = useCallback(async (documentId: string) => {
+    if (!documentId) return;
+    setProcessingDocumentId(documentId);
+    try {
+      const response = await processInventoryDocument(documentId);
+      if (response.type === "success") {
+        showFlash(successResponse(response.message));
+        await loadDocuments();
+      } else {
+        showFlash(errorResponse(response.message));
+      }
+    } catch {
+      showFlash(errorResponse("Error al procesar documento"));
+    } finally {
+      setProcessingDocumentId(null);
+    }
+  }, [loadDocuments, showFlash]);
+
   const documentRows = useMemo<InventoryDocumentRow[]>(
     () =>
       documents.map((document) => {
@@ -501,6 +521,15 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         <div className="flex justify-center">
           <ActionsPopover
             actions={[
+              ...(row.document.status === DocStatus.DRAFT
+                ? [{
+                    id: "process",
+                    label: "Procesar",
+                    icon: <Play className="h-4 w-4 text-black/60" />,
+                    onClick: () => handleProcessDocument(row.document.id ?? row.id),
+                    disabled: processingDocumentId === (row.document.id ?? row.id),
+                  }]
+                : []),
               {
                 id: "open-pdf",
                 label: "Abrir pdf",

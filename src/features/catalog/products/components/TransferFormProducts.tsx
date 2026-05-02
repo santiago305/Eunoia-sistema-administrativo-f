@@ -15,7 +15,6 @@ import { listSkus } from "@/shared/services/skuService";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductTypes } from "@/features/catalog/types/ProductTypes";
-import { TransferResultModal } from "@/features/catalog/products/components/TransferResultModal";
 import { findOwnUser } from "@/shared/services/userService";
 import { useAuth } from "@/shared/hooks/useAuth";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
@@ -42,8 +41,6 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     const [form, setForm] = useState<CreateTransfer>(() => buildEmptyFormTransfer());
     const [pendingItem, setPendingItem] = useState<TransferItem>(() => buildEmptyItemTransfer());
 
-    const [openNavigateModal, setOpenNavigateModal] = useState(false);
-    const [lastSavedTransferId, setLastSavedTransferId] = useState("");
 
     const [searchResults, setSearchResults] = useState<ListSkusResponse>();
     const [selectedSkus, setSelectedSkus] = useState<ProductSkuWithAttributes[]>([]);
@@ -357,15 +354,13 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
             const res = await createTransfer(payload);
             const transferId = res.data?.documentId ?? "";
-
-            setLastSavedTransferId(transferId);
-            showFlash(successResponse("Transferencia registrada"));
+            showFlash(successResponse("Transferencia registrada en borrador"));
 
             if (transferId) {
                 await onSaved?.(transferId);
             }
-
-            setOpenNavigateModal(true);
+            onClose?.();
+            resetForm();
         } catch {
             showFlash(errorResponse("Error al guardar la transferencia"));
         } finally {
@@ -756,24 +751,6 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
                     </aside>
                 </div>
             </div>
-
-            <TransferResultModal
-                open={openNavigateModal}
-                onClose={() => setOpenNavigateModal(false)}
-                onNew={() => {
-                    setOpenNavigateModal(false);
-                    resetForm();
-                    setLastSavedTransferId("");
-                    
-                }}
-                onGoToList={() => {
-                    setOpenNavigateModal(false);
-                    onClose?.();
-                }}
-                transferId={lastSavedTransferId}
-                title="Transferencia de inventario procesada"
-                goToLabel="Volver al listado"
-            />
         </>
     );
     return content;

@@ -126,3 +126,8 @@ export const createTransfer = async (payload: CreateTransfer): Promise<Adjustmen
   const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.transfertCreated, payload);
   return response.data;
 };
+
+export const processInventoryDocument = async (docId: string): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.processDocument(docId));
+  return response.data;
+};
