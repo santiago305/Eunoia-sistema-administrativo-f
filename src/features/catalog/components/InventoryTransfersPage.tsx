@@ -151,7 +151,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         searchState,
         { docType: DocType.TRANSFER },
       ),
-    [appliedSearchText, searchFilters],
+    [appliedSearchText, searchFilters, searchState],
   );
 
   const loadSearchState = useCallback(async () => {

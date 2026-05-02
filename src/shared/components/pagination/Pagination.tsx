@@ -36,13 +36,13 @@ export function Pagination({ page, limit, total, onPageChange }: Props) {
 
   return (
     <div className="flex flex-col gap-3 rounded-sm border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground text-center sm:text-left">
         Mostrando <span className="font-medium text-foreground">{from}</span> a{" "}
         <span className="font-medium text-foreground">{to}</span> de{" "}
         <span className="font-medium text-foreground">{total}</span> registros
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2">
         <button
           type="button"
           onClick={() => onPageChange(page - 1)}

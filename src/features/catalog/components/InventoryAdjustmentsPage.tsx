@@ -161,7 +161,7 @@ export function InventoryAdjustmentsPage({
         searchState,
         { docType: DocType.ADJUSTMENT },
       ),
-    [appliedSearchText, searchFilters],
+    [appliedSearchText, searchFilters, searchState],
   );
 
   const loadSearchState = useCallback(async () => {
