@@ -31,6 +31,7 @@ const FIELD_ORDER: ProductionSearchField[] = [
   ProductionSearchFields.MANUFACTURE_DATE,
   ProductionSearchFields.NUMBER,
   ProductionSearchFields.REFERENCE,
+  ProductionSearchFields.CREATED_BY,
   ProductionSearchFields.FROM_WAREHOUSE_ID,
   ProductionSearchFields.TO_WAREHOUSE_ID,
   ProductionSearchFields.STATUS,
@@ -41,6 +42,7 @@ const FIELD_LABELS: Record<ProductionSearchField, string> = {
   [ProductionSearchFields.MANUFACTURE_DATE]: "Registro",
   [ProductionSearchFields.NUMBER]: "Serie o correlativo",
   [ProductionSearchFields.REFERENCE]: "Referencia",
+  [ProductionSearchFields.CREATED_BY]: "Usuario",
   [ProductionSearchFields.FROM_WAREHOUSE_ID]: "Almacen origen",
   [ProductionSearchFields.TO_WAREHOUSE_ID]: "Almacen destino",
   [ProductionSearchFields.STATUS]: "Estado",
@@ -52,6 +54,7 @@ const CATALOG_FIELDS = new Set<ProductionSearchField>([
   ProductionSearchFields.TO_WAREHOUSE_ID,
   ProductionSearchFields.STATUS,
   ProductionSearchFields.SKU_ID,
+  ProductionSearchFields.CREATED_BY,
 ]);
 
 const TEXT_FIELDS = new Set<ProductionSearchField>([
@@ -194,6 +197,9 @@ function getCatalogMaps(searchState?: ProductionSearchStateResponse | null) {
     product: new Map(
       (searchState?.catalogs.products ?? []).map((item) => [item.id, item.label]),
     ),
+    user: new Map(
+      (searchState?.catalogs.users ?? []).map((item) => [item.id, item.label]),
+    ),
   };
 }
 
@@ -212,6 +218,8 @@ function getCatalogLabels(
           ? maps.status
           : field === ProductionSearchFields.SKU_ID
             ? maps.product
+            : field === ProductionSearchFields.CREATED_BY
+              ? maps.user
             : new Map<string, string>();
 
   return values.map((value) => map.get(value) ?? value);
@@ -405,6 +413,14 @@ export function buildProductionSmartSearchColumns(
       description: "Busca por referencia registrada en la orden.",
       operators: TEXT_OPERATOR_OPTIONS,
       placeholder: "Ej. Lote abril",
+    },
+    {
+      id: ProductionSearchFields.CREATED_BY,
+      label: "Usuario",
+      kind: "catalog",
+      description: "Selecciona el usuario que creo la orden.",
+      operators: [{ id: ProductionSearchOperators.IN, label: "Es alguno de" }],
+      options: searchState?.catalogs.users ?? [],
     },
     {
       id: ProductionSearchFields.FROM_WAREHOUSE_ID,

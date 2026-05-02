@@ -74,6 +74,7 @@ type ProductionRow = {
   registro: string;
   serie: string;
   referencia: string;
+  usuario: string;
   almacenOrigen: string;
   almacenDestino: string;
   estado?: ProductionStatus;
@@ -347,6 +348,8 @@ export default function Production() {
       setDetailOrder({
         ...order,
         ...response,
+        createdBy: response.createdBy ?? order.createdBy,
+        createdByName: response.createdByName ?? order.createdByName ?? null,
         serie: response.serie ?? order.serie ?? null,
         fromWarehouse: response.fromWarehouse ?? order.fromWarehouse ?? null,
         toWarehouse: response.toWarehouse ?? order.toWarehouse ?? null,
@@ -366,6 +369,7 @@ export default function Production() {
     try {
       const res = await uploadProductionImageProdution(productionId, file);
       if (res.type === "success") {
+        skippedPhotoRef.current.add(productionId);
         showFlash(successResponse(res.message));
         setCompletedPhotoOrder(null);
         await loadOrders();
@@ -420,6 +424,7 @@ export default function Production() {
       registro: formatDateTime(order.manufactureDate),
       serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
       referencia: order.reference || "-",
+      usuario: order.createdByName ?? order.createdBy ?? "-",
       almacenOrigen: order.fromWarehouse?.name ?? "-",
       almacenDestino: order.toWarehouse?.name ?? "-",
       estado: order.status ?? ProductionStatus.DRAFT,
@@ -450,6 +455,12 @@ export default function Production() {
         sortable: false,
       },
       {
+        id: "usuario",
+        header: "Usuario",
+        accessorKey: "usuario",
+        sortable: false,
+      },
+      {
         id: "almacenOrigen",
         header: "Almacen origen",
         accessorKey: "almacenOrigen",
@@ -464,6 +475,8 @@ export default function Production() {
       {
         id: "estado",
         header: "Estado",
+        headerClassName: "text-center [&>div]:justify-center",
+        className: "text-center",
         cell: (row) => (
           <span className="inline-flex rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-700">
             {row.estado ? (statusLabels[row.estado] ?? "-") : "-"}
@@ -475,6 +488,7 @@ export default function Production() {
       {
         id: "tiempoProduccion",
         header: "T. Produccion",
+        headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => {
           const order = row.original;
 
@@ -510,12 +524,14 @@ export default function Production() {
       {
         id: "termino",
         header: "Termino",
+        headerClassName: "text-center [&>div]:justify-center",
+        className: "text-center",
         accessorKey: "termino",
       },
       {
         id: "actions",
         header: "Acciones",
-        headerClassName: "text-center w-[70px]",
+        headerClassName: "text-center [&>div]:justify-center",
         stopRowClick: true,
         cell: (row) => {
           const order = row.original;
@@ -523,6 +539,7 @@ export default function Production() {
           return (
             <div className="flex justify-center">
               <ActionsPopover
+                itemClassName="justify-start"
                 actions={[
                   {
                     id: "start",

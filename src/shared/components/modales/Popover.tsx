@@ -483,7 +483,7 @@ export function   Popover({
             </div>
           ) : null}
 
-          <div className={cn("scrollbar-panel min-h-0 overflow-y-auto p-4", bodyClassName)}>
+          <div className={cn("scrollbar-panel min-h-0 overflow-y-auto p-2", bodyClassName)}>
             {children}
           </div>
 

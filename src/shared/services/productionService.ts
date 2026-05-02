@@ -80,6 +80,7 @@ export const getProductionSearchState = async (): Promise<ProductionSearchStateR
       statuses: normalizeProductionSearchOptions(response.data?.catalogs?.statuses),
       warehouses: normalizeProductionSearchOptions(response.data?.catalogs?.warehouses),
       products: normalizeProductionSearchOptions(response.data?.catalogs?.products),
+      users: normalizeProductionSearchOptions(response.data?.catalogs?.users),
     },
   };
 };

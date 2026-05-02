@@ -23,6 +23,7 @@ export const ProductionSearchFields = {
   MANUFACTURE_DATE: "manufactureDate",
   NUMBER: "number",
   REFERENCE: "reference",
+  CREATED_BY: "createdBy",
   FROM_WAREHOUSE_ID: "fromWarehouseId",
   TO_WAREHOUSE_ID: "toWarehouseId",
   STATUS: "status",
@@ -85,6 +86,7 @@ export type ProductionSearchStateResponse = {
     warehouses: ProductionSearchOption[];
     statuses: ProductionSearchOption[];
     products: ProductionSearchOption[];
+    users: ProductionSearchOption[];
   };
 };
 
@@ -170,6 +172,8 @@ export type ProductionOrder = {
   serieId: string;
   correlative?: number;
   reference?: string | null;
+  createdBy?: string;
+  createdByName?: string | null;
   manufactureDate: string;
   fromWarehouseId: string;
   toWarehouseId: string;

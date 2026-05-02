@@ -1,7 +1,8 @@
 import { Boxes } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
+import { env } from "@/env";
 import { ProductionStatus, type ProductionOrder } from "@/features/production/types/production";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { uploadProductionImageProdution } from "@/features/production/utils/productionActions";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
@@ -31,6 +32,18 @@ const statusStyles: Record<ProductionStatus, string> = {
   [ProductionStatus.CANCELLED]: "bg-rose-100 text-rose-700",
 };
 
+const resolveImageUrl = (rawUrl?: string | null) => {
+  const raw = rawUrl?.trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  try {
+    return new URL(raw, env.apiBaseUrl).toString();
+  } catch {
+    return raw;
+  }
+};
+
 export function ProductionOrderDetailModal({
   open,
   loading,
@@ -41,24 +54,24 @@ export function ProductionOrderDetailModal({
 }: ProductionOrderDetailModalProps) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const { showFlash } = useFlashMessage();
+
   const fromWarehouseLabel = order?.fromWarehouse?.name ?? order?.fromWarehouseId ?? "-";
   const toWarehouseLabel = order?.toWarehouse?.name ?? order?.toWarehouseId ?? "-";
-  const images = order?.imageProdution ?? [];
 
-  const resolveImageUrl = (url: string) => {
-    if (!url) return url;
-    if (url.includes("/api/assets//api/assets/")) {
-      return url.replace("/api/assets//api/assets/", "/api/assets/");
-    }
-    return url;
-  };
+  const normalizedImages = useMemo(() => {
+    const images = order?.imageProdution ?? [];
+    return images.map((url) => resolveImageUrl(url)).filter(Boolean);
+  }, [order?.imageProdution]);
 
   const handleUploadFromDetail = async (file?: File | null) => {
     const productionId = order?.productionId ?? order?.id;
     if (!productionId || !file) return;
+
     setUploadingPhoto(true);
+
     try {
       const response = await uploadProductionImageProdution(productionId, file);
+
       if (response.type === "success") {
         showFlash(successResponse(response.message));
         await onUploadedPhoto?.();
@@ -66,7 +79,7 @@ export function ProductionOrderDetailModal({
         showFlash(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("No se pudo subir la foto de producción"));
+      showFlash(errorResponse("No se pudo subir la foto de produccion"));
     } finally {
       setUploadingPhoto(false);
     }
@@ -76,7 +89,7 @@ export function ProductionOrderDetailModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Detalle de orden de producción"
+      title="Detalle de orden de produccion"
       className="w-[min(36rem,calc(100vw-2rem))]"
       bodyClassName="p-0"
     >
@@ -88,6 +101,9 @@ export function ProductionOrderDetailModal({
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-500">
               <span>
+                <span className="text-neutral-400">Usuario:</span> {order?.createdByName ?? order?.createdBy ?? "-"}
+              </span>
+              <span>
                 <span className="text-neutral-400">Origen:</span> {fromWarehouseLabel}
               </span>
               <span>
@@ -98,7 +114,9 @@ export function ProductionOrderDetailModal({
 
           <span
             className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-              order?.status ? statusStyles[order.status] ?? "bg-neutral-100 text-neutral-700" : "bg-neutral-100 text-neutral-700"
+              order?.status
+                ? statusStyles[order.status] ?? "bg-neutral-100 text-neutral-700"
+                : "bg-neutral-100 text-neutral-700"
             }`}
           >
             {order?.status ? statusLabels[order.status] ?? order.status : "-"}
@@ -111,9 +129,7 @@ export function ProductionOrderDetailModal({
             <div>
               <p className="text-sm font-medium text-neutral-900">Items producidos</p>
               <p className="text-xs text-neutral-500">
-                {loading
-                  ? "Cargando detalle..."
-                  : `${order?.items?.length ?? 0} registrados en la orden`}
+                {loading ? "Cargando detalle..." : `${order?.items?.length ?? 0} registrados en la orden`}
               </p>
             </div>
           </div>
@@ -153,22 +169,29 @@ export function ProductionOrderDetailModal({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-neutral-900">Foto de producción</p>
-          {images.length > 0 ? (
+          <p className="text-sm font-medium text-neutral-900">Foto de produccion</p>
+          {normalizedImages.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
-              {images.map((url, index) => {
-                const normalizedUrl = resolveImageUrl(url);
-                return (
-                  <a key={`${url}-${index}`} href={normalizedUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border border-black/10">
-                    <img src={normalizedUrl} alt={`Producción ${index + 1}`} className="h-24 w-full object-cover" />
-                  </a>
-                );
-              })}
+              {normalizedImages.map((normalizedUrl, index) => (
+                <a
+                  key={`${normalizedUrl}-${index}`}
+                  href={normalizedUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block overflow-hidden rounded-md border border-black/10"
+                >
+                  <img
+                    src={normalizedUrl}
+                    alt={`Produccion ${index + 1}`}
+                    className="h-24 w-full object-cover"
+                  />
+                </a>
+              ))}
             </div>
           ) : (
             <div className="space-y-2">
               <div className="rounded-md bg-slate-50 px-3 py-4 text-center text-xs text-black/45">
-                Esta producción no tiene foto.
+                Esta produccion no tiene foto.
               </div>
               {canAdminUploadMissingPhoto ? (
                 <label className="block text-xs text-black/60">
