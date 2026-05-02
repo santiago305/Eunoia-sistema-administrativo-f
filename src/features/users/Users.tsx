@@ -69,6 +69,7 @@ export default function Users() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 250);
   const [page, setPage] = useState(1);
+  const [reloadTick, setReloadTick] = useState(0);
   const [pagination, setPagination] = useState<Pick<ListUsersResponse, "total" | "page" | "pageSize" | "totalPages" | "hasPrev" | "hasNext">>({
     total: 0,
     page: 1,
@@ -137,7 +138,7 @@ export default function Users() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedQuery, page, status]);
+  }, [debouncedQuery, page, status, reloadTick]);
 
   useEffect(() => {
     let cancelled = false;
@@ -363,11 +364,12 @@ export default function Users() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        hideHeader
-        className="w-full max-w-[740px]"
-        bodyClassName="p-0"
+        title="Crear usuario"
       >
-        <UserForm closeModal={() => setModalOpen(false)} />
+        <UserForm
+          closeModal={() => setModalOpen(false)}
+          onCreated={() => setReloadTick((prev) => prev + 1)}
+        />
       </Modal>
     </div>
   );

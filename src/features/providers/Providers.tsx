@@ -523,7 +523,7 @@ export default function Providers() {
   return (
     <PageShell>
       <PageTitle title="Proveedores" />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Headed title="Proveedores" size="lg" />
         <SystemButton
           size="sm"

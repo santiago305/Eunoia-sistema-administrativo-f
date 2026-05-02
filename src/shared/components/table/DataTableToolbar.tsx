@@ -87,7 +87,7 @@ export function DataTableToolbar({
       </div>
 
       {rightContent || filtersConfig || rangeDates ? (
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex w-full gap-3 sm:w-auto sm:flex-row sm:items-center justify-end">
           {rangeDates ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>

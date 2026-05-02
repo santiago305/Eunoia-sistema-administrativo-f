@@ -720,7 +720,7 @@ export default function Production() {
       <PageTitle title="Produccion" />
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Headed title="Ordenes de Produccion" size="lg" />
           <SystemButton
             size="md"

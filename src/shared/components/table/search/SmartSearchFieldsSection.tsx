@@ -1,6 +1,5 @@
 import { ChevronDown } from "lucide-react";
 import type { SmartSearchFieldConfig } from "./types";
-// colunmas
 type Props<TFieldKey extends string, TOperator extends string, TSnapshot> = {
   fields: SmartSearchFieldConfig<TFieldKey, TOperator>[];
   snapshot: TSnapshot;

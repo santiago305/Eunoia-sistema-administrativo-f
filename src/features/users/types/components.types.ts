@@ -1,5 +1,6 @@
 export interface UserFormProps {
   closeModal?: () => void;
+  onCreated?: () => void;
 }
 
 export interface NavbarProps {

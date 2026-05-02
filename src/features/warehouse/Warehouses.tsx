@@ -728,7 +728,7 @@ export default function Warehouses() {
   return (
     <PageShell>
       <PageTitle title="Almacenes" />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Headed title="Almacenes" size="lg" />
         <SystemButton
           size="sm"

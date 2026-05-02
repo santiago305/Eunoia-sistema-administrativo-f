@@ -446,7 +446,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     return (
         <PageShell>
             <PageTitle title={config.pageTitle} />
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <Headed title={config.headingTitle} size="lg" />
                 <div className="flex flex-wrap items-center gap-2">
                     <SystemButton

@@ -71,7 +71,7 @@ export function DataTableColumnManager({
         offset={12}
         animation="scale"
         hideHeader
-        bodyClassName="w-[22rem] p-3"
+        bodyClassName="w-[22rem] py-3"
         className="border-border/70 bg-background/95 shadow-2xl backdrop-blur-xl"
       >
         <div className="mb-3 flex items-start justify-between gap-3">
