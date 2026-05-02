@@ -11,6 +11,7 @@ export type ProductCatalogSkuResponseLike = {
     name?: string;
     customSku?: string | null;
     barcode?: string | null;
+    image?: string | null;
     price?: number;
     cost?: number;
     isActive?: boolean;
@@ -41,6 +42,7 @@ export type ProductSkuDraftLike = {
   name: string;
   customSku: string;
   barcode: string;
+  image: string;
   price: string;
   cost: string;
   presentation: string;
@@ -54,6 +56,7 @@ export type ProductCatalogSkuUpdatePayloadLike = {
   name?: string;
   customSku?: string | null;
   barcode?: string | null;
+  image?: string | null;
   price?: number;
   cost?: number;
   isActive?: boolean;
@@ -105,6 +108,7 @@ export const mapSkuResponseToDraftRow = (
   name: String(skuResponse.sku.name ?? ""),
   customSku: String(skuResponse.sku.customSku ?? ""),
   barcode: String(skuResponse.sku.barcode ?? ""),
+  image: String(skuResponse.sku.image ?? ""),
   price: String(skuResponse.sku.price ?? 0),
   cost: String(skuResponse.sku.cost ?? 0),
   presentation: getAttributeValue(skuResponse.attributes, "presentation"),
@@ -126,6 +130,7 @@ export const buildSkuUpdatePayload = (
   name: row.name.trim() || undefined,
   customSku: row.customSku.trim() || null,
   barcode: row.barcode.trim() || null,
+  image: row.image.trim() || null,
   price: row.price.trim() ? Number(row.price) : 0,
   cost: row.cost.trim() ? Number(row.cost) : 0,
   isActive: row.isActive,

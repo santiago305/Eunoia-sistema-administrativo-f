@@ -1,5 +1,7 @@
 import { Trash2 } from "lucide-react";
+import { type ChangeEvent, useRef, useState } from "react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -9,6 +11,7 @@ export type ProductSkuDraft = {
   name: string;
   customSku: string;
   barcode: string;
+  image: string;
   price: string;
   cost: string;
   presentation: string;
@@ -27,6 +30,7 @@ type ProductSkuTableProps = {
   readOnly?: boolean;
   allowRemoveRows?: boolean;
   tableId?: string;
+  mode?: "create" | "edit";
 };
 
 export function ProductSkuTable({
@@ -38,7 +42,39 @@ export function ProductSkuTable({
   readOnly = false,
   allowRemoveRows = !readOnly,
   tableId = "product-sku-create",
+  mode = "create",
 }: ProductSkuTableProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadTargetRowId, setUploadTargetRowId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const askImageFile = (rowId: string) => {
+    if (readOnly) return;
+    setUploadTargetRowId(rowId);
+    fileInputRef.current?.click();
+  };
+
+  const openPreview = (imageUrl?: string) => {
+    const trimmed = imageUrl?.trim();
+    if (!trimmed) return;
+    setPreviewImage(trimmed);
+  };
+
+  const onPickImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const targetRowId = uploadTargetRowId;
+    if (!file || !targetRowId) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      onChangeRow(targetRowId, "image", result);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+    setUploadTargetRowId(null);
+  };
+
   const columns: DataTableColumn<ProductSkuDraft>[] = [
     {
       id: "customSku",
@@ -70,6 +106,55 @@ export function ProductSkuTable({
           className="h-9 text-xs"
         />
       ),
+      searchable: false,
+      sortable: false,
+      hideable: false,
+    },
+    {
+      id: "image",
+      header: "Imagen",
+      headerClassName: "justify-center",
+      className: "[&>div]:justify-center justify-center",
+      cell: (row) => {
+        const hasImage = Boolean(row.image?.trim());
+        const isEditMode = mode === "edit";
+        return (
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (isEditMode) {
+                  askImageFile(row.id);
+                  return;
+                }
+                if (hasImage) {
+                  openPreview(row.image);
+                  return;
+                }
+                askImageFile(row.id);
+              }}
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded border border-black/15 bg-black/[0.03] text-[10px] text-black/60"
+              title={isEditMode ? "Cambiar imagen" : hasImage ? "Ver imagen" : "Subir imagen"}
+            >
+              {hasImage ? (
+                <img src={row.image} alt="SKU" className="h-5 w-5 object-cover" />
+              ) : (
+                <span>+</span>
+              )}
+            </button>
+            {isEditMode && hasImage ? (
+              <SystemButton
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-[10px]"
+                onClick={() => openPreview(row.image)}
+              >
+                Ver
+              </SystemButton>
+            ) : null}
+          </div>
+        );
+      },
       searchable: false,
       sortable: false,
       hideable: false,
@@ -214,6 +299,13 @@ export function ProductSkuTable({
 
   return (
     <div className="space-y-3">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onPickImage}
+      />
       {
         canAddRows && (
           <div className="flex items-center justify-end gap-3">
@@ -247,6 +339,13 @@ export function ProductSkuTable({
           maxHeight="300px"
         />
       </div>
+      <ImagePreviewModal
+        open={Boolean(previewImage)}
+        images={previewImage ? [previewImage] : []}
+        currentIndex={0}
+        onClose={() => setPreviewImage(null)}
+        altPrefix="Imagen SKU"
+      />
     </div>
   );
 }

@@ -149,6 +149,7 @@ export function ProductDetailsSection({
             onRemoveRow={onRemoveSkuRow}
             onChangeRow={onChangeSkuRow}
             readOnly={false}
+            mode={isEditMode ? "edit" : "create"}
             allowRemoveRows={!createFlowLocked}            
             tableId={isEditMode ? `product-sku-edit-${productId ?? "draft"}` : "product-sku-create"}
           />

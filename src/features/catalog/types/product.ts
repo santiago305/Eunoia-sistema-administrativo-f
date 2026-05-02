@@ -42,6 +42,7 @@ export type ProductCatalogSku = {
   customSku: string | null;
   name: string;
   barcode?: string | null;
+  image?: string | null;
   price?: number;
   cost?: number;
   isSellable?: boolean;
@@ -222,6 +223,7 @@ export type CreateProductSkuDto = {
   name: string;
   customSku?: string | null;
   barcode?: string | null;
+  image?: string | null;
   price?: number;
   cost?: number;
   isSellable?: boolean;
@@ -236,6 +238,7 @@ export type UpdateProductSkuDto = {
   name?: string;
   customSku?: string | null;
   barcode?: string | null;
+  image?: string | null;
   price?: number;
   cost?: number;
   isSellable?: boolean;

@@ -76,8 +76,7 @@ export function AdjustmentItemModal({
             open={open}
             title={title}
             onClose={handleClose}
-            
-            className="w-[400px] max-h-90 space-y-3"
+            className="max-h-90 space-y-3"
         >
             <div className="grid grid-cols-1 gap-3">
                 <SectionHeaderForm icon={Boxes} title={sectionTitle} />

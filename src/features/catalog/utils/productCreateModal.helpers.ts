@@ -31,6 +31,7 @@ export const createDefaultSkuRow = (): ProductSkuDraft => ({
   name: "",
   customSku: "",
   barcode: "",
+  image: "",
   price: "",
   cost: "",
   presentation: "",
@@ -163,6 +164,7 @@ export const buildCreateSkuPayloads = ({
       row.name.trim() ||
         row.customSku.trim() ||
         row.barcode.trim() ||
+        row.image.trim() ||
         row.price.trim() ||
         row.cost.trim() ||
         row.presentation.trim() ||
@@ -178,6 +180,7 @@ export const buildCreateSkuPayloads = ({
       name: row.name.trim() || fallbackName.trim(),
       customSku: row.customSku.trim() || undefined,
       barcode: row.barcode.trim() || undefined,
+      image: row.image.trim() || undefined,
       price: row.price.trim() ? Number(row.price) : undefined,
       cost: row.cost.trim() ? Number(row.cost) : undefined,
       isActive: row.isActive,
