@@ -34,7 +34,9 @@ type EquivalenceModalProps = {
 type EquivalenceRow = {
   id: string;
   fromName: string;
+  fromCode: string;
   toName: string;
+  toCode: string;
   factor: number;
   unitLabel: string;
   equivalenceLabel: string;
@@ -109,15 +111,15 @@ export function EquivalenceModal({
         );
         const fromLabel = unitList.find((u) => u.id === best.fromUnitId);
         const toLabel = unitList.find((u) => u.id === best.toUnitId);
-        const fromName = fromLabel?.name ?? "UNIDADES";
-        const toName = toLabel?.name ?? "UNIDADES";
+        const fromCode = fromLabel?.code ?? best.fromUnit?.code ?? "NIU";
+        const toCode = toLabel?.code ?? best.toUnit?.code ?? "NIU";
 
-        setPendingEquivalence(fromName);
-        setPendingUnitBase(toName);
+        setPendingEquivalence(fromCode);
+        setPendingUnitBase(toCode);
         setPendingFactor(best.factor ?? 1);
       } else {
-        setPendingEquivalence("UNIDADES");
-        setPendingUnitBase("UNIDADES");
+        setPendingEquivalence("NIU");
+        setPendingUnitBase("NIU");
         setPendingFactor(1);
       }
     } catch {
@@ -257,14 +259,18 @@ export function EquivalenceModal({
     return equivalences.map((eq) => {
       const fromLabel = units.find((u) => u.id === eq.fromUnitId);
       const toLabel = units.find((u) => u.id === eq.toUnitId);
-      const fromName = fromLabel?.name ?? "UNIDADES";
-      const toName = toLabel?.name ?? "UNIDADES";
+      const fromName = fromLabel?.name ?? eq.fromUnit?.name ?? "UNIDADES";
+      const toName = toLabel?.name ?? eq.toUnit?.name ?? "UNIDADES";
+      const fromCode = fromLabel?.code ?? eq.fromUnit?.code ?? "NIU";
+      const toCode = toLabel?.code ?? eq.toUnit?.code ?? "NIU";
       const factor = Number(eq.factor ?? 1);
 
       return {
         id: eq.id,
         fromName,
+        fromCode,
         toName,
+        toCode,
         factor,
         unitLabel: fromLabel ? `${toName} (${factor})` : eq.toUnitId,
         equivalenceLabel: `Equivale a ${factor} - ${fromName}`,
@@ -274,8 +280,8 @@ export function EquivalenceModal({
 
   const isActiveRow = useCallback(
     (row: EquivalenceRow) =>
-      pendingEquivalence === row.fromName &&
-      pendingUnitBase === row.toName &&
+      pendingEquivalence === row.fromCode &&
+      pendingUnitBase === row.toCode &&
       pendingFactor === row.factor,
     [pendingEquivalence, pendingFactor, pendingUnitBase],
   );
@@ -379,9 +385,9 @@ export function EquivalenceModal({
                 hoverable={false}
                 animated={false}
                 onRowClick={(row) => {
-                  setPendingEquivalence(row.fromName || "UNIDADES");
+                  setPendingEquivalence(row.fromCode || "NIU");
                   setPendingFactor(row.factor ?? 1);
-                  setPendingUnitBase(row.toName || "UNIDADES");
+                  setPendingUnitBase(row.toCode || "NIU");
                 }}
                 rowClassName={(row) =>
                   isActiveRow(row) ? "bg-black/5 hover:bg-black/5" : "hover:bg-black/[0.03]"

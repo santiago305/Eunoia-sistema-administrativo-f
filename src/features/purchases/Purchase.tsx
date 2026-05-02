@@ -373,6 +373,9 @@ export default function PurchaseCreateLocal({
 
         return {
           skuId: calculatedItem.skuId,
+          unitBase: calculatedItem.unitBase,
+          equivalence: calculatedItem.equivalence,
+          factor: Number(calculatedItem.factor ?? 1),
           afectType: calculatedItem.afectType,
           quantity: normalizeQuantity(calculatedItem.quantity),
           porcentageIgv: calculatedItem.porcentageIgv ?? IGV,

@@ -61,6 +61,9 @@ const purchaseSearchRuleSchema = z.object({
 
 export const addPurchaseOrderItemSchema = z.object({
   skuId: uuidSchema,
+  unitBase: z.string().min(1).optional(),
+  equivalence: z.string().min(1).optional(),
+  factor: z.number().min(0).optional(),
   afectType: afectTypeEnum,
   quantity: z.number().int().min(1),
   porcentageIgv: z.number().min(0),
