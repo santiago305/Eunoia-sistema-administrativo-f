@@ -3,54 +3,24 @@ import {
   ArrowDown,
   ArrowLeftRight,
   ArrowUp,
+  CircleDollarSign,
   Factory,
   Package,
   ReceiptText,
+  Wallet,
+  CreditCard,
   Wrench,
 } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import type { InventoryDocument } from "@/features/catalog/types/documentInventory";
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
-
-export type InventoryDocumentDetailItem = {
-  id?: string | null;
-  docId?: string | null;
-  skuId?: string | null;
-  sku?: {
-    id?: string | null;
-    name?: string | null;
-    backendSku?: string | null;
-    customSku?: string | null;
-    sku?: {
-      name?: string | null;
-      backendSku?: string | null;
-      customSku?: string | null;
-    } | null;
-  } | null;
-  name?: string | null;
-  backendSku?: string | null;
-  customSku?: string | null;
-  unitName?: string | null;
-  unit?: {
-    name?: string | null;
-  } | null;
-  quantity?: number | null;
-};
-
-export type InventoryDocumentDetail = {
-  document: InventoryDocument;
-  items: InventoryDocumentDetailItem[];
-};
-
-type Props = {
-  open: boolean;
-  documentId?: string | null;
-  document: InventoryDocument | null;
-  items?: InventoryDocumentDetailItem[];
-  onClose: () => void;
-  loadDetail?: (documentId: string) => Promise<InventoryDocumentDetail>;
-};
+import { OperationImageGallery } from "@/shared/components/components/OperationImageGallery";
+import type {
+  DocumentInventoryDetailsProps,
+  InventoryDocumentDetail,
+  InventoryDocumentDetailItem,
+} from "@/shared/components/components/types/documentInventoryDetails";
 
 const docTypeLabels: Record<DocType, string> = {
   [DocType.ADJUSTMENT]: "Ajuste",
@@ -244,7 +214,8 @@ export function DocumentInventoryDetails({
   items,
   onClose,
   loadDetail,
-}: Props) {
+  extendedDetails,
+}: DocumentInventoryDetailsProps) {
   const [detail, setDetail] = useState<InventoryDocumentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -337,6 +308,326 @@ export function DocumentInventoryDetails({
   const itemCountLabel = `${resolvedItems.length} item${
     resolvedItems.length === 1 ? "" : "s"
   }`;
+
+  const hasExtendedDetails = Boolean(extendedDetails);
+
+  if (hasExtendedDetails) {
+    const x = extendedDetails!;
+    const xItems = x.items ?? [];
+    const xPayments = x.payments ?? [];
+    const xQuotas = x.quotas ?? [];
+
+    return (
+      <Modal
+        open={open}
+        onClose={onClose}
+        title={x.title ?? "Detalle"}
+        className={x.modalClassName ?? "max-h-[70vh]"}
+        bodyClassName={x.modalBodyClassName ?? "p-0 overflow-hidden"}
+      >
+        {!x.headerNumber ? (
+          <div className="px-5 py-8 text-center text-xs text-black/50">
+            {x.emptyMessage ?? "No hay registro seleccionado."}
+          </div>
+        ) : (
+          <div className="bg-white">
+            <header className="border-b border-black/5 px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 gap-2.5">
+                  <div
+                    className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
+                      x.headerIconClassName ?? "bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {x.headerIcon ?? <ReceiptText className="h-3.5 w-3.5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45">
+                        {x.headerLabel}
+                      </p>
+                      {x.headerBadge ? (
+                        <span
+                          className={`rounded-md px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide ${
+                            x.headerBadgeClassName ?? "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {x.headerBadge}
+                        </span>
+                      ) : null}
+                    </div>
+                    <h3 className="mt-0.5 truncate text-sm font-semibold text-black/85">
+                      {x.headerNumber}
+                    </h3>
+                    {x.headerSubLabel ? (
+                      <p className="mt-0.5 truncate text-[11px] text-black/45">
+                        {x.headerSubLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                {x.headerRightLabel && x.headerRightValue ? (
+                  <div className="shrink-0 text-center">
+                    <p className="text-[9px] uppercase tracking-wide text-black/35">
+                      {x.headerRightLabel}
+                    </p>
+                    <p className="text-xs font-semibold text-black/75">
+                      {x.headerRightValue}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {(x.summaryTopFields ?? []).length ? (
+                <div className="mt-3 grid gap-1.5 sm:grid-cols-3">
+                  {(x.summaryTopFields ?? []).map((field) => (
+                    <FieldItem key={field.label} label={field.label} value={field.value} />
+                  ))}
+                </div>
+              ) : null}
+            </header>
+
+            {x.loading ? (
+              <div className="px-5 py-8 text-center text-xs text-black/50">
+                Cargando detalle...
+              </div>
+            ) : x.error ? (
+              <div className="px-5 py-8 text-center text-xs text-rose-600">
+                {x.error}
+              </div>
+            ) : (
+              <div className="max-h-[calc(80vh-6rem)] space-y-4 overflow-y-auto px-4 py-3">
+                {(x.summaryFields ?? []).length ? (
+                  <section>
+                    <SectionHeader
+                      icon={<ReceiptText className="h-3.5 w-3.5" />}
+                      title="Resumen"
+                      meta={x.summaryMeta}
+                    />
+                    <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                      {(x.summaryFields ?? []).map((field) => (
+                        <FieldItem key={field.label} label={field.label} value={field.value} />
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                <section>
+                  <SectionHeader
+                    icon={<Package className="h-3.5 w-3.5" />}
+                    title={x.itemsTitle ?? "Items"}
+                    meta={x.itemsMeta}
+                  />
+                  {xItems.length ? (
+                    <div className="overflow-hidden rounded-md border border-black/5">
+                      {xItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between gap-3 border-b border-black/5 px-3 py-2 last:border-b-0 hover:bg-slate-50/80"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-medium text-black/80">
+                              {item.label}
+                            </p>
+                            <p className="mt-0.5 truncate text-[10px] text-black/40">
+                              {item.code ?? "-"}
+                              {item.unit ? ` · ${item.unit}` : ""}
+                              {item.extra ? ` · ${item.extra}` : ""}
+                            </p>
+                          </div>
+                          <div
+                            className={`grid shrink-0 ${
+                              item.amount ? "grid-cols-2" : "grid-cols-1"
+                            } gap-3 text-right`}
+                          >
+                            <div>
+                              <p className="text-[9px] uppercase tracking-wide text-black/35">
+                                Cant.
+                              </p>
+                              <p className="text-xs font-semibold text-black/80">
+                                {item.quantity ?? "-"}
+                              </p>
+                            </div>
+                            {item.amount ? (
+                              <div>
+                                <p className="text-[9px] uppercase tracking-wide text-black/35">
+                                  Importe
+                                </p>
+                                <p className="text-xs font-semibold text-black/80">
+                                  {item.amount}
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      message={x.itemsEmptyMessage ?? "No hay items registrados."}
+                    />
+                  )}
+                </section>
+
+                {xPayments.length || x.paymentsMeta ? (
+                  <section>
+                    <SectionHeader
+                      icon={<Wallet className="h-3.5 w-3.5" />}
+                      title="Pagos"
+                      meta={x.paymentsMeta}
+                    />
+                    {xPayments.length ? (
+                      <div className="overflow-hidden rounded-md border border-black/5">
+                        {xPayments.map((payment) => (
+                          <div
+                            key={payment.id}
+                            className="flex items-center justify-between gap-3 border-b border-black/5 px-3 py-2 last:border-b-0 hover:bg-slate-50/80"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-medium text-black/80">
+                                {payment.method}
+                              </p>
+                              <p className="mt-0.5 truncate text-[10px] text-black/40">
+                                {formatDateTime(payment.date)}
+                                {payment.operationNumber
+                                  ? ` · Op. ${payment.operationNumber}`
+                                  : ""}
+                              </p>
+                              {payment.note ? (
+                                <p className="mt-0.5 truncate text-[10px] text-black/40">
+                                  {payment.note}
+                                </p>
+                              ) : null}
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <p className="text-[9px] uppercase tracking-wide text-black/35">
+                                Monto
+                              </p>
+                              <p className="text-xs font-semibold text-black/80">
+                                {payment.amount}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        message={
+                          x.paymentsEmptyMessage ?? "No hay pagos registrados."
+                        }
+                      />
+                    )}
+                  </section>
+                ) : null}
+
+                {xQuotas.length || x.quotasMeta ? (
+                  <section>
+                    <SectionHeader
+                      icon={<CircleDollarSign className="h-3.5 w-3.5" />}
+                      title="Cuotas"
+                      meta={x.quotasMeta}
+                    />
+                    {xQuotas.length ? (
+                      <div className="overflow-hidden rounded-md border border-black/5">
+                        {xQuotas.map((quota) => (
+                          <div
+                            key={quota.id}
+                            className="flex items-center justify-between gap-3 border-b border-black/5 px-3 py-2 last:border-b-0 hover:bg-slate-50/80"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="truncate text-xs font-medium text-black/80">
+                                  Cuota {quota.number}
+                                </p>
+                                <span
+                                  className={`rounded-md px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide ${
+                                    quota.completed
+                                      ? "bg-emerald-50 text-emerald-700"
+                                      : "bg-amber-50 text-amber-700"
+                                  }`}
+                                >
+                                  {quota.completed ? "Pagada" : "Pendiente"}
+                                </span>
+                              </div>
+                              <p className="mt-0.5 truncate text-[10px] text-black/40">
+                                Vence: {quota.expirationDate ?? "-"}
+                                {quota.paymentDate
+                                  ? ` · Pago: ${quota.paymentDate}`
+                                  : ""}
+                              </p>
+                            </div>
+                            <div className="grid shrink-0 grid-cols-3 gap-3 text-right">
+                              <div>
+                                <p className="text-[9px] uppercase tracking-wide text-black/35">
+                                  Total
+                                </p>
+                                <p className="text-xs font-semibold text-black/80">
+                                  {quota.total}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] uppercase tracking-wide text-black/35">
+                                  Pagado
+                                </p>
+                                <p className="text-xs font-semibold text-black/80">
+                                  {quota.paid}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] uppercase tracking-wide text-black/35">
+                                  Pend.
+                                </p>
+                                <p className="text-xs font-semibold text-black/80">
+                                  {quota.pending}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        message={
+                          x.quotasEmptyMessage ?? "No hay cuotas registradas."
+                        }
+                      />
+                    )}
+                  </section>
+                ) : null}
+
+                {x.note?.trim() ? (
+                  <section>
+                    <SectionHeader
+                      icon={<CreditCard className="h-3.5 w-3.5" />}
+                      title={x.noteTitle ?? "Nota"}
+                    />
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <p className="text-xs leading-5 text-black/60">{x.note}</p>
+                    </div>
+                  </section>
+                ) : null}
+
+                <section>
+                  <SectionHeader
+                    icon={<Package className="h-3.5 w-3.5" />}
+                    title={x.imageTitle ?? "Foto"}
+                  />
+                  <OperationImageGallery
+                    images={x.images ?? []}
+                    altPrefix={x.imageAltPrefix ?? "Imagen"}
+                    emptyMessage={x.imageEmptyMessage ?? "No hay foto."}
+                    canUpload={Boolean(x.canUploadImage)}
+                    uploading={Boolean(x.uploadingImage)}
+                    onUpload={x.onUploadImage}
+                  />
+                </section>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    );
+  }
 
   return (
     <Modal
