@@ -42,6 +42,7 @@ import { InventorySmartSearchPanel } from "@/features/catalog/components/Invento
 import { InventoryForecastModal } from "@/features/catalog/components/InventoryForecastModal";
 import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
 import { listSkus } from "@/shared/services/skuService";
+import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
 import type { DataTableSearchOption } from "@/shared/components/table/search";
 import type {
   InventorySearchFilterKey,
@@ -78,6 +79,7 @@ type InventoryStockPageConfig = {
 };
 
 type InventorySnapshotRow = {
+  stockItemId: string;
   sku: ProductSkuWithAttributes;
   warehouseId: string;
   warehouseName: string;
@@ -117,6 +119,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [forecastLoading, setForecastLoading] = useState(false);
   const forecastRequestRef = useRef(0);
   const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
+  const realtimeRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isActiveRow = (row: InventorySnapshotRow) =>
     selectedSku === row.sku.sku.id && selectedWarehouseId === row.warehouseId;
@@ -496,6 +499,44 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, executedSnapshot, warehouseQuery, config.productType]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeInventoryStockUpdated((event) => {
+      let updatedAnyRow = false;
+
+      setInventoryRows((current) =>
+        current.map((row) => {
+          if (row.warehouseId !== event.warehouseId) return row;
+          if (row.stockItemId !== event.stockItemId) return row;
+          updatedAnyRow = true;
+          return {
+            ...row,
+            onHand: Number(event.onHand ?? row.onHand),
+            reserved: Number(event.reserved ?? row.reserved),
+            available: Number(event.available ?? row.available),
+          };
+        }),
+      );
+
+      // Si el evento no corresponde a filas visibles (por paginación/filtros),
+      // hacemos refresh ligero con debounce para mantener coherencia.
+      if (!updatedAnyRow && !realtimeRefreshTimeoutRef.current) {
+        realtimeRefreshTimeoutRef.current = setTimeout(() => {
+          realtimeRefreshTimeoutRef.current = null;
+          void loadInventory();
+        }, 350);
+      }
+    }, {
+      warehouseIds: warehouseQuery.warehouseIdsIn.length ? warehouseQuery.warehouseIdsIn : undefined,
+    });
+    return () => {
+      unsubscribe();
+      if (realtimeRefreshTimeoutRef.current) {
+        clearTimeout(realtimeRefreshTimeoutRef.current);
+        realtimeRefreshTimeoutRef.current = null;
+      }
+    };
+  }, [loadInventory, warehouseQuery.warehouseIdsIn]);
 
   const handleSaveMetric = useCallback(async (name: string) => {
     if (!hasInventorySearchCriteria(executedSnapshot)) return false;

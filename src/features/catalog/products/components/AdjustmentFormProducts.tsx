@@ -16,6 +16,7 @@ import { createOutOrder, getStockSku } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
 import { findOwnUser } from "@/shared/services/userService";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductType, ProductTypes } from "@/features/catalog/types/ProductTypes";
@@ -103,6 +104,7 @@ export default function AdjustmentFormProducts({
     possible: false,
     reasons: [],
   });
+  const [realtimeStockVersion, setRealtimeStockVersion] = useState(0);
 
   const resetForm = useCallback(() => {
     if (skuSearchTimeoutRef.current) {
@@ -542,7 +544,18 @@ export default function AdjustmentFormProducts({
     return () => {
       cancelled = true;
     };
-  }, [form.warehouseId, items, selectedSkus]);
+  }, [form.warehouseId, items, selectedSkus, realtimeStockVersion]);
+
+  useEffect(() => {
+    if (!open) return;
+    const unsubscribe = subscribeInventoryStockUpdated((event) => {
+      if (!form.warehouseId || event.warehouseId !== form.warehouseId) return;
+      setRealtimeStockVersion((current) => current + 1);
+    }, {
+      warehouseIds: form.warehouseId ? [form.warehouseId] : undefined,
+    });
+    return unsubscribe;
+  }, [open, form.warehouseId]);
 
   useEffect(() => {
     if (!open || !initialSku?.skuId) return;

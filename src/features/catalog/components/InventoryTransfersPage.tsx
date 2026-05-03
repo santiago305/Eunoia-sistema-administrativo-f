@@ -60,6 +60,7 @@ import {
   getInventoryDocumentsExportPresets,
   saveInventoryDocumentsExportPreset,
 } from "@/shared/services/documentService";
+import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -140,6 +141,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [loading, setLoading] = useState(false);
   const [processingDocumentId, setProcessingDocumentId] = useState<string | null>(null);
   const showFlashRef = useRef(showFlash);
+  const realtimeRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     showFlashRef.current = showFlash;
@@ -426,6 +428,23 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
 
   useEffect(() => {
     void loadDocuments();
+  }, [loadDocuments]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeInventoryStockUpdated(() => {
+      if (realtimeRefreshTimeoutRef.current) return;
+      realtimeRefreshTimeoutRef.current = setTimeout(() => {
+        realtimeRefreshTimeoutRef.current = null;
+        void loadDocuments();
+      }, 350);
+    });
+    return () => {
+      unsubscribe();
+      if (realtimeRefreshTimeoutRef.current) {
+        clearTimeout(realtimeRefreshTimeoutRef.current);
+        realtimeRefreshTimeoutRef.current = null;
+      }
+    };
   }, [loadDocuments]);
 
   const openDocumentPdf = (id: string) => {

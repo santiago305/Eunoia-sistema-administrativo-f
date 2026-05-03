@@ -17,6 +17,7 @@ import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/
 import { ProductTypes } from "@/features/catalog/types/ProductTypes";
 import { findOwnUser } from "@/shared/services/userService";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import {
     TransferProductsProps,
@@ -63,6 +64,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
         possible: false,
         reasons: [],
     });
+    const [realtimeStockVersion, setRealtimeStockVersion] = useState(0);
 
     useEffect(() => {
         setQuantityTextBySkuId((previous) => {
@@ -539,7 +541,20 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
         return () => {
             cancelled = true;
         };
-    }, [form.fromWarehouseId, form.toWarehouseId, form.items, selectedSkus]);
+    }, [form.fromWarehouseId, form.toWarehouseId, form.items, selectedSkus, realtimeStockVersion]);
+
+    useEffect(() => {
+        if (!open) return;
+        const unsubscribe = subscribeInventoryStockUpdated((event) => {
+            const involvesOrigin = form.fromWarehouseId ? event.warehouseId === form.fromWarehouseId : false;
+            const involvesTarget = form.toWarehouseId ? event.warehouseId === form.toWarehouseId : false;
+            if (!involvesOrigin && !involvesTarget) return;
+            setRealtimeStockVersion((current) => current + 1);
+        }, {
+            warehouseIds: [form.fromWarehouseId, form.toWarehouseId].filter(Boolean) as string[],
+        });
+        return unsubscribe;
+    }, [open, form.fromWarehouseId, form.toWarehouseId]);
 
     useEffect(() => {
         if (!open || !initialSku?.skuId) return;
