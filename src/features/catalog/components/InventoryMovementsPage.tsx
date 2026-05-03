@@ -27,11 +27,17 @@ import {
   type InventoryLedgerSearchStateResponse,
 } from "@/features/catalog/types/inventoryLedgerSearch";
 import {
+  deleteInventoryLedgerExportPreset,
   deleteInventoryLedgerSearchMetric,
+  exportInventoryLedgerExcel,
+  getInventoryLedgerExportColumns,
+  getInventoryLedgerExportPresets,
   getInventoryLedgerMovements,
   getInventoryLedgerSearchState,
+  saveInventoryLedgerExportPreset,
   saveInventoryLedgerSearchMetric,
 } from "@/shared/services/kardexService";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { InventoryLedgerSmartSearchPanel } from "@/features/catalog/components/InventoryLedgerSmartSearchPanel";
 import {
   buildInventoryLedgerSearchChips,
@@ -101,6 +107,10 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
 
   const [searchState, setSearchState] = useState<InventoryLedgerSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [exportColumns, setExportColumns] = useState<Array<{ key: string; label: string }>>([]);
+  const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>>([]);
+  const [exporting, setExporting] = useState(false);
+  const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
 
   const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
   const loadSkus = useCallback(async (q?: string) => {
@@ -155,6 +165,33 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     void loadSearchState();
     void loadSkus();
   }, [loadSearchState, loadSkus]);
+
+  const loadExportColumns = useCallback(async () => {
+    const response = await getInventoryLedgerExportColumns({
+      from: fromDate || undefined,
+      to: toDate || undefined,
+      productType: config.productType,
+      q: executedSnapshot.q,
+      filters: JSON.stringify(executedSnapshot.filters),
+    });
+    setExportColumns(response ?? []);
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, fromDate, toDate]);
+
+  const loadExportPresets = useCallback(async () => {
+    const response = await getInventoryLedgerExportPresets({
+      productType: config.productType,
+    });
+    setExportPresets((response ?? []).map((item) => ({
+      metricId: item.metricId,
+      name: item.name,
+      columns: (item.snapshot?.columns ?? []) as Array<{ key: string; label: string }>,
+    })));
+  }, [config.productType]);
+
+  useEffect(() => {
+    void loadExportColumns();
+    void loadExportPresets();
+  }, [loadExportColumns, loadExportPresets]);
 
   useEffect(() => {
     const prefilledSkuId = searchParams.get("skuId")?.trim();
@@ -466,12 +503,67 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     [config.itemLabel],
   );
 
+  const handleExport = useCallback(async (columnsToExport: Array<{ key: string; label: string }>) => {
+    setExporting(true);
+    try {
+      const file = await exportInventoryLedgerExcel({
+        from: useTableDateRangeForExport ? (fromDate || undefined) : undefined,
+        to: useTableDateRangeForExport ? (toDate || undefined) : undefined,
+        productType: config.productType,
+        q: executedSnapshot.q,
+        filters: JSON.stringify(executedSnapshot.filters),
+        columns: columnsToExport,
+      });
+      const url = URL.createObjectURL(file.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showFlash(successResponse("Excel exportado correctamente"));
+    } catch {
+      showFlash(errorResponse("No se pudo exportar el Excel"));
+    } finally {
+      setExporting(false);
+    }
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, fromDate, showFlash, toDate, useTableDateRangeForExport]);
+
+  const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
+    await saveInventoryLedgerExportPreset({
+      name: payload.name,
+      columns: payload.columns,
+      productType: config.productType,
+      useDateRange: useTableDateRangeForExport,
+    });
+    await loadExportPresets();
+  }, [config.productType, loadExportPresets, useTableDateRangeForExport]);
+
+  const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+    await deleteInventoryLedgerExportPreset({
+      metricId,
+      productType: config.productType,
+    });
+    await loadExportPresets();
+  }, [config.productType, loadExportPresets]);
+
   return (
     <PageShell>
       <PageTitle title={config.pageTitle} />
 
       <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
         <Headed title={config.headingTitle} size="lg" />
+        <div className="flex justify-end">
+          {exportColumns.length ? (
+            <ExportPopover
+              columns={exportColumns}
+              presets={exportPresets}
+              loading={exporting}
+              onSavePreset={handleSaveExportPreset}
+              onDeletePreset={handleDeleteExportPreset}
+              onExport={handleExport}
+            />
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -526,6 +618,8 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
               });
             },
           }}
+          useRangeDatesForExternalExport
+          onExternalExportRangeStateChange={(state) => setUseTableDateRangeForExport(state.useDateRange)}
           pagination={{ page, limit, total }}
           onPageChange={(nextPage) => startTransition(() => setPage(nextPage))}
           tableClassName="text-[10px]"

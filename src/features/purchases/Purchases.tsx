@@ -14,11 +14,16 @@ import { parseApiError } from "@/shared/common/utils/handleApiError";
 import {
     deletePurchaseSearchMetric,
     enterPurchaseOrder,
+    exportPurchaseOrdersExcel,
+    getPurchaseExportColumns,
+    getPurchaseExportPresets,
     getPurchaseSearchState,
     listPurchaseOrders,
     savePurchaseSearchMetric,
+    savePurchaseExportPreset,
     setCancelPurchase,
     setSentPurchase,
+    deletePurchaseExportPreset,
 } from "@/shared/services/purchaseService";
 import { money, parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
@@ -27,6 +32,7 @@ import { QuotaListModal } from "./components/QuotaListModal";
 import { PurchaseModal } from "./components/PurchaseModal";
 import { PurchaseDetailsModal } from "./components/PurchaseDetailsModal";
 import type {
+    PurchaseExportColumn,
     PurchaseOrder,
     PurchaseSearchFilters,
     PurchaseSearchRule,
@@ -57,6 +63,7 @@ import { useCompany } from "@/shared/hooks/useCompany";
 import { ExtraTimeModal } from "./components/ExtraTimeModal";
 import { PurchaseCompletionPhotoModal } from "./components/PurchaseCompletionPhotoModal";
 import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "./utils/purchaseActions";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -123,6 +130,10 @@ export default function Purchases() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchState, setSearchState] = useState<PurchaseSearchStateResponse | null>(null);
+    const [exportColumns, setExportColumns] = useState<PurchaseExportColumn[]>([]);
+    const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: PurchaseExportColumn[] }>>([]);
+    const [exporting, setExporting] = useState(false);
+    const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
     const [savingMetric, setSavingMetric] = useState(false);
     const [modalPayment, setModalPayment] = useState(false);
     const [modalPaymentList, setModalPaymentList] = useState(false);
@@ -191,6 +202,30 @@ export default function Purchases() {
             setSearchState(response);
         } catch {
             showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+        }
+    }, []);
+
+    const loadExportColumns = useCallback(async () => {
+        try {
+            const response = await getPurchaseExportColumns();
+            setExportColumns(response ?? []);
+        } catch {
+            showFlashRef.current(errorResponse("Error al cargar columnas de exportacion"));
+        }
+    }, []);
+
+    const loadExportPresets = useCallback(async () => {
+        try {
+            const response = await getPurchaseExportPresets();
+            setExportPresets(
+                (response ?? []).map((item) => ({
+                    metricId: item.metricId,
+                    name: item.name,
+                    columns: (item.snapshot?.columns ?? []) as PurchaseExportColumn[],
+                })),
+            );
+        } catch {
+            showFlashRef.current(errorResponse("Error al cargar presets de exportacion"));
         }
     }, []);
 
@@ -373,6 +408,13 @@ export default function Purchases() {
     useEffect(() => {
         void loadSearchState();
     }, [loadSearchState]);
+
+    useEffect(() => {
+        void loadExportColumns();
+    }, [loadExportColumns]);
+    useEffect(() => {
+        void loadExportPresets();
+    }, [loadExportPresets]);
 
     useEffect(() => {
         if (completedPhotoPo) return;
@@ -836,6 +878,47 @@ export default function Purchases() {
         }
     }, [loadSearchState, showFlash]);
 
+    const handleExport = useCallback(async (columnsToExport: PurchaseExportColumn[]) => {
+        setExporting(true);
+        try {
+            const file = await exportPurchaseOrdersExcel({
+                columns: columnsToExport,
+                q: executedSnapshot.q,
+                filters: executedSnapshot.filters as unknown as Record<string, unknown>[],
+                from: fromDate || undefined,
+                to: toDate || undefined,
+                useDateRange: useTableDateRangeForExport,
+            });
+            const url = URL.createObjectURL(file.blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = file.filename;
+            anchor.click();
+            URL.revokeObjectURL(url);
+            showFlash(successResponse("Excel exportado correctamente"));
+        } catch {
+            showFlash(errorResponse("No se pudo exportar el Excel"));
+        } finally {
+            setExporting(false);
+        }
+    }, [executedSnapshot.filters, executedSnapshot.q, fromDate, showFlash, toDate, useTableDateRangeForExport]);
+
+    const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: PurchaseExportColumn[] }) => {
+        await savePurchaseExportPreset({
+            name: payload.name,
+            columns: payload.columns,
+            useDateRange: useTableDateRangeForExport,
+        });
+        await loadExportPresets();
+        showFlash(successResponse("Preset de exportacion guardado"));
+    }, [loadExportPresets, showFlash, useTableDateRangeForExport]);
+
+    const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+        await deletePurchaseExportPreset(metricId);
+        await loadExportPresets();
+        showFlash(successResponse("Preset eliminado"));
+    }, [loadExportPresets, showFlash]);
+
     return (
         <PageShell className="bg-white">
             <PageTitle title="Compras" />
@@ -845,7 +928,17 @@ export default function Purchases() {
                         title="Compras"
                         size="lg"
                     />
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                        {exportColumns.length ? (
+                            <ExportPopover
+                                columns={exportColumns}
+                                loading={exporting}
+                                presets={exportPresets}
+                                onSavePreset={handleSaveExportPreset}
+                                onDeletePreset={handleDeleteExportPreset}
+                                onExport={handleExport}
+                            />
+                        ) : null}
                         <SystemButton
                             size="md"
                             className="w-full lg:w-auto"
@@ -911,6 +1004,10 @@ export default function Purchases() {
                         startDate: parseDateInputValue(fromDate),
                         endDate: parseDateInputValue(toDate),
                         onChange: handleDateRangeChange,
+                    }}
+                    useRangeDatesForExternalExport
+                    onExternalExportRangeStateChange={(state) => {
+                        setUseTableDateRangeForExport(state.useDateRange);
                     }}
                     pagination={{
                         page,

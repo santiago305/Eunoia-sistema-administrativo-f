@@ -95,6 +95,56 @@ export const deleteInventorySearchMetric = async (params: {
   return response.data;
 };
 
+export const getInventoryExportColumns = async (params: {
+  productType?: ProductCatalogProductType;
+  q?: string;
+  filters?: string;
+}): Promise<Array<{ key: string; label: string }>> => {
+  const response = await axiosInstance.get(API_INVENTORY_GROUP.exportColumns, { params });
+  return response.data;
+};
+
+export const exportInventoryExcel = async (payload: ListInventoryQuery & {
+  columns: Array<{ key: string; label: string }>;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_INVENTORY_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `inventario-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
+};
+
+export const getInventoryExportPresets = async (params: {
+  productType?: ProductCatalogProductType;
+}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+  const response = await axiosInstance.get(API_INVENTORY_GROUP.exportPresets, { params });
+  return response.data;
+};
+
+export const saveInventoryExportPreset = async (payload: {
+  name: string;
+  productType?: ProductCatalogProductType;
+  columns: Array<{ key: string; label: string }>;
+  useDateRange?: boolean;
+}) => {
+  const response = await axiosInstance.post(API_INVENTORY_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteInventoryExportPreset = async (params: {
+  metricId: string;
+  productType?: ProductCatalogProductType;
+}) => {
+  const response = await axiosInstance.delete(API_INVENTORY_GROUP.deleteExportPreset(params.metricId), {
+    params: {
+      ...(params.productType ? { productType: params.productType } : {}),
+    },
+  });
+  return response.data;
+};
+
 export type AvailableStockQuery = {
   warehouseId?: string;
   q?: string;

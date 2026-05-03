@@ -209,3 +209,8 @@ export type PurchaseOrderListResponse = {
   limit: number;
 };
 
+export type PurchaseExportColumn = {
+  key: string;
+  label: string;
+};
+

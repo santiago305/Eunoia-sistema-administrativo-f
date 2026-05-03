@@ -209,3 +209,8 @@ export type ProductionOrderListResponse = {
   page: number;
   limit: number;
 };
+
+export type ProductionExportColumn = {
+  key: string;
+  label: string;
+};

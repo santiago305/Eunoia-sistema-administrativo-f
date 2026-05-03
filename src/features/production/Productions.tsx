@@ -16,21 +16,28 @@ import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
   cancelProductionOrder,
   closeProductionOrder,
+  deleteProductionExportPreset,
   deleteProductionSearchMetric,
+  exportProductionOrdersExcel,
   getProductionOrder,
+  getProductionExportColumns,
+  getProductionExportPresets,
   getProductionSearchState,
   listProductionOrders,
+  saveProductionExportPreset,
   saveProductionSearchMetric,
   startProductionOrder,
 } from "@/shared/services/productionService";
 import { getProductionOrderPdf } from "@/shared/services/pdfServices";
 import { parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import type {
+  ProductionExportColumn,
   ProductionOrder,
   ProductionSearchRule,
   ProductionSearchSnapshot,
   ProductionSearchStateResponse,
 } from "@/features/production/types/production";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { ProductionStatus } from "@/features/production/types/production";
 import TimerToEnd from "@/shared/components/components/TimerToEnd";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
@@ -111,6 +118,10 @@ export default function Production() {
   const [searchFilters, setSearchFilters] = useState(() => createEmptyProductionSearchFilters());
   const [searchState, setSearchState] = useState<ProductionSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [exportColumns, setExportColumns] = useState<ProductionExportColumn[]>([]);
+  const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: ProductionExportColumn[] }>>([]);
+  const [exporting, setExporting] = useState(false);
+  const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [openPdfModal, setOpenPdfModal] = useState(false);
@@ -193,6 +204,28 @@ export default function Production() {
       setSearchState(response);
     } catch {
       showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+    }
+  }, []);
+
+  const loadExportColumns = useCallback(async () => {
+    try {
+      const response = await getProductionExportColumns();
+      setExportColumns(response ?? []);
+    } catch {
+      showFlashRef.current(errorResponse("Error al cargar columnas de exportacion"));
+    }
+  }, []);
+
+  const loadExportPresets = useCallback(async () => {
+    try {
+      const response = await getProductionExportPresets();
+      setExportPresets((response ?? []).map((item) => ({
+        metricId: item.metricId,
+        name: item.name,
+        columns: (item.snapshot?.columns ?? []) as ProductionExportColumn[],
+      })));
+    } catch {
+      showFlashRef.current(errorResponse("Error al cargar presets de exportacion"));
     }
   }, []);
 
@@ -400,6 +433,10 @@ export default function Production() {
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+  useEffect(() => {
+    void loadExportColumns();
+    void loadExportPresets();
+  }, [loadExportColumns, loadExportPresets]);
 
   useEffect(() => {
     if (completedPhotoOrder) return;
@@ -715,6 +752,47 @@ export default function Production() {
     }
   }, [loadSearchState, showFlash]);
 
+  const handleExport = useCallback(async (columnsToExport: ProductionExportColumn[]) => {
+    setExporting(true);
+    try {
+      const file = await exportProductionOrdersExcel({
+        columns: columnsToExport,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters as unknown as Record<string, unknown>[],
+        from: fromDate || undefined,
+        to: toDate || undefined,
+        useDateRange: useTableDateRangeForExport,
+      });
+      const url = URL.createObjectURL(file.blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = file.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      showFlash(successResponse("Excel exportado correctamente"));
+    } catch {
+      showFlash(errorResponse("No se pudo exportar el Excel"));
+    } finally {
+      setExporting(false);
+    }
+  }, [executedSnapshot.filters, executedSnapshot.q, fromDate, showFlash, toDate, useTableDateRangeForExport]);
+
+  const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: ProductionExportColumn[] }) => {
+    await saveProductionExportPreset({
+      name: payload.name,
+      columns: payload.columns,
+      useDateRange: useTableDateRangeForExport,
+    });
+    await loadExportPresets();
+    showFlash(successResponse("Preset de exportacion guardado"));
+  }, [loadExportPresets, showFlash, useTableDateRangeForExport]);
+
+  const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+    await deleteProductionExportPreset(metricId);
+    await loadExportPresets();
+    showFlash(successResponse("Preset eliminado"));
+  }, [loadExportPresets, showFlash]);
+
   return (
     <PageShell className="bg-white">
       <PageTitle title="Produccion" />
@@ -722,21 +800,33 @@ export default function Production() {
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Headed title="Ordenes de Produccion" size="lg" />
-          <SystemButton
-            size="md"
-            className="w-full lg:w-auto"
-            leftIcon={<Plus className="h-4 w-4" />}
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-            onClick={handleCreate}
-            disabled={companyActionDisabled}
-            title={companyActionTitle}
-          >
-            Nueva orden
-          </SystemButton>
+          <div className="flex items-center gap-2">
+            {exportColumns.length ? (
+              <ExportPopover
+                columns={exportColumns}
+                loading={exporting}
+                presets={exportPresets}
+                onSavePreset={handleSaveExportPreset}
+                onDeletePreset={handleDeleteExportPreset}
+                onExport={handleExport}
+              />
+            ) : null}
+            <SystemButton
+              size="md"
+              className="w-full lg:w-auto"
+              leftIcon={<Plus className="h-4 w-4" />}
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+              }}
+              onClick={handleCreate}
+              disabled={companyActionDisabled}
+              title={companyActionTitle}
+            >
+              Nueva orden
+            </SystemButton>
+          </div>
         </div>
 
         <DataTableSearchChips
@@ -787,6 +877,10 @@ export default function Production() {
               setToDate(endDate ? toLocalDateKey(endDate) : "");
               setPage(1);
             },
+          }}
+          useRangeDatesForExternalExport
+          onExternalExportRangeStateChange={(state) => {
+            setUseTableDateRangeForExport(state.useDateRange);
           }}
           pagination={{
             page,

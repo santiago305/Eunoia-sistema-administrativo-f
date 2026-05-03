@@ -18,13 +18,19 @@ import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
 import {
+  deleteInventoryExportPreset,
   deleteInventorySearchMetric,
+  exportInventoryExcel,
+  getInventoryExportColumns,
+  getInventoryExportPresets,
   getInventorySearchState,
   getSkuStockSnapshots,
   listInventory,
+  saveInventoryExportPreset,
   saveInventorySearchMetric,
   type SkuStockForecast,
 } from "@/shared/services/inventoryService";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import type { Warehouse } from "@/features/warehouse/types/warehouse";
 import type {
   ProductCatalogProductType,
@@ -101,6 +107,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [exportColumns, setExportColumns] = useState<Array<{ key: string; label: string }>>([]);
+  const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>>([]);
+  const [exporting, setExporting] = useState(false);
   const [inventoryRows, setInventoryRows] = useState<InventorySnapshotRow[]>([]);
   const [inventoryTotal, setInventoryTotal] = useState(0);
   const [forecastModalOpen, setForecastModalOpen] = useState(false);
@@ -219,6 +228,26 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     [config.productType],
   );
 
+  const loadExportColumns = useCallback(async () => {
+    const response = await getInventoryExportColumns({
+      productType: config.productType,
+      q: executedSnapshot.q,
+      filters: JSON.stringify(executedSnapshot.filters),
+    });
+    setExportColumns(response ?? []);
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q]);
+
+  const loadExportPresets = useCallback(async () => {
+    const response = await getInventoryExportPresets({
+      productType: config.productType,
+    });
+    setExportPresets((response ?? []).map((item) => ({
+      metricId: item.metricId,
+      name: item.name,
+      columns: (item.snapshot?.columns ?? []) as Array<{ key: string; label: string }>,
+    })));
+  }, [config.productType]);
+
   const skuSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSearchSku = useCallback((q: string) => {
     if (skuSearchDebounceRef.current) clearTimeout(skuSearchDebounceRef.current);
@@ -321,6 +350,10 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   useEffect(() => {
     void loadSkus();
   }, [loadSkus]);
+  useEffect(() => {
+    void loadExportColumns();
+    void loadExportPresets();
+  }, [loadExportColumns, loadExportPresets]);
 
   const loadForecast = async (skuId: string, warehouseId?: string) => {
     const requestId = (forecastRequestRef.current += 1);
@@ -509,6 +542,49 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     }
   }, [config.productType, loadSearchState, showFlash]);
 
+  const handleExport = useCallback(async (columnsToExport: Array<{ key: string; label: string }>) => {
+    setExporting(true);
+    try {
+      const file = await exportInventoryExcel({
+        page,
+        limit: DEFAULT_LIMIT,
+        q: executedSnapshot.q,
+        filters: JSON.stringify(executedSnapshot.filters),
+        productType: config.productType,
+        columns: columnsToExport,
+      } as any);
+      const url = URL.createObjectURL(file.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showFlash(successResponse("Excel exportado correctamente"));
+    } catch {
+      showFlash(errorResponse("No se pudo exportar el Excel"));
+    } finally {
+      setExporting(false);
+    }
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, page, showFlash]);
+
+  const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
+    await saveInventoryExportPreset({
+      name: payload.name,
+      columns: payload.columns,
+      productType: config.productType,
+      useDateRange: false,
+    });
+    await loadExportPresets();
+  }, [config.productType, loadExportPresets]);
+
+  const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+    await deleteInventoryExportPreset({
+      metricId,
+      productType: config.productType,
+    });
+    await loadExportPresets();
+  }, [config.productType, loadExportPresets]);
+
   const columns = useMemo<DataTableColumn<InventorySnapshotRow>[]>(
     () => [
       {
@@ -591,10 +667,19 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     <PageShell>
       <PageTitle title={config.pageTitle} />
       <div className="space-y-2">
-        <Headed
-          title={config.headingTitle}
-          size="lg"
-        />
+        <div className="flex items-center justify-between gap-2">
+          <Headed title={config.headingTitle} size="lg" />
+          {exportColumns.length ? (
+            <ExportPopover
+              columns={exportColumns}
+              presets={exportPresets}
+              loading={exporting}
+              onSavePreset={handleSaveExportPreset}
+              onDeletePreset={handleDeleteExportPreset}
+              onExport={handleExport}
+            />
+          ) : null}
+        </div>
 
         <section>
           <div className="space-y-3">

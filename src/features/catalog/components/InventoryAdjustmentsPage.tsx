@@ -52,6 +52,14 @@ import {
   upsertInventoryDocumentsSearchRule,
 } from "@/features/catalog/utils/inventoryDocumentsSmartSearch";
 import { InventoryDocumentsSmartSearchPanel } from "@/features/catalog/components/InventoryDocumentsSmartSearchPanel";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import {
+  deleteInventoryDocumentsExportPreset,
+  exportInventoryDocumentsExcel,
+  getInventoryDocumentsExportColumns,
+  getInventoryDocumentsExportPresets,
+  saveInventoryDocumentsExportPreset,
+} from "@/shared/services/documentService";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -122,6 +130,10 @@ export function InventoryAdjustmentsPage({
 
   const [searchState, setSearchState] = useState<InventoryDocumentsSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [exportColumns, setExportColumns] = useState<Array<{ key: string; label: string }>>([]);
+  const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>>([]);
+  const [exporting, setExporting] = useState(false);
+  const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null,
@@ -181,6 +193,31 @@ export function InventoryAdjustmentsPage({
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  const loadExportColumns = useCallback(async () => {
+    const response = await getInventoryDocumentsExportColumns({
+      docType: DocType.ADJUSTMENT,
+      productType: config.documentProductType,
+    });
+    setExportColumns(response ?? []);
+  }, [config.documentProductType]);
+
+  const loadExportPresets = useCallback(async () => {
+    const response = await getInventoryDocumentsExportPresets({
+      docType: DocType.ADJUSTMENT,
+      productType: config.documentProductType,
+    });
+    setExportPresets((response ?? []).map((item) => ({
+      metricId: item.metricId,
+      name: item.name,
+      columns: (item.snapshot?.columns ?? []) as Array<{ key: string; label: string }>,
+    })));
+  }, [config.documentProductType]);
+
+  useEffect(() => {
+    void loadExportColumns();
+    void loadExportPresets();
+  }, [loadExportColumns, loadExportPresets]);
 
   useEffect(() => {
     if (prefillHandledRef.current) return;
@@ -552,13 +589,71 @@ export function InventoryAdjustmentsPage({
     ];
   }, [handleProcessDocument, processingDocumentId]);
 
+  const handleExport = useCallback(async (columnsToExport: Array<{ key: string; label: string }>) => {
+    setExporting(true);
+    try {
+      const file = await exportInventoryDocumentsExcel({
+        page,
+        limit,
+        docType: DocType.ADJUSTMENT,
+        productType: config.documentProductType,
+        q: executedSnapshot.q,
+        filters: JSON.stringify(executedSnapshot.filters),
+        from: useTableDateRangeForExport ? (fromDate || undefined) : undefined,
+        to: useTableDateRangeForExport ? (toDate || undefined) : undefined,
+        columns: columnsToExport,
+      } as any);
+      const url = URL.createObjectURL(file.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showFlash(successResponse("Excel exportado correctamente"));
+    } catch {
+      showFlash(errorResponse("No se pudo exportar el Excel"));
+    } finally {
+      setExporting(false);
+    }
+  }, [config.documentProductType, executedSnapshot.filters, executedSnapshot.q, fromDate, limit, page, showFlash, toDate, useTableDateRangeForExport]);
+
+  const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
+    await saveInventoryDocumentsExportPreset({
+      name: payload.name,
+      columns: payload.columns,
+      docType: DocType.ADJUSTMENT,
+      productType: config.documentProductType,
+      useDateRange: useTableDateRangeForExport,
+    });
+    await loadExportPresets();
+  }, [config.documentProductType, loadExportPresets, useTableDateRangeForExport]);
+
+  const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+    await deleteInventoryDocumentsExportPreset({
+      metricId,
+      docType: DocType.ADJUSTMENT,
+      productType: config.documentProductType,
+    });
+    await loadExportPresets();
+  }, [config.documentProductType, loadExportPresets]);
+
   return (
     <PageShell className="bg-white">
       <PageTitle title="Ajustes" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Headed title={config.headingTitle} size="lg" />
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {exportColumns.length ? (
+            <ExportPopover
+              columns={exportColumns}
+              presets={exportPresets}
+              loading={exporting}
+              onSavePreset={handleSaveExportPreset}
+              onDeletePreset={handleDeleteExportPreset}
+              onExport={handleExport}
+            />
+          ) : null}
           <SystemButton
             size="md"
             leftIcon={<Plus className="h-4 w-4" />}
@@ -624,6 +719,8 @@ export function InventoryAdjustmentsPage({
             });
           },
         }}
+        useRangeDatesForExternalExport
+        onExternalExportRangeStateChange={(state) => setUseTableDateRangeForExport(state.useDateRange)}
         pagination={{
           page,
           limit,

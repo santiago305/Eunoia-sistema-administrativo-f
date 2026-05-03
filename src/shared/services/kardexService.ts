@@ -67,3 +67,60 @@ export const deleteInventoryLedgerSearchMetric = async (params: {
   });
   return response.data;
 };
+
+export const getInventoryLedgerExportColumns = async (params: {
+  from?: string;
+  to?: string;
+  productType?: ProductCatalogProductType;
+  q?: string;
+  filters?: string;
+}): Promise<Array<{ key: string; label: string }>> => {
+  const response = await axiosInstance.get(API_KARDEX_GROUP.exportColumns, { params });
+  return response.data;
+};
+
+export const exportInventoryLedgerExcel = async (payload: {
+  from?: string;
+  to?: string;
+  productType?: ProductCatalogProductType;
+  q?: string;
+  filters?: string;
+  columns: Array<{ key: string; label: string }>;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_KARDEX_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `movimientos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
+};
+
+export const getInventoryLedgerExportPresets = async (params: {
+  productType?: ProductCatalogProductType;
+}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+  const response = await axiosInstance.get(API_KARDEX_GROUP.exportPresets, { params });
+  return response.data;
+};
+
+export const saveInventoryLedgerExportPreset = async (payload: {
+  name: string;
+  productType?: ProductCatalogProductType;
+  columns: Array<{ key: string; label: string }>;
+  useDateRange?: boolean;
+}) => {
+  const response = await axiosInstance.post(API_KARDEX_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteInventoryLedgerExportPreset = async (params: {
+  metricId: string;
+  productType?: ProductCatalogProductType;
+}) => {
+  const response = await axiosInstance.delete(API_KARDEX_GROUP.deleteExportPreset(params.metricId), {
+    params: {
+      ...(params.productType ? { productType: params.productType } : {}),
+    },
+  });
+  return response.data;
+};

@@ -9,6 +9,7 @@ import type {
   PurchaseOrderListResponse,
   PurchaseSearchSnapshot,
   PurchaseSearchStateResponse,
+  PurchaseExportColumn,
   UpdatePurchaseOrderDto,
 } from "@/features/purchases/types/purchase";
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
@@ -34,6 +35,47 @@ export const listPurchaseOrders = async (
 export const getPurchaseSearchState = async (): Promise<PurchaseSearchStateResponse> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.searchState);
   return response.data;
+};
+
+export const getPurchaseExportColumns = async (): Promise<PurchaseExportColumn[]> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.exportColumns);
+  return response.data;
+};
+
+export const getPurchaseExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.exportPresets);
+  return response.data;
+};
+
+export const savePurchaseExportPreset = async (payload: {
+  name: string;
+  columns: PurchaseExportColumn[];
+  useDateRange?: boolean;
+}): Promise<{ metricId: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deletePurchaseExportPreset = async (metricId: string): Promise<boolean> => {
+  const response = await axiosInstance.delete(API_PURCHASE_GROUP.deleteExportPreset(metricId));
+  return response.data;
+};
+
+export const exportPurchaseOrdersExcel = async (payload: {
+  columns: PurchaseExportColumn[];
+  q?: string;
+  filters?: Record<string, unknown>[];
+  from?: string;
+  to?: string;
+  useDateRange?: boolean;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `compras-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
 };
 
 export const savePurchaseSearchMetric = async (

@@ -74,6 +74,12 @@ export type DataTableSortState =
       }
     | null;
 
+export type DataTableExternalExportRangeState = {
+    useDateRange: boolean;
+    startDate: Date | null;
+    endDate: Date | null;
+};
+
 export type DataTableProps<T> = {
     data: T[];
     columns: DataTableColumn<T>[];
@@ -113,6 +119,8 @@ export type DataTableProps<T> = {
     toolbarSearchContent?: ReactNode;
     animateRowsThreshold?: number;
     maxHeight?: string;
+    useRangeDatesForExternalExport?: boolean;
+    onExternalExportRangeStateChange?: (state: DataTableExternalExportRangeState) => void;
 };
 
 export type DataTableColumnPreference = {

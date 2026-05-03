@@ -8,6 +8,7 @@ import type {
   ProductionOrderListResponse,
   ProductionSearchSnapshot,
   ProductionSearchStateResponse,
+  ProductionExportColumn,
   UpdateProductionOrderDto,
 } from "@/features/production/types/production";
 
@@ -103,6 +104,47 @@ export const deleteProductionSearchMetric = async (
     API_PRODUCTION_ORDERS_GROUP.deleteSearchMetric(metricId),
   );
   return response.data;
+};
+
+export const getProductionExportColumns = async (): Promise<ProductionExportColumn[]> => {
+  const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.exportColumns);
+  return response.data;
+};
+
+export const getProductionExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+  const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.exportPresets);
+  return response.data;
+};
+
+export const saveProductionExportPreset = async (payload: {
+  name: string;
+  columns: ProductionExportColumn[];
+  useDateRange?: boolean;
+}) => {
+  const response = await axiosInstance.post(API_PRODUCTION_ORDERS_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteProductionExportPreset = async (metricId: string) => {
+  const response = await axiosInstance.delete(API_PRODUCTION_ORDERS_GROUP.deleteExportPreset(metricId));
+  return response.data;
+};
+
+export const exportProductionOrdersExcel = async (payload: {
+  columns: ProductionExportColumn[];
+  q?: string;
+  filters?: Record<string, unknown>[];
+  from?: string;
+  to?: string;
+  useDateRange?: boolean;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_PRODUCTION_ORDERS_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `produccion-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
 };
 
 export const getProductionOrder = async (id: string): Promise<ProductionOrder> => {

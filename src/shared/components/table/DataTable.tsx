@@ -90,6 +90,8 @@ export function DataTable<T extends Record<string, unknown>>({
   toolbarSearchContent,
   animateRowsThreshold = 12,
   maxHeight,
+  useRangeDatesForExternalExport = false,
+  onExternalExportRangeStateChange,
 }: DataTableProps<T>) {
   const preferenceStorageKey = `data-table-preferences:${tableId}`;
   const controlledSearch = typeof searchValue === "string";
@@ -388,6 +390,19 @@ export function DataTable<T extends Record<string, unknown>>({
       label: rangeDates.label ?? "Rango de fechas",
     }
     : undefined;
+
+  useEffect(() => {
+    onExternalExportRangeStateChange?.({
+      useDateRange: useRangeDatesForExternalExport,
+      startDate: resolvedRangeDates?.startDate ?? null,
+      endDate: resolvedRangeDates?.endDate ?? null,
+    });
+  }, [
+    onExternalExportRangeStateChange,
+    resolvedRangeDates?.endDate,
+    resolvedRangeDates?.startDate,
+    useRangeDatesForExternalExport,
+  ]);
 
   return (
     <div className={cn("w-full", className)}>

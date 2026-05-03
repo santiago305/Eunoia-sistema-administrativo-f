@@ -127,6 +127,59 @@ export const createTransfer = async (payload: CreateTransfer): Promise<Adjustmen
   return response.data;
 };
 
+export const getInventoryDocumentsExportColumns = async (params: {
+  docType: DocType;
+  productType?: InventoryDocumentProductType;
+}): Promise<Array<{ key: string; label: string }>> => {
+  const response = await axiosInstance.get(API_DOCUMENT_INVENTORY_GROUP.exportColumns, { params });
+  return response.data;
+};
+
+export const exportInventoryDocumentsExcel = async (payload: GetInventoryDocumentsParams & {
+  columns: Array<{ key: string; label: string }>;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `transferencias-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
+};
+
+export const getInventoryDocumentsExportPresets = async (params: {
+  docType: DocType;
+  productType?: InventoryDocumentProductType;
+}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+  const response = await axiosInstance.get(API_DOCUMENT_INVENTORY_GROUP.exportPresets, { params });
+  return response.data;
+};
+
+export const saveInventoryDocumentsExportPreset = async (payload: {
+  name: string;
+  docType: DocType;
+  productType?: InventoryDocumentProductType;
+  columns: Array<{ key: string; label: string }>;
+  useDateRange?: boolean;
+}) => {
+  const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteInventoryDocumentsExportPreset = async (params: {
+  metricId: string;
+  docType: DocType;
+  productType?: InventoryDocumentProductType;
+}) => {
+  const response = await axiosInstance.delete(API_DOCUMENT_INVENTORY_GROUP.deleteExportPreset(params.metricId), {
+    params: {
+      docType: params.docType,
+      ...(params.productType ? { productType: params.productType } : {}),
+    },
+  });
+  return response.data;
+};
+
 export const processInventoryDocument = async (docId: string): Promise<{ type: string; message: string }> => {
   const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.processDocument(docId));
   return response.data;
