@@ -4,6 +4,8 @@ import { AuthProvider } from "@/shared/context/AuthProvider";
 import { CompanyProvider } from "@/shared/context/CompanyProvider";
 import { FlashMessageProvider } from "@/shared/context/FlashMessageProvider";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import { NotificationProvider } from "./providers/NotificationProvider";
+import { Toaster } from "sileo";
 /*
  * Componente raiz de la aplicacion.
  *
@@ -20,10 +22,13 @@ function App({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <CompanyProvider>
-        <FlashMessageProvider>
-          <FlashMessageRoot />
-          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-        </FlashMessageProvider>
+        <NotificationProvider>
+          <Toaster position="top-right" />
+          <FlashMessageProvider>
+            <FlashMessageRoot />
+            <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+          </FlashMessageProvider>
+        </NotificationProvider>
       </CompanyProvider>
     </AuthProvider>
   );

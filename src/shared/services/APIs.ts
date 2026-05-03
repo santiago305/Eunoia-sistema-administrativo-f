@@ -52,6 +52,17 @@ export const API_SESSIONS_GROUP = {
   revokeAll: "/sessions",
 };
 
+export const API_NOTIFICATIONS_GROUP = {
+  list: "/notifications",
+  unreadCount: "/notifications/unread-count",
+  byId: (id: string) => `/notifications/${id}`,
+  markSeen: (id: string) => `/notifications/${id}/seen`,
+  markRead: (id: string) => `/notifications/${id}/read`,
+  markAllRead: "/notifications/read-all",
+  archive: (id: string) => `/notifications/${id}/archive`,
+  devSendToMe: "/notifications/dev/send-to-me",
+};
+
 export const API_SECURITY_GROUP = {
   summary: "/security/summary",
   topIps: "/security/top-ips",

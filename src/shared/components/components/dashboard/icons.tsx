@@ -17,7 +17,8 @@ import {
   Factory,
   Banknote,
   PencilRuler,
-  ClipboardList
+  ClipboardList,
+  Bell
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -88,6 +89,10 @@ export const IconCollapse = ({ className }: { className?: string }) => (
 
 export const IconExpand = ({ className }: { className?: string }) => (
   <PanelLeft className={className} size={18} />
+);
+
+export const IconBell = ({ className }: { className?: string }) => (
+  <Bell className={className} size={18} />
 );
 
 

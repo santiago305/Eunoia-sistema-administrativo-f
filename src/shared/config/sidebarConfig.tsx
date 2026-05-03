@@ -103,6 +103,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.security,
         icon: <IconUsers className="text-sidebar-foreground" />,
     },
+    {
+        label: "Notificaciones",
+        href: RoutesPaths.notifications,
+        icon: <IconUsers className="text-sidebar-foreground" />,
+    },
 ];
 
 export const getSidebarItems = (): SidebarItem[] => SIDEBAR_ITEMS;

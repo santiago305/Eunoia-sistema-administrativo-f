@@ -21,6 +21,8 @@ const Dashboard = lazy(() => import("@/features/dashboard/Index"));
 const Users = lazy(() => import("@/features/users/Users"));
 const ProfilePage = lazy(() => import("@/features/profile/Profile"));
 const Sessions = lazy(() => import("@/features/sessions/Sessions"));
+const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
+const NotificationDetailPage = lazy(() => import("@/pages/NotificationDetailPage"));
 const Securitypage = lazy(() => import("@/features/security/security"));
 const IpsDetails = lazy(() => import("@/features/security/IpDetailPage"));
 const CatalogSummary = lazy(() => import("@/features/catalog/products/Summary"));
@@ -77,6 +79,14 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.sessions,
                 element: withRouteGuard(RoutesPaths.sessions, <Sessions />),
+            },
+            {
+                path: RoutesPaths.notifications,
+                element: withRouteGuard(RoutesPaths.notifications, <NotificationsPage />),
+            },
+            {
+                path: RoutesPaths.notificationDetail,
+                element: withRouteGuard(RoutesPaths.notificationDetail, <NotificationDetailPage />),
             },
             {
                 path: RoutesPaths.catalogProducts,

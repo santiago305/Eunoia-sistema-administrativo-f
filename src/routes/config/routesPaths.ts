@@ -10,6 +10,8 @@ export const RoutesPaths = {
   // paginas de usuario propio
   profile: "/profile",
   sessions: "/sessions-actives",
+  notifications: "/notifications",
+  notificationDetail: "/notifications/:id",
 
   createUser: "/users/create",
   users: "/users",
