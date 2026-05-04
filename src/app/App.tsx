@@ -23,7 +23,7 @@ function App({ children }: { children: ReactNode }) {
     <AuthProvider>
       <CompanyProvider>
         <NotificationProvider>
-          <Toaster position="top-right" />
+          <Toaster position="top-center" theme="light"/>
           <FlashMessageProvider>
             <FlashMessageRoot />
             <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
