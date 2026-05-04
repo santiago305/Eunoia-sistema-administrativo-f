@@ -12,6 +12,7 @@ import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import {
+    confirmPurchaseReception,
     deletePurchaseSearchMetric,
     enterPurchaseOrder,
     exportPurchaseOrdersExcel,
@@ -72,6 +73,7 @@ const statusLabels: Record<PurchaseOrderStatus, string> = {
     [PurchaseOrderStatuses.DRAFT]: "Borrador",
     [PurchaseOrderStatuses.SENT]: "Enviado",
     [PurchaseOrderStatuses.PARTIAL]: "Parcial",
+    [PurchaseOrderStatuses.PENDING_RECEIPT_CONFIRMATION]: "Pendiente confirmacion",
     [PurchaseOrderStatuses.RECEIVED]: "Recibido",
     [PurchaseOrderStatuses.CANCELLED]: "Cancelado",
 };
@@ -343,11 +345,31 @@ export default function Purchases() {
             }
             if (res.type === "success") {
                 showFlash(successResponse(res.message));
+                const selected = purchases.find((purchase) => purchase.poId === id) ?? null;
+                setCompletedPhotoPo(selected);
                 void loadPurchases();
             }
         } catch {
             showFlash(errorResponse("Error al ingresar a almacen"));
             void loadPurchases();
+        }
+    }, [clearFlash, loadPurchases, purchases, showFlash]);
+
+    const confirmReception = useCallback(async (id: string) => {
+        clearFlash();
+        try {
+            const res = await confirmPurchaseReception(id);
+            if (res.type === "success") {
+                showFlash(successResponse(res.message));
+                await loadPurchases();
+                return true;
+            }
+
+            showFlash(errorResponse(res.message));
+            return false;
+        } catch {
+            showFlash(errorResponse("Error al confirmar ingreso a stock"));
+            return false;
         }
     }, [clearFlash, loadPurchases, showFlash]);
 
@@ -378,9 +400,11 @@ export default function Purchases() {
             const res = await uploadPurchaseImageProdution(poId, file);
             if (res.type === "success") {
                 skippedPhotoRef.current.add(poId);
-                showFlash(successResponse(res.message));
-                setCompletedPhotoPo(null);
-                await loadPurchases();
+                const confirmed = await confirmReception(poId);
+                if (confirmed) {
+                    showFlash(successResponse(`${res.message}. Compra ingresada a stock.`));
+                    setCompletedPhotoPo(null);
+                }
             } else {
                 showFlash(errorResponse(res.message));
             }
@@ -389,17 +413,21 @@ export default function Purchases() {
         } finally {
             setCompletedPhotoLoading(false);
         }
-    }, [completedPhotoPo?.poId, loadPurchases, showFlash]);
+    }, [completedPhotoPo?.poId, confirmReception, showFlash]);
 
     const skipCompletedPhoto = useCallback(async () => {
         const poId = completedPhotoPo?.poId;
+        if (!poId) return;
         if (poId) {
             skippedPhotoRef.current.add(poId);
             markPhotoPromptSkipped(poId);
         }
-        setCompletedPhotoPo(null);
-        showFlash(successResponse("Compra ingresada sin foto. Se puede subir luego desde detalle (admin)."));
-    }, [completedPhotoPo?.poId, markPhotoPromptSkipped, showFlash]);
+        const confirmed = await confirmReception(poId);
+        if (confirmed) {
+            setCompletedPhotoPo(null);
+            showFlash(successResponse("Compra ingresada sin foto. Se puede subir luego desde detalle (admin)."));
+        }
+    }, [completedPhotoPo?.poId, confirmReception, markPhotoPromptSkipped, showFlash]);
 
     useEffect(() => {
         void loadPurchases();
@@ -419,7 +447,7 @@ export default function Purchases() {
     useEffect(() => {
         if (completedPhotoPo) return;
         const candidate = purchases.find((purchase) =>
-            purchase.status === PurchaseOrderStatuses.RECEIVED &&
+            purchase.status === PurchaseOrderStatuses.PENDING_RECEIPT_CONFIRMATION &&
             (!purchase.imageProdution || purchase.imageProdution.length === 0) &&
             purchase.poId &&
             !skippedPhotoRef.current.has(purchase.poId) &&
@@ -609,6 +637,12 @@ export default function Purchases() {
                             <span className="mt-1">Completado</span>
                         </span>
                     )}
+                    {row.purchase.status === PurchaseOrderStatuses.PENDING_RECEIPT_CONFIRMATION && (
+                        <span className="flex items-center rounded-lg gap-2 p-1 text-[10px] font-medium bg-cyan-50 text-cyan-700">
+                            <Timer className="h-4 w-4" />
+                            <span className="mt-1">Por confirmar</span>
+                        </span>
+                    )}
                 </div>
             ),
             headerClassName: "text-center [&>div]:justify-center",
@@ -628,9 +662,18 @@ export default function Purchases() {
                         actions={[
                             (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
                                 id: "enter-warehouse",
-                                label: "Ingresar Almacen",
+                                label: "Procesar llegada",
                                 icon: <PackageCheck className="h-4 w-4 text-black/60" />,
                                 onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
+                            },
+                            row.purchase.status === PurchaseOrderStatuses.PENDING_RECEIPT_CONFIRMATION && {
+                                id: "confirm-reception",
+                                label: "Confirmar ingreso",
+                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                                onClick: () => {
+                                    setCompletedPhotoPo(row.purchase);
+                                },
                                 disabled: companyActionDisabled,
                             },
                             row.purchase.status === PurchaseOrderStatuses.SENT && {
@@ -1032,12 +1075,10 @@ export default function Purchases() {
                     setOpenPurchaseModal(false);
                     setEditPoId(undefined);
                 }}
-                onSaved={async (poId) => {
+                onSaved={async () => {
                     await loadPurchases();
                     setOpenPurchaseModal(false);
                     setEditPoId(undefined);
-                    setSelectedProductionId(poId);
-                    setOpenPdfModal(true);
                 }}
             />
             <PurchaseDetailsModal

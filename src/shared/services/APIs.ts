@@ -163,6 +163,7 @@ export const API_PURCHASE_GROUP = {
   setSent: (id: string) => `/purchases/orders/${id}/sent`,
   setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
+  confirmReception: (id: string) => `/purchases/orders/${id}/confirm-reception`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
   listPayments: (id: string) => `/payments/get-by-po/${id}`,
   listQuotas: (id: string) => `/payments/credit-quotas/get-by-po/${id}`,

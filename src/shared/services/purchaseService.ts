@@ -110,6 +110,11 @@ export const enterPurchaseOrder = async (id:string): Promise<{type:string, messa
   return response.data;
 };
 
+export const confirmPurchaseReception = async (id: string): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.confirmReception(id));
+  return response.data;
+};
+
 export const listPayments = async (id:string): Promise<Payment[]> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.listPayments(id));
   return response.data;

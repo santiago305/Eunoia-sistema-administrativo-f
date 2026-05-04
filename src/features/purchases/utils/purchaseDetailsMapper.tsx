@@ -29,6 +29,7 @@ export const statusToneByStatus: Record<PurchaseOrderStatus, string> = {
   DRAFT: "bg-slate-100 text-slate-700",
   SENT: "bg-amber-50 text-amber-700",
   PARTIAL: "bg-orange-50 text-orange-700",
+  PENDING_RECEIPT_CONFIRMATION: "bg-cyan-50 text-cyan-700",
   RECEIVED: "bg-emerald-50 text-emerald-700",
   CANCELLED: "bg-rose-50 text-rose-700",
 };
