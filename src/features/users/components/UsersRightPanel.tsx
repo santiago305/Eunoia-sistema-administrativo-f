@@ -1,6 +1,8 @@
 import type { Role, User } from "../types/users.types";
 import { ROLE_LABELS, RoleType } from "../types/roles.types";
 import { formatDateTimeLabel } from "../utils/dateFormat";
+import { useState } from "react";
+import type { PermissionEffect, UserPermissionOverride } from "@/shared/services/accessControlService";
 
 const ROLES = Object.values(RoleType) as Role[];
 
@@ -53,6 +55,14 @@ interface UsersRightPanelProps {
   deactivateUser: () => Promise<void>;
   restoreUser: () => Promise<void>;
   effectivePermissions: string[];
+  permissionOverrides: UserPermissionOverride[];
+  savingOverride: boolean;
+  savePermissionOverride: (permissionCode: string, effect: PermissionEffect, reason?: string) => Promise<void>;
+  deletePermissionOverride: (permissionCode: string) => Promise<void>;
+  preferredHomePath: string;
+  setPreferredHomePathDraft: (value: string) => void;
+  savingPreferredHomePath: boolean;
+  savePreferredHomePath: () => Promise<void>;
 }
 
 export function UsersRightPanel({
@@ -65,8 +75,19 @@ export function UsersRightPanel({
   deactivateUser,
   restoreUser,
   effectivePermissions,
+  permissionOverrides,
+  savingOverride,
+  savePermissionOverride,
+  deletePermissionOverride,
+  preferredHomePath,
+  setPreferredHomePathDraft,
+  savingPreferredHomePath,
+  savePreferredHomePath,
 }: UsersRightPanelProps) {
   const isDeleted = Boolean(selected?.deleted || selected?.deletedAt);
+  const [permissionCodeDraft, setPermissionCodeDraft] = useState("");
+  const [effectDraft, setEffectDraft] = useState<PermissionEffect>("ALLOW");
+  const [reasonDraft, setReasonDraft] = useState("");
 
   return (
     <section className="h-full rounded-2xl border border-zinc-200 bg-white">
@@ -206,6 +227,102 @@ export function UsersRightPanel({
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200 p-4">
+                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Pagina inicial</p>
+                <p className="mt-1 text-[12px] font-medium text-zinc-800">Ruta preferida al iniciar sesion</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px]">
+                  <input
+                    value={preferredHomePath}
+                    onChange={(e) => setPreferredHomePathDraft(e.target.value)}
+                    placeholder="Ej: /compras (vacío = automatico)"
+                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                  />
+                  <button
+                    disabled={savingPreferredHomePath}
+                    onClick={() => void savePreferredHomePath()}
+                    className={cn(
+                      "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
+                      savingPreferredHomePath ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
+                    )}
+                    style={{ background: "hsl(var(--primary))" }}
+                  >
+                    {savingPreferredHomePath ? "Guardando..." : "Guardar"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200 p-4">
+                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Delegar permisos</p>
+                <p className="mt-1 text-[12px] font-medium text-zinc-800">Asignar override directo al usuario</p>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px]">
+                  <input
+                    value={permissionCodeDraft}
+                    onChange={(e) => setPermissionCodeDraft(e.target.value)}
+                    placeholder="Ej: purchases.approve"
+                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                  />
+                  <select
+                    value={effectDraft}
+                    onChange={(e) => setEffectDraft(e.target.value as PermissionEffect)}
+                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                  >
+                    <option value="ALLOW">ALLOW</option>
+                    <option value="DENY">DENY</option>
+                  </select>
+                </div>
+
+                <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_120px]">
+                  <input
+                    value={reasonDraft}
+                    onChange={(e) => setReasonDraft(e.target.value)}
+                    placeholder="Motivo (opcional)"
+                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                  />
+                  <button
+                    disabled={savingOverride || !permissionCodeDraft.trim()}
+                    onClick={async () => {
+                      await savePermissionOverride(permissionCodeDraft.trim(), effectDraft, reasonDraft.trim() || undefined);
+                      setPermissionCodeDraft("");
+                      setReasonDraft("");
+                    }}
+                    className={cn(
+                      "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
+                      savingOverride || !permissionCodeDraft.trim() ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
+                    )}
+                    style={{ background: "hsl(var(--primary))" }}
+                  >
+                    {savingOverride ? "Guardando..." : "Aplicar"}
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {permissionOverrides.length === 0 ? (
+                    <p className="text-[11px] text-zinc-500">Sin overrides directos.</p>
+                  ) : (
+                    permissionOverrides.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-[11px] font-medium text-zinc-800">{item.permissionCode ?? "-"}</p>
+                          <p className="text-[10px] text-zinc-500">
+                            {item.effect} {item.reason ? `• ${item.reason}` : ""}
+                          </p>
+                        </div>
+                        {item.permissionCode ? (
+                          <button
+                            disabled={savingOverride}
+                            onClick={() => void deletePermissionOverride(item.permissionCode!)}
+                            className="ml-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-600"
+                          >
+                            Quitar
+                          </button>
+                        ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}

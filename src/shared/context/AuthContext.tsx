@@ -14,6 +14,7 @@ interface AuthContextType {
   userRole: string | null;
   userRoles: string[];
   permissions: string[];
+  preferredHomePath: string | null;
   userId: string | null;
   login: (payload: LoginCredentials) => Promise<AuthResponse>;
   logout: () => void;

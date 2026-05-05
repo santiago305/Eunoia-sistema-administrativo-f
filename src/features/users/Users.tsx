@@ -7,7 +7,6 @@ import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
   countUsersByRole,
   deleteUser as deleteUserById,
-  getEffectivePermissionsByUser,
   listUsers,
   restoreUser as restoreUserById,
   updateUserRole,
@@ -15,6 +14,14 @@ import {
   type ListUsersResponse,
   type UserApiListItem,
 } from "@/shared/services/userService";
+import {
+  getEffectivePermissionsDetailByUser,
+  removeUserPermissionOverride,
+  setUserPreferredHomePath,
+  setUserPermissionOverride,
+  type PermissionEffect,
+  type UserPermissionOverride,
+} from "@/shared/services/accessControlService";
 import { findAllRoles } from "@/shared/services/roleService";
 import { UsersHeader } from "./components/UsersHeader";
 import { UsersLeftPanel } from "./components/UsersLeftPanel";
@@ -88,6 +95,10 @@ export default function Users() {
   const [savingRole, setSavingRole] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [effectivePermissions, setEffectivePermissions] = useState<string[]>([]);
+  const [permissionOverrides, setPermissionOverrides] = useState<UserPermissionOverride[]>([]);
+  const [savingOverride, setSavingOverride] = useState(false);
+  const [preferredHomePathDraft, setPreferredHomePathDraft] = useState("");
+  const [savingPreferredHomePath, setSavingPreferredHomePath] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -185,12 +196,20 @@ export default function Users() {
         return;
       }
       try {
-        const data = await getEffectivePermissionsByUser(selected.id);
+        const data = await getEffectivePermissionsDetailByUser(selected.id);
         if (!cancelled) {
           setEffectivePermissions(Array.isArray(data?.permissions) ? data.permissions : []);
+          setPermissionOverrides(Array.isArray(data?.overrides) ? data.overrides : []);
+          setPreferredHomePathDraft(
+            typeof data?.preferredHomePath === "string" ? data.preferredHomePath : "",
+          );
         }
       } catch {
-        if (!cancelled) setEffectivePermissions([]);
+        if (!cancelled) {
+          setEffectivePermissions([]);
+          setPermissionOverrides([]);
+          setPreferredHomePathDraft("");
+        }
       }
     };
 
@@ -337,6 +356,66 @@ export default function Users() {
     }
   }
 
+  async function savePermissionOverride(permissionCode: string, effect: PermissionEffect, reason?: string) {
+    if (!selected?.id) return;
+    clearFlash();
+    setSavingOverride(true);
+    try {
+      await setUserPermissionOverride({
+        userId: selected.id,
+        permissionCode,
+        effect,
+        reason,
+      });
+      const data = await getEffectivePermissionsDetailByUser(selected.id);
+      setEffectivePermissions(Array.isArray(data?.permissions) ? data.permissions : []);
+      setPermissionOverrides(Array.isArray(data?.overrides) ? data.overrides : []);
+      showFlash(successResponse("Permiso delegado correctamente."));
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFlash(errorResponse(parsed.message.trim() || "No se pudo delegar el permiso."));
+    } finally {
+      setSavingOverride(false);
+    }
+  }
+
+  async function deletePermissionOverride(permissionCode: string) {
+    if (!selected?.id) return;
+    clearFlash();
+    setSavingOverride(true);
+    try {
+      await removeUserPermissionOverride(selected.id, permissionCode);
+      const data = await getEffectivePermissionsDetailByUser(selected.id);
+      setEffectivePermissions(Array.isArray(data?.permissions) ? data.permissions : []);
+      setPermissionOverrides(Array.isArray(data?.overrides) ? data.overrides : []);
+      showFlash(successResponse("Override eliminado correctamente."));
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFlash(errorResponse(parsed.message.trim() || "No se pudo eliminar el override."));
+    } finally {
+      setSavingOverride(false);
+    }
+  }
+
+  async function savePreferredHomePath() {
+    if (!selected?.id) return;
+    clearFlash();
+    setSavingPreferredHomePath(true);
+    try {
+      const preferredHomePath = preferredHomePathDraft.trim() || null;
+      await setUserPreferredHomePath({
+        userId: selected.id,
+        preferredHomePath,
+      });
+      showFlash(successResponse("Pagina inicial actualizada."));
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFlash(errorResponse(parsed.message.trim() || "No se pudo actualizar la pagina inicial."));
+    } finally {
+      setSavingPreferredHomePath(false);
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -383,6 +462,14 @@ export default function Users() {
             deactivateUser={deactivateUser}
             restoreUser={restoreUser}
             effectivePermissions={effectivePermissions}
+            permissionOverrides={permissionOverrides}
+            savingOverride={savingOverride}
+            savePermissionOverride={savePermissionOverride}
+            deletePermissionOverride={deletePermissionOverride}
+            preferredHomePath={preferredHomePathDraft}
+            setPreferredHomePathDraft={setPreferredHomePathDraft}
+            savingPreferredHomePath={savingPreferredHomePath}
+            savePreferredHomePath={savePreferredHomePath}
           />
         </div>
       </div>

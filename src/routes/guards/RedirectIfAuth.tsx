@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { PropsUrl } from "@/routes/guards/typeGuards";
 import { RoutesPaths } from "../config/routesPaths";
+import { getFirstAccessibleProtectedPath } from "../config/routeAccess";
 
 /**
  * Guardian de Rutas de Autenticacion.
@@ -22,7 +23,7 @@ import { RoutesPaths } from "../config/routesPaths";
  * </RedirectIfAuth>
  */
 const RedirectIfAuth = ({ children }: PropsUrl) => {
-  const { isAuthenticated, authChecked, loading, checkAuth } = useAuth();
+  const { isAuthenticated, authChecked, loading, userRole, permissions, preferredHomePath, checkAuth } = useAuth();
 
   useEffect(() => {
     if (authChecked || loading || isAuthenticated) return;
@@ -33,7 +34,10 @@ const RedirectIfAuth = ({ children }: PropsUrl) => {
     return <div>Cargando sesion...</div>;
   }
 
-  if (isAuthenticated) return <Navigate to={RoutesPaths.dashboard} replace />;
+  if (isAuthenticated) {
+    const nextPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
+    return <Navigate to={nextPath ?? RoutesPaths.dashboard} replace />;
+  }
 
   return children;
 };

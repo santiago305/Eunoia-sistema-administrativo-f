@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { PrivateRouteProps } from "@/routes/guards/typeGuards";
 import { RoutesPaths } from "../config/routesPaths";
 import ErrorPage from "@/pages/Error404";
+import { getFirstAccessibleProtectedPath } from "../config/routeAccess";
 
 /**
  * Private route guard.
@@ -14,7 +15,8 @@ const normalizeRole = (role?: string | null) =>
   String(role ?? "").trim().toLowerCase();
 
 const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed }: PrivateRouteProps) => {
-  const { isAuthenticated, authChecked, loading, userRole, permissions, checkAuth } = useAuth();
+  const { isAuthenticated, authChecked, loading, userRole, permissions, preferredHomePath, checkAuth } = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     if (authChecked || loading || isAuthenticated) return;
@@ -36,6 +38,12 @@ const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed }: PrivateRou
     const allowed = rolesAllowed.map(normalizeRole);
 
     if (!allowed.includes(role)) {
+      if (location.pathname === RoutesPaths.dashboard) {
+        const fallbackPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
+        if (fallbackPath && fallbackPath !== location.pathname) {
+          return <Navigate to={fallbackPath} replace />;
+        }
+      }
       return <ErrorPage />;
     }
   }
@@ -47,6 +55,12 @@ const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed }: PrivateRou
     );
 
     if (!hasAllPermissions) {
+      if (location.pathname === RoutesPaths.dashboard) {
+        const fallbackPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
+        if (fallbackPath && fallbackPath !== location.pathname) {
+          return <Navigate to={fallbackPath} replace />;
+        }
+      }
       return <ErrorPage />;
     }
   }

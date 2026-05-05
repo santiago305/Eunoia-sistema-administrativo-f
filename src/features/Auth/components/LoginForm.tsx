@@ -11,6 +11,7 @@ import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { getFirstAccessibleProtectedPath } from "@/routes/config/routeAccess";
 
 function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [submitting, setSubmitting] = useState(false);
@@ -18,7 +19,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [formError, setFormError] = useState("");
   const navigate = useNavigate();
   const { showFlash, clearFlash } = useFlashMessage();
-  const { login } = useAuth();
+  const { login, userRole, permissions, preferredHomePath } = useAuth();
 
   const {
     register,
@@ -85,7 +86,8 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
       if (response.success) {
         showFlash(successResponse(response.message));
         startTransition(() => {
-          navigate(RoutesPaths.dashboard, { replace: true });
+          const nextPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
+          navigate(nextPath ?? RoutesPaths.dashboard, { replace: true });
         });
       } else {
         const retrySeconds = response.data?.retryAfterSeconds ?? 0;

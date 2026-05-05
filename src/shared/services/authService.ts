@@ -13,6 +13,7 @@ export interface UserInfoAuthResponse {
   rol: string;
   roles?: string[];
   permissions?: string[];
+  preferredHomePath?: string | null;
 }
 
 type AuthRequestConfig = AxiosRequestConfig & {

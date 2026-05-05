@@ -25,9 +25,11 @@ export const API_USERS_GROUP = {
 export const API_ACCESS_CONTROL_GROUP = {
   listPermissions: "/access-control/permissions",
   effectivePermissionsByUser: (id: string) => `/access-control/users/${id}/effective-permissions`,
+  setUserPreferredHomePath: (id: string) => `/access-control/users/${id}/preferred-home`,
   setUserPermissionOverride: (id: string) => `/access-control/users/${id}/permissions`,
   removeUserPermissionOverride: (id: string, permissionCode: string) =>
     `/access-control/users/${id}/permissions/${encodeURIComponent(permissionCode)}`,
+  rolePermissionsByRole: (roleId: string) => `/access-control/roles/${roleId}/permissions`,
 };
 
 export const API_PROFILE_GROUP = {
@@ -171,6 +173,9 @@ export const API_PURCHASE_GROUP = {
   setSent: (id: string) => `/purchases/orders/${id}/sent`,
   setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
+  requestProcessing: (id: string) => `/purchases/orders/${id}/request-processing`,
+  approveProcessing: (id: string) => `/purchases/orders/${id}/approve-processing`,
+  rejectProcessing: (id: string) => `/purchases/orders/${id}/reject-processing`,
   confirmReception: (id: string) => `/purchases/orders/${id}/confirm-reception`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
   listPayments: (id: string) => `/payments/get-by-po/${id}`,

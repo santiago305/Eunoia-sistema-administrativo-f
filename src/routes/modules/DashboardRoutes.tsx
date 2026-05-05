@@ -19,6 +19,7 @@ const DashboardLayout = lazy(() => import("@/shared/layouts/DashboardLayout"));
 const ErrorPage = lazy(() => import("@/pages/Error404"));
 const Dashboard = lazy(() => import("@/features/dashboard/Index"));
 const Users = lazy(() => import("@/features/users/Users"));
+const RolesPermissions = lazy(() => import("@/features/roles/RolesPermissions"));
 const ProfilePage = lazy(() => import("@/features/profile/Profile"));
 const Sessions = lazy(() => import("@/features/sessions/Sessions"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
@@ -74,10 +75,14 @@ export const dashboardRoutes: RouteObject[] = [
         handle: getRouteMetaByPath(RoutesPaths.dashboard),
 
         children: [
-            { index: true, element: <Dashboard /> },
+            { index: true, element: withRouteGuard(RoutesPaths.dashboard, <Dashboard />) },
             {
                 path: RoutesPaths.users,
                 element: withRouteGuard(RoutesPaths.users, <Users />),
+            },
+            {
+                path: RoutesPaths.roles,
+                element: withRouteGuard(RoutesPaths.roles, <RolesPermissions />),
             },
             {
                 path: RoutesPaths.profile,

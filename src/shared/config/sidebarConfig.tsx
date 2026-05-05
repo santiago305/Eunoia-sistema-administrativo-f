@@ -99,6 +99,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         icon: <IconUsers className="text-sidebar-foreground" />,
     },
     {
+        label: "Roles",
+        href: RoutesPaths.roles,
+        icon: <IconUsers className="text-sidebar-foreground" />,
+    },
+    {
         label: "Seguridad",
         href: RoutesPaths.security,
         icon: <IconUsers className="text-sidebar-foreground" />,

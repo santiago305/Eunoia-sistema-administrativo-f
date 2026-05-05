@@ -15,6 +15,7 @@ export const RoutesPaths = {
 
   createUser: "/users/create",
   users: "/users",
+  roles: "/roles",
 
   catalogSummary: "/catalago",
   catalogProducts: "/catalago/productos",

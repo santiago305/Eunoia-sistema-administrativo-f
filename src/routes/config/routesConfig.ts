@@ -20,6 +20,13 @@ export const routesConfig: RouteMetadata[] = [
     permissionsAllowed: ["page.users.view"],
   },
   {
+    path: RoutesPaths.roles,
+    name: "roles",
+    isProtected: true,
+    rolesAllowed: ["admin"],
+    permissionsAllowed: ["page.roles.view"],
+  },
+  {
     path: RoutesPaths.company,
     name: "company",
     isProtected: true,

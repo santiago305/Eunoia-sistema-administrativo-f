@@ -110,6 +110,30 @@ export const enterPurchaseOrder = async (id:string): Promise<{type:string, messa
   return response.data;
 };
 
+export const requestProcessingPurchaseOrder = async (
+  id: string,
+  reason?: string
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.requestProcessing(id), { reason });
+  return response.data;
+};
+
+export const approveProcessingPurchaseOrder = async (
+  id: string,
+  comment?: string
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.approveProcessing(id), { comment });
+  return response.data;
+};
+
+export const rejectProcessingPurchaseOrder = async (
+  id: string,
+  comment?: string
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.rejectProcessing(id), { comment });
+  return response.data;
+};
+
 export const confirmPurchaseReception = async (id: string): Promise<{ type: string; message: string }> => {
   const response = await axiosInstance.post(API_PURCHASE_GROUP.confirmReception(id));
   return response.data;

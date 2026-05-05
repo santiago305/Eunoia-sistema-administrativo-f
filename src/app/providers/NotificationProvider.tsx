@@ -2,7 +2,7 @@ import { createContext, useEffect, useMemo, useState, type ReactNode } from 'rea
 import { useAuth } from '@/shared/hooks/useAuth';
 import { closeNotificationSocket, createNotificationSocket } from '@/shared/lib/socket';
 import { NOTIFICATION_SOCKET_EVENTS, NOTIFICATION_WINDOW_EVENTS } from '@/features/notifications/constants/notification-events.constants';
-import type { NotificationUnreadCount } from '@/features/notifications/types/notification.types';
+import type { NotificationPriority, NotificationUnreadCount } from '@/features/notifications/types/notification.types';
 import { getUnreadCount } from '@/shared/services/notificationService';
 import { showNotificationToast } from '@/features/notifications/services/notification-toast.service';
 
@@ -25,7 +25,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
 
-    const onCreated = (payload: { notification?: { title?: string; message?: string; priority?: string; actionUrl?: string; actionLabel?: string } }) => {
+    const onCreated = (payload: { notification?: { title?: string; message?: string; priority?: NotificationPriority; actionUrl?: string; actionLabel?: string } }) => {
       showNotificationToast(payload?.notification);
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
     };

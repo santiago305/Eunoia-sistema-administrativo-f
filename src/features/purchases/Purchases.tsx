@@ -12,6 +12,7 @@ import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import {
+    approveProcessingPurchaseOrder,
     confirmPurchaseReception,
     deletePurchaseSearchMetric,
     enterPurchaseOrder,
@@ -20,6 +21,8 @@ import {
     getPurchaseExportPresets,
     getPurchaseSearchState,
     listPurchaseOrders,
+    rejectProcessingPurchaseOrder,
+    requestProcessingPurchaseOrder,
     savePurchaseSearchMetric,
     savePurchaseExportPreset,
     setCancelPurchase,
@@ -61,6 +64,7 @@ import {
 } from "./utils/purchaseSmartSearch";
 import { PurchaseSmartSearchPanel } from "./components/PurchaseSmartSearchPanel";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 import { ExtraTimeModal } from "./components/ExtraTimeModal";
 import { PurchaseCompletionPhotoModal } from "./components/PurchaseCompletionPhotoModal";
 import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "./utils/purchaseActions";
@@ -109,6 +113,7 @@ export default function Purchases() {
     const showFlashRef = useRef(showFlash);
     useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
     const { hasCompany } = useCompany();
+    const { can } = usePermissions();
     const companyActionDisabled = !hasCompany;
     const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -354,6 +359,51 @@ export default function Purchases() {
             void loadPurchases();
         }
     }, [clearFlash, loadPurchases, purchases, showFlash]);
+
+    const requestProcessing = useCallback(async (id: string) => {
+        clearFlash();
+        try {
+            const res = await requestProcessingPurchaseOrder(id);
+            if (res.type === "success") {
+                showFlash(successResponse(res.message));
+                await loadPurchases();
+                return;
+            }
+            showFlash(errorResponse(res.message));
+        } catch {
+            showFlash(errorResponse("No se pudo solicitar aprobación de procesamiento"));
+        }
+    }, [clearFlash, loadPurchases, showFlash]);
+
+    const approveProcessing = useCallback(async (id: string) => {
+        clearFlash();
+        try {
+            const res = await approveProcessingPurchaseOrder(id);
+            if (res.type === "success") {
+                showFlash(successResponse(res.message));
+                await loadPurchases();
+                return;
+            }
+            showFlash(errorResponse(res.message));
+        } catch {
+            showFlash(errorResponse("No se pudo aprobar el procesamiento"));
+        }
+    }, [clearFlash, loadPurchases, showFlash]);
+
+    const rejectProcessing = useCallback(async (id: string) => {
+        clearFlash();
+        try {
+            const res = await rejectProcessingPurchaseOrder(id);
+            if (res.type === "success") {
+                showFlash(successResponse(res.message));
+                await loadPurchases();
+                return;
+            }
+            showFlash(errorResponse(res.message));
+        } catch {
+            showFlash(errorResponse("No se pudo rechazar el procesamiento"));
+        }
+    }, [clearFlash, loadPurchases, showFlash]);
 
     const confirmReception = useCallback(async (id: string) => {
         clearFlash();
@@ -660,6 +710,31 @@ export default function Purchases() {
                 <div className="flex justify-center">
                     <ActionsPopover
                         actions={[
+                            (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) &&
+                            can("purchases.process.request") && {
+                                id: "request-processing-approval",
+                                label: "Solicitar aprobacion",
+                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                                onClick: () => requestProcessing(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
+                            },
+                            row.purchase.status === PurchaseOrderStatuses.SENT &&
+                            can("purchases.approve") && {
+                                id: "approve-processing",
+                                label: "Aprobar procesamiento",
+                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                                onClick: () => approveProcessing(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
+                            },
+                            row.purchase.status === PurchaseOrderStatuses.SENT &&
+                            can("purchases.approve") && {
+                                id: "reject-processing",
+                                label: "Rechazar procesamiento",
+                                className: "text-rose-700 hover:bg-rose-50",
+                                icon: <XCircle className="h-4 w-4" />,
+                                onClick: () => rejectProcessing(row.purchase.poId ?? ""),
+                                disabled: companyActionDisabled,
+                            },
                             (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
                                 id: "enter-warehouse",
                                 label: "Procesar llegada",
@@ -782,11 +857,15 @@ export default function Purchases() {
         },
     ], [
         EnterToWarehouse,
+        approveProcessing,
+        can,
         cancelOrder,
         companyActionDisabled,
         loadPurchases,
         now,
         openPurchasePdf,
+        rejectProcessing,
+        requestProcessing,
         setSent,
     ]);
 

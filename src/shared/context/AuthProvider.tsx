@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
+  const [preferredHomePath, setPreferredHomePath] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -70,6 +71,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     setUserRole(null);
     setUserRoles([]);
     setPermissions([]);
+    setPreferredHomePath(null);
     setUserId(null);
     setAuthChecked(checked);
   }, []);
@@ -90,6 +92,11 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       setUserRole(role);
       setUserRoles(Array.isArray(response.roles) ? response.roles : [role]);
       setPermissions(Array.isArray(response.permissions) ? response.permissions : []);
+      setPreferredHomePath(
+        typeof response.preferredHomePath === "string" && response.preferredHomePath.trim().length > 0
+          ? response.preferredHomePath.trim()
+          : null
+      );
       setUserId(String(id));
       setIsAuthenticated(true);
       setAuthChecked(true);
@@ -182,6 +189,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
         userRole,
         userRoles,
         permissions,
+        preferredHomePath,
         userId,
         login,
         logout,
