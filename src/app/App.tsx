@@ -22,8 +22,8 @@ function App({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <CompanyProvider>
+        <Toaster position="bottom-left" theme="light"/>
         <NotificationProvider>
-          <Toaster position="top-center" theme="light"/>
           <FlashMessageProvider>
             <FlashMessageRoot />
             <TooltipProvider delayDuration={200}>{children}</TooltipProvider>

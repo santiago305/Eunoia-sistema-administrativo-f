@@ -52,6 +52,7 @@ interface UsersRightPanelProps {
   togglingStatus: boolean;
   deactivateUser: () => Promise<void>;
   restoreUser: () => Promise<void>;
+  effectivePermissions: string[];
 }
 
 export function UsersRightPanel({
@@ -63,6 +64,7 @@ export function UsersRightPanel({
   togglingStatus,
   deactivateUser,
   restoreUser,
+  effectivePermissions,
 }: UsersRightPanelProps) {
   const isDeleted = Boolean(selected?.deleted || selected?.deletedAt);
 
@@ -177,6 +179,33 @@ export function UsersRightPanel({
                     {savingRole ? "Guardando..." : "Guardar"}
                   </button>
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Permisos efectivos</p>
+                    <p className="mt-1 text-[12px] font-medium text-zinc-800">Base del nuevo control por permisos</p>
+                  </div>
+                  <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[10px] text-zinc-600">
+                    {effectivePermissions.length} permisos
+                  </span>
+                </div>
+
+                {!effectivePermissions.length ? (
+                  <p className="mt-3 text-[11px] text-zinc-500">No se encontraron permisos para este usuario.</p>
+                ) : (
+                  <div className="mt-3 flex max-h-36 flex-wrap gap-1 overflow-y-auto rounded-xl border border-zinc-100 bg-zinc-50 p-2">
+                    {effectivePermissions.map((permission) => (
+                      <span
+                        key={permission}
+                        className="inline-flex rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] text-zinc-700"
+                      >
+                        {permission}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

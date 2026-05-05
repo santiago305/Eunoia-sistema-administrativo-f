@@ -11,6 +11,8 @@ export interface LoginApiSuccessResponse {
 export interface UserInfoAuthResponse {
   user_id: string;
   rol: string;
+  roles?: string[];
+  permissions?: string[];
 }
 
 type AuthRequestConfig = AxiosRequestConfig & {

@@ -22,6 +22,14 @@ export const API_USERS_GROUP = {
   restoreUser: (id: string) => `/users/restore/${id}`,
 };
 
+export const API_ACCESS_CONTROL_GROUP = {
+  listPermissions: "/access-control/permissions",
+  effectivePermissionsByUser: (id: string) => `/access-control/users/${id}/effective-permissions`,
+  setUserPermissionOverride: (id: string) => `/access-control/users/${id}/permissions`,
+  removeUserPermissionOverride: (id: string, permissionCode: string) =>
+    `/access-control/users/${id}/permissions/${encodeURIComponent(permissionCode)}`,
+};
+
 export const API_PROFILE_GROUP = {
   me: "/users/me",
   updateMe: "/users/me/update",

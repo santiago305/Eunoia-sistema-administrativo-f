@@ -1,5 +1,5 @@
 import axiosInstance from "@/shared/common/utils/axios"
-import { API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
+import { API_ACCESS_CONTROL_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
 import type {
   CountUsersByRoleData,
   CreateUserRequest,
@@ -55,6 +55,12 @@ export type CountUsersByRoleParams = {
 export type CountUsersByRoleResponse = {
   total: CountUsersByRoleData["total"];
   byRole: CountUsersByRoleData["byRole"];
+};
+
+export type EffectivePermissionsResponse = {
+  userId: string;
+  roles: string[];
+  permissions: string[];
 };
 
 // ----------------------------------------
@@ -176,3 +182,10 @@ export const restoreUser = async (id: string) => {
   const response = await axiosInstance.patch(API_USERS_GROUP.restoreUser(id))
   return response.data
 }
+
+export const getEffectivePermissionsByUser = async (id: string) => {
+  const response = await axiosInstance.get<EffectivePermissionsResponse>(
+    API_ACCESS_CONTROL_GROUP.effectivePermissionsByUser(id)
+  );
+  return response.data;
+};

@@ -7,16 +7,17 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.login, name: "Login", isAuthRoute: true },
 
   // Dashboard
-  { path: RoutesPaths.dashboard, name: "Dashboard", isProtected: true },
+  { path: RoutesPaths.dashboard, name: "Dashboard", isProtected: true, permissionsAllowed: ["page.dashboard.view"] },
   { path: RoutesPaths.profile, name: "profile", isProtected: true },
   { path: RoutesPaths.sessions, name: "sessions", isProtected: true },
-  { path: RoutesPaths.notifications, name: "notifications", isProtected: true },
-  { path: RoutesPaths.notificationDetail, name: "notificationDetail", isProtected: true },
+  { path: RoutesPaths.notifications, name: "notifications", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
+  { path: RoutesPaths.notificationDetail, name: "notificationDetail", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
   {
     path: RoutesPaths.users,
     name: "users",
     isProtected: true,
     rolesAllowed: ["admin", "moderator"],
+    permissionsAllowed: ["page.users.view"],
   },
   {
     path: RoutesPaths.company,
@@ -50,8 +51,8 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.providers, name: "providers", isProtected: true },
 
   { path: RoutesPaths.purchase, name: "purchase", isProtected: true },
-  { path: RoutesPaths.purchases, name: "purchases", isProtected: true },
-  { path: RoutesPaths.purchaseEdit, name: "purchases", isProtected: true },
+  { path: RoutesPaths.purchases, name: "purchases", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
+  { path: RoutesPaths.purchaseEdit, name: "purchases", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
 
   { path: RoutesPaths.production, name: "production", isProtected: true, rolesAllowed: ["admin", "moderator"] },
   { path: RoutesPaths.productionCreate, name: "productionCreate", isProtected: true, rolesAllowed: ["admin", "moderator"] },

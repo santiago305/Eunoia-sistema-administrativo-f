@@ -54,6 +54,8 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -66,6 +68,8 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const resetAuthState = useCallback((checked = true) => {
     setIsAuthenticated(false);
     setUserRole(null);
+    setUserRoles([]);
+    setPermissions([]);
     setUserId(null);
     setAuthChecked(checked);
   }, []);
@@ -84,6 +88,8 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       }
 
       setUserRole(role);
+      setUserRoles(Array.isArray(response.roles) ? response.roles : [role]);
+      setPermissions(Array.isArray(response.permissions) ? response.permissions : []);
       setUserId(String(id));
       setIsAuthenticated(true);
       setAuthChecked(true);
@@ -174,6 +180,8 @@ export const AuthProvider = ({ children }: PropsUrl) => {
         isAuthenticated,
         authChecked,
         userRole,
+        userRoles,
+        permissions,
         userId,
         login,
         logout,

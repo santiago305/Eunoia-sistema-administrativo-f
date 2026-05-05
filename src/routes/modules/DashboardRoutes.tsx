@@ -49,7 +49,14 @@ const CatalogInventory = lazy(() => import("@/features/catalog/products/Inventor
 
 const withRouteGuard = (path: string, element: ReactElement) => {
     const routeMeta = getRouteMetaByPath(path);
-    return <PrivateRoute rolesAllowed={routeMeta?.rolesAllowed}>{element}</PrivateRoute>;
+    return (
+      <PrivateRoute
+        rolesAllowed={routeMeta?.rolesAllowed}
+        permissionsAllowed={routeMeta?.permissionsAllowed}
+      >
+        {element}
+      </PrivateRoute>
+    );
 };
 
 const withCompanyRouteGuard = (path: string, element: ReactElement) =>

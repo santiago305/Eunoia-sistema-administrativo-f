@@ -7,6 +7,7 @@ import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
   countUsersByRole,
   deleteUser as deleteUserById,
+  getEffectivePermissionsByUser,
   listUsers,
   restoreUser as restoreUserById,
   updateUserRole,
@@ -86,6 +87,7 @@ export default function Users() {
   const [roleDraft, setRoleDraft] = useState<Role>("adviser");
   const [savingRole, setSavingRole] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [effectivePermissions, setEffectivePermissions] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,6 +176,29 @@ export default function Users() {
   useEffect(() => {
     if (selected) setRoleDraft(selected.role);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadEffectivePermissions = async () => {
+      if (!selected?.id) {
+        setEffectivePermissions([]);
+        return;
+      }
+      try {
+        const data = await getEffectivePermissionsByUser(selected.id);
+        if (!cancelled) {
+          setEffectivePermissions(Array.isArray(data?.permissions) ? data.permissions : []);
+        }
+      } catch {
+        if (!cancelled) setEffectivePermissions([]);
+      }
+    };
+
+    void loadEffectivePermissions();
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id]);
 
   useEffect(() => {
     setPage(1);
@@ -357,6 +382,7 @@ export default function Users() {
             togglingStatus={togglingStatus}
             deactivateUser={deactivateUser}
             restoreUser={restoreUser}
+            effectivePermissions={effectivePermissions}
           />
         </div>
       </div>

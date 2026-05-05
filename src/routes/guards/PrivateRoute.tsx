@@ -13,8 +13,8 @@ import ErrorPage from "@/pages/Error404";
 const normalizeRole = (role?: string | null) =>
   String(role ?? "").trim().toLowerCase();
 
-const PrivateRoute = ({ children, rolesAllowed }: PrivateRouteProps) => {
-  const { isAuthenticated, authChecked, loading, userRole, checkAuth } = useAuth();
+const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed }: PrivateRouteProps) => {
+  const { isAuthenticated, authChecked, loading, userRole, permissions, checkAuth } = useAuth();
 
   useEffect(() => {
     if (authChecked || loading || isAuthenticated) return;
@@ -36,6 +36,17 @@ const PrivateRoute = ({ children, rolesAllowed }: PrivateRouteProps) => {
     const allowed = rolesAllowed.map(normalizeRole);
 
     if (!allowed.includes(role)) {
+      return <ErrorPage />;
+    }
+  }
+
+  const hasPermissionsRestriction = Array.isArray(permissionsAllowed) && permissionsAllowed.length > 0;
+  if (hasPermissionsRestriction) {
+    const hasAllPermissions = permissionsAllowed.every((permission) =>
+      permissions.includes(permission)
+    );
+
+    if (!hasAllPermissions) {
       return <ErrorPage />;
     }
   }
