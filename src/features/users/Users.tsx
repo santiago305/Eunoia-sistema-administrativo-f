@@ -29,6 +29,7 @@ import { UsersRightPanel } from "./components/UsersRightPanel";
 import { UserForm } from "./components/formUser";
 import { RoleType } from "./types/roles.types";
 import type { Role, RoleOption, User, UserListStatus } from "./types/users.types";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 const ROLES = Object.values(RoleType) as Role[];
 
@@ -67,6 +68,7 @@ const readError = (error: unknown) => {
 
 export default function Users() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { can } = usePermissions();
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -429,6 +431,7 @@ export default function Users() {
       <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
         <UsersHeader
           onCreateClick={() => setModalOpen(true)}
+          canCreateUser={can("users.create")}
           visibleRoles={visibleRoles}
           countsByRole={countsByRole}
           counts={counts}
@@ -458,24 +461,31 @@ export default function Users() {
             setRoleDraft={setRoleDraft}
             savingRole={savingRole}
             saveRole={saveRole}
+            canEditRole={can("users.assign_roles")}
             togglingStatus={togglingStatus}
             deactivateUser={deactivateUser}
             restoreUser={restoreUser}
+            canDeleteUser={can("users.delete")}
+            canRestoreUser={can("users.restore")}
             effectivePermissions={effectivePermissions}
             permissionOverrides={permissionOverrides}
             savingOverride={savingOverride}
             savePermissionOverride={savePermissionOverride}
             deletePermissionOverride={deletePermissionOverride}
+            canManageOverrides={
+              can("users.assign_permissions") || can("users.deny_permissions")
+            }
             preferredHomePath={preferredHomePathDraft}
             setPreferredHomePathDraft={setPreferredHomePathDraft}
             savingPreferredHomePath={savingPreferredHomePath}
             savePreferredHomePath={savePreferredHomePath}
+            canEditPreferredHome={can("users.update")}
           />
         </div>
       </div>
 
       <Modal
-        open={modalOpen}
+        open={modalOpen && can("users.create")}
         onClose={() => setModalOpen(false)}
         title="Crear usuario"
       >

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizePurchaseSearchSnapshot } from "@/pages/purchases/utils/purchaseSmartSearch";
+import { sanitizePurchaseSearchSnapshot } from "@/features/purchases/utils/purchaseSmartSearch";
 
 describe("purchaseSmartSearch", () => {
   it("keeps current smart-search contract for catalog, numeric and date fields", () => {

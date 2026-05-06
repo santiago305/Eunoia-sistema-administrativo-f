@@ -9,6 +9,7 @@ type PaymentMethodFormModalProps = {
     open: boolean;
     mode: "create" | "edit";
     paymentMethodId?: string | null;
+    canManage?: boolean;
     onClose: () => void;
     onSaved?: () => void;
     primaryColor: string;
@@ -20,7 +21,7 @@ const DEFAULT_FORM: PaymentMethodFormState = {
     isActive: true,
 };
 
-export function PaymentMethodFormModal({ open, mode, paymentMethodId, onClose, onSaved, primaryColor, entityLabel = "método de pago" }: PaymentMethodFormModalProps) {
+export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage = true, onClose, onSaved, primaryColor, entityLabel = "metodo de pago" }: PaymentMethodFormModalProps) {
     const shouldReduceMotion = useReducedMotion();
     const [form, setForm] = useState<PaymentMethodFormState>(DEFAULT_FORM);
     const [loading, setLoading] = useState(false);
@@ -50,7 +51,7 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, onClose, o
                 });
             } catch (e: any) {
                 if (!cancelled) {
-                    setError(e?.response?.data?.message ?? "No se pudo cargar el método de pago.");
+                    setError(e?.response?.data?.message ?? "No se pudo cargar el metodo de pago.");
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -66,7 +67,7 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, onClose, o
 
     const title = mode === "edit" ? `Editar ${entityLabel}` : `Nuevo ${entityLabel}`;
     const submitLabel = mode === "edit" ? "Guardar cambios" : "Guardar";
-    const canSubmit = Boolean(form.name.trim()) && !saving;
+    const canSubmit = Boolean(form.name.trim()) && !saving && canManage;
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
@@ -90,7 +91,7 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, onClose, o
             onSaved?.();
             onClose();
         } catch (e: any) {
-            setError(e?.response?.data?.message ?? "No se pudo guardar el método de pago.");
+            setError(e?.response?.data?.message ?? "No se pudo guardar el metodo de pago.");
         } finally {
             setSaving(false);
         }
@@ -100,9 +101,9 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, onClose, o
         <Modal title={title} onClose={onClose} className="max-w-lx">
             <motion.div initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }} animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.16 }}>
                 {loading ? (
-                    <div className="px-1 py-6 text-sm text-black/60">Cargando método de pago...</div>
+                    <div className="px-1 py-6 text-sm text-black/60">Cargando metodo de pago...</div>
                 ) : (
-                    <PaymentMethodFormFields form={form} setForm={setForm} primaryColor={primaryColor} disabled={loading} />
+                    <PaymentMethodFormFields form={form} setForm={setForm} primaryColor={primaryColor} disabled={loading || !canManage} />
                 )}
 
                 {error && <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>}

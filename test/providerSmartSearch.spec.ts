@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildProviderSmartSearchColumns,
   sanitizeProviderSearchSnapshot,
-} from "@/pages/providers/utils/providerSmartSearch";
+} from "@/features/providers/utils/providerSmartSearch";
 
 describe("providerSmartSearch", () => {
   it("normalizes legacy status to isActive and drops leadTimeDays", () => {

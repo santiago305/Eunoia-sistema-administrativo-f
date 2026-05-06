@@ -202,6 +202,9 @@ export const API_PRODUCTION_ORDERS_GROUP = {
 
 export const API_PAYMENT_GROUP = {
   create: "/payments",
+  list: "/payments",
+  byId: (id: string) => `/payments/${id}`,
+  listByPo: (id: string) => `/payments/get-by-po/${id}`,
   remove: (id: string) => `/payments/${id}`,
 }
 

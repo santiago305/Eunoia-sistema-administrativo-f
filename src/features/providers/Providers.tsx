@@ -18,6 +18,7 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
 import { ProviderSmartSearchPanel } from "./components/ProviderSmartSearchPanel";
 import { SupplierFormModal } from "./components/SupplierFormModal";
@@ -59,6 +60,10 @@ export default function Providers() {
   }, [showFlash]);
 
   const { hasCompany } = useCompany();
+  const { can } = usePermissions();
+  const canManageSuppliers = can("suppliers.manage");
+  const canReadPaymentMethods = can("payment-methods.read");
+  const canManagePaymentMethods = can("payment-methods.manage");
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -197,14 +202,16 @@ export default function Providers() {
   }, [loadSearchState]);
 
   const startCreate = useCallback(() => {
+    if (!canManageSuppliers) return;
     setEditingSupplierId(null);
     setOpenCreate(true);
-  }, []);
+  }, [canManageSuppliers]);
 
   const openEdit = useCallback((supplierId: string) => {
+    if (!canManageSuppliers) return;
     setOpenCreate(false);
     setEditingSupplierId(supplierId);
-  }, []);
+  }, [canManageSuppliers]);
 
   const supplierPendingToggle = useMemo(
     () =>
@@ -324,6 +331,7 @@ export default function Providers() {
                 id: "edit",
                 label: "Detalles",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
+                hidden: !canManageSuppliers,
                 onClick: () => openEdit(row.supplierId),
                 disabled: companyActionDisabled,
               },
@@ -331,6 +339,7 @@ export default function Providers() {
                 id: "methods",
                 label: "Metodos de pago",
                 icon: <IconPaymentMethod />,
+                hidden: !canReadPaymentMethods,
                 onClick: () => setMethodSupplierId(row.supplierId),
                 disabled: companyActionDisabled,
               },
@@ -339,6 +348,7 @@ export default function Providers() {
                 label: row.isActive ? "Desactivar" : "Reactivar",
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
+                hidden: !canManageSuppliers,
                 className: row.isActive
                   ? "text-rose-700 hover:bg-rose-50"
                   : "text-cyan-700 hover:bg-cyan-50",
@@ -376,7 +386,7 @@ export default function Providers() {
         hideable: false,
       },
     ],
-    [companyActionDisabled, getSupplierDisplayName, openEdit],
+    [canManageSuppliers, canReadPaymentMethods, companyActionDisabled, getSupplierDisplayName, openEdit],
   );
 
   const smartSearchColumns = useMemo(
@@ -534,7 +544,7 @@ export default function Providers() {
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
-          disabled={companyActionDisabled}
+          disabled={companyActionDisabled || !canManageSuppliers}
           title={companyActionTitle}
         >
           Crear proveedor
@@ -590,8 +600,8 @@ export default function Providers() {
         tableClassName="text-[10px]"
       />
 
-      <SupplierFormModal
-        open={openCreate}
+        <SupplierFormModal
+        open={openCreate && canManageSuppliers}
         mode="create"
         onClose={() => setOpenCreate(false)}
         onSaved={handleCreateSaved}
@@ -599,7 +609,7 @@ export default function Providers() {
       />
 
       <SupplierFormModal
-        open={Boolean(editingSupplierId)}
+        open={Boolean(editingSupplierId) && canManageSuppliers}
         mode="edit"
         supplierId={editingSupplierId}
         onClose={() => setEditingSupplierId(null)}
@@ -608,7 +618,7 @@ export default function Providers() {
       />
 
       <AlertModal
-        open={Boolean(toggleSupplierId)}
+        open={Boolean(toggleSupplierId) && canManageSuppliers}
         type={supplierPendingToggle?.isActive ? "warning" : "restore"}
         title={supplierPendingToggle?.isActive ? "Desactivar proveedor" : "Reactivar proveedor"}
         message={
@@ -624,10 +634,11 @@ export default function Providers() {
         }}
       />
 
-      {methodSupplierId && (
+      {methodSupplierId && canReadPaymentMethods && (
         <ProviderMethodListModal
           title="Metodos de pago del proveedor"
           supplierId={methodSupplierId}
+          canManagePaymentMethods={canManagePaymentMethods}
           close={() => setMethodSupplierId(null)}
           className="w-[600px] max-h-[600px]"
         />

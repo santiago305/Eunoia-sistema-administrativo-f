@@ -51,18 +51,23 @@ interface UsersRightPanelProps {
   setRoleDraft: (role: Role) => void;
   savingRole: boolean;
   saveRole: () => Promise<void>;
+  canEditRole: boolean;
   togglingStatus: boolean;
   deactivateUser: () => Promise<void>;
   restoreUser: () => Promise<void>;
+  canDeleteUser: boolean;
+  canRestoreUser: boolean;
   effectivePermissions: string[];
   permissionOverrides: UserPermissionOverride[];
   savingOverride: boolean;
   savePermissionOverride: (permissionCode: string, effect: PermissionEffect, reason?: string) => Promise<void>;
   deletePermissionOverride: (permissionCode: string) => Promise<void>;
+  canManageOverrides: boolean;
   preferredHomePath: string;
   setPreferredHomePathDraft: (value: string) => void;
   savingPreferredHomePath: boolean;
   savePreferredHomePath: () => Promise<void>;
+  canEditPreferredHome: boolean;
 }
 
 export function UsersRightPanel({
@@ -71,18 +76,23 @@ export function UsersRightPanel({
   setRoleDraft,
   savingRole,
   saveRole,
+  canEditRole,
   togglingStatus,
   deactivateUser,
   restoreUser,
+  canDeleteUser,
+  canRestoreUser,
   effectivePermissions,
   permissionOverrides,
   savingOverride,
   savePermissionOverride,
   deletePermissionOverride,
+  canManageOverrides,
   preferredHomePath,
   setPreferredHomePathDraft,
   savingPreferredHomePath,
   savePreferredHomePath,
+  canEditPreferredHome,
 }: UsersRightPanelProps) {
   const isDeleted = Boolean(selected?.deleted || selected?.deletedAt);
   const [permissionCodeDraft, setPermissionCodeDraft] = useState("");
@@ -124,7 +134,7 @@ export function UsersRightPanel({
                     <StatusChip inactive={isDeleted} />
                     <RoleChip role={selected.role} />
 
-                    {!isDeleted ? (
+                    {!isDeleted && canDeleteUser ? (
                       <button
                         onClick={deactivateUser}
                         disabled={togglingStatus}
@@ -135,7 +145,8 @@ export function UsersRightPanel({
                       >
                         {togglingStatus ? "..." : "Eliminar"}
                       </button>
-                    ) : (
+                    ) : null}
+                    {isDeleted && canRestoreUser ? (
                       <button
                         onClick={restoreUser}
                         disabled={togglingStatus}
@@ -147,7 +158,7 @@ export function UsersRightPanel({
                       >
                         {togglingStatus ? "..." : "Restablecer"}
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -158,7 +169,8 @@ export function UsersRightPanel({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-200 p-4">
+              {canEditRole ? (
+                <div className="rounded-2xl border border-zinc-200 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Rol</p>
@@ -201,6 +213,7 @@ export function UsersRightPanel({
                   </button>
                 </div>
               </div>
+              ) : null}
 
               <div className="rounded-2xl border border-zinc-200 p-4">
                 <div className="flex items-center justify-between gap-3">
@@ -229,7 +242,8 @@ export function UsersRightPanel({
                 )}
               </div>
 
-              <div className="rounded-2xl border border-zinc-200 p-4">
+              {canEditPreferredHome ? (
+                <div className="rounded-2xl border border-zinc-200 p-4">
                 <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Pagina inicial</p>
                 <p className="mt-1 text-[12px] font-medium text-zinc-800">Ruta preferida al iniciar sesion</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px]">
@@ -252,8 +266,10 @@ export function UsersRightPanel({
                   </button>
                 </div>
               </div>
+              ) : null}
 
-              <div className="rounded-2xl border border-zinc-200 p-4">
+              {canManageOverrides ? (
+                <div className="rounded-2xl border border-zinc-200 p-4">
                 <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Delegar permisos</p>
                 <p className="mt-1 text-[12px] font-medium text-zinc-800">Asignar override directo al usuario</p>
 
@@ -324,6 +340,7 @@ export function UsersRightPanel({
                   )}
                 </div>
               </div>
+              ) : null}
             </div>
           )}
         </div>

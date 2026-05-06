@@ -16,11 +16,13 @@ function StatPill({ label, value }: { label: string; value: number }) {
 
 export function UsersHeader({
   onCreateClick,
+  canCreateUser,
   visibleRoles,
   countsByRole,
   counts,
 }: {
   onCreateClick: () => void;
+  canCreateUser: boolean;
   visibleRoles: string[];
   countsByRole: CountUsersByRoleResponse | null;
   counts: Record<string, number>;
@@ -40,15 +42,17 @@ export function UsersHeader({
           </p>
         </div>
 
-        <div className="shrink-0">
-          <button
-            onClick={onCreateClick}
-            className="w-full rounded-xl px-3 py-2 text-[12px] font-medium text-white shadow-[0_10px_26px_rgba(33,184,166,.18)] transition active:scale-[.99] sm:w-auto sm:px-4 sm:py-2.5 sm:text-[13px]"
-            style={{ background: PRIMARY }}
-          >
-            + Nuevo
-          </button>
-        </div>
+        {canCreateUser ? (
+          <div className="shrink-0">
+            <button
+              onClick={onCreateClick}
+              className="w-full rounded-xl px-3 py-2 text-[12px] font-medium text-white shadow-[0_10px_26px_rgba(33,184,166,.18)] transition active:scale-[.99] sm:w-auto sm:px-4 sm:py-2.5 sm:text-[13px]"
+              style={{ background: PRIMARY }}
+            >
+              + Nuevo
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div

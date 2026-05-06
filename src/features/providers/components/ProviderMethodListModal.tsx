@@ -27,6 +27,7 @@ type ProviderMethodListModalProps = {
   close: () => void;
   className?: string;
   supplierId: string;
+  canManagePaymentMethods: boolean;
 };
 
 type SelectOption = {
@@ -43,6 +44,7 @@ export function ProviderMethodListModal({
   close,
   className,
   supplierId,
+  canManagePaymentMethods,
 }: ProviderMethodListModalProps) {
   const { showFlash, clearFlash } = useFlashMessage();
 
@@ -116,7 +118,7 @@ export function ProviderMethodListModal({
   }, [selectedId, availableOptions]);
 
   const addMethod = useCallback(async () => {
-    if (!supplierId || !selectedId || adding) return;
+    if (!canManagePaymentMethods || !supplierId || !selectedId || adding) return;
 
     clearFlash();
     setAdding(true);
@@ -137,11 +139,11 @@ export function ProviderMethodListModal({
     } finally {
       setAdding(false);
     }
-  }, [adding, clearFlash, loadSupplierMethods, number, selectedId, showFlash, supplierId]);
+  }, [adding, canManagePaymentMethods, clearFlash, loadSupplierMethods, number, selectedId, showFlash, supplierId]);
 
   const removeMethod = useCallback(
     async (supplierMethodId?: string | null) => {
-      if (!supplierMethodId) return;
+      if (!canManagePaymentMethods || !supplierMethodId) return;
 
       clearFlash();
       setRemoving(true);
@@ -157,7 +159,7 @@ export function ProviderMethodListModal({
         setRemoving(false);
       }
     },
-    [clearFlash, loadSupplierMethods, showFlash],
+    [canManagePaymentMethods, clearFlash, loadSupplierMethods, showFlash],
   );
 
   const columns = useMemo<DataTableColumn<SupplierMethodRelation>[]>(
@@ -182,7 +184,10 @@ export function ProviderMethodListModal({
           <div className="flex justify-end">
             <IconButton
               title="Eliminar"
-              onClick={() => setPendingRemoveMethod(row)}
+              onClick={() => {
+                if (!canManagePaymentMethods) return;
+                setPendingRemoveMethod(row);
+              }}
               tone="danger"
               PRIMARY={primaryColor}
               PRIMARY_HOVER={primaryHover}
@@ -197,7 +202,7 @@ export function ProviderMethodListModal({
         sortable: false,
       },
     ],
-    [],
+    [canManagePaymentMethods],
   );
 
   return (
@@ -210,11 +215,17 @@ export function ProviderMethodListModal({
               value={selectedId}
               onChange={setSelectedId}
               options={availableOptions}
-              onCreate={() => setOpenCreateMethod(true)}
-              onEdit={(methodId) => setEditingMethodId(methodId)}
+              onCreate={() => {
+                if (!canManagePaymentMethods) return;
+                setOpenCreateMethod(true);
+              }}
+              onEdit={(methodId) => {
+                if (!canManagePaymentMethods) return;
+                setEditingMethodId(methodId);
+              }}
               className="h-10"
               textSize="text-xs"
-              disabled={adding}
+              disabled={adding || !canManagePaymentMethods}
               emptyLabel="Sin resultados"
             />
           </div>
@@ -226,7 +237,7 @@ export function ProviderMethodListModal({
               value={number}
               onChange={(e) => setNumber(e.target.value)}
               className="h-10 text-xs"
-              disabled={adding}
+              disabled={adding || !canManagePaymentMethods}
             />
           </div>
 
@@ -234,7 +245,7 @@ export function ProviderMethodListModal({
             size="sm"
             className="sm:mb-1 h-10"
             leftIcon={<Plus className="h-4 w-4" />}
-            disabled={!selectedId || adding}
+            disabled={!selectedId || adding || !canManagePaymentMethods}
             onClick={addMethod}
             style={{
               backgroundColor: primaryColor,
@@ -259,9 +270,10 @@ export function ProviderMethodListModal({
       </div>
 
       <PaymentMethodFormModal
-        open={openCreateMethod || Boolean(editingMethodId)}
+        open={canManagePaymentMethods && (openCreateMethod || Boolean(editingMethodId))}
         mode={editingMethodId ? "edit" : "create"}
         paymentMethodId={editingMethodId}
+        canManage={canManagePaymentMethods}
         onClose={() => {
           setOpenCreateMethod(false);
           setEditingMethodId(null);
@@ -275,7 +287,7 @@ export function ProviderMethodListModal({
       />
 
       <AlertModal
-        open={Boolean(pendingRemoveMethod)}
+        open={canManagePaymentMethods && Boolean(pendingRemoveMethod)}
         type="warning"
         title="Desvincular método de pago"
         message={

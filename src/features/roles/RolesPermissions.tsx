@@ -8,6 +8,7 @@ import {
   type AccessPermissionItem,
 } from "@/shared/services/accessControlService";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 
 type RoleOption = { id: string; description: string };
@@ -25,6 +26,8 @@ const groupByModule = (permissions: AccessPermissionItem[]) => {
 
 export default function RolesPermissions() {
   const { showFlash, clearFlash } = useFlashMessage();
+  const { can } = usePermissions();
+  const canAssignRolePermissions = can("roles.assign_permissions");
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [selectedRoleDescription, setSelectedRoleDescription] = useState("");
@@ -141,13 +144,16 @@ export default function RolesPermissions() {
               </select>
               <button
                 onClick={saveMatrix}
-                disabled={saving || !selectedRoleId}
+                disabled={saving || !selectedRoleId || !canAssignRolePermissions}
                 className="h-9 rounded-xl bg-zinc-900 px-3 text-xs font-medium text-white disabled:opacity-60"
               >
                 {saving ? "Guardando..." : "Guardar matriz"}
               </button>
             </div>
           </div>
+          {!canAssignRolePermissions ? (
+            <p className="mt-2 text-xs text-zinc-500">Solo lectura: falta permiso `roles.assign_permissions`.</p>
+          ) : null}
         </div>
 
         <div className="mt-4 grid gap-3">
@@ -165,6 +171,7 @@ export default function RolesPermissions() {
                       <input
                         type="checkbox"
                         checked={checked}
+                        disabled={!canAssignRolePermissions}
                         onChange={() => togglePermission(permission.code)}
                         className="mt-0.5"
                       />

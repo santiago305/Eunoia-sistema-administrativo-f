@@ -48,6 +48,7 @@ import { ProductionOrderDetailModal } from "@/features/production/components/Pro
 import { ProductionOrderFormModal } from "@/features/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 import { ProductionSmartSearchPanel } from "@/features/production/components/ProductionSmartSearchPanel";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { ExtraTimeModal } from "@/features/production/components/ExtraTimeModal";
@@ -110,6 +111,16 @@ export default function Production() {
   useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
   const { hasCompany } = useCompany();
   const { userRole } = useAuth();
+  const { can } = usePermissions();
+  const canReadProduction = can("production.read");
+  const canCreateProduction = can("production.create");
+  const canUpdateProduction = can("production.update");
+  const canStartProduction = can("production.start");
+  const canCloseProduction = can("production.close");
+  const canCancelProduction = can("production.cancel");
+  const canExtraTimeProduction = can("production.extra-time");
+  const canExportProduction = can("production.export");
+  const canUploadProductionImage = can("production.image.upload");
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -344,12 +355,14 @@ export default function Production() {
 
   const handleEdit = useCallback((id: string) => {
     if (!id) return;
+    if (!canUpdateProduction) return;
     setFormMode("edit");
     setEditingProductionId(id);
     setOpenFormModal(true);
-  }, []);
+  }, [canUpdateProduction]);
 
   const handleCreate = () => {
+    if (!canCreateProduction) return;
     setFormMode("create");
     setEditingProductionId(undefined);
     setOpenFormModal(true);
@@ -582,7 +595,7 @@ export default function Production() {
                     id: "start",
                     label: "Procesar",
                     icon: <Play className="h-4 w-4 text-black/60" />,
-                    hidden: order.status !== ProductionStatus.DRAFT,
+                    hidden: order.status !== ProductionStatus.DRAFT || !canStartProduction,
                     onClick: () => setPendingStartOrder(order),
                     disabled: companyActionDisabled,
                   },
@@ -592,7 +605,7 @@ export default function Production() {
                     icon: <PackageCheck className="h-4 w-4 text-black/60" />,
                     hidden:
                       order.status !== ProductionStatus.IN_PROGRESS &&
-                      order.status !== ProductionStatus.PARTIAL,
+                      order.status !== ProductionStatus.PARTIAL || !canCloseProduction,
                     onClick: () => handleClose(order.productionId ?? ""),
                     disabled: companyActionDisabled,
                   },
@@ -600,7 +613,7 @@ export default function Production() {
                     id: "extra-time",
                     label: "Tiempo extra",
                     icon: <Timer className="h-4 w-4 text-black/60" />,
-                    hidden: order.status !== ProductionStatus.IN_PROGRESS,
+                    hidden: order.status !== ProductionStatus.IN_PROGRESS || !canExtraTimeProduction,
                     onClick: () => setExtraTimeProductionId(order.productionId ?? ""),
                     disabled: companyActionDisabled,
                   },
@@ -608,7 +621,7 @@ export default function Production() {
                     id: "edit",
                     label: "Editar",
                     icon: <Pencil className="h-4 w-4 text-black/60" />,
-                    hidden: order.status !== ProductionStatus.DRAFT,
+                    hidden: order.status !== ProductionStatus.DRAFT || !canUpdateProduction,
                     onClick: () => handleEdit(order.productionId ?? ""),
                     disabled: companyActionDisabled,
                   },
@@ -616,6 +629,7 @@ export default function Production() {
                     id: "pdf",
                     label: "PDF",
                     icon: <FileText className="h-4 w-4 text-black/60" />,
+                    hidden: !canReadProduction,
                     onClick: () => openProductionPdf(order.productionId ?? ""),
                   },
                   {
@@ -624,7 +638,7 @@ export default function Production() {
                     icon: <Ban className="h-4 w-4 text-black/60" />,
                     hidden:
                       order.status === ProductionStatus.CANCELLED ||
-                      order.status === ProductionStatus.COMPLETED,
+                      order.status === ProductionStatus.COMPLETED || !canCancelProduction,
                     onClick: () => setPendingCancelOrder(order),
                     disabled: companyActionDisabled,
                   },
@@ -638,7 +652,7 @@ export default function Production() {
         },
       },
     ];
-  }, [companyActionDisabled, currentNowIso, handleClose, handleEdit, loadOrders, openProductionPdf]);
+  }, [canCancelProduction, canCloseProduction, canExtraTimeProduction, canReadProduction, canStartProduction, canUpdateProduction, companyActionDisabled, currentNowIso, handleClose, handleEdit, loadOrders, openProductionPdf]);
 
   const smartSearchColumns = useMemo(
     () => buildProductionSmartSearchColumns(searchState),
@@ -801,7 +815,7 @@ export default function Production() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Headed title="Ordenes de Produccion" size="lg" />
           <div className="flex items-center gap-2">
-            {exportColumns.length ? (
+            {canExportProduction && exportColumns.length ? (
               <ExportPopover
                 columns={exportColumns}
                 loading={exporting}
@@ -821,7 +835,7 @@ export default function Production() {
                 boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
               }}
               onClick={handleCreate}
-              disabled={companyActionDisabled}
+              disabled={companyActionDisabled || !canCreateProduction}
               title={companyActionTitle}
             >
               Nueva orden
@@ -902,7 +916,7 @@ export default function Production() {
           }}
           loading={detailLoading}
           order={detailOrder}
-          canAdminUploadMissingPhoto={(userRole ?? "").toLowerCase() === "admin"}
+          canAdminUploadMissingPhoto={canUploadProductionImage || (userRole ?? "").toLowerCase() === "admin"}
           onUploadedPhoto={async () => {
             const id = detailOrder?.productionId ?? detailOrder?.id;
             if (!id) return;
@@ -926,7 +940,7 @@ export default function Production() {
         />
 
         <AlertModal
-          open={Boolean(pendingStartOrder)}
+          open={canStartProduction && Boolean(pendingStartOrder)}
           type="warning"
           title="Procesar orden de producción"
           message={
@@ -947,7 +961,7 @@ export default function Production() {
         />
 
         <AlertModal
-          open={Boolean(pendingCancelOrder)}
+          open={canCancelProduction && Boolean(pendingCancelOrder)}
           type="warning"
           title="Cancelar orden de producción"
           message={
@@ -968,7 +982,7 @@ export default function Production() {
         />
 
         <ProductionOrderFormModal
-          open={openFormModal}
+          open={openFormModal && (formMode === "create" ? canCreateProduction : canUpdateProduction)}
           mode={formMode}
           productionId={editingProductionId}
           onClose={handleCloseFormModal}
@@ -979,7 +993,7 @@ export default function Production() {
           primaryColor={PRIMARY}
         />
         <ExtraTimeModal
-          open={Boolean(extraTimeProductionId)}
+          open={canExtraTimeProduction && Boolean(extraTimeProductionId)}
           loading={extraTimeLoading}
           onClose={() => setExtraTimeProductionId(null)}
           onConfirm={handleAddExtraTime}

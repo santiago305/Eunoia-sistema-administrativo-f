@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildProductionSmartSearchColumns,
   sanitizeProductionSearchSnapshot,
-} from "@/pages/production/utils/productionSmartSearch";
+} from "@/features/production/utils/productionSmartSearch";
 
 const mockAxiosGet = vi.fn();
 
-vi.mock("@/common/utils/axios", () => ({
+vi.mock("@/shared/common/utils/axios", () => ({
   default: {
     get: mockAxiosGet,
   },
@@ -73,7 +73,7 @@ describe("productionService", () => {
       },
     });
 
-    const { getProductionSearchState } = await import("@/services/productionService");
+    const { getProductionSearchState } = await import("@/shared/services/productionService");
     const state = await getProductionSearchState();
 
     expect(state.catalogs.statuses).toEqual([{ id: "DRAFT", label: "Borrador", keywords: undefined }]);

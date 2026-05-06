@@ -3,7 +3,7 @@ import {
   buildInventorySearchChips,
   buildInventorySmartSearchColumns,
   sanitizeInventorySearchSnapshot,
-} from "@/pages/catalog/utils/inventorySmartSearch";
+} from "@/features/catalog/utils/inventorySmartSearch";
 
 describe("inventorySmartSearch", () => {
   it("keeps sku, warehouse and numeric filters in order", () => {

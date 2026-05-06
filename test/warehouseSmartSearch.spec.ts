@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildWarehouseSmartSearchColumns,
   sanitizeWarehouseSearchSnapshot,
-} from "@/pages/warehouse/utils/warehouseSmartSearch";
+} from "@/features/warehouse/utils/warehouseSmartSearch";
 
 describe("warehouseSmartSearch", () => {
   it("normalizes legacy status to isActive and drops createdAt", () => {
