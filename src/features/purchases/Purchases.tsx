@@ -12,6 +12,7 @@ import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import {
+    approveCreationWithPayment,
     approveProcessingPurchaseOrder,
     confirmPurchaseReception,
     deletePurchaseSearchMetric,
@@ -22,6 +23,7 @@ import {
     getPurchaseSearchState,
     listPurchaseOrders,
     rejectProcessingPurchaseOrder,
+    rejectCreationWithPayment,
     requestProcessingPurchaseOrder,
     savePurchaseSearchMetric,
     savePurchaseExportPreset,
@@ -29,6 +31,7 @@ import {
     setSentPurchase,
     deletePurchaseExportPreset,
 } from "@/shared/services/purchaseService";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { money, parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { PaymentModal } from "./components/PaymentModal";
 import { PaymentListModal } from "./components/PaymentListModal";
@@ -69,6 +72,8 @@ import { ExtraTimeModal } from "./components/ExtraTimeModal";
 import { PurchaseCompletionPhotoModal } from "./components/PurchaseCompletionPhotoModal";
 import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "./utils/purchaseActions";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import { approvePayment as approvePaymentById } from "@/shared/services/paymentService";
+import { RoutesPaths } from "@/routes/config/routesPaths";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -113,7 +118,16 @@ export default function Purchases() {
     const showFlashRef = useRef(showFlash);
     useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
     const { hasCompany } = useCompany();
-    const { can } = usePermissions();
+    const { can, canAny } = usePermissions();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const canCreatePurchase = can("purchases.create");
+    const canApproveProcessing = canAny(["purchases.approve_processing", "purchases.approve"]);
+    const canApproveCreationWithPayment = canAny([
+        "purchases.approve_creation_with_payment",
+        "purchases.approve_payment",
+        "purchases.approve",
+    ]);
     const companyActionDisabled = !hasCompany;
     const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -161,6 +175,7 @@ export default function Purchases() {
     const [completedPhotoPo, setCompletedPhotoPo] = useState<PurchaseOrder | null>(null);
     const [completedPhotoLoading, setCompletedPhotoLoading] = useState(false);
     const skippedPhotoRef = useRef<Set<string>>(new Set());
+    const handledDeepLinkRef = useRef<string | null>(null);
     const isPhotoPromptSkipped = useCallback((poId?: string) => {
         if (!poId) return false;
         try {
@@ -513,6 +528,15 @@ export default function Purchases() {
             purchases.map((purchase) => {
                 const numero = [purchase.serie, purchase.correlative].filter((v) => v !== null && v !== undefined && String(v).length > 0).join("-");
                 const statusLabel = purchase.status ? (statusLabels[purchase.status] ?? purchase.status) : "-";
+                const approvalStatusLabel =
+                    purchase.approvalStatus === "PENDING" ? " (Pendiente aprobación)"
+                    : purchase.approvalStatus === "REJECTED" ? " (Rechazada por aprobación de pago)"
+                    : "";
+                const processingStatusLabel =
+                    purchase.processingApprovalStatus === "PENDING" ? " (Proc. pendiente aprobación)"
+                    : purchase.processingApprovalStatus === "APPROVED" ? " (Proc. aprobado)"
+                    : purchase.processingApprovalStatus === "REJECTED" ? " (Proc. rechazado)"
+                    : "";
                 const docLabel = purchase.documentType ? (docTypeLabels[purchase.documentType] ?? purchase.documentType) : "-";
                 const date = formatDate(new Date(purchase.dateIssue ?? ""));
                 const time = purchase.dateIssue
@@ -536,7 +560,7 @@ export default function Purchases() {
                     supplierLabel: purchase.supplierName ?? "-",
                     supplierDoc: purchase.supplierDocumentNumber ?? "",
                     warehouseLabel: purchase.warehouseName ?? "-",
-                    statusLabel,
+                    statusLabel: `${statusLabel}${approvalStatusLabel}${processingStatusLabel}`,
                     docLabel,
                     date,
                     time,
@@ -546,6 +570,60 @@ export default function Purchases() {
             }),
         [purchases],
     );
+
+    useEffect(() => {
+        const purchaseId = searchParams.get("purchaseId");
+        const modal = searchParams.get("modal");
+        const action = searchParams.get("action");
+        const paymentId = searchParams.get("paymentId");
+        if (!purchaseId) return;
+        const key = `${purchaseId}|${modal ?? ""}|${action ?? ""}`;
+        if (handledDeepLinkRef.current === key) return;
+
+        const target = purchaseRows.find((row) => row.purchase.poId === purchaseId);
+        if (!target) return;
+
+        handledDeepLinkRef.current = key;
+
+        const run = async () => {
+            if (action === "approveCreationWithPayment") {
+                const res = await approveCreationWithPayment(purchaseId);
+                showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                await loadPurchases();
+            } else if (action === "rejectCreationWithPayment") {
+                const res = await rejectCreationWithPayment(purchaseId);
+                showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                await loadPurchases();
+            } else if (action === "approveProcessing") {
+                await approveProcessing(purchaseId);
+            } else if (action === "rejectProcessing") {
+                await rejectProcessing(purchaseId);
+            } else if (action === "approvePayment" && paymentId) {
+                const res = await approvePaymentById(paymentId);
+                showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                await loadPurchases();
+            }
+
+            if (modal === "payments") {
+                setPoId(purchaseId);
+                setTotalPo(target.purchase.total);
+                setPaymentForm(target.purchase.paymentForm);
+                setModalPaymentList(true);
+            } else {
+                setSelectedPurchaseRow(target);
+            }
+            setSearchParams({}, { replace: true });
+        };
+        void run();
+    }, [
+        approveProcessing,
+        loadPurchases,
+        purchaseRows,
+        rejectProcessing,
+        searchParams,
+        setSearchParams,
+        showFlash,
+    ]);
 
     const columns = useMemo<DataTableColumn<PurchaseRow>[]>(() => [
         {
@@ -706,35 +784,38 @@ export default function Purchases() {
             header: "acciones",
             headerClassName: "text-center [&>div]:justify-center",
             stopRowClick: true,
-            cell: (row) => (
+            cell: (row) => {
+                const approvalStatus = (row.purchase.approvalStatus ?? "") as string;
+                const isApprovalBlocked = approvalStatus === "PENDING" || approvalStatus === "REJECTED";
+                const isApprovalRejected = approvalStatus === "REJECTED";
+                return (
                 <div className="flex justify-center">
+                    {isApprovalRejected ? (
+                        <ActionsPopover
+                            actions={[
+                                {
+                                    id: "view-detail",
+                                    label: "Ver detalle",
+                                    icon: <FileText className="h-4 w-4 text-black/60" />,
+                                    onClick: () => setSelectedPurchaseRow(row),
+                                },
+                                can("purchases.view_history") && {
+                                    id: "view-history",
+                                    label: "Ver historial",
+                                    icon: <List className="h-4 w-4 text-black/60" />,
+                                    onClick: () => navigate(`${RoutesPaths.purchasesHistory}?purchaseId=${row.purchase.poId ?? ""}`),
+                                },
+                            ].filter(Boolean) as ActionItem[]}
+                            columns={1}
+                            compact
+                            showLabels
+                            triggerIcon={<Menu className="h-4 w-4" />}
+                            popoverClassName="min-w-35"
+                            popoverBodyClassName="p-2"
+                        />
+                    ) : (
                     <ActionsPopover
                         actions={[
-                            (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) &&
-                            can("purchases.process.request") && {
-                                id: "request-processing-approval",
-                                label: "Solicitar aprobacion",
-                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
-                                onClick: () => requestProcessing(row.purchase.poId ?? ""),
-                                disabled: companyActionDisabled,
-                            },
-                            row.purchase.status === PurchaseOrderStatuses.SENT &&
-                            can("purchases.approve") && {
-                                id: "approve-processing",
-                                label: "Aprobar procesamiento",
-                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
-                                onClick: () => approveProcessing(row.purchase.poId ?? ""),
-                                disabled: companyActionDisabled,
-                            },
-                            row.purchase.status === PurchaseOrderStatuses.SENT &&
-                            can("purchases.approve") && {
-                                id: "reject-processing",
-                                label: "Rechazar procesamiento",
-                                className: "text-rose-700 hover:bg-rose-50",
-                                icon: <XCircle className="h-4 w-4" />,
-                                onClick: () => rejectProcessing(row.purchase.poId ?? ""),
-                                disabled: companyActionDisabled,
-                            },
                             (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
                                 id: "enter-warehouse",
                                 label: "Procesar llegada",
@@ -762,7 +843,33 @@ export default function Purchases() {
                                 id: "process",
                                 label: "Procesar",
                                 icon: <Play className="h-4 w-4 text-black/60" />,
-                                onClick: () => setSent(row.purchase.poId ?? ""),
+                                onClick: () => {
+                                    const poId = row.purchase.poId ?? "";
+                                    if (!poId) return;
+                                    if (canApproveProcessing) {
+                                        void setSent(poId);
+                                        return;
+                                    }
+                                    void requestProcessing(poId);
+                                },
+                                disabled:
+                                    companyActionDisabled ||
+                                    isApprovalBlocked,
+                                hidden: isApprovalBlocked,
+                            },
+                            row.purchase.status === PurchaseOrderStatuses.DRAFT &&
+                            row.purchase.approvalStatus === "PENDING" &&
+                            canApproveCreationWithPayment && {
+                                id: "approve-creation-with-payment",
+                                label: "Aprobar compra con pago",
+                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                                onClick: async () => {
+                                    const poId = row.purchase.poId ?? "";
+                                    if (!poId) return;
+                                    const res = await approveCreationWithPayment(poId);
+                                    showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                                    await loadPurchases();
+                                },
                                 disabled: companyActionDisabled,
                             },
                             row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
@@ -776,7 +883,10 @@ export default function Purchases() {
                                     setTotalToPay(row.purchase.totalToPay ?? 0);
                                     setPoId(row.purchase.poId ?? "");
                                 },
-                                disabled: companyActionDisabled,
+                                disabled:
+                                    companyActionDisabled ||
+                                    isApprovalBlocked,
+                                hidden: isApprovalBlocked,
                             },
                             row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
                                 id: "quotas",
@@ -795,7 +905,7 @@ export default function Purchases() {
                                     openPurchasePdf(row.purchase.poId ?? "");
                                 },
                             },
-                            {
+                            row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
                                 id: "list-payments",
                                 label: "Listar pagos",
                                 icon: <List className="h-4 w-4 text-black/60" />,
@@ -849,24 +959,26 @@ export default function Purchases() {
                             </button>
                         )}
                     />
+                    )}
                 </div>
-            ),
+                );
+            },
             className: "text-left",
             hideable: true,
             sortable: false,
         },
     ], [
         EnterToWarehouse,
-        approveProcessing,
+        canApproveCreationWithPayment,
         can,
         cancelOrder,
         companyActionDisabled,
         loadPurchases,
         now,
         openPurchasePdf,
-        rejectProcessing,
         requestProcessing,
         setSent,
+        showFlash,
     ]);
 
     const smartSearchColumns = useMemo(
@@ -1074,8 +1186,8 @@ export default function Purchases() {
                                 setEditPoId(undefined);
                                 setOpenPurchaseModal(true);
                             }}
-                            disabled={companyActionDisabled}
-                            title={companyActionTitle}
+                            disabled={companyActionDisabled || !canCreatePurchase}
+                            title={!canCreatePurchase ? "No tienes permiso para crear compras." : companyActionTitle}
                         >
                             Nueva compra
                         </SystemButton>

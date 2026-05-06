@@ -14,8 +14,8 @@ import { getFirstAccessibleProtectedPath } from "../config/routeAccess";
 const normalizeRole = (role?: string | null) =>
   String(role ?? "").trim().toLowerCase();
 
-const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed }: PrivateRouteProps) => {
-  const { isAuthenticated, authChecked, loading, userRole, permissions, preferredHomePath, checkAuth } = useAuth();
+const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed, superAdminOnly }: PrivateRouteProps) => {
+  const { isAuthenticated, authChecked, loading, userRole, permissions, preferredHomePath, isSuperAdmin, checkAuth } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -39,7 +39,7 @@ const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed }: PrivateRou
 
     if (!allowed.includes(role)) {
       if (location.pathname === RoutesPaths.dashboard) {
-        const fallbackPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
+        const fallbackPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath, isSuperAdmin);
         if (fallbackPath && fallbackPath !== location.pathname) {
           return <Navigate to={fallbackPath} replace />;
         }
@@ -56,13 +56,17 @@ const PrivateRoute = ({ children, rolesAllowed, permissionsAllowed }: PrivateRou
 
     if (!hasAllPermissions) {
       if (location.pathname === RoutesPaths.dashboard) {
-        const fallbackPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
+        const fallbackPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath, isSuperAdmin);
         if (fallbackPath && fallbackPath !== location.pathname) {
           return <Navigate to={fallbackPath} replace />;
         }
       }
       return <ErrorPage />;
     }
+  }
+
+  if (superAdminOnly && !isSuperAdmin) {
+    return <ErrorPage />;
   }
 
   return children;

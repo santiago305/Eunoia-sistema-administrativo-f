@@ -15,6 +15,7 @@ interface AuthContextType {
   userRoles: string[];
   permissions: string[];
   preferredHomePath: string | null;
+  isSuperAdmin: boolean;
   userId: string | null;
   login: (payload: LoginCredentials) => Promise<AuthResponse>;
   logout: () => void;

@@ -13,6 +13,7 @@ export interface NotificationPayload {
   sourceEntityType: string | null;
   sourceEntityId: string | null;
   metadata: Record<string, unknown>;
+  showAsToast?: boolean;
   createdAt: string;
 }
 

@@ -25,8 +25,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
 
-    const onCreated = (payload: { notification?: { title?: string; message?: string; priority?: NotificationPriority; actionUrl?: string; actionLabel?: string } }) => {
-      showNotificationToast(payload?.notification);
+    const onCreated = (payload: {
+      notification?: {
+        title?: string;
+        message?: string;
+        priority?: NotificationPriority;
+        actionUrl?: string;
+        actionLabel?: string;
+        showAsToast?: boolean;
+        metadata?: Record<string, unknown>;
+      };
+    }) => {
+      const shouldShowToast = payload?.notification?.showAsToast !== false
+        && payload?.notification?.metadata?.showAsToast !== false;
+      if (shouldShowToast) {
+        showNotificationToast(payload?.notification);
+      }
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
     };
 

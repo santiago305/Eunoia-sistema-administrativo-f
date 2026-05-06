@@ -40,6 +40,7 @@ const RowMaterialDocuments = lazy(() => import("@/features/catalog/raw-material/
 const Providers = lazy(() => import("@/features/providers/Providers"));
 const Purchase = lazy(() => import("@/features/purchases/Purchase"));
 const Purchases = lazy(() => import("@/features/purchases/Purchases"));
+const PurchaseHistory = lazy(() => import("@/features/purchases/PurchaseHistory"));
 const Payments = lazy(() => import("@/features/payments/Payments"));
 const Company = lazy(() => import("@/features/company/Company"));
 const Production = lazy(() => import("@/features/production/Productions"));
@@ -55,6 +56,7 @@ const withRouteGuard = (path: string, element: ReactElement) => {
       <PrivateRoute
         rolesAllowed={routeMeta?.rolesAllowed}
         permissionsAllowed={routeMeta?.permissionsAllowed}
+        superAdminOnly={routeMeta?.superAdminOnly}
       >
         {element}
       </PrivateRoute>
@@ -164,6 +166,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.purchases,
                 element: withRouteGuard(RoutesPaths.purchases, <Purchases />),
+            },
+            {
+                path: RoutesPaths.purchasesHistory,
+                element: withRouteGuard(RoutesPaths.purchasesHistory, <PurchaseHistory />),
             },
             {
                 path: RoutesPaths.purchaseEdit,

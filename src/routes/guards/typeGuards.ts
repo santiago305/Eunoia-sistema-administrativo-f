@@ -7,6 +7,7 @@ export interface PropsUrl {
 export interface PrivateRouteProps extends PropsUrl {
   rolesAllowed?: string[];
   permissionsAllowed?: string[];
+  superAdminOnly?: boolean;
 }
 
 

@@ -14,6 +14,7 @@ export interface UserInfoAuthResponse {
   roles?: string[];
   permissions?: string[];
   preferredHomePath?: string | null;
+  isSuperAdmin?: boolean;
 }
 
 type AuthRequestConfig = AxiosRequestConfig & {

@@ -42,6 +42,16 @@ export const removePayment = async (id:string): Promise<{type:String, message:st
   return response.data;
 }
 
+export const approvePayment = async (id: string): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.approve(id));
+  return response.data;
+};
+
+export const rejectPayment = async (id: string, reason?: string): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.reject(id), { reason });
+  return response.data;
+};
+
 
 
 

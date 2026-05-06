@@ -8,7 +8,12 @@ import type { SidebarItem } from "./types";
 const normalizeRole = (role?: string | null) =>
   String(role ?? "").trim().toLowerCase();
 
-const canAccessHref = (href: string | undefined, role: string | null, permissions: string[]) => {
+const canAccessHref = (
+  href: string | undefined,
+  role: string | null,
+  permissions: string[],
+  isSuperAdmin: boolean,
+) => {
   if (!href) return true;
 
   const routeMeta = getRouteMetaByUrl(href);
@@ -17,6 +22,7 @@ const canAccessHref = (href: string | undefined, role: string | null, permission
   const hasRoleRestriction = Array.isArray(routeMeta.rolesAllowed) && routeMeta.rolesAllowed.length > 0;
   const hasPermissionRestriction =
     Array.isArray(routeMeta.permissionsAllowed) && routeMeta.permissionsAllowed.length > 0;
+  if (routeMeta.superAdminOnly && !isSuperAdmin) return false;
 
   if (hasRoleRestriction) {
     const currentRole = normalizeRole(role);
@@ -34,20 +40,20 @@ const canAccessHref = (href: string | undefined, role: string | null, permission
 };
 
 const SidebarBody = () => {
-  const { userRole, permissions } = useAuth();
+  const { userRole, permissions, isSuperAdmin } = useAuth();
 
   const items = useMemo(() => {
     const filtered = getSidebarItems()
       .map((item): SidebarItem => {
         const children = item.children?.filter((child) =>
-          canAccessHref(child.href, userRole, permissions)
+          canAccessHref(child.href, userRole, permissions, isSuperAdmin)
         );
 
         return { ...item, children };
       })
       .filter((item) => {
         const hasVisibleChildren = Boolean(item.children?.length);
-        const hasVisibleHref = canAccessHref(item.href, userRole, permissions);
+        const hasVisibleHref = canAccessHref(item.href, userRole, permissions, isSuperAdmin);
 
         // Un item padre sin href se muestra solo si tiene hijos visibles.
         if (!item.href) return hasVisibleChildren;
@@ -56,7 +62,7 @@ const SidebarBody = () => {
       });
 
     return filtered;
-  }, [permissions, userRole]);
+  }, [isSuperAdmin, permissions, userRole]);
 
   return (
     <div className="scroll-area flex-1 overflow-y-auto px-3 py-4 select-none">

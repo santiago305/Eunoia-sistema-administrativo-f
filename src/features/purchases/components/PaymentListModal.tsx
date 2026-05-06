@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { removePayment } from "@/shared/services/paymentService";
+import { approvePayment, rejectPayment, removePayment } from "@/shared/services/paymentService";
 import { listPayments } from "@/shared/services/purchaseService";
 import { Payment } from "@/features/purchases/types/purchase";
 import { money } from "@/shared/utils/functionPurchases";
@@ -11,6 +11,7 @@ import { PaymentModal } from "./PaymentModal";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -45,6 +46,8 @@ export function PaymentListModal({
   const [loading, setLoading] = useState(false);
   const [modalPayment, setModalPayment] = useState(false);
   const { showFlash, clearFlash } = useFlashMessage();
+  const { can } = usePermissions();
+  const canApprovePayment = can("purchases.approve_payment");
 
   const reloadPayments = useCallback(async (options?: { silent?: boolean }) => {
     if (!poId) return;
@@ -97,16 +100,21 @@ export function PaymentListModal({
     if (payments) setRows(payments);
   }, [payments]);
 
-  const totalPaid = rows.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const visibleRows = useMemo(
+    () => (canApprovePayment ? rows : rows.filter((row) => row.status !== "REJECTED")),
+    [canApprovePayment, rows],
+  );
+
+  const totalPaid = visibleRows.reduce((sum, p) => sum + (p.amount ?? 0), 0);
   const totalToPay = (total ?? 0) - totalPaid;
 
   const paymentRows = useMemo<PaymentRow[]>(
     () =>
-      rows.map((p, index) => ({
+      visibleRows.map((p, index) => ({
         ...p,
         id: p.payDocId ?? `${poId}-${index}`,
       })),
-    [rows, poId],
+    [visibleRows, poId],
   );
 
   const handleRemove = useCallback(async (paymentId?: string | null) => {
@@ -167,10 +175,61 @@ export function PaymentListModal({
         cell: (row) => <span>{row.note ?? "-"}</span>,
       },
       {
+        id: "status",
+        header: "Estado",
+        cell: (row) => {
+          const status = row.status ?? "APPROVED";
+          if (status === "PENDING_APPROVAL") {
+            return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Por confirmar</span>;
+          }
+          if (status === "REJECTED") {
+            return <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700">Rechazado</span>;
+          }
+          return <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Aprobado</span>;
+        },
+      },
+      {
         id: "actions",
         header: "Acciones",
         cell: (row) => (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {canApprovePayment && row.status === "PENDING_APPROVAL" ? (
+              <>
+                <SystemButton
+                  size="sm"
+                  onClick={async () => {
+                    if (!row.payDocId) return;
+                    const res = await approvePayment(row.payDocId);
+                    if (res.type === "success") {
+                      showFlash(successResponse(res.message));
+                      await reloadPayments({ silent: true });
+                      loadPurchases();
+                    } else {
+                      showFlash(errorResponse(res.message));
+                    }
+                  }}
+                >
+                  Aprobar
+                </SystemButton>
+                <SystemButton
+                  size="sm"
+                  variant="danger"
+                  onClick={async () => {
+                    if (!row.payDocId) return;
+                    const res = await rejectPayment(row.payDocId);
+                    if (res.type === "success") {
+                      showFlash(successResponse(res.message));
+                      await reloadPayments({ silent: true });
+                      loadPurchases();
+                    } else {
+                      showFlash(errorResponse(res.message));
+                    }
+                  }}
+                >
+                  Rechazar
+                </SystemButton>
+              </>
+            ) : null}
             <SystemButton
               variant="danger"
               size="icon"
@@ -187,7 +246,7 @@ export function PaymentListModal({
         hideable: false,
       },
     ],
-    [handleRemove],
+    [canApprovePayment, handleRemove, loadPurchases, reloadPayments, showFlash],
   );
 
   return (
@@ -198,7 +257,7 @@ export function PaymentListModal({
           <div className="rounded-sm border border-black/10 bg-black/[0.02] px-4 py-3">
             <p className="text-xs text-black/60">Pagos registrados</p>
             <div className="mt-1 text-sm font-semibold text-black tabular-nums">
-              {loading ? "Cargando..." : `${rows.length} registros`}
+              {loading ? "Cargando..." : `${visibleRows.length} registros`}
             </div>
           </div>
 

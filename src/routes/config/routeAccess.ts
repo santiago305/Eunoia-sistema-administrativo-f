@@ -8,9 +8,11 @@ export const canAccessRoute = (
   routeMeta: RouteMetadata | undefined,
   role: string | null,
   permissions: string[],
+  isSuperAdmin = false,
 ) => {
   if (!routeMeta) return false;
   if (routeMeta.isAuthRoute || routeMeta.isPublic) return true;
+  if (routeMeta.superAdminOnly && !isSuperAdmin) return false;
 
   const hasRoleRestriction = Array.isArray(routeMeta.rolesAllowed) && routeMeta.rolesAllowed.length > 0;
   const hasPermissionRestriction =
@@ -33,10 +35,11 @@ export const getFirstAccessibleProtectedPath = (
   role: string | null,
   permissions: string[],
   preferredPath?: string | null,
+  isSuperAdmin = false,
 ): string | null => {
   if (preferredPath) {
     const preferredRoute = routesConfig.find((route) => route.path === preferredPath);
-    if (preferredRoute && canAccessRoute(preferredRoute, role, permissions)) {
+    if (preferredRoute && canAccessRoute(preferredRoute, role, permissions, isSuperAdmin)) {
       return preferredRoute.path;
     }
   }
@@ -44,7 +47,7 @@ export const getFirstAccessibleProtectedPath = (
   const candidates = routesConfig.filter((route) => {
     if (!route.isProtected) return false;
     if (!route.path || route.path === "*" || route.path.includes(":")) return false;
-    return canAccessRoute(route, role, permissions);
+    return canAccessRoute(route, role, permissions, isSuperAdmin);
   });
 
   if (!candidates.length) return null;

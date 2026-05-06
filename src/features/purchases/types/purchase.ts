@@ -173,6 +173,9 @@ export type PurchaseOrder = {
   dateExpiration?: string | null;
   isActive?: boolean;
   createdAt?: string;
+  createdByUserId?: string;
+  approvalStatus?: "NOT_REQUIRED" | "PENDING" | "APPROVED" | "REJECTED";
+  processingApprovalStatus?: "PENDING" | "APPROVED" | "REJECTED" | null;
   updatedAt?: string;
   imageProdution?: string[];
   items?: PurchaseOrderItem[];
@@ -190,6 +193,13 @@ export type Payment = {
   note?: string | null;
   quotaId?: string | null;
   poId?: string | null;
+  status?: "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+  requestedByUserId?: string | null;
+  approvedByUserId?: string | null;
+  rejectedByUserId?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
 };
 
 export type CreditQuota = {

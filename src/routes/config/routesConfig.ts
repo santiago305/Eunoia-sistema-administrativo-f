@@ -23,6 +23,7 @@ export const routesConfig: RouteMetadata[] = [
     name: "roles",
     isProtected: true,
     permissionsAllowed: ["page.roles.view"],
+    superAdminOnly: true,
   },
   {
     path: RoutesPaths.company,
@@ -57,6 +58,7 @@ export const routesConfig: RouteMetadata[] = [
 
   { path: RoutesPaths.purchase, name: "purchase", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
   { path: RoutesPaths.purchases, name: "purchases", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
+  { path: RoutesPaths.purchasesHistory, name: "purchasesHistory", isProtected: true, permissionsAllowed: ["purchases.view_history"] },
   { path: RoutesPaths.purchaseEdit, name: "purchases", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
   { path: RoutesPaths.payments, name: "payments", isProtected: true, permissionsAllowed: ["page.payments.view"] },
 

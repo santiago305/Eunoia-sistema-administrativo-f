@@ -110,6 +110,35 @@ export const enterPurchaseOrder = async (id:string): Promise<{type:string, messa
   return response.data;
 };
 
+export const listPurchaseHistory = async (
+  params: ListPurchaseOrdersQuery & {
+    eventType?: string;
+    eventFrom?: string;
+    eventTo?: string;
+    performedByUserId?: string;
+  }
+): Promise<PurchaseOrderListResponse & { items: Array<PurchaseOrder & { history?: { eventsCount: number; lastEventAt: string | null } }> }> => {
+  const requestParams = {
+    ...params,
+    filters: params.filters?.length ? JSON.stringify(params.filters) : undefined,
+  };
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.history, { params: requestParams });
+  return response.data;
+};
+
+export const getPurchaseTimeline = async (
+  poId: string,
+  params?: {
+    eventType?: string;
+    performedByUserId?: string;
+    from?: string;
+    to?: string;
+  },
+): Promise<{ purchaseId: string; events: Array<Record<string, unknown>> }> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.purchaseHistory(poId), { params });
+  return response.data;
+};
+
 export const requestProcessingPurchaseOrder = async (
   id: string,
   reason?: string
@@ -131,6 +160,21 @@ export const rejectProcessingPurchaseOrder = async (
   comment?: string
 ): Promise<{ type: string; message: string }> => {
   const response = await axiosInstance.post(API_PURCHASE_GROUP.rejectProcessing(id), { comment });
+  return response.data;
+};
+
+export const approveCreationWithPayment = async (
+  id: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.approveCreationWithPayment(id));
+  return response.data;
+};
+
+export const rejectCreationWithPayment = async (
+  id: string,
+  reason?: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_GROUP.rejectCreationWithPayment(id), { reason });
   return response.data;
 };
 

@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [preferredHomePath, setPreferredHomePath] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -72,6 +73,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     setUserRoles([]);
     setPermissions([]);
     setPreferredHomePath(null);
+    setIsSuperAdmin(false);
     setUserId(null);
     setAuthChecked(checked);
   }, []);
@@ -97,6 +99,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
           ? response.preferredHomePath.trim()
           : null
       );
+      setIsSuperAdmin(Boolean(response.isSuperAdmin));
       setUserId(String(id));
       setIsAuthenticated(true);
       setAuthChecked(true);
@@ -190,6 +193,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
         userRoles,
         permissions,
         preferredHomePath,
+        isSuperAdmin,
         userId,
         login,
         logout,

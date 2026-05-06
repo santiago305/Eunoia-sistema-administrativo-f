@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { NotificationRecipientItem } from '../types/notification.types';
 import { Button } from '@/shared/components/ui/button';
+import { getNotificationApproveUrl, getNotificationViewUrl } from '../utils/notificationActions';
 
 interface Props {
   item: NotificationRecipientItem;
@@ -24,16 +25,27 @@ export default function NotificationDetail({ item, onMarkAsRead }: Props) {
           Marcar como leida
         </Button>
 
-        {item.notification.actionUrl && item.notification.actionLabel ? (
+        {getNotificationViewUrl(item) ? (
           <Button
             type="button"
             variant="outline"
             onClick={async () => {
               await onMarkAsRead();
-              navigate(item.notification.actionUrl!);
+              navigate(getNotificationViewUrl(item)!);
             }}
           >
-            {item.notification.actionLabel}
+            Ver
+          </Button>
+        ) : null}
+        {getNotificationApproveUrl(item) ? (
+          <Button
+            type="button"
+            onClick={async () => {
+              await onMarkAsRead();
+              navigate(getNotificationApproveUrl(item)!);
+            }}
+          >
+            Aprobar
           </Button>
         ) : null}
       </div>

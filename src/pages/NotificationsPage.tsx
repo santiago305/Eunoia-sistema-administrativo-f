@@ -4,7 +4,7 @@ import { Button } from '@/shared/components/ui/button';
 import { sendDevNotificationToMe } from '@/shared/services/notificationService';
 
 export default function NotificationsPage() {
-  const { items, count, loading, markAllAsRead } = useNotifications();
+  const { items, count, loading, markAllAsRead, markOneAsRead } = useNotifications();
 
   return (
     <div className="space-y-4">
@@ -21,7 +21,11 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {loading ? <div className="text-sm text-muted-foreground">Cargando...</div> : <NotificationList items={items} />}
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Cargando...</div>
+      ) : (
+        <NotificationList items={items} onMarkAsRead={markOneAsRead} />
+      )}
     </div>
   );
 }

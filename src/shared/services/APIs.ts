@@ -176,8 +176,12 @@ export const API_PURCHASE_GROUP = {
   requestProcessing: (id: string) => `/purchases/orders/${id}/request-processing`,
   approveProcessing: (id: string) => `/purchases/orders/${id}/approve-processing`,
   rejectProcessing: (id: string) => `/purchases/orders/${id}/reject-processing`,
+  approveCreationWithPayment: (id: string) => `/purchases/orders/${id}/approve-creation-with-payment`,
+  rejectCreationWithPayment: (id: string) => `/purchases/orders/${id}/reject-creation-with-payment`,
   confirmReception: (id: string) => `/purchases/orders/${id}/confirm-reception`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
+  history: "/purchases/orders/history",
+  purchaseHistory: (poId: string) => `/purchases/orders/${poId}/history`,
   listPayments: (id: string) => `/payments/get-by-po/${id}`,
   listQuotas: (id: string) => `/payments/credit-quotas/get-by-po/${id}`,
 };
@@ -205,6 +209,8 @@ export const API_PAYMENT_GROUP = {
   list: "/payments",
   byId: (id: string) => `/payments/${id}`,
   listByPo: (id: string) => `/payments/get-by-po/${id}`,
+  approve: (id: string) => `/payments/${id}/approve`,
+  reject: (id: string) => `/payments/${id}/reject`,
   remove: (id: string) => `/payments/${id}`,
 }
 

@@ -315,7 +315,9 @@ export function FloatingSelect({
 
   const handleListWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
     if (!open || filteredOptions.length === 0) return;
-    event.preventDefault();
+    if (event.cancelable) {
+      event.preventDefault();
+    }
     moveActiveIndex(event.deltaY > 0 ? 1 : -1);
   }, [filteredOptions.length, moveActiveIndex, open]);
 
