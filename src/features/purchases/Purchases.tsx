@@ -883,7 +883,9 @@ export default function Purchases() {
                                 disabled:
                                     companyActionDisabled ||
                                     isApprovalBlocked,
-                                hidden: isApprovalBlocked,
+                                hidden:
+                                    isApprovalBlocked ||
+                                    (row.purchase.processingApprovalStatus === "PENDING" && !canApproveProcessing),
                             },
                             row.purchase.status === PurchaseOrderStatuses.DRAFT &&
                             row.purchase.approvalStatus === "PENDING" &&
@@ -999,11 +1001,13 @@ export default function Purchases() {
         approveProcessing,
         EnterToWarehouse,
         canApproveCreationWithPayment,
+        canApproveProcessing,
         canDeleteProcessedPurchase,
         can,
         cancelOrder,
         companyActionDisabled,
         loadPurchases,
+        navigate,
         now,
         openPurchasePdf,
         requestProcessing,
