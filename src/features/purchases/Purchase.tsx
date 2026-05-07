@@ -10,8 +10,7 @@ import {
   VoucherDocTypes,
 } from "@/features/purchases/types/purchaseEnums";
 import { listSuppliers } from "@/shared/services/supplierService";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
-import { errorResponse, successResponse } from "@/shared/common/utils/response";
+import { errorResponse } from "@/shared/common/utils/response";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingDateTimePicker } from "@/shared/components/components/date-picker/FloatingDateTimePicker";
@@ -23,7 +22,7 @@ import type {
 } from "@/features/purchases/types/purchase";
 import { SupplierFormModal } from "../providers/components/SupplierFormModal";
 import { WarehouseFormModal } from "../warehouse/components/WarehouseFormModal";
-import { createPurchaseOrder, updatePurchaseOrder } from "@/shared/services/purchaseService";
+import { createPurchaseOrder, updatePurchaseOrder, validatePurchaseOrderNumber } from "@/shared/services/purchaseService";
 import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import { EquivalenceModal } from "./components/EquivalenceModal";
 import { PurchaseItemsSection } from "./components/PurchaseItemsSection";
@@ -56,6 +55,7 @@ import {
   type PurchaseSkuInfo,
 } from "./utils/purchaseSkus";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { sileo } from "sileo";
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
@@ -148,9 +148,10 @@ export default function PurchaseCreateLocal({
   onClose,
   onSaved,
 }: PurchaseCreateLocalProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
-  const showFlashRef = useRef(showFlash);
-  useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
+  const showFlashRef = useRef((msg: { type?: string; message?: string }) => {
+    if ((msg?.type ?? "error") === "success") sileo.success({ title: msg?.message ?? "Operación correcta" });
+    else sileo.error({ title: msg?.message ?? "Ocurrió un error" });
+  });
   const { hasCompany } = useCompany();
   const navigate = useNavigate();
   const companyActionDisabled = !hasCompany;
@@ -173,6 +174,7 @@ export default function PurchaseCreateLocal({
   const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
 
   const [form, setForm] = useState<PurchaseOrder>(() => buildEmptyForm());
+  const [documentNumberError, setDocumentNumberError] = useState<string | null>(null);
   const { poId: routePoId } = useParams<{ poId: string }>();
   const effectivePoId = poIdOverride ?? routePoId;
   const isEdit = Boolean(effectivePoId);
@@ -221,7 +223,6 @@ export default function PurchaseCreateLocal({
         setOpenEquivalence(false)
     },[])
   const loadSuppliers = useCallback(async (appliedSearch: string) => {
-    clearFlash();
     try {
       const res = await listSuppliers({
         page: 1,
@@ -244,10 +245,9 @@ export default function PurchaseCreateLocal({
       setSupplierOptions([]);
       showFlashRef.current(errorResponse("Error al cargar proveedores"));
     }
-  }, [clearFlash]);
+  }, []);
 
   const loadWarehouses = useCallback(async () => {
-    clearFlash();
     try {
       const res = await listActiveWarehouses({ page: 1, limit: 100 });
       const options =
@@ -260,7 +260,7 @@ export default function PurchaseCreateLocal({
       setWarehouseOptions([]);
       showFlashRef.current(errorResponse("Error al cargar almacenes"));
     }
-  }, [clearFlash]);
+  }, []);
 
   const productOptions = useMemo(
     () =>
@@ -347,6 +347,10 @@ export default function PurchaseCreateLocal({
 
   const savePurchase = async () => {
     if (!form.items?.length || !form.serie.trim() || !form.supplierId || !form.warehouseId) return;
+    if (documentNumberError) {
+      sileo.error({ title: "Número de orden ya registrado" });
+      return;
+    }
 
     const payload: CreatePurchaseOrderDto = {
       supplierId: form.supplierId,
@@ -406,12 +410,10 @@ export default function PurchaseCreateLocal({
       })),
     };
 
-    clearFlash();
-
     try {
       const res = effectivePoId ? await updatePurchaseOrder(effectivePoId, payload) : await createPurchaseOrder(payload);
       if (res.type === "success") {
-        showFlash(successResponse("Compra registrada."));
+        sileo.success({ title: "Compra creada" });
         const nextPoId = res.order?.poId ?? effectivePoId ?? "";
         if (nextPoId) setLastSavedPoId(nextPoId);
         setOpenPaymentModal(false);
@@ -428,12 +430,36 @@ export default function PurchaseCreateLocal({
       }
 
       if (res.type === "error") {
-        showFlash(errorResponse("Registro fallido."));
+        sileo.error({ title: "Registro fallido" });
       }
     } catch {
-      showFlash(errorResponse("Error al registrar la compra."));
+      sileo.error({ title: "Error al registrar la compra" });
     }
   };
+
+  useEffect(() => {
+    const serie = form.serie?.trim();
+    const correlative = Number(form.correlative ?? 0);
+    if (!serie || !correlative) {
+      setDocumentNumberError(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await validatePurchaseOrderNumber({
+          serie,
+          correlative,
+          excludePoId: effectivePoId,
+        });
+        setDocumentNumberError(response.exists ? "Ya está inscrito ese número de orden." : null);
+      } catch {
+        setDocumentNumberError(null);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [effectivePoId, form.correlative, form.serie]);
 
   const loadPurchase = useCallback(async (poId: string) => {
     try {
@@ -713,6 +739,7 @@ export default function PurchaseCreateLocal({
                   label="Serie"
                   name="serie"
                   value={form.serie}
+                  error={documentNumberError ?? undefined}
                   onChange={(e) => setForm((prev) => ({ ...prev, serie: e.target.value }))}
                 />
 
@@ -721,6 +748,7 @@ export default function PurchaseCreateLocal({
                   name="correlative"
                   type="number"
                   value={form.correlative ? String(form.correlative) : ""}
+                  error={documentNumberError ?? undefined}
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
@@ -874,6 +902,7 @@ export default function PurchaseCreateLocal({
                     companyActionDisabled ||
                     !form.items?.length ||
                     !form.serie.trim() ||
+                    Boolean(documentNumberError) ||
                     !form.supplierId ||
                     !form.correlative ||
                     !form.warehouseId ||

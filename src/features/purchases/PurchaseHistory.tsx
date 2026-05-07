@@ -32,12 +32,18 @@ export default function PurchaseHistory() {
     PROCESSING_REQUESTED: "Procesamiento solicitado",
     PROCESSING_APPROVED: "Procesamiento aprobado",
     PROCESSING_REJECTED: "Procesamiento rechazado",
+    PURCHASE_CREATED_WITH_PAYMENT_PENDING_APPROVAL: "Compra enviada con pago",
+    PURCHASE_CREATION_APPROVED: "Aprobación de compra con pago",
+    PURCHASE_CREATION_REJECTED: "Rechazo de compra con pago",
   };
 
   const EVENT_BADGE_CLASS: Record<string, string> = {
     PROCESSING_REQUESTED: "bg-amber-100 text-amber-800 border-amber-200",
     PROCESSING_APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
     PROCESSING_REJECTED: "bg-rose-100 text-rose-800 border-rose-200",
+    PURCHASE_CREATED_WITH_PAYMENT_PENDING_APPROVAL: "bg-cyan-100 text-cyan-800 border-cyan-200",
+    PURCHASE_CREATION_APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    PURCHASE_CREATION_REJECTED: "bg-rose-100 text-rose-800 border-rose-200",
   };
 
   const load = useCallback(async () => {
@@ -226,6 +232,12 @@ export default function PurchaseHistory() {
                     {EVENT_LABELS[String(event.eventType ?? "")] ?? String(event.eventType ?? "-")}
                   </span>
                   <p className="text-sm text-zinc-900">{String(event.description ?? "-")}</p>
+                  <p className="text-xs text-zinc-600">
+                    Solicitado por: {String(event.performedByUserName ?? event.performedByUserId ?? "-")}
+                  </p>
+                  <p className="text-xs text-zinc-600">
+                    Afecta a: {String(event.targetUserName ?? event.targetUserId ?? "-")}
+                  </p>
                   <p className="text-xs text-zinc-500">{event.createdAt ? new Date(String(event.createdAt)).toLocaleString() : "-"}</p>
                 </div>
               ))}

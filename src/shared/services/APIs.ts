@@ -174,6 +174,7 @@ export const API_PURCHASE_GROUP = {
   setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
   requestProcessing: (id: string) => `/purchases/orders/${id}/request-processing`,
+  validateNumber: "/purchases/orders/validate-number",
   approveProcessing: (id: string) => `/purchases/orders/${id}/approve-processing`,
   rejectProcessing: (id: string) => `/purchases/orders/${id}/reject-processing`,
   approveCreationWithPayment: (id: string) => `/purchases/orders/${id}/approve-creation-with-payment`,

@@ -8,8 +8,6 @@ import {
     type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
-import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import {
     approveCreationWithPayment,
@@ -74,6 +72,8 @@ import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "./utils/purc
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { approvePayment as approvePaymentById } from "@/shared/services/paymentService";
 import { RoutesPaths } from "@/routes/config/routesPaths";
+import { NOTIFICATION_WINDOW_EVENTS } from "@/features/notifications/constants/notification-events.constants";
+import { sileo } from "sileo";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -114,7 +114,15 @@ type PurchaseRow = {
 };
 
 export default function Purchases() {
-    const { showFlash, clearFlash } = useFlashMessage();
+    const showFlash = useCallback((payload: { type?: string; message?: string }) => {
+        const kind = payload?.type ?? "success";
+        const title = payload?.message ?? "Operación completada";
+        if (kind === "success") sileo.success({ title });
+        else if (kind === "warning") sileo.warning({ title });
+        else if (kind === "info") sileo.info({ title });
+        else sileo.error({ title });
+    }, []);
+    const clearFlash = useCallback(() => undefined, []);
     const showFlashRef = useRef(showFlash);
     useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
     const { hasCompany } = useCompany();
@@ -122,12 +130,13 @@ export default function Purchases() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const canCreatePurchase = can("purchases.create");
-    const canApproveProcessing = canAny(["purchases.approve_processing", "purchases.approve"]);
+    const canApproveProcessing = can("purchases.approve_processing");
     const canApproveCreationWithPayment = canAny([
         "purchases.approve_creation_with_payment",
         "purchases.approve_payment",
         "purchases.approve",
     ]);
+    const canDeleteProcessedPurchase = can("purchases.delete_processed_purchase");
     const companyActionDisabled = !hasCompany;
     const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -223,7 +232,7 @@ export default function Purchases() {
             const response = await getPurchaseSearchState();
             setSearchState(response);
         } catch {
-            showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+            showFlashRef.current({ type: "error", message: "Error al cargar el estado del buscador inteligente" });
         }
     }, []);
 
@@ -232,7 +241,7 @@ export default function Purchases() {
             const response = await getPurchaseExportColumns();
             setExportColumns(response ?? []);
         } catch {
-            showFlashRef.current(errorResponse("Error al cargar columnas de exportacion"));
+            showFlashRef.current({ type: "error", message: "Error al cargar columnas de exportacion" });
         }
     }, []);
 
@@ -247,7 +256,7 @@ export default function Purchases() {
                 })),
             );
         } catch {
-            showFlashRef.current(errorResponse("Error al cargar presets de exportacion"));
+            showFlashRef.current({ type: "error", message: "Error al cargar presets de exportacion" });
         }
     }, []);
 
@@ -303,7 +312,7 @@ export default function Purchases() {
                 hasNext: false,
             }));
             setError("Error al listar compras");
-            showFlashRef.current(errorResponse("Error al listar compras"));
+            showFlashRef.current({ type: "error", message: "Error al listar compras" });
         } finally {
             setLoading(false);
         }
@@ -322,14 +331,14 @@ export default function Purchases() {
         try {
             const res = await setSentPurchase(id);
             if (res.type === "error") {
-                showFlash(errorResponse(res.message));
+                showFlash({ type: "error", message: res.message });
             }
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 void loadPurchases();
             }
         } catch {
-            showFlash(errorResponse("Error al iniciar espera de mercaderia"));
+            showFlash({ type: "error", message: "Error al iniciar espera de mercaderia" });
         }
     }, [clearFlash, loadPurchases, showFlash]);
 
@@ -338,14 +347,14 @@ export default function Purchases() {
         try {
             const res = await setCancelPurchase(id);
             if (res.type === "error") {
-                showFlash(errorResponse(res.message));
+                showFlash({ type: "error", message: res.message });
             }
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 void loadPurchases();
             }
         } catch {
-            showFlash(errorResponse("Error al iniciar espera de mercaderia"));
+            showFlash({ type: "error", message: "Error al iniciar espera de mercaderia" });
         }
     }, [clearFlash, loadPurchases, showFlash]);
 
@@ -360,17 +369,17 @@ export default function Purchases() {
         try {
             const res = await enterPurchaseOrder(id);
             if (res.type === "error") {
-                showFlash(errorResponse(res.message));
+                showFlash({ type: "error", message: res.message });
                 void loadPurchases();
             }
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 const selected = purchases.find((purchase) => purchase.poId === id) ?? null;
                 setCompletedPhotoPo(selected);
                 void loadPurchases();
             }
         } catch {
-            showFlash(errorResponse("Error al ingresar a almacen"));
+            showFlash({ type: "error", message: "Error al ingresar a almacen" });
             void loadPurchases();
         }
     }, [clearFlash, loadPurchases, purchases, showFlash]);
@@ -380,13 +389,13 @@ export default function Purchases() {
         try {
             const res = await requestProcessingPurchaseOrder(id);
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 await loadPurchases();
                 return;
             }
-            showFlash(errorResponse(res.message));
+            showFlash({ type: "error", message: res.message });
         } catch {
-            showFlash(errorResponse("No se pudo solicitar aprobación de procesamiento"));
+            showFlash({ type: "error", message: "No se pudo solicitar aprobación de procesamiento" });
         }
     }, [clearFlash, loadPurchases, showFlash]);
 
@@ -395,13 +404,13 @@ export default function Purchases() {
         try {
             const res = await approveProcessingPurchaseOrder(id);
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 await loadPurchases();
                 return;
             }
-            showFlash(errorResponse(res.message));
+            showFlash({ type: "error", message: res.message });
         } catch {
-            showFlash(errorResponse("No se pudo aprobar el procesamiento"));
+            showFlash({ type: "error", message: "No se pudo aprobar el procesamiento" });
         }
     }, [clearFlash, loadPurchases, showFlash]);
 
@@ -410,13 +419,13 @@ export default function Purchases() {
         try {
             const res = await rejectProcessingPurchaseOrder(id);
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 await loadPurchases();
                 return;
             }
-            showFlash(errorResponse(res.message));
+            showFlash({ type: "error", message: res.message });
         } catch {
-            showFlash(errorResponse("No se pudo rechazar el procesamiento"));
+            showFlash({ type: "error", message: "No se pudo rechazar el procesamiento" });
         }
     }, [clearFlash, loadPurchases, showFlash]);
 
@@ -425,15 +434,15 @@ export default function Purchases() {
         try {
             const res = await confirmPurchaseReception(id);
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 await loadPurchases();
                 return true;
             }
 
-            showFlash(errorResponse(res.message));
+            showFlash({ type: "error", message: res.message });
             return false;
         } catch {
-            showFlash(errorResponse("Error al confirmar ingreso a stock"));
+            showFlash({ type: "error", message: "Error al confirmar ingreso a stock" });
             return false;
         }
     }, [clearFlash, loadPurchases, showFlash]);
@@ -444,14 +453,14 @@ export default function Purchases() {
         try {
             const res = await addPurchaseExtraTime(extraTimePoId, values);
             if (res.type === "success") {
-                showFlash(successResponse(res.message));
+                showFlash({ type: "success", message: res.message });
                 setExtraTimePoId(null);
                 await loadPurchases();
             } else {
-                showFlash(errorResponse(res.message));
+                showFlash({ type: "error", message: res.message });
             }
         } catch {
-            showFlash(errorResponse("Error al agregar tiempo extra"));
+            showFlash({ type: "error", message: "Error al agregar tiempo extra" });
         } finally {
             setExtraTimeLoading(false);
         }
@@ -467,14 +476,14 @@ export default function Purchases() {
                 skippedPhotoRef.current.add(poId);
                 const confirmed = await confirmReception(poId);
                 if (confirmed) {
-                    showFlash(successResponse(`${res.message}. Compra ingresada a stock.`));
+                    showFlash({ type: "success", message: `${res.message}. Compra ingresada a stock.` });
                     setCompletedPhotoPo(null);
                 }
             } else {
-                showFlash(errorResponse(res.message));
+                showFlash({ type: "error", message: res.message });
             }
         } catch (err) {
-            showFlash(errorResponse(parseApiError(err, "No se pudo subir la foto de la compra")));
+            showFlash({ type: "error", message: parseApiError(err, "No se pudo subir la foto de la compra") });
         } finally {
             setCompletedPhotoLoading(false);
         }
@@ -490,7 +499,7 @@ export default function Purchases() {
         const confirmed = await confirmReception(poId);
         if (confirmed) {
             setCompletedPhotoPo(null);
-            showFlash(successResponse("Compra ingresada sin foto. Se puede subir luego desde detalle (admin)."));
+            showFlash({ type: "success", message: "Compra ingresada sin foto. Se puede subir luego desde detalle (admin)." });
         }
     }, [completedPhotoPo?.poId, confirmReception, markPhotoPromptSkipped, showFlash]);
 
@@ -501,6 +510,14 @@ export default function Purchases() {
     useEffect(() => {
         void loadSearchState();
     }, [loadSearchState]);
+
+    useEffect(() => {
+        const onRefresh = () => {
+            void loadPurchases();
+        };
+        window.addEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, onRefresh);
+        return () => window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, onRefresh);
+    }, [loadPurchases]);
 
     useEffect(() => {
         void loadExportColumns();
@@ -528,14 +545,9 @@ export default function Purchases() {
             purchases.map((purchase) => {
                 const numero = [purchase.serie, purchase.correlative].filter((v) => v !== null && v !== undefined && String(v).length > 0).join("-");
                 const statusLabel = purchase.status ? (statusLabels[purchase.status] ?? purchase.status) : "-";
-                const approvalStatusLabel =
-                    purchase.approvalStatus === "PENDING" ? " (Pendiente aprobación)"
-                    : purchase.approvalStatus === "REJECTED" ? " (Rechazada por aprobación de pago)"
-                    : "";
+                const approvalStatusLabel = "";
                 const processingStatusLabel =
-                    purchase.processingApprovalStatus === "PENDING" ? " (Proc. pendiente aprobación)"
-                    : purchase.processingApprovalStatus === "APPROVED" ? " (Proc. aprobado)"
-                    : purchase.processingApprovalStatus === "REJECTED" ? " (Proc. rechazado)"
+                    purchase.processingApprovalStatus === "PENDING" ? " (Pre-envío)"
                     : "";
                 const docLabel = purchase.documentType ? (docTypeLabels[purchase.documentType] ?? purchase.documentType) : "-";
                 const date = formatDate(new Date(purchase.dateIssue ?? ""));
@@ -588,11 +600,11 @@ export default function Purchases() {
         const run = async () => {
             if (action === "approveCreationWithPayment") {
                 const res = await approveCreationWithPayment(purchaseId);
-                showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
                 await loadPurchases();
             } else if (action === "rejectCreationWithPayment") {
                 const res = await rejectCreationWithPayment(purchaseId);
-                showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
                 await loadPurchases();
             } else if (action === "approveProcessing") {
                 await approveProcessing(purchaseId);
@@ -600,7 +612,7 @@ export default function Purchases() {
                 await rejectProcessing(purchaseId);
             } else if (action === "approvePayment" && paymentId) {
                 const res = await approvePaymentById(paymentId);
-                showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
                 await loadPurchases();
             }
 
@@ -748,6 +760,18 @@ export default function Purchases() {
             header: "T. Espera",
             cell: (row) => (
                 <div className="flex h-full items-center justify-center">
+                    {row.purchase.status === PurchaseOrderStatuses.DRAFT && row.purchase.approvalStatus === "PENDING" && (
+                        <span className="flex items-center rounded-lg gap-2 p-1 text-[10px] font-medium bg-amber-50 text-amber-700">
+                            <Timer className="h-4 w-4" />
+                            <span className="mt-1">E. confirmación</span>
+                        </span>
+                    )}
+                    {row.purchase.status === PurchaseOrderStatuses.DRAFT && row.purchase.processingApprovalStatus === "PENDING" && (
+                        <span className="flex items-center rounded-lg gap-2 p-1 text-[10px] font-medium bg-cyan-50 text-cyan-700">
+                            <Timer className="h-4 w-4" />
+                            <span className="mt-1">E. aprobación</span>
+                        </span>
+                    )}
                     {row.purchase.status === PurchaseOrderStatuses.SENT && (
                         <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
                             <TimerToEnd from={now} to={row.purchase.expectedAt ?? ""} loadPurchases={loadPurchases} />
@@ -841,11 +865,15 @@ export default function Purchases() {
                             },
                             row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                                 id: "process",
-                                label: "Procesar",
+                                label: row.purchase.processingApprovalStatus === "PENDING" ? "A. procesar" : "Procesar",
                                 icon: <Play className="h-4 w-4 text-black/60" />,
                                 onClick: () => {
                                     const poId = row.purchase.poId ?? "";
                                     if (!poId) return;
+                                    if (row.purchase.processingApprovalStatus === "PENDING" && canApproveProcessing) {
+                                        void approveProcessing(poId);
+                                        return;
+                                    }
                                     if (canApproveProcessing) {
                                         void setSent(poId);
                                         return;
@@ -867,7 +895,7 @@ export default function Purchases() {
                                     const poId = row.purchase.poId ?? "";
                                     if (!poId) return;
                                     const res = await approveCreationWithPayment(poId);
-                                    showFlash(res.type === "success" ? successResponse(res.message) : errorResponse(res.message));
+                                    showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
                                     await loadPurchases();
                                 },
                                 disabled: companyActionDisabled,
@@ -928,13 +956,13 @@ export default function Purchases() {
                                 },
                                 disabled: companyActionDisabled,
                             },
-                            row.purchase.status === PurchaseOrderStatuses.DRAFT && {
+                            (row.purchase.status === PurchaseOrderStatuses.DRAFT || row.purchase.status === PurchaseOrderStatuses.RECEIVED) && {
                                 id: "cancel",
-                                label: "Cancelar",
+                                label: row.purchase.status === PurchaseOrderStatuses.RECEIVED ? "Eliminar pedido" : "Cancelar",
                                 className: "text-rose-700 hover:bg-rose-50",
                                 icon: <XCircle className="h-4 w-4" />,
                                 onClick: () => cancelOrder(row.purchase.poId ?? ""),
-                                disabled: companyActionDisabled,
+                                disabled: companyActionDisabled || (row.purchase.status === PurchaseOrderStatuses.RECEIVED && !canDeleteProcessedPurchase),
                             },
                         ].filter(Boolean) as ActionItem[]}
                         columns={1}
@@ -968,8 +996,10 @@ export default function Purchases() {
             sortable: false,
         },
     ], [
+        approveProcessing,
         EnterToWarehouse,
         canApproveCreationWithPayment,
+        canDeleteProcessedPurchase,
         can,
         cancelOrder,
         companyActionDisabled,
@@ -1083,15 +1113,15 @@ export default function Purchases() {
         try {
             const response = await savePurchaseSearchMetric(name, snapshot);
             if (response.type === "success") {
-                showFlash(successResponse(response.message));
+                showFlash({ type: "success", message: response.message });
                 await loadSearchState();
                 return true;
             } else {
-                showFlash(errorResponse(response.message));
+                showFlash({ type: "error", message: response.message });
                 return false;
             }
         } catch {
-            showFlash(errorResponse("Error al guardar la metrica"));
+            showFlash({ type: "error", message: "Error al guardar la metrica" });
             return false;
         } finally {
             setSavingMetric(false);
@@ -1102,13 +1132,13 @@ export default function Purchases() {
         try {
             const response = await deletePurchaseSearchMetric(metricId);
             if (response.type === "success") {
-                showFlash(successResponse(response.message));
+                showFlash({ type: "success", message: response.message });
                 await loadSearchState();
             } else {
-                showFlash(errorResponse(response.message));
+                showFlash({ type: "error", message: response.message });
             }
         } catch {
-            showFlash(errorResponse("Error al eliminar la metrica"));
+            showFlash({ type: "error", message: "Error al eliminar la metrica" });
         }
     }, [loadSearchState, showFlash]);
 
@@ -1129,9 +1159,9 @@ export default function Purchases() {
             anchor.download = file.filename;
             anchor.click();
             URL.revokeObjectURL(url);
-            showFlash(successResponse("Excel exportado correctamente"));
+            showFlash({ type: "success", message: "Excel exportado correctamente" });
         } catch {
-            showFlash(errorResponse("No se pudo exportar el Excel"));
+            showFlash({ type: "error", message: "No se pudo exportar el Excel" });
         } finally {
             setExporting(false);
         }
@@ -1144,13 +1174,13 @@ export default function Purchases() {
             useDateRange: useTableDateRangeForExport,
         });
         await loadExportPresets();
-        showFlash(successResponse("Preset de exportacion guardado"));
+        showFlash({ type: "success", message: "Preset de exportacion guardado" });
     }, [loadExportPresets, showFlash, useTableDateRangeForExport]);
 
     const handleDeleteExportPreset = useCallback(async (metricId: string) => {
         await deletePurchaseExportPreset(metricId);
         await loadExportPresets();
-        showFlash(successResponse("Preset eliminado"));
+        showFlash({ type: "success", message: "Preset eliminado" });
     }, [loadExportPresets, showFlash]);
 
     return (
@@ -1357,3 +1387,4 @@ export default function Purchases() {
         </PageShell>
     );
 }
+

@@ -9,7 +9,6 @@ import {
 } from "@/shared/services/accessControlService";
 import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { useAuth } from "@/shared/hooks/useAuth";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 
 type RoleOption = { id: string; description: string };
@@ -28,7 +27,6 @@ const groupByModule = (permissions: AccessPermissionItem[]) => {
 export default function RolesPermissions() {
   const { showFlash, clearFlash } = useFlashMessage();
   const { can } = usePermissions();
-  const { isSuperAdmin } = useAuth();
   const canAssignRolePermissions = can("roles.assign_permissions");
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -51,12 +49,9 @@ export default function RolesPermissions() {
           id: String(role.id),
           description: String(role.description ?? "").toLowerCase(),
         }));
-        const withSuperAdmin = isSuperAdmin
-          ? [{ id: "__superadmin__", description: "superadmin" }, ...normalizedRoles]
-          : normalizedRoles;
-        setRoles(withSuperAdmin);
+        setRoles(normalizedRoles);
         setAllPermissions(permissionsData ?? []);
-        const firstRole = withSuperAdmin[0];
+        const firstRole = normalizedRoles[0];
         if (firstRole) {
           setSelectedRoleId(firstRole.id);
           setSelectedRoleDescription(firstRole.description);
@@ -77,10 +72,6 @@ export default function RolesPermissions() {
     let cancelled = false;
     const loadRolePermissions = async () => {
       if (!selectedRoleId) return;
-      if (selectedRoleId === "__superadmin__") {
-        setSelectedCodes(new Set(allPermissions.map((permission) => permission.code)));
-        return;
-      }
       try {
         const data = await listRolePermissions(selectedRoleId);
         if (cancelled) return;
@@ -107,7 +98,7 @@ export default function RolesPermissions() {
   };
 
   const saveMatrix = async () => {
-    if (!selectedRoleId || selectedRoleId === "__superadmin__") return;
+    if (!selectedRoleId) return;
     clearFlash();
     setSaving(true);
     try {
@@ -153,7 +144,7 @@ export default function RolesPermissions() {
               </select>
               <button
                 onClick={saveMatrix}
-                disabled={saving || !selectedRoleId || !canAssignRolePermissions || selectedRoleId === "__superadmin__"}
+                disabled={saving || !selectedRoleId || !canAssignRolePermissions}
                 className="h-9 rounded-xl bg-zinc-900 px-3 text-xs font-medium text-white disabled:opacity-60"
               >
                 {saving ? "Guardando..." : "Guardar matriz"}
@@ -162,8 +153,6 @@ export default function RolesPermissions() {
           </div>
           {!canAssignRolePermissions ? (
             <p className="mt-2 text-xs text-zinc-500">Solo lectura: falta permiso `roles.assign_permissions`.</p>
-          ) : selectedRoleId === "__superadmin__" ? (
-            <p className="mt-2 text-xs text-zinc-500">Superadmin tiene control total y permisos completos fijos.</p>
           ) : null}
         </div>
 
@@ -182,7 +171,7 @@ export default function RolesPermissions() {
                       <input
                         type="checkbox"
                         checked={checked}
-                        disabled={!canAssignRolePermissions || selectedRoleId === "__superadmin__"}
+                        disabled={!canAssignRolePermissions}
                         onChange={() => togglePermission(permission.code)}
                         className="mt-0.5"
                       />
