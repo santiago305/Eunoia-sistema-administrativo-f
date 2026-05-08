@@ -24,11 +24,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     {
         label: "Compras",
         icon: <IconPurchase className="text-sidebar-foreground" />,
+        href: RoutesPaths.purchases,
         children: [
-            {
-                label: "Compras",
-                href: RoutesPaths.purchases,
-            },
             {
                 label: "Historial de compras",
                 href: RoutesPaths.purchasesHistory,

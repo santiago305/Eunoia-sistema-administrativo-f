@@ -146,7 +146,7 @@ export default function Purchases() {
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [page, setPage] = useState(1);
-    const limit = 8;
+    const limit = 25;
 
     const [purchases, setPurchases] = useState<PurchaseOrder[]>([]);
     const [pagination, setPagination] = useState({

@@ -75,9 +75,9 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
         {buttonLabel}
       </SystemButton>
 
-      <Popover open={open} onClose={() => setOpen(false)} anchorRef={buttonRef} placement="bottom-end" offset={10} hideHeader bodyClassName="w-[24rem] p-3">
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={buttonRef} placement="bottom-end" offset={10} hideHeader bodyClassName="w-[20rem] py-3 px-0">
         <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">Selecciona columnas y orden para Excel.</p>
+          <p className="text-xs text-muted-foreground px-3">Selecciona columnas y orden para Excel.</p>
 
           {presets.length ? (
             <select
@@ -98,7 +98,7 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
             </select>
           ) : null}
 
-          <div className="max-h-72 space-y-2 overflow-auto pr-1">
+          <div className="max-h-72 space-y-2 overflow-auto scrollbar-panel p-0">
             {columns.map((column) => {
               const checked = selectedKeys.has(column.key);
               return (
@@ -126,7 +126,7 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
             })}
           </div>
 
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center px-3">
             <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Nombre de configuración" className="h-9 flex-1 rounded-md border border-border px-2 text-xs" />
             <SystemButton size="sm" variant="outline" leftIcon={<Save className="h-4 w-4" />} onClick={handleSavePreset}>
               Guardar
@@ -144,10 +144,11 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
               </SystemButton>
             ) : null}
           </div>
-
-          <SystemButton size="sm" className="w-full" onClick={() => onExport(selected)} disabled={loading || selected.length === 0} leftIcon={<Download className="h-4 w-4" />}>
-            {loading ? "Exportando..." : "Exportar"}
-          </SystemButton>
+          <div className="px-3">
+            <SystemButton size="sm" className="w-full" onClick={() => onExport(selected)} disabled={loading || selected.length === 0} leftIcon={<Download className="h-4 w-4" />}>
+              {loading ? "Exportando..." : "Exportar"}
+            </SystemButton>
+          </div>
         </div>
       </Popover>
     </div>
