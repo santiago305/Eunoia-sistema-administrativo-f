@@ -224,3 +224,6 @@ textarea {
   box-shadow: var(--shadow-modal-panel);
 }
 
+[data-sileo-viewport] {
+  z-index: 99999 !important;
+}
