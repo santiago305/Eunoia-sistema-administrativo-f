@@ -5,7 +5,7 @@ import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { Direction } from "@/features/out-orders/type/outOrder";
@@ -46,7 +46,7 @@ export function AdjustmentItemModal({
     sectionTitle = "Productos",
     messages,
 }: AdjustmentItemModalProps) {
-    const { showFlash } = useFlashMessage();
+    const { showFeedback } = useFeedbackToast();
     const onCloseRef = useRef(onClose);
     const onAddRef = useRef(onAdd);
 
@@ -130,10 +130,10 @@ export function AdjustmentItemModal({
                     size="sm"
                     onClick={() => {
                         if (!pendingItem.adjustmentType) {
-                            return showFlash(errorResponse(missingTypeMessage));
+                            return showFeedback(errorResponse(missingTypeMessage));
                         }
                         if (pendingItem.quantity === 0) {
-                            return showFlash(errorResponse(zeroQuantityMessage));
+                            return showFeedback(errorResponse(zeroQuantityMessage));
                         }
                         handleAdd();
                     }}
@@ -145,3 +145,4 @@ export function AdjustmentItemModal({
         </Modal>
     );
 }
+

@@ -16,7 +16,7 @@ import {
 import { IconPaymentMethod } from "@/shared/components/components/dashboard/icons";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
@@ -52,12 +52,12 @@ const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
 
 export default function Providers() {
-  const { showFlash } = useFlashMessage();
-  const showFlashRef = useRef(showFlash);
+  const { showFeedback } = useFeedbackToast();
+  const showFeedbackRef = useRef(showFeedback);
 
   useEffect(() => {
-    showFlashRef.current = showFlash;
-  }, [showFlash]);
+    showFeedbackRef.current = showFeedback;
+  }, [showFeedback]);
 
   const { hasCompany } = useCompany();
   const { can } = usePermissions();
@@ -122,7 +122,7 @@ export default function Providers() {
       const response = await getProviderSearchState();
       setSearchState(response);
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
   }, []);
 
@@ -187,7 +187,7 @@ export default function Providers() {
         hasPrev: false,
         hasNext: false,
       });
-      showFlashRef.current(errorResponse("Error al listar proveedores"));
+      showFeedbackRef.current(errorResponse("Error al listar proveedores"));
     } finally {
       setLoading(false);
     }
@@ -240,13 +240,13 @@ export default function Providers() {
         ),
       );
       setToggleSupplierId(null);
-      showFlash(successResponse(nextActiveState ? "Proveedor reactivado" : "Proveedor desactivado"));
+      showFeedback(successResponse(nextActiveState ? "Proveedor reactivado" : "Proveedor desactivado"));
     } catch {
-      showFlash(errorResponse("Error al cambiar estado"));
+      showFeedback(errorResponse("Error al cambiar estado"));
     } finally {
       setTogglingStatus(false);
     }
-  }, [showFlash, supplierPendingToggle, togglingStatus]);
+  }, [showFeedback, supplierPendingToggle, togglingStatus]);
 
   const handleCreateSaved = useCallback(() => {
     if (paginationState.pageIndex === 0) {
@@ -498,34 +498,34 @@ export default function Providers() {
     try {
       const response = await saveProviderSearchMetric(name, snapshot);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
         return true;
       }
 
-      showFlash(errorResponse(response.message));
+      showFeedback(errorResponse(response.message));
       return false;
     } catch {
-      showFlash(errorResponse("Error al guardar la metrica"));
+      showFeedback(errorResponse("Error al guardar la metrica"));
       return false;
     } finally {
       setSavingMetric(false);
     }
-  }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+  }, [appliedSearchText, loadSearchState, searchFilters, showFeedback]);
 
   const handleDeleteMetric = useCallback(async (metricId: string) => {
     try {
       const response = await deleteProviderSearchMetric(metricId);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar la metrica"));
+      showFeedback(errorResponse("Error al eliminar la metrica"));
     }
-  }, [loadSearchState, showFlash]);
+  }, [loadSearchState, showFeedback]);
 
   const safePage = serverPagination.page;
   const effectiveLimit = serverPagination.limit;
@@ -646,3 +646,4 @@ export default function Providers() {
     </PageShell>
   );
 }
+

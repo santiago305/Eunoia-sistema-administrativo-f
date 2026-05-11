@@ -10,7 +10,7 @@ import type { CurrencyType } from "@/features/purchases/types/purchaseEnums";
 import { CurrencyTypes } from "@/features/purchases/types/purchaseEnums";
 import { money } from "@/shared/utils/functionPurchases";
 import { PaymentModal } from "./PaymentModal";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
 
@@ -57,22 +57,22 @@ export function QuotaListModal({
     totalPaid: 0,
     totalToPay: 0,
   });
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
 
   const loadQuotas = useCallback(async () => {
     if (!poId) return;
     setLoading(true);
-    clearFlash();
+    clearFeedback();
     try {
       const data = await listQuotas(poId);
       setRows(data ?? []);
     } catch {
       setRows([]);
-      showFlash(errorResponse("No se pudieron cargar las cuotas."));
+      showFeedback(errorResponse("No se pudieron cargar las cuotas."));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, poId, showFlash]);
+  }, [clearFeedback, poId, showFeedback]);
 
   useEffect(() => {
     void loadQuotas();
@@ -216,5 +216,6 @@ export function QuotaListModal({
     </Modal>
   );
 }
+
 
 

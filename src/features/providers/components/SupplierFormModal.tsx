@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
   createSupplier,
@@ -78,7 +78,7 @@ export function SupplierFormModal({
   onSaved,
   primaryColor = "hsl(var(--primary))",
 }: SupplierFormModalProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
 
   const [form, setForm] = useState<SupplierForm>(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
@@ -158,7 +158,7 @@ export function SupplierFormModal({
     if (!canSave || lookupLoading) return;
 
     setError(null);
-    clearFlash();
+    clearFeedback();
     setLookupLoading(true);
 
     try {
@@ -170,7 +170,7 @@ export function SupplierFormModal({
       const payload = result?.data;
 
       if (!payload) {
-        showFlash(errorResponse("No se pudo obtener la identidad"));
+        showFeedback(errorResponse("No se pudo obtener la identidad"));
         return;
       }
 
@@ -201,13 +201,13 @@ export function SupplierFormModal({
       });
 
       if (form.documentType === DocumentType.DNI || form.documentType === DocumentType.RUC) {
-        showFlash(successResponse("Datos actualizados"));
+        showFeedback(successResponse("Datos actualizados"));
         return;
       }
 
-      showFlash(errorResponse("Tipo de documento no soportado"));
+      showFeedback(errorResponse("Tipo de documento no soportado"));
     } catch {
-      showFlash(errorResponse("No se pudo obtener la identidad"));
+      showFeedback(errorResponse("No se pudo obtener la identidad"));
     } finally {
       setLookupLoading(false);
     }
@@ -228,7 +228,7 @@ export function SupplierFormModal({
         await createSupplier(payload);
       }
 
-      showFlash(successResponse(mode === "edit" ? "Proveedor actualizado" : "Proveedor creado"));
+      showFeedback(successResponse(mode === "edit" ? "Proveedor actualizado" : "Proveedor creado"));
       onSaved?.();
       onClose();
     } catch (error: unknown) {

@@ -14,7 +14,7 @@ import {
   type DataTableRecentSearchItem,
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
 import {
@@ -90,7 +90,7 @@ type InventorySnapshotRow = {
 
 export function InventoryStockPage({ config }: { config: InventoryStockPageConfig }) {
   const shouldReduceMotion = useReducedMotion();
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
   const { hasCompany } = useCompany();
   const navigate = useNavigate();
   const companyActionDisabled = !hasCompany;
@@ -204,9 +204,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       const response = await getInventorySearchState({ productType: config.productType });
       setSearchState(response);
     } catch {
-      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFeedback(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, [config.productType, showFlash]);
+  }, [config.productType, showFeedback]);
 
   const loadSkus = useCallback(
     async (q?: string) => {
@@ -373,7 +373,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     } catch {
       if (forecastRequestRef.current !== requestId) return;
       setSelectedForecast(null);
-      showFlash(errorResponse("Error al cargar forecast"));
+      showFeedback(errorResponse("Error al cargar forecast"));
     } finally {
       if (forecastRequestRef.current === requestId) {
         setForecastLoading(false);
@@ -394,7 +394,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       setWarehouseOptions(options);
     } catch {
       setWarehouseOptions([]);
-      showFlash(errorResponse("Error al cargar almacenes"));
+      showFeedback(errorResponse("Error al cargar almacenes"));
     }
   };
 
@@ -432,11 +432,11 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     } catch {
       setInventoryRows([]);
       setInventoryTotal(0);
-      showFlash(errorResponse("Error al cargar inventario"));
+      showFeedback(errorResponse("Error al cargar inventario"));
     } finally {
       setLoading(false);
     }
-  }, [config.productType, executedSnapshot, loadSearchState, page, showFlash, warehouseQuery]);
+  }, [config.productType, executedSnapshot, loadSearchState, page, showFeedback, warehouseQuery]);
 
   const buildInventoryActions = (row: InventorySnapshotRow): ActionItem[] => [
     {
@@ -550,20 +550,20 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       });
 
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
         return true;
       }
 
-      showFlash(errorResponse(response.message));
+      showFeedback(errorResponse(response.message));
       return false;
     } catch {
-      showFlash(errorResponse("Error al guardar la metrica"));
+      showFeedback(errorResponse("Error al guardar la metrica"));
       return false;
     } finally {
       setSavingMetric(false);
     }
-  }, [config.productType, executedSnapshot, loadSearchState, showFlash]);
+  }, [config.productType, executedSnapshot, loadSearchState, showFeedback]);
 
   const handleDeleteMetric = useCallback(async (metricId: string) => {
     try {
@@ -573,15 +573,15 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       });
 
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar la metrica"));
+      showFeedback(errorResponse("Error al eliminar la metrica"));
     }
-  }, [config.productType, loadSearchState, showFlash]);
+  }, [config.productType, loadSearchState, showFeedback]);
 
   const handleExport = useCallback(async (columnsToExport: Array<{ key: string; label: string }>) => {
     setExporting(true);
@@ -600,13 +600,13 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       a.download = file.filename;
       a.click();
       URL.revokeObjectURL(url);
-      showFlash(successResponse("Excel exportado correctamente"));
+      showFeedback(successResponse("Excel exportado correctamente"));
     } catch {
-      showFlash(errorResponse("No se pudo exportar el Excel"));
+      showFeedback(errorResponse("No se pudo exportar el Excel"));
     } finally {
       setExporting(false);
     }
-  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, page, showFlash]);
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, page, showFeedback]);
 
   const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
     await saveInventoryExportPreset({
@@ -804,3 +804,4 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     </PageShell>
   );
 }
+

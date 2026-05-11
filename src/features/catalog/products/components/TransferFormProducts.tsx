@@ -6,7 +6,7 @@ import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
@@ -37,7 +37,7 @@ import { SectionHeaderForm } from "@/shared/components/components/SectionHederFo
 
 export default function TransferProducts({ onClose, onSaved, type, open, initialSku }: TransferProductsProps) {
     const { userId } = useAuth();
-    const { showFlash, clearFlash } = useFlashMessage();
+    const { showFeedback, clearFeedback } = useFeedbackToast();
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState<CreateTransfer>(() => buildEmptyFormTransfer());
     const [pendingItem, setPendingItem] = useState<TransferItem>(() => buildEmptyItemTransfer());
@@ -92,7 +92,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     };
 
     const loadWarehouses = useCallback(async () => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await listActive();
             const options =
@@ -103,9 +103,9 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
             setWarehouseOptions(options);
         } catch {
             setWarehouseOptions([]);
-            showFlash(errorResponse("Error al cargar almacenes"));
+            showFeedback(errorResponse("Error al cargar almacenes"));
         }
-    }, [clearFlash, showFlash]);
+    }, [clearFeedback, showFeedback]);
 
     const loadSeries = async (warehouseId: string) => {
         if (!warehouseId) {
@@ -143,7 +143,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
         } catch {
             setSerie({ value: "", label: "" });
             setForm((prev) => ({ ...prev, serieId: "" }));
-            showFlash(errorResponse("Error al cargar series"));
+            showFeedback(errorResponse("Error al cargar series"));
         }
     };
 
@@ -161,26 +161,26 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
             setSearchResults(res);
         } catch {
             setSearchResults(undefined);
-            showFlash(errorResponse("Error al cargar SKUs"));
+            showFeedback(errorResponse("Error al cargar SKUs"));
         }
-    }, [query, showFlash, type]);
+    }, [query, showFeedback, type]);
 
     const addItem = (skuId: string, quantity = 1) => {
         const selected = (searchResults?.items ?? []).find((s) => s.sku.id === skuId) ?? selectedSkus.find((s) => s.sku.id === skuId);
 
         if (!skuId) {
-            showFlash(errorResponse("Selecciona un SKU"));
+            showFeedback(errorResponse("Selecciona un SKU"));
             return;
         }
 
         if (!selected) {
-            showFlash(errorResponse("SKU no encontrado"));
+            showFeedback(errorResponse("SKU no encontrado"));
             return;
         }
 
         const alreadyAdded = (form.items ?? []).some((item) => item.skuId === skuId);
         if (alreadyAdded) {
-            showFlash(errorResponse("El SKU ya fue agregado"));
+            showFeedback(errorResponse("El SKU ya fue agregado"));
             return;
         }
 
@@ -322,23 +322,23 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     );
 
     const saveTransfer = async () => {
-        clearFlash();
+        clearFeedback();
 
         if (!form.fromWarehouseId || !form.toWarehouseId || !form.serieId) {
-            showFlash(errorResponse("Completa los datos del documento"));
+            showFeedback(errorResponse("Completa los datos del documento"));
             return;
         }
 
         if (!form.items?.length) {
-            showFlash(errorResponse("Agrega al menos un item"));
+            showFeedback(errorResponse("Agrega al menos un item"));
             return;
         }
         if (transferCheck.loading) {
-            showFlash(errorResponse("Validando stock de transferencia..."));
+            showFeedback(errorResponse("Validando stock de transferencia..."));
             return;
         }
         if (!transferCheck.possible) {
-            showFlash(errorResponse(transferCheck.reasons[0] ?? "No es posible realizar la transferencia"));
+            showFeedback(errorResponse(transferCheck.reasons[0] ?? "No es posible realizar la transferencia"));
             return;
         }
 
@@ -356,7 +356,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
             const res = await createTransfer(payload);
             const transferId = res.data?.documentId ?? "";
-            showFlash(successResponse("Transferencia registrada en borrador"));
+            showFeedback(successResponse("Transferencia registrada en borrador"));
 
             if (transferId) {
                 await onSaved?.(transferId);
@@ -364,7 +364,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
             onClose?.();
             resetForm();
         } catch {
-            showFlash(errorResponse("Error al guardar la transferencia"));
+            showFeedback(errorResponse("Error al guardar la transferencia"));
         } finally {
             setLoading(false);
         }
@@ -372,13 +372,13 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
     const handleRowClick = async (row: TransferItemRow) => {
         if (!form.fromWarehouseId) {
-            showFlash(errorResponse("Selecciona el almacén de origen"));
+            showFeedback(errorResponse("Selecciona el almacén de origen"));
             return;
         }
 
         const skuData = selectedSkus.find((s) => s.sku.id === row.skuId);
         if (!skuData) {
-            showFlash(errorResponse("No se encontró el SKU seleccionado"));
+            showFeedback(errorResponse("No se encontró el SKU seleccionado"));
             return;
         }
 
@@ -770,4 +770,5 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     );
     return content;
 }
+
 

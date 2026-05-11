@@ -2,7 +2,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { Boxes, ClipboardList, Trash2 } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
@@ -29,7 +29,7 @@ const CURRENCY = "PEN";
 
 
 export default function OutOrder() {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(false);
@@ -77,7 +77,7 @@ export default function OutOrder() {
   };
 
   const loadWarehouses = async () => {
-    clearFlash();
+    clearFeedback();
     try {
       const res = await listActiveWarehouses({ page: 1, limit: 100 });
       const options =
@@ -92,7 +92,7 @@ export default function OutOrder() {
       setWarehouseOptions(options);
     } catch {
       setWarehouseOptions([]);
-      showFlash(errorResponse("Error al cargar almacenes"));
+      showFeedback(errorResponse("Error al cargar almacenes"));
     }
   };
 
@@ -125,7 +125,7 @@ export default function OutOrder() {
     } catch {
       setSerie({ value: "", label: "" });
       setForm((prev) => ({ ...prev, serieId: "" }));
-      showFlash(errorResponse("Error al cargar series"));
+      showFeedback(errorResponse("Error al cargar series"));
     }
   };
 
@@ -139,7 +139,7 @@ export default function OutOrder() {
       setSearchResults(response);
       setProductsCache((prev) => mergeSkuCache(prev, response));
     } catch {
-      showFlash(errorResponse("Error al cargar productos"));
+      showFeedback(errorResponse("Error al cargar productos"));
     }
   };
 
@@ -168,28 +168,28 @@ export default function OutOrder() {
       productsCache?.items.find((p) => p.sku.id === itemId);
 
     if (!itemId) {
-      showFlash(errorResponse("Selecciona un producto"));
+      showFeedback(errorResponse("Selecciona un producto"));
       return;
     }
 
     if (quantity <= 0) {
-      showFlash(errorResponse("La cantidad debe ser mayor a 0"));
+      showFeedback(errorResponse("La cantidad debe ser mayor a 0"));
       return;
     }
 
     if (unitCost !== undefined && unitCost < 0) {
-      showFlash(errorResponse("El costo debe ser mayor o igual a 0"));
+      showFeedback(errorResponse("El costo debe ser mayor o igual a 0"));
       return;
     }
 
     if (!selected) {
-      showFlash(errorResponse("Producto no encontrado"));
+      showFeedback(errorResponse("Producto no encontrado"));
       return;
     }
 
     const alreadyAdded = (form.items ?? []).some((item) => item.itemId === itemId);
     if (alreadyAdded) {
-      showFlash(errorResponse("El producto ya fue agregado"));
+      showFeedback(errorResponse("El producto ya fue agregado"));
       return;
     }
 
@@ -238,13 +238,13 @@ export default function OutOrder() {
   }, [form.items]);
 
   const saveOrder = async () => {
-    clearFlash();
+    clearFeedback();
     if (!form.warehouseId || !form.serieId) {
-      showFlash(errorResponse("Completa los datos del documento"));
+      showFeedback(errorResponse("Completa los datos del documento"));
       return;
     }
     if (!form.items?.length) {
-      showFlash(errorResponse("Agrega al menos un item"));
+      showFeedback(errorResponse("Agrega al menos un item"));
       return;
     }
     setLoading(true);
@@ -265,10 +265,10 @@ export default function OutOrder() {
       const res = await createOutOrder(payload);
       const nextId = res.documentId ?? "";
       setLastSavedOutOrderId(nextId);
-      showFlash(successResponse("Salida registrada"));
+      showFeedback(successResponse("Salida registrada"));
       setOpenNavigateModal(true);
     } catch {
-      showFlash(errorResponse("Error al guardar la salida"));
+      showFeedback(errorResponse("Error al guardar la salida"));
     } finally {
       setLoading(false);
     }
@@ -562,3 +562,4 @@ export default function OutOrder() {
     </div>
   );
 }
+

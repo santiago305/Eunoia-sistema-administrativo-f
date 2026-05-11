@@ -148,7 +148,7 @@ export default function PurchaseCreateLocal({
   onClose,
   onSaved,
 }: PurchaseCreateLocalProps) {
-  const showFlashRef = useRef((msg: { type?: string; message?: string }) => {
+  const showFeedbackRef = useRef((msg: { type?: string; message?: string }) => {
     if ((msg?.type ?? "error") === "success") sileo.success({ title: msg?.message ?? "Operación correcta" });
     else sileo.error({ title: msg?.message ?? "Ocurrió un error" });
   });
@@ -210,7 +210,7 @@ export default function PurchaseCreateLocal({
     } catch {
       setSearchResults(undefined);
       if (!isEdit) setProducts([]);
-      showFlashRef.current(errorResponse("Error al cargar SKUs de materia prima"));
+      showFeedbackRef.current(errorResponse("Error al cargar SKUs de materia prima"));
     }
   }, [isEdit]);
 
@@ -243,7 +243,7 @@ export default function PurchaseCreateLocal({
       setSupplierOptions(options);
     } catch {
       setSupplierOptions([]);
-      showFlashRef.current(errorResponse("Error al cargar proveedores"));
+      showFeedbackRef.current(errorResponse("Error al cargar proveedores"));
     }
   }, []);
 
@@ -258,7 +258,7 @@ export default function PurchaseCreateLocal({
       setWarehouseOptions(options);
     } catch {
       setWarehouseOptions([]);
-      showFlashRef.current(errorResponse("Error al cargar almacenes"));
+      showFeedbackRef.current(errorResponse("Error al cargar almacenes"));
     }
   }, []);
 
@@ -501,7 +501,7 @@ export default function PurchaseCreateLocal({
         quotas: data.quotas ?? [],
       }));
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar la compra."));
+      showFeedbackRef.current(errorResponse("Error al cargar la compra."));
     }
   }, []);
 
@@ -1019,3 +1019,4 @@ export default function PurchaseCreateLocal({
   if (inModal) return content;
   return <PageShell>{content}</PageShell>;
 }
+

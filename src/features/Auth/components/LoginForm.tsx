@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginCredentials } from "@/features/Auth/types/auth";
 import { LoginSchema } from "@/shared/schemas/authSchemas";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -18,7 +18,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [lockSeconds, setLockSeconds] = useState<number>(0);
   const [formError, setFormError] = useState("");
   const navigate = useNavigate();
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const { login, userRole, permissions, preferredHomePath } = useAuth();
 
   const {
@@ -69,7 +69,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 
   const onSubmit = async (data: LoginCredentials) => {
     if (isTemporarilyBlocked) {
-      showFlash(
+      showFeedback(
         errorResponse(
           `Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(lockSeconds)}`
         )
@@ -77,14 +77,14 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
       return;
     }
 
-    clearFlash();
+    clearFeedback();
     setFormError("");
     clearErrors(["email", "password"]);
     setSubmitting(true);
     try {
       const response = await login(data);
       if (response.success) {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         startTransition(() => {
           const nextPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
           navigate(nextPath ?? RoutesPaths.dashboard, { replace: true });
@@ -93,7 +93,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
         const retrySeconds = response.data?.retryAfterSeconds ?? 0;
         if (retrySeconds > 0) {
           setFormError(response.message);
-          showFlash(
+          showFeedback(
             errorResponse(
               `Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(retrySeconds)}`
             )
@@ -101,7 +101,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
           setLockSeconds(retrySeconds);
         } else if (response.data?.status === 423) {
           setFormError("Cuenta bloqueada. Intenta nuevamente en 1 minuto");
-          showFlash(errorResponse("Cuenta bloqueada. Intenta nuevamente en 1 minuto"));
+          showFeedback(errorResponse("Cuenta bloqueada. Intenta nuevamente en 1 minuto"));
           setLockSeconds(60);
         } else {
           setFormError(response.message);
@@ -111,12 +111,12 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
           if (response.data?.fieldErrors?.password) {
             setError("password", { type: "server", message: response.data.fieldErrors.password });
           }
-          showFlash(errorResponse(response.message));
+          showFeedback(errorResponse(response.message));
         }
       }
     } catch {
       setFormError("Credenciales invalidas o error de red");
-      showFlash(errorResponse("Credenciales invalidas o error de red"));
+      showFeedback(errorResponse("Credenciales invalidas o error de red"));
     } finally {
       setSubmitting(false);
     }
@@ -187,5 +187,6 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 export default LoginForm;
+
 
 

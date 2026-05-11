@@ -8,7 +8,7 @@ import { SectionHeaderForm } from "@/shared/components/components/SectionHederFo
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { getApiErrorMessage } from "@/shared/common/utils/apiError";
 import { listActive } from "@/shared/services/warehouseServices";
@@ -95,7 +95,7 @@ export function ProductionOrderFormModal({
   onSaved,
   primaryColor,
 }: ProductionOrderFormModalProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const accent = primaryColor ?? DEFAULT_PRIMARY;
   const isEdit = mode === "edit" && Boolean(productionId);
 
@@ -132,7 +132,7 @@ export function ProductionOrderFormModal({
       );
     } catch {
       setWarehouseOptions([]);
-      showFlash(errorResponse("Error al cargar almacenes"));
+      showFeedback(errorResponse("Error al cargar almacenes"));
     }
   };
 
@@ -150,7 +150,7 @@ export function ProductionOrderFormModal({
       setSearchResults((res ?? []).filter((item) => Boolean(item.stockItemId)));
     } catch {
       setSearchResults([]);
-      showFlash(errorResponse("Error al cargar SKUs terminados"));
+      showFeedback(errorResponse("Error al cargar SKUs terminados"));
     }
   };
 
@@ -219,7 +219,7 @@ export function ProductionOrderFormModal({
     } catch {
       setSerie({ value: "", label: "" });
       setForm((prev) => ({ ...prev, serieId: "" }));
-      showFlash(errorResponse("Error al cargar series"));
+      showFeedback(errorResponse("Error al cargar series"));
     }
   };
 
@@ -229,15 +229,15 @@ export function ProductionOrderFormModal({
       products.find((product) => (product.itemId ?? product.id) === finishedItemId);
 
     if (!finishedItemId) {
-      showFlash(errorResponse("Selecciona un producto"));
+      showFeedback(errorResponse("Selecciona un producto"));
       return;
     }
     if (!selected?.stockItemId) {
-      showFlash(errorResponse("El producto seleccionado no tiene item de stock valido para produccion"));
+      showFeedback(errorResponse("El producto seleccionado no tiene item de stock valido para produccion"));
       return;
     }
     if ((form.items ?? []).some((item) => item.finishedItemId === finishedItemId)) {
-      showFlash(errorResponse("El producto ya fue agregado"));
+      showFeedback(errorResponse("El producto ya fue agregado"));
       return;
     }
 
@@ -422,14 +422,14 @@ export function ProductionOrderFormModal({
   );
 
   const saveOrder = async () => {
-    clearFlash();
+    clearFeedback();
 
     if (!form.fromWarehouseId || !form.toWarehouseId || !form.serieId) {
-      showFlash(errorResponse("Completa los datos de documento"));
+      showFeedback(errorResponse("Completa los datos de documento"));
       return;
     }
     if (!form.items?.length) {
-      showFlash(errorResponse("Agrega al menos un item"));
+      showFeedback(errorResponse("Agrega al menos un item"));
       return;
     }
 
@@ -443,15 +443,15 @@ export function ProductionOrderFormModal({
 
       if (isEdit && productionId) {
         await updateProductionOrder(productionId, payload);
-        showFlash(successResponse("Orden de produccion actualizada"));
+        showFeedback(successResponse("Orden de produccion actualizada"));
       } else {
         await createProductionOrder(payload);
-        showFlash(successResponse("Orden de produccion creada"));
+        showFeedback(successResponse("Orden de produccion creada"));
       }
 
       await onSaved();
     } catch (error) {
-      showFlash(errorResponse(getApiErrorMessage(error, "Error al guardar la orden de produccion")));
+      showFeedback(errorResponse(getApiErrorMessage(error, "Error al guardar la orden de produccion")));
     } finally {
       setLoading(false);
     }
@@ -459,7 +459,7 @@ export function ProductionOrderFormModal({
 
   const loadOrder = async (nextProductionId: string) => {
     setLoading(true);
-    clearFlash();
+    clearFeedback();
 
     try {
       const data = await getProductionOrder(nextProductionId);
@@ -481,7 +481,7 @@ export function ProductionOrderFormModal({
       setProducts(mappedProducts);
       setSearchResults(mappedProducts);
     } catch {
-      showFlash(errorResponse("Error al cargar la orden de produccion"));
+      showFeedback(errorResponse("Error al cargar la orden de produccion"));
     } finally {
       setLoading(false);
     }
@@ -674,3 +674,4 @@ export function ProductionOrderFormModal({
     </>
   );
 }
+

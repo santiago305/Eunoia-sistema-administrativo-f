@@ -114,7 +114,7 @@ type PurchaseRow = {
 };
 
 export default function Purchases() {
-    const showFlash = useCallback((payload: { type?: string; message?: string }) => {
+    const showFeedback = useCallback((payload: { type?: string; message?: string }) => {
         const kind = payload?.type ?? "success";
         const title = payload?.message ?? "Operación completada";
         if (kind === "success") sileo.success({ title });
@@ -122,9 +122,9 @@ export default function Purchases() {
         else if (kind === "info") sileo.info({ title });
         else sileo.error({ title });
     }, []);
-    const clearFlash = useCallback(() => undefined, []);
-    const showFlashRef = useRef(showFlash);
-    useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
+    const clearFeedback = useCallback(() => undefined, []);
+    const showFeedbackRef = useRef(showFeedback);
+    useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
     const { hasCompany } = useCompany();
     const { can, canAny } = usePermissions();
     const navigate = useNavigate();
@@ -232,7 +232,7 @@ export default function Purchases() {
             const response = await getPurchaseSearchState();
             setSearchState(response);
         } catch {
-            showFlashRef.current({ type: "error", message: "Error al cargar el estado del buscador inteligente" });
+            showFeedbackRef.current({ type: "error", message: "Error al cargar el estado del buscador inteligente" });
         }
     }, []);
 
@@ -241,7 +241,7 @@ export default function Purchases() {
             const response = await getPurchaseExportColumns();
             setExportColumns(response ?? []);
         } catch {
-            showFlashRef.current({ type: "error", message: "Error al cargar columnas de exportacion" });
+            showFeedbackRef.current({ type: "error", message: "Error al cargar columnas de exportacion" });
         }
     }, []);
 
@@ -256,7 +256,7 @@ export default function Purchases() {
                 })),
             );
         } catch {
-            showFlashRef.current({ type: "error", message: "Error al cargar presets de exportacion" });
+            showFeedbackRef.current({ type: "error", message: "Error al cargar presets de exportacion" });
         }
     }, []);
 
@@ -274,7 +274,7 @@ export default function Purchases() {
     }, []);
 
     const loadPurchases = useCallback(async () => {
-        clearFlash();
+        clearFeedback();
         setLoading(true);
         setError(null);
         try {
@@ -312,12 +312,12 @@ export default function Purchases() {
                 hasNext: false,
             }));
             setError("Error al listar compras");
-            showFlashRef.current({ type: "error", message: "Error al listar compras" });
+            showFeedbackRef.current({ type: "error", message: "Error al listar compras" });
         } finally {
             setLoading(false);
         }
     }, [
-        clearFlash,
+        clearFeedback,
         executedSnapshot,
         fromDate,
         limit,
@@ -327,125 +327,125 @@ export default function Purchases() {
     ]);
 
     const setSent = useCallback(async (id: string) => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await setSentPurchase(id);
             if (res.type === "error") {
-                showFlash({ type: "error", message: res.message });
+                showFeedback({ type: "error", message: res.message });
             }
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 void loadPurchases();
             }
         } catch {
-            showFlash({ type: "error", message: "Error al iniciar espera de mercaderia" });
+            showFeedback({ type: "error", message: "Error al iniciar espera de mercaderia" });
         }
-    }, [clearFlash, loadPurchases, showFlash]);
+    }, [clearFeedback, loadPurchases, showFeedback]);
 
     const cancelOrder = useCallback(async (id: string) => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await setCancelPurchase(id);
             if (res.type === "error") {
-                showFlash({ type: "error", message: res.message });
+                showFeedback({ type: "error", message: res.message });
             }
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 void loadPurchases();
             }
         } catch {
-            showFlash({ type: "error", message: "Error al iniciar espera de mercaderia" });
+            showFeedback({ type: "error", message: "Error al iniciar espera de mercaderia" });
         }
-    }, [clearFlash, loadPurchases, showFlash]);
+    }, [clearFeedback, loadPurchases, showFeedback]);
 
     const openPurchasePdf = useCallback((id: string) => {
-        clearFlash();
+        clearFeedback();
         setSelectedProductionId(id);
         setOpenPdfModal(true);
-    }, [clearFlash]);
+    }, [clearFeedback]);
 
     const EnterToWarehouse = useCallback(async (id: string) => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await enterPurchaseOrder(id);
             if (res.type === "error") {
-                showFlash({ type: "error", message: res.message });
+                showFeedback({ type: "error", message: res.message });
                 void loadPurchases();
             }
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 const selected = purchases.find((purchase) => purchase.poId === id) ?? null;
                 setCompletedPhotoPo(selected);
                 void loadPurchases();
             }
         } catch {
-            showFlash({ type: "error", message: "Error al ingresar a almacen" });
+            showFeedback({ type: "error", message: "Error al ingresar a almacen" });
             void loadPurchases();
         }
-    }, [clearFlash, loadPurchases, purchases, showFlash]);
+    }, [clearFeedback, loadPurchases, purchases, showFeedback]);
 
     const requestProcessing = useCallback(async (id: string) => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await requestProcessingPurchaseOrder(id);
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 await loadPurchases();
                 return;
             }
-            showFlash({ type: "error", message: res.message });
+            showFeedback({ type: "error", message: res.message });
         } catch {
-            showFlash({ type: "error", message: "No se pudo solicitar aprobación de procesamiento" });
+            showFeedback({ type: "error", message: "No se pudo solicitar aprobación de procesamiento" });
         }
-    }, [clearFlash, loadPurchases, showFlash]);
+    }, [clearFeedback, loadPurchases, showFeedback]);
 
     const approveProcessing = useCallback(async (id: string) => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await approveProcessingPurchaseOrder(id);
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 await loadPurchases();
                 return;
             }
-            showFlash({ type: "error", message: res.message });
+            showFeedback({ type: "error", message: res.message });
         } catch {
-            showFlash({ type: "error", message: "No se pudo aprobar el procesamiento" });
+            showFeedback({ type: "error", message: "No se pudo aprobar el procesamiento" });
         }
-    }, [clearFlash, loadPurchases, showFlash]);
+    }, [clearFeedback, loadPurchases, showFeedback]);
 
     const rejectProcessing = useCallback(async (id: string) => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await rejectProcessingPurchaseOrder(id);
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 await loadPurchases();
                 return;
             }
-            showFlash({ type: "error", message: res.message });
+            showFeedback({ type: "error", message: res.message });
         } catch {
-            showFlash({ type: "error", message: "No se pudo rechazar el procesamiento" });
+            showFeedback({ type: "error", message: "No se pudo rechazar el procesamiento" });
         }
-    }, [clearFlash, loadPurchases, showFlash]);
+    }, [clearFeedback, loadPurchases, showFeedback]);
 
     const confirmReception = useCallback(async (id: string) => {
-        clearFlash();
+        clearFeedback();
         try {
             const res = await confirmPurchaseReception(id);
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 await loadPurchases();
                 return true;
             }
 
-            showFlash({ type: "error", message: res.message });
+            showFeedback({ type: "error", message: res.message });
             return false;
         } catch {
-            showFlash({ type: "error", message: "Error al confirmar ingreso a stock" });
+            showFeedback({ type: "error", message: "Error al confirmar ingreso a stock" });
             return false;
         }
-    }, [clearFlash, loadPurchases, showFlash]);
+    }, [clearFeedback, loadPurchases, showFeedback]);
 
     const addExtraTime = useCallback(async (values: { days: number; hours: number; minutes: number }) => {
         if (!extraTimePoId) return;
@@ -453,18 +453,18 @@ export default function Purchases() {
         try {
             const res = await addPurchaseExtraTime(extraTimePoId, values);
             if (res.type === "success") {
-                showFlash({ type: "success", message: res.message });
+                showFeedback({ type: "success", message: res.message });
                 setExtraTimePoId(null);
                 await loadPurchases();
             } else {
-                showFlash({ type: "error", message: res.message });
+                showFeedback({ type: "error", message: res.message });
             }
         } catch {
-            showFlash({ type: "error", message: "Error al agregar tiempo extra" });
+            showFeedback({ type: "error", message: "Error al agregar tiempo extra" });
         } finally {
             setExtraTimeLoading(false);
         }
-    }, [extraTimePoId, loadPurchases, showFlash]);
+    }, [extraTimePoId, loadPurchases, showFeedback]);
 
     const uploadCompletedPhoto = useCallback(async (file: File) => {
         const poId = completedPhotoPo?.poId;
@@ -476,18 +476,18 @@ export default function Purchases() {
                 skippedPhotoRef.current.add(poId);
                 const confirmed = await confirmReception(poId);
                 if (confirmed) {
-                    showFlash({ type: "success", message: `${res.message}. Compra ingresada a stock.` });
+                    showFeedback({ type: "success", message: `${res.message}. Compra ingresada a stock.` });
                     setCompletedPhotoPo(null);
                 }
             } else {
-                showFlash({ type: "error", message: res.message });
+                showFeedback({ type: "error", message: res.message });
             }
         } catch (err) {
-            showFlash({ type: "error", message: parseApiError(err, "No se pudo subir la foto de la compra") });
+            showFeedback({ type: "error", message: parseApiError(err, "No se pudo subir la foto de la compra") });
         } finally {
             setCompletedPhotoLoading(false);
         }
-    }, [completedPhotoPo?.poId, confirmReception, showFlash]);
+    }, [completedPhotoPo?.poId, confirmReception, showFeedback]);
 
     const skipCompletedPhoto = useCallback(async () => {
         const poId = completedPhotoPo?.poId;
@@ -499,9 +499,9 @@ export default function Purchases() {
         const confirmed = await confirmReception(poId);
         if (confirmed) {
             setCompletedPhotoPo(null);
-            showFlash({ type: "success", message: "Compra ingresada sin foto. Se puede subir luego desde detalle (admin)." });
+            showFeedback({ type: "success", message: "Compra ingresada sin foto. Se puede subir luego desde detalle (admin)." });
         }
-    }, [completedPhotoPo?.poId, confirmReception, markPhotoPromptSkipped, showFlash]);
+    }, [completedPhotoPo?.poId, confirmReception, markPhotoPromptSkipped, showFeedback]);
 
     useEffect(() => {
         void loadPurchases();
@@ -600,11 +600,11 @@ export default function Purchases() {
         const run = async () => {
             if (action === "approveCreationWithPayment") {
                 const res = await approveCreationWithPayment(purchaseId);
-                showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
+                showFeedback({ type: res.type === "success" ? "success" : "error", message: res.message });
                 await loadPurchases();
             } else if (action === "rejectCreationWithPayment") {
                 const res = await rejectCreationWithPayment(purchaseId);
-                showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
+                showFeedback({ type: res.type === "success" ? "success" : "error", message: res.message });
                 await loadPurchases();
             } else if (action === "approveProcessing") {
                 await approveProcessing(purchaseId);
@@ -612,7 +612,7 @@ export default function Purchases() {
                 await rejectProcessing(purchaseId);
             } else if (action === "approvePayment" && paymentId) {
                 const res = await approvePaymentById(paymentId);
-                showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
+                showFeedback({ type: res.type === "success" ? "success" : "error", message: res.message });
                 await loadPurchases();
             }
 
@@ -634,7 +634,7 @@ export default function Purchases() {
         rejectProcessing,
         searchParams,
         setSearchParams,
-        showFlash,
+        showFeedback,
     ]);
 
     const columns = useMemo<DataTableColumn<PurchaseRow>[]>(() => [
@@ -897,7 +897,7 @@ export default function Purchases() {
                                     const poId = row.purchase.poId ?? "";
                                     if (!poId) return;
                                     const res = await approveCreationWithPayment(poId);
-                                    showFlash({ type: res.type === "success" ? "success" : "error", message: res.message });
+                                    showFeedback({ type: res.type === "success" ? "success" : "error", message: res.message });
                                     await loadPurchases();
                                 },
                                 disabled: companyActionDisabled,
@@ -1012,7 +1012,7 @@ export default function Purchases() {
         openPurchasePdf,
         requestProcessing,
         setSent,
-        showFlash,
+        showFeedback,
     ]);
 
     const smartSearchColumns = useMemo(
@@ -1117,34 +1117,34 @@ export default function Purchases() {
         try {
             const response = await savePurchaseSearchMetric(name, snapshot);
             if (response.type === "success") {
-                showFlash({ type: "success", message: response.message });
+                showFeedback({ type: "success", message: response.message });
                 await loadSearchState();
                 return true;
             } else {
-                showFlash({ type: "error", message: response.message });
+                showFeedback({ type: "error", message: response.message });
                 return false;
             }
         } catch {
-            showFlash({ type: "error", message: "Error al guardar la metrica" });
+            showFeedback({ type: "error", message: "Error al guardar la metrica" });
             return false;
         } finally {
             setSavingMetric(false);
         }
-    }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+    }, [appliedSearchText, loadSearchState, searchFilters, showFeedback]);
 
     const handleDeleteMetric = useCallback(async (metricId: string) => {
         try {
             const response = await deletePurchaseSearchMetric(metricId);
             if (response.type === "success") {
-                showFlash({ type: "success", message: response.message });
+                showFeedback({ type: "success", message: response.message });
                 await loadSearchState();
             } else {
-                showFlash({ type: "error", message: response.message });
+                showFeedback({ type: "error", message: response.message });
             }
         } catch {
-            showFlash({ type: "error", message: "Error al eliminar la metrica" });
+            showFeedback({ type: "error", message: "Error al eliminar la metrica" });
         }
-    }, [loadSearchState, showFlash]);
+    }, [loadSearchState, showFeedback]);
 
     const handleExport = useCallback(async (columnsToExport: PurchaseExportColumn[]) => {
         setExporting(true);
@@ -1163,13 +1163,13 @@ export default function Purchases() {
             anchor.download = file.filename;
             anchor.click();
             URL.revokeObjectURL(url);
-            showFlash({ type: "success", message: "Excel exportado correctamente" });
+            showFeedback({ type: "success", message: "Excel exportado correctamente" });
         } catch {
-            showFlash({ type: "error", message: "No se pudo exportar el Excel" });
+            showFeedback({ type: "error", message: "No se pudo exportar el Excel" });
         } finally {
             setExporting(false);
         }
-    }, [executedSnapshot.filters, executedSnapshot.q, fromDate, showFlash, toDate, useTableDateRangeForExport]);
+    }, [executedSnapshot.filters, executedSnapshot.q, fromDate, showFeedback, toDate, useTableDateRangeForExport]);
 
     const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: PurchaseExportColumn[] }) => {
         await savePurchaseExportPreset({
@@ -1178,14 +1178,14 @@ export default function Purchases() {
             useDateRange: useTableDateRangeForExport,
         });
         await loadExportPresets();
-        showFlash({ type: "success", message: "Preset de exportacion guardado" });
-    }, [loadExportPresets, showFlash, useTableDateRangeForExport]);
+        showFeedback({ type: "success", message: "Preset de exportacion guardado" });
+    }, [loadExportPresets, showFeedback, useTableDateRangeForExport]);
 
     const handleDeleteExportPreset = useCallback(async (metricId: string) => {
         await deletePurchaseExportPreset(metricId);
         await loadExportPresets();
-        showFlash({ type: "success", message: "Preset eliminado" });
-    }, [loadExportPresets, showFlash]);
+        showFeedback({ type: "success", message: "Preset eliminado" });
+    }, [loadExportPresets, showFeedback]);
 
     return (
         <PageShell className="bg-white">
@@ -1391,4 +1391,5 @@ export default function Purchases() {
         </PageShell>
     );
 }
+
 

@@ -8,7 +8,7 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { Headed } from "@/shared/components/components/Headed";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
@@ -81,7 +81,7 @@ export default function AdjustmentFormProducts({
   initialSku,
 }: AdjustmentFormProductsProps) {
   const { userId } = useAuth();
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<PendingAdjustmentItem>(() => buildEmptyPendingItem());
@@ -129,7 +129,7 @@ export default function AdjustmentFormProducts({
   }, [loadDocuments, onClose, resetForm]);
 
   const loadWarehouses = useCallback(async () => {
-    clearFlash();
+    clearFeedback();
     try {
       const res = await listActive();
       const options =
@@ -140,9 +140,9 @@ export default function AdjustmentFormProducts({
       setWarehouseOptions(options);
     } catch {
       setWarehouseOptions([]);
-      showFlash(errorResponse("Error al cargar almacenes"));
+      showFeedback(errorResponse("Error al cargar almacenes"));
     }
-  }, [clearFlash, showFlash]);
+  }, [clearFeedback, showFeedback]);
 
   const loadSeries = async (warehouseId: string) => {
     if (!warehouseId) {
@@ -180,7 +180,7 @@ export default function AdjustmentFormProducts({
     } catch {
       setSerie({ value: "", label: "" });
       setForm((prev) => ({ ...prev, serieId: "" }));
-      showFlash(errorResponse("Error al cargar series"));
+      showFeedback(errorResponse("Error al cargar series"));
     }
   };
 
@@ -200,9 +200,9 @@ export default function AdjustmentFormProducts({
     } catch {
       if (latestSkuQueryRef.current.trim() !== requestQuery) return;
       setSearchResults(undefined);
-      showFlash(errorResponse("Error al cargar SKUs"));
+      showFeedback(errorResponse("Error al cargar SKUs"));
     }
-  }, [showFlash, type]);
+  }, [showFeedback, type]);
 
   const handleSkuSearchChange = useCallback((text: string) => {
     latestSkuQueryRef.current = text;
@@ -219,15 +219,15 @@ export default function AdjustmentFormProducts({
   }, [searchSkus]);
 
   const addItem = (skuId: string, quantity = 1) => {
-    clearFlash();
+    clearFeedback();
 
     if (!skuId) {
-      showFlash(errorResponse("Selecciona un SKU"));
+      showFeedback(errorResponse("Selecciona un SKU"));
       return;
     }
 
     if (quantity === 0) {
-      showFlash(errorResponse("La cantidad no puede ser 0"));
+      showFeedback(errorResponse("La cantidad no puede ser 0"));
       return;
     }
 
@@ -236,13 +236,13 @@ export default function AdjustmentFormProducts({
       selectedSkus.find((s) => s.sku.id === skuId);
 
     if (!selected) {
-      showFlash(errorResponse("SKU no encontrado"));
+      showFeedback(errorResponse("SKU no encontrado"));
       return;
     }
 
     const alreadyAdded = items.some((item) => item.skuId === skuId);
     if (alreadyAdded) {
-      showFlash(errorResponse("El SKU ya fue agregado"));
+      showFeedback(errorResponse("El SKU ya fue agregado"));
       return;
     }
 
@@ -342,23 +342,23 @@ export default function AdjustmentFormProducts({
   );
 
   const saveAdjustment = async () => {
-    clearFlash();
+    clearFeedback();
 
     if (!form.warehouseId || !form.serieId) {
-      showFlash(errorResponse("Completa los datos del documento"));
+      showFeedback(errorResponse("Completa los datos del documento"));
       return;
     }
 
     if (!items.length) {
-      showFlash(errorResponse("Agrega al menos un item"));
+      showFeedback(errorResponse("Agrega al menos un item"));
       return;
     }
     if (adjustmentCheck.loading) {
-      showFlash(errorResponse("Validando ajuste..."));
+      showFeedback(errorResponse("Validando ajuste..."));
       return;
     }
     if (!adjustmentCheck.possible) {
-      showFlash(errorResponse(adjustmentCheck.reasons[0] ?? "No es posible realizar el ajuste"));
+      showFeedback(errorResponse(adjustmentCheck.reasons[0] ?? "No es posible realizar el ajuste"));
       return;
     }
 
@@ -375,14 +375,14 @@ export default function AdjustmentFormProducts({
 
       const res = await createOutOrder(payload);
       const adjustmentId = res?.documentId ?? res.docId ?? "";
-      showFlash(successResponse("Ajuste registrado en borrador"));
+      showFeedback(successResponse("Ajuste registrado en borrador"));
 
       if (adjustmentId) {
         await onSaved?.(adjustmentId);
       }
       handleClose();
     } catch {
-      showFlash(errorResponse("Error al guardar el ajuste"));
+      showFeedback(errorResponse("Error al guardar el ajuste"));
     } finally {
       setLoading(false);
     }
@@ -390,18 +390,18 @@ export default function AdjustmentFormProducts({
 
   const handleRowClick = async (row: AdjustmentItemRow) => {
     if (!form.warehouseId) {
-      showFlash(errorResponse("Selecciona el almacén"));
+      showFeedback(errorResponse("Selecciona el almacén"));
       return;
     }
 
     if (!row.skuId) {
-      showFlash(errorResponse("No se encontró el SKU seleccionado"));
+      showFeedback(errorResponse("No se encontró el SKU seleccionado"));
       return;
     }
 
     const skuData = selectedSkus.find((s) => s.sku.id === row.skuId);
     if (!skuData) {
-      showFlash(errorResponse("No se encontró el SKU seleccionado"));
+      showFeedback(errorResponse("No se encontró el SKU seleccionado"));
       return;
     }
 
@@ -785,3 +785,4 @@ export default function AdjustmentFormProducts({
     </Modal>
   );
 }
+

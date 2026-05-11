@@ -7,7 +7,7 @@ import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Trash2 } from "lucide-react";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listPayments, removePayment, type ListPaymentsResponse } from "@/shared/services/paymentService";
 import type { Payment } from "@/features/purchases/types/purchase";
@@ -30,7 +30,7 @@ const formatDate = (value?: string | null) => {
 
 export default function Payments() {
   const { can } = usePermissions();
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
   const canManagePayments = can("payments.manage");
 
   const [loading, setLoading] = useState(false);
@@ -59,11 +59,11 @@ export default function Payments() {
       });
     } catch {
       setPayments([]);
-      showFlash(errorResponse("No se pudo cargar la lista de pagos."));
+      showFeedback(errorResponse("No se pudo cargar la lista de pagos."));
     } finally {
       setLoading(false);
     }
-  }, [pagination.limit, pagination.page, poIdFilter, showFlash]);
+  }, [pagination.limit, pagination.page, poIdFilter, showFeedback]);
 
   useEffect(() => {
     void loadPayments();
@@ -75,15 +75,15 @@ export default function Payments() {
       setDeletingId(payDocId);
       try {
         await removePayment(payDocId);
-        showFlash(successResponse("Pago eliminado correctamente."));
+        showFeedback(successResponse("Pago eliminado correctamente."));
         await loadPayments();
       } catch {
-        showFlash(errorResponse("No se pudo eliminar el pago."));
+        showFeedback(errorResponse("No se pudo eliminar el pago."));
       } finally {
         setDeletingId(null);
       }
     },
-    [canManagePayments, deletingId, loadPayments, showFlash],
+    [canManagePayments, deletingId, loadPayments, showFeedback],
   );
 
   const columns = useMemo<DataTableColumn<Payment>[]>(
@@ -185,4 +185,5 @@ export default function Payments() {
     </PageShell>
   );
 }
+
 

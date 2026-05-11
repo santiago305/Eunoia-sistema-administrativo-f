@@ -11,7 +11,7 @@ import {
 } from "@/shared/components/table/search";
 import { Headed } from "@/shared/components/components/Headed";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
   parseDateInputValue,
@@ -93,7 +93,7 @@ type InventoryMovementsPageProps = {
 };
 
 export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [searchParams] = useSearchParams();
 
   const [fromDate, setFromDate] = useState("");
@@ -157,9 +157,9 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       const response = await getInventoryLedgerSearchState({ productType: config.productType });
       setSearchState(response);
     } catch {
-      showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFeedback(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, [config.productType, showFlash]);
+  }, [config.productType, showFeedback]);
 
   useEffect(() => {
     void loadSearchState();
@@ -322,17 +322,17 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       });
 
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al guardar la metrica"));
+      showFeedback(errorResponse("Error al guardar la metrica"));
     } finally {
       setSavingMetric(false);
     }
-  }, [config.productType, executedSnapshot, loadSearchState, savingMetric, showFlash]);
+  }, [config.productType, executedSnapshot, loadSearchState, savingMetric, showFeedback]);
 
   const handleDeleteMetric = useCallback(async (metricId: string) => {
     try {
@@ -342,18 +342,18 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       });
 
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar la metrica"));
+      showFeedback(errorResponse("Error al eliminar la metrica"));
     }
-  }, [config.productType, loadSearchState, showFlash]);
+  }, [config.productType, loadSearchState, showFeedback]);
 
   const loadMovements = useCallback(async () => {
-    clearFlash();
+    clearFeedback();
     setLoading(true);
     setError(null);
 
@@ -378,11 +378,11 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       setItems([]);
       setTotal(0);
       setError("Error al listar movimientos");
-      showFlash(errorResponse("Error al listar movimientos"));
+      showFeedback(errorResponse("Error al listar movimientos"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, config.productType, executedSnapshot, fromDate, loadSearchState, page, showFlash, toDate]);
+  }, [clearFeedback, config.productType, executedSnapshot, fromDate, loadSearchState, page, showFeedback, toDate]);
 
   useEffect(() => {
     void loadMovements();
@@ -520,13 +520,13 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       a.download = file.filename;
       a.click();
       URL.revokeObjectURL(url);
-      showFlash(successResponse("Excel exportado correctamente"));
+      showFeedback(successResponse("Excel exportado correctamente"));
     } catch {
-      showFlash(errorResponse("No se pudo exportar el Excel"));
+      showFeedback(errorResponse("No se pudo exportar el Excel"));
     } finally {
       setExporting(false);
     }
-  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, fromDate, showFlash, toDate, useTableDateRangeForExport]);
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, fromDate, showFeedback, toDate, useTableDateRangeForExport]);
 
   const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
     await saveInventoryLedgerExportPreset({
@@ -630,3 +630,4 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     </PageShell>
   );
 }
+

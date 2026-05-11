@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlaskConical, PackageCheck, Save, Scale } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { getApiErrorMessage } from "@/shared/common/utils/apiError";
 import { listUnits } from "@/shared/services/unitService";
@@ -49,7 +49,7 @@ import { createEmptyRecipeDraft, RecipeDraft } from "./recipeFormFields.helpers"
 const DEFAULT_DRAFT: ProductCreateDraft = createEmptyProductCreateDraft();
 
 export function ProductCreateModal({ open, mode = "create", productId, productType, primaryColor = DEFAULT_PRIMARY, entityLabel, onClose, onSaved }: ProductCreateModalProps) {
-    const { showFlash, clearFlash } = useFlashMessage();
+    const { showFeedback, clearFeedback } = useFeedbackToast();
     const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("details");
     const [units, setUnits] = useState<ListUnitResponse>();
     const [loadingUnits, setLoadingUnits] = useState(false);
@@ -182,10 +182,10 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         listUnits()
             .then((response) => setUnits(response))
             .catch(() => {
-                showFlash(errorResponse("Error al cargar unidades"));
+                showFeedback(errorResponse("Error al cargar unidades"));
             })
             .finally(() => setLoadingUnits(false));
-    }, [open, units, loadingUnits, showFlash]);
+    }, [open, units, loadingUnits, showFeedback]);
 
     const loadEquivalences = useCallback(async (id: string) => {
         setLoadingEquivalences(true);
@@ -194,11 +194,11 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             setEquivalences(response ?? []);
         } catch {
             setEquivalences([]);
-            showFlash(errorResponse("Error al cargar equivalencias"));
+            showFeedback(errorResponse("Error al cargar equivalencias"));
         } finally {
             setLoadingEquivalences(false);
         }
-    }, [showFlash]);
+    }, [showFeedback]);
 
     const mapRecipeResponseToDraft = useCallback((response?: RecipeResponse | null): RecipeDraft => {
         if (!response?.recipe) return createEmptyRecipeDraft();
@@ -235,18 +235,18 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 setPersistedRecipesBySkuId((prev) => ({ ...prev, [skuId]: empty }));
                 setEditedRecipesBySkuId((prev) => (prev[skuId] ? prev : { ...prev, [skuId]: empty }));
             } else {
-                showFlash(errorResponse(getApiErrorMessage(error, "Error al cargar recetas")));
+                showFeedback(errorResponse(getApiErrorMessage(error, "Error al cargar recetas")));
             }
         } finally {
             setLoadingRecipe(false);
         }
-    }, [mapRecipeResponseToDraft, showFlash]);
+    }, [mapRecipeResponseToDraft, showFeedback]);
 
     useEffect(() => {
         if (!open || !isEditMode) return;
         if (!productId) return;
 
-        clearFlash();
+        clearFeedback();
         setLoadingProduct(true);
 
         getCatalogProductById(productId)
@@ -282,12 +282,12 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 await loadEquivalences(product.id);
             })
             .catch(() => {
-                showFlash(errorResponse(`No se pudo cargar ${label}`));
+                showFeedback(errorResponse(`No se pudo cargar ${label}`));
             })
             .finally(() => {
                 setLoadingProduct(false);
             });
-    }, [open, isEditMode, productId, label, clearFlash, loadEquivalences, showFlash]);
+    }, [open, isEditMode, productId, label, clearFeedback, loadEquivalences, showFeedback]);
 
     const loadMaterials = useCallback(async () => {
         setLoadingPrimaVariants(true);
@@ -313,11 +313,11 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             }));
             setPrimaVariants(normalized);
         } catch {
-            showFlash(errorResponse("Error al cargar materias primas"));
+            showFeedback(errorResponse("Error al cargar materias primas"));
         } finally {
             setLoadingPrimaVariants(false);
         }
-    }, [showFlash]);
+    }, [showFeedback]);
 
     useEffect(() => {
         if (!open || isMaterial || loadingPrimaVariants || primaVariants.length > 0) return;
@@ -441,7 +441,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             setEquivalenceFailures((prev) => prev.filter((eq) => !(eq.fromUnitId === payload.fromUnitId && eq.toUnitId === payload.toUnitId && Number(eq.factor) === Number(payload.factor))));
             await loadEquivalences(activeProductId);
         } catch {
-            showFlash(errorResponse("Error al crear equivalencia"));
+            showFeedback(errorResponse("Error al crear equivalencia"));
         }
     };
 
@@ -451,7 +451,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             await deleteProductEquivalence(id);
             await loadEquivalences(activeProductId);
         } catch {
-            showFlash(errorResponse("Error al eliminar equivalencia"));
+            showFeedback(errorResponse("Error al eliminar equivalencia"));
         }
     };
 
@@ -900,12 +900,12 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             } else {
                 setWorkspaceTab("equivalences");
             }
-            showFlash(errorResponse(partialFailureMessage));
+            showFeedback(errorResponse(partialFailureMessage));
             return;
         }
 
         resetCreateDraftState();
-        showFlash(successResponse(successMessage));
+        showFeedback(successResponse(successMessage));
         if (closeOnSuccess) {
             handleClose();
         }
@@ -914,7 +914,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const retryPendingCreateArtifacts = async () => {
         if (!createdProductId || saving) return;
 
-        clearFlash();
+        clearFeedback();
         setSaving(true);
         try {
             const { createdSkuIdsByDraftId: nextSkuIdsByDraftId, failedSkuDraftIds } = await persistSkuDrafts({
@@ -949,7 +949,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
 
     const saveProductUpdates = async () => {
         if (!productId || saving) return;
-        clearFlash();
+        clearFeedback();
         setSaving(true);
         try {
             await updateProduct(productId, {
@@ -967,7 +967,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     skuIds: failedSkuIds,
                     fallbackName: form.name,
                 });
-                showFlash(
+                showFeedback(
                     errorResponse(
                         failedLabels ? `Se actualiz\u00f3 ${label}, pero no se pudieron guardar estos SKUs: ${failedLabels}.` : `Se actualiz\u00f3 ${label}, pero quedaron SKUs pendientes de guardar.`,
                     ),
@@ -983,7 +983,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                         skuIds: failedSkuDraftIds,
                         fallbackName: form.name,
                     });
-                    showFlash(
+                    showFeedback(
                         errorResponse(
                             failedLabels
                                 ? `Se actualiz\u00f3 ${label}, pero no se pudieron crear/actualizar estos SKUs nuevos: ${failedLabels}.`
@@ -999,7 +999,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     skuIds: failedRecipeDraftIds,
                     fallbackName: form.name,
                 });
-                showFlash(
+                showFeedback(
                     errorResponse(
                         failedLabels
                             ? `Se actualiz\u00f3 ${label}, pero no se pudieron guardar las recetas de: ${failedLabels}.`
@@ -1017,7 +1017,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     skuIds: failedRecipeSkuIds,
                     fallbackName: form.name,
                 });
-                showFlash(
+                showFeedback(
                     errorResponse(
                         recipeNotFoundSkuIds.length > 0 && recipeNotFoundSkuIds.length === failedRecipeSkuIds.length
                             ? "Recipe not found"
@@ -1032,11 +1032,11 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 return;
             }
 
-            showFlash(successResponse(changedSkuRows.length > 0 ? `${label} actualizado` : `${label} actualizado`));
+            showFeedback(successResponse(changedSkuRows.length > 0 ? `${label} actualizado` : `${label} actualizado`));
             await onSaved?.();
             handleClose();
         } catch {
-            showFlash(errorResponse(`Error al actualizar ${label}`));
+            showFeedback(errorResponse(`Error al actualizar ${label}`));
         } finally {
             setSaving(false);
         }
@@ -1044,7 +1044,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
 
     const saveProductAndSkus = async () => {
         if ((!canSave && !createdProductId) || saving) return;
-        clearFlash();
+        clearFeedback();
         setSaving(true);
         try {
             let targetProductId = createdProductId;
@@ -1090,7 +1090,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 closeOnSuccess: true,
             });
         } catch {
-            showFlash(errorResponse(`Error al crear ${label} y sus SKUs`));
+            showFeedback(errorResponse(`Error al crear ${label} y sus SKUs`));
         } finally {
             setSaving(false);
         }
@@ -1105,13 +1105,13 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         try {
             const response = await deleteSkuRecipeItem(parsed.id, itemId);
             applyRecipeResponseToState(parsed.id, response.data ?? null);
-            showFlash(successResponse(response.message ?? "Item eliminado"));
+            showFeedback(successResponse(response.message ?? "Item eliminado"));
         } catch (error) {
             const status = (error as { response?: { status?: number } })?.response?.status;
             if (status === 404) {
-                showFlash(errorResponse("Recipe item not found"));
+                showFeedback(errorResponse("Recipe item not found"));
             } else {
-                showFlash(errorResponse(getApiErrorMessage(error, "Error al eliminar item de receta")));
+                showFeedback(errorResponse(getApiErrorMessage(error, "Error al eliminar item de receta")));
             }
         } finally {
             setSavingRecipe(false);
@@ -1213,3 +1213,4 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         </Modal>
     );
 }
+

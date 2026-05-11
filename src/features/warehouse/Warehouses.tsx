@@ -9,7 +9,7 @@ import {
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { WarehouseFormModal } from "@/features/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
@@ -73,9 +73,9 @@ function toSearchOptions(items: Array<{ id: string; name: string }>) {
 }
 
 export default function Warehouses() {
-  const { showFlash, clearFlash } = useFlashMessage();
-  const showFlashRef = useRef(showFlash);
-  useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
+  const { showFeedback, clearFeedback } = useFeedbackToast();
+  const showFeedbackRef = useRef(showFeedback);
+  useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
@@ -174,7 +174,7 @@ export default function Warehouses() {
       const response = await getWarehouseSearchState();
       setSearchState(response);
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
   }, []);
 
@@ -195,7 +195,7 @@ export default function Warehouses() {
   }, []);
 
   const loadWarehouses = useCallback(async () => {
-    clearFlash();
+    clearFeedback();
     setLoading(true);
 
     try {
@@ -235,11 +235,11 @@ export default function Warehouses() {
         hasPrev: false,
         hasNext: false,
       });
-      showFlashRef.current(errorResponse("Error al listar almacenes"));
+      showFeedbackRef.current(errorResponse("Error al listar almacenes"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, executedSnapshot, loadSearchState, page, paginationState.pageSize]);
+  }, [clearFeedback, executedSnapshot, loadSearchState, page, paginationState.pageSize]);
 
   useEffect(() => {
     void loadWarehouses();
@@ -263,7 +263,7 @@ export default function Warehouses() {
         }
       } catch {
         if (!cancelled) {
-          showFlashRef.current(errorResponse("Error al cargar departamentos"));
+          showFeedbackRef.current(errorResponse("Error al cargar departamentos"));
         }
       }
     })();
@@ -302,7 +302,7 @@ export default function Warehouses() {
         }
       } catch {
         if (!cancelled) {
-          showFlashRef.current(errorResponse("Error al cargar provincias"));
+          showFeedbackRef.current(errorResponse("Error al cargar provincias"));
         }
       }
     })();
@@ -340,7 +340,7 @@ export default function Warehouses() {
         }
       } catch {
         if (!cancelled) {
-          showFlashRef.current(errorResponse("Error al cargar distritos"));
+          showFeedbackRef.current(errorResponse("Error al cargar distritos"));
         }
       }
     })();
@@ -417,15 +417,15 @@ export default function Warehouses() {
             : warehouse,
         ),
       );
-      showFlash(
+      showFeedback(
         successResponse(!warehouseToToggle.isActive ? "Almacen restaurado" : "Almacen desactivado"),
       );
     } catch {
-      showFlash(errorResponse("Error al cambiar estado del almacen"));
+      showFeedback(errorResponse("Error al cambiar estado del almacen"));
     } finally {
       setDeletingWarehouseId(null);
     }
-  }, [deletingWarehouseId, warehouses, showFlash]);
+  }, [deletingWarehouseId, warehouses, showFeedback]);
 
   const warehousePendingToggle = useMemo(
     () =>
@@ -681,34 +681,34 @@ export default function Warehouses() {
     try {
       const response = await saveWarehouseSearchMetric(name, snapshot);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
         return true;
       }
 
-      showFlash(errorResponse(response.message));
+      showFeedback(errorResponse(response.message));
       return false;
     } catch {
-      showFlash(errorResponse("Error al guardar la metrica"));
+      showFeedback(errorResponse("Error al guardar la metrica"));
       return false;
     } finally {
       setSavingMetric(false);
     }
-  }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+  }, [appliedSearchText, loadSearchState, searchFilters, showFeedback]);
 
   const handleDeleteMetric = useCallback(async (metricId: string) => {
     try {
       const response = await deleteWarehouseSearchMetric(metricId);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar la metrica"));
+      showFeedback(errorResponse("Error al eliminar la metrica"));
     }
-  }, [loadSearchState, showFlash]);
+  }, [loadSearchState, showFeedback]);
 
   const handleSavedWarehouse = useCallback(() => {
     if (paginationState.pageIndex === 0) {
@@ -842,3 +842,4 @@ export default function Warehouses() {
     </PageShell>
   );
 }
+

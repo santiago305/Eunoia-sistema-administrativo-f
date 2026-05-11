@@ -3,7 +3,7 @@ import { getById } from "@/shared/services/purchaseService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { uploadPurchaseImageProdution } from "../utils/purchaseActions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { DocumentDetailsModal } from "@/shared/components/components/DocumentDetailsModal";
 import { DocType, DocStatus } from "@/features/warehouse/types/warehouse";
@@ -17,7 +17,7 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
   const [error, setError] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const { userRole } = useAuth();
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
 
   useEffect(() => {
     if (!open || !poId) {
@@ -66,14 +66,14 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
     try {
       const response = await uploadPurchaseImageProdution(poId, file);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         const refreshed = await getById(poId);
         setDetail(refreshed);
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch (err) {
-      showFlash(errorResponse(parseApiError(err, "No se pudo subir la foto de compra")));
+      showFeedback(errorResponse(parseApiError(err, "No se pudo subir la foto de compra")));
     } finally {
       setUploadingPhoto(false);
     }
@@ -134,3 +134,4 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
     />
   );
 }
+

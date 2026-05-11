@@ -14,12 +14,12 @@ export const useAfterLoginRedirect = () => {
     if (userRole) {
       navigate(RoutesPaths.dashboard, {
         replace: true,
-        state: { flashMessage: successResponse("Inicio de sesion exitoso") },
+        state: { feedbackMessage: successResponse("Inicio de sesion exitoso") },
       });
     } else {
       navigate(RoutesPaths.login, {
         replace: true,
-        state: { flashMessage: infoResponse("No se pudo obtener el rol del usuario.") },
+        state: { feedbackMessage: infoResponse("No se pudo obtener el rol del usuario.") },
       });
     }
   }, [isAuthenticated, userRole, loading, navigate]);

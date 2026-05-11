@@ -11,7 +11,7 @@ import {
 } from "@/shared/services/locationServices";
 import type { Location, LocationForm } from "@/features/warehouse/types/location";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -52,7 +52,7 @@ export function WarehouseLocationsModal({
   primaryHover,
 }: WarehouseLocationsModalProps) {
   const shouldReduceMotion = useReducedMotion();
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -77,7 +77,7 @@ export function WarehouseLocationsModal({
   const loadLocations = useCallback(async () => {
     if (!warehouse?.warehouseId) return;
 
-    clearFlash();
+    clearFeedback();
     setLoading(true);
     setError(null);
 
@@ -112,11 +112,11 @@ export function WarehouseLocationsModal({
         hasNext: false,
       }));
       setError("Error al listar ubicaciones");
-      showFlash(errorResponse("Error al listar ubicaciones"));
+      showFeedback(errorResponse("Error al listar ubicaciones"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, page, showFlash, warehouse?.warehouseId]);
+  }, [clearFeedback, page, showFeedback, warehouse?.warehouseId]);
 
   useEffect(() => {
     if (!open) return;
@@ -141,9 +141,9 @@ export function WarehouseLocationsModal({
       });
       setEditingLocationId(id);
     } catch {
-      showFlash(errorResponse("No se pudo cargar la ubicacion"));
+      showFeedback(errorResponse("No se pudo cargar la ubicacion"));
     }
-  }, [showFlash]);
+  }, [showFeedback]);
 
   const saveCreate = async () => {
     if (!createForm.warehouseId || !createForm.code.trim()) return;
@@ -157,9 +157,9 @@ export function WarehouseLocationsModal({
 
       setCreateForm(buildEmptyLocationForm(createForm.warehouseId));
       await loadLocations();
-      showFlash(successResponse("Ubicacion creada"));
+      showFeedback(successResponse("Ubicacion creada"));
     } catch {
-      showFlash(errorResponse("Error al crear ubicacion"));
+      showFeedback(errorResponse("Error al crear ubicacion"));
     }
   };
 
@@ -176,9 +176,9 @@ export function WarehouseLocationsModal({
       await updateLocationActive(editingLocationId, { isActive: editForm.isActive });
       setEditingLocationId(null);
       await loadLocations();
-      showFlash(successResponse("Ubicacion actualizada"));
+      showFeedback(successResponse("Ubicacion actualizada"));
     } catch {
-      showFlash(errorResponse("Error al editar ubicacion"));
+      showFeedback(errorResponse("Error al editar ubicacion"));
     }
   };
 
@@ -189,11 +189,11 @@ export function WarehouseLocationsModal({
       await updateLocationActive(deletingLocationId, { isActive: nextActiveState });
       setDeletingLocationId(null);
       await loadLocations();
-      showFlash(
+      showFeedback(
         successResponse(nextActiveState ? "Ubicacion restaurada" : "Ubicacion desactivada"),
       );
     } catch {
-      showFlash(errorResponse("Error al cambiar estado"));
+      showFeedback(errorResponse("Error al cambiar estado"));
     }
   };
 
@@ -427,3 +427,4 @@ function LocationFormFields({
 export default function Locations() {
   return null;
 }
+

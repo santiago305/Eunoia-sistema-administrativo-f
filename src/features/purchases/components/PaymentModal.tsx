@@ -20,7 +20,7 @@ import {
   parseDecimalInput,
 } from "@/shared/utils/functionPurchases";
 import { createPayment } from "@/shared/services/paymentService";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
 
@@ -68,7 +68,7 @@ export function PaymentModal({
 
   const previousOpenRef = useRef(open);
   const [saving, setSaving] = useState(false);
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
 
   useEffect(() => {
     const wasOpen = previousOpenRef.current;
@@ -104,12 +104,12 @@ export function PaymentModal({
 
     const amountNumber = normalizeMoney(parseDecimalInput(form.amount));
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-      showFlash(errorResponse("Ingresa un monto válido"));
+      showFeedback(errorResponse("Ingresa un monto válido"));
       return;
     }
 
     setSaving(true);
-    clearFlash();
+    clearFeedback();
 
     try {
       const res = await createPayment({
@@ -120,7 +120,7 @@ export function PaymentModal({
       });
 
       if (res.type === "success") {
-        showFlash(successResponse("Pago guardado con exito"));
+        showFeedback(successResponse("Pago guardado con exito"));
 
         if (loadPurchases) {
           loadPurchases();
@@ -131,12 +131,12 @@ export function PaymentModal({
         }
         await onSaved?.();
       } else {
-        showFlash(errorResponse("Error al guardar pago"));
+        showFeedback(errorResponse("Error al guardar pago"));
       }
 
       close();
     } catch {
-      showFlash(errorResponse("Error al guardar pago"));
+      showFeedback(errorResponse("Error al guardar pago"));
     } finally {
       setSaving(false);
     }
@@ -282,3 +282,4 @@ export function PaymentModal({
     </Modal>
   );
 }
+

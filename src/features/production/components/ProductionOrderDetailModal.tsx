@@ -3,7 +3,7 @@ import { Factory } from "lucide-react";
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 import { DocumentDetailsModal } from "@/shared/components/components/DocumentDetailsModal";
 import { uploadProductionImageProdution } from "@/features/production/utils/productionActions";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { ProductionStatus, type ProductionOrder } from "@/features/production/types/production";
 
@@ -39,7 +39,7 @@ export function ProductionOrderDetailModal({
   onClose,
 }: ProductionOrderDetailModalProps) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
 
   const handleUploadFromDetail = useCallback(async (file?: File | null) => {
     const productionId = order?.productionId ?? order?.id;
@@ -51,17 +51,17 @@ export function ProductionOrderDetailModal({
       const response = await uploadProductionImageProdution(productionId, file);
 
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await onUploadedPhoto?.();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("No se pudo subir la foto de produccion"));
+      showFeedback(errorResponse("No se pudo subir la foto de produccion"));
     } finally {
       setUploadingPhoto(false);
     }
-  }, [order, showFlash, onUploadedPhoto]);
+  }, [order, showFeedback, onUploadedPhoto]);
 
   const extendedDetails = useMemo(() => {
     if (!order) return undefined;
@@ -156,3 +156,4 @@ export function ProductionOrderDetailModal({
     />
   );
 }
+

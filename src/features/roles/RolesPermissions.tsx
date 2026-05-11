@@ -7,7 +7,7 @@ import {
   listRolePermissions,
   type AccessPermissionItem,
 } from "@/shared/services/accessControlService";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 
@@ -25,7 +25,7 @@ const groupByModule = (permissions: AccessPermissionItem[]) => {
 };
 
 export default function RolesPermissions() {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canAssignRolePermissions = can("roles.assign_permissions");
   const [roles, setRoles] = useState<RoleOption[]>([]);
@@ -57,7 +57,7 @@ export default function RolesPermissions() {
           setSelectedRoleDescription(firstRole.description);
         }
       } catch {
-        if (!cancelled) showFlash(errorResponse("No se pudo cargar roles/permisos."));
+        if (!cancelled) showFeedback(errorResponse("No se pudo cargar roles/permisos."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -66,7 +66,7 @@ export default function RolesPermissions() {
     return () => {
       cancelled = true;
     };
-  }, [showFlash]);
+  }, [showFeedback]);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,13 +99,13 @@ export default function RolesPermissions() {
 
   const saveMatrix = async () => {
     if (!selectedRoleId) return;
-    clearFlash();
+    clearFeedback();
     setSaving(true);
     try {
       await assignPermissionsToRole(selectedRoleId, Array.from(selectedCodes));
-      showFlash(successResponse("Permisos del rol actualizados."));
+      showFeedback(successResponse("Permisos del rol actualizados."));
     } catch {
-      showFlash(errorResponse("No se pudieron actualizar permisos del rol."));
+      showFeedback(errorResponse("No se pudieron actualizar permisos del rol."));
     } finally {
       setSaving(false);
     }
@@ -196,4 +196,5 @@ export default function RolesPermissions() {
     </div>
   );
 }
+
 

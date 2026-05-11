@@ -5,7 +5,7 @@ import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { listPurchaseHistory, getPurchaseTimeline } from "@/shared/services/purchaseService";
 import type { PurchaseOrder } from "@/features/purchases/types/purchase";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
 
@@ -17,7 +17,7 @@ type HistoryPurchase = PurchaseOrder & {
 };
 
 export default function PurchaseHistory() {
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
   const [items, setItems] = useState<HistoryPurchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<HistoryPurchase | null>(null);
@@ -60,11 +60,11 @@ export default function PurchaseHistory() {
       setItems((res.items ?? []) as HistoryPurchase[]);
     } catch {
       setItems([]);
-      showFlash(errorResponse("No se pudo cargar el historial de compras."));
+      showFeedback(errorResponse("No se pudo cargar el historial de compras."));
     } finally {
       setLoading(false);
     }
-  }, [eventTypeFilter, fromFilter, performedByFilter, showFlash, toFilter]);
+  }, [eventTypeFilter, fromFilter, performedByFilter, showFeedback, toFilter]);
 
   useEffect(() => {
     void load();
@@ -111,11 +111,11 @@ export default function PurchaseHistory() {
       setTimeline(res.events ?? []);
     } catch {
       setTimeline([]);
-      showFlash(errorResponse("No se pudo cargar la línea de tiempo de la compra."));
+      showFeedback(errorResponse("No se pudo cargar la línea de tiempo de la compra."));
     } finally {
       setTimelineLoading(false);
     }
-  }, [eventTypeFilter, fromFilter, performedByFilter, showFlash, toFilter]);
+  }, [eventTypeFilter, fromFilter, performedByFilter, showFeedback, toFilter]);
 
   return (
     <PageShell className="bg-white">
@@ -248,3 +248,4 @@ export default function PurchaseHistory() {
     </PageShell>
   );
 }
+

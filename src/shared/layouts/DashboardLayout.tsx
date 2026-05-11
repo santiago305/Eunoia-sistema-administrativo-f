@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import { useToast } from "@/shared/hooks/use-toast";
-import { useLocationFlashMessage } from "@/shared/hooks/useLocationFlashMessage";
+import { useLocationFeedback } from "@/shared/hooks/useLocationFeedback";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useUserDetails } from "@/shared/hooks/useUserDetails";
 import { resolveProfileAvatarUrl } from "@/features/profile/components/profile.utils";
@@ -77,7 +77,7 @@ const DashboardContent = () => {
 };
 
 const DashboardLayout = () => {
-  useLocationFlashMessage();
+  useLocationFeedback();
 
   return (
     <SidebarProvider>

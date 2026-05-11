@@ -22,7 +22,7 @@ export default function CompanyRequiredRoute({
         to={RoutesPaths.company}
         replace
         state={{
-          flashMessage: errorResponse(
+          feedbackMessage: errorResponse(
             "Primero debes registrar la empresa para realizar esta operacion.",
           ),
           from: location.pathname,

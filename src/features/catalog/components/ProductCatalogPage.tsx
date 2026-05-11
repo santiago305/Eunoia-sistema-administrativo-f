@@ -11,7 +11,7 @@ import {
     type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useProducts } from "@/shared/hooks/useProducts";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
@@ -72,7 +72,7 @@ type ProductCatalogPageConfig = {
 };
 
 export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfig }) {
-    const { showFlash, clearFlash } = useFlashMessage();
+    const { showFeedback, clearFeedback } = useFeedbackToast();
     const { hasCompany } = useCompany();
     const companyActionDisabled = !hasCompany;
 
@@ -188,9 +188,9 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             const response = await getProductSearchState({ type: config.productType });
             setSearchState(response);
         } catch {
-            showFlash(errorResponse("Error al cargar el estado del buscador inteligente"));
+            showFeedback(errorResponse("Error al cargar el estado del buscador inteligente"));
         }
-    }, [config.productType, showFlash]);
+    }, [config.productType, showFeedback]);
 
     useEffect(() => {
         void loadSearchState();
@@ -231,34 +231,34 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         try {
             const response = await saveProductSearchMetric(name, snapshot, { type: config.productType });
             if (response.type === "success") {
-                showFlash(successResponse(response.message));
+                showFeedback(successResponse(response.message));
                 await loadSearchState();
                 return true;
             } else {
-                showFlash(errorResponse(response.message));
+                showFeedback(errorResponse(response.message));
                 return false;
             }
         } catch {
-            showFlash(errorResponse("Error al guardar la metrica"));
+            showFeedback(errorResponse("Error al guardar la metrica"));
             return false;
         } finally {
             setSavingMetric(false);
         }
-    }, [config.productType, executedSearchText, loadSearchState, searchFilters, showFlash]);
+    }, [config.productType, executedSearchText, loadSearchState, searchFilters, showFeedback]);
 
     const handleDeleteMetric = useCallback(async (metricId: string) => {
         try {
             const response = await deleteProductSearchMetric(metricId, { type: config.productType });
             if (response.type === "success") {
-                showFlash(successResponse(response.message));
+                showFeedback(successResponse(response.message));
                 await loadSearchState();
             } else {
-                showFlash(errorResponse(response.message));
+                showFeedback(errorResponse(response.message));
             }
         } catch {
-            showFlash(errorResponse("Error al eliminar la metrica"));
+            showFeedback(errorResponse("Error al eliminar la metrica"));
         }
-    }, [config.productType, loadSearchState, showFlash]);
+    }, [config.productType, loadSearchState, showFeedback]);
 
     const deletingProduct = useMemo(
         () => products.find((product) => product.id === deletingProductId) ?? null,
@@ -363,7 +363,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
 
     const confirmDelete = async () => {
         if (!deletingProductId) return;
-        clearFlash();
+        clearFeedback();
         try {
             const product = products.find((p) => p.id === deletingProductId);
             if (product) {
@@ -372,10 +372,10 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             });
             }  
             setDeletingProductId(null);
-            showFlash(successResponse(config.updateSuccessMessage));
+            showFeedback(successResponse(config.updateSuccessMessage));
             await refresh();
         } catch {
-            showFlash(errorResponse(config.updateErrorMessage));
+            showFeedback(errorResponse(config.updateErrorMessage));
         }
     };
 
@@ -576,3 +576,4 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         </PageShell>
     );
 }
+

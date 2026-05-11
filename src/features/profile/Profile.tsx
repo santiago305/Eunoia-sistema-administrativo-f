@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, infoResponse, successResponse } from "@/shared/common/utils/response";
 import {
   changeMyPassword,
@@ -30,7 +30,7 @@ import {
 
 export default function ProfilePage() {
   const { userId } = useAuth();
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -71,18 +71,18 @@ export default function ProfilePage() {
         telefono: currentUser.telefono ?? "",
       });
     } catch {
-      showFlash(errorResponse("Error al cargar el perfil"));
+      showFeedback(errorResponse("Error al cargar el perfil"));
     } finally {
       setLoading(false);
     }
-  }, [profileForm, showFlash]);
+  }, [profileForm, showFeedback]);
 
   useEffect(() => {
     void getUser();
   }, [getUser]);
 
   const onSubmitProfile = profileForm.handleSubmit(async (values) => {
-    clearFlash();
+    clearFeedback();
     setSavingProfile(true);
     try {
       const payload: { name?: string; telefono?: string } = {};
@@ -93,22 +93,22 @@ export default function ProfilePage() {
       if (nextTelefono !== (user?.telefono ?? "")) payload.telefono = nextTelefono;
 
       if (Object.keys(payload).length === 0) {
-        showFlash(infoResponse("No hay cambios para guardar"));
+        showFeedback(infoResponse("No hay cambios para guardar"));
         return;
       }
 
       const res = await updateOwnUser(payload);
-      showFlash(successResponse(res.message || "Perfil actualizado"));
+      showFeedback(successResponse(res.message || "Perfil actualizado"));
       await getUser();
     } catch {
-      showFlash(errorResponse("No se pudo actualizar el perfil"));
+      showFeedback(errorResponse("No se pudo actualizar el perfil"));
     } finally {
       setSavingProfile(false);
     }
   });
 
   const onSubmitPassword = passwordForm.handleSubmit(async (values) => {
-    clearFlash();
+    clearFeedback();
     passwordForm.clearErrors(["currentPassword", "newPassword"]);
     setSavingPassword(true);
     try {
@@ -116,7 +116,7 @@ export default function ProfilePage() {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });
-      showFlash(successResponse(res.message || "Contrasena actualizada correctamente"));
+      showFeedback(successResponse(res.message || "Contrasena actualizada correctamente"));
       passwordForm.reset({
         currentPassword: "",
         newPassword: "",
@@ -136,35 +136,35 @@ export default function ProfilePage() {
           message: parsed.fieldErrors.newPassword,
         });
       }
-      showFlash(errorResponse(parsed.message));
+      showFeedback(errorResponse(parsed.message));
     } finally {
       setSavingPassword(false);
     }
   });
 
   const onPickAvatar = async (file: File) => {
-    clearFlash();
+    clearFeedback();
     setSavingAvatar(true);
     try {
       await updateMyAvatar(file);
-      showFlash(successResponse("Foto actualizada"));
+      showFeedback(successResponse("Foto actualizada"));
       await getUser();
     } catch {
-      showFlash(errorResponse("No se pudo actualizar la foto"));
+      showFeedback(errorResponse("No se pudo actualizar la foto"));
     } finally {
       setSavingAvatar(false);
     }
   };
 
   const onRemoveAvatar = async () => {
-    clearFlash();
+    clearFeedback();
     setSavingAvatar(true);
     try {
       await removeMyAvatar();
-      showFlash(successResponse("Foto eliminada"));
+      showFeedback(successResponse("Foto eliminada"));
       await getUser();
     } catch {
-      showFlash(errorResponse("No se pudo eliminar la foto"));
+      showFeedback(errorResponse("No se pudo eliminar la foto"));
     } finally {
       setSavingAvatar(false);
     }
@@ -238,5 +238,6 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
 

@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
-import { FlashMessageRoot } from "@/shared/components/components/flashMessage/FlashMessageRoot";
 import { AuthProvider } from "@/shared/context/AuthProvider";
 import { CompanyProvider } from "@/shared/context/CompanyProvider";
-import { FlashMessageProvider } from "@/shared/context/FlashMessageProvider";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { NotificationProvider } from "./providers/NotificationProvider";
 import { Toaster } from "sileo";
@@ -11,8 +9,7 @@ import { Toaster } from "sileo";
  *
  * Este componente configura los providers globales de la aplicacion:
  * - AuthProvider: Proporciona el contexto de autenticacion.
- * - FlashMessageProvider: Gestiona los mensajes flash (notificaciones).
- * - FlashMessageRoot: Componente visual que muestra los mensajes flash.
+ * - Toaster (Sileo): Gestiona mensajes/toasts globales.
  *
  * Tambien inicializa las rutas principales mediante AppRouter.
  *
@@ -24,10 +21,7 @@ function App({ children }: { children: ReactNode }) {
       <CompanyProvider>
         <Toaster position="bottom-left" theme="light"/>
         <NotificationProvider>
-          <FlashMessageProvider>
-            <FlashMessageRoot />
-            <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-          </FlashMessageProvider>
+          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
         </NotificationProvider>
       </CompanyProvider>
     </AuthProvider>

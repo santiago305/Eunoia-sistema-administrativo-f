@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { findAllRoles } from "@/shared/services/roleService";
 import { createUser } from "@/shared/services/userService";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { createUserSchema } from "@/shared/schemas/userSchemas";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -13,7 +13,7 @@ import type { CreateUserRequest, UserRoleOptionApi } from "@/features/users/type
 import type { UserFormProps } from "../types/components.types";
 
 export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [roles, setRoles] = useState<UserRoleOptionApi[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,13 +59,13 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
   }, []);
 
   const submit = async (data: CreateUserRequest) => {
-    clearFlash();
+    clearFeedback();
     setSubmitting(true);
 
     try {
       const res = await createUser(data);
 
-      showFlash(successResponse(res.message || "Usuario creado satisfactoriamente"));
+      showFeedback(successResponse(res.message || "Usuario creado satisfactoriamente"));
       onCreated?.();
       closeModal?.();
 
@@ -77,7 +77,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
         password: "",
       });
     } catch {
-      showFlash(errorResponse("No se pudo crear el usuario"));
+      showFeedback(errorResponse("No se pudo crear el usuario"));
     } finally {
       setSubmitting(false);
     }
@@ -161,3 +161,4 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
     </form>
   );
 };
+

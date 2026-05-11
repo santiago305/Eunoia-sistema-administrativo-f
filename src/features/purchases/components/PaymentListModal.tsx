@@ -8,7 +8,7 @@ import { listPayments } from "@/shared/services/purchaseService";
 import { Payment } from "@/features/purchases/types/purchase";
 import { money } from "@/shared/utils/functionPurchases";
 import { PaymentModal } from "./PaymentModal";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -45,13 +45,13 @@ export function PaymentListModal({
   const [rows, setRows] = useState<Payment[]>(payments ?? []);
   const [loading, setLoading] = useState(false);
   const [modalPayment, setModalPayment] = useState(false);
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canApprovePayment = can("purchases.approve_payment");
 
   const reloadPayments = useCallback(async (options?: { silent?: boolean }) => {
     if (!poId) return;
-    if (!options?.silent) clearFlash();
+    if (!options?.silent) clearFeedback();
 
     setLoading(true);
     try {
@@ -60,12 +60,12 @@ export function PaymentListModal({
     } catch {
       setRows([]);
       if (!options?.silent) {
-        showFlash(errorResponse("No se pudieron cargar los pagos."));
+        showFeedback(errorResponse("No se pudieron cargar los pagos."));
       }
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, poId, showFlash]);
+  }, [clearFeedback, poId, showFeedback]);
 
   useEffect(() => {
     let alive = true;
@@ -74,7 +74,7 @@ export function PaymentListModal({
       if (!poId || payments) return;
 
       setLoading(true);
-      clearFlash();
+      clearFeedback();
 
       try {
         const data = await listPayments(poId);
@@ -82,7 +82,7 @@ export function PaymentListModal({
       } catch {
         if (alive) {
           setRows([]);
-          showFlash(errorResponse("No se pudieron cargar los pagos."));
+          showFeedback(errorResponse("No se pudieron cargar los pagos."));
         }
       } finally {
         if (alive) setLoading(false);
@@ -94,7 +94,7 @@ export function PaymentListModal({
     return () => {
       alive = false;
     };
-  }, [clearFlash, poId, payments, open, showFlash]);
+  }, [clearFeedback, poId, payments, open, showFeedback]);
 
   useEffect(() => {
     if (payments) setRows(payments);
@@ -120,22 +120,22 @@ export function PaymentListModal({
   const handleRemove = useCallback(async (paymentId?: string | null) => {
     if (!paymentId) return;
 
-    clearFlash();
+    clearFeedback();
 
     try {
       const res = await removePayment(paymentId);
 
       if (res.type === "success") {
-        showFlash(successResponse("Pago eliminado con exito"));
+        showFeedback(successResponse("Pago eliminado con exito"));
         await reloadPayments({ silent: true });
         loadPurchases();
       } else {
-        showFlash(errorResponse("Error al eliminar pago"));
+        showFeedback(errorResponse("Error al eliminar pago"));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar pago"));
+      showFeedback(errorResponse("Error al eliminar pago"));
     }
-  }, [clearFlash, loadPurchases, reloadPayments, showFlash]);
+  }, [clearFeedback, loadPurchases, reloadPayments, showFeedback]);
 
   const columns = useMemo<DataTableColumn<PaymentRow>[]>(
     () => [
@@ -201,11 +201,11 @@ export function PaymentListModal({
                     if (!row.payDocId) return;
                     const res = await approvePayment(row.payDocId);
                     if (res.type === "success") {
-                      showFlash(successResponse(res.message));
+                      showFeedback(successResponse(res.message));
                       await reloadPayments({ silent: true });
                       loadPurchases();
                     } else {
-                      showFlash(errorResponse(res.message));
+                      showFeedback(errorResponse(res.message));
                     }
                   }}
                 >
@@ -218,11 +218,11 @@ export function PaymentListModal({
                     if (!row.payDocId) return;
                     const res = await rejectPayment(row.payDocId);
                     if (res.type === "success") {
-                      showFlash(successResponse(res.message));
+                      showFeedback(successResponse(res.message));
                       await reloadPayments({ silent: true });
                       loadPurchases();
                     } else {
-                      showFlash(errorResponse(res.message));
+                      showFeedback(errorResponse(res.message));
                     }
                   }}
                 >
@@ -246,7 +246,7 @@ export function PaymentListModal({
         hideable: false,
       },
     ],
-    [canApprovePayment, handleRemove, loadPurchases, reloadPayments, showFlash],
+    [canApprovePayment, handleRemove, loadPurchases, reloadPayments, showFeedback],
   );
 
   return (
@@ -318,3 +318,4 @@ export function PaymentListModal({
     </Modal>
   );
 }
+

@@ -7,7 +7,7 @@ import SessionsSummaryCard from "./components/SessionsSummaryCard";
 import type { Session } from "./types/session.types";
 import { findSessions, revokeAllSessions, revokeSession } from "@/shared/services/sessionService";
 import type { SessionApiDto } from "@/features/sessions/types/session.api";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/settings/modal";
 import { PageTitle } from "@/shared/components/components/PageTitle";
@@ -58,7 +58,7 @@ const mapSessionToUi = (session: SessionApiDto): Session => {
 };
 
 export default function SessionsUsers() {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
@@ -71,7 +71,7 @@ export default function SessionsUsers() {
   }, []);
 
   const loadSessions = useCallback(async () => {
-    clearFlash();
+    clearFeedback();
     setLoading(true);
     try {
       const result = await findSessions();
@@ -80,39 +80,39 @@ export default function SessionsUsers() {
       );
       setSessions(sorted.map(mapSessionToUi));
     } catch {
-      showFlash(errorResponse("No se pudieron cargar las sesiones"));
+      showFeedback(errorResponse("No se pudieron cargar las sesiones"));
     } finally {
       setLoading(false);
     }
-  }, [clearFlash, showFlash]);
+  }, [clearFeedback, showFeedback]);
 
   useEffect(() => {
     void loadSessions();
   }, [loadSessions]);
 
   const onRevoke = async (id: string) => {
-    clearFlash();
+    clearFeedback();
     try {
       setRevokingId(id);
       const res = await revokeSession(id);
       setSessions((prev) => prev.filter((session) => session.id !== id));
-      showFlash(successResponse(res.message || "Sesion cerrada"));
+      showFeedback(successResponse(res.message || "Sesion cerrada"));
     } catch {
-      showFlash(errorResponse("No se pudo cerrar la sesion"));
+      showFeedback(errorResponse("No se pudo cerrar la sesion"));
     } finally {
       setRevokingId(null);
     }
   };
 
   const onRevokeAll = async () => {
-    clearFlash();
+    clearFeedback();
     try {
       setRevokingAll(true);
       const res = await revokeAllSessions();
       setSessions((prev) => prev.filter((session) => session.isCurrent));
-      showFlash(successResponse(res.message || "Todas las sesiones cerradas"));
+      showFeedback(successResponse(res.message || "Todas las sesiones cerradas"));
     } catch {
-      showFlash(errorResponse("No se pudieron cerrar las sesiones"));
+      showFeedback(errorResponse("No se pudieron cerrar las sesiones"));
     } finally {
       setRevokingAll(false);
     }
@@ -210,5 +210,6 @@ export default function SessionsUsers() {
     </div>
   );
 }
+
 
 

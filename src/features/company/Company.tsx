@@ -5,7 +5,7 @@ import { PageTitle } from "@/shared/components/components/PageTitle";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { UbigeoSelection } from "@/shared/types/ubigeo";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { CompanyFormSection } from "@/features/company/components/CompanyFormSection";
 import { CompanyLogoBlock } from "@/features/company/components/CompanyLogoBlock";
 import { PaymentMethodListModal } from "@/features/company/components/PaymentMethodListModal";
@@ -37,7 +37,7 @@ import { useCompany } from "@/shared/hooks/useCompany";
 const COMPANY_PRIMARY = "hsl(var(--primary))";
 
 export default function CompanyPage() {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const { refreshCompany } = useCompany();
 
   const [loading, setLoading] = useState(true);
@@ -128,43 +128,43 @@ export default function CompanyPage() {
         return;
       }
 
-      showFlash(errorResponse("Error al cargar la empresa"));
+      showFeedback(errorResponse("Error al cargar la empresa"));
     } finally {
       setLoading(false);
     }
-  }, [resetForm, showFlash]);
+  }, [resetForm, showFeedback]);
 
   useEffect(() => {
     void fetchCompany();
   }, [fetchCompany]);
 
   const onPickLogo = async (file: File) => {
-    clearFlash();
+    clearFeedback();
     setSavingLogo(true);
 
     try {
       await uploadCompanyLogo(file);
       await refreshCompany();
-      showFlash(successResponse("Logo actualizado"));
+      showFeedback(successResponse("Logo actualizado"));
       await fetchCompany();
     } catch {
-      showFlash(errorResponse("No se pudo actualizar el logo"));
+      showFeedback(errorResponse("No se pudo actualizar el logo"));
     } finally {
       setSavingLogo(false);
     }
   };
 
   const onPickCert = async (file: File) => {
-    clearFlash();
+    clearFeedback();
     setSavingCert(true);
 
     try {
       await uploadCompanyCert(file);
       await refreshCompany();
-      showFlash(successResponse("Certificado actualizado"));
+      showFeedback(successResponse("Certificado actualizado"));
       await fetchCompany();
     } catch {
-      showFlash(errorResponse("No se pudo actualizar el certificado"));
+      showFeedback(errorResponse("No se pudo actualizar el certificado"));
     } finally {
       setSavingCert(false);
     }
@@ -172,7 +172,7 @@ export default function CompanyPage() {
 
   const onSubmitCompany = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    clearFlash();
+    clearFeedback();
     setSavingCompany(true);
 
     try {
@@ -181,23 +181,23 @@ export default function CompanyPage() {
       setFormErrors(validation.errors);
 
       if (!validation.ok) {
-        showFlash(errorResponse("Revisa los campos obligatorios"));
+        showFeedback(errorResponse("Revisa los campos obligatorios"));
         return;
       }
 
       if (!hasCompany) {
         await createCompany(validation.values);
         await refreshCompany();
-        showFlash(successResponse("Empresa creada"));
+        showFeedback(successResponse("Empresa creada"));
       } else {
         await updateCompany(validation.values);
         await refreshCompany();
-        showFlash(successResponse("Empresa actualizada"));
+        showFeedback(successResponse("Empresa actualizada"));
       }
 
       await fetchCompany();
     } catch {
-      showFlash(errorResponse("No se pudo actualizar la empresa"));
+      showFeedback(errorResponse("No se pudo actualizar la empresa"));
     } finally {
       setSavingCompany(false);
     }
@@ -300,3 +300,4 @@ export default function CompanyPage() {
     </div>
   );
 }
+

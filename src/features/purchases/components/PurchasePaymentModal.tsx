@@ -11,7 +11,7 @@ import { SectionHeaderForm } from "@/shared/components/components/SectionHederFo
 import { CurrencyType, CurrencyTypes, PaymentFormTypes, PaymentTypes } from "@/features/purchases/types/purchaseEnums";
 import type { CreditQuota, Payment, PurchaseOrder } from "@/features/purchases/types/purchase";
 import { todayIso, toDateInputValue, parseDateInputValue, toLocalDateKey, clampQuotas, buildQuotas, normalizeMoney, parseDecimalInput } from "@/shared/utils/functionPurchases";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { getPaymentMethodsBySupplier } from "@/shared/services/paymentMethodService";
 import { PaymentMethodPivot } from "@/features/payment-methods/types/paymentMethod";
@@ -56,7 +56,7 @@ export function PurchasePaymentModal({
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
   const pendingAmount = Math.max(0, totalPrice - totalPaid);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodPivot[]>([]);;
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
 
 
   const addPayment = (amount?: number) => {
@@ -77,7 +77,7 @@ export function PurchasePaymentModal({
   };
 
   const loadSupplierMethods = useCallback(async (id: string) => {
-    clearFlash();
+    clearFeedback();
     try {
       const data = await getPaymentMethodsBySupplier(id);
       const normalized = (data ?? []).map((m) => ({
@@ -95,9 +95,9 @@ export function PurchasePaymentModal({
 
       setPaymentMethods(normalized ?? []);
     } catch {
-      showFlash(errorResponse("No se pudieron cargar los metodos de pago."));
+      showFeedback(errorResponse("No se pudieron cargar los metodos de pago."));
     }
-  }, [clearFlash, showFlash]);
+  }, [clearFeedback, showFeedback]);
 
   useEffect(() => {
     void loadSupplierMethods(form.supplierId);
@@ -465,5 +465,6 @@ export function PurchasePaymentModal({
     </Modal>
   );
 }
+
 
 

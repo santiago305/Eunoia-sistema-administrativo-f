@@ -12,7 +12,7 @@ import {
 } from "@/shared/components/table/search";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { getDocumentInventoryPdf } from "@/shared/services/pdfServices";
 import { parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
@@ -105,13 +105,13 @@ type InventoryAdjustmentsPageProps = {
 export function InventoryAdjustmentsPage({
   config,
 }: InventoryAdjustmentsPageProps) {
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
   const [searchParams] = useSearchParams();
-  const showFlashRef = useRef(showFlash);
+  const showFeedbackRef = useRef(showFeedback);
 
   useEffect(() => {
-    showFlashRef.current = showFlash;
-  }, [showFlash]);
+    showFeedbackRef.current = showFeedback;
+  }, [showFeedback]);
 
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
@@ -188,7 +188,7 @@ export function InventoryAdjustmentsPage({
       });
       setSearchState(response);
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
   }, [config.documentProductType]);
 
@@ -355,20 +355,20 @@ export function InventoryAdjustmentsPage({
         snapshot,
       });
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
         return true;
       }
 
-      showFlash(errorResponse(response.message));
+      showFeedback(errorResponse(response.message));
       return false;
     } catch {
-      showFlash(errorResponse("Error al guardar la metrica"));
+      showFeedback(errorResponse("Error al guardar la metrica"));
       return false;
     } finally {
       setSavingMetric(false);
     }
-  }, [appliedSearchText, config.documentProductType, loadSearchState, searchFilters, searchState, showFlash]);
+  }, [appliedSearchText, config.documentProductType, loadSearchState, searchFilters, searchState, showFeedback]);
 
   const handleDeleteMetric = useCallback(async (metricId: string) => {
     try {
@@ -379,15 +379,15 @@ export function InventoryAdjustmentsPage({
       });
 
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar la metrica"));
+      showFeedback(errorResponse("Error al eliminar la metrica"));
     }
-  }, [config.documentProductType, loadSearchState, showFlash]);
+  }, [config.documentProductType, loadSearchState, showFeedback]);
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
@@ -417,7 +417,7 @@ export function InventoryAdjustmentsPage({
     } catch {
       setDocuments([]);
       setTotal(0);
-      showFlashRef.current(
+      showFeedbackRef.current(
         errorResponse("No se pudieron cargar los documentos."),
       );
     } finally {
@@ -464,17 +464,17 @@ export function InventoryAdjustmentsPage({
     try {
       const response = await processInventoryDocument(documentId);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadDocuments();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al procesar documento"));
+      showFeedback(errorResponse("Error al procesar documento"));
     } finally {
       setProcessingDocumentId(null);
     }
-  }, [loadDocuments, showFlash]);
+  }, [loadDocuments, showFeedback]);
 
   const documentRows = useMemo<InventoryDocumentRow[]>(() => {
     return (documents ?? []).map((document) => ({
@@ -628,13 +628,13 @@ export function InventoryAdjustmentsPage({
       a.download = file.filename;
       a.click();
       URL.revokeObjectURL(url);
-      showFlash(successResponse("Excel exportado correctamente"));
+      showFeedback(successResponse("Excel exportado correctamente"));
     } catch {
-      showFlash(errorResponse("No se pudo exportar el Excel"));
+      showFeedback(errorResponse("No se pudo exportar el Excel"));
     } finally {
       setExporting(false);
     }
-  }, [config.documentProductType, executedSnapshot.filters, executedSnapshot.q, fromDate, limit, page, showFlash, toDate, useTableDateRangeForExport]);
+  }, [config.documentProductType, executedSnapshot.filters, executedSnapshot.q, fromDate, limit, page, showFeedback, toDate, useTableDateRangeForExport]);
 
   const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
     await saveInventoryDocumentsExportPreset({
@@ -797,3 +797,4 @@ export function InventoryAdjustmentsPage({
     </PageShell>
   );
 }
+

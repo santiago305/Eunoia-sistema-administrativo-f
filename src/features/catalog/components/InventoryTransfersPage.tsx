@@ -13,7 +13,7 @@ import {
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { formatDate } from "@/shared/components/components/TimerToEnd";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { getDocumentInventoryPdf } from "@/shared/services/pdfServices";
 import {
@@ -110,7 +110,7 @@ type InventoryTransfersPageProps = {
 };
 
 export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [searchParams] = useSearchParams();
   const { hasCompany } = useCompany();
   const companyActionDisabled = !hasCompany;
@@ -140,12 +140,12 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [processingDocumentId, setProcessingDocumentId] = useState<string | null>(null);
-  const showFlashRef = useRef(showFlash);
+  const showFeedbackRef = useRef(showFeedback);
   const realtimeRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    showFlashRef.current = showFlash;
-  }, [showFlash]);
+    showFeedbackRef.current = showFeedback;
+  }, [showFeedback]);
 
   const [openDetailsModal, setOpenDetailsModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<InventoryDocument | null>(null);
@@ -178,7 +178,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       });
       setSearchState(response);
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
   }, [config.productType]);
 
@@ -353,20 +353,20 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         snapshot,
       });
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
         return true;
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
         return false;
       }
     } catch {
-      showFlash(errorResponse("Error al guardar la metrica"));
+      showFeedback(errorResponse("Error al guardar la metrica"));
       return false;
     } finally {
       setSavingMetric(false);
     }
-  }, [appliedSearchText, config.productType, loadSearchState, searchFilters, searchState, showFlash]);
+  }, [appliedSearchText, config.productType, loadSearchState, searchFilters, searchState, showFeedback]);
 
   const handleDeleteMetric = useCallback(async (metricId: string) => {
     try {
@@ -376,15 +376,15 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         productType: config.productType,
       });
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar la metrica"));
+      showFeedback(errorResponse("Error al eliminar la metrica"));
     }
-  }, [config.productType, loadSearchState, showFlash]);
+  }, [config.productType, loadSearchState, showFeedback]);
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
@@ -413,7 +413,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     } catch {
       setDocuments([]);
       setTotal(0);
-      showFlashRef.current(errorResponse("Error al listar documentos"));
+      showFeedbackRef.current(errorResponse("Error al listar documentos"));
     } finally {
       setLoading(false);
     }
@@ -448,7 +448,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   }, [loadDocuments]);
 
   const openDocumentPdf = (id: string) => {
-    clearFlash();
+    clearFeedback();
     setSelectedDocumentId(id);
     setOpenPdfModal(true);
   };
@@ -459,17 +459,17 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     try {
       const response = await processInventoryDocument(documentId);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadDocuments();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al procesar documento"));
+      showFeedback(errorResponse("Error al procesar documento"));
     } finally {
       setProcessingDocumentId(null);
     }
-  }, [loadDocuments, showFlash]);
+  }, [loadDocuments, showFeedback]);
 
   const documentRows = useMemo<InventoryDocumentRow[]>(
     () =>
@@ -643,13 +643,13 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       a.download = file.filename;
       a.click();
       URL.revokeObjectURL(url);
-      showFlash(successResponse("Excel exportado correctamente"));
+      showFeedback(successResponse("Excel exportado correctamente"));
     } catch {
-      showFlash(errorResponse("No se pudo exportar el Excel"));
+      showFeedback(errorResponse("No se pudo exportar el Excel"));
     } finally {
       setExporting(false);
     }
-  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, fromDate, limit, page, showFlash, toDate, useTableDateRangeForExport]);
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, fromDate, limit, page, showFeedback, toDate, useTableDateRangeForExport]);
 
   const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
     await saveInventoryDocumentsExportPreset({
@@ -807,3 +807,4 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     </PageShell>
   );
 }
+

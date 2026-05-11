@@ -1,7 +1,7 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { Modal } from "@/shared/components/modales/Modal";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
@@ -67,7 +67,7 @@ const readError = (error: unknown) => {
 };
 
 export default function Users() {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
 
   const [loading, setLoading] = useState(true);
@@ -298,23 +298,23 @@ export default function Users() {
   async function saveRole() {
     if (!selected) return;
     if (roleDraft === selected.role) return;
-    clearFlash();
+    clearFeedback();
     setSavingRole(true);
 
     try {
       const roleId = roles.find((r) => r.description === roleDraft)?.id;
       if (!roleId) {
-        showFlash(errorResponse("No se pudo resolver el rol seleccionado."));
+        showFeedback(errorResponse("No se pudo resolver el rol seleccionado."));
         return;
       }
 
       const res = await updateUserRole(selected.id, { roleId });
       const nowIso = new Date().toISOString();
       setUsers((p) => p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft, updatedAt: nowIso } : u)));
-      showFlash(successResponse((res as { message?: string })?.message || "Rol actualizado"));
+      showFeedback(successResponse((res as { message?: string })?.message || "Rol actualizado"));
     } catch (error: unknown) {
       const parsed = readError(error);
-      showFlash(errorResponse(parsed.message.trim() || "No se pudo actualizar el rol."));
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo actualizar el rol."));
     } finally {
       setSavingRole(false);
     }
@@ -322,7 +322,7 @@ export default function Users() {
 
   async function deactivateUser() {
     if (!selected) return;
-    clearFlash();
+    clearFeedback();
     setTogglingStatus(true);
 
     try {
@@ -331,10 +331,10 @@ export default function Users() {
       setUsers((prev) =>
         prev.map((u) => (u.id === selected.id ? { ...u, deleted: true, deletedAt: u.deletedAt ?? nowIso, updatedAt: nowIso } : u)),
       );
-      showFlash(successResponse((res as { message?: string })?.message || "Usuario desactivado"));
+      showFeedback(successResponse((res as { message?: string })?.message || "Usuario desactivado"));
     } catch (error: unknown) {
       const parsed = readError(error);
-      showFlash(errorResponse(parsed.message.trim() || "No se pudo desactivar el usuario."));
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo desactivar el usuario."));
     } finally {
       setTogglingStatus(false);
     }
@@ -342,17 +342,17 @@ export default function Users() {
 
   async function restoreUser() {
     if (!selected) return;
-    clearFlash();
+    clearFeedback();
     setTogglingStatus(true);
 
     try {
       const res = await restoreUserById(selected.id);
       const nowIso = new Date().toISOString();
       setUsers((prev) => prev.map((u) => (u.id === selected.id ? { ...u, deleted: false, deletedAt: null, updatedAt: nowIso } : u)));
-      showFlash(successResponse((res as { message?: string })?.message || "Usuario restablecido"));
+      showFeedback(successResponse((res as { message?: string })?.message || "Usuario restablecido"));
     } catch (error: unknown) {
       const parsed = readError(error);
-      showFlash(errorResponse(parsed.message.trim() || "No se pudo restablecer el usuario."));
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo restablecer el usuario."));
     } finally {
       setTogglingStatus(false);
     }
@@ -360,7 +360,7 @@ export default function Users() {
 
   async function savePermissionOverride(permissionCode: string, effect: PermissionEffect, reason?: string) {
     if (!selected?.id) return;
-    clearFlash();
+    clearFeedback();
     setSavingOverride(true);
     try {
       await setUserPermissionOverride({
@@ -372,10 +372,10 @@ export default function Users() {
       const data = await getEffectivePermissionsDetailByUser(selected.id);
       setEffectivePermissions(Array.isArray(data?.permissions) ? data.permissions : []);
       setPermissionOverrides(Array.isArray(data?.overrides) ? data.overrides : []);
-      showFlash(successResponse("Permiso delegado correctamente."));
+      showFeedback(successResponse("Permiso delegado correctamente."));
     } catch (error: unknown) {
       const parsed = readError(error);
-      showFlash(errorResponse(parsed.message.trim() || "No se pudo delegar el permiso."));
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo delegar el permiso."));
     } finally {
       setSavingOverride(false);
     }
@@ -383,17 +383,17 @@ export default function Users() {
 
   async function deletePermissionOverride(permissionCode: string) {
     if (!selected?.id) return;
-    clearFlash();
+    clearFeedback();
     setSavingOverride(true);
     try {
       await removeUserPermissionOverride(selected.id, permissionCode);
       const data = await getEffectivePermissionsDetailByUser(selected.id);
       setEffectivePermissions(Array.isArray(data?.permissions) ? data.permissions : []);
       setPermissionOverrides(Array.isArray(data?.overrides) ? data.overrides : []);
-      showFlash(successResponse("Override eliminado correctamente."));
+      showFeedback(successResponse("Override eliminado correctamente."));
     } catch (error: unknown) {
       const parsed = readError(error);
-      showFlash(errorResponse(parsed.message.trim() || "No se pudo eliminar el override."));
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo eliminar el override."));
     } finally {
       setSavingOverride(false);
     }
@@ -401,7 +401,7 @@ export default function Users() {
 
   async function savePreferredHomePath() {
     if (!selected?.id) return;
-    clearFlash();
+    clearFeedback();
     setSavingPreferredHomePath(true);
     try {
       const preferredHomePath = preferredHomePathDraft.trim() || null;
@@ -409,10 +409,10 @@ export default function Users() {
         userId: selected.id,
         preferredHomePath,
       });
-      showFlash(successResponse("Pagina inicial actualizada."));
+      showFeedback(successResponse("Pagina inicial actualizada."));
     } catch (error: unknown) {
       const parsed = readError(error);
-      showFlash(errorResponse(parsed.message.trim() || "No se pudo actualizar la pagina inicial."));
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo actualizar la pagina inicial."));
     } finally {
       setSavingPreferredHomePath(false);
     }
@@ -497,3 +497,4 @@ export default function Users() {
     </div>
   );
 }
+

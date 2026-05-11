@@ -16,7 +16,7 @@ import {
   blacklistSecurityIp,
   exportSecurityAudit,
 } from "@/shared/services/securityService";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, infoResponse, successResponse } from "@/shared/common/utils/response";
 
 import type {
@@ -44,7 +44,7 @@ type FetchSecurityOptions = {
 
 export default function SecurityPage() {
   const navigate = useNavigate();
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
   type SecuritySummary = Awaited<ReturnType<typeof getSecuritySummary>>;
 
   const [topIps, setTopIps] = useState<SecurityTopIpItem[]>([]);
@@ -200,10 +200,10 @@ export default function SecurityPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      showFlash(successResponse("Exportacion de auditoria completada."));
+      showFeedback(successResponse("Exportacion de auditoria completada."));
     } catch (err) {
       console.error(err);
-      showFlash(errorResponse("No se pudo exportar la auditoria."));
+      showFeedback(errorResponse("No se pudo exportar la auditoria."));
     } finally {
       setAuditExporting(false);
     }
@@ -212,7 +212,7 @@ export default function SecurityPage() {
   const handleTogglePolling = () => {
     setPollingPaused((prev) => {
       const next = !prev;
-      showFlash(infoResponse(next ? "Polling pausado." : "Polling reanudado."));
+      showFeedback(infoResponse(next ? "Polling pausado." : "Polling reanudado."));
       return next;
     });
   };
@@ -222,11 +222,11 @@ export default function SecurityPage() {
       setIpRiskLoading(true);
       const result = await getSecurityRiskScoreByIp(ip, { hours });
       setIpRiskResult(result);
-      showFlash(successResponse(`Riesgo consultado para ${result.ip}.`));
+      showFeedback(successResponse(`Riesgo consultado para ${result.ip}.`));
     } catch (err) {
       console.error(err);
       setIpRiskResult(null);
-      showFlash(errorResponse("No se pudo consultar el score de riesgo por IP."));
+      showFeedback(errorResponse("No se pudo consultar el score de riesgo por IP."));
     } finally {
       setIpRiskLoading(false);
     }
@@ -359,3 +359,4 @@ export default function SecurityPage() {
     </DashboardShell>
   );
 }
+

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetState
 import { Boxes, Scale } from "lucide-react";
 import { Modal } from "@/shared/components/settings/modal";
 import { errorResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { listProductEquivalences } from "@/shared/services/equivalenceService";
 import { listUnits } from "@/shared/services/unitService";
 import { AfectType, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
@@ -53,7 +53,7 @@ export function EquivalenceModal({
   setItemId,
   onClose,
 }: EquivalenceModalProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [loading, setLoading] = useState(false);
   const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
   const [units, setUnits] = useState<ListUnitResponse>([]);
@@ -88,10 +88,10 @@ export function EquivalenceModal({
       if (canUpdate()) setUnits(list);
       return list;
     } catch {
-      if (canUpdate()) showFlash(errorResponse("Error al cargar unidades"));
+      if (canUpdate()) showFeedback(errorResponse("Error al cargar unidades"));
       return [];
     }
-  }, [showFlash, units]);
+  }, [showFeedback, units]);
 
   const loadEquivalences = useCallback(async (
     productId: string,
@@ -125,12 +125,12 @@ export function EquivalenceModal({
     } catch {
       if (canUpdate()) {
         setEquivalences([]);
-        showFlash(errorResponse("Error al cargar equivalencias"));
+        showFeedback(errorResponse("Error al cargar equivalencias"));
       }
     } finally {
       if (canUpdate()) setLoading(false);
     }
-  }, [showFlash]);
+  }, [showFeedback]);
 
   const addSelectedProduct = (
     selectedItemId?: string,
@@ -216,13 +216,13 @@ export function EquivalenceModal({
 
       const selectedProduct = products.find((p) => p.skuId === itemId);
       if (!selectedProduct) {
-        if (canUpdate()) showFlash(errorResponse("No se encontró el producto seleccionado"));
+        if (canUpdate()) showFeedback(errorResponse("No se encontró el producto seleccionado"));
         if (active) handleClose();
         return;
       }
 
       if (!selectedProduct.productId) {
-        if (canUpdate()) showFlash(errorResponse("No se encontro el producto base del SKU seleccionado"));
+        if (canUpdate()) showFeedback(errorResponse("No se encontro el producto base del SKU seleccionado"));
         if (active) handleClose();
         return;
       }
@@ -245,7 +245,7 @@ export function EquivalenceModal({
     return () => {
       active = false;
     };
-  }, [open, itemId, products, handleClose, loadEquivalences, loadUnits, showFlash]);
+  }, [open, itemId, products, handleClose, loadEquivalences, loadUnits, showFeedback]);
 
   const afectTypeOptions = [
     { value: AfectType.TAXED, label: "GRAVADA - OPERACION ONEROSA" },
@@ -408,14 +408,14 @@ export function EquivalenceModal({
               borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
             }}
             onClick={() => {
-              clearFlash();
+              clearFeedback();
               if (!itemId) return;
 
               const hasSelection = Boolean(pendingEquivalence || pendingUnitBase);
               const hasEquivalences = equivalences.length > 0;
 
               if (hasEquivalences && !hasSelection) {
-                showFlash(errorResponse("Debe elegir una equivalencia"));
+                showFeedback(errorResponse("Debe elegir una equivalencia"));
                 return;
               }
 
@@ -442,3 +442,4 @@ export function EquivalenceModal({
     </Modal>
   );
 }
+

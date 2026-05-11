@@ -1,7 +1,7 @@
 import { useState } from "react";
+import { sileo } from "sileo";
 import { loginUser } from "@/shared/services/authService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
-import { flashMessage } from "@/shared/common/utils/flashEvent";
 
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -10,11 +10,11 @@ export const useLogin = () => {
     setLoading(true);
     try {
       const data = await loginUser({ email, password });
-      flashMessage("success", "Inicio de sesión exitoso");
+      sileo.success({ title: "Exito", description: "Inicio de sesion exitoso" });
       return data;
     } catch (error) {
-      const msg = parseApiError(error, "Error al iniciar sesión.");
-      flashMessage("error", msg);
+      const msg = parseApiError(error, "Error al iniciar sesion.");
+      sileo.error({ title: "Error", description: msg });
       throw error;
     } finally {
       setLoading(false);
@@ -23,5 +23,3 @@ export const useLogin = () => {
 
   return { login, loading };
 };
-
-

@@ -73,6 +73,26 @@ export const API_NOTIFICATIONS_GROUP = {
   devSendToMe: "/notifications/dev/send-to-me",
 };
 
+export const API_NOTIFICATION_MESSAGES_GROUP = {
+  modules: "/notifications/modules",
+  listMessages: "/notifications/messages",
+  getMessageDetail: (id: string) => `/notifications/messages/${id}`,
+  sendMessage: "/notifications/messages",
+  markMessageRead: (id: string) => `/notifications/messages/${id}/read`,
+  starMessage: (id: string) => `/notifications/messages/${id}/star`,
+  unstarMessage: (id: string) => `/notifications/messages/${id}/unstar`,
+  deleteMessage: (id: string) => `/notifications/messages/${id}`,
+  restoreMessage: (id: string) => `/notifications/messages/${id}/restore`,
+  bulkMessages: "/notifications/messages/bulk",
+  replyMessage: (id: string) => `/notifications/messages/${id}/reply`,
+  forwardMessage: (id: string) => `/notifications/messages/${id}/forward`,
+  listDrafts: "/notifications/drafts",
+  createDraft: "/notifications/drafts",
+  updateDraft: (id: string) => `/notifications/drafts/${id}`,
+  deleteDraft: (id: string) => `/notifications/drafts/${id}`,
+  sendDraft: (id: string) => `/notifications/drafts/${id}/send`,
+};
+
 export const API_SECURITY_GROUP = {
   summary: "/security/summary",
   topIps: "/security/top-ips",

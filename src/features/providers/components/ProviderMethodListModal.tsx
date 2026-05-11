@@ -6,7 +6,7 @@ import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { PaymentMethodSelectComposed } from "@/features/payment-methods/components/PaymentMethodSelectComposed";
 import { PaymentMethodFormModal } from "@/features/payment-methods/components/PaymentMethodFormModal";
@@ -46,7 +46,7 @@ export function ProviderMethodListModal({
   supplierId,
   canManagePaymentMethods,
 }: ProviderMethodListModalProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
 
   const [rows, setRows] = useState<SupplierMethodRelation[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
@@ -63,7 +63,7 @@ export function ProviderMethodListModal({
     async (silent = false) => {
       if (!supplierId) return;
 
-      if (!silent) clearFlash();
+      if (!silent) clearFeedback();
       setLoading(true);
 
       try {
@@ -72,18 +72,18 @@ export function ProviderMethodListModal({
       } catch {
         setRows([]);
         if (!silent) {
-          showFlash(errorResponse("No se pudieron cargar los métodos de pago."));
+          showFeedback(errorResponse("No se pudieron cargar los métodos de pago."));
         }
       } finally {
         setLoading(false);
       }
     },
-    [clearFlash, showFlash, supplierId],
+    [clearFeedback, showFeedback, supplierId],
   );
 
   const loadAllMethods = useCallback(
     async (silent = false) => {
-      if (!silent) clearFlash();
+      if (!silent) clearFeedback();
 
       try {
         const data = await getAllPaymentMethods();
@@ -91,11 +91,11 @@ export function ProviderMethodListModal({
       } catch {
         setAllMethods([]);
         if (!silent) {
-          showFlash(errorResponse("No se pudieron cargar los métodos disponibles."));
+          showFeedback(errorResponse("No se pudieron cargar los métodos disponibles."));
         }
       }
     },
-    [clearFlash, showFlash],
+    [clearFeedback, showFeedback],
   );
 
   useEffect(() => {
@@ -120,7 +120,7 @@ export function ProviderMethodListModal({
   const addMethod = useCallback(async () => {
     if (!canManagePaymentMethods || !supplierId || !selectedId || adding) return;
 
-    clearFlash();
+    clearFeedback();
     setAdding(true);
 
     try {
@@ -130,36 +130,36 @@ export function ProviderMethodListModal({
         number: number.trim() || undefined,
       });
 
-      showFlash(successResponse("Método agregado"));
+      showFeedback(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
       await loadSupplierMethods(true);
     } catch {
-      showFlash(errorResponse("No se pudo agregar el método"));
+      showFeedback(errorResponse("No se pudo agregar el método"));
     } finally {
       setAdding(false);
     }
-  }, [adding, canManagePaymentMethods, clearFlash, loadSupplierMethods, number, selectedId, showFlash, supplierId]);
+  }, [adding, canManagePaymentMethods, clearFeedback, loadSupplierMethods, number, selectedId, showFeedback, supplierId]);
 
   const removeMethod = useCallback(
     async (supplierMethodId?: string | null) => {
       if (!canManagePaymentMethods || !supplierMethodId) return;
 
-      clearFlash();
+      clearFeedback();
       setRemoving(true);
 
       try {
         await deleteSupplierMethod(supplierMethodId);
-        showFlash(successResponse("Método desvinculado"));
+        showFeedback(successResponse("Método desvinculado"));
         await loadSupplierMethods(true);
         setPendingRemoveMethod(null);
       } catch {
-        showFlash(errorResponse("No se pudo desvincular el método"));
+        showFeedback(errorResponse("No se pudo desvincular el método"));
       } finally {
         setRemoving(false);
       }
     },
-    [canManagePaymentMethods, clearFlash, loadSupplierMethods, showFlash],
+    [canManagePaymentMethods, clearFeedback, loadSupplierMethods, showFeedback],
   );
 
   const columns = useMemo<DataTableColumn<SupplierMethodRelation>[]>(
@@ -308,3 +308,4 @@ export function ProviderMethodListModal({
     </Modal>
   );
 }
+

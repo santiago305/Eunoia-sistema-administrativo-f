@@ -10,7 +10,7 @@ import {
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { getApiErrorMessage } from "@/shared/common/utils/apiError";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
@@ -106,9 +106,9 @@ const formatDateTime = (value?: string | null) => {
 };
 
 export default function Production() {
-  const { showFlash, clearFlash } = useFlashMessage();
-  const showFlashRef = useRef(showFlash);
-  useEffect(() => { showFlashRef.current = showFlash; }, [showFlash]);
+  const { showFeedback, clearFeedback } = useFeedbackToast();
+  const showFeedbackRef = useRef(showFeedback);
+  useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
   const { hasCompany } = useCompany();
   const { userRole } = useAuth();
   const { can } = usePermissions();
@@ -214,7 +214,7 @@ export default function Production() {
       const response = await getProductionSearchState();
       setSearchState(response);
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
+      showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
   }, []);
 
@@ -223,7 +223,7 @@ export default function Production() {
       const response = await getProductionExportColumns();
       setExportColumns(response ?? []);
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar columnas de exportacion"));
+      showFeedbackRef.current(errorResponse("Error al cargar columnas de exportacion"));
     }
   }, []);
 
@@ -236,7 +236,7 @@ export default function Production() {
         columns: (item.snapshot?.columns ?? []) as ProductionExportColumn[],
       })));
     } catch {
-      showFlashRef.current(errorResponse("Error al cargar presets de exportacion"));
+      showFeedbackRef.current(errorResponse("Error al cargar presets de exportacion"));
     }
   }, []);
 
@@ -246,7 +246,7 @@ export default function Production() {
   }, [searchText]);
 
   const loadOrders = useCallback(async () => {
-    clearFlash();
+    clearFeedback();
     setLoading(true);
 
     try {
@@ -287,37 +287,37 @@ export default function Production() {
         hasPrev: false,
         hasNext: false,
       }));
-      showFlashRef.current(errorResponse("Error al listar producciones"));
+      showFeedbackRef.current(errorResponse("Error al listar producciones"));
     } finally {
       setLoading(false);
     }
   }, [executedSnapshot, fromDate, limit, loadSearchState, page, toDate]);
 
   const handleStart = async (id: string) => {
-    clearFlash();
+    clearFeedback();
     setSubmittingAction("start");
     try {
       const response = await startProductionOrder(id);
-      showFlash(successResponse(response.message ?? "Orden iniciada"));
+      showFeedback(successResponse(response.message ?? "Orden iniciada"));
       setPendingStartOrder(null);
       await loadOrders();
     } catch (error) {
-      showFlash(errorResponse(getApiErrorMessage(error, "Error al iniciar la orden")));
+      showFeedback(errorResponse(getApiErrorMessage(error, "Error al iniciar la orden")));
     } finally {
       setSubmittingAction(null);
     }
   };
 
   const handleClose = useCallback(async (id: string) => {
-    clearFlash();
+    clearFeedback();
     try {
       const response = await closeProductionOrder(id);
-      showFlash(successResponse(response.message ?? "Orden cerrada"));
+      showFeedback(successResponse(response.message ?? "Orden cerrada"));
       await loadOrders();
     } catch (error) {
-      showFlash(errorResponse(getApiErrorMessage(error, "Error al cerrar la orden")));
+      showFeedback(errorResponse(getApiErrorMessage(error, "Error al cerrar la orden")));
     }
-  }, [clearFlash, loadOrders, showFlash]);
+  }, [clearFeedback, loadOrders, showFeedback]);
 
   const handleAddExtraTime = useCallback(async (values: { days: number; hours: number; minutes: number }) => {
     if (!extraTimeProductionId) return;
@@ -325,29 +325,29 @@ export default function Production() {
     try {
       const res = await addProductionExtraTime(extraTimeProductionId, values);
       if (res.type === "success") {
-        showFlash(successResponse(res.message));
+        showFeedback(successResponse(res.message));
         setExtraTimeProductionId(null);
         await loadOrders();
       } else {
-        showFlash(errorResponse(res.message));
+        showFeedback(errorResponse(res.message));
       }
     } catch (error) {
-      showFlash(errorResponse(getApiErrorMessage(error, "Error al agregar tiempo extra")));
+      showFeedback(errorResponse(getApiErrorMessage(error, "Error al agregar tiempo extra")));
     } finally {
       setExtraTimeLoading(false);
     }
-  }, [extraTimeProductionId, loadOrders, showFlash]);
+  }, [extraTimeProductionId, loadOrders, showFeedback]);
 
   const handleCancel = async (id: string) => {
-    clearFlash();
+    clearFeedback();
     setSubmittingAction("cancel");
     try {
       const response = await cancelProductionOrder(id);
-      showFlash(successResponse(response.message ?? "Orden cancelada"));
+      showFeedback(successResponse(response.message ?? "Orden cancelada"));
       setPendingCancelOrder(null);
       await loadOrders();
     } catch (error) {
-      showFlash(errorResponse(getApiErrorMessage(error, "Error al cancelar la orden")));
+      showFeedback(errorResponse(getApiErrorMessage(error, "Error al cancelar la orden")));
     } finally {
       setSubmittingAction(null);
     }
@@ -375,16 +375,16 @@ export default function Production() {
   };
 
   const openProductionPdf = useCallback((id: string) => {
-    clearFlash();
+    clearFeedback();
     setSelectedProductionId(id);
     setOpenPdfModal(true);
-  }, [clearFlash]);
+  }, [clearFeedback]);
 
   const handleOpenDetail = useCallback(async (order: ProductionOrder) => {
     const productionId = order.productionId ?? order.id;
     if (!productionId) return;
 
-    clearFlash();
+    clearFeedback();
     setOpenDetailModal(true);
     setDetailLoading(true);
     setDetailOrder(order);
@@ -402,11 +402,11 @@ export default function Production() {
         items: response.items ?? order.items ?? [],
       });
     } catch (error) {
-      showFlash(errorResponse(getApiErrorMessage(error, "Error al cargar el detalle de la orden")));
+      showFeedback(errorResponse(getApiErrorMessage(error, "Error al cargar el detalle de la orden")));
     } finally {
       setDetailLoading(false);
     }
-  }, [clearFlash, showFlash]);
+  }, [clearFeedback, showFeedback]);
 
   const handleUploadCompletedPhoto = useCallback(async (file: File) => {
     const productionId = completedPhotoOrder?.productionId ?? completedPhotoOrder?.id;
@@ -416,18 +416,18 @@ export default function Production() {
       const res = await uploadProductionImageProdution(productionId, file);
       if (res.type === "success") {
         skippedPhotoRef.current.add(productionId);
-        showFlash(successResponse(res.message));
+        showFeedback(successResponse(res.message));
         setCompletedPhotoOrder(null);
         await loadOrders();
       } else {
-        showFlash(errorResponse(res.message));
+        showFeedback(errorResponse(res.message));
       }
     } catch (error) {
-      showFlash(errorResponse(getApiErrorMessage(error, "No se pudo subir la foto de producción")));
+      showFeedback(errorResponse(getApiErrorMessage(error, "No se pudo subir la foto de producción")));
     } finally {
       setCompletedPhotoLoading(false);
     }
-  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, loadOrders, showFlash]);
+  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, loadOrders, showFeedback]);
 
   const handleSkipCompletedPhoto = useCallback(async () => {
     const productionId = completedPhotoOrder?.productionId ?? completedPhotoOrder?.id;
@@ -436,8 +436,8 @@ export default function Production() {
       markPhotoPromptSkipped(productionId);
     }
     setCompletedPhotoOrder(null);
-    showFlash(successResponse("Producción ingresada sin foto. Se puede subir luego desde detalle (admin)."));
-  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, markPhotoPromptSkipped, showFlash]);
+    showFeedback(successResponse("Producción ingresada sin foto. Se puede subir luego desde detalle (admin)."));
+  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, markPhotoPromptSkipped, showFeedback]);
 
   useEffect(() => {
     void loadOrders();
@@ -737,34 +737,34 @@ export default function Production() {
     try {
       const response = await saveProductionSearchMetric(name, snapshot);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
         return true;
       }
 
-      showFlash(errorResponse(response.message));
+      showFeedback(errorResponse(response.message));
       return false;
     } catch {
-      showFlash(errorResponse("Error al guardar la metrica"));
+      showFeedback(errorResponse("Error al guardar la metrica"));
       return false;
     } finally {
       setSavingMetric(false);
     }
-  }, [appliedSearchText, loadSearchState, searchFilters, showFlash]);
+  }, [appliedSearchText, loadSearchState, searchFilters, showFeedback]);
 
   const handleDeleteMetric = useCallback(async (metricId: string) => {
     try {
       const response = await deleteProductionSearchMetric(metricId);
       if (response.type === "success") {
-        showFlash(successResponse(response.message));
+        showFeedback(successResponse(response.message));
         await loadSearchState();
       } else {
-        showFlash(errorResponse(response.message));
+        showFeedback(errorResponse(response.message));
       }
     } catch {
-      showFlash(errorResponse("Error al eliminar la metrica"));
+      showFeedback(errorResponse("Error al eliminar la metrica"));
     }
-  }, [loadSearchState, showFlash]);
+  }, [loadSearchState, showFeedback]);
 
   const handleExport = useCallback(async (columnsToExport: ProductionExportColumn[]) => {
     setExporting(true);
@@ -783,13 +783,13 @@ export default function Production() {
       anchor.download = file.filename;
       anchor.click();
       URL.revokeObjectURL(url);
-      showFlash(successResponse("Excel exportado correctamente"));
+      showFeedback(successResponse("Excel exportado correctamente"));
     } catch {
-      showFlash(errorResponse("No se pudo exportar el Excel"));
+      showFeedback(errorResponse("No se pudo exportar el Excel"));
     } finally {
       setExporting(false);
     }
-  }, [executedSnapshot.filters, executedSnapshot.q, fromDate, showFlash, toDate, useTableDateRangeForExport]);
+  }, [executedSnapshot.filters, executedSnapshot.q, fromDate, showFeedback, toDate, useTableDateRangeForExport]);
 
   const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: ProductionExportColumn[] }) => {
     await saveProductionExportPreset({
@@ -798,14 +798,14 @@ export default function Production() {
       useDateRange: useTableDateRangeForExport,
     });
     await loadExportPresets();
-    showFlash(successResponse("Preset de exportacion guardado"));
-  }, [loadExportPresets, showFlash, useTableDateRangeForExport]);
+    showFeedback(successResponse("Preset de exportacion guardado"));
+  }, [loadExportPresets, showFeedback, useTableDateRangeForExport]);
 
   const handleDeleteExportPreset = useCallback(async (metricId: string) => {
     await deleteProductionExportPreset(metricId);
     await loadExportPresets();
-    showFlash(successResponse("Preset eliminado"));
-  }, [loadExportPresets, showFlash]);
+    showFeedback(successResponse("Preset eliminado"));
+  }, [loadExportPresets, showFeedback]);
 
   return (
     <PageShell className="bg-white">
@@ -1009,3 +1009,4 @@ export default function Production() {
     </PageShell>
   );
 }
+

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/settings/modal";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { PaymentMethodFormModal } from "@/features/payment-methods/components/PaymentMethodFormModal";
 import { PaymentMethodSelectComposed } from "@/features/payment-methods/components/PaymentMethodSelectComposed";
@@ -33,7 +33,7 @@ export function PaymentMethodListModal({
   className,
   companyId,
 }: PaymentMethodListModalProps) {
-  const { showFlash, clearFlash } = useFlashMessage();
+  const { showFeedback, clearFeedback } = useFeedbackToast();
   const [rows, setRows] = useState<PaymentMethodPivot[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +46,7 @@ export function PaymentMethodListModal({
   const loadCompanyMethods = useCallback(
     async (options?: { silent?: boolean }) => {
       if (!companyId) return;
-      if (!options?.silent) clearFlash();
+      if (!options?.silent) clearFeedback();
       setLoading(true);
 
       try {
@@ -55,18 +55,18 @@ export function PaymentMethodListModal({
       } catch {
         setRows([]);
         if (!options?.silent) {
-          showFlash(errorResponse("No se pudieron cargar los métodos de pago."));
+          showFeedback(errorResponse("No se pudieron cargar los métodos de pago."));
         }
       } finally {
         setLoading(false);
       }
     },
-    [clearFlash, companyId, showFlash],
+    [clearFeedback, companyId, showFeedback],
   );
 
   const loadAllMethods = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!options?.silent) clearFlash();
+      if (!options?.silent) clearFeedback();
 
       try {
         const records = await getAllPaymentMethods();
@@ -74,11 +74,11 @@ export function PaymentMethodListModal({
       } catch {
         setAllMethods([]);
         if (!options?.silent) {
-          showFlash(errorResponse("No se pudieron cargar los métodos de pago disponibles."));
+          showFeedback(errorResponse("No se pudieron cargar los métodos de pago disponibles."));
         }
       }
     },
-    [clearFlash, showFlash],
+    [clearFeedback, showFeedback],
   );
 
   useEffect(() => {
@@ -106,7 +106,7 @@ export function PaymentMethodListModal({
   const addMethod = useCallback(async () => {
     if (!companyId || !selectedId || adding) return;
 
-    clearFlash();
+    clearFeedback();
     setAdding(true);
 
     try {
@@ -116,31 +116,31 @@ export function PaymentMethodListModal({
         number,
       });
 
-      showFlash(successResponse("Método agregado"));
+      showFeedback(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
       await loadCompanyMethods({ silent: true });
     } catch {
-      showFlash(errorResponse("No se pudo agregar el método"));
+      showFeedback(errorResponse("No se pudo agregar el método"));
     } finally {
       setAdding(false);
     }
-  }, [adding, clearFlash, companyId, loadCompanyMethods, number, selectedId, showFlash]);
+  }, [adding, clearFeedback, companyId, loadCompanyMethods, number, selectedId, showFeedback]);
 
   const removeMethod = useCallback(
     async (companyMethodId?: string | null) => {
       if (!companyMethodId) return;
 
-      clearFlash();
+      clearFeedback();
       try {
         await deleteCompanyMethod(companyMethodId);
-        showFlash(successResponse("Método eliminado"));
+        showFeedback(successResponse("Método eliminado"));
         await loadCompanyMethods({ silent: true });
       } catch {
-        showFlash(errorResponse("No se pudo eliminar el método"));
+        showFeedback(errorResponse("No se pudo eliminar el método"));
       }
     },
-    [clearFlash, loadCompanyMethods, showFlash],
+    [clearFeedback, loadCompanyMethods, showFeedback],
   );
 
   const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(

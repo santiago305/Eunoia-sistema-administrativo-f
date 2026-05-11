@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { errorResponse } from "@/shared/common/utils/response";
-import { useFlashMessage } from "@/shared/hooks/useFlashMessage";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { getWarehouseStockById } from "@/shared/services/warehouseServices";
 import type { WarehouseStockResponse } from "@/features/warehouse/types/warehouse";
 import { WarehouseStockChart } from "./WarehouseStockChart";
@@ -18,7 +18,7 @@ type Props = {
 };
 
 export function WarehouseStockModal({ open, warehouse, onClose }: Props) {
-  const { showFlash } = useFlashMessage();
+  const { showFeedback } = useFeedbackToast();
   const [cache, setCache] = useState<Record<string, WarehouseStockResponse>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +46,12 @@ export function WarehouseStockModal({ open, warehouse, onClose }: Props) {
       } catch {
         const message = "No se pudo cargar el detalle de stock del almacén.";
         setError(message);
-        showFlash(errorResponse(message));
+        showFeedback(errorResponse(message));
       } finally {
         setLoading(false);
       }
     },
-    [cache, showFlash, warehouseId],
+    [cache, showFeedback, warehouseId],
   );
 
   useEffect(() => {
@@ -87,3 +87,4 @@ export function WarehouseStockModal({ open, warehouse, onClose }: Props) {
     </Modal>
   );
 }
+
