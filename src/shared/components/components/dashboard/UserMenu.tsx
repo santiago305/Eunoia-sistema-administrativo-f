@@ -2,12 +2,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { Popover } from "@/shared/components/modales/Popover";
-import { IconCompany, IconLogout, IconMonitor, IconUser } from "./icons";
+import { IconBell, IconLogout, IconMonitor, IconUser } from "./icons";
 import { useSidebarContext } from "./SidebarContext";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import type { User } from "./types";
 import { cn } from "@/shared/lib/utils";
 import { getInitials } from "@/shared/utils/getInitials";
+import { useUnreadNotificationsCount } from "@/features/notifications/hooks/useUnreadNotificationsCount";
 
 interface UserMenuProps {
   user: User;
@@ -21,7 +22,7 @@ type UserMenuAction = {
 };
 
 const USER_MENU_ACTIONS: UserMenuAction[] = [
-  { to: RoutesPaths.company, label: "Empresa", icon: IconCompany },
+  { to: RoutesPaths.notifications, label: "Notificaciones", icon: IconBell },
   { to: RoutesPaths.profile, label: "Perfil", icon: IconUser },
   { to: RoutesPaths.sessions, label: "Sesiones activas", icon: IconMonitor },
 ];
@@ -30,7 +31,9 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
   const { isCollapsed, isMobile } = useSidebarContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const { count } = useUnreadNotificationsCount();
   const isSidebarCollapsed = isCollapsed && !isMobile;
+  const showUnreadBadge = count.unread > 0;
 
   useEffect(() => {
     if (isMobile) {
@@ -58,7 +61,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
 
   const menuContent = useMemo(
     () => (
-      <div className="flex min-w-[220px] flex-col">
+      <div className="flex w-full min-w-0 flex-col">
         <div className="px-2 py-1.5 select-none">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -74,7 +77,12 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
             className="relative flex select-none items-center rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <Icon className="mr-2" />
-            <span>{label}</span>
+            <span className="flex-1">{label}</span>
+            {to === RoutesPaths.notifications && showUnreadBadge ? (
+              <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                {count.unread > 99 ? "99+" : count.unread}
+              </span>
+            ) : null}
           </Link>
         ))}
 
@@ -90,7 +98,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
         </button>
       </div>
     ),
-    [handleCloseMenu, handleLogout, user.email, user.name],
+    [count.unread, handleCloseMenu, handleLogout, showUnreadBadge, user.email, user.name],
   );
 
   return (
@@ -122,6 +130,11 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
           </div>
         ) : null}
       </button>
+      {!isMenuOpen && showUnreadBadge ? (
+        <span className="pointer-events-none absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+          {count.unread > 99 ? "99+" : count.unread}
+        </span>
+      ) : null}
 
       <Popover
         open={isMenuOpen}
@@ -132,7 +145,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
         hideHeader
         animation="slide"
         bodyClassName="p-1"
-        className="w-56 rounded-md"
+        className="w-58 rounded-md"
       >
         {menuContent}
       </Popover>

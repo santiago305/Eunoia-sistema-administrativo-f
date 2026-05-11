@@ -1,4 +1,5 @@
 import { 
+    IconCompany,
     IconHome,
     IconOutOrder,
     IconProduction,
@@ -115,13 +116,13 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         icon: <IconUsers className="text-sidebar-foreground" />,
     },
     {
-        label: "Seguridad",
-        href: RoutesPaths.security,
-        icon: <IconUsers className="text-sidebar-foreground" />,
+        label: "Empresa",
+        href: RoutesPaths.company,
+        icon: <IconCompany className="text-sidebar-foreground" />,
     },
     {
-        label: "Notificaciones",
-        href: RoutesPaths.notifications,
+        label: "Seguridad",
+        href: RoutesPaths.security,
         icon: <IconUsers className="text-sidebar-foreground" />,
     },
 ];

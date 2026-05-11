@@ -10,7 +10,6 @@ import MobileSidebar from "../components/components/dashboard/MobileSidebar";
 import Sidebar from "../components/components/dashboard/Sidebar";
 import { IconExpand } from "../components/components/dashboard/icons";
 import { SidebarProvider } from "../components/components/dashboard/SidebarProvider";
-import NotificationBell from "@/features/notifications/components/NotificationBell";
 
 const DashboardContent = () => {
   const { isMobile, openMobileSidebar } = useSidebarContext();
@@ -59,8 +58,6 @@ const DashboardContent = () => {
       ) : null}
 
       <main className="scroll-area relative h-full flex-1 overflow-y-auto">
-        <NotificationBell />
-        <NotificationBell mobile />
         {isMobile ? (
           <button
             type="button"
