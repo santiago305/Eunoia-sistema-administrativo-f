@@ -25,15 +25,29 @@ interface SidebarItemProps {
   item: SidebarItemType;
 }
 
+const splitHref = (href?: string) => {
+  if (!href) return { path: "", query: "" };
+  const [path, query = ""] = href.split("?");
+  return { path, query };
+};
+
+const isLinkActive = (href: string | undefined, pathname: string, search: string) => {
+  if (!href) return false;
+  const { path, query } = splitHref(href);
+  if (path !== pathname) return false;
+  if (!query) return true;
+  return query === (search.startsWith("?") ? search.slice(1) : search);
+};
+
 const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const { isCollapsed, isMobile } = useSidebarContext();
   const location = useLocation();
   const isSidebarCollapsed = isCollapsed && !isMobile;
 
   const hasChildren = !!item.children?.length;
-  const isActive = item.href === location.pathname;
+  const isActive = isLinkActive(item.href, location.pathname, location.search);
   const isChildActive = item.children?.some(
-    (child) => child.href === location.pathname
+    (child) => isLinkActive(child.href, location.pathname, location.search)
   );
 
   // Solo abre inicialmente si algún hijo está activo.

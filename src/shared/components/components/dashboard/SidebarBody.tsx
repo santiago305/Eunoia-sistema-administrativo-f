@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { getSidebarItems } from "@/shared/config/sidebarConfig";
 import SidebarItemComponent from "./SidebarItem";
 import { getRouteMetaByUrl } from "@/routes/config/routesConfig";
@@ -16,7 +17,8 @@ const canAccessHref = (
 ) => {
   if (!href) return true;
 
-  const routeMeta = getRouteMetaByUrl(href);
+  const hrefPath = href.split("?")[0];
+  const routeMeta = getRouteMetaByUrl(hrefPath);
   if (!routeMeta) return false;
 
   const hasRoleRestriction = Array.isArray(routeMeta.rolesAllowed) && routeMeta.rolesAllowed.length > 0;
@@ -41,9 +43,10 @@ const canAccessHref = (
 
 const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
+  const location = useLocation();
 
   const items = useMemo(() => {
-    const filtered = getSidebarItems()
+    const filtered = getSidebarItems(location.pathname)
       .map((item): SidebarItem => {
         const children = item.children?.filter((child) =>
           canAccessHref(child.href, userRole, permissions, isSuperAdmin)
@@ -62,7 +65,7 @@ const SidebarBody = () => {
       });
 
     return filtered;
-  }, [isSuperAdmin, permissions, userRole]);
+  }, [isSuperAdmin, location.pathname, permissions, userRole]);
 
   return (
     <div className="scroll-area flex-1 overflow-y-auto px-2 py-4 select-none">

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
@@ -44,10 +43,9 @@ const getSenderLabel = (row: InboxItem | SentMessageItem | DraftMessageItem, cur
 export default function NotificationsPage() {
   const [folder, setFolder] = useState<UiFolder>("inbox");
   const [originModule, setOriginModule] = useState<string>("");
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const q = (searchParams.get("q") ?? "").trim();
   const [debouncedQ, setDebouncedQ] = useState("");
-  const [showMoreModules, setShowMoreModules] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 50;
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
@@ -87,6 +85,9 @@ export default function NotificationsPage() {
     setEditingDraftId(null);
     setComposeOpen(false);
     setComposeMinimized(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete("compose");
+    setSearchParams(next, { replace: true });
   };
 
   useEffect(() => {
@@ -94,12 +95,20 @@ export default function NotificationsPage() {
     return () => clearTimeout(t);
   }, [q]);
 
-  const sidebarItems: Array<{ key: UiFolder; label: string }> = [
-    { key: "inbox", label: "Recibidos" },
-    { key: "starred", label: "Destacados" },
-    { key: "sent", label: "Enviados" },
-    { key: "drafts", label: "Borradores" },
-  ];
+  useEffect(() => {
+    const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
+    const validFolders: UiFolder[] = ["inbox", "sent", "drafts", "trash", "starred"];
+    if (validFolders.includes(folderParam as UiFolder) && folderParam !== folder) {
+      setFolder(folderParam as UiFolder);
+    }
+  }, [folder, searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("compose") === "1") {
+      setComposeOpen(true);
+      setComposeMinimized(false);
+    }
+  }, [searchParams]);
 
   return (
     <div className="h-full p-4 md:p-6">
@@ -127,73 +136,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      <div className="grid h-[calc(100vh-190px)] grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
-        <aside className="rounded-xl border bg-sidebar p-3">
-          <div className="space-y-1">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setFolder(item.key)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm",
-                  folder === item.key ? "bg-background font-medium text-foreground" : "text-muted-foreground hover:bg-background/70",
-                )}
-              >
-                <span>{item.label}</span>
-                {item.key === "drafts" ? <Badge variant="secondary">{drafts.items.length}</Badge> : null}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setShowMoreModules((prev) => !prev)}
-              className={cn(
-                "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm",
-                "text-muted-foreground hover:bg-background/70",
-              )}
-            >
-              <span>{showMoreModules ? "Ver menos" : "Ver mas"}</span>
-            </button>
-          </div>
-
-          {showMoreModules ? (
-            <div className="mt-4 border-t pt-3">
-              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Modulos</p>
-              <div className="space-y-1">
-                {modules.map((moduleItem) => (
-                  <button
-                    key={moduleItem.key}
-                    type="button"
-                    onClick={() => setOriginModule((prev) => (prev === moduleItem.key ? "" : moduleItem.key))}
-                    className={cn(
-                      "w-full rounded-md px-2 py-1.5 text-left text-xs",
-                      originModule === moduleItem.key ? "bg-background text-foreground" : "text-muted-foreground hover:bg-background/70",
-                    )}
-                  >
-                    {moduleItem.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-4 border-t pt-3">
-            <button
-              type="button"
-              onClick={() => {
-                setFolder("trash");
-                setOriginModule("");
-              }}
-              className={cn(
-                "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm",
-                folder === "trash" ? "bg-background font-medium text-foreground" : "text-muted-foreground hover:bg-background/70",
-              )}
-            >
-              <span>Papelera</span>
-            </button>
-          </div>
-        </aside>
-
+      <div className="grid h-[calc(100vh-190px)] grid-cols-1 gap-4">
         <section className="flex min-h-0 flex-col rounded-xl border bg-background">
           <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-muted-foreground">
             <span>{folder.toUpperCase()}</span>

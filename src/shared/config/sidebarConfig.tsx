@@ -1,4 +1,5 @@
 import { 
+    IconBell,
     IconCompany,
     IconHome,
     IconOutOrder,
@@ -127,12 +128,51 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     },
 ];
 
-export const getSidebarItems = (): SidebarItem[] => SIDEBAR_ITEMS;
+const EMAIL_SIDEBAR_ITEMS: SidebarItem[] = [
+    {
+        label: "Redactar",
+        href: `${RoutesPaths.notifications}?folder=inbox&compose=1`,
+        icon: <IconBell className="text-sidebar-foreground" />,
+    },
+    {
+        label: "Email",
+        href: `${RoutesPaths.notifications}?folder=inbox`,
+        icon: <IconBell className="text-sidebar-foreground" />,
+        children: [
+            {
+                label: "Recibidos",
+                href: `${RoutesPaths.notifications}?folder=inbox`,
+            },
+            {
+                label: "Destacados",
+                href: `${RoutesPaths.notifications}?folder=starred`,
+            },
+            {
+                label: "Enviados",
+                href: `${RoutesPaths.notifications}?folder=sent`,
+            },
+            {
+                label: "Borradores",
+                href: `${RoutesPaths.notifications}?folder=drafts`,
+            },
+            {
+                label: "Papelera",
+                href: `${RoutesPaths.notifications}?folder=trash`,
+            },
+        ],
+    },
+];
+
+export const getSidebarItems = (pathname?: string): SidebarItem[] => {
+  if (pathname?.startsWith(RoutesPaths.notifications)) return EMAIL_SIDEBAR_ITEMS;
+  return SIDEBAR_ITEMS;
+};
 
 const normalizePath = (path: string) => path.replace(/\/+$/, "") || "/";
 
 export const getSidebarTitleByPath = (pathname: string): string | null => {
   const normalizedPath = normalizePath(pathname);
+  const activeItems = getSidebarItems(pathname);
 
   const search = (items: SidebarItem[]): string | null => {
     for (const item of items) {
@@ -145,7 +185,7 @@ export const getSidebarTitleByPath = (pathname: string): string | null => {
     return null;
   };
 
-  return search(SIDEBAR_ITEMS);
+  return search(activeItems);
 };
 
 

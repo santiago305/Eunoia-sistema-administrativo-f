@@ -16,6 +16,8 @@ const DashboardContent = () => {
   const { toast } = useToast();
   const { logout } = useAuth();
   const { userDetails } = useUserDetails();
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -46,6 +48,23 @@ const DashboardContent = () => {
       userDetails?.data?.name,
     ],
   );
+
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node) return;
+
+    const update = () => setHeaderHeight(Math.ceil(node.getBoundingClientRect().height));
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    window.addEventListener("resize", update);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   return (
     <div
@@ -79,22 +98,3 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
-  const headerRef = useRef<HTMLDivElement | null>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
-
-  useEffect(() => {
-    const node = headerRef.current;
-    if (!node) return;
-
-    const update = () => setHeaderHeight(Math.ceil(node.getBoundingClientRect().height));
-    update();
-
-    const observer = new ResizeObserver(update);
-    observer.observe(node);
-    window.addEventListener("resize", update);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", update);
-    };
-  }, []);
