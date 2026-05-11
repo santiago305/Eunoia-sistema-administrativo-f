@@ -10,11 +10,14 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { getFirstAccessibleProtectedPath } from "@/routes/config/routeAccess";
+import { getCompanyBranding } from "@/shared/services/companyService";
+import { resolveCompanyAssetUrl } from "@/features/company/utils/companyAssets";
 
 function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [submitting, setSubmitting] = useState(false);
   const [lockSeconds, setLockSeconds] = useState<number>(0);
   const [formError, setFormError] = useState("");
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("");
   const navigate = useNavigate();
   const { login, userRole, permissions, preferredHomePath } = useAuth();
 
@@ -29,6 +32,17 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   });
 
   const isTemporarilyBlocked = useMemo(() => lockSeconds > 0, [lockSeconds]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const branding = await getCompanyBranding();
+        setCompanyLogoUrl(resolveCompanyAssetUrl(branding.logoPath));
+      } catch {
+        setCompanyLogoUrl("");
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!isTemporarilyBlocked) return;
@@ -107,9 +121,15 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 
   return (
     <div className={cn("w-full", className)} {...props}>
-      <div className="mb-5 text-center sm:mb-6">
+      <div className="mb-4 text-center">
         <p className="text-[10px] tracking-[0.25em] text-black/60 sm:text-[11px]">ADMINISTRACION</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl">EUNOIA</h1>
+        {companyLogoUrl ? (
+          <img
+            src={companyLogoUrl}
+            alt="Logo de la empresa"
+            className="mx-auto mt-2 h-14 w-auto max-w-[220px] object-contain"
+          />
+        ) : null}
       </div>
 
       <div

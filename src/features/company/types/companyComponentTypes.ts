@@ -25,12 +25,15 @@ export type CompanyLogoBlockProps = {
   loading: boolean;
   name: string;
   logoUrl: string;
+  isotypeUrl?: string;
   certUrl?: string;
   certLabel?: string;
   certLabelMaxChars?: number;
   onPickLogo: (file: File) => void;
+  onPickIsotype: (file: File) => void;
   onPickCert: (file: File) => void;
   disabled?: boolean;
+  isotypeDisabled?: boolean;
   certDisabled?: boolean;
   companyPrimary: string;
 };

@@ -51,7 +51,7 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
             <img
               src={logoUrl}
               alt="Logo de empresa"
-              className={cn("h-9 w-auto max-w-[140px] object-contain", isCollapsed && !isMobile ? "opacity-70" : "opacity-100")}
+              className={cn("h-7 w-auto max-w-[140px] object-contain", isCollapsed && !isMobile ? "opacity-70" : "opacity-100")}
             />
           ) : null}
         </Link>

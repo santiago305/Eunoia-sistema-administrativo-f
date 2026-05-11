@@ -20,9 +20,17 @@ export type Company = {
   solUser?: string | null;
   solPass?: string | null;
   logoPath?: string | null;
+  isotypePath?: string | null;
   certPath?: string | null;
   production: boolean;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type CompanyBranding = {
+  companyId: string | null;
+  name: string | null;
+  logoPath: string | null;
+  isotypePath: string | null;
 };

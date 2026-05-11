@@ -43,7 +43,9 @@ export const API_COMPANY_GROUP = {
   create: "/company",
   update: "/company",
   get: "/company",
+  branding: "/company/branding",
   uploadLogo: "/company/logo",
+  uploadIsotype: "/company/isotype",
   uploadCert: "/company/cert",
 };
 

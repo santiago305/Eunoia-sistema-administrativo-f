@@ -25,9 +25,9 @@ import {
 } from "@/features/company/utils/companyForm";
 import {
   createCompany,
-  getCompany,
   updateCompany,
   uploadCompanyCert,
+  uploadCompanyIsotype,
   uploadCompanyLogo,
 } from "@/shared/services/companyService";
 import { Headed } from "@/shared/components/components/Headed";
@@ -37,10 +37,15 @@ const COMPANY_PRIMARY = "hsl(var(--primary))";
 
 export default function CompanyPage() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
-  const { refreshCompany } = useCompany();
+  const {
+    refreshCompany,
+    company: contextCompany,
+    checked: companyChecked,
+    loading: companyLoading,
+  } = useCompany();
 
-  const [loading, setLoading] = useState(true);
   const [savingLogo, setSavingLogo] = useState(false);
+  const [savingIsotype, setSavingIsotype] = useState(false);
   const [savingCert, setSavingCert] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
   const [company, setCompany] = useState<Company | null>(null);
@@ -56,6 +61,10 @@ export default function CompanyPage() {
   const certUrl = useMemo(
     () => resolveCompanyAssetUrl(company?.certPath),
     [company?.certPath],
+  );
+  const isotypeUrl = useMemo(
+    () => resolveCompanyAssetUrl(company?.isotypePath),
+    [company?.isotypePath],
   );
   const certLabel = useMemo(
     () => getCompanyAssetLabel(company?.certPath),
@@ -111,31 +120,21 @@ export default function CompanyPage() {
     setFormErrors({});
   }, []);
 
-  const fetchCompany = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const response = await getCompany();
-      setCompany(response);
-      setFormValues(mapCompanyToFormValues(response));
-      setFormErrors({});
-    } catch (error) {
-      const status = (error as { response?: { status?: number } }).response?.status;
-      if (status === 404) {
-        setCompany(null);
-        resetForm();
-        return;
-      }
-
-      showFeedback(errorResponse("Error al cargar la empresa"));
-    } finally {
-      setLoading(false);
-    }
-  }, [resetForm, showFeedback]);
-
   useEffect(() => {
-    void fetchCompany();
-  }, [fetchCompany]);
+    if (!companyChecked) return;
+
+    if (!contextCompany) {
+      setCompany(null);
+      resetForm();
+      return;
+    }
+
+    setCompany(contextCompany);
+    setFormValues(mapCompanyToFormValues(contextCompany));
+    setFormErrors({});
+  }, [companyChecked, contextCompany, resetForm]);
+
+  const loading = companyLoading || !companyChecked;
 
   const onPickLogo = async (file: File) => {
     clearFeedback();
@@ -168,6 +167,23 @@ export default function CompanyPage() {
       showFeedback(errorResponse("No se pudo actualizar el certificado"));
     } finally {
       setSavingCert(false);
+    }
+  };
+
+  const onPickIsotype = async (file: File) => {
+    clearFeedback();
+    setSavingIsotype(true);
+
+    try {
+      const nextCompany = await uploadCompanyIsotype(file);
+      setCompany(nextCompany);
+      setFormValues(mapCompanyToFormValues(nextCompany));
+      await refreshCompany();
+      showFeedback(successResponse("Isotipo actualizado"));
+    } catch {
+      showFeedback(errorResponse("No se pudo actualizar el isotipo"));
+    } finally {
+      setSavingIsotype(false);
     }
   };
 
@@ -209,7 +225,7 @@ export default function CompanyPage() {
   return (
     <div className="min-h-screen w-full">
 
-      <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 lg:max-w-[1280px] lg:px-8 2xl:max-w-[1600px] 2xl:px-10">
+      <div className="mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -240,11 +256,14 @@ export default function CompanyPage() {
                   loading={loading}
                   name={displayName}
                   logoUrl={logoUrl}
+                  isotypeUrl={isotypeUrl || undefined}
                   certUrl={certUrl || undefined}
                   certLabel={certLabel || undefined}
                   onPickLogo={onPickLogo}
+                  onPickIsotype={onPickIsotype}
                   onPickCert={onPickCert}
                   disabled={savingLogo || !hasCompany}
+                  isotypeDisabled={savingIsotype || !hasCompany}
                   certDisabled={savingCert || !hasCompany}
                   companyPrimary={COMPANY_PRIMARY}
                   certLabelMaxChars={20}

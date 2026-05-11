@@ -7,12 +7,15 @@ export function CompanyLogoBlock({
   loading,
   name,
   logoUrl,
+  isotypeUrl,
   certUrl,
   certLabel,
   certLabelMaxChars,
   onPickLogo,
+  onPickIsotype,
   onPickCert,
   disabled = false,
+  isotypeDisabled = false,
   certDisabled = false,
   companyPrimary,
 }: CompanyLogoBlockProps) {
@@ -58,8 +61,14 @@ export function CompanyLogoBlock({
         </p>
 
         <p className="mt-1 text-xs leading-5 text-black/55">
-          PNG o SVG. Recomendado: formato cuadrado.
+          Logo e isotipo en PNG o SVG. Recomendado: formato cuadrado.
         </p>
+
+        {isotypeUrl && (
+          <div className="mt-1">
+            <p className="truncate text-xs text-black/45">Isotipo configurado para icono del sistema</p>
+          </div>
+        )}
 
         {(certLabel || certUrl) && (
           <div className="mt-1">
@@ -97,6 +106,29 @@ export function CompanyLogoBlock({
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) onPickLogo(file);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+
+          <label
+            className={[
+              "inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-3 text-[11px] font-medium",
+              "border border-black/10 bg-white text-black/65",
+              "transition hover:bg-black/[0.03] active:scale-[0.99]",
+              isotypeDisabled ? "cursor-not-allowed opacity-60" : "",
+            ].join(" ")}
+          >
+            {isotypeDisabled ? "Subiendo..." : "Subir isotipo"}
+
+            <input
+              type="file"
+              accept="image/png,image/svg+xml"
+              className="hidden"
+              disabled={isotypeDisabled}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onPickIsotype(file);
                 event.currentTarget.value = "";
               }}
             />

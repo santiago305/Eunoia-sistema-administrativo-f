@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { sileo } from "sileo";
 
 export type FeedbackType = "error" | "success" | "warning" | "info";
@@ -7,7 +8,7 @@ export type FeedbackMessage = {
 };
 
 export const useFeedbackToast = () => {
-  const showFeedback = (msg: FeedbackMessage) => {
+  const showFeedback = useCallback((msg: FeedbackMessage) => {
     const title = msg.type === "success" ? "Exito" : msg.type === "error" ? "Error" : "Aviso";
     switch (msg.type) {
       case "error":
@@ -22,11 +23,11 @@ export const useFeedbackToast = () => {
         sileo.info({ title, description: msg.message });
         break;
     }
-  };
+  }, []);
 
-  const clearFeedback = () => {
+  const clearFeedback = useCallback(() => {
     // no-op: feedback is transient
-  };
+  }, []);
 
   return { feedback: null, showFeedback, clearFeedback };
 };
