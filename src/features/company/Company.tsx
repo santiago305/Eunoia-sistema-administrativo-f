@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardHeader } from "@/shared/components/components/AppCard";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { UbigeoSelection } from "@/shared/types/ubigeo";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
@@ -143,10 +142,11 @@ export default function CompanyPage() {
     setSavingLogo(true);
 
     try {
-      await uploadCompanyLogo(file);
+      const nextCompany = await uploadCompanyLogo(file);
+      setCompany(nextCompany);
+      setFormValues(mapCompanyToFormValues(nextCompany));
       await refreshCompany();
       showFeedback(successResponse("Logo actualizado"));
-      await fetchCompany();
     } catch {
       showFeedback(errorResponse("No se pudo actualizar el logo"));
     } finally {
@@ -159,10 +159,11 @@ export default function CompanyPage() {
     setSavingCert(true);
 
     try {
-      await uploadCompanyCert(file);
+      const nextCompany = await uploadCompanyCert(file);
+      setCompany(nextCompany);
+      setFormValues(mapCompanyToFormValues(nextCompany));
       await refreshCompany();
       showFeedback(successResponse("Certificado actualizado"));
-      await fetchCompany();
     } catch {
       showFeedback(errorResponse("No se pudo actualizar el certificado"));
     } finally {
@@ -186,16 +187,18 @@ export default function CompanyPage() {
       }
 
       if (!hasCompany) {
-        await createCompany(validation.values);
+        const nextCompany = await createCompany(validation.values);
+        setCompany(nextCompany);
+        setFormValues(mapCompanyToFormValues(nextCompany));
         await refreshCompany();
         showFeedback(successResponse("Empresa creada"));
       } else {
-        await updateCompany(validation.values);
+        const nextCompany = await updateCompany(validation.values);
+        setCompany(nextCompany);
+        setFormValues(mapCompanyToFormValues(nextCompany));
         await refreshCompany();
         showFeedback(successResponse("Empresa actualizada"));
       }
-
-      await fetchCompany();
     } catch {
       showFeedback(errorResponse("No se pudo actualizar la empresa"));
     } finally {
@@ -205,7 +208,6 @@ export default function CompanyPage() {
 
   return (
     <div className="min-h-screen w-full">
-      <PageTitle title="Empresa" />
 
       <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 lg:max-w-[1280px] lg:px-8 2xl:max-w-[1600px] 2xl:px-10">
         <motion.div

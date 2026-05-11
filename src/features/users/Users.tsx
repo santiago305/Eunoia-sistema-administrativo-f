@@ -1,5 +1,4 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { Modal } from "@/shared/components/modales/Modal";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
@@ -427,7 +426,6 @@ export default function Users() {
         "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12",
       )}
     >
-      <PageTitle title="Gestión de usuarios" />
       <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
         <UsersHeader
           onCreateClick={() => setModalOpen(true)}

@@ -50,7 +50,6 @@ import { WarehouseSearchFields } from "@/features/warehouse/types/warehouse";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { Headed } from "@/shared/components/components/Headed";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { AlertModal } from "@/shared/components/components/AlertModal";
@@ -727,7 +726,6 @@ export default function Warehouses() {
 
   return (
     <PageShell>
-      <PageTitle title="Almacenes" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Headed title="Almacenes" size="lg" />
         <SystemButton

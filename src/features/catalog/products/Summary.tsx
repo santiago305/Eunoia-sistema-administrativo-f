@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { listProducts } from "@/shared/services/productService";
 import { useProducts } from "@/shared/hooks/useProducts";
 import {
@@ -280,7 +279,6 @@ export default function CatalogSummary() {
 
   return (
     <PageShell>
-      <PageTitle title="Catálogo · Resumen" />
 
       <div className="space-y-6">
         {/* Header */}

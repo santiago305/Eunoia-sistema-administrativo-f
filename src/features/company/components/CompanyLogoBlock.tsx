@@ -58,7 +58,7 @@ export function CompanyLogoBlock({
         </p>
 
         <p className="mt-1 text-xs leading-5 text-black/55">
-          PNG/JPG. Recomendado: cuadrado, buena luz.
+          PNG o SVG. Recomendado: formato cuadrado.
         </p>
 
         {(certLabel || certUrl) && (
@@ -91,7 +91,7 @@ export function CompanyLogoBlock({
 
             <input
               type="file"
-              accept="image/*"
+              accept="image/png,image/svg+xml"
               className="hidden"
               disabled={disabled}
               onChange={(event) => {

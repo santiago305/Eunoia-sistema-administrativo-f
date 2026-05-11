@@ -1,5 +1,4 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
 import {
     DataTableSearchBar,
@@ -1189,7 +1188,6 @@ export default function Purchases() {
 
     return (
         <PageShell className="bg-white">
-            <PageTitle title="Compras" />
             <div className="space-y-4">
                 <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
                     <Headed

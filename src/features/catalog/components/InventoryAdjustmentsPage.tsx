@@ -1,7 +1,6 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Menu, Play, Plus } from "lucide-react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -658,7 +657,6 @@ export function InventoryAdjustmentsPage({
 
   return (
     <PageShell className="bg-white">
-      <PageTitle title="Ajustes" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Headed title={config.headingTitle} size="lg" />
 

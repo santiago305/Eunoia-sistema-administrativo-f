@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { findAllRoles } from "@/shared/services/roleService";
 import {
   assignPermissionsToRole,
@@ -117,7 +116,6 @@ export default function RolesPermissions() {
 
   return (
     <div className="w-full bg-gradient-to-b from-white via-white to-zinc-50 py-4 sm:py-6 2xl:py-8">
-      <PageTitle title="Matriz de permisos por rol" />
       <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

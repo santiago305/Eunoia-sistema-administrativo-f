@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { Headed } from "@/shared/components/components/Headed";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -150,7 +149,6 @@ export default function Payments() {
 
   return (
     <PageShell>
-      <PageTitle title="Pagos" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Headed title="Pagos registrados" size="lg" />
         <div className="flex items-center gap-2">

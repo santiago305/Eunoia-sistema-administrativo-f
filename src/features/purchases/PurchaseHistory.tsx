@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -119,7 +118,6 @@ export default function PurchaseHistory() {
 
   return (
     <PageShell className="bg-white">
-      <PageTitle title="Historial de Compras" />
       <DataTable
         tableId="purchase-history"
         data={items}

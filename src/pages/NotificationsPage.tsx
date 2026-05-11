@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -44,7 +44,8 @@ const getSenderLabel = (row: InboxItem | SentMessageItem | DraftMessageItem, cur
 export default function NotificationsPage() {
   const [folder, setFolder] = useState<UiFolder>("inbox");
   const [originModule, setOriginModule] = useState<string>("");
-  const [q, setQ] = useState("");
+  const [searchParams] = useSearchParams();
+  const q = (searchParams.get("q") ?? "").trim();
   const [debouncedQ, setDebouncedQ] = useState("");
   const [showMoreModules, setShowMoreModules] = useState(false);
   const [page, setPage] = useState(1);
@@ -89,7 +90,7 @@ export default function NotificationsPage() {
   };
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
+    const t = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(t);
   }, [q]);
 
@@ -108,12 +109,6 @@ export default function NotificationsPage() {
           <p className="text-xs text-muted-foreground">Bandeja corporativa</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Input
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
-            placeholder="Buscar en mensajes"
-            className="w-[320px]"
-          />
           <select
             value={originModule}
             onChange={(event) => setOriginModule(event.target.value)}

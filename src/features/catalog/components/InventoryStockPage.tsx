@@ -2,7 +2,6 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState, typ
 import { useNavigate } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
 import { ArrowLeftRight, FileText, Menu, Wrench } from "lucide-react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { Headed } from "@/shared/components/components/Headed";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
@@ -65,7 +64,6 @@ const DEFAULT_LIMIT = 25;
 
 type InventoryStockPageConfig = {
   productType: ProductCatalogProductType;
-  pageTitle: string;
   headingTitle: string;
   itemLabel: string;
   tableId: string;
@@ -706,7 +704,6 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
 
   return (
     <PageShell>
-      <PageTitle title={config.pageTitle} />
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Headed title={config.headingTitle} size="lg" />

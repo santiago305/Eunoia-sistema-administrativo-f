@@ -129,4 +129,23 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 
 export const getSidebarItems = (): SidebarItem[] => SIDEBAR_ITEMS;
 
+const normalizePath = (path: string) => path.replace(/\/+$/, "") || "/";
+
+export const getSidebarTitleByPath = (pathname: string): string | null => {
+  const normalizedPath = normalizePath(pathname);
+
+  const search = (items: SidebarItem[]): string | null => {
+    for (const item of items) {
+      if (item.href && normalizePath(item.href) === normalizedPath) return item.label;
+      if (item.children?.length) {
+        const nested = search(item.children);
+        if (nested) return nested;
+      }
+    }
+    return null;
+  };
+
+  return search(SIDEBAR_ITEMS);
+};
+
 

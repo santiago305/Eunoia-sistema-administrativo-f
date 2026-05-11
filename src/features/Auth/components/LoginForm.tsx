@@ -7,9 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginCredentials } from "@/features/Auth/types/auth";
 import { LoginSchema } from "@/shared/schemas/authSchemas";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { RoutesPaths } from "@/routes/config/routesPaths";
-import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { getFirstAccessibleProtectedPath } from "@/routes/config/routeAccess";
 
@@ -18,7 +16,6 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [lockSeconds, setLockSeconds] = useState<number>(0);
   const [formError, setFormError] = useState("");
   const navigate = useNavigate();
-  const { showFeedback, clearFeedback } = useFeedbackToast();
   const { login, userRole, permissions, preferredHomePath } = useAuth();
 
   const {
@@ -69,22 +66,16 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 
   const onSubmit = async (data: LoginCredentials) => {
     if (isTemporarilyBlocked) {
-      showFeedback(
-        errorResponse(
-          `Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(lockSeconds)}`
-        )
-      );
+      setFormError(`Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(lockSeconds)}`);
       return;
     }
 
-    clearFeedback();
     setFormError("");
     clearErrors(["email", "password"]);
     setSubmitting(true);
     try {
       const response = await login(data);
       if (response.success) {
-        showFeedback(successResponse(response.message));
         startTransition(() => {
           const nextPath = getFirstAccessibleProtectedPath(userRole, permissions, preferredHomePath);
           navigate(nextPath ?? RoutesPaths.dashboard, { replace: true });
@@ -93,15 +84,9 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
         const retrySeconds = response.data?.retryAfterSeconds ?? 0;
         if (retrySeconds > 0) {
           setFormError(response.message);
-          showFeedback(
-            errorResponse(
-              `Cuenta bloqueada. Intenta nuevamente en ${humanizeLockTime(retrySeconds)}`
-            )
-          );
           setLockSeconds(retrySeconds);
         } else if (response.data?.status === 423) {
           setFormError("Cuenta bloqueada. Intenta nuevamente en 1 minuto");
-          showFeedback(errorResponse("Cuenta bloqueada. Intenta nuevamente en 1 minuto"));
           setLockSeconds(60);
         } else {
           setFormError(response.message);
@@ -111,12 +96,10 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
           if (response.data?.fieldErrors?.password) {
             setError("password", { type: "server", message: response.data.fieldErrors.password });
           }
-          showFeedback(errorResponse(response.message));
         }
       }
     } catch {
       setFormError("Credenciales invalidas o error de red");
-      showFeedback(errorResponse("Credenciales invalidas o error de red"));
     } finally {
       setSubmitting(false);
     }
@@ -135,8 +118,14 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
           "p-5 sm:p-6"
         )}
       >
-        <h2 className="text-sm font-semibold text-black sm:text-base">Inicia sesion</h2>
-        <p className="mt-1 text-xs text-black/60 sm:text-sm">Ingresa tus credenciales para continuar.</p>
+        <h2 className="text-lg font-semibold text-center text-black sm:text-xl">
+          Inicia sesión
+        </h2>
+
+        <p className="mt-1 text-xs text-center text-black/60 sm:text-sm">
+          Ingresa tus credenciales para continuar.
+        </p>
+
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4 sm:mt-6">
           <FloatingInput
@@ -153,11 +142,16 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
             error={errors.password?.message}
           />
 
+          {formError ? (
+            <div className="text-sm text-red-700">
+              {formError}
+            </div>
+          ) : null}
           <Button
             type="submit"
             disabled={submitting || isTemporarilyBlocked}
             className={cn(
-              "mt-2 w-full rounded-xl text-white cursor-pointer",
+              "w-full rounded-xl text-white cursor-pointer",
               "bg-primary hover:bg-[#19a897]",
               "shadow-sm",
               "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -171,11 +165,6 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
                 : "Ingresar"}
           </Button>
 
-          {formError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {formError}
-            </div>
-          ) : null}
         </form>
       </div>
 

@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, infoResponse, successResponse } from "@/shared/common/utils/response";
@@ -172,7 +171,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen w-full bg-white text-black">
-      <PageTitle title="Perfil" />
 
       <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 lg:max-w-[1280px] lg:px-8 2xl:max-w-[1600px] 2xl:px-10">
         <motion.div

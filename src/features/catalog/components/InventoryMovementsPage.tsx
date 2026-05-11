@@ -1,6 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -80,7 +79,6 @@ const statusLabel: Record<MovementRow["direction"], string> = {
 
 type InventoryMovementsPageConfig = {
   productType: ProductCatalogProductType;
-  pageTitle: string;
   headingTitle: string;
   itemLabel: string;
   tableId: string;
@@ -548,7 +546,6 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
 
   return (
     <PageShell>
-      <PageTitle title={config.pageTitle} />
 
       <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
         <Headed title={config.headingTitle} size="lg" />

@@ -1,6 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Download, Menu, Plus } from "lucide-react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -55,7 +54,6 @@ type ProductCatalogPageConfig = {
     productType: ProductCatalogProductType;
     mode: "product" | "material";
     listAll: CatalogListFn;
-    pageTitle: string;
     headingTitle: string;
     tableId: string;
     searchLabel: string;
@@ -445,7 +443,6 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
 
     return (
         <PageShell>
-            <PageTitle title={config.pageTitle} />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <Headed title={config.headingTitle} size="lg" />
                 <div className="flex flex-wrap items-center gap-2">

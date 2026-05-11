@@ -20,7 +20,6 @@ import { buildEmptyFormOutOrder, buildEmptyItemOutOrder, formatAttrs } from "./u
 import { CreateOutOrder, AddOutOrderItemDto, Direction, OutOrderItemRow } from "./type/outOrder";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 
@@ -418,7 +417,6 @@ export default function OutOrder() {
 
   return (
     <div className="w-full min-h-screen bg-white">
-      <PageTitle title="Orden de salida" />
 
       <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

@@ -1,6 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Menu, Pencil, Plus, Timer, Trash2 } from "lucide-react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { Headed } from "@/shared/components/components/Headed";
@@ -532,7 +531,6 @@ export default function Providers() {
 
   return (
     <PageShell>
-      <PageTitle title="Proveedores" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Headed title="Proveedores" size="lg" />
         <SystemButton

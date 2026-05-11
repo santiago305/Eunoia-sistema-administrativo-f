@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus } from "lucide-react";
-import { PageTitle } from "@/shared/components/components/PageTitle";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -809,7 +808,6 @@ export default function Production() {
 
   return (
     <PageShell className="bg-white">
-      <PageTitle title="Produccion" />
 
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
