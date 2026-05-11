@@ -1,7 +1,8 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Download, Menu, Plus } from "lucide-react";
+import { Menu, Plus } from "lucide-react";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { DataTable } from "@/shared/components/table/DataTable";
 import {
     DataTableSearchBar,
@@ -80,7 +81,6 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const [openDetails, setOpenDetails] = useState(false);
     const limit = 25;
     const [page, setPage] = useState(1);
-    const [exporting, setExporting] = useState(false);
     const [searchText, setSearchText] = useState("");
     const [executedSearchText, setExecutedSearchText] = useState("");
     const [searchFilters, setSearchFilters] = useState(() => createEmptyProductSearchFilters());
@@ -376,89 +376,11 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         }
     };
 
-    const buildCsv = (
-        rows: Array<{
-            id: string;
-            name: string;
-            description: string | null;
-            brand?: string | null;
-            isActive: boolean;
-            baseUnitName?: string;
-        }>,
-    ) => {
-        const header = ["id", "name", "description", "brand", "isActive"];
-        const escape = (value: string) => {
-            if (value.includes('"') || value.includes(",") || value.includes("\n")) return `"${value.replace(/"/g, '""')}"`;
-            return value;
-        };
-        const lines = rows.map((row, index) => {
-            const csvId = String(index + 1).padStart(5, "0");
-            return [
-                csvId,
-                row.name,
-                row.description ?? "",
-                row.brand ?? "",
-                String(row.isActive),
-            ].map((value) => escape(String(value))).join(",");
-        });
-        return [header.join(","), ...lines].join("\n");
-    };
-
-    const downloadCsv = async () => {
-        if (exporting) return;
-        setExporting(true);
-        try {
-            const pageSize = 100;
-            const first = await config.listAll({ page: 1, limit: pageSize });
-            const allItems = [...(first.items ?? [])];
-            const pages = Math.max(1, Math.ceil((first.total ?? allItems.length) / pageSize));
-
-            for (let currentPage = 2; currentPage <= pages; currentPage += 1) {
-                const response = await config.listAll({ page: currentPage, limit: pageSize });
-                if (response.items?.length) allItems.push(...response.items);
-            }
-
-            const sorted = [...allItems].sort((a, b) => {
-            const dateA = new Date(a.createdAt ?? 0).getTime();
-            const dateB = new Date(b.createdAt ?? 0).getTime();
-
-            return dateA - dateB;
-            });
-            const csv = `\uFEFF${buildCsv(sorted)}`;
-            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = config.csvFileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } finally {
-            setExporting(false);
-        }
-    };
-    
-
     return (
         <PageShell>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                    <SystemButton
-                        variant="outline"
-                        size="sm"
-                        className="text-[11px]"
-                        onClick={downloadCsv}
-                        loading={exporting}
-                        leftIcon={<Download className="h-4 w-4" />}
-                        title="Exportar CSV"
-                    >
-                        {exporting ? "Exportando..." : "Exportar CSV"}
-                    </SystemButton>
-
+            <PageActionsRow>
                     <SystemButton
                         size="sm"
-                        className="text-[11px]"
                         onClick={startCreate}
                         leftIcon={<Plus className="h-4 w-4" />}
                         title={config.createTitle}
@@ -466,8 +388,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                     >
                         {config.createLabel}
                     </SystemButton>
-                </div>
-            </div>
+            </PageActionsRow>
 
             <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 

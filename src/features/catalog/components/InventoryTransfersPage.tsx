@@ -51,6 +51,7 @@ import {
 } from "@/features/catalog/utils/inventoryDocumentsSmartSearch";
 import { InventoryDocumentsSmartSearchPanel } from "@/features/catalog/components/InventoryDocumentsSmartSearchPanel";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import {
   deleteInventoryDocumentsExportPreset,
   exportInventoryDocumentsExcel,
@@ -670,8 +671,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
 
   return (
     <PageShell>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex justify-end gap-2">
+        <PageActionsRow>
             {exportColumns.length ? (
               <ExportPopover
                 columns={exportColumns}
@@ -683,7 +683,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
               />
             ) : null}
             <SystemButton
-              size="md"
+              size="sm"
               leftIcon={<Plus className="h-4 w-4" />}
               style={{
                 backgroundColor: PRIMARY,
@@ -696,8 +696,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
             >
               Crear transferencia
             </SystemButton>
-          </div>
-        </div>
+        </PageActionsRow>
 
         <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 

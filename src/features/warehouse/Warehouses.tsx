@@ -51,6 +51,7 @@ import { StatusPill } from "@/shared/components/components/StatusTag";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 
 const PRIMARY = "hsl(var(--primary))";
@@ -725,7 +726,7 @@ export default function Warehouses() {
 
   return (
     <PageShell>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <PageActionsRow>
         <SystemButton
           size="sm"
           leftIcon={<Plus className="h-4 w-4" />}
@@ -740,7 +741,7 @@ export default function Warehouses() {
         >
           Crear almacen
         </SystemButton>
-      </div>
+      </PageActionsRow>
 
       <DataTableSearchChips
         chips={searchChips}

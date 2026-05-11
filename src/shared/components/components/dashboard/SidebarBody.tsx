@@ -65,7 +65,7 @@ const SidebarBody = () => {
   }, [isSuperAdmin, permissions, userRole]);
 
   return (
-    <div className="scroll-area flex-1 overflow-y-auto pl-2 py-4 select-none">
+    <div className="scroll-area flex-1 overflow-y-auto px-2 py-4 select-none">
       <nav>
         {items.map((item) => (
           <SidebarItemComponent key={item.href ?? item.label} item={item} />

@@ -29,6 +29,7 @@ import {
   type SkuStockForecast,
 } from "@/shared/services/inventoryService";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import type { Warehouse } from "@/features/warehouse/types/warehouse";
 import type {
   ProductCatalogProductType,
@@ -704,7 +705,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   return (
     <PageShell>
       <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
+        <PageActionsRow>
           {exportColumns.length ? (
             <ExportPopover
               columns={exportColumns}
@@ -715,7 +716,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
               onExport={handleExport}
             />
           ) : null}
-        </div>
+        </PageActionsRow>
 
         <section>
           <div className="space-y-3">

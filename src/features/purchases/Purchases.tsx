@@ -68,6 +68,7 @@ import { ExtraTimeModal } from "./components/ExtraTimeModal";
 import { PurchaseCompletionPhotoModal } from "./components/PurchaseCompletionPhotoModal";
 import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "./utils/purchaseActions";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { approvePayment as approvePaymentById } from "@/shared/services/paymentService";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/notifications/constants/notification-events.constants";
@@ -1188,38 +1189,35 @@ export default function Purchases() {
     return (
         <PageShell className="bg-white">
             <div className="space-y-4">
-                <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
-                    <div className="flex justify-end gap-2">
-                        {exportColumns.length ? (
-                            <ExportPopover
-                                columns={exportColumns}
-                                loading={exporting}
-                                presets={exportPresets}
-                                onSavePreset={handleSaveExportPreset}
-                                onDeletePreset={handleDeleteExportPreset}
-                                onExport={handleExport}
-                            />
-                        ) : null}
-                        <SystemButton
-                            size="md"
-                            className="w-full lg:w-auto"
-                            leftIcon={<Plus className="h-4 w-4" />}
-                            style={{
-                                backgroundColor: PRIMARY,
-                                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-                            }}
-                            onClick={() => {
-                                setEditPoId(undefined);
-                                setOpenPurchaseModal(true);
-                            }}
-                            disabled={companyActionDisabled || !canCreatePurchase}
-                            title={!canCreatePurchase ? "No tienes permiso para crear compras." : companyActionTitle}
-                        >
-                            Nueva compra
-                        </SystemButton>
-                    </div>
-                </div>
+                <PageActionsRow>
+                    {exportColumns.length ? (
+                        <ExportPopover
+                            columns={exportColumns}
+                            loading={exporting}
+                            presets={exportPresets}
+                            onSavePreset={handleSaveExportPreset}
+                            onDeletePreset={handleDeleteExportPreset}
+                            onExport={handleExport}
+                        />
+                    ) : null}
+                    <SystemButton
+                        size="sm"
+                        leftIcon={<Plus className="h-4 w-4" />}
+                        style={{
+                            backgroundColor: PRIMARY,
+                            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+                        }}
+                        onClick={() => {
+                            setEditPoId(undefined);
+                            setOpenPurchaseModal(true);
+                        }}
+                        disabled={companyActionDisabled || !canCreatePurchase}
+                        title={!canCreatePurchase ? "No tienes permiso para crear compras." : companyActionTitle}
+                    >
+                        Nueva compra
+                    </SystemButton>
+                </PageActionsRow>
 
                 <DataTableSearchChips
                     chips={searchChips}

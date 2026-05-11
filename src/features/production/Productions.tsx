@@ -42,6 +42,7 @@ import TimerToEnd from "@/shared/components/components/TimerToEnd";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { ProductionOrderDetailModal } from "@/features/production/components/ProductionOrderDetailModal";
 import { ProductionOrderFormModal } from "@/features/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -809,35 +810,32 @@ export default function Production() {
     <PageShell className="bg-white">
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            {canExportProduction && exportColumns.length ? (
-              <ExportPopover
-                columns={exportColumns}
-                loading={exporting}
-                presets={exportPresets}
-                onSavePreset={handleSaveExportPreset}
-                onDeletePreset={handleDeleteExportPreset}
-                onExport={handleExport}
-              />
-            ) : null}
-            <SystemButton
-              size="md"
-              className="w-full lg:w-auto"
-              leftIcon={<Plus className="h-4 w-4" />}
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-              }}
-              onClick={handleCreate}
-              disabled={companyActionDisabled || !canCreateProduction}
-              title={companyActionTitle}
-            >
-              Nueva orden
-            </SystemButton>
-          </div>
-        </div>
+        <PageActionsRow>
+          {canExportProduction && exportColumns.length ? (
+            <ExportPopover
+              columns={exportColumns}
+              loading={exporting}
+              presets={exportPresets}
+              onSavePreset={handleSaveExportPreset}
+              onDeletePreset={handleDeleteExportPreset}
+              onExport={handleExport}
+            />
+          ) : null}
+          <SystemButton
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            style={{
+              backgroundColor: PRIMARY,
+              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+            }}
+            onClick={handleCreate}
+            disabled={companyActionDisabled || !canCreateProduction}
+            title={companyActionTitle}
+          >
+            Nueva orden
+          </SystemButton>
+        </PageActionsRow>
 
         <DataTableSearchChips
           chips={searchChips}

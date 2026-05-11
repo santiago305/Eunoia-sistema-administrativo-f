@@ -13,6 +13,7 @@ import {
 } from "@/shared/components/table/search";
 import { IconPaymentMethod } from "@/shared/components/components/dashboard/icons";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -530,7 +531,7 @@ export default function Providers() {
 
   return (
     <PageShell>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <PageActionsRow>
         <SystemButton
           size="sm"
           leftIcon={<Plus className="h-4 w-4" />}
@@ -545,7 +546,7 @@ export default function Providers() {
         >
           Crear proveedor
         </SystemButton>
-      </div>
+      </PageActionsRow>
 
       <DataTableSearchChips
         chips={searchChips}

@@ -36,6 +36,7 @@ import {
   saveInventoryLedgerSearchMetric,
 } from "@/shared/services/kardexService";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { InventoryLedgerSmartSearchPanel } from "@/features/catalog/components/InventoryLedgerSmartSearchPanel";
 import {
   buildInventoryLedgerSearchChips,
@@ -546,20 +547,18 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   return (
     <PageShell>
 
-      <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
-        <div className="flex justify-end">
-          {exportColumns.length ? (
-            <ExportPopover
-              columns={exportColumns}
-              presets={exportPresets}
-              loading={exporting}
-              onSavePreset={handleSaveExportPreset}
-              onDeletePreset={handleDeleteExportPreset}
-              onExport={handleExport}
-            />
-          ) : null}
-        </div>
-      </div>
+      <PageActionsRow>
+        {exportColumns.length ? (
+          <ExportPopover
+            columns={exportColumns}
+            presets={exportPresets}
+            loading={exporting}
+            onSavePreset={handleSaveExportPreset}
+            onDeletePreset={handleDeleteExportPreset}
+            onExport={handleExport}
+          />
+        ) : null}
+      </PageActionsRow>
 
       <div className="space-y-3">
         <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
