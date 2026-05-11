@@ -2,7 +2,6 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState, typ
 import { Menu, Pencil, Plus, Timer, Trash2 } from "lucide-react";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
-import { Headed } from "@/shared/components/components/Headed";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -532,7 +531,6 @@ export default function Providers() {
   return (
     <PageShell>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Headed title="Proveedores" size="lg" />
         <SystemButton
           size="sm"
           leftIcon={<Plus className="h-4 w-4" />}

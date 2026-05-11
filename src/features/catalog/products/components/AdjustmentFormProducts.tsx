@@ -7,7 +7,6 @@ import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { Headed } from "@/shared/components/components/Headed";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
@@ -595,11 +594,6 @@ export default function AdjustmentFormProducts({
       <div className={inModal ? "w-full" : "h-screen w-full py-0"}>
         {!inModal ? (
           <div className="pt-2">
-            <Headed
-              title="Ajuste de productos terminados"
-              subtitle="Al reducir stock solo puedes reducir hasta dejarlo en (0)."
-              size="lg"
-            />
           </div>
         ) : null}
 

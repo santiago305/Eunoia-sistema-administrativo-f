@@ -40,7 +40,6 @@ import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { ProductionStatus } from "@/features/production/types/production";
 import TimerToEnd from "@/shared/components/components/TimerToEnd";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
-import { Headed } from "@/shared/components/components/Headed";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { ProductionOrderDetailModal } from "@/features/production/components/ProductionOrderDetailModal";
@@ -811,7 +810,6 @@ export default function Production() {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Headed title="Ordenes de Produccion" size="lg" />
           <div className="flex items-center gap-2">
             {canExportProduction && exportColumns.length ? (
               <ExportPopover

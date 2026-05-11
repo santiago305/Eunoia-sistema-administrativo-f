@@ -26,6 +26,7 @@ import {
   profileSchema,
   resolveProfileAvatarUrl,
 } from "@/features/profile/components";
+import { PageShell } from "@/shared/layouts/PageShell";
 
 export default function ProfilePage() {
   const { userId } = useAuth();
@@ -170,9 +171,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white text-black">
-
-      <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 lg:max-w-[1280px] lg:px-8 2xl:max-w-[1600px] 2xl:px-10">
+    <PageShell contentClassName="py-6 sm:py-6 lg:py-6 2xl:py-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-10">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -233,7 +233,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

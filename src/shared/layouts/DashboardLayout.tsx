@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Outlet } from "react-router-dom";
 import { useToast } from "@/shared/hooks/use-toast";
 import { useLocationFeedback } from "@/shared/hooks/useLocationFeedback";
@@ -48,8 +48,13 @@ const DashboardContent = () => {
   );
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
-      <DashboardHeader user={sidebarUser} onLogout={handleLogout} />
+    <div
+      className="flex h-screen w-full flex-col overflow-hidden bg-background"
+      style={{ "--dashTop": `${headerHeight}px` } as CSSProperties}
+    >
+      <div ref={headerRef}>
+        <DashboardHeader user={sidebarUser} onLogout={handleLogout} />
+      </div>
 
       <div className="flex min-h-0 flex-1">
         {isMobile ? null : <Sidebar />}
@@ -74,3 +79,22 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node) return;
+
+    const update = () => setHeaderHeight(Math.ceil(node.getBoundingClientRect().height));
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    window.addEventListener("resize", update);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);

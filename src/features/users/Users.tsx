@@ -29,6 +29,7 @@ import { UserForm } from "./components/formUser";
 import { RoleType } from "./types/roles.types";
 import type { Role, RoleOption, User, UserListStatus } from "./types/users.types";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { PageShell } from "@/shared/layouts/PageShell";
 
 const ROLES = Object.values(RoleType) as Role[];
 
@@ -418,15 +419,14 @@ export default function Users() {
   }
 
   return (
-    <div
+    <PageShell
       className={cn(
-        "w-full bg-gradient-to-b from-white via-white to-zinc-50",
-        "h-[calc(100vh-var(--dashTop,0px))]",
+        "bg-gradient-to-b from-white via-white to-zinc-50",
         "flex flex-col",
-        "py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12",
       )}
+      contentClassName="h-full min-h-0 gap-0 py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12"
     >
-      <div className="mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col px-4 sm:px-6 lg:max-w-[1440px] lg:px-8 2xl:max-w-[1680px] 2xl:px-10">
+      <div className="flex h-full w-full min-h-0 flex-col px-4 sm:px-6 lg:px-8 2xl:px-10">
         <UsersHeader
           onCreateClick={() => setModalOpen(true)}
           canCreateUser={can("users.create")}
@@ -492,7 +492,7 @@ export default function Users() {
           onCreated={() => setReloadTick((prev) => prev + 1)}
         />
       </Modal>
-    </div>
+    </PageShell>
   );
 }
 

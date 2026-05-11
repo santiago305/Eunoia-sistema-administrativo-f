@@ -21,7 +21,6 @@ import type {
 } from "@/features/catalog/types/documentInventory";
 import { InventoryDocumentProductType } from "@/features/catalog/types/documentInventory";
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
-import { Headed } from "@/shared/components/components/Headed";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import {
@@ -658,7 +657,6 @@ export function InventoryAdjustmentsPage({
   return (
     <PageShell className="bg-white">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Headed title={config.headingTitle} size="lg" />
 
         <div className="flex justify-end gap-2">
           {exportColumns.length ? (

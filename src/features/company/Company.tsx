@@ -30,8 +30,8 @@ import {
   uploadCompanyIsotype,
   uploadCompanyLogo,
 } from "@/shared/services/companyService";
-import { Headed } from "@/shared/components/components/Headed";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { PageShell } from "@/shared/layouts/PageShell";
 
 const COMPANY_PRIMARY = "hsl(var(--primary))";
 
@@ -223,20 +223,14 @@ export default function CompanyPage() {
   };
 
   return (
-    <div className="min-h-screen w-full">
-
-      <div className="mx-auto">
+    <PageShell>
+      <div className="w-full">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="flex flex-col gap-1"
         >
-          <Headed
-            title="Información de la empresa"
-            subtitle="Datos generales y de contacto"
-            size="lg"
-          />
         </motion.div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -318,7 +312,7 @@ export default function CompanyPage() {
           companyId={company.companyId}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

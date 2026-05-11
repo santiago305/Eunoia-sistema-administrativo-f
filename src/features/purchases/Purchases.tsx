@@ -49,7 +49,6 @@ import { ActionsPopover, type ActionItem } from "@/shared/components/components/
 import { Calendar, CreditCard, FileText, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/shared/services/pdfServices";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
-import { Headed } from "@/shared/components/components/Headed";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import {
@@ -1190,10 +1189,6 @@ export default function Purchases() {
         <PageShell className="bg-white">
             <div className="space-y-4">
                 <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
-                    <Headed
-                        title="Compras"
-                        size="lg"
-                    />
                     <div className="flex justify-end gap-2">
                         {exportColumns.length ? (
                             <ExportPopover

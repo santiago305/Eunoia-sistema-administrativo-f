@@ -22,7 +22,6 @@ import {
 } from "@/shared/services/productService";
 import type { Product, ProductCatalogProductType} from "@/features/catalog/types/product";
 import type { ProductSearchStateResponse } from "@/features/catalog/types/productSearch";
-import { Headed } from "@/shared/components/components/Headed";
 import { getDropdownItemProducts } from "../data/getDropdownItemProducts";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { ProductCreateModal } from "./ProductCreateModal";
@@ -444,7 +443,6 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     return (
         <PageShell>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <Headed title={config.headingTitle} size="lg" />
                 <div className="flex flex-wrap items-center gap-2">
                     <SystemButton
                         variant="outline"

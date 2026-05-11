@@ -22,6 +22,7 @@ import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { PageShell } from "@/shared/layouts/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
 const CURRENCY = "PEN";
@@ -416,9 +417,8 @@ export default function OutOrder() {
   ], [itemRows, removeItem, updateItem]);
 
   return (
-    <div className="w-full min-h-screen bg-white">
-
-      <div className="mx-auto w-full max-w-[1500px] px-4 pt-2 space-y-4">
+    <PageShell>
+      <div className="w-full px-4 pt-2 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold tracking-tight">Orden de salida</h1>
@@ -557,7 +557,7 @@ export default function OutOrder() {
         outOrderId={lastSavedOutOrderId}
         primaryColor={PRIMARY}
       />
-    </div>
+    </PageShell>
   );
 }
 

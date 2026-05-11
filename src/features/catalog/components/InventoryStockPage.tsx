@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
 import { ArrowLeftRight, FileText, Menu, Wrench } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { Headed } from "@/shared/components/components/Headed";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -706,7 +705,6 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     <PageShell>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Headed title={config.headingTitle} size="lg" />
           {exportColumns.length ? (
             <ExportPopover
               columns={exportColumns}

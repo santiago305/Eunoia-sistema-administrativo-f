@@ -8,7 +8,6 @@ import {
   type DataTableRecentSearchItem,
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
-import { Headed } from "@/shared/components/components/Headed";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
@@ -548,7 +547,6 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     <PageShell>
 
       <div className="grid grid-cols-2 ms:grid-cols-1 gap-3 items-center">
-        <Headed title={config.headingTitle} size="lg" />
         <div className="flex justify-end">
           {exportColumns.length ? (
             <ExportPopover
