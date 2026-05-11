@@ -2,17 +2,18 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { Popover } from "@/shared/components/modales/Popover";
-import { IconBell, IconLogout, IconMonitor, IconUser } from "./icons";
+import { IconLogout, IconMonitor, IconUser } from "./icons";
 import { useSidebarContext } from "./SidebarContext";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import type { User } from "./types";
 import { cn } from "@/shared/lib/utils";
 import { getInitials } from "@/shared/utils/getInitials";
-import { useUnreadNotificationsCount } from "@/features/notifications/hooks/useUnreadNotificationsCount";
 
 interface UserMenuProps {
   user: User;
   onLogout: () => void;
+  compact?: boolean;
+  placement?: "top-start" | "top-end" | "bottom-start" | "bottom-end";
 }
 
 type UserMenuAction = {
@@ -22,18 +23,20 @@ type UserMenuAction = {
 };
 
 const USER_MENU_ACTIONS: UserMenuAction[] = [
-  { to: RoutesPaths.notifications, label: "Notificaciones", icon: IconBell },
   { to: RoutesPaths.profile, label: "Perfil", icon: IconUser },
   { to: RoutesPaths.sessions, label: "Sesiones activas", icon: IconMonitor },
 ];
 
-const UserMenu = ({ user, onLogout }: UserMenuProps) => {
+const UserMenu = ({
+  user,
+  onLogout,
+  compact = false,
+  placement = "top-start",
+}: UserMenuProps) => {
   const { isCollapsed, isMobile } = useSidebarContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const { count } = useUnreadNotificationsCount();
-  const isSidebarCollapsed = isCollapsed && !isMobile;
-  const showUnreadBadge = count.unread > 0;
+  const isSidebarCollapsed = compact ? true : isCollapsed && !isMobile;
 
   useEffect(() => {
     if (isMobile) {
@@ -56,7 +59,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
 
   const triggerButtonClassName = cn(
     "flex w-full items-center rounded-lg cursor-pointer select-none hover:bg-sidebar-accent",
-    isSidebarCollapsed ? "justify-center p-2" : "gap-3 px-3 py-2",
+    isSidebarCollapsed ? "justify-center" : "gap-3 px-3 py-2",
   );
 
   const menuContent = useMemo(
@@ -78,11 +81,6 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
           >
             <Icon className="mr-2" />
             <span className="flex-1">{label}</span>
-            {to === RoutesPaths.notifications && showUnreadBadge ? (
-              <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
-                {count.unread > 99 ? "99+" : count.unread}
-              </span>
-            ) : null}
           </Link>
         ))}
 
@@ -98,7 +96,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
         </button>
       </div>
     ),
-    [count.unread, handleCloseMenu, handleLogout, showUnreadBadge, user.email, user.name],
+    [handleCloseMenu, handleLogout, user.email, user.name],
   );
 
   return (
@@ -112,7 +110,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
         aria-expanded={isMenuOpen}
         aria-haspopup="menu"
       >
-        <Avatar className="h-9 w-9 shrink-0 border-2 border-primary/20">
+        <Avatar className="h-8 w-8 shrink-0 border-2 border-primary/20">
           <AvatarImage src={user.avatar} alt={user.name} />
           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
             {getInitials(user.name)}
@@ -130,17 +128,11 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
           </div>
         ) : null}
       </button>
-      {!isMenuOpen && showUnreadBadge ? (
-        <span className="pointer-events-none absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
-          {count.unread > 99 ? "99+" : count.unread}
-        </span>
-      ) : null}
-
       <Popover
         open={isMenuOpen}
         onClose={handleCloseMenu}
         anchorRef={triggerRef}
-        placement={isSidebarCollapsed ? "top-end" : "top-start"}
+        placement={placement}
         offset={10}
         hideHeader
         animation="slide"

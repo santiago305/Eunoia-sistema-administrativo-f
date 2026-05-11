@@ -19,6 +19,8 @@ import {
   PencilRuler,
   ClipboardList,
   Bell
+  ,
+  Menu
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -93,6 +95,10 @@ export const IconExpand = ({ className }: { className?: string }) => (
 
 export const IconBell = ({ className }: { className?: string }) => (
   <Bell className={className} size={18} />
+);
+
+export const IconMenu = ({ className }: { className?: string }) => (
+  <Menu className={className} size={18} />
 );
 
 

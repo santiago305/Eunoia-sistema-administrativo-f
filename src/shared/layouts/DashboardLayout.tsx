@@ -5,14 +5,14 @@ import { useLocationFeedback } from "@/shared/hooks/useLocationFeedback";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useUserDetails } from "@/shared/hooks/useUserDetails";
 import { resolveProfileAvatarUrl } from "@/features/profile/components/profile.utils";
-import { useSidebarContext } from "../components/components/dashboard/SidebarContext";
 import MobileSidebar from "../components/components/dashboard/MobileSidebar";
 import Sidebar from "../components/components/dashboard/Sidebar";
-import { IconExpand } from "../components/components/dashboard/icons";
+import DashboardHeader from "../components/components/dashboard/DashboardHeader";
+import { useSidebarContext } from "../components/components/dashboard/SidebarContext";
 import { SidebarProvider } from "../components/components/dashboard/SidebarProvider";
 
 const DashboardContent = () => {
-  const { isMobile, openMobileSidebar } = useSidebarContext();
+  const { isMobile } = useSidebarContext();
   const { toast } = useToast();
   const { logout } = useAuth();
   const { userDetails } = useUserDetails();
@@ -48,30 +48,17 @@ const DashboardContent = () => {
   );
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      {isMobile ? null : (
-        <Sidebar user={sidebarUser} onLogout={handleLogout} />
-      )}
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
+      <DashboardHeader user={sidebarUser} onLogout={handleLogout} />
 
-      {isMobile ? (
-        <MobileSidebar user={sidebarUser} onLogout={handleLogout} />
-      ) : null}
+      <div className="flex min-h-0 flex-1">
+        {isMobile ? null : <Sidebar />}
+        {isMobile ? <MobileSidebar /> : null}
 
-      <main className="scroll-area relative h-full flex-1 overflow-y-auto">
-        {isMobile ? (
-          <button
-            type="button"
-            title="Abrir menu"
-            onClick={() => {
-              openMobileSidebar();
-            }}
-            className="fixed right-3 top-3 z-30 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background/95 shadow-sm backdrop-blur sm:hidden"
-          >
-            <IconExpand />
-          </button>
-        ) : null}
-        <Outlet />
-      </main>
+        <main className="scroll-area relative h-full flex-1 overflow-y-auto border border-gray-200 rounded-t-2xl md:rounded-tr-none">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };

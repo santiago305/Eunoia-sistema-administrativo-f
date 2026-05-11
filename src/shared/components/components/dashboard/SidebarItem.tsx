@@ -64,21 +64,21 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
   const parentBaseClass = cn(
     "group flex w-full items-center rounded-xl transition-all duration-200",
-    "min-h-10",
-    isSidebarCollapsed ? "justify-center px-2 py-2" : "px-2.5 py-2",
+    "min-h-8",
+    isSidebarCollapsed ? "justify-center px-2 py-1.5" : "px-2 py-1.5",
     isParentHighlighted
       ? "bg-primary/10 text-primary shadow-sm"
       : "text-sidebar-foreground hover:bg-sidebar-accent/70"
   );
 
   const labelClass = cn(
-    "truncate text-[14px] font-medium transition-all duration-200",
+    "truncate text-[12px] font-medium transition-all duration-200",
     isSidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
   );
 
   const childLinkClass = (active?: boolean) =>
     cn(
-      "group/child flex min-h-8 items-center rounded-lg px-2.5 py-1.5 text-[13px] transition-all duration-200",
+      "group/child flex min-h-8 items-center rounded-lg px-2.5 py-1.5 text-[12px] transition-all duration-200",
       active
         ? "bg-primary/8 text-primary font-medium"
         : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"

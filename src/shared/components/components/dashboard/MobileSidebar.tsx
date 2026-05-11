@@ -3,16 +3,9 @@ import { useLocation } from "react-router-dom";
 import { useSidebarContext } from "./SidebarContext";
 import SidebarHeader from "./SidebarHeader";
 import SidebarBody from "./SidebarBody";
-import SidebarFooter from "./SidebarFooter";
-import type { User } from "./types";
 import { cn } from "@/shared/lib/utils";
 
-interface MobileSidebarProps {
-  user: User;
-  onLogout: () => void;
-}
-
-const MobileSidebar = ({ user, onLogout }: MobileSidebarProps) => {
+const MobileSidebar = () => {
   const location = useLocation();
   const { isMobileSidebarOpen, closeMobileSidebar } = useSidebarContext();
   const previousPathnameRef = useRef(location.pathname);
@@ -42,7 +35,6 @@ const MobileSidebar = ({ user, onLogout }: MobileSidebarProps) => {
       >
         <SidebarHeader />
         <SidebarBody />
-        <SidebarFooter user={user} onLogout={onLogout} />
       </aside>
     </>
   );
