@@ -1,21 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
-import { cn } from "@/shared/lib/utils";
+import { useSearchParams } from "react-router-dom";
 import { useMessagesV2 } from "@/features/notifications/hooks/useMessagesV2";
 import { useDrafts } from "@/features/notifications/hooks/useDrafts";
-import { useNotificationModules } from "@/features/notifications/hooks/useNotificationModules";
-import { sendMessage } from "@/features/notifications/services/messages.service";
+import { sendMessage, bulkMessages } from "@/features/notifications/services/messages.service";
 import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/notifications/services/drafts.service";
-import { bulkMessages } from "@/features/notifications/services/messages.service";
-import { RoutesPaths } from "@/routes/config/routesPaths";
 import type { DraftMessageItem, InboxItem, MessageFolder, SentMessageItem } from "@/features/notifications/types/message.types";
 import MessageLoadingState from "@/features/notifications/components/feedback/MessageLoadingState";
-import MessageEmptyState from "@/features/notifications/components/feedback/MessageEmptyState";
 import MessageErrorState from "@/features/notifications/components/feedback/MessageErrorState";
-import InlineMessageError from "@/features/notifications/components/feedback/InlineMessageError";
+import NotificationMailToolbar from "@/features/notifications/components/mail/NotificationMailToolbar";
+import NotificationMailList from "@/features/notifications/components/mail/NotificationMailList";
+import NotificationComposeModal from "@/features/notifications/components/mail/NotificationComposeModal";
+import { NOTIFICATION_WINDOW_EVENTS } from "@/features/notifications/constants/notification-events.constants";
 
 type UiFolder = "inbox" | "sent" | "drafts" | "trash" | "starred";
 
@@ -58,7 +53,6 @@ export default function NotificationsPage() {
   const [body, setBody] = useState("");
   const [composeError, setComposeError] = useState<string | null>(null);
 
-  const { modules } = useNotificationModules();
   const messages = useMessagesV2({
     folder: (folder === "drafts" ? "inbox" : folder) as MessageFolder,
     originModule: originModule || undefined,
@@ -72,11 +66,16 @@ export default function NotificationsPage() {
     if (folder === "drafts") return drafts.items;
     return messages.items;
   }, [folder, drafts.items, messages.items]) as Array<InboxItem | SentMessageItem | DraftMessageItem>;
+
   const inboxRows = rows.filter((row): row is InboxItem => "recipient" in row);
   const visibleRecipientIds = inboxRows.map((row) => row.recipient.id);
+  const allVisibleSelected = visibleRecipientIds.length > 0 && visibleRecipientIds.every((id) => selectedRecipientIds.includes(id));
+  const hasSelection = selectedRecipientIds.length > 0;
+
   const rangeStart = messages.total === 0 ? 0 : (page - 1) * limit + 1;
   const rangeEnd = Math.min(page * limit, messages.total);
   const maxPage = Math.max(1, Math.ceil(messages.total / limit));
+  const emitRefresh = () => window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
 
   const resetCompose = () => {
     setRecipients("");
@@ -94,6 +93,11 @@ export default function NotificationsPage() {
     const t = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(t);
   }, [q]);
+
+  useEffect(() => {
+    setPage(1);
+    setSelectedRecipientIds([]);
+  }, [folder, originModule, debouncedQ]);
 
   useEffect(() => {
     const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
@@ -117,354 +121,167 @@ export default function NotificationsPage() {
     }
   }, [searchParams]);
 
+  const applyBulkAction = async (action: "MARK_AS_READ" | "MARK_AS_UNREAD" | "DELETE" | "RESTORE") => {
+    if (!selectedRecipientIds.length) return;
+    await bulkMessages({ messageRecipientIds: selectedRecipientIds, action });
+    setSelectedRecipientIds([]);
+    await messages.reload();
+    emitRefresh();
+  };
+
+  const runRowAction = async (action: () => Promise<void>) => {
+    try {
+      await action();
+      emitRefresh();
+    } catch {
+      // Mantiene la UX estable ante fallos puntuales de red.
+    }
+  };
+
   return (
-    <div className="h-full p-4 md:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-4">
-        <div>
-          <h1 className="text-xl font-semibold">Mensajeria</h1>
-          <p className="text-xs text-muted-foreground">Bandeja corporativa</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={originModule}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setOriginModule(nextValue);
-              const next = new URLSearchParams(searchParams);
-              if (nextValue) next.set("originModule", nextValue);
-              else next.delete("originModule");
-              setSearchParams(next, { replace: true });
-            }}
-            className="h-9 rounded-md border px-3 text-sm"
-          >
-            <option value="">Todos los modulos</option>
-            {modules.map((moduleItem) => (
-              <option key={moduleItem.key} value={moduleItem.key}>
-                {moduleItem.label}
-              </option>
-            ))}
-          </select>
-          <Button type="button" onClick={() => setComposeOpen(true)}>
-            Redactar
-          </Button>
-        </div>
-      </div>
-
+    <div className="h-full">
       <div className="grid h-[calc(100vh-190px)] grid-cols-1 gap-4">
-        <section className="flex min-h-0 flex-col rounded-xl border bg-background">
-          <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-muted-foreground">
-            <span>{folder.toUpperCase()}</span>
-            <span>
-              {folder !== "drafts"
-                ? `${rangeStart}-${rangeEnd} de ${messages.total}`
-                : `${drafts.items.length} borradores`}
-            </span>
-          </div>
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-md border bg-background">
           {folder !== "drafts" ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={visibleRecipientIds.length > 0 && visibleRecipientIds.every((id) => selectedRecipientIds.includes(id))}
-                  onChange={(event) => {
-                    if (event.target.checked) {
-                      setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...visibleRecipientIds])));
-                    } else {
-                      setSelectedRecipientIds(selectedRecipientIds.filter((id) => !visibleRecipientIds.includes(id)));
-                    }
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">Seleccionados: {selectedRecipientIds.length}</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="outline">Seleccion</Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-44 p-2">
-                    <div className="space-y-1">
-                      <Button type="button" variant="ghost" className="w-full justify-start" onClick={() => setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...visibleRecipientIds])))}>
-                        Todos
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...inboxRows.filter((row) => Boolean(row.recipient.readAt)).map((row) => row.recipient.id)])))}
-                      >
-                        Leidos
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...inboxRows.filter((row) => !row.recipient.readAt).map((row) => row.recipient.id)])))}
-                      >
-                        No leidos
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    if (!selectedRecipientIds.length) return;
-                    await bulkMessages({ messageRecipientIds: selectedRecipientIds, action: "MARK_AS_READ" });
-                    setSelectedRecipientIds([]);
-                    await messages.reload();
-                  }}
-                >
-                  Leer
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    if (!selectedRecipientIds.length) return;
-                    await bulkMessages({ messageRecipientIds: selectedRecipientIds, action: "MARK_AS_UNREAD" });
-                    setSelectedRecipientIds([]);
-                    await messages.reload();
-                  }}
-                >
-                  No leido
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    if (!selectedRecipientIds.length) return;
-                    await bulkMessages({
-                      messageRecipientIds: selectedRecipientIds,
-                      action: folder === "trash" ? "RESTORE" : "DELETE",
-                    });
-                    setSelectedRecipientIds([]);
-                    await messages.reload();
-                  }}
-                >
-                  {folder === "trash" ? "Restaurar" : "Eliminar"}
-                </Button>
-              </div>
-            </div>
+            <NotificationMailToolbar
+              allVisibleSelected={allVisibleSelected}
+              hasSelection={hasSelection}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              total={messages.total}
+              page={page}
+              maxPage={maxPage}
+              inTrash={folder === "trash"}
+              onSelectToggle={() => {
+                if (allVisibleSelected || hasSelection) setSelectedRecipientIds([]);
+                else setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...visibleRecipientIds])));
+              }}
+              onSelectAllVisible={() => setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...visibleRecipientIds])))}
+              onSelectNone={() => setSelectedRecipientIds([])}
+              onSelectRead={() => {
+                const readIds = inboxRows.filter((row) => Boolean(row.recipient.readAt)).map((row) => row.recipient.id);
+                setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...readIds])));
+              }}
+              onSelectUnread={() => {
+                const unreadIds = inboxRows.filter((row) => !row.recipient.readAt).map((row) => row.recipient.id);
+                setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...unreadIds])));
+              }}
+              onBulkAction={(action) => void applyBulkAction(action)}
+              onRefresh={() => {
+                void messages.reload();
+                emitRefresh();
+              }}
+              onPrevPage={() => setPage((prev) => Math.max(1, prev - 1))}
+              onNextPage={() => setPage((prev) => Math.min(maxPage, prev + 1))}
+            />
           ) : null}
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {messages.loading && folder !== "drafts" ? (
-              <MessageLoadingState />
-            ) : messages.error && folder !== "drafts" ? (
-              <MessageErrorState text={messages.error} onRetry={() => void messages.reload()} />
-            ) : !rows.length ? (
-              <MessageEmptyState text={folder === "drafts" ? "No tienes borradores." : "No tienes mensajes en esta bandeja."} />
-            ) : (
-              rows.map((row) => {
-                const isInboxRow = "recipient" in row;
-                const message = isInboxRow ? row.message : row;
-                const recipient = isInboxRow ? row.recipient : null;
-                const sender = getSenderLabel(row, folder);
-                const title = message?.subject ?? "(Sin asunto)";
-                const preview = message?.bodyText ?? "";
-                const date = formatMessageDate(message?.sentAt ?? message?.updatedAt ?? message?.createdAt);
-                const unread = Boolean(isInboxRow && recipient && !recipient.readAt);
-
-                return (
-                  <div
-                    key={message?.id ?? recipient?.id}
-                    className={cn(
-                      "group grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b px-4 py-3 hover:bg-muted/40",
-                      unread ? "bg-muted/20" : "",
-                    )}
-                  >
-                    {isInboxRow && recipient ? (
-                      <input
-                        type="checkbox"
-                        checked={selectedRecipientIds.includes(recipient.id)}
-                        onChange={(event) => {
-                          if (event.target.checked) {
-                            setSelectedRecipientIds((prev) => Array.from(new Set([...prev, recipient.id])));
-                          } else {
-                            setSelectedRecipientIds((prev) => prev.filter((id) => id !== recipient.id));
-                          }
-                        }}
-                      />
-                    ) : (
-                      <span />
-                    )}
-                    <div className="min-w-0">
-                      <div className="grid grid-cols-[160px_1fr] items-center gap-3">
-                        <p className={cn("truncate text-sm", unread ? "font-semibold" : "font-medium")}>{sender}</p>
-                        <div className="min-w-0">
-                          <Link
-                            className={cn("block truncate text-sm", unread ? "font-semibold" : "font-medium")}
-                            to={RoutesPaths.notificationDetail.replace(":id", (recipient?.id ?? message?.id ?? "").toString())}
-                          >
-                            {title}
-                          </Link>
-                          <p className="truncate text-xs text-muted-foreground">{preview}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="hidden md:inline-flex">{message?.originModule ?? "-"}</Badge>
-                      <span className="text-xs text-muted-foreground group-hover:hidden">{date}</span>
-                      {isInboxRow && recipient ? (
-                        <div className="hidden items-center gap-1 group-hover:flex">
-                          <Button type="button" variant="outline" onClick={() => void messages.starInboxRow(recipient.id, !recipient.starredAt)}>
-                            {recipient.starredAt ? "Unstar" : "Star"}
-                          </Button>
-                          {folder === "trash" ? (
-                            <Button type="button" variant="outline" onClick={() => void messages.restoreInboxRow(recipient.id)}>
-                              Restaurar
-                            </Button>
-                          ) : (
-                            <Button type="button" variant="outline" onClick={() => void messages.deleteInboxRow(recipient.id)}>
-                              Eliminar
-                            </Button>
-                          )}
-                        </div>
-                      ) : null}
-                      {!isInboxRow && folder === "drafts" ? (
-                        <div className="hidden items-center gap-1 group-hover:flex">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingDraftId(message?.id ?? null);
-                              setRecipients(String(message?.bodyJson?.draftRecipients ?? ""));
-                              setSubject(message?.subject ?? "");
-                              setBody(message?.bodyHtml ?? "");
-                              setComposeOpen(true);
-                              setComposeMinimized(false);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={async () => {
-                              if (!message?.id) return;
-                              await deleteDraft(message.id);
-                              await drafts.reload();
-                            }}
-                          >
-                            Eliminar
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-          {folder !== "drafts" ? (
-            <div className="flex items-center justify-end gap-2 border-t px-4 py-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                disabled={page <= 1}
-              >
-                {"<"}
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                Pagina {page} de {maxPage}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPage((prev) => Math.min(maxPage, prev + 1))}
-                disabled={page >= maxPage}
-              >
-                {">"}
-              </Button>
-            </div>
-          ) : null}
+          {messages.loading && folder !== "drafts" ? (
+            <MessageLoadingState />
+          ) : messages.error && folder !== "drafts" ? (
+            <MessageErrorState text={messages.error} onRetry={() => void messages.reload()} />
+          ) : (
+            <NotificationMailList
+              rows={rows}
+              folder={folder}
+              selectedRecipientIds={selectedRecipientIds}
+              onToggleSelect={(recipientId, checked) => {
+                if (checked) setSelectedRecipientIds((prev) => Array.from(new Set([...prev, recipientId])));
+                else setSelectedRecipientIds((prev) => prev.filter((id) => id !== recipientId));
+              }}
+              onToggleRead={(recipientId, value) => {
+                void runRowAction(async () => {
+                  await bulkMessages({
+                    messageRecipientIds: [recipientId],
+                    action: value ? "MARK_AS_UNREAD" : "MARK_AS_READ",
+                  });
+                  await messages.reload();
+                });
+              }}
+              onToggleStar={(recipientId, value) => {
+                void runRowAction(() => messages.starInboxRow(recipientId, value));
+              }}
+              onDelete={(recipientId) => {
+                void runRowAction(() => messages.deleteInboxRow(recipientId));
+              }}
+              onRestore={(recipientId) => {
+                void runRowAction(() => messages.restoreInboxRow(recipientId));
+              }}
+              onEditDraft={(draft) => {
+                setEditingDraftId(draft.id);
+                setRecipients(String(draft.bodyJson?.draftRecipients ?? ""));
+                setSubject(draft.subject ?? "");
+                setBody(draft.bodyHtml ?? "");
+                setComposeOpen(true);
+                setComposeMinimized(false);
+              }}
+              onDeleteDraft={async (draftId) => {
+                await deleteDraft(draftId);
+                await drafts.reload();
+                emitRefresh();
+              }}
+              getSenderLabel={getSenderLabel}
+              formatMessageDate={formatMessageDate}
+            />
+          )}
         </section>
       </div>
 
-      {composeOpen ? (
-        <div className={cn("fixed bottom-4 right-4 z-50 w-[560px] rounded-xl border bg-background shadow-2xl", composeMinimized ? "h-12" : "")}>
-          <div className="flex items-center justify-between rounded-t-xl border-b px-3 py-2">
-            <p className="text-sm font-medium">{editingDraftId ? "Editar borrador" : "Mensaje nuevo"}</p>
-            <div className="flex gap-1">
-              <Button type="button" variant="outline" onClick={() => setComposeMinimized((prev) => !prev)}>
-                _
-              </Button>
-              <Button type="button" variant="outline" onClick={resetCompose}>
-                X
-              </Button>
-            </div>
-          </div>
-          {!composeMinimized ? (
-            <div className="space-y-2 p-3">
-              <Input value={recipients} onChange={(event) => setRecipients(event.target.value)} placeholder="Para" />
-              <Input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Asunto" />
-              <textarea
-                className="min-h-44 w-full rounded-md border p-2 text-sm"
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                placeholder="Escribe tu mensaje..."
-              />
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={async () => {
-                      if (!recipients.trim() || !subject.trim() || !body.trim()) {
-                        setComposeError("Completa destinatarios, asunto y cuerpo.");
-                        return;
-                      }
-                      setComposeError(null);
-                      try {
-                        if (editingDraftId) {
-                          await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
-                          await sendDraft(editingDraftId, recipients);
-                        } else {
-                          await sendMessage({ recipients, subject, bodyHtml: body, originModule: originModule || "corporate" });
-                        }
-                        resetCompose();
-                        if (folder === "drafts") void drafts.reload();
-                        else void messages.reload();
-                      } catch {
-                        setComposeError("No se pudo enviar el mensaje.");
-                      }
-                    }}
-                  >
-                    Enviar
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={async () => {
-                      setComposeError(null);
-                      try {
-                        if (editingDraftId) {
-                          await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
-                        } else {
-                          await createDraft({
-                            recipients: recipients || undefined,
-                            subject: subject || undefined,
-                            bodyHtml: body || undefined,
-                            originModule: originModule || "corporate",
-                          });
-                        }
-                        resetCompose();
-                        if (folder === "drafts") void drafts.reload();
-                      } catch {
-                        setComposeError("No se pudo guardar el borrador.");
-                      }
-                    }}
-                  >
-                    Guardar borrador
-                  </Button>
-                </div>
-              </div>
-              <InlineMessageError text={composeError ?? undefined} />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <NotificationComposeModal
+        open={composeOpen}
+        minimized={composeMinimized}
+        editingDraft={Boolean(editingDraftId)}
+        recipients={recipients}
+        subject={subject}
+        body={body}
+        error={composeError ?? undefined}
+        onToggleMinimize={() => setComposeMinimized((prev) => !prev)}
+        onClose={resetCompose}
+        onRecipientsChange={setRecipients}
+        onSubjectChange={setSubject}
+        onBodyChange={setBody}
+        onSend={async () => {
+          if (!recipients.trim() || !subject.trim() || !body.trim()) {
+            setComposeError("Completa destinatarios, asunto y cuerpo.");
+            return;
+          }
+          setComposeError(null);
+          try {
+            if (editingDraftId) {
+              await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
+              await sendDraft(editingDraftId, recipients);
+            } else {
+              await sendMessage({ recipients, subject, bodyHtml: body, originModule: originModule || "corporate" });
+            }
+            resetCompose();
+            if (folder === "drafts") void drafts.reload();
+            else void messages.reload();
+            emitRefresh();
+          } catch {
+            setComposeError("No se pudo enviar el mensaje.");
+          }
+        }}
+        onSaveDraft={async () => {
+          setComposeError(null);
+          try {
+            if (editingDraftId) {
+              await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
+            } else {
+              await createDraft({
+                recipients: recipients || undefined,
+                subject: subject || undefined,
+                bodyHtml: body || undefined,
+                originModule: originModule || "corporate",
+              });
+            }
+            resetCompose();
+            if (folder === "drafts") void drafts.reload();
+            emitRefresh();
+          } catch {
+            setComposeError("No se pudo guardar el borrador.");
+          }
+        }}
+      />
     </div>
   );
 }

@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { listMessages } from "../services/messages.service";
 import { listDrafts } from "../services/drafts.service";
 import type { MessageFolder } from "../types/message.types";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { NOTIFICATION_WINDOW_EVENTS } from "../constants/notification-events.constants";
 
 type SidebarCounts = {
   inbox: number;
@@ -20,42 +22,50 @@ const INITIAL_COUNTS: SidebarCounts = {
 };
 
 export function useNotificationSidebarCounts() {
+  const { isAuthenticated, authChecked, userId } = useAuth();
   const [counts, setCounts] = useState<SidebarCounts>(INITIAL_COUNTS);
 
+  const reload = useCallback(async () => {
+    if (!authChecked || !isAuthenticated || !userId) {
+      setCounts(INITIAL_COUNTS);
+      return;
+    }
+
+    try {
+      const folders: MessageFolder[] = ["inbox", "starred", "sent", "trash"];
+      const [inbox, starred, sent, trash, drafts] = await Promise.all([
+        listMessages({ folder: folders[0], page: 1, limit: 1 }),
+        listMessages({ folder: folders[1], page: 1, limit: 1 }),
+        listMessages({ folder: folders[2], page: 1, limit: 1 }),
+        listMessages({ folder: folders[3], page: 1, limit: 1 }),
+        listDrafts(),
+      ]);
+
+      setCounts({
+        inbox: inbox.total ?? 0,
+        starred: starred.total ?? 0,
+        sent: sent.total ?? 0,
+        trash: trash.total ?? 0,
+        drafts: drafts.length ?? 0,
+      });
+    } catch {
+      // Mantiene el ultimo estado valido para no congelar el sidebar en 0.
+    }
+  }, [authChecked, isAuthenticated, userId]);
+
   useEffect(() => {
-    let mounted = true;
+    void reload();
+  }, [reload]);
 
-    const load = async () => {
-      try {
-        const folders: MessageFolder[] = ["inbox", "starred", "sent", "trash"];
-        const [inbox, starred, sent, trash, drafts] = await Promise.all([
-          listMessages({ folder: folders[0], page: 1, limit: 1 }),
-          listMessages({ folder: folders[1], page: 1, limit: 1 }),
-          listMessages({ folder: folders[2], page: 1, limit: 1 }),
-          listMessages({ folder: folders[3], page: 1, limit: 1 }),
-          listDrafts(),
-        ]);
-
-        if (!mounted) return;
-        setCounts({
-          inbox: inbox.total ?? 0,
-          starred: starred.total ?? 0,
-          sent: sent.total ?? 0,
-          trash: trash.total ?? 0,
-          drafts: drafts.length ?? 0,
-        });
-      } catch {
-        if (!mounted) return;
-        setCounts(INITIAL_COUNTS);
-      }
-    };
-
-    void load();
+  useEffect(() => {
+    const handleRefresh = () => void reload();
+    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, handleRefresh);
+    window.addEventListener("focus", handleRefresh);
     return () => {
-      mounted = false;
+      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, handleRefresh);
+      window.removeEventListener("focus", handleRefresh);
     };
-  }, []);
+  }, [reload]);
 
   return counts;
 }
-
