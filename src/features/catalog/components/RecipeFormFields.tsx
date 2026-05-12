@@ -209,7 +209,7 @@ export function RecipeFormFields({
             </SystemButton>
           </div>
         ),
-        headerClassName: "text-right w-[40px]",
+        headerClassName: "text-right w-[50px]",
         className: "text-right",
         hideable: false,
         sortable: false,

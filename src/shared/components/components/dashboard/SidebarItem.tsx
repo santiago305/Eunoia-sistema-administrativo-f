@@ -63,8 +63,12 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
     return cloneElement(item.icon as ReactElement<{ className?: string }>, {
       className: cn(
-        "size-[18px] shrink-0 transition-colors duration-200",
-        isParentHighlighted
+        "shrink-0 transition-colors duration-200",
+        item.isComposeAction && isSidebarCollapsed ? "size-4" : "size-[18px]",
+        // Redactar: color del icono (solo boton especial).
+        item.isComposeAction
+          ? "text-white"
+          : isParentHighlighted
           ? "text-primary"
           : "text-sidebar-foreground/90 group-hover:text-sidebar-foreground"
       ),
@@ -79,10 +83,20 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
   const parentBaseClass = cn(
     "group flex w-full items-center rounded-xl transition-all duration-200",
-    "min-h-8",
-    isSidebarCollapsed ? "justify-center px-2 py-1.5" : "px-2 py-1.5",
+    // Redactar: altura del boton en expanded/collapsed.
+    item.isComposeAction ? "min-h-10" : "min-h-8",
+    // Redactar collapsed: caja cuadrada del boton cuando el sidebar esta cerrado.
+    // Redactar expanded: padding/margen del boton cuando el sidebar esta abierto.
+    isSidebarCollapsed
+      ? item.isComposeAction
+        ? "mx-auto justify-center px-2 py-1.5"
+        : "justify-center px-2 py-1.5"
+      : item.isComposeAction
+      ? "p-4 mb-2"
+      : "px-2 py-1.5",
+    // Redactar: fondo principal + texto blanco.
     item.isComposeAction
-      ? "bg-primary text-primary-foreground shadow-sm hover:shadow-md"
+      ? "bg-primary text-white shadow-sm hover:shadow-md"
       : isParentHighlighted
       ? "bg-primary/10 text-primary shadow-sm"
       : "text-sidebar-foreground hover:bg-sidebar-accent/70"
@@ -120,6 +134,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const ParentInnerContent = () => (
     <>
       {renderIcon()}
+      {/* Redactar expanded: separacion icono-texto (ml-3). */}
       {!isSidebarCollapsed && (
         <span className={cn("ml-3 flex-1 text-left", labelClass)}>
           {item.collapsibleLabels ? (isOpen ? item.collapsibleLabels.open : item.collapsibleLabels.closed) : item.label}
