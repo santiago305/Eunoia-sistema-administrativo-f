@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { MailLabelItem } from "../../types/message.types";
+import { SystemButton } from '../../../../shared/components/components/SystemButton';
+import { Popover } from "@/shared/components/modales/Popover";
 
 type AttachmentItem = {
   id: string;
@@ -50,6 +52,7 @@ export default function NotificationComposeModal(props: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const recipientInputRef = useRef<HTMLInputElement>(null);
+  const labelsAnchorRef = useRef<HTMLButtonElement | null>(null);
   const [showFormat, setShowFormat] = useState(false);
   const [showLink, setShowLink] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -217,8 +220,11 @@ export default function NotificationComposeModal(props: Props) {
   }
 
   return (
-    <div className="fixed bottom-0 right-6 z-50 bg-background border border-border rounded-t-lg shadow-compose w-[540px] max-h-[600px] flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2 bg-mail-compose text-mail-compose-foreground rounded-t-lg">
+    <div 
+    className="fixed bottom-0 right-6 z-50 bg-background border border-border rounded-t-lg shadow-compose w-[540px] flex flex-col"
+    style={{height: "600px"}}
+    >
+      <div className="flex items-center justify-between px-4 py-2 bg-blue-200 text-mail-compose-foreground rounded-t-lg">
         <span className="text-sm font-medium">{props.editingDraft ? "Editar borrador" : "Mensaje nuevo"}</span>
         <div className="flex items-center gap-1">
           <button onClick={props.onToggleMinimize} className="size-7 rounded hover:bg-black/10 flex items-center justify-center">
@@ -283,7 +289,7 @@ export default function NotificationComposeModal(props: Props) {
           ref={bodyRef}
           contentEditable
           onInput={(e) => props.onBodyChange((e.target as HTMLDivElement).innerHTML)}
-          className="flex-1 overflow-y-auto px-4 py-3 text-sm outline-none min-h-[180px] max-h-[280px]"
+          className="flex-1 overflow-y-auto px-4 py-3 text-sm outline-none min-h-[180px]"
           suppressContentEditableWarning
           onDrop={(e) => {
             e.preventDefault();
@@ -316,13 +322,16 @@ export default function NotificationComposeModal(props: Props) {
         {props.error ? <div className="px-4 py-2 text-xs text-destructive bg-destructive/10">{props.error}</div> : null}
       </div>
 
-      <div className="flex items-center gap-1 px-2 py-2 border-t border-border relative">
-        <button onClick={handleSend} className="px-5 py-2 bg-mail-accent text-mail-accent-foreground rounded-full font-medium text-sm hover:opacity-90 flex items-center gap-2">
-          <Send className="size-4" />
-          Enviar
-        </button>
+      <div className="flex items-center gap-1 p-2 border-t border-border relative">
+        <SystemButton
+          onClick={handleSend}
+          leftIcon={<Send className="size-4" />}
+          className="rounded-full"
+        >
+          Enviar  
+        </SystemButton>
 
-        <button onClick={() => fileInputRef.current?.click()} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center ml-2" title="Adjuntar archivo">
+        <button onClick={() => fileInputRef.current?.click()} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Adjuntar archivo">
           <Paperclip className="size-5" />
         </button>
 
@@ -425,11 +434,14 @@ export default function NotificationComposeModal(props: Props) {
             </div>
           ) : null}
         </div>
+
         <button onClick={() => imageInputRef.current?.click()} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Insertar imagen">
           <ImageIcon className="size-5" />
         </button>
-        <div className="relative ml-1">
+        <div className="relative">
           <button
+            ref={labelsAnchorRef}
+            type="button"
             onClick={() => {
               setShowLabels((v) => !v);
               setShowEmoji(false);
@@ -446,39 +458,47 @@ export default function NotificationComposeModal(props: Props) {
               </span>
             ) : null}
           </button>
-          {showLabels ? (
-            <div className="absolute bottom-full mb-2 left-0 z-50 w-72 bg-popover border border-border rounded-lg shadow-popover p-2">
-              <div className="max-h-[200px] overflow-y-auto pr-1">
-                {(props.labels ?? []).length === 0 ? (
-                  <p className="px-2 py-2 text-xs text-muted-foreground">No hay etiquetas creadas.</p>
-                ) : (
-                  (props.labels ?? []).map((label) => {
-                    const selected = Boolean(props.selectedLabelIds?.includes(label.id));
-                    return (
-                      <button
-                        key={label.id}
-                        type="button"
-                        onClick={() => props.onToggleLabel?.(label.id)}
-                        className={cn(
-                          "w-full flex items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-mail-hover",
-                          selected && "bg-mail-hover",
-                        )}
-                      >
-                        <span className="flex items-center gap-2 min-w-0">
-                          <Bookmark
-                            className="size-4 shrink-0 rotate-[270deg]"
-                            style={{ color: label.color ?? "currentColor", fill: label.color ?? "transparent" }}
-                          />
-                          <span className="truncate">{label.name}</span>
-                        </span>
-                        {selected ? <Check className="size-4 shrink-0" /> : null}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+          <Popover
+            open={showLabels}
+            onClose={() => setShowLabels(false)}
+            anchorRef={labelsAnchorRef}
+            placement="top-start"
+            offset={8}
+            zIndex={70}
+            hideHeader
+            className="rounded-lg border border-border bg-popover shadow-popover"
+            bodyClassName="p-2 px-0"
+          >
+            <div className="max-h-[200px] overflow-y-auto pr-1">
+              {(props.labels ?? []).length === 0 ? (
+                <p className="px-2 py-2 text-xs text-muted-foreground">No hay etiquetas creadas.</p>
+              ) : (
+                (props.labels ?? []).map((label) => {
+                  const selected = Boolean(props.selectedLabelIds?.includes(label.id));
+                  return (
+                    <button
+                      key={label.id}
+                      type="button"
+                      onClick={() => props.onToggleLabel?.(label.id)}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-2 rounded-md p-1 text-left text-sm hover:bg-mail-hover",
+                        selected && "bg-mail-hover",
+                      )}
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <Bookmark
+                          className="size-4 shrink-0 rotate-[270deg]"
+                          style={{ color: label.color ?? "currentColor", fill: label.color ?? "transparent" }}
+                        />
+                        <span className="truncate">{label.name}</span>
+                      </span>
+                      {selected ? <Check className="size-4 shrink-0" /> : null}
+                    </button>
+                  );
+                })
+              )}
             </div>
-          ) : null}
+          </Popover>
         </div>
 
         <button onClick={props.onClose} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center ml-auto" title="Descartar borrador">
@@ -504,4 +524,3 @@ export default function NotificationComposeModal(props: Props) {
     </div>
   );
 }
-

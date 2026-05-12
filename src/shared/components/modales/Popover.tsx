@@ -46,6 +46,7 @@ type PopoverProps = {
   titleClassName?: string;
   descriptionClassName?: string;
   closeButtonClassName?: string;
+  zIndex?: number;
 };
 
 type PopoverSize = {
@@ -242,6 +243,7 @@ export function Popover({
   titleClassName,
   descriptionClassName,
   closeButtonClassName,
+  zIndex = UI_LAYERS.popover,
 }: PopoverProps) {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const lastAnchorRectRef = useRef<DOMRect | null>(null);
@@ -590,7 +592,7 @@ export function Popover({
             position: "fixed",
             top: position.top,
             left: position.left,
-            zIndex: UI_LAYERS.popover,
+            zIndex,
             visibility: position.ready ? "visible" : "hidden",
           }}
         >
