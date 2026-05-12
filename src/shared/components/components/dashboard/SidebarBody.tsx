@@ -74,7 +74,7 @@ const SidebarBody = () => {
       });
 
     return filtered;
-  }, [isSuperAdmin, isNotifications, location.pathname, notificationCounts, permissions, userRole]);
+  }, [isSuperAdmin, isNotifications, notificationCounts, permissions, userRole]);
 
   return (
     <div className="scroll-area flex-1 overflow-y-auto px-2 lg:pr-1 py-4 select-none">

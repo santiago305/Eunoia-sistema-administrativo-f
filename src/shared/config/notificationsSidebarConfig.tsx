@@ -1,7 +1,9 @@
 import {
   BookOpen,
+  Archive,
   Boxes,
   ChevronDown,
+  Clock3,
   Factory,
   File,
   Inbox,
@@ -23,6 +25,8 @@ export type NotificationSidebarCounts = {
   sent: number;
   drafts: number;
   trash: number;
+  archived: number;
+  snoozed: number;
 };
 
 export const getNotificationsSidebarItems = (
@@ -57,6 +61,18 @@ export const getNotificationsSidebarItems = (
     href: `${RoutesPaths.notifications}?folder=drafts`,
     icon: <File className="text-sidebar-foreground" />,
     badgeCount: counts?.drafts,
+  },
+  {
+    label: "Pospuestos",
+    href: `${RoutesPaths.notifications}?folder=snoozed`,
+    icon: <Clock3 className="text-sidebar-foreground" />,
+    badgeCount: counts?.snoozed,
+  },
+  {
+    label: "Archivados",
+    href: `${RoutesPaths.notifications}?folder=archived`,
+    icon: <Archive className="text-sidebar-foreground" />,
+    badgeCount: counts?.archived,
   },
   {
     label: "Mas",

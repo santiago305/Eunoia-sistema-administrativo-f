@@ -1,49 +1,59 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useMessagesV2 } from "@/features/notifications/hooks/useMessagesV2";
-import { useDrafts } from "@/features/notifications/hooks/useDrafts";
-import { sendMessage, bulkMessages } from "@/features/notifications/services/messages.service";
-import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/notifications/services/drafts.service";
-import type { DraftMessageItem, InboxItem, MessageFolder, SentMessageItem } from "@/features/notifications/types/message.types";
-import MessageLoadingState from "@/features/notifications/components/feedback/MessageLoadingState";
-import MessageErrorState from "@/features/notifications/components/feedback/MessageErrorState";
-import NotificationMailToolbar from "@/features/notifications/components/mail/NotificationMailToolbar";
-import NotificationMailList from "@/features/notifications/components/mail/NotificationMailList";
+import { SEED_MAILS, CURRENT_USER } from "../../mail/data";
+import type { Mail } from "../../mail/types";
+import MailToolbar from "@/features/notifications/components/mail/MailToolbar";
+import MailList from "@/features/notifications/components/mail/MailList";
+import MailDetail from "@/features/notifications/components/mail/MailDetail";
 import NotificationComposeModal from "@/features/notifications/components/mail/NotificationComposeModal";
-import { NOTIFICATION_WINDOW_EVENTS } from "@/features/notifications/constants/notification-events.constants";
 
-type UiFolder = "inbox" | "sent" | "drafts" | "trash" | "starred";
+type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed";
 
-const formatMessageDate = (iso?: string | null) => {
-  if (!iso) return "-";
+const formatMailDate = (iso: string): string => {
   const d = new Date(iso);
   const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString();
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  if (sameDay) return d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const diffDays = Math.floor((+now - +d) / 86400_000);
+  if (diffDays === 1) return "Ayer";
+  if (diffDays < 7) return d.toLocaleDateString("es-PE", { weekday: "long" });
+  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 };
 
-const getSenderLabel = (row: InboxItem | SentMessageItem | DraftMessageItem, currentFolder: UiFolder) => {
-  if ("recipient" in row) {
-    const message = row.message;
-    if (!message) return "Sistema";
-    if (message.senderType === "SYSTEM") return "Sistema";
-    return "Usuario";
-  }
-  if (currentFolder === "sent") return "Yo";
-  if (row.senderType === "SYSTEM") return "Sistema";
-  return "Usuario";
+const formatFullDate = (iso: string): string =>
+  new Date(iso).toLocaleString("es-PE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const initialsOf = (name: string): string =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
+
+const avatarColor = (seed: string): string => {
+  const colors = ["oklch(0.6 0.18 25)", "oklch(0.6 0.18 60)", "oklch(0.55 0.18 140)", "oklch(0.55 0.18 200)", "oklch(0.55 0.18 260)", "oklch(0.55 0.18 320)", "oklch(0.6 0.18 10)"];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % colors.length;
+  return colors[h];
 };
 
 export default function NotificationsPage() {
-  const [folder, setFolder] = useState<UiFolder>("inbox");
-  const [originModule, setOriginModule] = useState<string>("");
   const [searchParams, setSearchParams] = useSearchParams();
-  const q = (searchParams.get("q") ?? "").trim();
-  const [debouncedQ, setDebouncedQ] = useState("");
-  const [page, setPage] = useState(1);
-  const limit = 50;
-  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
+  const q = (searchParams.get("q") ?? "").trim().toLowerCase();
+
+  const [folder, setFolder] = useState<UiFolder>("inbox");
+  const [mails, setMails] = useState<Mail[]>(SEED_MAILS);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const [activeMailId, setActiveMailId] = useState<string | null>(null);
 
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeMinimized, setComposeMinimized] = useState(false);
@@ -53,29 +63,64 @@ export default function NotificationsPage() {
   const [body, setBody] = useState("");
   const [composeError, setComposeError] = useState<string | null>(null);
 
-  const messages = useMessagesV2({
-    folder: (folder === "drafts" ? "inbox" : folder) as MessageFolder,
-    originModule: originModule || undefined,
-    q: debouncedQ || undefined,
-    page,
-    limit,
-  });
-  const drafts = useDrafts(folder === "drafts");
+  useEffect(() => {
+    const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
+    const valid: UiFolder[] = ["inbox", "starred", "sent", "drafts", "trash", "archived", "snoozed"];
+    if (valid.includes(folderParam as UiFolder)) setFolder(folderParam as UiFolder);
+  }, [searchParams]);
 
-  const rows = useMemo(() => {
-    if (folder === "drafts") return drafts.items;
-    return messages.items;
-  }, [folder, drafts.items, messages.items]) as Array<InboxItem | SentMessageItem | DraftMessageItem>;
+  useEffect(() => {
+    if (searchParams.get("compose") === "1") {
+      setComposeOpen(true);
+      setComposeMinimized(false);
+    }
+    const activeId = (searchParams.get("id") ?? "").trim();
+    setActiveMailId(activeId || null);
+  }, [searchParams]);
 
-  const inboxRows = rows.filter((row): row is InboxItem => "recipient" in row);
-  const visibleRecipientIds = inboxRows.map((row) => row.recipient.id);
-  const allVisibleSelected = visibleRecipientIds.length > 0 && visibleRecipientIds.every((id) => selectedRecipientIds.includes(id));
-  const hasSelection = selectedRecipientIds.length > 0;
+  useEffect(() => {
+    setPage(0);
+    setSelectedIds(new Set());
+  }, [folder, q]);
 
-  const rangeStart = messages.total === 0 ? 0 : (page - 1) * limit + 1;
-  const rangeEnd = Math.min(page * limit, messages.total);
-  const maxPage = Math.max(1, Math.ceil(messages.total / limit));
-  const emitRefresh = () => window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
+  const visible = useMemo(() => {
+    let filtered = mails;
+    if (folder === "starred") filtered = filtered.filter((m) => m.starred && m.folder !== "trash");
+    else filtered = filtered.filter((m) => m.folder === folder);
+
+    if (q) {
+      filtered = filtered.filter(
+        (m) =>
+          m.subject.toLowerCase().includes(q) ||
+          m.body.toLowerCase().includes(q) ||
+          m.from.email.toLowerCase().includes(q) ||
+          m.from.name.toLowerCase().includes(q),
+      );
+    }
+    return [...filtered].sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  }, [mails, folder, q]);
+
+  const total = visible.length;
+  const start = page * pageSize;
+  const end = Math.min(start + pageSize, total);
+  const pageMails = visible.slice(start, end);
+  const pageMailIds = pageMails.map((m) => m.id);
+  const pageReadIds = pageMails.filter((m) => m.read).map((m) => m.id);
+  const pageUnreadIds = pageMails.filter((m) => !m.read).map((m) => m.id);
+  const pageStarredIds = pageMails.filter((m) => m.starred).map((m) => m.id);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  const activeMail = useMemo(() => mails.find((m) => m.id === activeMailId) ?? null, [mails, activeMailId]);
+
+  const setRead = (ids: string[], read: boolean) => {
+    setMails((prev) => prev.map((m) => (ids.includes(m.id) ? { ...m, read } : m)));
+    setSelectedIds(new Set());
+  };
+
+  const moveToTrash = (ids: string[]) => {
+    setMails((prev) => prev.map((m) => (ids.includes(m.id) ? { ...m, folder: "trash" } : m)));
+    setSelectedIds(new Set());
+  };
 
   const resetCompose = () => {
     setRecipients("");
@@ -89,141 +134,84 @@ export default function NotificationsPage() {
     setSearchParams(next, { replace: true });
   };
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q), 300);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  useEffect(() => {
-    setPage(1);
-    setSelectedRecipientIds([]);
-  }, [folder, originModule, debouncedQ]);
-
-  useEffect(() => {
-    const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
-    const validFolders: UiFolder[] = ["inbox", "sent", "drafts", "trash", "starred"];
-    if (validFolders.includes(folderParam as UiFolder) && folderParam !== folder) {
-      setFolder(folderParam as UiFolder);
-    }
-  }, [folder, searchParams]);
-
-  useEffect(() => {
-    const originModuleParam = (searchParams.get("originModule") ?? "").trim();
-    if (originModuleParam !== originModule) {
-      setOriginModule(originModuleParam);
-    }
-  }, [originModule, searchParams]);
-
-  useEffect(() => {
-    if (searchParams.get("compose") === "1") {
-      setComposeOpen(true);
-      setComposeMinimized(false);
-    }
-  }, [searchParams]);
-
-  const applyBulkAction = async (action: "MARK_AS_READ" | "MARK_AS_UNREAD" | "DELETE" | "RESTORE") => {
-    if (!selectedRecipientIds.length) return;
-    await bulkMessages({ messageRecipientIds: selectedRecipientIds, action });
-    setSelectedRecipientIds([]);
-    await messages.reload();
-    emitRefresh();
-  };
-
-  const runRowAction = async (action: () => Promise<void>) => {
-    try {
-      await action();
-      emitRefresh();
-    } catch {
-      // Mantiene la UX estable ante fallos puntuales de red.
-    }
-  };
-
   return (
     <div className="h-full">
-      <div className="grid h-[calc(100vh-190px)] grid-cols-1 gap-4">
+      <div className="grid h-full grid-cols-1 gap-4">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-md border bg-background">
-          {folder !== "drafts" ? (
-            <NotificationMailToolbar
-              allVisibleSelected={allVisibleSelected}
-              hasSelection={hasSelection}
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-              total={messages.total}
-              page={page}
-              maxPage={maxPage}
-              inTrash={folder === "trash"}
-              onSelectToggle={() => {
-                if (allVisibleSelected || hasSelection) setSelectedRecipientIds([]);
-                else setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...visibleRecipientIds])));
-              }}
-              onSelectAllVisible={() => setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...visibleRecipientIds])))}
-              onSelectNone={() => setSelectedRecipientIds([])}
-              onSelectRead={() => {
-                const readIds = inboxRows.filter((row) => Boolean(row.recipient.readAt)).map((row) => row.recipient.id);
-                setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...readIds])));
-              }}
-              onSelectUnread={() => {
-                const unreadIds = inboxRows.filter((row) => !row.recipient.readAt).map((row) => row.recipient.id);
-                setSelectedRecipientIds(Array.from(new Set([...selectedRecipientIds, ...unreadIds])));
-              }}
-              onBulkAction={(action) => void applyBulkAction(action)}
-              onRefresh={() => {
-                void messages.reload();
-                emitRefresh();
-              }}
-              onPrevPage={() => setPage((prev) => Math.max(1, prev - 1))}
-              onNextPage={() => setPage((prev) => Math.min(maxPage, prev + 1))}
-            />
-          ) : null}
-
-          {messages.loading && folder !== "drafts" ? (
-            <MessageLoadingState />
-          ) : messages.error && folder !== "drafts" ? (
-            <MessageErrorState text={messages.error} onRetry={() => void messages.reload()} />
-          ) : (
-            <NotificationMailList
-              rows={rows}
-              folder={folder}
-              selectedRecipientIds={selectedRecipientIds}
-              onToggleSelect={(recipientId, checked) => {
-                if (checked) setSelectedRecipientIds((prev) => Array.from(new Set([...prev, recipientId])));
-                else setSelectedRecipientIds((prev) => prev.filter((id) => id !== recipientId));
-              }}
-              onToggleRead={(recipientId, value) => {
-                void runRowAction(async () => {
-                  await bulkMessages({
-                    messageRecipientIds: [recipientId],
-                    action: value ? "MARK_AS_UNREAD" : "MARK_AS_READ",
-                  });
-                  await messages.reload();
-                });
-              }}
-              onToggleStar={(recipientId, value) => {
-                void runRowAction(() => messages.starInboxRow(recipientId, value));
-              }}
-              onDelete={(recipientId) => {
-                void runRowAction(() => messages.deleteInboxRow(recipientId));
-              }}
-              onRestore={(recipientId) => {
-                void runRowAction(() => messages.restoreInboxRow(recipientId));
-              }}
-              onEditDraft={(draft) => {
-                setEditingDraftId(draft.id);
-                setRecipients(String(draft.bodyJson?.draftRecipients ?? ""));
-                setSubject(draft.subject ?? "");
-                setBody(draft.bodyHtml ?? "");
-                setComposeOpen(true);
-                setComposeMinimized(false);
-              }}
-              onDeleteDraft={async (draftId) => {
-                await deleteDraft(draftId);
-                await drafts.reload();
-                emitRefresh();
-              }}
-              getSenderLabel={getSenderLabel}
-              formatMessageDate={formatMessageDate}
-            />
-          )}
+          <main className="flex-1 flex flex-col bg-background overflow-hidden">
+            {activeMailId ? (
+              <MailDetail
+                mail={activeMail}
+                currentUserEmail={CURRENT_USER.email}
+                onBack={() => {
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("id");
+                  setSearchParams(next, { replace: true });
+                  setActiveMailId(null);
+                }}
+                onSetRead={(id, read) => setRead([id], read)}
+                onDelete={(id) => moveToTrash([id])}
+                onToggleStar={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)))}
+                onComposePrefill={(payload) => {
+                  setEditingDraftId(null);
+                  setRecipients(payload.to ?? "");
+                  setSubject(payload.subject ?? "");
+                  setBody(payload.body ?? "");
+                  setComposeOpen(true);
+                  setComposeMinimized(false);
+                }}
+                formatFullDate={formatFullDate}
+                initialsOf={initialsOf}
+                avatarColor={avatarColor}
+              />
+            ) : (
+              <>
+                <MailToolbar
+                  total={total}
+                  start={start}
+                  end={end}
+                  page={page}
+                  pageCount={pageCount}
+                  pageMailIds={pageMailIds}
+                  pageReadIds={pageReadIds}
+                  pageUnreadIds={pageUnreadIds}
+                  pageStarredIds={pageStarredIds}
+                  selectedIds={selectedIds}
+                  folder={folder}
+                  onSelectVisible={(ids) => setSelectedIds(new Set(ids))}
+                  onClearSelection={() => setSelectedIds(new Set())}
+                  onSetReadBulk={(ids, read) => setRead(ids, read)}
+                  onDeleteBulk={(ids) => moveToTrash(ids)}
+                  onPrevPage={() => setPage((p) => Math.max(0, p - 1))}
+                  onNextPage={() => setPage((p) => (end < total ? p + 1 : p))}
+                  onRefresh={() => setMails((prev) => [...prev])}
+                />
+                <MailList
+                  mails={pageMails}
+                  selectedIds={selectedIds}
+                  onOpen={(id) => {
+                    const next = new URLSearchParams(searchParams);
+                    next.set("id", id);
+                    setSearchParams(next, { replace: true });
+                    setActiveMailId(id);
+                  }}
+                  onToggleSelect={(id) => setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id); else next.add(id);
+                    return next;
+                  })}
+                  onToggleStar={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)))}
+                  onSetRead={(id, read) => setRead([id], read)}
+                  onDelete={(id) => moveToTrash([id])}
+                  onArchive={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, folder: "archived" } : m)))}
+                  onSnooze={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, folder: "snoozed" } : m)))}
+                  formatMailDate={formatMailDate}
+                  initialsOf={initialsOf}
+                  avatarColor={avatarColor}
+                />
+              </>
+            )}
+          </main>
         </section>
       </div>
 
@@ -246,40 +234,20 @@ export default function NotificationsPage() {
             return;
           }
           setComposeError(null);
-          try {
-            if (editingDraftId) {
-              await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
-              await sendDraft(editingDraftId, recipients);
-            } else {
-              await sendMessage({ recipients, subject, bodyHtml: body, originModule: originModule || "corporate" });
-            }
-            resetCompose();
-            if (folder === "drafts") void drafts.reload();
-            else void messages.reload();
-            emitRefresh();
-          } catch {
-            setComposeError("No se pudo enviar el mensaje.");
-          }
+          setMails((prev) => {
+            const id = `sent-${Date.now()}`;
+            const to = recipients.split(",").map((email) => ({ name: email.trim(), email: email.trim() })).filter((item) => item.email);
+            return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to, subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "sent", category: "sistema" }, ...prev];
+          });
+          resetCompose();
         }}
         onSaveDraft={async () => {
           setComposeError(null);
-          try {
-            if (editingDraftId) {
-              await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
-            } else {
-              await createDraft({
-                recipients: recipients || undefined,
-                subject: subject || undefined,
-                bodyHtml: body || undefined,
-                originModule: originModule || "corporate",
-              });
-            }
-            resetCompose();
-            if (folder === "drafts") void drafts.reload();
-            emitRefresh();
-          } catch {
-            setComposeError("No se pudo guardar el borrador.");
-          }
+          setMails((prev) => {
+            const id = `draft-${Date.now()}`;
+            return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to: [], subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "drafts", category: "sistema" }, ...prev];
+          });
+          resetCompose();
         }}
       />
     </div>

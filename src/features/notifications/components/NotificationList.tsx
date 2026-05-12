@@ -19,7 +19,7 @@ export default function NotificationList({ items, onMarkAsRead }: Props) {
       {items.map((item) => (
         <div key={item.recipientId} className="rounded-md border p-4 hover:bg-muted/30">
           <div className="flex items-center justify-between">
-            <Link to={RoutesPaths.notificationDetail.replace(':id', item.recipientId)} className="font-semibold hover:underline">
+            <Link to={`${RoutesPaths.notifications}?id=${encodeURIComponent(item.recipientId)}`} className="font-semibold hover:underline">
               {item.notification.title}
             </Link>
             <span className="text-xs text-muted-foreground">{item.status}</span>

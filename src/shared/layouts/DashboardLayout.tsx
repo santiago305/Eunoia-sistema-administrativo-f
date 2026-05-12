@@ -79,7 +79,7 @@ const DashboardContent = () => {
         {isMobile ? null : <Sidebar />}
         {isMobile ? <MobileSidebar /> : null}
 
-        <main className="scroll-area relative h-full flex-1 overflow-y-auto border border-gray-200 rounded-t-2xl md:rounded-tr-none">
+        <main className="relative min-h-0 h-full flex-1 border border-gray-200 rounded-t-2xl md:rounded-tr-none overflow-hidden flex flex-col">
           <Outlet />
         </main>
       </div>

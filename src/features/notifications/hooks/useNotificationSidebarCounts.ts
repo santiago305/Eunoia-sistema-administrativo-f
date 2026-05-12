@@ -11,6 +11,8 @@ type SidebarCounts = {
   sent: number;
   drafts: number;
   trash: number;
+  archived: number;
+  snoozed: number;
 };
 
 const INITIAL_COUNTS: SidebarCounts = {
@@ -19,6 +21,8 @@ const INITIAL_COUNTS: SidebarCounts = {
   sent: 0,
   drafts: 0,
   trash: 0,
+  archived: 0,
+  snoozed: 0,
 };
 
 export function useNotificationSidebarCounts() {
@@ -47,6 +51,8 @@ export function useNotificationSidebarCounts() {
         sent: sent.total ?? 0,
         trash: trash.total ?? 0,
         drafts: drafts.length ?? 0,
+        archived: 0,
+        snoozed: 0,
       });
     } catch {
       // Mantiene el ultimo estado valido para no congelar el sidebar en 0.
