@@ -6,6 +6,18 @@ export interface NotificationModuleItem {
   icon: string;
 }
 
+export interface MailLabelItem {
+  id: string;
+  ownerUserId: string | null;
+  key: string;
+  name: string;
+  type: "SYSTEM" | "MODULE" | "CUSTOM";
+  color: string | null;
+  icon: string | null;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
 export interface MessageListQuery {
   folder?: MessageFolder;
   originModule?: string;

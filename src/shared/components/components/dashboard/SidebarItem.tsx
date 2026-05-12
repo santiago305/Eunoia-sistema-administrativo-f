@@ -61,8 +61,10 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const renderIcon = () => {
     if (!item.icon || !isValidElement(item.icon)) return null;
 
-    return cloneElement(item.icon as ReactElement<{ className?: string }>, {
+    const iconElement = item.icon as ReactElement<{ className?: string }>;
+    return cloneElement(iconElement, {
       className: cn(
+        iconElement.props.className,
         "shrink-0 transition-colors duration-200",
         item.isComposeAction && isSidebarCollapsed ? "size-4" : "size-[18px]",
         // Redactar: color del icono (solo boton especial).

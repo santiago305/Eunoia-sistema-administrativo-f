@@ -2,6 +2,7 @@ import axiosInstance from "@/shared/common/utils/axios";
 import { API_NOTIFICATION_MESSAGES_GROUP } from "@/shared/services/APIs";
 import type {
   InboxItem,
+  MailLabelItem,
   MessageListQuery,
   MessageListResponse,
   NotificationModuleItem,
@@ -33,8 +34,19 @@ export const sendMessage = async (payload: {
   subject: string;
   bodyHtml: string;
   originModule?: string;
+  labelIds?: string[];
 }) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.sendMessage, payload);
+  return response.data;
+};
+
+export const listMailLabels = async () => {
+  const response = await axiosInstance.get<MailLabelItem[]>(API_NOTIFICATION_MESSAGES_GROUP.listLabels);
+  return response.data;
+};
+
+export const createMailLabel = async (payload: { name: string; color: string }) => {
+  const response = await axiosInstance.post<MailLabelItem>(API_NOTIFICATION_MESSAGES_GROUP.createLabel, payload);
   return response.data;
 };
 

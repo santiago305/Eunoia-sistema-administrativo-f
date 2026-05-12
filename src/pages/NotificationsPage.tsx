@@ -6,6 +6,10 @@ import MailToolbar from "@/features/notifications/components/mail/MailToolbar";
 import MailList from "@/features/notifications/components/mail/MailList";
 import MailDetail from "@/features/notifications/components/mail/MailDetail";
 import NotificationComposeModal from "@/features/notifications/components/mail/NotificationComposeModal";
+import { sendMessage } from "@/features/notifications/services/messages.service";
+import { createDraft, updateDraft } from "@/features/notifications/services/drafts.service";
+import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed";
 
@@ -62,6 +66,14 @@ export default function NotificationsPage() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [composeError, setComposeError] = useState<string | null>(null);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+  const [createLabelOpen, setCreateLabelOpen] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelColor, setNewLabelColor] = useState("#2563eb");
+  const [labelError, setLabelError] = useState<string | null>(null);
+  const { can } = usePermissions();
+  const canCreateLabel = can("notifications.labels.create");
+  const { items: labels, createLabel } = useMailLabels(true);
 
   useEffect(() => {
     const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
@@ -74,9 +86,12 @@ export default function NotificationsPage() {
       setComposeOpen(true);
       setComposeMinimized(false);
     }
+    if (searchParams.get("createLabel") === "1" && canCreateLabel) {
+      setCreateLabelOpen(true);
+    }
     const activeId = (searchParams.get("id") ?? "").trim();
     setActiveMailId(activeId || null);
-  }, [searchParams]);
+  }, [canCreateLabel, searchParams]);
 
   useEffect(() => {
     setPage(0);
@@ -127,11 +142,54 @@ export default function NotificationsPage() {
     setSubject("");
     setBody("");
     setEditingDraftId(null);
+    setSelectedLabelIds([]);
     setComposeOpen(false);
     setComposeMinimized(false);
     const next = new URLSearchParams(searchParams);
     next.delete("compose");
     setSearchParams(next, { replace: true });
+  };
+
+  const isComposeEmpty = () => {
+    const textOnly = body.replace(/<[^>]+>/g, "").trim();
+    return !recipients.trim() && !subject.trim() && !textOnly;
+  };
+
+  const closeComposeWithDraft = async () => {
+    if (isComposeEmpty()) {
+      resetCompose();
+      return;
+    }
+    try {
+      if (editingDraftId) {
+        await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
+      } else {
+        await createDraft({ recipients, subject, bodyHtml: body, originModule: "corporate" });
+      }
+    } catch {
+      // Evita bloquear el cierre si falla autosave.
+    }
+    resetCompose();
+  };
+
+  const createNewLabel = async () => {
+    if (!newLabelName.trim()) {
+      setLabelError("El nombre de etiqueta es obligatorio.");
+      return;
+    }
+    try {
+      setLabelError(null);
+      await createLabel(newLabelName.trim(), newLabelColor);
+      setNewLabelName("");
+      setNewLabelColor("#2563eb");
+      setCreateLabelOpen(false);
+      const next = new URLSearchParams(searchParams);
+      next.delete("createLabel");
+      setSearchParams(next, { replace: true });
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+      setLabelError(Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo crear la etiqueta.");
+    }
   };
 
   return (
@@ -224,32 +282,102 @@ export default function NotificationsPage() {
         body={body}
         error={composeError ?? undefined}
         onToggleMinimize={() => setComposeMinimized((prev) => !prev)}
-        onClose={resetCompose}
+        onClose={() => { void closeComposeWithDraft(); }}
         onRecipientsChange={setRecipients}
         onSubjectChange={setSubject}
         onBodyChange={setBody}
+        labels={labels.filter((item) => item.type === "CUSTOM" || item.type === "MODULE")}
+        selectedLabelIds={selectedLabelIds}
+        onToggleLabel={(labelId) =>
+          setSelectedLabelIds((prev) =>
+            prev.includes(labelId) ? prev.filter((id) => id !== labelId) : [...prev, labelId],
+          )
+        }
         onSend={async () => {
           if (!recipients.trim() || !subject.trim() || !body.trim()) {
             setComposeError("Completa destinatarios, asunto y cuerpo.");
             return;
           }
-          setComposeError(null);
-          setMails((prev) => {
-            const id = `sent-${Date.now()}`;
-            const to = recipients.split(",").map((email) => ({ name: email.trim(), email: email.trim() })).filter((item) => item.email);
-            return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to, subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "sent", category: "sistema" }, ...prev];
-          });
-          resetCompose();
+          try {
+            setComposeError(null);
+            await sendMessage({
+              recipients,
+              subject,
+              bodyHtml: body,
+              originModule: "corporate",
+              labelIds: selectedLabelIds,
+            });
+            setMails((prev) => {
+              const id = `sent-${Date.now()}`;
+              const to = recipients.split(",").map((email) => ({ name: email.trim(), email: email.trim() })).filter((item) => item.email);
+              return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to, subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "sent", category: "sistema" }, ...prev];
+            });
+            resetCompose();
+          } catch (error: any) {
+            const backendMessage = error?.response?.data?.message;
+            setComposeError(Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo enviar el mensaje.");
+          }
         }}
         onSaveDraft={async () => {
-          setComposeError(null);
-          setMails((prev) => {
-            const id = `draft-${Date.now()}`;
-            return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to: [], subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "drafts", category: "sistema" }, ...prev];
-          });
-          resetCompose();
+          try {
+            setComposeError(null);
+            if (editingDraftId) {
+              await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
+            } else {
+              const draft = await createDraft({
+                recipients,
+                subject,
+                bodyHtml: body,
+                originModule: "corporate",
+              });
+              if (draft?.id) setEditingDraftId(draft.id);
+            }
+            setMails((prev) => {
+              const id = `draft-${Date.now()}`;
+              return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to: [], subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "drafts", category: "sistema" }, ...prev];
+            });
+            resetCompose();
+          } catch (error: any) {
+            const backendMessage = error?.response?.data?.message;
+            setComposeError(Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo guardar el borrador.");
+          }
         }}
       />
+      {createLabelOpen ? (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-background border border-border rounded-lg p-4 w-full max-w-md">
+            <h3 className="text-base font-semibold mb-3">Crear etiqueta</h3>
+            <input
+              type="text"
+              value={newLabelName}
+              onChange={(e) => setNewLabelName(e.target.value)}
+              placeholder="Nombre de etiqueta"
+              className="w-full border border-border rounded px-3 py-2 text-sm mb-3"
+            />
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm text-muted-foreground">Color</span>
+              <input type="color" value={newLabelColor} onChange={(e) => setNewLabelColor(e.target.value)} />
+            </div>
+            {labelError ? <p className="text-xs text-destructive mb-3">{labelError}</p> : null}
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-3 py-1.5 text-sm rounded border border-border"
+                onClick={() => {
+                  setCreateLabelOpen(false);
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("createLabel");
+                  setSearchParams(next, { replace: true });
+                }}
+              >
+                Cancelar
+              </button>
+              <button className="px-3 py-1.5 text-sm rounded bg-mail-accent text-mail-accent-foreground" onClick={() => void createNewLabel()}>
+                Crear
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

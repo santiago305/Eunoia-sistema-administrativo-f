@@ -48,9 +48,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new CustomEvent(NOTIFICATION_WINDOW_EVENTS.unreadCountUpdated, { detail: payload }));
     };
 
+    const onMessageCreated = (payload: { message?: { subject?: string; preview?: string } }) => {
+      showNotificationToast({
+        title: "Nuevo correo",
+        message: payload?.message?.subject || payload?.message?.preview || "Tienes un nuevo mensaje.",
+        priority: "NORMAL",
+      });
+      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
+    socket.on(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
     socket.on(NOTIFICATION_SOCKET_EVENTS.unreadCountUpdated, onUnreadCountUpdated);
 
     void getUnreadCount().then((payload) => {
@@ -61,6 +71,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
+      socket.off(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
       socket.off(NOTIFICATION_SOCKET_EVENTS.unreadCountUpdated, onUnreadCountUpdated);
       closeNotificationSocket();
       setConnected(false);

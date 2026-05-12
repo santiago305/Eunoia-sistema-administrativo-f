@@ -1,23 +1,17 @@
 import {
-  BookOpen,
   Archive,
-  Boxes,
-  ChevronDown,
+  Bookmark,
   Clock3,
-  Factory,
   File,
   Inbox,
   Pencil,
   Send,
-  ShieldCheck,
-  ShoppingCart,
   Star,
   Trash2,
-  UserCog,
-  Warehouse,
 } from "lucide-react";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import type { SidebarItem } from "../components/components/dashboard/types";
+import type { MailLabelItem } from "@/features/notifications/types/message.types";
 
 export type NotificationSidebarCounts = {
   inbox: number;
@@ -31,6 +25,8 @@ export type NotificationSidebarCounts = {
 
 export const getNotificationsSidebarItems = (
   counts?: Partial<NotificationSidebarCounts>,
+  labels?: MailLabelItem[],
+  canCreateLabel?: boolean,
 ): SidebarItem[] => [
   {
     label: "Redactar",
@@ -76,44 +72,26 @@ export const getNotificationsSidebarItems = (
   },
   {
     label: "Mas",
-    icon: <ChevronDown className="text-sidebar-foreground" />,
     collapsibleLabels: { closed: "Mas", open: "Menos" },
     children: [
-      {
-        label: "Compras",
-        href: `${RoutesPaths.notifications}?folder=inbox&originModule=purchases`,
-        icon: <ShoppingCart className="text-sidebar-foreground" />,
-      },
-      {
-        label: "Produccion",
-        href: `${RoutesPaths.notifications}?folder=inbox&originModule=production`,
-        icon: <Factory className="text-sidebar-foreground" />,
-      },
-      {
-        label: "Almacen",
-        href: `${RoutesPaths.notifications}?folder=inbox&originModule=warehouse`,
-        icon: <Warehouse className="text-sidebar-foreground" />,
-      },
-      {
-        label: "Catalogo",
-        href: `${RoutesPaths.notifications}?folder=inbox&originModule=catalog`,
-        icon: <BookOpen className="text-sidebar-foreground" />,
-      },
-      {
-        label: "Suministros",
-        href: `${RoutesPaths.notifications}?folder=inbox&originModule=supplies`,
-        icon: <Boxes className="text-sidebar-foreground" />,
-      },
-      {
-        label: "Seguridad",
-        href: `${RoutesPaths.notifications}?folder=inbox&originModule=security`,
-        icon: <ShieldCheck className="text-sidebar-foreground" />,
-      },
-      {
-        label: "Roles",
-        href: `${RoutesPaths.notifications}?folder=inbox&originModule=roles`,
-        icon: <UserCog className="text-sidebar-foreground" />,
-      },
+      ...((labels ?? []).map((label) => ({
+        label: label.name,
+        href: `${RoutesPaths.notifications}?folder=inbox&labelId=${label.id}`,
+        icon: (
+          <Bookmark
+            style={{
+              color: label.color ?? "currentColor",
+              fill: label.color ?? "transparent",
+              transform: "rotate(270deg)",
+            }}
+            className="text-sidebar-foreground"
+          />
+        ),
+      }))),
+      ...(canCreateLabel ? [{
+        label: "+ Etiqueta",
+        href: `${RoutesPaths.notifications}?folder=inbox&createLabel=1`,
+      }] : []),
     ],
   },
   {
