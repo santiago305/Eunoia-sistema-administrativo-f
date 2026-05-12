@@ -4,7 +4,13 @@ export interface SidebarItem {
   label: string;
   href?: string;
   icon?: ReactNode;
-  children?: Omit<SidebarItem, "icon" | "children">[];
+  badgeCount?: number;
+  isComposeAction?: boolean;
+  collapsibleLabels?: {
+    open: string;
+    closed: string;
+  };
+  children?: SidebarItem[];
 }
 
 export interface User {

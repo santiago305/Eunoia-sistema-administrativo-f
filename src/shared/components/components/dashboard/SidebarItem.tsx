@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { IconChevronRight } from "./icons";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useSidebarContext } from "./SidebarContext";
 import type { SidebarItem as SidebarItemType } from "./types";
 import { cn } from "@/shared/lib/utils";
@@ -80,7 +81,9 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
     "group flex w-full items-center rounded-xl transition-all duration-200",
     "min-h-8",
     isSidebarCollapsed ? "justify-center px-2 py-1.5" : "px-2 py-1.5",
-    isParentHighlighted
+    item.isComposeAction
+      ? "bg-primary text-primary-foreground shadow-sm hover:shadow-md"
+      : isParentHighlighted
       ? "bg-primary/10 text-primary shadow-sm"
       : "text-sidebar-foreground hover:bg-sidebar-accent/70"
   );
@@ -106,7 +109,11 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
         isParentHighlighted && "text-primary/80"
       )}
     >
-      <IconChevronRight className="size-4" />
+      {item.collapsibleLabels ? (
+        isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />
+      ) : (
+        <IconChevronRight className="size-4" />
+      )}
     </span>
   );
 
@@ -115,9 +122,12 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
       {renderIcon()}
       {!isSidebarCollapsed && (
         <span className={cn("ml-3 flex-1 text-left", labelClass)}>
-          {item.label}
+          {item.collapsibleLabels ? (isOpen ? item.collapsibleLabels.open : item.collapsibleLabels.closed) : item.label}
         </span>
       )}
+      {!isSidebarCollapsed && typeof item.badgeCount === "number" ? (
+        <span className="ml-2 text-[11px] text-sidebar-muted">{item.badgeCount}</span>
+      ) : null}
     </>
   );
 
@@ -171,7 +181,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
               )}
 
               {item.children?.map((child, index) => {
-                const childActive = child.href === location.pathname;
+                const childActive = isLinkActive(child.href, location.pathname, location.search);
 
                 return (
                   <Link
@@ -186,6 +196,9 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
                     )}
                   >
                     <span className="truncate">{child.label}</span>
+                    {typeof child.badgeCount === "number" ? (
+                      <span className="ml-2 text-[11px] text-sidebar-muted">{child.badgeCount}</span>
+                    ) : null}
                   </Link>
                 );
               })}
@@ -287,7 +300,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
             <div className="space-y-1">
               {item.children?.map((child, index) => {
-                const childActive = child.href === location.pathname;
+                const childActive = isLinkActive(child.href, location.pathname, location.search);
 
                 return (
                   <Link
@@ -295,14 +308,27 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
                     to={child.href || "#"}
                     className={childLinkClass(childActive)}
                   >
+                    {child.icon && isValidElement(child.icon)
+                      ? cloneElement(child.icon as ReactElement<{ className?: string }>, {
+                          className: cn(
+                            "mr-2 size-[16px] shrink-0",
+                            childActive
+                              ? "text-primary"
+                              : "text-sidebar-foreground/80 group-hover/child:text-sidebar-foreground"
+                          ),
+                        })
+                      : null}
                     <span
                       className={cn(
-                        "truncate",
+                        "flex-1 truncate",
                         childActive ? "text-primary" : ""
                       )}
                     >
                       {child.label}
                     </span>
+                    {typeof child.badgeCount === "number" ? (
+                      <span className="ml-2 text-[11px] text-sidebar-muted">{child.badgeCount}</span>
+                    ) : null}
                   </Link>
                 );
               })}

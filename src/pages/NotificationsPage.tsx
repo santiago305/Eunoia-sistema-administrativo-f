@@ -104,6 +104,13 @@ export default function NotificationsPage() {
   }, [folder, searchParams]);
 
   useEffect(() => {
+    const originModuleParam = (searchParams.get("originModule") ?? "").trim();
+    if (originModuleParam !== originModule) {
+      setOriginModule(originModuleParam);
+    }
+  }, [originModule, searchParams]);
+
+  useEffect(() => {
     if (searchParams.get("compose") === "1") {
       setComposeOpen(true);
       setComposeMinimized(false);
@@ -120,7 +127,14 @@ export default function NotificationsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={originModule}
-            onChange={(event) => setOriginModule(event.target.value)}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setOriginModule(nextValue);
+              const next = new URLSearchParams(searchParams);
+              if (nextValue) next.set("originModule", nextValue);
+              else next.delete("originModule");
+              setSearchParams(next, { replace: true });
+            }}
             className="h-9 rounded-md border px-3 text-sm"
           >
             <option value="">Todos los modulos</option>

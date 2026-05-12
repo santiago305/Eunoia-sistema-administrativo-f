@@ -1,5 +1,4 @@
 import { 
-    IconBell,
     IconCompany,
     IconHome,
     IconOutOrder,
@@ -9,8 +8,9 @@ import {
     IconStock, IconUsers, 
     IconWarehouse 
 } from "../components/components/dashboard/icons";
-import { RoutesPaths } from "@/routes/config/routesPaths";
 import { SidebarItem } from "../components/components/dashboard/types";
+import { RoutesPaths } from "@/routes/config/routesPaths";
+import { getNotificationsSidebarItems } from "./notificationsSidebarConfig";
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
     {
@@ -128,51 +128,15 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     },
 ];
 
-const EMAIL_SIDEBAR_ITEMS: SidebarItem[] = [
-    {
-        label: "Redactar",
-        href: `${RoutesPaths.notifications}?folder=inbox&compose=1`,
-        icon: <IconBell className="text-sidebar-foreground" />,
-    },
-    {
-        label: "Email",
-        href: `${RoutesPaths.notifications}?folder=inbox`,
-        icon: <IconBell className="text-sidebar-foreground" />,
-        children: [
-            {
-                label: "Recibidos",
-                href: `${RoutesPaths.notifications}?folder=inbox`,
-            },
-            {
-                label: "Destacados",
-                href: `${RoutesPaths.notifications}?folder=starred`,
-            },
-            {
-                label: "Enviados",
-                href: `${RoutesPaths.notifications}?folder=sent`,
-            },
-            {
-                label: "Borradores",
-                href: `${RoutesPaths.notifications}?folder=drafts`,
-            },
-            {
-                label: "Papelera",
-                href: `${RoutesPaths.notifications}?folder=trash`,
-            },
-        ],
-    },
-];
-
-export const getSidebarItems = (pathname?: string): SidebarItem[] => {
-  if (pathname?.startsWith(RoutesPaths.notifications)) return EMAIL_SIDEBAR_ITEMS;
-  return SIDEBAR_ITEMS;
-};
+export const getSidebarItems = (): SidebarItem[] => SIDEBAR_ITEMS;
 
 const normalizePath = (path: string) => path.replace(/\/+$/, "") || "/";
 
 export const getSidebarTitleByPath = (pathname: string): string | null => {
   const normalizedPath = normalizePath(pathname);
-  const activeItems = getSidebarItems(pathname);
+  const activeItems = pathname.startsWith(RoutesPaths.notifications)
+    ? getNotificationsSidebarItems()
+    : getSidebarItems();
 
   const search = (items: SidebarItem[]): string | null => {
     for (const item of items) {

@@ -1,10 +1,13 @@
 import { memo, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { getSidebarItems } from "@/shared/config/sidebarConfig";
+import { getNotificationsSidebarItems } from "@/shared/config/notificationsSidebarConfig";
 import SidebarItemComponent from "./SidebarItem";
 import { getRouteMetaByUrl } from "@/routes/config/routesConfig";
 import { useAuth } from "@/shared/hooks/useAuth";
 import type { SidebarItem } from "./types";
+import { RoutesPaths } from "@/routes/config/routesPaths";
+import { useNotificationSidebarCounts } from "@/features/notifications/hooks/useNotificationSidebarCounts";
 
 const normalizeRole = (role?: string | null) =>
   String(role ?? "").trim().toLowerCase();
@@ -44,9 +47,15 @@ const canAccessHref = (
 const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
+  const notificationCounts = useNotificationSidebarCounts();
+  const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
 
   const items = useMemo(() => {
-    const filtered = getSidebarItems(location.pathname)
+    const sourceItems = isNotifications
+      ? getNotificationsSidebarItems(notificationCounts)
+      : getSidebarItems();
+
+    const filtered = sourceItems
       .map((item): SidebarItem => {
         const children = item.children?.filter((child) =>
           canAccessHref(child.href, userRole, permissions, isSuperAdmin)
@@ -65,7 +74,7 @@ const SidebarBody = () => {
       });
 
     return filtered;
-  }, [isSuperAdmin, location.pathname, permissions, userRole]);
+  }, [isSuperAdmin, isNotifications, location.pathname, notificationCounts, permissions, userRole]);
 
   return (
     <div className="scroll-area flex-1 overflow-y-auto px-2 py-4 select-none">
