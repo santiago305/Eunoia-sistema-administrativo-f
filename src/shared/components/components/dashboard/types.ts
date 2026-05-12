@@ -5,6 +5,8 @@ export interface SidebarItem {
   href?: string;
   icon?: ReactNode;
   badgeCount?: number;
+  isCustomLabel?: boolean;
+  labelId?: string;
   isComposeAction?: boolean;
   collapsibleLabels?: {
     open: string;

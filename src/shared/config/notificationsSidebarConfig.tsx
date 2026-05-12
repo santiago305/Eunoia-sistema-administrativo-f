@@ -77,6 +77,8 @@ export const getNotificationsSidebarItems = (
       ...((labels ?? []).map((label) => ({
         label: label.name,
         href: `${RoutesPaths.notifications}?folder=inbox&labelId=${label.id}`,
+        isCustomLabel: label.type === "CUSTOM",
+        labelId: label.id,
         icon: (
           <Bookmark
             style={{
@@ -101,4 +103,3 @@ export const getNotificationsSidebarItems = (
     badgeCount: counts?.trash,
   },
 ];
-

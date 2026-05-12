@@ -95,6 +95,7 @@ export const API_NOTIFICATION_MESSAGES_GROUP = {
   sendDraft: (id: string) => `/email/drafts/${id}/send`,
   listLabels: "/email/labels",
   createLabel: "/email/labels",
+  deleteLabel: (id: string) => `/email/labels/${id}`,
 };
 
 export const API_SECURITY_GROUP = {

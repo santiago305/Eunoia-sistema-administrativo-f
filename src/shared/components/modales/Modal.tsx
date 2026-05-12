@@ -305,7 +305,7 @@ export function Modal({
               {footer ? (
                 <div
                   className={cn(
-                    "shrink-0 border-t border-border bg-muted/40 px-5 py-4",
+                    "shrink-0 border-t border-border p-3",
                     footerClassName,
                   )}
                 >

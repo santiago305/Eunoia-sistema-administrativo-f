@@ -50,6 +50,11 @@ export const createMailLabel = async (payload: { name: string; color: string }) 
   return response.data;
 };
 
+export const deleteMailLabel = async (id: string) => {
+  const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.deleteLabel(id));
+  return response.data;
+};
+
 export const markMessageAsRead = async (recipientId: string) => {
   const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.markMessageRead(recipientId));
   return response.data;

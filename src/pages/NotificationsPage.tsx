@@ -10,8 +10,16 @@ import { sendMessage } from "@/features/notifications/services/messages.service"
 import { createDraft, updateDraft } from "@/features/notifications/services/drafts.service";
 import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { SystemButton } from "@/shared/components/components/SystemButton";
+import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { Modal } from "@/shared/components/modales/Modal";
 
 type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed";
+
+const MAIL_FOLDER = {
+  ARCHIVED: "archived" as Mail["folder"],
+  SNOOZED: "snoozed" as Mail["folder"],
+} as const;
 
 const formatMailDate = (iso: string): string => {
   const d = new Date(iso);
@@ -73,7 +81,7 @@ export default function NotificationsPage() {
   const [labelError, setLabelError] = useState<string | null>(null);
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
-  const { items: labels, createLabel } = useMailLabels(true);
+  const { items: labels, createLabel, deleteLabel } = useMailLabels(true);
 
   useEffect(() => {
     const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
@@ -92,6 +100,23 @@ export default function NotificationsPage() {
     const activeId = (searchParams.get("id") ?? "").trim();
     setActiveMailId(activeId || null);
   }, [canCreateLabel, searchParams]);
+
+  useEffect(() => {
+    const labelId = (searchParams.get("deleteLabel") ?? "").trim();
+    if (!labelId) return;
+    if (!canCreateLabel) return;
+    void (async () => {
+      try {
+        await deleteLabel(labelId);
+      } catch {
+        setLabelError("No se pudo eliminar la etiqueta.");
+      } finally {
+        const next = new URLSearchParams(searchParams);
+        next.delete("deleteLabel");
+        setSearchParams(next, { replace: true });
+      }
+    })();
+  }, [canCreateLabel, deleteLabel, searchParams, setSearchParams]);
 
   useEffect(() => {
     setPage(0);
@@ -127,14 +152,20 @@ export default function NotificationsPage() {
 
   const activeMail = useMemo(() => mails.find((m) => m.id === activeMailId) ?? null, [mails, activeMailId]);
 
+  const moveToFolder = (ids: string[], targetFolder: Mail["folder"]) => {
+    setMails((prev): Mail[] =>
+      prev.map((m): Mail => (ids.includes(m.id) ? { ...m, folder: targetFolder } : m)),
+    );
+    setSelectedIds(new Set());
+  };
+
   const setRead = (ids: string[], read: boolean) => {
     setMails((prev) => prev.map((m) => (ids.includes(m.id) ? { ...m, read } : m)));
     setSelectedIds(new Set());
   };
 
   const moveToTrash = (ids: string[]) => {
-    setMails((prev) => prev.map((m) => (ids.includes(m.id) ? { ...m, folder: "trash" } : m)));
-    setSelectedIds(new Set());
+    moveToFolder(ids, "trash");
   };
 
   const resetCompose = () => {
@@ -188,7 +219,20 @@ export default function NotificationsPage() {
       setSearchParams(next, { replace: true });
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;
-      setLabelError(Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo crear la etiqueta.");
+      const normalized = Array.isArray(backendMessage) ? String(backendMessage[0] ?? "") : String(backendMessage ?? "");
+      const normalizedUpper = normalized.toUpperCase();
+
+      if (normalizedUpper.includes("LABEL_ALREADY_EXISTS")) {
+        setLabelError("Etiqueta ya existente.");
+        return;
+      }
+
+      if (normalizedUpper.includes("LABEL_NAME_REQUIRED") || normalizedUpper.includes("LABEL_NAME_INVALID")) {
+        setLabelError("Nombre de etiqueta inválido.");
+        return;
+      }
+
+      setLabelError("No se pudo crear la etiqueta. Intenta nuevamente.");
     }
   };
 
@@ -261,8 +305,8 @@ export default function NotificationsPage() {
                   onToggleStar={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)))}
                   onSetRead={(id, read) => setRead([id], read)}
                   onDelete={(id) => moveToTrash([id])}
-                  onArchive={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, folder: "archived" } : m)))}
-                  onSnooze={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, folder: "snoozed" } : m)))}
+                  onArchive={(id) => moveToFolder([id], MAIL_FOLDER.ARCHIVED)}
+                  onSnooze={(id) => moveToFolder([id], MAIL_FOLDER.SNOOZED)}
                   formatMailDate={formatMailDate}
                   initialsOf={initialsOf}
                   avatarColor={avatarColor}
@@ -343,41 +387,57 @@ export default function NotificationsPage() {
           }
         }}
       />
-      {createLabelOpen ? (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-background border border-border rounded-lg p-4 w-full max-w-md">
-            <h3 className="text-base font-semibold mb-3">Crear etiqueta</h3>
-            <input
-              type="text"
-              value={newLabelName}
-              onChange={(e) => setNewLabelName(e.target.value)}
-              placeholder="Nombre de etiqueta"
-              className="w-full border border-border rounded px-3 py-2 text-sm mb-3"
-            />
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-muted-foreground">Color</span>
-              <input type="color" value={newLabelColor} onChange={(e) => setNewLabelColor(e.target.value)} />
-            </div>
-            {labelError ? <p className="text-xs text-destructive mb-3">{labelError}</p> : null}
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-3 py-1.5 text-sm rounded border border-border"
-                onClick={() => {
-                  setCreateLabelOpen(false);
-                  const next = new URLSearchParams(searchParams);
-                  next.delete("createLabel");
-                  setSearchParams(next, { replace: true });
-                }}
-              >
-                Cancelar
-              </button>
-              <button className="px-3 py-1.5 text-sm rounded bg-mail-accent text-mail-accent-foreground" onClick={() => void createNewLabel()}>
-                Crear
-              </button>
-            </div>
+      <Modal
+        open={createLabelOpen}
+        onClose={() => {
+          setCreateLabelOpen(false);
+          const next = new URLSearchParams(searchParams);
+          next.delete("createLabel");
+          setSearchParams(next, { replace: true });
+        }}
+        title="Crear etiqueta"
+        className="w-full max-w-xs"
+        bodyClassName="space-y-3 px-0"
+        footer={
+          <div className="flex justify-end gap-2">
+            <SystemButton
+              type="button"
+              variant="outline"
+              size="sm"
+              className="px-3 py-1.5 text-sm rounded-sm"
+              onClick={() => {
+                setCreateLabelOpen(false);
+                const next = new URLSearchParams(searchParams);
+                next.delete("createLabel");
+                setSearchParams(next, { replace: true });
+              }}
+            >
+              Cancelar
+            </SystemButton>
+            <SystemButton
+              type="button"
+              variant="primary"
+              size="sm"
+              className="px-3 py-1.5 text-sm rounded-sm"
+              onClick={() => void createNewLabel()}
+            >
+              Crear
+            </SystemButton>
           </div>
+        }
+      >
+        <FloatingInput
+          label="Nombre de etiqueta"
+          name="new-label-name"
+          value={newLabelName}
+          onChange={(e) => setNewLabelName(e.target.value)}
+        />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Color</span>
+          <input type="color" value={newLabelColor} onChange={(e) => setNewLabelColor(e.target.value)} />
         </div>
-      ) : null}
+        {labelError ? <p className="text-xs text-destructive">{labelError}</p> : null}
+      </Modal>
     </div>
   );
 }

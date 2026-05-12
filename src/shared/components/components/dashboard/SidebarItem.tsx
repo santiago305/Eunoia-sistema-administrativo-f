@@ -8,9 +8,11 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import { IconChevronRight } from "./icons";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useSidebarContext } from "./SidebarContext";
 import type { SidebarItem as SidebarItemType } from "./types";
 import { cn } from "@/shared/lib/utils";
+import { useAuth } from "@/shared/hooks/useAuth";
 import {
   Tooltip,
   TooltipContent,
@@ -42,7 +44,9 @@ const isLinkActive = (href: string | undefined, pathname: string, search: string
 
 const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const { isCollapsed, isMobile } = useSidebarContext();
+  const { permissions } = useAuth();
   const location = useLocation();
+  const canManageLabels = permissions.includes("notifications.labels.create");
   const isSidebarCollapsed = isCollapsed && !isMobile;
 
   const hasChildren = !!item.children?.length;
@@ -81,6 +85,16 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
     e?.preventDefault();
     e?.stopPropagation();
     if (hasChildren) setIsOpen((prev) => !prev);
+  };
+
+  const requestDeleteLabel = (e: React.MouseEvent, labelId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!labelId) return;
+    const next = new URLSearchParams(location.search);
+    next.set("deleteLabel", labelId);
+    window.history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   const parentBaseClass = cn(
@@ -343,6 +357,16 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
                     >
                       {child.label}
                     </span>
+                    {child.isCustomLabel && canManageLabels ? (
+                      <button
+                        type="button"
+                        onClick={(event) => requestDeleteLabel(event, child.labelId)}
+                        className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded opacity-0 transition group-hover/child:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                        title="Eliminar etiqueta"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    ) : null}
                     {typeof child.badgeCount === "number" ? (
                       <span className="ml-2 text-[11px] text-sidebar-muted">{child.badgeCount}</span>
                     ) : null}
