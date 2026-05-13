@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SEED_MAILS, CURRENT_USER } from "../../mail/data";
 import type { Mail } from "../../mail/types";
-import MailToolbar from "@/features/notifications/components/mail/MailToolbar";
-import MailList from "@/features/notifications/components/mail/MailList";
-import MailDetail from "@/features/notifications/components/mail/MailDetail";
-import NotificationComposeModal from "@/features/notifications/components/mail/NotificationComposeModal";
+import MailToolbar from "@/features/notifications/components/MailToolbar";
+import MailList from "@/features/notifications/components/MailList";
+import MailDetail from "@/features/notifications/components/MailDetail";
+import NotificationComposeStack from "@/features/notifications/components/ComposeStack";
 import { sendMessage } from "@/features/notifications/services/messages.service";
 import { createDraft, updateDraft } from "@/features/notifications/services/drafts.service";
 import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
@@ -24,12 +24,30 @@ const MAIL_FOLDER = {
 const formatMailDate = (iso: string): string => {
   const d = new Date(iso);
   const now = new Date();
-  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-  if (sameDay) return d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+
+  if (sameDay) {
+    return d.toLocaleTimeString("es-PE", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }
+
   const diffDays = Math.floor((+now - +d) / 86400_000);
+
   if (diffDays === 1) return "Ayer";
   if (diffDays < 7) return d.toLocaleDateString("es-PE", { weekday: "long" });
-  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+
+  return d.toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  });
 };
 
 const formatFullDate = (iso: string): string =>
@@ -50,9 +68,22 @@ const initialsOf = (name: string): string =>
     .join("");
 
 const avatarColor = (seed: string): string => {
-  const colors = ["oklch(0.6 0.18 25)", "oklch(0.6 0.18 60)", "oklch(0.55 0.18 140)", "oklch(0.55 0.18 200)", "oklch(0.55 0.18 260)", "oklch(0.55 0.18 320)", "oklch(0.6 0.18 10)"];
+  const colors = [
+    "oklch(0.6 0.18 25)",
+    "oklch(0.6 0.18 60)",
+    "oklch(0.55 0.18 140)",
+    "oklch(0.55 0.18 200)",
+    "oklch(0.55 0.18 260)",
+    "oklch(0.55 0.18 320)",
+    "oklch(0.6 0.18 10)",
+  ];
+
   let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % colors.length;
+
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i)) % colors.length;
+  }
+
   return colors[h];
 };
 
@@ -75,18 +106,33 @@ export default function NotificationsPage() {
   const [body, setBody] = useState("");
   const [composeError, setComposeError] = useState<string | null>(null);
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+
   const [createLabelOpen, setCreateLabelOpen] = useState(false);
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState("#2563eb");
   const [labelError, setLabelError] = useState<string | null>(null);
+
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
+
   const { items: labels, createLabel, deleteLabel } = useMailLabels(true);
 
   useEffect(() => {
     const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
-    const valid: UiFolder[] = ["inbox", "starred", "sent", "drafts", "trash", "archived", "snoozed"];
-    if (valid.includes(folderParam as UiFolder)) setFolder(folderParam as UiFolder);
+
+    const valid: UiFolder[] = [
+      "inbox",
+      "starred",
+      "sent",
+      "drafts",
+      "trash",
+      "archived",
+      "snoozed",
+    ];
+
+    if (valid.includes(folderParam as UiFolder)) {
+      setFolder(folderParam as UiFolder);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -94,17 +140,22 @@ export default function NotificationsPage() {
       setComposeOpen(true);
       setComposeMinimized(false);
     }
+
     if (searchParams.get("createLabel") === "1" && canCreateLabel) {
       setCreateLabelOpen(true);
     }
+
     const activeId = (searchParams.get("id") ?? "").trim();
+
     setActiveMailId(activeId || null);
   }, [canCreateLabel, searchParams]);
 
   useEffect(() => {
     const labelId = (searchParams.get("deleteLabel") ?? "").trim();
+
     if (!labelId) return;
     if (!canCreateLabel) return;
+
     void (async () => {
       try {
         await deleteLabel(labelId);
@@ -112,7 +163,9 @@ export default function NotificationsPage() {
         setLabelError("No se pudo eliminar la etiqueta.");
       } finally {
         const next = new URLSearchParams(searchParams);
+
         next.delete("deleteLabel");
+
         setSearchParams(next, { replace: true });
       }
     })();
@@ -125,8 +178,12 @@ export default function NotificationsPage() {
 
   const visible = useMemo(() => {
     let filtered = mails;
-    if (folder === "starred") filtered = filtered.filter((m) => m.starred && m.folder !== "trash");
-    else filtered = filtered.filter((m) => m.folder === folder);
+
+    if (folder === "starred") {
+      filtered = filtered.filter((m) => m.starred && m.folder !== "trash");
+    } else {
+      filtered = filtered.filter((m) => m.folder === folder);
+    }
 
     if (q) {
       filtered = filtered.filter(
@@ -137,6 +194,7 @@ export default function NotificationsPage() {
           m.from.name.toLowerCase().includes(q),
       );
     }
+
     return [...filtered].sort((a, b) => +new Date(b.date) - +new Date(a.date));
   }, [mails, folder, q]);
 
@@ -150,12 +208,16 @@ export default function NotificationsPage() {
   const pageStarredIds = pageMails.filter((m) => m.starred).map((m) => m.id);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const activeMail = useMemo(() => mails.find((m) => m.id === activeMailId) ?? null, [mails, activeMailId]);
+  const activeMail = useMemo(
+    () => mails.find((m) => m.id === activeMailId) ?? null,
+    [mails, activeMailId],
+  );
 
   const moveToFolder = (ids: string[], targetFolder: Mail["folder"]) => {
     setMails((prev): Mail[] =>
       prev.map((m): Mail => (ids.includes(m.id) ? { ...m, folder: targetFolder } : m)),
     );
+
     setSelectedIds(new Set());
   };
 
@@ -174,33 +236,66 @@ export default function NotificationsPage() {
     setBody("");
     setEditingDraftId(null);
     setSelectedLabelIds([]);
+    setComposeError(null);
     setComposeOpen(false);
     setComposeMinimized(false);
+
     const next = new URLSearchParams(searchParams);
+
     next.delete("compose");
+
     setSearchParams(next, { replace: true });
+  };
+
+  const openCompose = (payload?: { to?: string; subject?: string; body?: string }) => {
+    setEditingDraftId(null);
+    setComposeError(null);
+    setSelectedLabelIds([]);
+
+    setRecipients(payload?.to ?? "");
+    setSubject(payload?.subject ?? "");
+    setBody(payload?.body ?? "");
+
+    setComposeOpen(true);
+    setComposeMinimized(false);
   };
 
   const isComposeEmpty = () => {
     const textOnly = body.replace(/<[^>]+>/g, "").trim();
+
     return !recipients.trim() && !subject.trim() && !textOnly;
   };
 
   const closeComposeWithDraft = async () => {
-    if (isComposeEmpty()) {
-      resetCompose();
-      return;
-    }
+    const shouldSave = !isComposeEmpty();
+
+    const draftId = editingDraftId;
+    const draftRecipients = recipients;
+    const draftSubject = subject;
+    const draftBody = body;
+
+    resetCompose();
+
+    if (!shouldSave) return;
+
     try {
-      if (editingDraftId) {
-        await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
+      if (draftId) {
+        await updateDraft(draftId, {
+          recipients: draftRecipients,
+          subject: draftSubject,
+          bodyHtml: draftBody,
+        });
       } else {
-        await createDraft({ recipients, subject, bodyHtml: body, originModule: "corporate" });
+        await createDraft({
+          recipients: draftRecipients,
+          subject: draftSubject,
+          bodyHtml: draftBody,
+          originModule: "corporate",
+        });
       }
     } catch {
-      // Evita bloquear el cierre si falla autosave.
+      // No bloquea el cierre visual de la ventana.
     }
-    resetCompose();
   };
 
   const createNewLabel = async () => {
@@ -208,18 +303,27 @@ export default function NotificationsPage() {
       setLabelError("El nombre de etiqueta es obligatorio.");
       return;
     }
+
     try {
       setLabelError(null);
+
       await createLabel(newLabelName.trim(), newLabelColor);
+
       setNewLabelName("");
       setNewLabelColor("#2563eb");
       setCreateLabelOpen(false);
+
       const next = new URLSearchParams(searchParams);
+
       next.delete("createLabel");
+
       setSearchParams(next, { replace: true });
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;
-      const normalized = Array.isArray(backendMessage) ? String(backendMessage[0] ?? "") : String(backendMessage ?? "");
+      const normalized = Array.isArray(backendMessage)
+        ? String(backendMessage[0] ?? "")
+        : String(backendMessage ?? "");
+
       const normalizedUpper = normalized.toUpperCase();
 
       if (normalizedUpper.includes("LABEL_ALREADY_EXISTS")) {
@@ -227,7 +331,10 @@ export default function NotificationsPage() {
         return;
       }
 
-      if (normalizedUpper.includes("LABEL_NAME_REQUIRED") || normalizedUpper.includes("LABEL_NAME_INVALID")) {
+      if (
+        normalizedUpper.includes("LABEL_NAME_REQUIRED") ||
+        normalizedUpper.includes("LABEL_NAME_INVALID")
+      ) {
         setLabelError("Nombre de etiqueta inválido.");
         return;
       }
@@ -240,28 +347,27 @@ export default function NotificationsPage() {
     <div className="h-full">
       <div className="grid h-full grid-cols-1 gap-4">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-md border bg-background">
-          <main className="flex-1 flex flex-col bg-background overflow-hidden">
+          <main className="flex flex-1 flex-col overflow-hidden bg-background">
             {activeMailId ? (
               <MailDetail
                 mail={activeMail}
                 currentUserEmail={CURRENT_USER.email}
                 onBack={() => {
                   const next = new URLSearchParams(searchParams);
+
                   next.delete("id");
+
                   setSearchParams(next, { replace: true });
                   setActiveMailId(null);
                 }}
                 onSetRead={(id, read) => setRead([id], read)}
                 onDelete={(id) => moveToTrash([id])}
-                onToggleStar={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)))}
-                onComposePrefill={(payload) => {
-                  setEditingDraftId(null);
-                  setRecipients(payload.to ?? "");
-                  setSubject(payload.subject ?? "");
-                  setBody(payload.body ?? "");
-                  setComposeOpen(true);
-                  setComposeMinimized(false);
-                }}
+                onToggleStar={(id) =>
+                  setMails((prev) =>
+                    prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)),
+                  )
+                }
+                onComposePrefill={openCompose}
                 formatFullDate={formatFullDate}
                 initialsOf={initialsOf}
                 avatarColor={avatarColor}
@@ -288,21 +394,36 @@ export default function NotificationsPage() {
                   onNextPage={() => setPage((p) => (end < total ? p + 1 : p))}
                   onRefresh={() => setMails((prev) => [...prev])}
                 />
+
                 <MailList
                   mails={pageMails}
                   selectedIds={selectedIds}
                   onOpen={(id) => {
                     const next = new URLSearchParams(searchParams);
+
                     next.set("id", id);
+
                     setSearchParams(next, { replace: true });
                     setActiveMailId(id);
                   }}
-                  onToggleSelect={(id) => setSelectedIds((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(id)) next.delete(id); else next.add(id);
-                    return next;
-                  })}
-                  onToggleStar={(id) => setMails((prev) => prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)))}
+                  onToggleSelect={(id) =>
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+
+                      if (next.has(id)) {
+                        next.delete(id);
+                      } else {
+                        next.add(id);
+                      }
+
+                      return next;
+                    })
+                  }
+                  onToggleStar={(id) =>
+                    setMails((prev) =>
+                      prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)),
+                    )
+                  }
                   onSetRead={(id, read) => setRead([id], read)}
                   onDelete={(id) => moveToTrash([id])}
                   onArchive={(id) => moveToFolder([id], MAIL_FOLDER.ARCHIVED)}
@@ -317,7 +438,7 @@ export default function NotificationsPage() {
         </section>
       </div>
 
-      <NotificationComposeModal
+      <NotificationComposeStack
         open={composeOpen}
         minimized={composeMinimized}
         editingDraft={Boolean(editingDraftId)}
@@ -326,7 +447,9 @@ export default function NotificationsPage() {
         body={body}
         error={composeError ?? undefined}
         onToggleMinimize={() => setComposeMinimized((prev) => !prev)}
-        onClose={() => { void closeComposeWithDraft(); }}
+        onClose={() => {
+          void closeComposeWithDraft();
+        }}
         onRecipientsChange={setRecipients}
         onSubjectChange={setSubject}
         onBodyChange={setBody}
@@ -334,7 +457,9 @@ export default function NotificationsPage() {
         selectedLabelIds={selectedLabelIds}
         onToggleLabel={(labelId) =>
           setSelectedLabelIds((prev) =>
-            prev.includes(labelId) ? prev.filter((id) => id !== labelId) : [...prev, labelId],
+            prev.includes(labelId)
+              ? prev.filter((id) => id !== labelId)
+              : [...prev, labelId],
           )
         }
         onSend={async () => {
@@ -342,8 +467,10 @@ export default function NotificationsPage() {
             setComposeError("Completa destinatarios, asunto y cuerpo.");
             return;
           }
+
           try {
             setComposeError(null);
+
             await sendMessage({
               recipients,
               subject,
@@ -351,22 +478,60 @@ export default function NotificationsPage() {
               originModule: "corporate",
               labelIds: selectedLabelIds,
             });
+
             setMails((prev) => {
               const id = `sent-${Date.now()}`;
-              const to = recipients.split(",").map((email) => ({ name: email.trim(), email: email.trim() })).filter((item) => item.email);
-              return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to, subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "sent", category: "sistema" }, ...prev];
+
+              const to = recipients
+                .split(",")
+                .map((email) => ({
+                  name: email.trim(),
+                  email: email.trim(),
+                }))
+                .filter((item) => item.email);
+
+              return [
+                {
+                  id,
+                  from: {
+                    name: CURRENT_USER.name,
+                    email: CURRENT_USER.email,
+                  },
+                  to,
+                  subject,
+                  body,
+                  preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110),
+                  date: new Date().toISOString(),
+                  read: true,
+                  starred: false,
+                  folder: "sent",
+                  category: "sistema",
+                },
+                ...prev,
+              ];
             });
+
             resetCompose();
           } catch (error: any) {
             const backendMessage = error?.response?.data?.message;
-            setComposeError(Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo enviar el mensaje.");
+
+            setComposeError(
+              Array.isArray(backendMessage)
+                ? backendMessage[0]
+                : backendMessage || "No se pudo enviar el mensaje.",
+            );
           }
         }}
         onSaveDraft={async () => {
           try {
             setComposeError(null);
+
             if (editingDraftId) {
-              await updateDraft(editingDraftId, { recipients, subject, bodyHtml: body });
+              await updateDraft(editingDraftId, {
+                recipients,
+                subject,
+                bodyHtml: body,
+              });
             } else {
               const draft = await createDraft({
                 recipients,
@@ -374,25 +539,58 @@ export default function NotificationsPage() {
                 bodyHtml: body,
                 originModule: "corporate",
               });
-              if (draft?.id) setEditingDraftId(draft.id);
+
+              if (draft?.id) {
+                setEditingDraftId(draft.id);
+              }
             }
+
             setMails((prev) => {
               const id = `draft-${Date.now()}`;
-              return [{ id, from: { name: CURRENT_USER.name, email: CURRENT_USER.email }, to: [], subject, body, preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110), date: new Date().toISOString(), read: true, starred: false, folder: "drafts", category: "sistema" }, ...prev];
+
+              return [
+                {
+                  id,
+                  from: {
+                    name: CURRENT_USER.name,
+                    email: CURRENT_USER.email,
+                  },
+                  to: [],
+                  subject,
+                  body,
+                  preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110),
+                  date: new Date().toISOString(),
+                  read: true,
+                  starred: false,
+                  folder: "drafts",
+                  category: "sistema",
+                },
+                ...prev,
+              ];
             });
+
             resetCompose();
           } catch (error: any) {
             const backendMessage = error?.response?.data?.message;
-            setComposeError(Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo guardar el borrador.");
+
+            setComposeError(
+              Array.isArray(backendMessage)
+                ? backendMessage[0]
+                : backendMessage || "No se pudo guardar el borrador.",
+            );
           }
         }}
       />
+
       <Modal
         open={createLabelOpen}
         onClose={() => {
           setCreateLabelOpen(false);
+
           const next = new URLSearchParams(searchParams);
+
           next.delete("createLabel");
+
           setSearchParams(next, { replace: true });
         }}
         title="Crear etiqueta"
@@ -404,21 +602,25 @@ export default function NotificationsPage() {
               type="button"
               variant="outline"
               size="sm"
-              className="px-3 py-1.5 text-sm rounded-sm"
+              className="rounded-sm px-3 py-1.5 text-sm"
               onClick={() => {
                 setCreateLabelOpen(false);
+
                 const next = new URLSearchParams(searchParams);
+
                 next.delete("createLabel");
+
                 setSearchParams(next, { replace: true });
               }}
             >
               Cancelar
             </SystemButton>
+
             <SystemButton
               type="button"
               variant="primary"
               size="sm"
-              className="px-3 py-1.5 text-sm rounded-sm"
+              className="rounded-sm px-3 py-1.5 text-sm"
               onClick={() => void createNewLabel()}
             >
               Crear
@@ -432,10 +634,17 @@ export default function NotificationsPage() {
           value={newLabelName}
           onChange={(e) => setNewLabelName(e.target.value)}
         />
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Color</span>
-          <input type="color" value={newLabelColor} onChange={(e) => setNewLabelColor(e.target.value)} />
+
+          <input
+            type="color"
+            value={newLabelColor}
+            onChange={(e) => setNewLabelColor(e.target.value)}
+          />
         </div>
+
         {labelError ? <p className="text-xs text-destructive">{labelError}</p> : null}
       </Modal>
     </div>
