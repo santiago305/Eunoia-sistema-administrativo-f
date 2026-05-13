@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Trash2, MailOpen, Mail as MailIcon, ChevronLeft, ChevronRight, RefreshCw, MoreVertical } from "lucide-react";
+import { ChevronDown, Trash2, MailOpen, Mail as MailIcon, ChevronLeft, ChevronRight, RefreshCw, MoreVertical, Archive } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
   onClearSelection: () => void;
   onSetReadBulk: (ids: string[], read: boolean) => void;
   onDeleteBulk: (ids: string[]) => void;
+  onArchiveBulk: (ids: string[], archive: boolean) => void;
   onPrevPage: () => void;
   onNextPage: () => void;
   onRefresh: () => void;
@@ -85,6 +86,9 @@ export default function MailToolbar(props: Props) {
           </button>
           <button onClick={() => props.onSetReadBulk(selectedArr, markRead)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title={markRead ? "Marcar como leído" : "Marcar como no leído"}>
             {markRead ? <MailOpen className="size-5" /> : <MailIcon className="size-5" />}
+          </button>
+          <button onClick={() => props.onArchiveBulk(selectedArr, props.folder !== "archived")} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title={props.folder === "archived" ? "Desarchivar" : "Archivar"}>
+            <Archive className="size-5" />
           </button>
           <button className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center">
             <MoreVertical className="size-5" />

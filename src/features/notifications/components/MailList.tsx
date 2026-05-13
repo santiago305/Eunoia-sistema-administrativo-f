@@ -1,5 +1,5 @@
 import { Inbox } from "lucide-react";
-import type { Mail } from "../../../../mail/types";
+import type { Mail } from "../types/mail-ui.types";
 import MailRow from "./MailRow";
 
 interface Props {
@@ -62,3 +62,4 @@ export default function MailList({
     </div>
   );
 }
+

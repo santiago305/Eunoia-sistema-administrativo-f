@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { ArrowLeft, Trash2, Mail as MailIcon, MailOpen, Reply, Forward, Star, Printer, MoreVertical, Paperclip } from "lucide-react";
-import type { Mail } from "../../../../mail/types";
+import type { Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
 
 interface Props {
@@ -141,3 +141,4 @@ export default function MailDetail(props: Props) {
     </div>
   );
 }
+

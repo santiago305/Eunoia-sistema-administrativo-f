@@ -1,5 +1,5 @@
 import { Star, Paperclip, Archive, Trash2, MailOpen, Mail as MailIcon, Clock } from "lucide-react";
-import type { Mail } from "../../../../mail/types";
+import type { Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
 
 interface Props {
@@ -93,7 +93,7 @@ export default function MailRow({
               onDelete(mail.id);
             }}
             className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
-            title="Eliminar"
+            title={mail.folder === "trash" ? "Eliminar permanentemente" : "Eliminar"}
           >
             <Trash2 className="size-4" />
           </button>
@@ -113,7 +113,7 @@ export default function MailRow({
               onArchive(mail.id);
             }}
             className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
-            title="Archivar"
+            title={mail.folder === "archived" ? "Desarchivar" : "Archivar"}
           >
             <Archive className="size-4" />
           </button>
@@ -123,7 +123,7 @@ export default function MailRow({
               onSnooze(mail.id);
             }}
             className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
-            title="Posponer"
+            title={mail.folder === "snoozed" ? "Quitar pospuesto" : "Posponer"}
           >
             <Clock className="size-4" />
           </button>
@@ -132,3 +132,4 @@ export default function MailRow({
     </div>
   );
 }
+

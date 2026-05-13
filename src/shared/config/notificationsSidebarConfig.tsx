@@ -16,11 +16,12 @@ import type { MailLabelItem } from "@/features/notifications/types/message.types
 export type NotificationSidebarCounts = {
   inbox: number;
   starred: number;
-  sent: number;
+  sent?: number;
   drafts: number;
   trash: number;
   archived: number;
   snoozed: number;
+  labelUnreadById: Record<string, number>;
 };
 
 export const getNotificationsSidebarItems = (
@@ -49,7 +50,6 @@ export const getNotificationsSidebarItems = (
     label: "Enviados",
     href: `${RoutesPaths.notifications}?folder=sent`,
     icon: <Send className="text-sidebar-foreground" />,
-    badgeCount: counts?.sent,
   },
   {
     label: "Borradores",
@@ -78,6 +78,7 @@ export const getNotificationsSidebarItems = (
         href: `${RoutesPaths.notifications}?folder=inbox&labelId=${label.id}`,
         isCustomLabel: label.type === "CUSTOM",
         labelId: label.id,
+        badgeCount: counts?.labelUnreadById?.[label.id] ?? 0,
         icon: (
           <Bookmark
             style={{

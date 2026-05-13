@@ -1,4 +1,4 @@
-export type MessageFolder = "inbox" | "sent" | "trash" | "starred";
+export type MessageFolder = "inbox" | "sent" | "trash" | "starred" | "archived" | "snoozed" | "drafts";
 
 export interface NotificationModuleItem {
   key: string;
@@ -21,6 +21,8 @@ export interface MailLabelItem {
 export interface MessageListQuery {
   folder?: MessageFolder;
   originModule?: string;
+  read?: boolean;
+  labelId?: string;
   q?: string;
   page?: number;
   limit?: number;
@@ -67,6 +69,11 @@ export interface InboxItem {
     createdAt: string;
     updatedAt: string;
   };
+  sender?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   message: SentMessageItem | null;
 }
 

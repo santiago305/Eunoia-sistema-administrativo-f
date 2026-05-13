@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { deleteMessage, listMessages, markMessageAsRead, restoreMessage, starMessage, unstarMessage } from "../services/messages.service";
+import { archiveMessage, deleteMessage, listMessages, markMessageAsRead, markMessageAsUnread, restoreMessage, snoozeMessage, starMessage, unarchiveMessage, unsnoozeMessage, unstarMessage } from "../services/messages.service";
 import type { InboxItem, MessageFolder, SentMessageItem } from "../types/message.types";
 
 export function useMessagesV2(params: {
   folder: MessageFolder;
   originModule?: string;
+  labelId?: string;
   q?: string;
   page?: number;
   limit?: number;
 }) {
-  const { folder, originModule, q, page, limit } = params;
+  const { folder, originModule, labelId, q, page, limit } = params;
   const [items, setItems] = useState<Array<InboxItem | SentMessageItem>>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -19,14 +20,14 @@ export function useMessagesV2(params: {
     setLoading(true);
     setError(null);
     try {
-      const response = await listMessages({ folder, originModule, q, page, limit });
+      const response = await listMessages({ folder, originModule, labelId, q, page, limit });
       setItems(response.items);
       setTotal(response.total);
     } catch {
       setError("No se pudieron cargar los mensajes.");
     }
     setLoading(false);
-  }, [folder, originModule, q, page, limit]);
+  }, [folder, originModule, labelId, q, page, limit]);
 
   useEffect(() => {
     void reload();
@@ -38,6 +39,17 @@ export function useMessagesV2(params: {
       prev.map((item) =>
         "recipient" in item && item.recipient.id === recipientId
           ? { ...item, recipient: { ...item.recipient, readAt: new Date().toISOString() } }
+          : item,
+      ),
+    );
+  }, []);
+
+  const markInboxRowAsUnread = useCallback(async (recipientId: string) => {
+    await markMessageAsUnread(recipientId);
+    setItems((prev) =>
+      prev.map((item) =>
+        "recipient" in item && item.recipient.id === recipientId
+          ? { ...item, recipient: { ...item.recipient, readAt: null } }
           : item,
       ),
     );
@@ -65,5 +77,40 @@ export function useMessagesV2(params: {
     await reload();
   }, [reload]);
 
-  return { items, total, loading, error, reload, markInboxRowAsRead, starInboxRow, deleteInboxRow, restoreInboxRow };
+  const archiveInboxRow = useCallback(async (recipientId: string) => {
+    await archiveMessage(recipientId);
+    await reload();
+  }, [reload]);
+
+  const unarchiveInboxRow = useCallback(async (recipientId: string) => {
+    await unarchiveMessage(recipientId);
+    await reload();
+  }, [reload]);
+
+  const snoozeInboxRow = useCallback(async (recipientId: string, snoozedUntil: string) => {
+    await snoozeMessage(recipientId, snoozedUntil);
+    await reload();
+  }, [reload]);
+
+  const unsnoozeInboxRow = useCallback(async (recipientId: string) => {
+    await unsnoozeMessage(recipientId);
+    await reload();
+  }, [reload]);
+
+  return {
+    items,
+    total,
+    loading,
+    error,
+    reload,
+    markInboxRowAsRead,
+    markInboxRowAsUnread,
+    starInboxRow,
+    deleteInboxRow,
+    restoreInboxRow,
+    archiveInboxRow,
+    unarchiveInboxRow,
+    snoozeInboxRow,
+    unsnoozeInboxRow,
+  };
 }

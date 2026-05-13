@@ -4,15 +4,17 @@ import { listDrafts } from "../services/drafts.service";
 import type { MessageFolder } from "../types/message.types";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { NOTIFICATION_WINDOW_EVENTS } from "../constants/notification-events.constants";
+import { listMailLabels } from "../services/messages.service";
 
 type SidebarCounts = {
   inbox: number;
   starred: number;
-  sent: number;
+  sent: number | undefined;
   drafts: number;
   trash: number;
   archived: number;
   snoozed: number;
+  labelUnreadById: Record<string, number>;
 };
 
 const INITIAL_COUNTS: SidebarCounts = {
@@ -23,6 +25,7 @@ const INITIAL_COUNTS: SidebarCounts = {
   trash: 0,
   archived: 0,
   snoozed: 0,
+  labelUnreadById: {},
 };
 
 export function useNotificationSidebarCounts() {
@@ -36,23 +39,34 @@ export function useNotificationSidebarCounts() {
     }
 
     try {
-      const folders: MessageFolder[] = ["inbox", "starred", "sent", "trash"];
-      const [inbox, starred, sent, trash, drafts] = await Promise.all([
-        listMessages({ folder: folders[0], page: 1, limit: 1 }),
-        listMessages({ folder: folders[1], page: 1, limit: 1 }),
-        listMessages({ folder: folders[2], page: 1, limit: 1 }),
-        listMessages({ folder: folders[3], page: 1, limit: 1 }),
+      const folders: MessageFolder[] = ["inbox", "starred", "trash", "archived", "snoozed"];
+      const [inbox, starred, trash, archived, snoozed, drafts, labels] = await Promise.all([
+        listMessages({ folder: folders[0], read: false, page: 1, limit: 1 }),
+        listMessages({ folder: folders[1], read: false, page: 1, limit: 1 }),
+        listMessages({ folder: folders[2], read: false, page: 1, limit: 1 }),
+        listMessages({ folder: folders[3], read: false, page: 1, limit: 1 }),
+        listMessages({ folder: folders[4], read: false, page: 1, limit: 1 }),
         listDrafts(),
+        listMailLabels(),
       ]);
+
+      const labelUnreadById: Record<string, number> = {};
+      await Promise.all(
+        (labels ?? []).map(async (label) => {
+          const result = await listMessages({ folder: "inbox", read: false, labelId: label.id, page: 1, limit: 1 });
+          labelUnreadById[label.id] = result.total ?? 0;
+        }),
+      );
 
       setCounts({
         inbox: inbox.total ?? 0,
         starred: starred.total ?? 0,
-        sent: sent.total ?? 0,
+        sent: undefined,
         trash: trash.total ?? 0,
         drafts: drafts.length ?? 0,
-        archived: 0,
-        snoozed: 0,
+        archived: archived.total ?? 0,
+        snoozed: snoozed.total ?? 0,
+        labelUnreadById,
       });
     } catch {
       // Mantiene el ultimo estado valido para no congelar el sidebar en 0.
@@ -66,9 +80,11 @@ export function useNotificationSidebarCounts() {
   useEffect(() => {
     const handleRefresh = () => void reload();
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, handleRefresh);
+    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
     window.addEventListener("focus", handleRefresh);
     return () => {
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, handleRefresh);
+      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
       window.removeEventListener("focus", handleRefresh);
     };
   }, [reload]);

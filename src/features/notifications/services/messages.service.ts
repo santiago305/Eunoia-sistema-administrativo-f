@@ -60,6 +60,11 @@ export const markMessageAsRead = async (recipientId: string) => {
   return response.data;
 };
 
+export const markMessageAsUnread = async (recipientId: string) => {
+  const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.markMessageUnread(recipientId));
+  return response.data;
+};
+
 export const starMessage = async (recipientId: string) => {
   const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.starMessage(recipientId));
   return response.data;
@@ -75,14 +80,39 @@ export const deleteMessage = async (recipientId: string) => {
   return response.data;
 };
 
+export const permanentlyDeleteMessage = async (recipientId: string) => {
+  const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.permanentlyDeleteMessage(recipientId));
+  return response.data;
+};
+
 export const restoreMessage = async (recipientId: string) => {
   const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.restoreMessage(recipientId));
   return response.data;
 };
 
+export const archiveMessage = async (recipientId: string) => {
+  const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.archiveMessage(recipientId));
+  return response.data;
+};
+
+export const unarchiveMessage = async (recipientId: string) => {
+  const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.unarchiveMessage(recipientId));
+  return response.data;
+};
+
+export const snoozeMessage = async (recipientId: string, snoozedUntil: string) => {
+  const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.snoozeMessage(recipientId), { snoozedUntil });
+  return response.data;
+};
+
+export const unsnoozeMessage = async (recipientId: string) => {
+  const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.unsnoozeMessage(recipientId));
+  return response.data;
+};
+
 export const bulkMessages = async (payload: {
   messageRecipientIds: string[];
-  action: "MARK_AS_READ" | "MARK_AS_UNREAD" | "DELETE" | "STAR" | "UNSTAR" | "RESTORE";
+  action: "MARK_AS_READ" | "MARK_AS_UNREAD" | "DELETE" | "STAR" | "UNSTAR" | "RESTORE" | "ARCHIVE" | "UNARCHIVE";
 }) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.bulkMessages, payload);
   return response.data;
