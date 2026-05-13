@@ -48,9 +48,17 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const location = useLocation();
   const canManageLabels = permissions.includes("notifications.labels.create");
   const isSidebarCollapsed = isCollapsed && !isMobile;
+  const composeHref = item.isComposeAction
+    ? (() => {
+        const current = new URLSearchParams(location.search);
+        current.set("compose", "1");
+        return `${location.pathname}?${current.toString()}`;
+      })()
+    : undefined;
+  const itemHref = composeHref ?? item.href;
 
   const hasChildren = !!item.children?.length;
-  const isActive = isLinkActive(item.href, location.pathname, location.search);
+  const isActive = isLinkActive(itemHref, location.pathname, location.search);
   const isChildActive = item.children?.some(
     (child) => isLinkActive(child.href, location.pathname, location.search)
   );
@@ -196,9 +204,9 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
             </div>
 
             <div className="space-y-0.5">
-              {item.href && (
+              {itemHref && (
                 <Link
-                  to={item.href}
+                  to={itemHref}
                   onClick={() => setPopoverOpen(false)}
                   className={cn(
                     "flex min-h-[34px] items-center rounded-xl px-3 py-1.5 text-[13px] transition-all duration-200",
@@ -244,8 +252,8 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   // COLLAPSED + SIN CHILDREN => TOOLTIP
   // ---------------------------------------------
   if (isSidebarCollapsed && !hasChildren) {
-    const singleItem = item.href ? (
-      <Link to={item.href} className={parentBaseClass}>
+    const singleItem = itemHref ? (
+      <Link to={itemHref} className={parentBaseClass}>
         {renderIcon()}
       </Link>
     ) : (
@@ -278,9 +286,9 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
               : "hover:bg-sidebar-accent/70"
           )}
         >
-          {item.href ? (
+          {itemHref ? (
             <Link
-              to={item.href}
+              to={itemHref}
               className="flex min-w-0 flex-1 items-center px-2.5 py-2"
             >
               <ParentInnerContent />
@@ -309,8 +317,8 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
             {caret}
           </button>
         </div>
-      ) : item.href ? (
-        <Link to={item.href} className={parentBaseClass}>
+      ) : itemHref ? (
+        <Link to={itemHref} className={parentBaseClass}>
           <ParentInnerContent />
         </Link>
       ) : (

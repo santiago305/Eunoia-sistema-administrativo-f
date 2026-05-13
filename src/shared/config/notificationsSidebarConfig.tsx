@@ -30,7 +30,6 @@ export const getNotificationsSidebarItems = (
 ): SidebarItem[] => [
   {
     label: "Redactar",
-    href: `${RoutesPaths.notifications}?folder=inbox&compose=1`,
     icon: <Pencil className="text-sidebar-foreground" />,
     isComposeAction: true,
   },
