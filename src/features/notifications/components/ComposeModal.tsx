@@ -27,33 +27,50 @@ type AttachmentItem = {
   file: File;
 };
 
-interface Props {
-  open: boolean;
+export type NotificationComposeDraft = {
+  id: string;
   minimized: boolean;
-  editingDraft: boolean;
+  editingDraftId: string | null;
   recipients: string;
   subject: string;
   body: string;
-  error?: string;
-  onToggleMinimize: () => void;
-  onClose: () => void;
-  onRecipientsChange: (value: string) => void;
-  onSubjectChange: (value: string) => void;
-  onBodyChange: (value: string) => void;
+  error: string | null;
+  selectedLabelIds: string[];
+};
+
+interface Props {
+  draft: NotificationComposeDraft;
   labels?: MailLabelItem[];
-  selectedLabelIds?: string[];
-  onToggleLabel?: (labelId: string) => void;
-  onSend: () => void | Promise<void>;
-  onSaveDraft: () => void | Promise<void>;
+  onToggleMinimize: (composeId: string) => void;
+  onClose: (composeId: string) => void;
+  onRecipientsChange: (composeId: string, value: string) => void;
+  onSubjectChange: (composeId: string, value: string) => void;
+  onBodyChange: (composeId: string, value: string) => void;
+  onToggleLabel: (composeId: string, labelId: string) => void;
+  onSend: (
+    composeId: string,
+    overrides?: Partial<
+      Pick<NotificationComposeDraft, "recipients" | "subject" | "body" | "selectedLabelIds">
+    >,
+  ) => void | Promise<void>;
 }
 
-export default function NotificationComposeModal(props: Props) {
+export default function NotificationComposeModal({
+  draft,
+  labels,
+  onToggleMinimize,
+  onClose,
+  onRecipientsChange,
+  onSubjectChange,
+  onBodyChange,
+  onToggleLabel,
+  onSend,
+}: Props) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const recipientInputRef = useRef<HTMLInputElement>(null);
   const labelsAnchorRef = useRef<HTMLButtonElement | null>(null);
-
   const attachmentsRef = useRef<AttachmentItem[]>([]);
 
   const [showFormat, setShowFormat] = useState(false);
@@ -68,19 +85,19 @@ export default function NotificationComposeModal(props: Props) {
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
 
   useEffect(() => {
-    if (bodyRef.current && bodyRef.current.innerHTML !== props.body) {
-      bodyRef.current.innerHTML = props.body;
+    if (bodyRef.current && bodyRef.current.innerHTML !== draft.body) {
+      bodyRef.current.innerHTML = draft.body;
     }
-  }, [props.body]);
+  }, [draft.id, draft.body]);
 
   useEffect(() => {
-    const tokens = props.recipients
+    const tokens = draft.recipients
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
 
     setRecipientTokens(tokens);
-  }, [props.recipients]);
+  }, [draft.recipients]);
 
   useEffect(() => {
     attachmentsRef.current = attachments;
@@ -98,37 +115,8 @@ export default function NotificationComposeModal(props: Props) {
     document.execCommand(cmd, false, value);
 
     if (bodyRef.current) {
-      props.onBodyChange(bodyRef.current.innerHTML);
+      onBodyChange(draft.id, bodyRef.current.innerHTML);
     }
-  };
-
-  const handleSend = () => {
-    setValidationError("");
-
-    commitDraftRecipients();
-
-    const recipients = [
-      ...recipientTokens,
-      ...recipientDraft
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ];
-
-    const uniqueRecipients = Array.from(
-      new Map(recipients.map((item) => [item.toLowerCase(), item])).values(),
-    );
-
-    if (uniqueRecipients.length === 0) {
-      setValidationError("Debe especificar al menos un destinatario");
-      return;
-    }
-
-    props.onRecipientsChange(uniqueRecipients.join(","));
-
-    window.setTimeout(() => {
-      void props.onSend();
-    }, 0);
   };
 
   const toSizeLabel = (size: number) => `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -186,7 +174,7 @@ export default function NotificationComposeModal(props: Props) {
 
       const next = [...prev, token];
 
-      props.onRecipientsChange(next.join(","));
+      onRecipientsChange(draft.id, next.join(","));
 
       return next;
     });
@@ -196,7 +184,7 @@ export default function NotificationComposeModal(props: Props) {
     setRecipientTokens((prev) => {
       const next = prev.filter((item) => item !== token);
 
-      props.onRecipientsChange(next.join(","));
+      onRecipientsChange(draft.id, next.join(","));
 
       return next;
     });
@@ -212,6 +200,38 @@ export default function NotificationComposeModal(props: Props) {
       .forEach(addRecipientToken);
 
     setRecipientDraft("");
+  };
+
+  const getCommittedRecipients = () => {
+    const tokens = [
+      ...recipientTokens,
+      ...recipientDraft
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ];
+
+    return Array.from(new Map(tokens.map((item) => [item.toLowerCase(), item])).values());
+  };
+
+  const handleSend = () => {
+    setValidationError("");
+
+    const committedRecipients = getCommittedRecipients();
+
+    if (committedRecipients.length === 0) {
+      setValidationError("Debe especificar al menos un destinatario");
+      return;
+    }
+
+    const recipientsValue = committedRecipients.join(",");
+
+    onRecipientsChange(draft.id, recipientsValue);
+    setRecipientDraft("");
+
+    void onSend(draft.id, {
+      recipients: recipientsValue,
+    });
   };
 
   const insertLink = () => {
@@ -252,18 +272,17 @@ export default function NotificationComposeModal(props: Props) {
     exec("insertText", emoji);
   };
 
-  if (!props.open) return null;
-
-  if (props.minimized) {
+  if (draft.minimized) {
     return (
       <div
         data-compose-modal
+        data-compose-id={draft.id}
         className="w-72 cursor-pointer rounded-t-lg border border-border bg-background shadow-compose"
-        onClick={props.onToggleMinimize}
+        onClick={() => onToggleMinimize(draft.id)}
       >
         <div className="flex items-center justify-between rounded-t-lg bg-mail-compose px-3 py-2 text-mail-compose-foreground">
           <span className="truncate text-sm font-medium">
-            {props.subject || "Mensaje nuevo"}
+            {draft.subject || "Mensaje nuevo"}
           </span>
 
           <div className="flex items-center gap-1">
@@ -271,7 +290,7 @@ export default function NotificationComposeModal(props: Props) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                props.onToggleMinimize();
+                onToggleMinimize(draft.id);
               }}
               className="flex size-6 items-center justify-center rounded hover:bg-black/10"
             >
@@ -282,7 +301,7 @@ export default function NotificationComposeModal(props: Props) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                props.onClose();
+                onClose(draft.id);
               }}
               className="flex size-6 items-center justify-center rounded hover:bg-black/10"
             >
@@ -297,17 +316,18 @@ export default function NotificationComposeModal(props: Props) {
   return (
     <div
       data-compose-modal
-      className="flex h-[600px] max-h-[calc(100vh-2rem)] w-[min(540px,calc(100vw-2rem))] flex-col rounded-t-lg border border-border bg-background shadow-2xl"
+      data-compose-id={draft.id}
+      className="flex h-[600px] max-h-[calc(100vh-2rem)] w-[min(540px,calc(100vw-2rem))] shrink-0 flex-col rounded-t-lg border border-border bg-background shadow-2xl"
     >
       <div className="flex items-center justify-between rounded-t-lg bg-mail-compose px-4 py-2 text-mail-compose-foreground">
         <span className="text-sm font-medium">
-          {props.editingDraft ? "Editar borrador" : "Mensaje nuevo"}
+          {draft.editingDraftId ? "Editar borrador" : "Mensaje nuevo"}
         </span>
 
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={props.onToggleMinimize}
+            onClick={() => onToggleMinimize(draft.id)}
             className="flex size-7 items-center justify-center rounded hover:bg-black/10"
           >
             <Minus className="size-4" />
@@ -315,7 +335,7 @@ export default function NotificationComposeModal(props: Props) {
 
           <button
             type="button"
-            onClick={props.onClose}
+            onClick={() => onClose(draft.id)}
             className="flex size-7 items-center justify-center rounded hover:bg-black/10"
           >
             <X className="size-4" />
@@ -380,15 +400,15 @@ export default function NotificationComposeModal(props: Props) {
         <input
           type="text"
           placeholder="Asunto"
-          value={props.subject}
-          onChange={(e) => props.onSubjectChange(e.target.value)}
+          value={draft.subject}
+          onChange={(e) => onSubjectChange(draft.id, e.target.value)}
           className="border-b border-border bg-transparent px-4 py-2 text-sm outline-none"
         />
 
         <div
           ref={bodyRef}
           contentEditable
-          onInput={(e) => props.onBodyChange((e.target as HTMLDivElement).innerHTML)}
+          onInput={(e) => onBodyChange(draft.id, (e.target as HTMLDivElement).innerHTML)}
           className="min-h-[180px] flex-1 overflow-y-auto px-4 py-3 text-sm outline-none"
           suppressContentEditableWarning
           onDrop={(e) => {
@@ -442,9 +462,9 @@ export default function NotificationComposeModal(props: Props) {
           </div>
         ) : null}
 
-        {props.error ? (
+        {draft.error ? (
           <div className="bg-destructive/10 px-4 py-2 text-xs text-destructive">
-            {props.error}
+            {draft.error}
           </div>
         ) : null}
       </div>
@@ -685,9 +705,9 @@ export default function NotificationComposeModal(props: Props) {
           >
             <Bookmark className="size-5 rotate-[270deg]" />
 
-            {(props.selectedLabelIds?.length ?? 0) > 0 ? (
+            {draft.selectedLabelIds.length > 0 ? (
               <span className="ml-1 text-[10px] font-semibold">
-                {props.selectedLabelIds?.length}
+                {draft.selectedLabelIds.length}
               </span>
             ) : null}
           </button>
@@ -704,19 +724,19 @@ export default function NotificationComposeModal(props: Props) {
             bodyClassName="p-2 px-0"
           >
             <div className="max-h-[200px] overflow-y-auto pr-1">
-              {(props.labels ?? []).length === 0 ? (
+              {(labels ?? []).length === 0 ? (
                 <p className="px-2 py-2 text-xs text-muted-foreground">
                   No hay etiquetas creadas.
                 </p>
               ) : (
-                (props.labels ?? []).map((label) => {
-                  const selected = Boolean(props.selectedLabelIds?.includes(label.id));
+                (labels ?? []).map((label) => {
+                  const selected = draft.selectedLabelIds.includes(label.id);
 
                   return (
                     <button
                       key={label.id}
                       type="button"
-                      onClick={() => props.onToggleLabel?.(label.id)}
+                      onClick={() => onToggleLabel(draft.id, label.id)}
                       className={cn(
                         "flex w-full items-center justify-between gap-2 rounded-md p-1 text-left text-sm hover:bg-mail-hover",
                         selected && "bg-mail-hover",
@@ -745,9 +765,9 @@ export default function NotificationComposeModal(props: Props) {
 
         <button
           type="button"
-          onClick={props.onClose}
+          onClick={() => onClose(draft.id)}
           className="ml-auto flex size-9 items-center justify-center rounded-full hover:bg-mail-hover"
-          title="Descartar borrador"
+          title="Cerrar y guardar borrador"
         >
           <Trash2 className="size-5" />
         </button>

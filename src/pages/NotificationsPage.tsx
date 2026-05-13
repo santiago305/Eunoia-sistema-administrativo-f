@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SEED_MAILS, CURRENT_USER } from "../../mail/data";
 import type { Mail } from "../../mail/types";
@@ -6,6 +6,7 @@ import MailToolbar from "@/features/notifications/components/MailToolbar";
 import MailList from "@/features/notifications/components/MailList";
 import MailDetail from "@/features/notifications/components/MailDetail";
 import NotificationComposeStack from "@/features/notifications/components/ComposeStack";
+import type { NotificationComposeDraft } from "@/features/notifications/components/ComposeModal";
 import { sendMessage } from "@/features/notifications/services/messages.service";
 import { createDraft, updateDraft } from "@/features/notifications/services/drafts.service";
 import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
@@ -16,10 +17,32 @@ import { Modal } from "@/shared/components/modales/Modal";
 
 type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed";
 
+type ComposePayload = {
+  to?: string;
+  subject?: string;
+  body?: string;
+  editingDraftId?: string | null;
+};
+
 const MAIL_FOLDER = {
   ARCHIVED: "archived" as Mail["folder"],
   SNOOZED: "snoozed" as Mail["folder"],
 } as const;
+
+const createComposeId = () =>
+  `compose-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const MAX_COMPOSE_DRAFTS = 4;
+
+const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft => ({
+  id: createComposeId(),
+  minimized: false,
+  editingDraftId: payload?.editingDraftId ?? null,
+  recipients: payload?.to ?? "",
+  subject: payload?.subject ?? "",
+  body: payload?.body ?? "",
+  error: null,
+  selectedLabelIds: [],
+});
 
 const formatMailDate = (iso: string): string => {
   const d = new Date(iso);
@@ -98,14 +121,7 @@ export default function NotificationsPage() {
   const pageSize = 50;
   const [activeMailId, setActiveMailId] = useState<string | null>(null);
 
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [composeMinimized, setComposeMinimized] = useState(false);
-  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
-  const [recipients, setRecipients] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [composeError, setComposeError] = useState<string | null>(null);
-  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+  const [composeDrafts, setComposeDrafts] = useState<NotificationComposeDraft[]>([]);
 
   const [createLabelOpen, setCreateLabelOpen] = useState(false);
   const [newLabelName, setNewLabelName] = useState("");
@@ -116,6 +132,209 @@ export default function NotificationsPage() {
   const canCreateLabel = can("notifications.labels.create");
 
   const { items: labels, createLabel, deleteLabel } = useMailLabels(true);
+
+  const openCompose = useCallback((payload?: ComposePayload) => {
+    setComposeDrafts((prev) => [
+      ...(prev.length >= MAX_COMPOSE_DRAFTS
+        ? prev
+        : [
+            ...prev.map((item) => ({
+              ...item,
+              minimized: true,
+            })),
+            createComposeDraft(payload),
+          ]),
+    ]);
+  }, []);
+
+  const updateComposeDraft = useCallback(
+    (composeId: string, patch: Partial<NotificationComposeDraft>) => {
+      setComposeDrafts((prev) =>
+        prev.map((item) => (item.id === composeId ? { ...item, ...patch } : item)),
+      );
+    },
+    [],
+  );
+
+  const removeComposeDraft = useCallback((composeId: string) => {
+    setComposeDrafts((prev) => prev.filter((item) => item.id !== composeId));
+  }, []);
+
+  const toggleComposeMinimize = useCallback((composeId: string) => {
+    setComposeDrafts((prev) => {
+      const target = prev.find((item) => item.id === composeId);
+      const willExpand = Boolean(target?.minimized);
+
+      return prev.map((item) => {
+        if (item.id === composeId) {
+          return {
+            ...item,
+            minimized: !item.minimized,
+          };
+        }
+
+        if (willExpand) {
+          return {
+            ...item,
+            minimized: true,
+          };
+        }
+
+        return item;
+      });
+    });
+  }, []);
+
+  const toggleComposeLabel = useCallback((composeId: string, labelId: string) => {
+    setComposeDrafts((prev) =>
+      prev.map((item) => {
+        if (item.id !== composeId) return item;
+
+        const selectedLabelIds = item.selectedLabelIds.includes(labelId)
+          ? item.selectedLabelIds.filter((id) => id !== labelId)
+          : [...item.selectedLabelIds, labelId];
+
+        return {
+          ...item,
+          selectedLabelIds,
+        };
+      }),
+    );
+  }, []);
+
+  const isComposeEmpty = (draft: NotificationComposeDraft) => {
+    const textOnly = draft.body.replace(/<[^>]+>/g, "").trim();
+
+    return !draft.recipients.trim() && !draft.subject.trim() && !textOnly;
+  };
+
+  const closeComposeWithDraft = async (composeId: string) => {
+    const draft = composeDrafts.find((item) => item.id === composeId);
+
+    if (!draft) return;
+
+    removeComposeDraft(composeId);
+
+    if (isComposeEmpty(draft)) return;
+
+    try {
+      if (draft.editingDraftId) {
+        await updateDraft(draft.editingDraftId, {
+          recipients: draft.recipients,
+          subject: draft.subject,
+          bodyHtml: draft.body,
+        });
+      } else {
+        await createDraft({
+          recipients: draft.recipients,
+          subject: draft.subject,
+          bodyHtml: draft.body,
+          originModule: "corporate",
+        });
+      }
+    } catch {
+      // El cierre visual no se bloquea si falla el autosave.
+    }
+  };
+
+  const sendCompose = async (
+    composeId: string,
+    overrides?: Partial<
+      Pick<NotificationComposeDraft, "recipients" | "subject" | "body" | "selectedLabelIds">
+    >,
+  ) => {
+    const currentDraft = composeDrafts.find((item) => item.id === composeId);
+
+    if (!currentDraft) return;
+
+    const draft = {
+      ...currentDraft,
+      ...overrides,
+    };
+
+    if (!draft.recipients.trim() || !draft.subject.trim() || !draft.body.trim()) {
+      updateComposeDraft(composeId, {
+        error: "Completa destinatarios, asunto y cuerpo.",
+      });
+      return;
+    }
+
+    try {
+      updateComposeDraft(composeId, {
+        error: null,
+      });
+
+      await sendMessage({
+        recipients: draft.recipients,
+        subject: draft.subject,
+        bodyHtml: draft.body,
+        originModule: "corporate",
+        labelIds: draft.selectedLabelIds,
+      });
+
+      setMails((prev) => {
+        const id = `sent-${Date.now()}`;
+
+        const to = draft.recipients
+          .split(",")
+          .map((email) => ({
+            name: email.trim(),
+            email: email.trim(),
+          }))
+          .filter((item) => item.email);
+
+        return [
+          {
+            id,
+            from: {
+              name: CURRENT_USER.name,
+              email: CURRENT_USER.email,
+            },
+            to,
+            subject: draft.subject,
+            body: draft.body,
+            preview: draft.body.replace(/<[^>]+>/g, " ").trim().slice(0, 110),
+            date: new Date().toISOString(),
+            read: true,
+            starred: false,
+            folder: "sent",
+            category: "sistema",
+          },
+          ...prev,
+        ];
+      });
+
+      removeComposeDraft(composeId);
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+
+      updateComposeDraft(composeId, {
+        error: Array.isArray(backendMessage)
+          ? backendMessage[0]
+          : backendMessage || "No se pudo enviar el mensaje.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (searchParams.get("compose") === "1") {
+      openCompose();
+
+      const next = new URLSearchParams(searchParams);
+
+      next.delete("compose");
+
+      setSearchParams(next, { replace: true });
+    }
+
+    if (searchParams.get("createLabel") === "1" && canCreateLabel) {
+      setCreateLabelOpen(true);
+    }
+
+    const activeId = (searchParams.get("id") ?? "").trim();
+
+    setActiveMailId(activeId || null);
+  }, [canCreateLabel, openCompose, searchParams, setSearchParams]);
 
   useEffect(() => {
     const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
@@ -134,21 +353,6 @@ export default function NotificationsPage() {
       setFolder(folderParam as UiFolder);
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    if (searchParams.get("compose") === "1") {
-      setComposeOpen(true);
-      setComposeMinimized(false);
-    }
-
-    if (searchParams.get("createLabel") === "1" && canCreateLabel) {
-      setCreateLabelOpen(true);
-    }
-
-    const activeId = (searchParams.get("id") ?? "").trim();
-
-    setActiveMailId(activeId || null);
-  }, [canCreateLabel, searchParams]);
 
   useEffect(() => {
     const labelId = (searchParams.get("deleteLabel") ?? "").trim();
@@ -230,74 +434,6 @@ export default function NotificationsPage() {
     moveToFolder(ids, "trash");
   };
 
-  const resetCompose = () => {
-    setRecipients("");
-    setSubject("");
-    setBody("");
-    setEditingDraftId(null);
-    setSelectedLabelIds([]);
-    setComposeError(null);
-    setComposeOpen(false);
-    setComposeMinimized(false);
-
-    const next = new URLSearchParams(searchParams);
-
-    next.delete("compose");
-
-    setSearchParams(next, { replace: true });
-  };
-
-  const openCompose = (payload?: { to?: string; subject?: string; body?: string }) => {
-    setEditingDraftId(null);
-    setComposeError(null);
-    setSelectedLabelIds([]);
-
-    setRecipients(payload?.to ?? "");
-    setSubject(payload?.subject ?? "");
-    setBody(payload?.body ?? "");
-
-    setComposeOpen(true);
-    setComposeMinimized(false);
-  };
-
-  const isComposeEmpty = () => {
-    const textOnly = body.replace(/<[^>]+>/g, "").trim();
-
-    return !recipients.trim() && !subject.trim() && !textOnly;
-  };
-
-  const closeComposeWithDraft = async () => {
-    const shouldSave = !isComposeEmpty();
-
-    const draftId = editingDraftId;
-    const draftRecipients = recipients;
-    const draftSubject = subject;
-    const draftBody = body;
-
-    resetCompose();
-
-    if (!shouldSave) return;
-
-    try {
-      if (draftId) {
-        await updateDraft(draftId, {
-          recipients: draftRecipients,
-          subject: draftSubject,
-          bodyHtml: draftBody,
-        });
-      } else {
-        await createDraft({
-          recipients: draftRecipients,
-          subject: draftSubject,
-          bodyHtml: draftBody,
-          originModule: "corporate",
-        });
-      }
-    } catch {
-      // No bloquea el cierre visual de la ventana.
-    }
-  };
-
   const createNewLabel = async () => {
     if (!newLabelName.trim()) {
       setLabelError("El nombre de etiqueta es obligatorio.");
@@ -367,7 +503,13 @@ export default function NotificationsPage() {
                     prev.map((m) => (m.id === id ? { ...m, starred: !m.starred } : m)),
                   )
                 }
-                onComposePrefill={openCompose}
+                onComposePrefill={(payload) =>
+                  openCompose({
+                    to: payload.to,
+                    subject: payload.subject,
+                    body: payload.body,
+                  })
+                }
                 formatFullDate={formatFullDate}
                 initialsOf={initialsOf}
                 avatarColor={avatarColor}
@@ -439,147 +581,29 @@ export default function NotificationsPage() {
       </div>
 
       <NotificationComposeStack
-        open={composeOpen}
-        minimized={composeMinimized}
-        editingDraft={Boolean(editingDraftId)}
-        recipients={recipients}
-        subject={subject}
-        body={body}
-        error={composeError ?? undefined}
-        onToggleMinimize={() => setComposeMinimized((prev) => !prev)}
-        onClose={() => {
-          void closeComposeWithDraft();
-        }}
-        onRecipientsChange={setRecipients}
-        onSubjectChange={setSubject}
-        onBodyChange={setBody}
+        drafts={composeDrafts}
         labels={labels.filter((item) => item.type === "CUSTOM" || item.type === "MODULE")}
-        selectedLabelIds={selectedLabelIds}
-        onToggleLabel={(labelId) =>
-          setSelectedLabelIds((prev) =>
-            prev.includes(labelId)
-              ? prev.filter((id) => id !== labelId)
-              : [...prev, labelId],
-          )
+        onToggleMinimize={toggleComposeMinimize}
+        onClose={(composeId) => {
+          void closeComposeWithDraft(composeId);
+        }}
+        onRecipientsChange={(composeId, value) =>
+          updateComposeDraft(composeId, {
+            recipients: value,
+          })
         }
-        onSend={async () => {
-          if (!recipients.trim() || !subject.trim() || !body.trim()) {
-            setComposeError("Completa destinatarios, asunto y cuerpo.");
-            return;
-          }
-
-          try {
-            setComposeError(null);
-
-            await sendMessage({
-              recipients,
-              subject,
-              bodyHtml: body,
-              originModule: "corporate",
-              labelIds: selectedLabelIds,
-            });
-
-            setMails((prev) => {
-              const id = `sent-${Date.now()}`;
-
-              const to = recipients
-                .split(",")
-                .map((email) => ({
-                  name: email.trim(),
-                  email: email.trim(),
-                }))
-                .filter((item) => item.email);
-
-              return [
-                {
-                  id,
-                  from: {
-                    name: CURRENT_USER.name,
-                    email: CURRENT_USER.email,
-                  },
-                  to,
-                  subject,
-                  body,
-                  preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110),
-                  date: new Date().toISOString(),
-                  read: true,
-                  starred: false,
-                  folder: "sent",
-                  category: "sistema",
-                },
-                ...prev,
-              ];
-            });
-
-            resetCompose();
-          } catch (error: any) {
-            const backendMessage = error?.response?.data?.message;
-
-            setComposeError(
-              Array.isArray(backendMessage)
-                ? backendMessage[0]
-                : backendMessage || "No se pudo enviar el mensaje.",
-            );
-          }
-        }}
-        onSaveDraft={async () => {
-          try {
-            setComposeError(null);
-
-            if (editingDraftId) {
-              await updateDraft(editingDraftId, {
-                recipients,
-                subject,
-                bodyHtml: body,
-              });
-            } else {
-              const draft = await createDraft({
-                recipients,
-                subject,
-                bodyHtml: body,
-                originModule: "corporate",
-              });
-
-              if (draft?.id) {
-                setEditingDraftId(draft.id);
-              }
-            }
-
-            setMails((prev) => {
-              const id = `draft-${Date.now()}`;
-
-              return [
-                {
-                  id,
-                  from: {
-                    name: CURRENT_USER.name,
-                    email: CURRENT_USER.email,
-                  },
-                  to: [],
-                  subject,
-                  body,
-                  preview: body.replace(/<[^>]+>/g, " ").trim().slice(0, 110),
-                  date: new Date().toISOString(),
-                  read: true,
-                  starred: false,
-                  folder: "drafts",
-                  category: "sistema",
-                },
-                ...prev,
-              ];
-            });
-
-            resetCompose();
-          } catch (error: any) {
-            const backendMessage = error?.response?.data?.message;
-
-            setComposeError(
-              Array.isArray(backendMessage)
-                ? backendMessage[0]
-                : backendMessage || "No se pudo guardar el borrador.",
-            );
-          }
-        }}
+        onSubjectChange={(composeId, value) =>
+          updateComposeDraft(composeId, {
+            subject: value,
+          })
+        }
+        onBodyChange={(composeId, value) =>
+          updateComposeDraft(composeId, {
+            body: value,
+          })
+        }
+        onToggleLabel={toggleComposeLabel}
+        onSend={sendCompose}
       />
 
       <Modal
