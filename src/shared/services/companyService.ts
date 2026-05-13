@@ -1,4 +1,5 @@
 import axiosInstance from "@/shared/common/utils/axios";
+import type { AxiosRequestConfig } from "axios";
 import { API_COMPANY_GROUP } from "@/shared/services/APIs";
 import type {
   Company,
@@ -34,7 +35,7 @@ export const getCompany = async (): Promise<Company> => {
 export const getCompanyBranding = async (): Promise<CompanyBranding> => {
   const response = await axiosInstance.get(API_COMPANY_GROUP.branding, {
     skipAuthRefresh: true,
-  } as { skipAuthRefresh: boolean });
+  } as AxiosRequestConfig & { skipAuthRefresh: boolean });
   return unwrapApiData<CompanyBranding>(response.data);
 };
 

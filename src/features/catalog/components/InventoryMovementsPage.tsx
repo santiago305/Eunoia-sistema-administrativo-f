@@ -9,6 +9,7 @@ import {
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import { PageShell } from "@/shared/layouts/PageShell";
+import { PageTitle } from "@/shared/components/components/PageTitle";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
@@ -79,6 +80,7 @@ const statusLabel: Record<MovementRow["direction"], string> = {
 
 type InventoryMovementsPageConfig = {
   productType: ProductCatalogProductType;
+  pageTitle: string;
   headingTitle: string;
   itemLabel: string;
   tableId: string;
@@ -546,6 +548,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
 
   return (
     <PageShell>
+      <PageTitle title={config.pageTitle} />
 
       <PageActionsRow>
         {exportColumns.length ? (

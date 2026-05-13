@@ -23,6 +23,7 @@ import type { InventoryDocument, InventoryDocumentRow } from "@/features/catalog
 import { InventoryDocumentProductType } from "@/features/catalog/types/documentInventory";
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 import { PageShell } from "@/shared/layouts/PageShell";
+import { PageTitle } from "@/shared/components/components/PageTitle";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import {
   deleteInventoryDocumentsSearchMetric,
@@ -86,6 +87,7 @@ const buildNumero = (document: InventoryDocument) => {
 
 type InventoryTransfersPageConfig = {
   productType: InventoryDocumentProductType;
+  pageTitle: string;
   headingTitle: string;
   tableId: string;
   searchName: string;
@@ -671,6 +673,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
 
   return (
     <PageShell>
+        <PageTitle title={config.pageTitle} />
         <PageActionsRow>
             {exportColumns.length ? (
               <ExportPopover

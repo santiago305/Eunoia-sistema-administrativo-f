@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
 import { ArrowLeftRight, FileText, Menu, Wrench } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
+import { PageTitle } from "@/shared/components/components/PageTitle";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -64,6 +65,7 @@ const DEFAULT_LIMIT = 25;
 
 type InventoryStockPageConfig = {
   productType: ProductCatalogProductType;
+  pageTitle: string;
   headingTitle: string;
   itemLabel: string;
   tableId: string;
@@ -379,7 +381,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     }
   };
 
-  const loadWarehouses = async () => {
+  const loadWarehouses = useCallback(async () => {
     try {
       const res = await listActive();
       const options = [
@@ -394,7 +396,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       setWarehouseOptions([]);
       showFeedback(errorResponse("Error al cargar almacenes"));
     }
-  };
+  }, [showFeedback]);
 
   const loadInventory = useCallback(async () => {
     setLoading(true);
@@ -436,7 +438,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     }
   }, [config.productType, executedSnapshot, loadSearchState, page, showFeedback, warehouseQuery]);
 
-  const buildInventoryActions = (row: InventorySnapshotRow): ActionItem[] => [
+  const buildInventoryActions = useCallback((row: InventorySnapshotRow): ActionItem[] => [
     {
       id: `kardex-${row.sku.sku.id}`,
       label: "Ver kardex",
@@ -476,11 +478,11 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         navigate(`${config.routes.adjustments}?${params.toString()}`);
       },
     },
-  ];
+  ], [companyActionDisabled, config.routes.adjustments, config.routes.kardex, config.routes.transfer, navigate]);
 
   useEffect(() => {
     void loadWarehouses();
-  }, []);
+  }, [loadWarehouses]);
 
   // Referencia para evitar dobles peticiones consecutivas o loops
   const fetchLockRef = useRef(false);
@@ -495,8 +497,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         fetchLockRef.current = false;
       }, 100);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, executedSnapshot, warehouseQuery, config.productType]);
+  }, [loadInventory]);
 
   useEffect(() => {
     const unsubscribe = subscribeInventoryStockUpdated((event) => {
@@ -699,11 +700,12 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         ),
       },
     ],
-    [companyActionDisabled, config.itemLabel, config.routes.adjustments, config.routes.kardex, config.routes.transfer, navigate],
+    [buildInventoryActions, config.itemLabel],
   );
 
   return (
     <PageShell>
+      <PageTitle title={config.pageTitle} />
       <div className="space-y-2">
         <PageActionsRow>
           {exportColumns.length ? (

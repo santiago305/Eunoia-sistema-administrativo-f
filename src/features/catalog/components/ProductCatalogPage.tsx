@@ -28,6 +28,7 @@ import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { ProductCreateModal } from "./ProductCreateModal";
 import { ProductDetailsModal } from "./ProductDetailsModal";
 import { PageShell } from "@/shared/layouts/PageShell";
+import { PageTitle } from "@/shared/components/components/PageTitle";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
@@ -52,6 +53,7 @@ type CatalogListFn = typeof listCatalogProducts;
 
 type ProductCatalogPageConfig = {
     productType: ProductCatalogProductType;
+    pageTitle: string;
     mode: "product" | "material";
     listAll: CatalogListFn;
     headingTitle: string;
@@ -378,6 +380,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
 
     return (
         <PageShell>
+            <PageTitle title={config.pageTitle} />
             <PageActionsRow>
                     <SystemButton
                         size="sm"
