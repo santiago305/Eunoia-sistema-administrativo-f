@@ -22,6 +22,7 @@ export interface MessageListQuery {
   folder?: MessageFolder;
   originModule?: string;
   read?: boolean;
+  hasAttachments?: boolean;
   labelId?: string;
   q?: string;
   page?: number;

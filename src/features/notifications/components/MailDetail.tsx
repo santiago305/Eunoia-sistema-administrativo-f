@@ -56,13 +56,18 @@ export default function MailDetail(props: Props) {
   const senderName = props.detailData?.sender?.name?.trim() || mail.from.name;
   const senderEmail = props.detailData?.sender?.email?.trim() || mail.from.email;
   const recipientsFromDetail =
-    props.detailData?.recipients
-      ?.map((item) => item.recipientEmail?.trim())
-      .filter((item): item is string => Boolean(item)) ?? [];
-  const detailToLabel =
-    recipientsFromDetail.length > 0
-      ? recipientsFromDetail.join(", ")
-      : mail.to.map((t) => t.name || t.email).join(", ");
+    props.detailData?.recipients?.filter((item) => Boolean(item?.recipientEmail?.trim())) ?? [];
+  const toRecipients = recipientsFromDetail
+    .filter((item) => (item.recipientType ?? "TO").toUpperCase() === "TO")
+    .map((item) => item.recipientEmail!.trim());
+  const ccRecipients = recipientsFromDetail
+    .filter((item) => (item.recipientType ?? "").toUpperCase() === "CC")
+    .map((item) => item.recipientEmail!.trim());
+  const bccRecipients = recipientsFromDetail
+    .filter((item) => (item.recipientType ?? "").toUpperCase() === "BCC")
+    .map((item) => item.recipientEmail!.trim());
+  const fallbackTo = mail.to.map((t) => t.name || t.email).filter(Boolean);
+  const detailToLabel = (toRecipients.length > 0 ? toRecipients : fallbackTo).join(", ");
   const threadItems = props.detailData?.thread ?? [];
 
   return (
@@ -91,7 +96,9 @@ export default function MailDetail(props: Props) {
         <button
           onClick={() =>
             props.onComposePrefill({
-              to: mail.to.map((t) => t.email).join(", "),
+              to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
+              cc: ccRecipients.join(", "),
+              bcc: bccRecipients.join(", "),
               subject: mail.subject.startsWith("Fwd:") ? mail.subject : `Fwd: ${mail.subject}`,
               body: `<br/><br/>---------- Mensaje reenviado ----------<br/><b>De:</b> ${senderName} &lt;${senderEmail}&gt;<br/><b>Asunto:</b> ${mail.subject}<br/><br/>${mail.body}`,
               mode: "forward",
@@ -140,6 +147,12 @@ export default function MailDetail(props: Props) {
                   ? `Para: ${detailToLabel}`
                   : `Para: ${mail.to.find((t) => t.email === props.currentUserEmail) ? "mi" : detailToLabel}`}
               </div>
+              {ccRecipients.length > 0 ? (
+                <div className="text-xs text-muted-foreground mt-1">{`CC: ${ccRecipients.join(", ")}`}</div>
+              ) : null}
+              {bccRecipients.length > 0 ? (
+                <div className="text-xs text-muted-foreground mt-1">{`BCC: ${bccRecipients.join(", ")}`}</div>
+              ) : null}
             </div>
           </div>
 
@@ -167,6 +180,8 @@ export default function MailDetail(props: Props) {
               onClick={() =>
                 props.onComposePrefill({
                   to: senderEmail,
+                  cc: "",
+                  bcc: "",
                   subject: mail.subject.startsWith("Re:") ? mail.subject : `Re: ${mail.subject}`,
                   body: `<br/><br/>El ${props.formatFullDate(mail.date)}, ${senderName} escribio:<br/><blockquote style="border-left:2px solid #ccc;padding-left:10px;margin-left:0;color:#666">${mail.body}</blockquote>`,
                   mode: "reply",
@@ -181,6 +196,9 @@ export default function MailDetail(props: Props) {
             <button
               onClick={() =>
                 props.onComposePrefill({
+                  to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
+                  cc: ccRecipients.join(", "),
+                  bcc: bccRecipients.join(", "),
                   subject: `Fwd: ${mail.subject}`,
                   body: `<br/><br/>---------- Mensaje reenviado ----------<br/>${mail.body}`,
                   mode: "forward",
