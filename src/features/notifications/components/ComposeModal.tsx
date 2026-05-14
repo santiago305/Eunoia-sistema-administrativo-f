@@ -31,6 +31,8 @@ export type NotificationComposeDraft = {
   id: string;
   minimized: boolean;
   editingDraftId: string | null;
+  mode: "new" | "reply" | "forward";
+  parentMessageId: string | null;
   recipients: string;
   subject: string;
   body: string;
@@ -321,7 +323,13 @@ export default function NotificationComposeModal({
     >
       <div className="flex items-center justify-between rounded-t-lg bg-mail-compose px-4 py-2 text-mail-compose-foreground">
         <span className="text-sm font-medium">
-          {draft.editingDraftId ? "Editar borrador" : "Mensaje nuevo"}
+          {draft.editingDraftId
+            ? "Editar borrador"
+            : draft.mode === "reply"
+              ? "Responder"
+              : draft.mode === "forward"
+                ? "Reenviar"
+                : "Mensaje nuevo"}
         </span>
 
         <div className="flex items-center gap-1">

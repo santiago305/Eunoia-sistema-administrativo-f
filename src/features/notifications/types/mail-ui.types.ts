@@ -22,6 +22,9 @@ export interface Mail {
   id: string;
   messageId?: string;
   recipientId?: string;
+  threadId?: string | null;
+  originModule?: string;
+  moduleLabel?: string;
   from: { name: string; email: string; avatar?: string };
   to: { name: string; email: string }[];
   subject: string;

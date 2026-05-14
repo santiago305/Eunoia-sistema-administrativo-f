@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useUnreadNotificationsCount } from "@/features/notifications/hooks/useUnreadNotificationsCount";
@@ -26,6 +26,24 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const logoUrl = resolveCompanyAssetUrl(company?.logoPath);
   const isEmailPage = location.pathname.startsWith(RoutesPaths.notifications);
   const emailSearch = searchParams.get("q") ?? "";
+  const searchHistory = useMemo(() => {
+    try {
+      const raw = window.localStorage.getItem("notifications.search.history");
+      if (!raw) return [] as string[];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [] as string[];
+      return parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 10);
+    } catch {
+      return [] as string[];
+    }
+  }, [emailSearch]);
+
+  const persistSearchHistory = (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const next = [trimmed, ...searchHistory.filter((item) => item.toLowerCase() !== trimmed.toLowerCase())].slice(0, 10);
+    window.localStorage.setItem("notifications.search.history", JSON.stringify(next));
+  };
   const routeTitle =
     getSidebarTitleByPath(location.pathname) ??
     ({
@@ -60,18 +78,34 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-3">
         <div className="min-w-0">
           {isEmailPage ? (
-            <input
-              value={emailSearch}
-              onChange={(event) => {
-                const next = new URLSearchParams(searchParams);
-                const value = event.target.value.trim();
-                if (value) next.set("q", value);
-                else next.delete("q");
-                setSearchParams(next, { replace: true });
-              }}
-              placeholder="Buscar correo"
-              className="h-9 w-[320px] max-w-full rounded-md border px-3 text-sm"
-            />
+            <>
+              <input
+                value={emailSearch}
+                onChange={(event) => {
+                  const next = new URLSearchParams(searchParams);
+                  const value = event.target.value;
+                  if (value) next.set("q", value);
+                  else next.delete("q");
+                  setSearchParams(next, { replace: true });
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    persistSearchHistory((event.target as HTMLInputElement).value);
+                  }
+                }}
+                onBlur={(event) => {
+                  persistSearchHistory(event.target.value);
+                }}
+                placeholder="Buscar correo"
+                list="notifications-search-history"
+                className="h-9 w-[320px] max-w-full rounded-md border px-3 text-sm"
+              />
+              <datalist id="notifications-search-history">
+                {searchHistory.map((item) => (
+                  <option key={item} value={item} />
+                ))}
+              </datalist>
+            </>
           ) : routeTitle ? (
             <h1 className="truncate text-lg font-semibold">{routeTitle}</h1>
           ) : null}

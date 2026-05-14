@@ -7,10 +7,18 @@ import MailDetail from "@/features/notifications/components/MailDetail";
 import NotificationComposeStack from "@/features/notifications/components/ComposeStack";
 import type { NotificationComposeDraft } from "@/features/notifications/components/ComposeModal";
 import { useMessagesV2 } from "@/features/notifications/hooks/useMessagesV2";
-import { bulkMessages, permanentlyDeleteMessage, sendMessage } from "@/features/notifications/services/messages.service";
+import {
+  bulkMessages,
+  forwardMessage,
+  getMessageDetail,
+  permanentlyDeleteMessage,
+  replyMessage,
+  sendMessage,
+} from "@/features/notifications/services/messages.service";
 import { createDraft, updateDraft } from "@/features/notifications/services/drafts.service";
 import type { InboxItem, SentMessageItem } from "@/features/notifications/types/message.types";
 import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
+import { useNotificationModules } from "@/features/notifications/hooks/useNotificationModules";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -26,6 +34,8 @@ type ComposePayload = {
   subject?: string;
   body?: string;
   editingDraftId?: string | null;
+  mode?: "new" | "reply" | "forward";
+  parentMessageId?: string | null;
 };
 
 const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft => ({
@@ -37,7 +47,35 @@ const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft 
   body: payload?.body ?? "",
   error: null,
   selectedLabelIds: [],
+  mode: payload?.mode ?? "new",
+  parentMessageId: payload?.parentMessageId ?? null,
 });
+
+const ORIGIN_MODULE_TO_CATEGORY: Record<string, Mail["category"]> = {
+  purchases: "compras",
+  production: "produccion",
+  warehouse: "almacen",
+  catalog: "catalogo",
+  supplies: "suministros",
+  security: "seguridad",
+  roles: "roles",
+  providers: "sistema",
+  corporate: "personal",
+  system: "sistema",
+};
+
+const ORIGIN_MODULE_TO_LABEL: Record<string, string> = {
+  purchases: "Compras",
+  production: "Produccion",
+  warehouse: "Almacen",
+  catalog: "Catalogo",
+  supplies: "Suministros",
+  security: "Seguridad",
+  roles: "Roles",
+  providers: "Proveedores",
+  corporate: "Corporativo",
+  system: "Sistema",
+};
 
 const formatMailDate = (iso: string): string => {
   const d = new Date(iso);
@@ -83,10 +121,14 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     if (!item.message) return null;
     const senderName = item.sender?.name?.trim() || (item.message.senderType === "SYSTEM" ? "Sistema" : "Usuario");
     const senderEmail = item.sender?.email?.trim() || (item.message.senderType === "SYSTEM" ? "no-reply@eunoia.local" : "usuario@eunoia.local");
+    const originModule = item.message.originModule ?? "system";
     return {
       id: item.recipient.id,
       messageId: item.message.id,
       recipientId: item.recipient.id,
+      threadId: item.message.threadId,
+      originModule,
+      moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
       from: {
         name: senderName,
         email: senderEmail,
@@ -99,14 +141,18 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
       read: Boolean(item.recipient.readAt),
       starred: Boolean(item.recipient.starredAt),
       folder,
-      category: "sistema",
+      category: ORIGIN_MODULE_TO_CATEGORY[originModule] ?? "sistema",
       attachments: [],
     };
   }
 
+  const originModule = item.originModule ?? "corporate";
   return {
     id: item.id,
     messageId: item.id,
+    threadId: item.threadId,
+    originModule,
+    moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
     from: { name: "Yo", email: "" },
     to: [{ name: "Destinatarios", email: "" }],
     subject: item.subject,
@@ -116,7 +162,7 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     read: true,
     starred: false,
     folder,
-    category: "sistema",
+    category: ORIGIN_MODULE_TO_CATEGORY[originModule] ?? "personal",
     attachments: [],
   };
 };
@@ -125,6 +171,7 @@ export default function NotificationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = (searchParams.get("q") ?? "").trim();
   const labelId = (searchParams.get("labelId") ?? "").trim() || undefined;
+  const originModule = (searchParams.get("originModule") ?? "").trim() || undefined;
 
   const [folder, setFolder] = useState<UiFolder>("inbox");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -139,10 +186,12 @@ export default function NotificationsPage() {
   const [labelError, setLabelError] = useState<string | null>(null);
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
   const [customSnoozeAt, setCustomSnoozeAt] = useState("");
+  const [activeMailDetail, setActiveMailDetail] = useState<any>(null);
 
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
   const { items: labels, createLabel, deleteLabel } = useMailLabels(true);
+  const { modules: allowedModules } = useNotificationModules();
 
   const {
     items,
@@ -158,6 +207,7 @@ export default function NotificationsPage() {
     unsnoozeInboxRow,
   } = useMessagesV2({
     folder,
+    originModule,
     labelId,
     q,
     page,
@@ -230,9 +280,31 @@ export default function NotificationsPage() {
     }
     try {
       updateComposeDraft(composeId, { error: null });
-      await sendMessage({ recipients: draft.recipients, subject: draft.subject, bodyHtml: draft.body, originModule: "corporate", labelIds: draft.selectedLabelIds });
+      if (draft.mode === "reply" && draft.parentMessageId) {
+        await replyMessage(draft.parentMessageId, {
+          bodyHtml: draft.body,
+          recipients: draft.recipients,
+        });
+      } else if (draft.mode === "forward" && draft.parentMessageId) {
+        await forwardMessage(draft.parentMessageId, {
+          bodyHtml: draft.body,
+          recipients: draft.recipients,
+        });
+      } else {
+        await sendMessage({
+          recipients: draft.recipients,
+          subject: draft.subject,
+          bodyHtml: draft.body,
+          originModule: "corporate",
+          labelIds: draft.selectedLabelIds,
+        });
+      }
       removeComposeDraft(composeId);
       await reload();
+      if (activeMailId) {
+        const detail = await getMessageDetail(activeMailId);
+        setActiveMailDetail(detail);
+      }
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;
       updateComposeDraft(composeId, { error: Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo enviar el mensaje." });
@@ -262,6 +334,15 @@ export default function NotificationsPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (!originModule) return;
+    const isAllowed = allowedModules.some((moduleItem) => moduleItem.key === originModule);
+    if (isAllowed) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("originModule");
+    setSearchParams(next, { replace: true });
+  }, [allowedModules, originModule, searchParams, setSearchParams]);
+
+  useEffect(() => {
     const id = (searchParams.get("deleteLabel") ?? "").trim();
     if (!id || !canCreateLabel) return;
     void (async () => {
@@ -280,7 +361,22 @@ export default function NotificationsPage() {
   useEffect(() => {
     setPage(1);
     setSelectedIds(new Set());
-  }, [folder, q, labelId]);
+  }, [folder, q, labelId, originModule]);
+
+  useEffect(() => {
+    if (!activeMailId) {
+      setActiveMailDetail(null);
+      return;
+    }
+    void (async () => {
+      try {
+        const detail = await getMessageDetail(activeMailId);
+        setActiveMailDetail(detail);
+      } catch {
+        setActiveMailDetail(null);
+      }
+    })();
+  }, [activeMailId]);
 
   const start = total === 0 ? 0 : (page - 1) * pageSize;
   const end = Math.min(start + mails.length, total);
@@ -392,7 +488,16 @@ export default function NotificationsPage() {
                 onSetRead={(id, read) => void markRead([id], read)}
                 onDelete={(id) => void moveToTrash([id])}
                 onToggleStar={(id) => void toggleStar(id)}
-                onComposePrefill={(payload) => openCompose({ to: payload.to, subject: payload.subject, body: payload.body })}
+                detailData={activeMailDetail}
+                onComposePrefill={(payload) =>
+                  openCompose({
+                    to: payload.to,
+                    subject: payload.subject,
+                    body: payload.body,
+                    mode: payload.mode,
+                    parentMessageId: payload.parentMessageId,
+                  })
+                }
                 formatFullDate={formatFullDate}
                 initialsOf={initialsOf}
                 avatarColor={avatarColor}

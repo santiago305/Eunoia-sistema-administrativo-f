@@ -53,7 +53,11 @@ export function useNotificationSidebarCounts() {
       const labelUnreadById: Record<string, number> = {};
       await Promise.all(
         (labels ?? []).map(async (label) => {
-          const result = await listMessages({ folder: "inbox", read: false, labelId: label.id, page: 1, limit: 1 });
+          const result = await listMessages(
+            label.type === "MODULE"
+              ? { folder: "inbox", read: false, originModule: label.key, page: 1, limit: 1 }
+              : { folder: "inbox", read: false, labelId: label.id, page: 1, limit: 1 },
+          );
           labelUnreadById[label.id] = result.total ?? 0;
         }),
       );

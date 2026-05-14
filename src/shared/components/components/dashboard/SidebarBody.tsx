@@ -9,6 +9,7 @@ import type { SidebarItem } from "./types";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useNotificationSidebarCounts } from "@/features/notifications/hooks/useNotificationSidebarCounts";
 import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
+import { useNotificationModules } from "@/features/notifications/hooks/useNotificationModules";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 
 const normalizeRole = (role?: string | null) =>
@@ -52,12 +53,21 @@ const SidebarBody = () => {
   const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
   const notificationCounts = useNotificationSidebarCounts();
   const { items: mailLabels } = useMailLabels(isNotifications);
+  const { modules: allowedModules } = useNotificationModules();
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
+  const allowedModuleKeys = useMemo(() => new Set(allowedModules.map((moduleItem) => moduleItem.key)), [allowedModules]);
+  const visibleLabels = useMemo(
+    () =>
+      mailLabels.filter((label) =>
+        label.type === "MODULE" ? allowedModuleKeys.has(label.key) : true,
+      ),
+    [allowedModuleKeys, mailLabels],
+  );
 
   const items = useMemo(() => {
     const sourceItems = isNotifications
-      ? getNotificationsSidebarItems(notificationCounts, mailLabels, canCreateLabel)
+      ? getNotificationsSidebarItems(notificationCounts, visibleLabels, canCreateLabel)
       : getSidebarItems();
 
     const filtered = sourceItems
@@ -79,7 +89,7 @@ const SidebarBody = () => {
       });
 
     return filtered;
-  }, [canCreateLabel, isSuperAdmin, isNotifications, mailLabels, notificationCounts, permissions, userRole]);
+  }, [canCreateLabel, isSuperAdmin, isNotifications, notificationCounts, permissions, userRole, visibleLabels]);
 
   return (
     <div className="scroll-area flex-1 overflow-y-auto px-2 lg:pr-1 py-4 select-none">

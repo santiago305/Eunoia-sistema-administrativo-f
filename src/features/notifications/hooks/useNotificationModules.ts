@@ -8,8 +8,12 @@ export function useNotificationModules() {
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const data = await getNotificationModules();
-    setModules(data);
+    try {
+      const data = await getNotificationModules();
+      setModules(data);
+    } catch {
+      setModules([]);
+    }
     setLoading(false);
   }, []);
 

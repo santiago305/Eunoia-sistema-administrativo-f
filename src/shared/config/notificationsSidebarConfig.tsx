@@ -75,7 +75,10 @@ export const getNotificationsSidebarItems = (
     children: [
       ...((labels ?? []).map((label) => ({
         label: label.name,
-        href: `${RoutesPaths.notifications}?folder=inbox&labelId=${label.id}`,
+        href:
+          label.type === "MODULE"
+            ? `${RoutesPaths.notifications}?folder=inbox&originModule=${label.key}`
+            : `${RoutesPaths.notifications}?folder=inbox&labelId=${label.id}`,
         isCustomLabel: label.type === "CUSTOM",
         labelId: label.id,
         badgeCount: counts?.labelUnreadById?.[label.id] ?? 0,
