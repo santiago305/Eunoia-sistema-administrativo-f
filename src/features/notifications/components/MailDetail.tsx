@@ -28,6 +28,8 @@ interface Props {
   onToggleStar: (id: string) => void;
   onComposePrefill: (payload: {
     to?: string;
+    cc?: string;
+    bcc?: string;
     subject?: string;
     body?: string;
     mode?: "new" | "reply" | "forward";

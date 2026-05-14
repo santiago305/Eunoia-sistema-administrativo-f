@@ -8,14 +8,16 @@ interface Props {
   labels?: MailLabelItem[];
   onToggleMinimize: (composeId: string) => void;
   onClose: (composeId: string) => void;
-  onRecipientsChange: (composeId: string, value: string) => void;
+  onToChange: (composeId: string, value: string) => void;
+  onCcChange: (composeId: string, value: string) => void;
+  onBccChange: (composeId: string, value: string) => void;
   onSubjectChange: (composeId: string, value: string) => void;
   onBodyChange: (composeId: string, value: string) => void;
   onToggleLabel: (composeId: string, labelId: string) => void;
   onSend: (
     composeId: string,
     overrides?: Partial<
-      Pick<NotificationComposeDraft, "recipients" | "subject" | "body" | "selectedLabelIds">
+      Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds">
     >,
   ) => void | Promise<void>;
 }
@@ -25,7 +27,9 @@ export default function NotificationComposeStack({
   labels,
   onToggleMinimize,
   onClose,
-  onRecipientsChange,
+  onToChange,
+  onCcChange,
+  onBccChange,
   onSubjectChange,
   onBodyChange,
   onToggleLabel,
@@ -42,7 +46,9 @@ export default function NotificationComposeStack({
           labels={labels}
           onToggleMinimize={onToggleMinimize}
           onClose={onClose}
-          onRecipientsChange={onRecipientsChange}
+          onToChange={onToChange}
+          onCcChange={onCcChange}
+          onBccChange={onBccChange}
           onSubjectChange={onSubjectChange}
           onBodyChange={onBodyChange}
           onToggleLabel={onToggleLabel}

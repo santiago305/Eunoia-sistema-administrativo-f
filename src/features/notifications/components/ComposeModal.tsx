@@ -33,7 +33,9 @@ export type NotificationComposeDraft = {
   editingDraftId: string | null;
   mode: "new" | "reply" | "forward";
   parentMessageId: string | null;
-  recipients: string;
+  to: string;
+  cc: string;
+  bcc: string;
   subject: string;
   body: string;
   error: string | null;
@@ -45,14 +47,16 @@ interface Props {
   labels?: MailLabelItem[];
   onToggleMinimize: (composeId: string) => void;
   onClose: (composeId: string) => void;
-  onRecipientsChange: (composeId: string, value: string) => void;
+  onToChange: (composeId: string, value: string) => void;
+  onCcChange: (composeId: string, value: string) => void;
+  onBccChange: (composeId: string, value: string) => void;
   onSubjectChange: (composeId: string, value: string) => void;
   onBodyChange: (composeId: string, value: string) => void;
   onToggleLabel: (composeId: string, labelId: string) => void;
   onSend: (
     composeId: string,
     overrides?: Partial<
-      Pick<NotificationComposeDraft, "recipients" | "subject" | "body" | "selectedLabelIds">
+      Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds">
     >,
   ) => void | Promise<void>;
 }
@@ -62,7 +66,9 @@ export default function NotificationComposeModal({
   labels,
   onToggleMinimize,
   onClose,
-  onRecipientsChange,
+  onToChange,
+  onCcChange,
+  onBccChange,
   onSubjectChange,
   onBodyChange,
   onToggleLabel,
@@ -93,13 +99,13 @@ export default function NotificationComposeModal({
   }, [draft.id, draft.body]);
 
   useEffect(() => {
-    const tokens = draft.recipients
+    const tokens = draft.to
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
 
     setRecipientTokens(tokens);
-  }, [draft.recipients]);
+  }, [draft.to]);
 
   useEffect(() => {
     attachmentsRef.current = attachments;
@@ -176,7 +182,7 @@ export default function NotificationComposeModal({
 
       const next = [...prev, token];
 
-      onRecipientsChange(draft.id, next.join(","));
+      onToChange(draft.id, next.join(","));
 
       return next;
     });
@@ -186,7 +192,7 @@ export default function NotificationComposeModal({
     setRecipientTokens((prev) => {
       const next = prev.filter((item) => item !== token);
 
-      onRecipientsChange(draft.id, next.join(","));
+      onToChange(draft.id, next.join(","));
 
       return next;
     });
@@ -228,11 +234,13 @@ export default function NotificationComposeModal({
 
     const recipientsValue = committedRecipients.join(",");
 
-    onRecipientsChange(draft.id, recipientsValue);
+    onToChange(draft.id, recipientsValue);
     setRecipientDraft("");
 
     void onSend(draft.id, {
-      recipients: recipientsValue,
+      to: recipientsValue,
+      cc: draft.cc,
+      bcc: draft.bcc,
     });
   };
 
@@ -404,6 +412,22 @@ export default function NotificationComposeModal({
             className="min-w-[160px] flex-1 border-0 bg-transparent outline-none"
           />
         </div>
+
+        <input
+          type="text"
+          placeholder="Cc (opcional): correo1@empresa.com, correo2@empresa.com"
+          value={draft.cc}
+          onChange={(e) => onCcChange(draft.id, e.target.value)}
+          className="border-b border-border bg-transparent px-4 py-2 text-sm outline-none"
+        />
+
+        <input
+          type="text"
+          placeholder="Bcc (opcional): correo1@empresa.com, correo2@empresa.com"
+          value={draft.bcc}
+          onChange={(e) => onBccChange(draft.id, e.target.value)}
+          className="border-b border-border bg-transparent px-4 py-2 text-sm outline-none"
+        />
 
         <input
           type="text"

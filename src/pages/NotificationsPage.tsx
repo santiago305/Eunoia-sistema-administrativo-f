@@ -31,6 +31,8 @@ type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" |
 
 type ComposePayload = {
   to?: string;
+  cc?: string;
+  bcc?: string;
   subject?: string;
   body?: string;
   editingDraftId?: string | null;
@@ -42,7 +44,9 @@ const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft 
   id: createComposeId(),
   minimized: false,
   editingDraftId: payload?.editingDraftId ?? null,
-  recipients: payload?.to ?? "",
+  to: payload?.to ?? "",
+  cc: payload?.cc ?? "",
+  bcc: payload?.bcc ?? "",
   subject: payload?.subject ?? "",
   body: payload?.body ?? "",
   error: null,
@@ -254,7 +258,8 @@ export default function NotificationsPage() {
     );
   }, []);
 
-  const isComposeEmpty = (draft: NotificationComposeDraft) => !draft.recipients.trim() && !draft.subject.trim() && !stripHtml(draft.body);
+  const isComposeEmpty = (draft: NotificationComposeDraft) =>
+    !draft.to.trim() && !draft.cc.trim() && !draft.bcc.trim() && !draft.subject.trim() && !stripHtml(draft.body);
 
   const closeComposeWithDraft = async (composeId: string) => {
     const draft = composeDrafts.find((item) => item.id === composeId);
@@ -263,18 +268,24 @@ export default function NotificationsPage() {
     if (isComposeEmpty(draft)) return;
     try {
       if (draft.editingDraftId) {
-        await updateDraft(draft.editingDraftId, { recipients: draft.recipients, subject: draft.subject, bodyHtml: draft.body });
+        await updateDraft(draft.editingDraftId, { recipients: draft.to, subject: draft.subject, bodyHtml: draft.body });
       } else {
-        await createDraft({ recipients: draft.recipients, subject: draft.subject, bodyHtml: draft.body, originModule: "corporate" });
+        await createDraft({ recipients: draft.to, subject: draft.subject, bodyHtml: draft.body, originModule: "corporate" });
       }
     } catch {}
   };
 
-  const sendCompose = async (composeId: string, overrides?: Partial<Pick<NotificationComposeDraft, "recipients" | "subject" | "body" | "selectedLabelIds">>) => {
+  const parseRecipientList = (value: string) =>
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  const sendCompose = async (composeId: string, overrides?: Partial<Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds">>) => {
     const currentDraft = composeDrafts.find((item) => item.id === composeId);
     if (!currentDraft) return;
     const draft = { ...currentDraft, ...overrides };
-    if (!draft.recipients.trim() || !draft.subject.trim() || !draft.body.trim()) {
+    if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) {
       updateComposeDraft(composeId, { error: "Completa destinatarios, asunto y cuerpo." });
       return;
     }
@@ -283,16 +294,22 @@ export default function NotificationsPage() {
       if (draft.mode === "reply" && draft.parentMessageId) {
         await replyMessage(draft.parentMessageId, {
           bodyHtml: draft.body,
-          recipients: draft.recipients,
+          to: parseRecipientList(draft.to),
+          cc: parseRecipientList(draft.cc),
+          bcc: parseRecipientList(draft.bcc),
         });
       } else if (draft.mode === "forward" && draft.parentMessageId) {
         await forwardMessage(draft.parentMessageId, {
           bodyHtml: draft.body,
-          recipients: draft.recipients,
+          to: parseRecipientList(draft.to),
+          cc: parseRecipientList(draft.cc),
+          bcc: parseRecipientList(draft.bcc),
         });
       } else {
         await sendMessage({
-          recipients: draft.recipients,
+          to: parseRecipientList(draft.to),
+          cc: parseRecipientList(draft.cc),
+          bcc: parseRecipientList(draft.bcc),
           subject: draft.subject,
           bodyHtml: draft.body,
           originModule: "corporate",
@@ -568,10 +585,12 @@ export default function NotificationsPage() {
         drafts={composeDrafts}
         labels={labels.filter((item) => item.type === "CUSTOM" || item.type === "MODULE")}
         onToggleMinimize={toggleComposeMinimize}
-        onClose={(composeId) => {
+      onClose={(composeId) => {
           void closeComposeWithDraft(composeId);
         }}
-        onRecipientsChange={(composeId, value) => updateComposeDraft(composeId, { recipients: value })}
+        onToChange={(composeId, value) => updateComposeDraft(composeId, { to: value })}
+        onCcChange={(composeId, value) => updateComposeDraft(composeId, { cc: value })}
+        onBccChange={(composeId, value) => updateComposeDraft(composeId, { bcc: value })}
         onSubjectChange={(composeId, value) => updateComposeDraft(composeId, { subject: value })}
         onBodyChange={(composeId, value) => updateComposeDraft(composeId, { body: value })}
         onToggleLabel={toggleComposeLabel}

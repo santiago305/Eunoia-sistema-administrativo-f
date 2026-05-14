@@ -30,7 +30,9 @@ export const getMessageDetail = async (id: string) => {
 };
 
 export const sendMessage = async (payload: {
-  recipients: string;
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
   subject: string;
   bodyHtml: string;
   originModule?: string;
@@ -120,7 +122,7 @@ export const bulkMessages = async (payload: {
 
 export const replyMessage = async (
   id: string,
-  payload: { bodyHtml: string; recipients?: string },
+  payload: { bodyHtml: string; to?: string[]; cc?: string[]; bcc?: string[] },
 ) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.replyMessage(id), payload);
   return response.data;
@@ -128,7 +130,7 @@ export const replyMessage = async (
 
 export const forwardMessage = async (
   id: string,
-  payload: { bodyHtml: string; recipients: string },
+  payload: { bodyHtml: string; to: string[]; cc?: string[]; bcc?: string[] },
 ) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.forwardMessage(id), payload);
   return response.data;

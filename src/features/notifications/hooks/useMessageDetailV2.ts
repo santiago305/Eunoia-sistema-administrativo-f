@@ -30,7 +30,7 @@ export function useMessageDetailV2(id?: string) {
   }, [emitRefresh, id, reload]);
 
   const reply = useCallback(
-    async (payload: { bodyHtml: string; recipients?: string }) => {
+    async (payload: { bodyHtml: string; to?: string[]; cc?: string[]; bcc?: string[] }) => {
       if (!id) return;
       await replyMessage(id, payload);
       await reload();
@@ -40,7 +40,7 @@ export function useMessageDetailV2(id?: string) {
   );
 
   const forward = useCallback(
-    async (payload: { bodyHtml: string; recipients: string }) => {
+    async (payload: { bodyHtml: string; to: string[]; cc?: string[]; bcc?: string[] }) => {
       if (!id) return;
       await forwardMessage(id, payload);
       await reload();
