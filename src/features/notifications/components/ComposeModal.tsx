@@ -14,17 +14,28 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { EditorContent, useEditor } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/core";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import TextStyle from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import TextAlign from "@tiptap/extension-text-align";
 import type { MailLabelItem } from "../types/message.types";
 import { SystemButton } from "../../../shared/components/components/SystemButton";
 import { Popover } from "@/shared/components/modales/Popover";
 
 type AttachmentItem = {
   id: string;
+  serverId?: string;
   name: string;
   sizeLabel: string;
   kind: "image" | "file";
   previewUrl?: string;
   file: File;
+  uploading?: boolean;
+  uploadError?: string | null;
 };
 
 export type NotificationComposeDraft = {
@@ -38,8 +49,10 @@ export type NotificationComposeDraft = {
   bcc: string;
   subject: string;
   body: string;
+  bodyJson?: Record<string, unknown> | null;
   error: string | null;
   selectedLabelIds: string[];
+  attachmentIds?: string[];
 };
 
 interface Props {
@@ -51,12 +64,18 @@ interface Props {
   onCcChange: (composeId: string, value: string) => void;
   onBccChange: (composeId: string, value: string) => void;
   onSubjectChange: (composeId: string, value: string) => void;
-  onBodyChange: (composeId: string, value: string) => void;
+  onBodyChange: (composeId: string, value: string, bodyJson: Record<string, unknown> | null, bodyText: string) => void;
   onToggleLabel: (composeId: string, labelId: string) => void;
+  onResolveDraftId: (composeId: string) => Promise<string>;
+  onAttachmentUploaded: (composeId: string, attachmentId: string) => void;
+  onAttachmentRemoved: (composeId: string, attachmentId: string) => void;
+  onUploadAttachment: (input: { composeId: string; file: File; draftId: string }) => Promise<{ id: string }>;
+  onDeleteAttachment: (attachmentId: string) => Promise<void>;
   onSend: (
     composeId: string,
     overrides?: Partial<
       Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds">
+      & { attachmentIds?: string[]; bodyJson?: Record<string, unknown> | null }
     >,
   ) => void | Promise<void>;
 }
@@ -72,9 +91,13 @@ export default function NotificationComposeModal({
   onSubjectChange,
   onBodyChange,
   onToggleLabel,
+  onResolveDraftId,
+  onAttachmentUploaded,
+  onAttachmentRemoved,
+  onUploadAttachment,
+  onDeleteAttachment,
   onSend,
 }: Props) {
-  const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const recipientInputRef = useRef<HTMLInputElement>(null);
@@ -91,12 +114,6 @@ export default function NotificationComposeModal({
   const [recipientDraft, setRecipientDraft] = useState("");
   const [recipientTokens, setRecipientTokens] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-
-  useEffect(() => {
-    if (bodyRef.current && bodyRef.current.innerHTML !== draft.body) {
-      bodyRef.current.innerHTML = draft.body;
-    }
-  }, [draft.id, draft.body]);
 
   useEffect(() => {
     const tokens = draft.to
@@ -119,17 +136,42 @@ export default function NotificationComposeModal({
     };
   }, []);
 
-  const exec = (cmd: string, value?: string) => {
-    document.execCommand(cmd, false, value);
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TextStyle,
+      Color,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Link.configure({ openOnClick: false }),
+    ],
+    content: (draft.bodyJson as JSONContent | null) ?? draft.body || "",
+    onUpdate: ({ editor: instance }) => {
+      const html = instance.getHTML();
+      const json = instance.getJSON() as Record<string, unknown>;
+      const text = instance.getText().trim();
+      onBodyChange(draft.id, html, json, text);
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "min-h-[180px] flex-1 overflow-y-auto px-4 py-3 text-sm outline-none prose prose-sm max-w-none",
+      },
+    },
+  });
 
-    if (bodyRef.current) {
-      onBodyChange(draft.id, bodyRef.current.innerHTML);
+  useEffect(() => {
+    if (!editor) return;
+    const current = editor.getHTML();
+    if ((draft.body || "") !== current) {
+      const nextContent = (draft.bodyJson as JSONContent | null) ?? draft.body || "";
+      editor.commands.setContent(nextContent, { emitUpdate: false });
     }
-  };
+  }, [draft.body, draft.bodyJson, editor]);
 
   const toSizeLabel = (size: number) => `${Math.max(1, Math.round(size / 1024))} KB`;
 
-  const addFiles = (files: FileList | null, kind: "image" | "file") => {
+  const addFiles = async (files: FileList | null, kind: "image" | "file") => {
     if (!files?.length) return;
 
     const next: AttachmentItem[] = [];
@@ -149,6 +191,32 @@ export default function NotificationComposeModal({
 
     setAttachments((prev) => [...prev, ...next]);
 
+    let draftId = draft.editingDraftId;
+    try {
+      draftId = draftId || (await onResolveDraftId(draft.id));
+    } catch {
+      setValidationError("No se pudo crear el borrador para adjuntar archivos.");
+      return;
+    }
+
+    for (const item of next) {
+      try {
+        const uploaded = await onUploadAttachment({ composeId: draft.id, file: item.file, draftId });
+        setAttachments((prev) =>
+          prev.map((current) =>
+            current.id === item.id ? { ...current, serverId: uploaded.id, uploading: false, uploadError: null } : current,
+          ),
+        );
+        onAttachmentUploaded(draft.id, uploaded.id);
+      } catch {
+        setAttachments((prev) =>
+          prev.map((current) =>
+            current.id === item.id ? { ...current, uploading: false, uploadError: "No se pudo subir." } : current,
+          ),
+        );
+      }
+    }
+
     if (kind === "file" && fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -158,12 +226,19 @@ export default function NotificationComposeModal({
     }
   };
 
-  const removeAttachment = (id: string) => {
+  const removeAttachment = async (id: string) => {
+    const current = attachmentsRef.current.find((item) => item.id === id);
+    if (current?.serverId) {
+      try {
+        await onDeleteAttachment(current.serverId);
+        onAttachmentRemoved(draft.id, current.serverId);
+      } catch {}
+    }
     setAttachments((prev) => {
-      const current = prev.find((item) => item.id === id);
+      const found = prev.find((item) => item.id === id);
 
-      if (current?.previewUrl) {
-        URL.revokeObjectURL(current.previewUrl);
+      if (found?.previewUrl) {
+        URL.revokeObjectURL(found.previewUrl);
       }
 
       return prev.filter((a) => a.id !== id);
@@ -241,6 +316,9 @@ export default function NotificationComposeModal({
       to: recipientsValue,
       cc: draft.cc,
       bcc: draft.bcc,
+      body: editor?.getHTML() ?? draft.body,
+      attachmentIds: draft.attachmentIds ?? [],
+      bodyJson: editor?.getJSON() ?? null,
     });
   };
 
@@ -266,9 +344,15 @@ export default function NotificationComposeModal({
         return;
       }
 
-      const html = `<a href="${parsed.toString()}" target="_blank" rel="noopener noreferrer">${linkName.trim()}</a> `;
-
-      exec("insertHTML", html);
+      if (!editor) return;
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: parsed.toString(), target: "_blank", rel: "noopener noreferrer" })
+        .insertContent(linkName.trim())
+        .unsetLink()
+        .run();
 
       setLinkName("");
       setLinkUrl("");
@@ -279,7 +363,8 @@ export default function NotificationComposeModal({
   };
 
   const insertEmoji = (emoji: string) => {
-    exec("insertText", emoji);
+    if (!editor) return;
+    editor.chain().focus().insertContent(emoji).run();
   };
 
   if (draft.minimized) {
@@ -438,17 +523,15 @@ export default function NotificationComposeModal({
         />
 
         <div
-          ref={bodyRef}
-          contentEditable
-          onInput={(e) => onBodyChange(draft.id, (e.target as HTMLDivElement).innerHTML)}
-          className="min-h-[180px] flex-1 overflow-y-auto px-4 py-3 text-sm outline-none"
-          suppressContentEditableWarning
+          className="min-h-[180px] flex-1"
           onDrop={(e) => {
             e.preventDefault();
-            addFiles(e.dataTransfer.files, "image");
+            void addFiles(e.dataTransfer.files, "image");
           }}
           onDragOver={(e) => e.preventDefault()}
-        />
+        >
+          <EditorContent editor={editor} />
+        </div>
 
         {attachments.length > 0 ? (
           <div className="flex flex-wrap gap-3 border-t border-border px-4 py-2">
@@ -478,7 +561,7 @@ export default function NotificationComposeModal({
 
                 <button
                   type="button"
-                  onClick={() => removeAttachment(a.id)}
+                  onClick={() => void removeAttachment(a.id)}
                   className="absolute right-1 top-1 rounded-full p-0.5 hover:bg-mail-hover"
                 >
                   <X className="size-3.5" />
@@ -596,7 +679,14 @@ export default function NotificationComposeModal({
           {showFormat ? (
             <div className="absolute bottom-full left-0 z-50 mb-2 flex w-72 flex-wrap items-center gap-1 rounded-lg border border-border bg-popover p-2 shadow-popover">
               <select
-                onChange={(e) => exec("fontSize", e.target.value)}
+                onChange={(e) => {
+                  if (!editor) return;
+                  const size = e.target.value;
+                  if (size === "1") editor.chain().focus().setMark("textStyle", { fontSize: "0.8em" }).run();
+                  if (size === "3") editor.chain().focus().setMark("textStyle", { fontSize: "1em" }).run();
+                  if (size === "5") editor.chain().focus().setMark("textStyle", { fontSize: "1.2em" }).run();
+                  if (size === "7") editor.chain().focus().setMark("textStyle", { fontSize: "1.4em" }).run();
+                }}
                 defaultValue="3"
                 className="rounded border border-border bg-background px-2 py-1 text-sm"
               >
@@ -608,73 +698,80 @@ export default function NotificationComposeModal({
 
               <button
                 type="button"
-                onClick={() => exec("bold")}
-                className="size-8 rounded font-bold hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                className={cn("size-8 rounded font-bold hover:bg-mail-hover", editor?.isActive("bold") && "bg-mail-hover")}
               >
                 B
               </button>
 
               <button
                 type="button"
-                onClick={() => exec("italic")}
-                className="size-8 rounded italic hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                className={cn("size-8 rounded italic hover:bg-mail-hover", editor?.isActive("italic") && "bg-mail-hover")}
               >
                 I
               </button>
 
               <button
                 type="button"
-                onClick={() => exec("underline")}
-                className="size-8 rounded underline hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                className={cn("size-8 rounded underline hover:bg-mail-hover", editor?.isActive("underline") && "bg-mail-hover")}
               >
                 U
               </button>
 
               <input
                 type="color"
-                onChange={(e) => exec("foreColor", e.target.value)}
+                onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()}
                 className="size-8 cursor-pointer rounded"
                 title="Color"
               />
 
               <button
                 type="button"
-                onClick={() => exec("justifyLeft")}
-                className="size-8 rounded text-xs hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().setTextAlign("left").run()}
+                className={cn("size-8 rounded text-xs hover:bg-mail-hover", editor?.isActive({ textAlign: "left" }) && "bg-mail-hover")}
               >
                 L
               </button>
 
               <button
                 type="button"
-                onClick={() => exec("justifyCenter")}
-                className="size-8 rounded text-xs hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().setTextAlign("center").run()}
+                className={cn("size-8 rounded text-xs hover:bg-mail-hover", editor?.isActive({ textAlign: "center" }) && "bg-mail-hover")}
               >
                 C
               </button>
 
               <button
                 type="button"
-                onClick={() => exec("justifyRight")}
-                className="size-8 rounded text-xs hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().setTextAlign("right").run()}
+                className={cn("size-8 rounded text-xs hover:bg-mail-hover", editor?.isActive({ textAlign: "right" }) && "bg-mail-hover")}
               >
                 R
               </button>
 
               <button
                 type="button"
-                onClick={() => exec("insertUnorderedList")}
-                className="size-8 rounded text-xs hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                className={cn("size-8 rounded text-xs hover:bg-mail-hover", editor?.isActive("bulletList") && "bg-mail-hover")}
               >
                 •
               </button>
 
               <button
                 type="button"
-                onClick={() => exec("insertOrderedList")}
-                className="size-8 rounded text-xs hover:bg-mail-hover"
+                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                className={cn("size-8 rounded text-xs hover:bg-mail-hover", editor?.isActive("orderedList") && "bg-mail-hover")}
               >
                 1.
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}
+                className="rounded px-2 py-1 text-xs hover:bg-mail-hover"
+              >
+                Limpiar
               </button>
             </div>
           ) : null}
@@ -809,7 +906,9 @@ export default function NotificationComposeModal({
           type="file"
           multiple
           className="hidden"
-          onChange={(e) => addFiles(e.target.files, "file")}
+          onChange={(e) => {
+            void addFiles(e.target.files, "file");
+          }}
         />
 
         <input
@@ -818,7 +917,9 @@ export default function NotificationComposeModal({
           accept="image/*"
           multiple
           className="hidden"
-          onChange={(e) => addFiles(e.target.files, "image")}
+          onChange={(e) => {
+            void addFiles(e.target.files, "image");
+          }}
         />
       </div>
     </div>

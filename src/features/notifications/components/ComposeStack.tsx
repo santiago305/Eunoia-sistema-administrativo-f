@@ -12,12 +12,18 @@ interface Props {
   onCcChange: (composeId: string, value: string) => void;
   onBccChange: (composeId: string, value: string) => void;
   onSubjectChange: (composeId: string, value: string) => void;
-  onBodyChange: (composeId: string, value: string) => void;
+  onBodyChange: (composeId: string, value: string, bodyJson: Record<string, unknown> | null, bodyText: string) => void;
   onToggleLabel: (composeId: string, labelId: string) => void;
+  onResolveDraftId: (composeId: string) => Promise<string>;
+  onAttachmentUploaded: (composeId: string, attachmentId: string) => void;
+  onAttachmentRemoved: (composeId: string, attachmentId: string) => void;
+  onUploadAttachment: (input: { composeId: string; file: File; draftId: string }) => Promise<{ id: string }>;
+  onDeleteAttachment: (attachmentId: string) => Promise<void>;
   onSend: (
     composeId: string,
     overrides?: Partial<
       Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds">
+      & { attachmentIds?: string[]; bodyJson?: Record<string, unknown> | null }
     >,
   ) => void | Promise<void>;
 }
@@ -33,6 +39,11 @@ export default function NotificationComposeStack({
   onSubjectChange,
   onBodyChange,
   onToggleLabel,
+  onResolveDraftId,
+  onAttachmentUploaded,
+  onAttachmentRemoved,
+  onUploadAttachment,
+  onDeleteAttachment,
   onSend,
 }: Props) {
   if (drafts.length === 0) return null;
@@ -52,6 +63,11 @@ export default function NotificationComposeStack({
           onSubjectChange={onSubjectChange}
           onBodyChange={onBodyChange}
           onToggleLabel={onToggleLabel}
+          onResolveDraftId={onResolveDraftId}
+          onAttachmentUploaded={onAttachmentUploaded}
+          onAttachmentRemoved={onAttachmentRemoved}
+          onUploadAttachment={onUploadAttachment}
+          onDeleteAttachment={onDeleteAttachment}
           onSend={onSend}
         />
       ))}

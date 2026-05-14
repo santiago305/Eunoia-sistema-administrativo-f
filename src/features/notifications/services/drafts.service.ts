@@ -11,6 +11,7 @@ export const createDraft = async (payload: {
   recipients?: string;
   subject?: string;
   bodyHtml?: string;
+  bodyJson?: Record<string, unknown>;
   originModule?: string;
 }) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.createDraft, payload);
@@ -19,7 +20,7 @@ export const createDraft = async (payload: {
 
 export const updateDraft = async (
   id: string,
-  payload: { recipients?: string; subject?: string; bodyHtml?: string },
+  payload: { recipients?: string; subject?: string; bodyHtml?: string; bodyJson?: Record<string, unknown> },
 ) => {
   const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.updateDraft(id), payload);
   return response.data;

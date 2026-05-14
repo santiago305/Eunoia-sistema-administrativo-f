@@ -1,6 +1,7 @@
 import { Star, Paperclip, Archive, Trash2, MailOpen, Mail as MailIcon, Clock } from "lucide-react";
 import type { Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
+import { LiaTrashRestoreAltSolid } from "react-icons/lia";
 
 interface Props {
   mail: Mail;
@@ -10,6 +11,7 @@ interface Props {
   onToggleStar: (id: string) => void;
   onSetRead: (id: string, read: boolean) => void;
   onDelete: (id: string) => void;
+  onRestore: (id: string) => void;
   onArchive: (id: string) => void;
   onSnooze: (id: string) => void;
   formatMailDate: (iso: string) => string;
@@ -25,6 +27,7 @@ export default function MailRow({
   onToggleStar,
   onSetRead,
   onDelete,
+  onRestore,
   onArchive,
   onSnooze,
   formatMailDate,
@@ -92,6 +95,18 @@ export default function MailRow({
           {formatMailDate(mail.date)}
         </span>
         <div className="absolute inset-0 hidden group-hover:flex items-center justify-end gap-1 bg-inherit">
+          {mail.folder === "trash" ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRestore(mail.id);
+              }}
+              className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title="Restaurar"
+            >
+              <LiaTrashRestoreAltSolid className="size-4" />
+            </button>
+          ) : null}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -112,26 +127,30 @@ export default function MailRow({
           >
             {mail.read ? <MailIcon className="size-4" /> : <MailOpen className="size-4" />}
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onArchive(mail.id);
-            }}
-            className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
-            title={mail.folder === "archived" ? "Desarchivar" : "Archivar"}
-          >
-            <Archive className="size-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSnooze(mail.id);
-            }}
-            className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
-            title={mail.folder === "snoozed" ? "Quitar pospuesto" : "Posponer"}
-          >
-            <Clock className="size-4" />
-          </button>
+          {mail.folder !== "trash" ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onArchive(mail.id);
+              }}
+              className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title={mail.folder === "archived" ? "Desarchivar" : "Archivar"}
+            >
+              <Archive className="size-4" />
+            </button>
+          ) : null}
+          {mail.folder !== "trash" ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSnooze(mail.id);
+              }}
+              className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title={mail.folder === "snoozed" ? "Quitar pospuesto" : "Posponer"}
+            >
+              <Clock className="size-4" />
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

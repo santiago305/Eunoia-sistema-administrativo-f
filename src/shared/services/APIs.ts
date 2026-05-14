@@ -102,6 +102,12 @@ export const API_NOTIFICATION_MESSAGES_GROUP = {
   listLabels: "/email/labels",
   createLabel: "/email/labels",
   deleteLabel: (id: string) => `/email/labels/${id}`,
+  listSearchHistory: "/email/search-history",
+  saveSearchHistory: "/email/search-history",
+  deleteSearchHistory: (id: string) => `/email/search-history/${id}`,
+  uploadAttachment: "/email/attachments",
+  downloadAttachment: (id: string) => `/email/attachments/${id}/download`,
+  deleteAttachment: (id: string) => `/email/attachments/${id}`,
 };
 
 export const API_SECURITY_GROUP = {

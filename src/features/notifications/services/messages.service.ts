@@ -35,8 +35,10 @@ export const sendMessage = async (payload: {
   bcc?: string[];
   subject: string;
   bodyHtml: string;
+  bodyJson?: Record<string, unknown> | null;
   originModule?: string;
   labelIds?: string[];
+  attachmentIds?: string[];
 }) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.sendMessage, payload);
   return response.data;
@@ -122,7 +124,7 @@ export const bulkMessages = async (payload: {
 
 export const replyMessage = async (
   id: string,
-  payload: { bodyHtml: string; to?: string[]; cc?: string[]; bcc?: string[] },
+  payload: { bodyHtml: string; bodyJson?: Record<string, unknown> | null; to?: string[]; cc?: string[]; bcc?: string[]; attachmentIds?: string[] },
 ) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.replyMessage(id), payload);
   return response.data;
@@ -130,8 +132,56 @@ export const replyMessage = async (
 
 export const forwardMessage = async (
   id: string,
-  payload: { bodyHtml: string; to: string[]; cc?: string[]; bcc?: string[] },
+  payload: { bodyHtml: string; bodyJson?: Record<string, unknown> | null; to: string[]; cc?: string[]; bcc?: string[]; attachmentIds?: string[] },
 ) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.forwardMessage(id), payload);
+  return response.data;
+};
+
+export const listSearchHistory = async () => {
+  const response = await axiosInstance.get<Array<{ id: string; query: string }>>(
+    API_NOTIFICATION_MESSAGES_GROUP.listSearchHistory,
+  );
+  return response.data;
+};
+
+export const saveSearchHistory = async (query: string) => {
+  const response = await axiosInstance.post<Array<{ id: string; query: string }>>(
+    API_NOTIFICATION_MESSAGES_GROUP.saveSearchHistory,
+    { query },
+  );
+  return response.data;
+};
+
+export const deleteSearchHistory = async (id: string) => {
+  const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.deleteSearchHistory(id));
+  return response.data;
+};
+
+export const uploadAttachment = async (input: {
+  file: File;
+  messageId?: string;
+  draftId?: string;
+}) => {
+  const form = new FormData();
+  form.append("file", input.file);
+  if (input.messageId) form.append("messageId", input.messageId);
+  if (input.draftId) form.append("draftId", input.draftId);
+  const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.uploadAttachment, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data as {
+    id: string;
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+    messageId: string | null;
+    draftId: string | null;
+    createdAt: string;
+  };
+};
+
+export const deleteAttachment = async (id: string) => {
+  const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.deleteAttachment(id));
   return response.data;
 };

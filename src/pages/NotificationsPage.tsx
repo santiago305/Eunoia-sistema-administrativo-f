@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { Mail } from "@/features/notifications/types/mail-ui.types";
 import MailToolbar from "@/features/notifications/components/MailToolbar";
 import MailList from "@/features/notifications/components/MailList";
@@ -11,11 +11,16 @@ import {
   bulkMessages,
   forwardMessage,
   getMessageDetail,
+  listSearchHistory,
   permanentlyDeleteMessage,
   replyMessage,
+  restoreMessage,
+  saveSearchHistory,
   sendMessage,
+  uploadAttachment,
+  deleteAttachment as deleteRemoteAttachment,
 } from "@/features/notifications/services/messages.service";
-import { createDraft, updateDraft } from "@/features/notifications/services/drafts.service";
+import { createDraft, deleteDraft, updateDraft } from "@/features/notifications/services/drafts.service";
 import type { InboxItem, SentMessageItem } from "@/features/notifications/types/message.types";
 import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
 import { useNotificationModules } from "@/features/notifications/hooks/useNotificationModules";
@@ -35,6 +40,7 @@ type ComposePayload = {
   bcc?: string;
   subject?: string;
   body?: string;
+  bodyJson?: Record<string, unknown> | null;
   editingDraftId?: string | null;
   mode?: "new" | "reply" | "forward";
   parentMessageId?: string | null;
@@ -49,8 +55,10 @@ const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft 
   bcc: payload?.bcc ?? "",
   subject: payload?.subject ?? "",
   body: payload?.body ?? "",
+  bodyJson: payload?.bodyJson ?? null,
   error: null,
   selectedLabelIds: [],
+  attachmentIds: [],
   mode: payload?.mode ?? "new",
   parentMessageId: payload?.parentMessageId ?? null,
 });
@@ -127,7 +135,7 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     const senderEmail = item.sender?.email?.trim() || (item.message.senderType === "SYSTEM" ? "no-reply@eunoia.local" : "usuario@eunoia.local");
     const originModule = item.message.originModule ?? "system";
     return {
-      id: item.recipient.id,
+      id: item.message.id,
       messageId: item.message.id,
       recipientId: item.recipient.id,
       threadId: item.message.threadId,
@@ -172,6 +180,8 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
 };
 
 export default function NotificationsPage() {
+  const navigate = useNavigate();
+  const params = useParams<{ folder?: string; messageId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const q = (searchParams.get("q") ?? "").trim();
   const labelId = (searchParams.get("labelId") ?? "").trim() || undefined;
@@ -191,6 +201,10 @@ export default function NotificationsPage() {
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
   const [customSnoozeAt, setCustomSnoozeAt] = useState("");
   const [activeMailDetail, setActiveMailDetail] = useState<any>(null);
+  const [searchInput, setSearchInput] = useState(q);
+  const [searchHistoryItems, setSearchHistoryItems] = useState<Array<{ id: string; query: string }>>([]);
+  const [searchHistoryOpen, setSearchHistoryOpen] = useState(false);
+  const searchHistoryRef = useRef<HTMLDivElement | null>(null);
 
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
@@ -228,9 +242,46 @@ export default function NotificationsPage() {
     ]);
   }, []);
 
+  const onComposeAttachmentUploaded = useCallback((composeId: string, attachmentId: string) => {
+    setComposeDrafts((prev) =>
+      prev.map((item) =>
+        item.id === composeId
+          ? { ...item, attachmentIds: Array.from(new Set([...(item.attachmentIds ?? []), attachmentId])) }
+          : item,
+      ),
+    );
+  }, []);
+
+  const onComposeAttachmentRemoved = useCallback((composeId: string, attachmentId: string) => {
+    setComposeDrafts((prev) =>
+      prev.map((item) =>
+        item.id === composeId
+          ? { ...item, attachmentIds: (item.attachmentIds ?? []).filter((id) => id !== attachmentId) }
+          : item,
+      ),
+    );
+  }, []);
+
   const updateComposeDraft = useCallback((composeId: string, patch: Partial<NotificationComposeDraft>) => {
     setComposeDrafts((prev) => prev.map((item) => (item.id === composeId ? { ...item, ...patch } : item)));
   }, []);
+
+  const resolveComposeDraftId = useCallback(async (composeId: string) => {
+    const compose = composeDrafts.find((item) => item.id === composeId);
+    if (!compose) throw new Error("COMPOSE_NOT_FOUND");
+    if (compose.editingDraftId) return compose.editingDraftId;
+    const created = await createDraft({
+      recipients: compose.to,
+      subject: compose.subject,
+      bodyHtml: compose.body,
+      bodyJson: compose.bodyJson ?? undefined,
+      originModule: "corporate",
+    });
+    const draftId = String(created?.id ?? "");
+    if (!draftId) throw new Error("DRAFT_CREATE_FAILED");
+    updateComposeDraft(composeId, { editingDraftId: draftId });
+    return draftId;
+  }, [composeDrafts, updateComposeDraft]);
 
   const removeComposeDraft = useCallback((composeId: string) => {
     setComposeDrafts((prev) => prev.filter((item) => item.id !== composeId));
@@ -268,9 +319,9 @@ export default function NotificationsPage() {
     if (isComposeEmpty(draft)) return;
     try {
       if (draft.editingDraftId) {
-        await updateDraft(draft.editingDraftId, { recipients: draft.to, subject: draft.subject, bodyHtml: draft.body });
+        await updateDraft(draft.editingDraftId, { recipients: draft.to, subject: draft.subject, bodyHtml: draft.body, bodyJson: draft.bodyJson ?? undefined });
       } else {
-        await createDraft({ recipients: draft.to, subject: draft.subject, bodyHtml: draft.body, originModule: "corporate" });
+        await createDraft({ recipients: draft.to, subject: draft.subject, bodyHtml: draft.body, bodyJson: draft.bodyJson ?? undefined, originModule: "corporate" });
       }
     } catch {}
   };
@@ -281,7 +332,7 @@ export default function NotificationsPage() {
       .map((item) => item.trim())
       .filter(Boolean);
 
-  const sendCompose = async (composeId: string, overrides?: Partial<Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds">>) => {
+  const sendCompose = async (composeId: string, overrides?: Partial<Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds" | "attachmentIds" | "bodyJson">>) => {
     const currentDraft = composeDrafts.find((item) => item.id === composeId);
     if (!currentDraft) return;
     const draft = { ...currentDraft, ...overrides };
@@ -294,16 +345,20 @@ export default function NotificationsPage() {
       if (draft.mode === "reply" && draft.parentMessageId) {
         await replyMessage(draft.parentMessageId, {
           bodyHtml: draft.body,
+          bodyJson: draft.bodyJson ?? null,
           to: parseRecipientList(draft.to),
           cc: parseRecipientList(draft.cc),
           bcc: parseRecipientList(draft.bcc),
+          attachmentIds: draft.attachmentIds ?? [],
         });
       } else if (draft.mode === "forward" && draft.parentMessageId) {
         await forwardMessage(draft.parentMessageId, {
           bodyHtml: draft.body,
+          bodyJson: draft.bodyJson ?? null,
           to: parseRecipientList(draft.to),
           cc: parseRecipientList(draft.cc),
           bcc: parseRecipientList(draft.bcc),
+          attachmentIds: draft.attachmentIds ?? [],
         });
       } else {
         await sendMessage({
@@ -312,8 +367,10 @@ export default function NotificationsPage() {
           bcc: parseRecipientList(draft.bcc),
           subject: draft.subject,
           bodyHtml: draft.body,
+          bodyJson: draft.bodyJson ?? null,
           originModule: "corporate",
           labelIds: draft.selectedLabelIds,
+          attachmentIds: draft.attachmentIds ?? [],
         });
       }
       removeComposeDraft(composeId);
@@ -340,15 +397,15 @@ export default function NotificationsPage() {
       setCreateLabelOpen(true);
     }
 
-    const activeId = (searchParams.get("id") ?? "").trim();
+    const activeId = (params.messageId ?? searchParams.get("id") ?? "").trim();
     setActiveMailId(activeId || null);
-  }, [canCreateLabel, openCompose, searchParams, setSearchParams]);
+  }, [canCreateLabel, openCompose, params.messageId, searchParams, setSearchParams]);
 
   useEffect(() => {
-    const folderParam = (searchParams.get("folder") ?? "").toLowerCase();
+    const folderParam = (params.folder ?? searchParams.get("folder") ?? "").toLowerCase();
     const valid: UiFolder[] = ["inbox", "starred", "sent", "drafts", "trash", "archived", "snoozed"];
     if (valid.includes(folderParam as UiFolder)) setFolder(folderParam as UiFolder);
-  }, [searchParams]);
+  }, [params.folder, searchParams]);
 
   useEffect(() => {
     if (!originModule) return;
@@ -381,6 +438,33 @@ export default function NotificationsPage() {
   }, [folder, q, labelId, originModule]);
 
   useEffect(() => {
+    setSearchInput(q);
+  }, [q]);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const history = await listSearchHistory();
+        setSearchHistoryItems(history ?? []);
+      } catch {
+        setSearchHistoryItems([]);
+      }
+    };
+    void loadHistory();
+  }, []);
+
+  useEffect(() => {
+    const onMouseDown = (event: MouseEvent) => {
+      if (!searchHistoryRef.current) return;
+      if (!searchHistoryRef.current.contains(event.target as Node)) {
+        setSearchHistoryOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, []);
+
+  useEffect(() => {
     if (!activeMailId) {
       setActiveMailDetail(null);
       return;
@@ -406,14 +490,28 @@ export default function NotificationsPage() {
   const activeMail = useMemo(() => mails.find((m) => m.id === activeMailId) ?? null, [mails, activeMailId]);
 
   const markRead = async (ids: string[], read: boolean) => {
-    const selected = mails.filter((m) => ids.includes(m.id) && m.recipientId).map((m) => m.recipientId as string);
+    const selected = mails
+      .filter((m) => ids.includes(m.id))
+      .map((m) => m.recipientId ?? m.messageId ?? m.id);
     await Promise.all(selected.map((id) => (read ? markInboxRowAsRead(id) : markInboxRowAsUnread(id))));
     setSelectedIds(new Set());
     await reload();
   };
 
   const moveToTrash = async (ids: string[]) => {
-    const selected = mails.filter((m) => ids.includes(m.id) && m.recipientId).map((m) => m.recipientId as string);
+    if (folder === "drafts") {
+      const draftIds = mails
+        .filter((m) => ids.includes(m.id))
+        .map((m) => m.messageId ?? m.id);
+      await Promise.all(draftIds.map((id) => deleteDraft(id)));
+      setSelectedIds(new Set());
+      await reload();
+      return;
+    }
+
+    const selected = mails
+      .filter((m) => ids.includes(m.id))
+      .map((m) => m.recipientId ?? m.messageId ?? m.id);
     if (folder === "trash") {
       await Promise.all(selected.map((id) => permanentlyDeleteMessage(id)));
     } else {
@@ -423,8 +521,19 @@ export default function NotificationsPage() {
     await reload();
   };
 
+  const restoreFromTrash = async (ids: string[]) => {
+    const selected = mails
+      .filter((m) => ids.includes(m.id))
+      .map((m) => m.recipientId ?? m.messageId ?? m.id);
+    await Promise.all(selected.map((id) => restoreMessage(id)));
+    setSelectedIds(new Set());
+    await reload();
+  };
+
   const archiveBulk = async (ids: string[], archive: boolean) => {
-    const selected = mails.filter((m) => ids.includes(m.id) && m.recipientId).map((m) => m.recipientId as string);
+    const selected = mails
+      .filter((m) => ids.includes(m.id))
+      .map((m) => m.recipientId ?? m.messageId ?? m.id);
     if (!selected.length) return;
     await bulkMessages({
       messageRecipientIds: selected,
@@ -436,16 +545,17 @@ export default function NotificationsPage() {
 
   const toggleStar = async (id: string) => {
     const target = mails.find((m) => m.id === id);
-    if (!target?.recipientId) return;
-    await starInboxRow(target.recipientId, !target.starred);
+    if (!target) return;
+    await starInboxRow(target.recipientId ?? target.messageId ?? target.id, !target.starred);
     await reload();
   };
 
   const toggleArchive = async (id: string) => {
     const target = mails.find((m) => m.id === id);
-    if (!target?.recipientId) return;
-    if (folder === "archived") await unarchiveInboxRow(target.recipientId);
-    else await archiveInboxRow(target.recipientId);
+    if (!target) return;
+    const actionId = target.recipientId ?? target.messageId ?? target.id;
+    if (folder === "archived") await unarchiveInboxRow(actionId);
+    else await archiveInboxRow(actionId);
   };
 
   const openSnooze = (id: string) => {
@@ -456,15 +566,15 @@ export default function NotificationsPage() {
   const applySnooze = async (iso: string) => {
     if (!snoozeTargetId) return;
     const target = mails.find((m) => m.id === snoozeTargetId);
-    if (!target?.recipientId) return;
-    await snoozeInboxRow(target.recipientId, iso);
+    if (!target) return;
+    await snoozeInboxRow(target.recipientId ?? target.messageId ?? target.id, iso);
     setSnoozeTargetId(null);
   };
 
   const unsnooze = async (id: string) => {
     const target = mails.find((m) => m.id === id);
-    if (!target?.recipientId) return;
-    await unsnoozeInboxRow(target.recipientId);
+    if (!target) return;
+    await unsnoozeInboxRow(target.recipientId ?? target.messageId ?? target.id);
   };
 
   const createNewLabel = async () => {
@@ -487,6 +597,21 @@ export default function NotificationsPage() {
     }
   };
 
+  const applySearch = async (value: string) => {
+    const term = value.trim();
+    const next = new URLSearchParams(searchParams);
+    if (term) {
+      next.set("q", term);
+      try {
+        const updated = await saveSearchHistory(term);
+        setSearchHistoryItems(updated ?? []);
+      } catch {}
+    } else {
+      next.delete("q");
+    }
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <div className="h-full">
       <div className="grid h-full grid-cols-1 gap-4">
@@ -497,13 +622,12 @@ export default function NotificationsPage() {
                 mail={activeMail}
                 currentUserEmail={""}
                 onBack={() => {
-                  const next = new URLSearchParams(searchParams);
-                  next.delete("id");
-                  setSearchParams(next, { replace: true });
+                  navigate(`/email/${folder}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                   setActiveMailId(null);
                 }}
                 onSetRead={(id, read) => void markRead([id], read)}
                 onDelete={(id) => void moveToTrash([id])}
+                onRestore={(id) => void restoreFromTrash([id])}
                 onToggleStar={(id) => void toggleStar(id)}
                 detailData={activeMailDetail}
                 onComposePrefill={(payload) =>
@@ -521,6 +645,41 @@ export default function NotificationsPage() {
               />
             ) : (
               <>
+                <div className="border-b border-border px-4 py-2">
+                  <div className="relative" ref={searchHistoryRef}>
+                    <input
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      onFocus={() => setSearchHistoryOpen(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void applySearch(searchInput);
+                          setSearchHistoryOpen(false);
+                        }
+                      }}
+                      placeholder="Buscar por correo, asunto, cuerpo, adjunto..."
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
+                    />
+                    {searchHistoryOpen && searchHistoryItems.length > 0 ? (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-md border border-border bg-background p-1 shadow-sm">
+                        {searchHistoryItems.map((item) => (
+                          <button
+                            key={item.id}
+                            className="block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted"
+                            onClick={() => {
+                              setSearchInput(item.query);
+                              void applySearch(item.query);
+                              setSearchHistoryOpen(false);
+                            }}
+                          >
+                            {item.query}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
                 <MailToolbar
                   total={total}
                   start={start}
@@ -537,6 +696,7 @@ export default function NotificationsPage() {
                   onClearSelection={() => setSelectedIds(new Set())}
                   onSetReadBulk={(ids, read) => void markRead(ids, read)}
                   onDeleteBulk={(ids) => void moveToTrash(ids)}
+                  onRestoreBulk={(ids) => void restoreFromTrash(ids)}
                   onArchiveBulk={(ids, archive) => void archiveBulk(ids, archive)}
                   onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
                   onNextPage={() => setPage((p) => (p < pageCount ? p + 1 : p))}
@@ -547,9 +707,7 @@ export default function NotificationsPage() {
                   mails={mails}
                   selectedIds={selectedIds}
                   onOpen={(id) => {
-                    const next = new URLSearchParams(searchParams);
-                    next.set("id", id);
-                    setSearchParams(next, { replace: true });
+                    navigate(`/email/${folder}/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                     setActiveMailId(id);
                   }}
                   onToggleSelect={(id) =>
@@ -563,6 +721,7 @@ export default function NotificationsPage() {
                   onToggleStar={(id) => void toggleStar(id)}
                   onSetRead={(id, read) => void markRead([id], read)}
                   onDelete={(id) => void moveToTrash([id])}
+                  onRestore={(id) => void restoreFromTrash([id])}
                   onArchive={(id) => void toggleArchive(id)}
                   onSnooze={(id) => {
                     if (folder === "snoozed") {
@@ -592,8 +751,15 @@ export default function NotificationsPage() {
         onCcChange={(composeId, value) => updateComposeDraft(composeId, { cc: value })}
         onBccChange={(composeId, value) => updateComposeDraft(composeId, { bcc: value })}
         onSubjectChange={(composeId, value) => updateComposeDraft(composeId, { subject: value })}
-        onBodyChange={(composeId, value) => updateComposeDraft(composeId, { body: value })}
+        onBodyChange={(composeId, value, bodyJson) => updateComposeDraft(composeId, { body: value, bodyJson })}
         onToggleLabel={toggleComposeLabel}
+        onResolveDraftId={resolveComposeDraftId}
+        onAttachmentUploaded={onComposeAttachmentUploaded}
+        onAttachmentRemoved={onComposeAttachmentRemoved}
+        onUploadAttachment={async ({ file, draftId }) => uploadAttachment({ file, draftId })}
+        onDeleteAttachment={async (attachmentId) => {
+          await deleteRemoteAttachment(attachmentId);
+        }}
         onSend={sendCompose}
       />
 

@@ -10,6 +10,7 @@ interface Props {
   onToggleStar: (id: string) => void;
   onSetRead: (id: string, read: boolean) => void;
   onDelete: (id: string) => void;
+  onRestore: (id: string) => void;
   onArchive: (id: string) => void;
   onSnooze: (id: string) => void;
   formatMailDate: (iso: string) => string;
@@ -25,6 +26,7 @@ export default function MailList({
   onToggleStar,
   onSetRead,
   onDelete,
+  onRestore,
   onArchive,
   onSnooze,
   formatMailDate,
@@ -52,6 +54,7 @@ export default function MailList({
           onToggleStar={onToggleStar}
           onSetRead={onSetRead}
           onDelete={onDelete}
+          onRestore={onRestore}
           onArchive={onArchive}
           onSnooze={onSnooze}
           formatMailDate={formatMailDate}

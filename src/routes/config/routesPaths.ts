@@ -11,7 +11,8 @@ export const RoutesPaths = {
   profile: "/profile",
   sessions: "/sessions-actives",
   notifications: "/email",
-  notificationDetail: "/email/:id",
+  notificationView: "/email/:folder",
+  notificationDetail: "/email/:folder/:messageId",
 
   createUser: "/users/create",
   users: "/users",

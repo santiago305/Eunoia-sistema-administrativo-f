@@ -36,36 +36,36 @@ export const getNotificationsSidebarItems = (
   },
   {
     label: "Recibidos",
-    href: `${RoutesPaths.notifications}?folder=inbox`,
+    href: `${RoutesPaths.notifications}/inbox`,
     icon: <Inbox className="text-sidebar-foreground" />,
     badgeCount: counts?.inbox,
   },
   {
     label: "Destacados",
-    href: `${RoutesPaths.notifications}?folder=starred`,
+    href: `${RoutesPaths.notifications}/starred`,
     icon: <Star className="text-sidebar-foreground" />,
     badgeCount: counts?.starred,
   },
   {
     label: "Enviados",
-    href: `${RoutesPaths.notifications}?folder=sent`,
+    href: `${RoutesPaths.notifications}/sent`,
     icon: <Send className="text-sidebar-foreground" />,
   },
   {
     label: "Borradores",
-    href: `${RoutesPaths.notifications}?folder=drafts`,
+    href: `${RoutesPaths.notifications}/drafts`,
     icon: <File className="text-sidebar-foreground" />,
     badgeCount: counts?.drafts,
   },
   {
     label: "Pospuestos",
-    href: `${RoutesPaths.notifications}?folder=snoozed`,
+    href: `${RoutesPaths.notifications}/snoozed`,
     icon: <Clock3 className="text-sidebar-foreground" />,
     badgeCount: counts?.snoozed,
   },
   {
     label: "Archivados",
-    href: `${RoutesPaths.notifications}?folder=archived`,
+    href: `${RoutesPaths.notifications}/archived`,
     icon: <Archive className="text-sidebar-foreground" />,
     badgeCount: counts?.archived,
   },
@@ -77,8 +77,8 @@ export const getNotificationsSidebarItems = (
         label: label.name,
         href:
           label.type === "MODULE"
-            ? `${RoutesPaths.notifications}?folder=inbox&originModule=${label.key}`
-            : `${RoutesPaths.notifications}?folder=inbox&labelId=${label.id}`,
+            ? `${RoutesPaths.notifications}/inbox?originModule=${label.key}`
+            : `${RoutesPaths.notifications}/inbox?labelId=${label.id}`,
         isCustomLabel: label.type === "CUSTOM",
         labelId: label.id,
         badgeCount: counts?.labelUnreadById?.[label.id] ?? 0,
@@ -95,13 +95,13 @@ export const getNotificationsSidebarItems = (
       }))),
       ...(canCreateLabel ? [{
         label: "+ Etiqueta",
-        href: `${RoutesPaths.notifications}?folder=inbox&createLabel=1`,
+        href: `${RoutesPaths.notifications}/inbox?createLabel=1`,
       }] : []),
     ],
   },
   {
     label: "Papelera",
-    href: `${RoutesPaths.notifications}?folder=trash`,
+    href: `${RoutesPaths.notifications}/trash`,
     icon: <Trash2 className="text-sidebar-foreground" />,
     badgeCount: counts?.trash,
   },

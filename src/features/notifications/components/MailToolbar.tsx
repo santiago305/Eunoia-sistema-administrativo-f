@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Trash2, MailOpen, Mail as MailIcon, ChevronLeft, ChevronRight, RefreshCw, MoreVertical, Archive } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { LiaTrashRestoreAltSolid } from "react-icons/lia";
 
 interface Props {
   total: number;
@@ -18,6 +19,7 @@ interface Props {
   onClearSelection: () => void;
   onSetReadBulk: (ids: string[], read: boolean) => void;
   onDeleteBulk: (ids: string[]) => void;
+  onRestoreBulk: (ids: string[]) => void;
   onArchiveBulk: (ids: string[], archive: boolean) => void;
   onPrevPage: () => void;
   onNextPage: () => void;
@@ -81,6 +83,11 @@ export default function MailToolbar(props: Props) {
 
       {someSelected ? (
         <>
+          {props.folder === "trash" ? (
+            <button onClick={() => props.onRestoreBulk(selectedArr)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Restaurar">
+              <LiaTrashRestoreAltSolid className="size-5" />
+            </button>
+          ) : null}
           <button onClick={() => props.onDeleteBulk(selectedArr)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Eliminar">
             <Trash2 className="size-5" />
           </button>

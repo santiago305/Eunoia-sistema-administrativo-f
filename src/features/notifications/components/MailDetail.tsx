@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
+import { LiaTrashRestoreAltSolid } from "react-icons/lia";
 
 interface Props {
   mail: Mail | null;
@@ -25,6 +26,7 @@ interface Props {
   onBack: () => void;
   onSetRead: (id: string, read: boolean) => void;
   onDelete: (id: string) => void;
+  onRestore: (id: string) => void;
   onToggleStar: (id: string) => void;
   onComposePrefill: (payload: {
     to?: string;
@@ -86,6 +88,18 @@ export default function MailDetail(props: Props) {
         >
           <Trash2 className="size-5" />
         </button>
+        {mail.folder === "trash" ? (
+          <button
+            onClick={() => {
+              props.onRestore(mail.id);
+              props.onBack();
+            }}
+            className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+            title="Restaurar"
+          >
+            <LiaTrashRestoreAltSolid className="size-5" />
+          </button>
+        ) : null}
         <button
           onClick={() => props.onSetRead(mail.id, !mail.read)}
           className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
