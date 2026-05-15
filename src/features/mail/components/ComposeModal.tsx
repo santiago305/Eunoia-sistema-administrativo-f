@@ -827,10 +827,10 @@ export default function NotificationComposeModal({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {renderRecipientField("to", "Para", "correo@empresa.com")}
-        {showCc ? renderRecipientField("cc", "CC", "correo@empresa.com") : null}
+        {renderRecipientField("to", "Para", "")}
+        {showCc ? renderRecipientField("cc", "CC", "") : null}
         {showBcc
-          ? renderRecipientField("bcc", "BCC", "correo@empresa.com")
+          ? renderRecipientField("bcc", "BCC", "")
           : null}
 
         <input

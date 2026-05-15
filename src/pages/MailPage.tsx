@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { isAxiosError } from "axios";
 import type { Mail } from "@/features/mail/types/mail-ui.types";
 import MailToolbar from "@/features/mail/components/MailToolbar";
 import MailList from "@/features/mail/components/MailList";
@@ -44,6 +45,16 @@ type ComposePayload = {
   editingDraftId?: string | null;
   mode?: "new" | "reply" | "forward";
   parentMessageId?: string | null;
+};
+
+type MailDetailData = {
+  sender?: { id?: string; name?: string; email?: string } | null;
+  recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
+  thread?: Array<{ id: string; subject: string; bodyHtml: string; createdAt: string; sentAt?: string | null }>;
+} | null;
+
+type BackendErrorPayload = {
+  message?: string | string[];
 };
 
 const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft => ({
@@ -200,7 +211,7 @@ export default function MailPage() {
   const [labelError, setLabelError] = useState<string | null>(null);
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
   const [customSnoozeAt, setCustomSnoozeAt] = useState("");
-  const [activeMailDetail, setActiveMailDetail] = useState<any>(null);
+  const [activeMailDetail, setActiveMailDetail] = useState<MailDetailData>(null);
   const [searchInput, setSearchInput] = useState(q);
   const [searchHistoryItems, setSearchHistoryItems] = useState<Array<{ id: string; query: string }>>([]);
   const [searchHistoryOpen, setSearchHistoryOpen] = useState(false);
@@ -235,11 +246,14 @@ export default function MailPage() {
   const mails = useMemo(() => items.map((item) => mapItemToMail(item, folder)).filter((v): v is Mail => Boolean(v)), [items, folder]);
 
   const openCompose = useCallback((payload?: ComposePayload) => {
-    setComposeDrafts((prev) => [
-      ...(prev.length >= MAX_COMPOSE_DRAFTS
-        ? prev
-        : [...prev.map((item) => ({ ...item, minimized: true })), createComposeDraft(payload)]),
-    ]);
+    setComposeDrafts((prev) => {
+      const nextDraft = createComposeDraft(payload);
+
+      return [
+        ...prev.map((item) => ({ ...item, minimized: true })),
+        nextDraft,
+      ].slice(-MAX_COMPOSE_DRAFTS);
+    });
   }, []);
 
   const onComposeAttachmentUploaded = useCallback((composeId: string, attachmentId: string) => {
@@ -293,7 +307,9 @@ export default function MailPage() {
     if (!draft?.editingDraftId) return;
     try {
       await deleteDraft(draft.editingDraftId);
-    } catch {}
+    } catch {
+      return;
+    }
   }, [composeDrafts, removeComposeDraft]);
 
   const toggleComposeMinimize = useCallback((composeId: string) => {
@@ -332,7 +348,9 @@ export default function MailPage() {
       } else {
         await createDraft({ recipients: draft.to, subject: draft.subject, bodyHtml: draft.body, bodyJson: draft.bodyJson ?? undefined, originModule: "corporate" });
       }
-    } catch {}
+    } catch {
+      setLabelError("No se pudo guardar el borrador.");
+    }
   };
 
   const parseRecipientList = (value: string) =>
@@ -388,8 +406,10 @@ export default function MailPage() {
         const detail = await getMessageDetail(activeMailId);
         setActiveMailDetail(detail);
       }
-    } catch (error: any) {
-      const backendMessage = error?.response?.data?.message;
+    } catch (error: unknown) {
+      const backendMessage = isAxiosError<BackendErrorPayload>(error)
+        ? error.response?.data?.message
+        : undefined;
       updateComposeDraft(composeId, { error: Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo enviar el mensaje." });
     }
   };
@@ -614,7 +634,9 @@ export default function MailPage() {
       try {
         const updated = await saveSearchHistory(term);
         setSearchHistoryItems(updated ?? []);
-      } catch {}
+      } catch {
+        return;
+      }
     } else {
       next.delete("q");
     }
