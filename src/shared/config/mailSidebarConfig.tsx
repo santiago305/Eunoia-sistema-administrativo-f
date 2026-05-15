@@ -11,9 +11,9 @@ import {
 } from "lucide-react";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import type { SidebarItem } from "../components/components/dashboard/types";
-import type { MailLabelItem } from "@/features/notifications/types/message.types";
+import type { MailLabelItem } from "@/features/mail/types/message.types";
 
-export type NotificationSidebarCounts = {
+export type MailSidebarCounts = {
   inbox: number;
   starred: number;
   sent?: number;
@@ -24,8 +24,8 @@ export type NotificationSidebarCounts = {
   labelUnreadById: Record<string, number>;
 };
 
-export const getNotificationsSidebarItems = (
-  counts?: Partial<NotificationSidebarCounts>,
+export const getMailSidebarItems = (
+  counts?: Partial<MailSidebarCounts>,
   labels?: MailLabelItem[],
   canCreateLabel?: boolean,
 ): SidebarItem[] => [
@@ -106,3 +106,5 @@ export const getNotificationsSidebarItems = (
     badgeCount: counts?.trash,
   },
 ];
+
+

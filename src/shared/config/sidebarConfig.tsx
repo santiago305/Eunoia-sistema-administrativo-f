@@ -10,7 +10,7 @@ import {
 } from "../components/components/dashboard/icons";
 import { SidebarItem } from "../components/components/dashboard/types";
 import { RoutesPaths } from "@/routes/config/routesPaths";
-import { getNotificationsSidebarItems } from "./notificationsSidebarConfig";
+import { getMailSidebarItems } from "./mailSidebarConfig";
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
     {
@@ -135,7 +135,7 @@ const normalizePath = (path: string) => path.replace(/\/+$/, "") || "/";
 export const getSidebarTitleByPath = (pathname: string): string | null => {
   const normalizedPath = normalizePath(pathname);
   const activeItems = pathname.startsWith(RoutesPaths.notifications)
-    ? getNotificationsSidebarItems()
+    ? getMailSidebarItems()
     : getSidebarItems();
 
   const search = (items: SidebarItem[]): string | null => {
@@ -151,5 +151,6 @@ export const getSidebarTitleByPath = (pathname: string): string | null => {
 
   return search(activeItems);
 };
+
 
 

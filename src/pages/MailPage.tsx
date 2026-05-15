@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import type { Mail } from "@/features/notifications/types/mail-ui.types";
-import MailToolbar from "@/features/notifications/components/MailToolbar";
-import MailList from "@/features/notifications/components/MailList";
-import MailDetail from "@/features/notifications/components/MailDetail";
-import NotificationComposeStack from "@/features/notifications/components/ComposeStack";
-import type { NotificationComposeDraft } from "@/features/notifications/components/ComposeModal";
-import { useMessagesV2 } from "@/features/notifications/hooks/useMessagesV2";
+import type { Mail } from "@/features/mail/types/mail-ui.types";
+import MailToolbar from "@/features/mail/components/MailToolbar";
+import MailList from "@/features/mail/components/MailList";
+import MailDetail from "@/features/mail/components/MailDetail";
+import NotificationComposeStack from "@/features/mail/components/ComposeStack";
+import type { NotificationComposeDraft } from "@/features/mail/components/ComposeModal";
+import { useMessagesV2 } from "@/features/mail/hooks/useMessagesV2";
 import {
   bulkMessages,
   forwardMessage,
@@ -19,11 +19,11 @@ import {
   sendMessage,
   uploadAttachment,
   deleteAttachment as deleteRemoteAttachment,
-} from "@/features/notifications/services/messages.service";
-import { createDraft, deleteDraft, updateDraft } from "@/features/notifications/services/drafts.service";
-import type { InboxItem, SentMessageItem } from "@/features/notifications/types/message.types";
-import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
-import { useNotificationModules } from "@/features/notifications/hooks/useNotificationModules";
+} from "@/features/mail/services/messages.service";
+import { createDraft, deleteDraft, updateDraft } from "@/features/mail/services/drafts.service";
+import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
+import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
+import { useMailModules } from "@/features/mail/hooks/useMailModules";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -179,7 +179,7 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
   };
 };
 
-export default function NotificationsPage() {
+export default function MailPage() {
   const navigate = useNavigate();
   const params = useParams<{ folder?: string; messageId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -209,7 +209,7 @@ export default function NotificationsPage() {
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
   const { items: labels, createLabel, deleteLabel } = useMailLabels(true);
-  const { modules: allowedModules } = useNotificationModules();
+  const { modules: allowedModules } = useMailModules();
 
   const {
     items,
@@ -622,7 +622,7 @@ export default function NotificationsPage() {
                 mail={activeMail}
                 currentUserEmail={""}
                 onBack={() => {
-                  navigate(`/email/${folder}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
+                  navigate(`/notifications/${folder}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                   setActiveMailId(null);
                 }}
                 onSetRead={(id, read) => void markRead([id], read)}
@@ -707,7 +707,7 @@ export default function NotificationsPage() {
                   mails={mails}
                   selectedIds={selectedIds}
                   onOpen={(id) => {
-                    navigate(`/email/${folder}/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
+                    navigate(`/notifications/${folder}/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                     setActiveMailId(id);
                   }}
                   onToggleSelect={(id) =>
@@ -863,3 +863,6 @@ export default function NotificationsPage() {
     </div>
   );
 }
+
+
+

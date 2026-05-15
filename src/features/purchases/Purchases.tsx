@@ -71,7 +71,7 @@ import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { approvePayment as approvePaymentById } from "@/shared/services/paymentService";
 import { RoutesPaths } from "@/routes/config/routesPaths";
-import { NOTIFICATION_WINDOW_EVENTS } from "@/features/notifications/constants/notification-events.constants";
+import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { sileo } from "sileo";
 
 const PRIMARY = "hsl(var(--primary))";
@@ -1382,5 +1382,7 @@ export default function Purchases() {
         </PageShell>
     );
 }
+
+
 
 

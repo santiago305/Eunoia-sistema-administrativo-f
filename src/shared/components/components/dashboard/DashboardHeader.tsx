@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { RoutesPaths } from "@/routes/config/routesPaths";
-import { useUnreadNotificationsCount } from "@/features/notifications/hooks/useUnreadNotificationsCount";
+import { useUnreadMailCount } from "@/features/mail/hooks/useUnreadMailCount";
 import { cn } from "@/shared/lib/utils";
 import { useSidebarContext } from "./SidebarContext";
 import { IconBell, IconMenu } from "./icons";
@@ -18,7 +18,7 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const { isCollapsed, isMobile, toggleSidebar } = useSidebarContext();
-  const { count } = useUnreadNotificationsCount();
+  const { count } = useUnreadMailCount();
   const { company } = useCompany();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -135,3 +135,5 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
 };
 
 export default memo(DashboardHeader);
+
+

@@ -3,7 +3,7 @@ import { listMessages } from "../services/messages.service";
 import { listDrafts } from "../services/drafts.service";
 import type { MessageFolder } from "../types/message.types";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { NOTIFICATION_WINDOW_EVENTS } from "../constants/notification-events.constants";
+import { NOTIFICATION_WINDOW_EVENTS } from "../constants/mail-events.constants";
 import { listMailLabels } from "../services/messages.service";
 
 type SidebarCounts = {
@@ -28,7 +28,7 @@ const INITIAL_COUNTS: SidebarCounts = {
   labelUnreadById: {},
 };
 
-export function useNotificationSidebarCounts() {
+export function useMailSidebarCounts() {
   const { isAuthenticated, authChecked, userId } = useAuth();
   const [counts, setCounts] = useState<SidebarCounts>(INITIAL_COUNTS);
 
@@ -95,3 +95,4 @@ export function useNotificationSidebarCounts() {
 
   return counts;
 }
+

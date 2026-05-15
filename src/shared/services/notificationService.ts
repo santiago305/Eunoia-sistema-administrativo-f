@@ -1,6 +1,6 @@
 import axiosInstance from '@/shared/common/utils/axios';
 import { API_NOTIFICATIONS_GROUP } from './APIs';
-import type { NotificationRecipientItem, NotificationUnreadCount } from '@/features/notifications/types/notification.types';
+import type { NotificationRecipientItem, NotificationUnreadCount } from '@/features/mail/types/notification.types';
 
 export const listMyNotifications = async (params?: { limit?: number; cursor?: string }) => {
   const response = await axiosInstance.get<NotificationRecipientItem[]>(API_NOTIFICATIONS_GROUP.list, { params });
@@ -41,3 +41,4 @@ export const sendDevNotificationToMe = async () => {
   const response = await axiosInstance.post<NotificationRecipientItem>(API_NOTIFICATIONS_GROUP.devSendToMe);
   return response.data;
 };
+

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getNotificationModules } from "../services/messages.service";
 import type { NotificationModuleItem } from "../types/message.types";
 
-export function useNotificationModules() {
+export function useMailModules() {
   const [modules, setModules] = useState<NotificationModuleItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,3 +23,4 @@ export function useNotificationModules() {
 
   return { modules, loading, reload };
 }
+

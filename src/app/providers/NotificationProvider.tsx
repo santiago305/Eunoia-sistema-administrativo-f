@@ -1,10 +1,10 @@
 import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { closeNotificationSocket, createNotificationSocket } from '@/shared/lib/socket';
-import { NOTIFICATION_SOCKET_EVENTS, NOTIFICATION_WINDOW_EVENTS } from '@/features/notifications/constants/notification-events.constants';
-import type { NotificationPriority, NotificationUnreadCount } from '@/features/notifications/types/notification.types';
+import { NOTIFICATION_SOCKET_EVENTS, NOTIFICATION_WINDOW_EVENTS } from '@/features/mail/constants/mail-events.constants';
+import type { NotificationPriority, NotificationUnreadCount } from '@/features/mail/types/notification.types';
 import { getUnreadCount } from '@/shared/services/notificationService';
-import { showNotificationToast } from '@/features/notifications/services/notification-toast.service';
+import { showNotificationToast } from '@/features/mail/services/mail-toast.service';
 
 export const NotificationContext = createContext<{ connected: boolean }>({ connected: false });
 
@@ -82,3 +82,5 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }
+
+

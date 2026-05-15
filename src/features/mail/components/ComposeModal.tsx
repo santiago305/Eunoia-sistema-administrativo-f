@@ -145,7 +145,7 @@ export default function NotificationComposeModal({
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Link.configure({ openOnClick: false }),
     ],
-    content: ((draft.bodyJson as JSONContent | null) ?? draft.body) || "",
+    content: (draft.bodyJson as JSONContent | null) ?? (draft.body || ""),
     onUpdate: ({ editor: instance }) => {
       const html = instance.getHTML();
       const json = instance.getJSON() as Record<string, unknown>;
@@ -164,7 +164,7 @@ export default function NotificationComposeModal({
     if (!editor) return;
     const current = editor.getHTML();
     if ((draft.body || "") !== current) {
-      const nextContent = ((draft.bodyJson as JSONContent | null) ?? draft.body) || "";
+      const nextContent = (draft.bodyJson as JSONContent | null) ?? (draft.body || "");
       editor.commands.setContent(nextContent, false);
     }
   }, [draft.body, draft.bodyJson, editor]);
@@ -233,7 +233,7 @@ export default function NotificationComposeModal({
         await onDeleteAttachment(current.serverId);
         onAttachmentRemoved(draft.id, current.serverId);
       } catch {
-        setValidationError("No se pudo eliminar el adjunto.");
+        setValidationError("No se pudo eliminar el adjunto del servidor.");
       }
     }
     setAttachments((prev) => {

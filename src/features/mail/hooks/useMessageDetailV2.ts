@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessageDetail, markMessageAsRead, forwardMessage, replyMessage } from "../services/messages.service";
-import { NOTIFICATION_WINDOW_EVENTS } from "../constants/notification-events.constants";
+import { NOTIFICATION_WINDOW_EVENTS } from "../constants/mail-events.constants";
 
 export function useMessageDetailV2(id?: string) {
   const [item, setItem] = useState<any>(null);
@@ -51,3 +51,4 @@ export function useMessageDetailV2(id?: string) {
 
   return { item, loading, reload, markRead, reply, forward };
 }
+

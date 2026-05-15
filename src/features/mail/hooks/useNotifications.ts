@@ -6,7 +6,7 @@ import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from '@/shared/services/notificationService';
-import { NOTIFICATION_WINDOW_EVENTS } from '../constants/notification-events.constants';
+import { NOTIFICATION_WINDOW_EVENTS } from '../constants/mail-events.constants';
 
 export function useNotifications() {
   const [items, setItems] = useState<NotificationRecipientItem[]>([]);
@@ -72,3 +72,4 @@ export function useNotifications() {
     markAllAsRead,
   };
 }
+

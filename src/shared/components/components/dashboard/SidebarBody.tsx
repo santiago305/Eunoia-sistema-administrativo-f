@@ -1,15 +1,15 @@
 import { memo, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { getSidebarItems } from "@/shared/config/sidebarConfig";
-import { getNotificationsSidebarItems } from "@/shared/config/notificationsSidebarConfig";
+import { getMailSidebarItems } from "@/shared/config/mailSidebarConfig";
 import SidebarItemComponent from "./SidebarItem";
 import { getRouteMetaByUrl } from "@/routes/config/routesConfig";
 import { useAuth } from "@/shared/hooks/useAuth";
 import type { SidebarItem } from "./types";
 import { RoutesPaths } from "@/routes/config/routesPaths";
-import { useNotificationSidebarCounts } from "@/features/notifications/hooks/useNotificationSidebarCounts";
-import { useMailLabels } from "@/features/notifications/hooks/useMailLabels";
-import { useNotificationModules } from "@/features/notifications/hooks/useNotificationModules";
+import { useMailSidebarCounts } from "@/features/mail/hooks/useMailSidebarCounts";
+import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
+import { useMailModules } from "@/features/mail/hooks/useMailModules";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 
 const normalizeRole = (role?: string | null) =>
@@ -55,9 +55,9 @@ const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
   const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
-  const notificationCounts = useNotificationSidebarCounts();
+  const notificationCounts = useMailSidebarCounts();
   const { items: mailLabels } = useMailLabels(isNotifications);
-  const { modules: allowedModules } = useNotificationModules();
+  const { modules: allowedModules } = useMailModules();
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
   const allowedModuleKeys = useMemo(() => new Set(allowedModules.map((moduleItem) => moduleItem.key)), [allowedModules]);
@@ -71,7 +71,7 @@ const SidebarBody = () => {
 
   const items = useMemo(() => {
     const sourceItems = isNotifications
-      ? getNotificationsSidebarItems(notificationCounts, visibleLabels, canCreateLabel)
+      ? getMailSidebarItems(notificationCounts, visibleLabels, canCreateLabel)
       : getSidebarItems();
 
     const filtered = sourceItems
@@ -107,5 +107,8 @@ const SidebarBody = () => {
 };
 
 export default memo(SidebarBody);
+
+
+
 
 

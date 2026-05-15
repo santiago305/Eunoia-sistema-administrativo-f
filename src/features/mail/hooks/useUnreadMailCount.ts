@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { NotificationUnreadCount } from '../types/notification.types';
 import { getUnreadCount } from '@/shared/services/notificationService';
-import { NOTIFICATION_WINDOW_EVENTS } from '../constants/notification-events.constants';
+import { NOTIFICATION_WINDOW_EVENTS } from '../constants/mail-events.constants';
 
-export function useUnreadNotificationsCount() {
+export function useUnreadMailCount() {
   const [count, setCount] = useState<NotificationUnreadCount>({ unread: 0, unseen: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -47,3 +47,4 @@ export function useUnreadNotificationsCount() {
 
   return { count, loading, reload };
 }
+

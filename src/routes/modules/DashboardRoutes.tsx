@@ -22,7 +22,7 @@ const Users = lazy(() => import("@/features/users/Users"));
 const RolesPermissions = lazy(() => import("@/features/roles/RolesPermissions"));
 const ProfilePage = lazy(() => import("@/features/profile/Profile"));
 const Sessions = lazy(() => import("@/features/sessions/Sessions"));
-const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
+const MailPage = lazy(() => import("@/pages/MailPage"));
 const Securitypage = lazy(() => import("@/features/security/security"));
 const IpsDetails = lazy(() => import("@/features/security/IpDetailPage"));
 const CatalogSummary = lazy(() => import("@/features/catalog/products/Summary"));
@@ -96,11 +96,11 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.notifications,
-                element: withRouteGuard(RoutesPaths.notifications, <NotificationsPage />),
+                element: withRouteGuard(RoutesPaths.notifications, <MailPage />),
             },
             {
-                path: "/email/:folder/:messageId?",
-                element: withRouteGuard(RoutesPaths.notifications, <NotificationsPage />),
+                path: "/notifications/:folder/:messageId?",
+                element: withRouteGuard(RoutesPaths.notifications, <MailPage />),
             },
             {
                 path: RoutesPaths.catalogProducts,
@@ -217,3 +217,4 @@ export const dashboardRoutes: RouteObject[] = [
         ],
     },
 ];
+
