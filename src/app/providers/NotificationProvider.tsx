@@ -21,11 +21,28 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const socket = createNotificationSocket(userId);
     if (!socket) return;
+    const dedupe = new Map<string, number>();
+    const DEDUPE_TTL_MS = 5000;
+    const markSeen = (key: string) => {
+      const now = Date.now();
+      dedupe.set(key, now);
+      dedupe.forEach((ts, k) => {
+        if (now - ts > DEDUPE_TTL_MS) dedupe.delete(k);
+      });
+    };
+    const isSeen = (key: string) => dedupe.has(key);
+    const refreshUnreadCount = () => {
+      void getUnreadCount().then((payload) => {
+        window.dispatchEvent(new CustomEvent(NOTIFICATION_WINDOW_EVENTS.unreadCountUpdated, { detail: payload }));
+      });
+    };
 
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
 
     const onCreated = (payload: {
+      recipientId?: string;
+      message?: { id?: string; subject?: string; preview?: string };
       notification?: {
         title?: string;
         message?: string;
@@ -36,19 +53,38 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         metadata?: Record<string, unknown>;
       };
     }) => {
+      const metadataMessageId =
+        typeof payload?.notification?.metadata?.messageId === 'string'
+          ? payload.notification.metadata.messageId
+          : undefined;
+      const dedupeKey = payload?.recipientId || payload?.message?.id || metadataMessageId;
+      if (dedupeKey && isSeen(`created:${dedupeKey}`)) return;
+      if (dedupeKey) markSeen(`created:${dedupeKey}`);
       const shouldShowToast = payload?.notification?.showAsToast !== false
         && payload?.notification?.metadata?.showAsToast !== false;
       if (shouldShowToast) {
-        showNotificationToast(payload?.notification);
+        if (payload?.notification?.title || payload?.notification?.message) {
+          showNotificationToast(payload?.notification);
+        } else if (payload?.message?.subject || payload?.message?.preview) {
+          showNotificationToast({
+            title: 'Nuevo correo',
+            message: payload?.message?.subject || payload?.message?.preview || 'Tienes un nuevo mensaje.',
+            priority: 'NORMAL',
+          });
+        }
       }
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
+      refreshUnreadCount();
     };
 
     const onUnreadCountUpdated = (payload: NotificationUnreadCount) => {
       window.dispatchEvent(new CustomEvent(NOTIFICATION_WINDOW_EVENTS.unreadCountUpdated, { detail: payload }));
     };
 
-    const onMessageCreated = (payload: { message?: { subject?: string; preview?: string } }) => {
+    const onMessageCreated = (payload: { recipientId?: string; message?: { id?: string; subject?: string; preview?: string } }) => {
+      const dedupeKey = payload?.recipientId || payload?.message?.id || '';
+      if (dedupeKey && isSeen(`message:${dedupeKey}`)) return;
+      if (dedupeKey) markSeen(`message:${dedupeKey}`);
       showNotificationToast({
         title: "Nuevo correo",
         message: payload?.message?.subject || payload?.message?.preview || "Tienes un nuevo mensaje.",
@@ -56,6 +92,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       });
       // Unificar refresh para evitar dobles caminos de sincronizacion durante coexistencia legacy/v2.
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
+      refreshUnreadCount();
     };
 
     socket.on('connect', onConnect);
@@ -64,9 +101,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     socket.on(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
     socket.on(NOTIFICATION_SOCKET_EVENTS.unreadCountUpdated, onUnreadCountUpdated);
 
-    void getUnreadCount().then((payload) => {
-      window.dispatchEvent(new CustomEvent(NOTIFICATION_WINDOW_EVENTS.unreadCountUpdated, { detail: payload }));
-    });
+    refreshUnreadCount();
 
     return () => {
       socket.off('connect', onConnect);

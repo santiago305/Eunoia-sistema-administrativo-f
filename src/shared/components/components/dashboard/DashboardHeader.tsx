@@ -38,6 +38,8 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const applySearch = async (value: string) => {
     const next = new URLSearchParams(searchParams);
     const trimmed = value.trim();
+    const current = (searchParams.get("q") ?? "").trim();
+    if (trimmed === current) return;
     if (trimmed) {
       next.set("q", trimmed);
       const updated = await saveSearchHistory(trimmed);
