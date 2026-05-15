@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useUnreadMailCount } from "@/features/mail/hooks/useUnreadMailCount";
@@ -10,6 +10,8 @@ import UserMenu from "./UserMenu";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { resolveCompanyAssetUrl } from "@/features/company/utils/companyAssets";
 import { getSidebarTitleByPath } from "@/shared/config/sidebarConfig";
+import { deleteSearchHistory, listSearchHistory, saveSearchHistory } from "@/features/mail/services/messages.service";
+import { X } from "lucide-react";
 
 interface DashboardHeaderProps {
   user: User;
@@ -22,29 +24,28 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const { company } = useCompany();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
+  const [history, setHistory] = useState<Array<{ id: string; query: string }>>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyRef = useRef<HTMLDivElement | null>(null);
   const unreadCount = count.unread ?? 0;
   const logoUrl = resolveCompanyAssetUrl(company?.logoPath);
   const isEmailPage =
     location.pathname.startsWith(RoutesPaths.notifications) ||
     location.pathname.startsWith("/notifications");
   const emailSearch = searchParams.get("q") ?? "";
-  const searchHistory = useMemo(() => {
-    try {
-      const raw = window.localStorage.getItem("notifications.search.history");
-      if (!raw) return [] as string[];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [] as string[];
-      return parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 10);
-    } catch {
-      return [] as string[];
-    }
-  }, [emailSearch]);
 
-  const persistSearchHistory = (query: string) => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    const next = [trimmed, ...searchHistory.filter((item) => item.toLowerCase() !== trimmed.toLowerCase())].slice(0, 10);
-    window.localStorage.setItem("notifications.search.history", JSON.stringify(next));
+  const applySearch = async (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    const trimmed = value.trim();
+    if (trimmed) {
+      next.set("q", trimmed);
+      const updated = await saveSearchHistory(trimmed);
+      setHistory(updated ?? []);
+    } else {
+      next.delete("q");
+    }
+    setSearchParams(next, { replace: true });
   };
   const routeTitle =
     getSidebarTitleByPath(location.pathname) ??
@@ -53,6 +54,31 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
       [RoutesPaths.sessions]: "Sesiones de usuario",
       [RoutesPaths.notifications]: "Email",
     }[location.pathname] ?? "");
+
+  useEffect(() => {
+    setSearchInput(emailSearch);
+  }, [emailSearch]);
+
+  useEffect(() => {
+    if (!isEmailPage) return;
+    void (async () => {
+      try {
+        const items = await listSearchHistory();
+        setHistory(items ?? []);
+      } catch {
+        setHistory([]);
+      }
+    })();
+  }, [isEmailPage]);
+
+  useEffect(() => {
+    const onMouseDown = (event: MouseEvent) => {
+      if (!historyRef.current) return;
+      if (!historyRef.current.contains(event.target as Node)) setHistoryOpen(false);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, []);
 
   return (
     <header className="flex py-1">
@@ -80,34 +106,53 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-3">
         <div className="min-w-0">
           {isEmailPage ? (
-            <>
+            <div className="relative" ref={historyRef}>
               <input
-                value={emailSearch}
-                onChange={(event) => {
-                  const next = new URLSearchParams(searchParams);
-                  const value = event.target.value;
-                  if (value) next.set("q", value);
-                  else next.delete("q");
-                  setSearchParams(next, { replace: true });
-                }}
-                onKeyDown={(event) => {
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                onFocus={() => setHistoryOpen(true)}
+                onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
                   if (event.key === "Enter") {
-                    persistSearchHistory((event.target as HTMLInputElement).value);
+                    event.preventDefault();
+                    void applySearch((event.target as HTMLInputElement).value);
+                    setHistoryOpen(false);
                   }
                 }}
-                onBlur={(event) => {
-                  persistSearchHistory(event.target.value);
-                }}
+                onBlur={(event) => void applySearch(event.target.value)}
                 placeholder="Buscar correo"
-                list="notifications-search-history"
                 className="h-9 w-[320px] max-w-full rounded-md border px-3 text-sm"
               />
-              <datalist id="notifications-search-history">
-                {searchHistory.map((item) => (
-                  <option key={item} value={item} />
-                ))}
-              </datalist>
-            </>
+              {historyOpen && history.length > 0 ? (
+                <div className="absolute left-0 top-full z-30 mt-1 max-h-72 w-[360px] max-w-[80vw] overflow-auto rounded-md border bg-popover p-1 shadow-md">
+                  {history.map((item) => (
+                    <div key={item.id} className="flex items-center gap-1 rounded px-2 py-1 hover:bg-accent">
+                      <button
+                        className="flex-1 truncate text-left text-sm"
+                        onClick={() => {
+                          setSearchInput(item.query);
+                          void applySearch(item.query);
+                          setHistoryOpen(false);
+                        }}
+                      >
+                        {item.query}
+                      </button>
+                      <button
+                        className="inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted"
+                        onClick={() => {
+                          void (async () => {
+                            await deleteSearchHistory(item.id);
+                            setHistory((prev) => prev.filter((current) => current.id !== item.id));
+                          })();
+                        }}
+                        title="Eliminar búsqueda"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : routeTitle ? (
             <h1 className="truncate text-lg font-semibold">{routeTitle}</h1>
           ) : null}

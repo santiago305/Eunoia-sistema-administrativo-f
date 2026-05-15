@@ -27,6 +27,7 @@ import {
   RiUnderline,
 } from "react-icons/ri";
 import { cn } from "@/shared/lib/utils";
+import { isAxiosError } from "axios";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { getMarkRange } from "@tiptap/core";
 import type { JSONContent } from "@tiptap/core";
@@ -52,6 +53,10 @@ type AttachmentItem = {
   file: File;
   uploading?: boolean;
   uploadError?: string | null;
+};
+
+type BackendErrorPayload = {
+  message?: string | string[];
 };
 
 type RecipientField = "to" | "cc" | "bcc";
@@ -179,6 +184,22 @@ export default function NotificationComposeModal({
     bcc: [],
   });
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const allowedAttachmentExtensions = useRef(
+    new Set(["pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx", "txt"]),
+  );
+  const allowedAttachmentMimeTypes = useRef(
+    new Set([
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/plain",
+    ]),
+  );
+  const maxAttachmentSizeBytes = 20 * 1024 * 1024;
 
   useEffect(() => {
     setRecipientTokens((prev) => ({
@@ -387,6 +408,40 @@ export default function NotificationComposeModal({
   const toSizeLabel = (size: number) =>
     `${Math.max(1, Math.round(size / 1024))} KB`;
 
+  const getFileExtension = (fileName: string) => {
+    const parts = fileName.toLowerCase().split(".");
+    if (parts.length < 2) return "";
+    return parts[parts.length - 1];
+  };
+
+  const validateAttachmentLocally = (file: File): string | null => {
+    const ext = getFileExtension(file.name);
+    if (!allowedAttachmentExtensions.current.has(ext)) {
+      return "Extension no permitida.";
+    }
+    if (!allowedAttachmentMimeTypes.current.has(file.type)) {
+      return "Tipo de archivo no permitido.";
+    }
+    if (file.size > maxAttachmentSizeBytes) {
+      return "Archivo excede 20 MB.";
+    }
+    return null;
+  };
+
+  const mapAttachmentBackendError = (error: unknown): string => {
+    const payloadMessage = isAxiosError<BackendErrorPayload>(error)
+      ? error.response?.data?.message
+      : undefined;
+    const message = Array.isArray(payloadMessage) ? payloadMessage[0] : payloadMessage;
+    if (!message) return "No se pudo subir.";
+    if (message.includes("ATTACHMENT_EXTENSION_NOT_ALLOWED")) return "Extension no permitida.";
+    if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED")) return "Tipo de archivo no permitido.";
+    if (message.includes("ATTACHMENT_TOO_LARGE")) return "Archivo excede 20 MB.";
+    if (message.includes("ATTACHMENT_ACCESS_DENIED")) return "No tienes permisos para adjuntar aquí.";
+    if (message.includes("ATTACHMENT_TARGET_REQUIRED")) return "El adjunto no tiene destino válido.";
+    return "No se pudo subir.";
+  };
+
   const addFiles = async (files: FileList | null, kind: "image" | "file") => {
     if (!files?.length) return;
 
@@ -394,6 +449,7 @@ export default function NotificationComposeModal({
 
     Array.from(files).forEach((file) => {
       const isImage = kind === "image" || file.type.startsWith("image/");
+      const localError = validateAttachmentLocally(file);
 
       next.push({
         id: `att-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -402,7 +458,8 @@ export default function NotificationComposeModal({
         kind: isImage ? "image" : "file",
         previewUrl: isImage ? URL.createObjectURL(file) : undefined,
         file,
-        uploading: true,
+        uploading: !localError,
+        uploadError: localError,
       });
     });
 
@@ -438,6 +495,7 @@ export default function NotificationComposeModal({
     }
 
     for (const item of next) {
+      if (item.uploadError) continue;
       try {
         const uploaded = await onUploadAttachment({
           composeId: draft.id,
@@ -457,14 +515,14 @@ export default function NotificationComposeModal({
           ),
         );
         onAttachmentUploaded(draft.id, uploaded.id);
-      } catch {
+      } catch (error: unknown) {
         setAttachments((prev) =>
           prev.map((current) =>
             current.id === item.id
               ? {
                   ...current,
                   uploading: false,
-                  uploadError: "No se pudo subir.",
+                  uploadError: mapAttachmentBackendError(error),
                 }
               : current,
           ),

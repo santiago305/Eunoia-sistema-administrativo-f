@@ -1,4 +1,4 @@
-export type MailFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed";
+export type MailFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed" | "all";
 
 export type MailCategory =
   | "compras"

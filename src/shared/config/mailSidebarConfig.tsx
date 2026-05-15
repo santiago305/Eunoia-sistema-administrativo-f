@@ -1,4 +1,5 @@
 import {
+  Layers,
   Archive,
   Bookmark,
   Clock3,
@@ -70,13 +71,18 @@ export const getMailSidebarItems = (
     badgeCount: counts?.archived,
   },
   {
+    label: "Todos",
+    href: `${RoutesPaths.notifications}/all`,
+    icon: <Layers className="text-sidebar-foreground" />,
+  },
+  {
     label: "Mas",
     collapsibleLabels: { closed: "Mas", open: "Menos" },
     children: [
-      ...((labels ?? []).map((label) => ({
+      ...((labels ?? []).filter((label) => label.type === "CUSTOM").map((label) => ({
         label: label.name,
         href: `${RoutesPaths.notifications}/inbox?labelId=${label.id}`,
-        isCustomLabel: label.type === "CUSTOM",
+        isCustomLabel: true,
         labelId: label.id,
         badgeCount: counts?.labelUnreadById?.[label.id] ?? 0,
         icon: (

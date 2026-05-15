@@ -63,7 +63,6 @@ const SidebarBody = () => {
 
   const items = useMemo(() => {
     const sourceItems = isNotifications
-      ? getMailSidebarItems(notificationCounts, visibleLabels, canCreateLabel)
       ? getMailSidebarItems(notificationCounts, mailLabels, canCreateLabel)
       : getSidebarItems();
 

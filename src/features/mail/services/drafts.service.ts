@@ -31,7 +31,7 @@ export const deleteDraft = async (id: string) => {
   return response.data;
 };
 
-export const sendDraft = async (id: string, recipients: string) => {
-  const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.sendDraft(id), { recipients });
+export const sendDraft = async (id: string, payload: { recipients: string; attachmentIds?: string[] }) => {
+  const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.sendDraft(id), payload);
   return response.data;
 };

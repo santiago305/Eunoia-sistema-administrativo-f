@@ -53,7 +53,7 @@ export function useMailSidebarCounts() {
 
       const labelUnreadById: Record<string, number> = {};
       await Promise.all(
-        (labels ?? []).map(async (label) => {
+        (labels ?? []).filter((label) => label.type === "CUSTOM").map(async (label) => {
           const result = await listMessages({ folder: "inbox", read: false, labelId: label.id, page: 1, limit: 1 });
           labelUnreadById[label.id] = result.total ?? 0;
         }),

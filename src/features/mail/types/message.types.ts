@@ -1,4 +1,4 @@
-export type MessageFolder = "inbox" | "sent" | "trash" | "starred" | "archived" | "snoozed" | "drafts";
+export type MessageFolder = "inbox" | "sent" | "trash" | "starred" | "archived" | "snoozed" | "drafts" | "all";
 
 export interface NotificationModuleItem {
   key: string;

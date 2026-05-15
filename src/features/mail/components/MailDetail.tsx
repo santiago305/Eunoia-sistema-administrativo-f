@@ -10,10 +10,12 @@ import {
   Printer,
   MoreVertical,
   Paperclip,
+  Tag,
 } from "lucide-react";
 import type { Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
 import { LiaTrashRestoreAltSolid } from "react-icons/lia";
+import type { MailLabelItem } from "../types/message.types";
 
 interface Props {
   mail: Mail | null;
@@ -28,6 +30,9 @@ interface Props {
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onToggleStar: (id: string) => void;
+  availableLabels?: MailLabelItem[];
+  selectedLabelIds?: string[];
+  onToggleLabel?: (messageId: string, labelId: string, selected: boolean) => void;
   onComposePrefill: (payload: {
     to?: string;
     cc?: string;
@@ -71,6 +76,8 @@ export default function MailDetail(props: Props) {
   const fallbackTo = mail.to.map((t) => t.name || t.email).filter(Boolean);
   const detailToLabel = (toRecipients.length > 0 ? toRecipients : fallbackTo).join(", ");
   const threadItems = props.detailData?.thread ?? [];
+  const labels = props.availableLabels ?? [];
+  const selectedLabelIds = props.selectedLabelIds ?? [];
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
@@ -166,6 +173,30 @@ export default function MailDetail(props: Props) {
           </div>
 
           <div className="prose prose-sm max-w-none text-sm leading-relaxed pl-14" dangerouslySetInnerHTML={{ __html: mail.body }} />
+
+          {labels.length > 0 ? (
+            <div className="pl-14 mt-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Tag className="size-3.5" />
+                Etiquetas
+              </span>
+              {labels.map((label) => {
+                const selected = selectedLabelIds.includes(label.id);
+                return (
+                  <button
+                    key={label.id}
+                    onClick={() => props.onToggleLabel?.(mail.messageId ?? mail.id, label.id, selected)}
+                    className={cn(
+                      "rounded-full border px-2 py-1 text-xs",
+                      selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {label.name}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
           {mail.attachments && mail.attachments.length > 0 ? (
             <div className="pl-14 mt-6">

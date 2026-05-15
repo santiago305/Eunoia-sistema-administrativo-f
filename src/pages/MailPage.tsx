@@ -12,6 +12,8 @@ import {
   bulkMessages,
   forwardMessage,
   getMessageDetail,
+  assignLabelToMessage,
+  removeLabelFromMessage,
   permanentlyDeleteMessage,
   replyMessage,
   restoreMessage,
@@ -19,7 +21,7 @@ import {
   uploadAttachment,
   deleteAttachment as deleteRemoteAttachment,
 } from "@/features/mail/services/messages.service";
-import { createDraft, deleteDraft, updateDraft } from "@/features/mail/services/drafts.service";
+import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/mail/services/drafts.service";
 import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
 import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -31,7 +33,7 @@ const createComposeId = () => `compose-${Date.now()}-${Math.random().toString(36
 const MAX_COMPOSE_DRAFTS = 4;
 const COMPOSE_AUTOSAVE_MS = 10_000;
 
-type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed";
+type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed" | "all";
 
 type ComposePayload = {
   to?: string;
@@ -40,6 +42,7 @@ type ComposePayload = {
   subject?: string;
   body?: string;
   bodyJson?: Record<string, unknown> | null;
+  attachmentIds?: string[];
   editingDraftId?: string | null;
   mode?: "new" | "reply" | "forward";
   parentMessageId?: string | null;
@@ -49,6 +52,7 @@ type MailDetailData = {
   sender?: { id?: string; name?: string; email?: string } | null;
   recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
   thread?: Array<{ id: string; subject: string; bodyHtml: string; createdAt: string; sentAt?: string | null }>;
+  labels?: Array<{ id?: string; labelId?: string }>;
 } | null;
 
 type BackendErrorPayload = {
@@ -67,7 +71,7 @@ const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft 
   bodyJson: payload?.bodyJson ?? null,
   error: null,
   selectedLabelIds: [],
-  attachmentIds: [],
+  attachmentIds: payload?.attachmentIds ?? [],
   mode: payload?.mode ?? "new",
   parentMessageId: payload?.parentMessageId ?? null,
 });
@@ -136,6 +140,22 @@ const avatarColor = (seed: string): string => {
 };
 
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+const extractDraftRecipients = (bodyJson: Record<string, unknown> | null | undefined): string => {
+  const raw = bodyJson && typeof bodyJson === "object" ? bodyJson.draftRecipients : "";
+  return typeof raw === "string" ? raw : "";
+};
+const extractDraftAttachmentIds = (bodyJson: Record<string, unknown> | null | undefined): string[] => {
+  const raw = bodyJson && typeof bodyJson === "object" ? bodyJson.draftAttachmentIds : [];
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+};
+const buildDraftBodyJson = (
+  draft: Pick<NotificationComposeDraft, "bodyJson" | "to" | "attachmentIds">,
+): Record<string, unknown> => ({
+  ...(draft.bodyJson ?? {}),
+  draftRecipients: draft.to,
+  draftAttachmentIds: draft.attachmentIds ?? [],
+});
 const serializeComposeDraft = (draft: NotificationComposeDraft) =>
   JSON.stringify({
     to: draft.to.trim(),
@@ -225,6 +245,7 @@ export default function MailPage() {
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
   const [customSnoozeAt, setCustomSnoozeAt] = useState("");
   const [activeMailDetail, setActiveMailDetail] = useState<MailDetailData>(null);
+  const [messageLabelIdsByMessage, setMessageLabelIdsByMessage] = useState<Record<string, string[]>>({});
   const composeDraftsRef = useRef<NotificationComposeDraft[]>([]);
   const persistedSignaturesRef = useRef<Map<string, string>>(new Map());
 
@@ -317,14 +338,14 @@ export default function MailPage() {
           recipients: draft.to,
           subject: draft.subject,
           bodyHtml: draft.body,
-          bodyJson: draft.bodyJson ?? undefined,
+          bodyJson: buildDraftBodyJson(draft),
         });
       } else {
         const created = await createDraft({
           recipients: draft.to,
           subject: draft.subject,
           bodyHtml: draft.body,
-          bodyJson: draft.bodyJson ?? undefined,
+          bodyJson: buildDraftBodyJson(draft),
           originModule: "corporate",
         });
         const draftId = String(created?.id ?? "");
@@ -350,7 +371,7 @@ export default function MailPage() {
         recipients: compose.to || compose.cc || compose.bcc || "",
         subject: compose.subject,
         bodyHtml: compose.body,
-        bodyJson: compose.bodyJson ?? undefined,
+        bodyJson: buildDraftBodyJson(compose),
         originModule: "corporate",
       });
       const draftId = String(created?.id ?? "");
@@ -469,6 +490,17 @@ export default function MailPage() {
           bcc: parseRecipientList(draft.bcc),
           attachmentIds: draft.attachmentIds ?? [],
         });
+      } else if (draft.editingDraftId && draft.mode === "new") {
+        await updateDraft(draft.editingDraftId, {
+          recipients: draft.to,
+          subject: draft.subject,
+          bodyHtml: draft.body,
+          bodyJson: buildDraftBodyJson(draft),
+        });
+        await sendDraft(draft.editingDraftId, {
+          recipients: draft.to,
+          attachmentIds: draft.attachmentIds ?? [],
+        });
       } else {
         await sendMessage({
           to: parseRecipientList(draft.to),
@@ -521,7 +553,7 @@ export default function MailPage() {
 
   useEffect(() => {
     const folderParam = (params.folder ?? searchParams.get("folder") ?? "").toLowerCase();
-    const valid: UiFolder[] = ["inbox", "starred", "sent", "drafts", "trash", "archived", "snoozed"];
+    const valid: UiFolder[] = ["inbox", "starred", "sent", "drafts", "trash", "archived", "snoozed", "all"];
     if (valid.includes(folderParam as UiFolder)) setFolder(folderParam as UiFolder);
   }, [params.folder, searchParams]);
 
@@ -582,6 +614,13 @@ export default function MailPage() {
       try {
         const detail = await getMessageDetail(activeMailId);
         setActiveMailDetail(detail);
+        const rawLabels = Array.isArray((detail as { labels?: unknown })?.labels)
+          ? ((detail as { labels?: Array<{ id?: string; labelId?: string }> }).labels ?? [])
+          : [];
+        const extracted = rawLabels
+          .map((item) => item?.id ?? item?.labelId)
+          .filter((id): id is string => Boolean(id));
+        setMessageLabelIdsByMessage((prev) => ({ ...prev, [activeMailId]: extracted }));
       } catch {
         setActiveMailDetail(null);
       }
@@ -648,6 +687,40 @@ export default function MailPage() {
       messageRecipientIds: selected,
       action: archive ? "ARCHIVE" : "UNARCHIVE",
     });
+    setSelectedIds(new Set());
+    await reload();
+  };
+
+  const snoozeBulk = async (ids: string[], snoozedUntil: string) => {
+    const selected = mails
+      .filter((m) => ids.includes(m.id))
+      .map((m) => m.recipientId ?? m.messageId ?? m.id);
+    if (!selected.length) return;
+    await bulkMessages({
+      messageRecipientIds: selected,
+      action: "SNOOZE",
+      snoozedUntil,
+    });
+    setSelectedIds(new Set());
+    await reload();
+  };
+
+  const assignLabelBulk = async (ids: string[], labelIdToAssign: string) => {
+    const selected = mails
+      .filter((m) => ids.includes(m.id))
+      .map((m) => m.messageId ?? m.id);
+    if (!selected.length) return;
+    await Promise.all(selected.map((messageId) => assignLabelToMessage(messageId, labelIdToAssign)));
+    setSelectedIds(new Set());
+    await reload();
+  };
+
+  const removeLabelBulk = async (ids: string[], labelIdToRemove: string) => {
+    const selected = mails
+      .filter((m) => ids.includes(m.id))
+      .map((m) => m.messageId ?? m.id);
+    if (!selected.length) return;
+    await Promise.all(selected.map((messageId) => removeLabelFromMessage(messageId, labelIdToRemove)));
     setSelectedIds(new Set());
     await reload();
   };
@@ -723,6 +796,21 @@ export default function MailPage() {
                 onDelete={(id) => void moveToTrash([id])}
                 onRestore={(id) => void restoreFromTrash([id])}
                 onToggleStar={(id) => void toggleStar(id)}
+                availableLabels={labels.filter((item) => item.type === "CUSTOM")}
+                selectedLabelIds={activeMailId ? (messageLabelIdsByMessage[activeMailId] ?? []) : []}
+                onToggleLabel={(messageId, labelId, selected) => {
+                  void (async () => {
+                    if (selected) await removeLabelFromMessage(messageId, labelId);
+                    else await assignLabelToMessage(messageId, labelId);
+                    setMessageLabelIdsByMessage((prev) => ({
+                      ...prev,
+                      [messageId]: selected
+                        ? (prev[messageId] ?? []).filter((id) => id !== labelId)
+                        : Array.from(new Set([...(prev[messageId] ?? []), labelId])),
+                    }));
+                    await reload();
+                  })();
+                }}
                 detailData={activeMailDetail}
                 onComposePrefill={(payload) =>
                   openCompose({
@@ -757,6 +845,10 @@ export default function MailPage() {
                   onDeleteBulk={(ids) => void moveToTrash(ids)}
                   onRestoreBulk={(ids) => void restoreFromTrash(ids)}
                   onArchiveBulk={(ids, archive) => void archiveBulk(ids, archive)}
+                  onSnoozeBulk={(ids, snoozedUntil) => void snoozeBulk(ids, snoozedUntil)}
+                  onAssignLabelBulk={(ids, labelIdToAssign) => void assignLabelBulk(ids, labelIdToAssign)}
+                  onRemoveLabelBulk={(ids, labelIdToRemove) => void removeLabelBulk(ids, labelIdToRemove)}
+                  labels={labels.filter((item) => item.type === "CUSTOM")}
                   onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
                   onNextPage={() => setPage((p) => (p < pageCount ? p + 1 : p))}
                   onRefresh={() => void reload()}
@@ -766,6 +858,21 @@ export default function MailPage() {
                   mails={mails}
                   selectedIds={selectedIds}
                   onOpen={(id) => {
+                    if (folder === "drafts") {
+                      const rawDraft = items.find((item): item is SentMessageItem => !("recipient" in item) && item.id === id);
+                      if (!rawDraft) return;
+                      openCompose({
+                        editingDraftId: rawDraft.id,
+                        to: extractDraftRecipients(rawDraft.bodyJson),
+                        subject: rawDraft.subject || "",
+                        body: rawDraft.bodyHtml || "",
+                        bodyJson: rawDraft.bodyJson ?? null,
+                        attachmentIds: extractDraftAttachmentIds(rawDraft.bodyJson),
+                        mode: "new",
+                        parentMessageId: null,
+                      });
+                      return;
+                    }
                     navigate(`/email/${folder}/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                     setActiveMailId(id);
                   }}
@@ -801,7 +908,7 @@ export default function MailPage() {
 
       <NotificationComposeStack
         drafts={composeDrafts}
-        labels={labels.filter((item) => item.type === "CUSTOM" || item.type === "MODULE")}
+        labels={labels.filter((item) => item.type === "CUSTOM")}
         savingComposeIds={savingComposeIds}
         sendingComposeIds={sendingComposeIds}
         discardingComposeIds={discardingComposeIds}
