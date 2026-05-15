@@ -631,7 +631,7 @@ export default function MailPage() {
                 mail={activeMail}
                 currentUserEmail={""}
                 onBack={() => {
-                  navigate(`/notifications/${folder}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
+                  navigate(`/email/${folder}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                   setActiveMailId(null);
                 }}
                 onSetRead={(id, read) => void markRead([id], read)}
@@ -716,7 +716,7 @@ export default function MailPage() {
                   mails={mails}
                   selectedIds={selectedIds}
                   onOpen={(id) => {
-                    navigate(`/notifications/${folder}/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
+                    navigate(`/email/${folder}/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                     setActiveMailId(id);
                   }}
                   onToggleSelect={(id) =>
