@@ -11,6 +11,8 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.profile, name: "profile", isProtected: true, permissionsAllowed: ["page.profile.view"] },
   { path: RoutesPaths.sessions, name: "sessions", isProtected: true, permissionsAllowed: ["page.sessions.view"] },
   { path: RoutesPaths.notifications, name: "notifications", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
+  { path: RoutesPaths.notificationView, name: "notificationView", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
+  { path: RoutesPaths.notificationDetail, name: "notificationDetail", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
   {
     path: RoutesPaths.users,
     name: "users",

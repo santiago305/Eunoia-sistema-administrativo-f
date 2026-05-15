@@ -24,7 +24,11 @@ const canAccessHref = (
   if (!href) return true;
 
   const hrefPath = href.split("?")[0];
-  const routeMeta = getRouteMetaByUrl(hrefPath);
+  const routeMeta =
+    getRouteMetaByUrl(hrefPath) ??
+    (hrefPath.startsWith(`${RoutesPaths.notifications}/`)
+      ? getRouteMetaByUrl(RoutesPaths.notifications)
+      : undefined);
   if (!routeMeta) return false;
 
   const hasRoleRestriction = Array.isArray(routeMeta.rolesAllowed) && routeMeta.rolesAllowed.length > 0;
