@@ -9,7 +9,6 @@ import type { SidebarItem } from "./types";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useMailSidebarCounts } from "@/features/mail/hooks/useMailSidebarCounts";
 import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
-import { useMailModules } from "@/features/mail/hooks/useMailModules";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 
 const normalizeRole = (role?: string | null) =>
@@ -54,24 +53,18 @@ const canAccessHref = (
 const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
-  const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
+  const isNotifications =
+    location.pathname.startsWith(RoutesPaths.notifications) ||
+    location.pathname.startsWith("/notifications");
   const notificationCounts = useMailSidebarCounts();
   const { items: mailLabels } = useMailLabels(isNotifications);
-  const { modules: allowedModules } = useMailModules();
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
-  const allowedModuleKeys = useMemo(() => new Set(allowedModules.map((moduleItem) => moduleItem.key)), [allowedModules]);
-  const visibleLabels = useMemo(
-    () =>
-      mailLabels.filter((label) =>
-        label.type === "MODULE" ? allowedModuleKeys.has(label.key) : true,
-      ),
-    [allowedModuleKeys, mailLabels],
-  );
 
   const items = useMemo(() => {
     const sourceItems = isNotifications
       ? getMailSidebarItems(notificationCounts, visibleLabels, canCreateLabel)
+      ? getMailSidebarItems(notificationCounts, mailLabels, canCreateLabel)
       : getSidebarItems();
 
     const filtered = sourceItems
@@ -93,7 +86,7 @@ const SidebarBody = () => {
       });
 
     return filtered;
-  }, [canCreateLabel, isSuperAdmin, isNotifications, notificationCounts, permissions, userRole, visibleLabels]);
+  }, [canCreateLabel, isSuperAdmin, isNotifications, mailLabels, notificationCounts, permissions, userRole]);
 
   return (
     <div className="scroll-area flex-1 overflow-y-auto px-2 lg:pr-1 py-4 select-none">

@@ -32,12 +32,14 @@ import { getMarkRange } from "@tiptap/core";
 import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import TiptapImage from "@tiptap/extension-image";
 import Underline from "@tiptap/extension-underline";
 import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import TextAlign from "@tiptap/extension-text-align";
 import type { MailLabelItem } from "../types/message.types";
 import { SystemButton } from "../../../shared/components/components/SystemButton";
+import { FloatingInput } from "../../../shared/components/components/FloatingInput";
 import { Popover } from "@/shared/components/modales/Popover";
 
 type AttachmentItem = {
@@ -74,6 +76,9 @@ export type NotificationComposeDraft = {
 interface Props {
   draft: NotificationComposeDraft;
   labels?: MailLabelItem[];
+  isSaving?: boolean;
+  isSending?: boolean;
+  isDiscarding?: boolean;
   onToggleMinimize: (composeId: string) => void;
   onClose: (composeId: string) => void;
   onToChange: (composeId: string, value: string) => void;
@@ -114,6 +119,9 @@ interface Props {
 export default function NotificationComposeModal({
   draft,
   labels,
+  isSaving = false,
+  isSending = false,
+  isDiscarding = false,
   onToggleMinimize,
   onClose,
   onToChange,
@@ -130,11 +138,14 @@ export default function NotificationComposeModal({
   onDiscard,
   onSend,
 }: Props) {
+  const isBusy = isSaving || isSending || isDiscarding;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const toInputRef = useRef<HTMLInputElement>(null);
   const ccInputRef = useRef<HTMLInputElement>(null);
   const bccInputRef = useRef<HTMLInputElement>(null);
+  const linkAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const formatAnchorRef = useRef<HTMLButtonElement | null>(null);
   const labelsAnchorRef = useRef<HTMLButtonElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);
   const bodyChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -310,6 +321,15 @@ export default function NotificationComposeModal({
       TextStyle,
       Color,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TiptapImage.configure({
+        inline: true,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "inline-block size-[50px] rounded-md border border-border object-cover align-middle",
+          width: "50",
+          height: "50",
+        },
+      }),
       Link.configure({
         openOnClick: true,
         autolink: true,
@@ -332,7 +352,7 @@ export default function NotificationComposeModal({
     editorProps: {
       attributes: {
         class:
-          "min-h-[180px] flex-1 px-4 py-3 text-sm outline-none prose prose-sm max-w-none [&_a]:text-blue-600 [&_a]:underline [&_a]:underline-offset-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1",
+          "min-h-[180px] flex-1 px-4 py-3 text-sm outline-none prose prose-sm max-w-none [&_a]:text-blue-600 [&_a]:underline [&_a]:underline-offset-2 [&_img]:inline-block [&_img]:size-[50px] [&_img]:rounded-md [&_img]:border [&_img]:border-border [&_img]:object-cover [&_img]:align-middle [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1",
       },
       handleKeyDown: (_view, event) => {
         if (event.key !== "Backspace" && event.key !== "Delete") return false;
@@ -387,6 +407,25 @@ export default function NotificationComposeModal({
     });
 
     setAttachments((prev) => [...prev, ...next]);
+
+    if (kind === "image" && editor) {
+      next
+        .filter((item) => item.kind === "image" && item.previewUrl)
+        .forEach((item) => {
+          editor
+            .chain()
+            .focus()
+            .setImage({ src: item.previewUrl!, alt: item.name, title: item.name })
+            .insertContent(" ")
+            .run();
+        });
+
+      const html = editor.getHTML();
+      const json = editor.getJSON() as Record<string, unknown>;
+      const bodyText = editor.getText().trim();
+      latestBodyRef.current = { html, json, text: bodyText };
+      flushBodyChange();
+    }
 
     let draftId = draft.editingDraftId;
     try {
@@ -767,8 +806,10 @@ export default function NotificationComposeModal({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (isBusy) return;
                 onToggleMinimize(draft.id);
               }}
+              disabled={isBusy}
               className="flex size-6 items-center justify-center rounded hover:bg-black/10"
             >
               <Maximize2 className="size-3.5" />
@@ -778,8 +819,10 @@ export default function NotificationComposeModal({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (isBusy) return;
                 onClose(draft.id);
               }}
+              disabled={isBusy}
               className="flex size-6 items-center justify-center rounded hover:bg-black/10"
             >
               <X className="size-3.5" />
@@ -810,7 +853,11 @@ export default function NotificationComposeModal({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => onToggleMinimize(draft.id)}
+            onClick={() => {
+              if (isBusy) return;
+              onToggleMinimize(draft.id);
+            }}
+            disabled={isBusy}
             className="flex size-7 items-center justify-center rounded hover:bg-black/10"
           >
             <Minus className="size-4" />
@@ -818,7 +865,11 @@ export default function NotificationComposeModal({
 
           <button
             type="button"
-            onClick={() => onClose(draft.id)}
+            onClick={() => {
+              if (isBusy) return;
+              onClose(draft.id);
+            }}
+            disabled={isBusy}
             className="flex size-7 items-center justify-center rounded hover:bg-black/10"
           >
             <X className="size-4" />
@@ -852,9 +903,11 @@ export default function NotificationComposeModal({
           <EditorContent editor={editor} />
         </div>
 
-        {attachments.length > 0 ? (
+        {attachments.some((a) => a.kind === "file") ? (
           <div className="flex flex-wrap gap-3 border-t border-border px-4 py-2">
-            {attachments.map((a) => (
+            {attachments
+              .filter((a) => a.kind === "file")
+              .map((a) => (
               <div
                 key={a.id}
                 className={cn(
@@ -924,8 +977,9 @@ export default function NotificationComposeModal({
           onClick={handleSend}
           leftIcon={<Send className="size-4" />}
           className="rounded-full"
+          disabled={isBusy}
         >
-          Enviar
+          {isSending ? "Enviando..." : "Enviar"}
         </SystemButton>
 
         <button
@@ -937,141 +991,157 @@ export default function NotificationComposeModal({
           <Paperclip className="size-5" />
         </button>
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setShowLink((v) => !v);
-              setShowFormat(false);
-              setShowLabels(false);
-            }}
-            className={cn(
-              "flex size-9 items-center justify-center rounded-full hover:bg-mail-hover",
-              showLink && "bg-mail-hover",
-            )}
-            title="Insertar enlace"
-          >
-            <LinkIcon className="size-5" />
-          </button>
+        <button
+          ref={linkAnchorRef}
+          type="button"
+          onClick={() => {
+            setShowLink((v) => !v);
+            setShowFormat(false);
+            setShowLabels(false);
+          }}
+          className={cn(
+            "flex size-9 items-center justify-center rounded-full hover:bg-mail-hover",
+            showLink && "bg-mail-hover",
+          )}
+          title="Insertar enlace"
+        >
+          <LinkIcon className="size-5" />
+        </button>
 
-          {showLink ? (
-            <div className="absolute bottom-full left-0 z-50 mb-2 w-72 rounded-lg border border-border bg-popover p-3 shadow-popover">
-              <p className="mb-2 text-xs font-medium">Insertar enlace</p>
+        <Popover
+          open={showLink}
+          onClose={() => setShowLink(false)}
+          anchorRef={linkAnchorRef}
+          placement="top-start"
+          offset={8}
+          zIndex={10000}
+          hideHeader
+          className="w-72 rounded-lg border border-border bg-popover shadow-popover"
+          bodyClassName="p-3"
+        >
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-medium">Insertar enlace</p>
 
-              <input
-                type="text"
-                placeholder="Texto a mostrar"
-                value={linkName}
-                onChange={(e) => setLinkName(e.target.value)}
-                className="mb-2 w-full rounded border border-border px-2 py-1 text-sm outline-none"
-              />
+            <FloatingInput
+              label="Texto"
+              name="linkText"
+              value={linkName}
+              onChange={(e) => setLinkName(e.target.value)}
+            />
 
-              <input
-                type="text"
-                placeholder="URL"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                className="mb-3 w-full rounded border border-border px-2 py-1 text-sm outline-none"
-              />
+            <FloatingInput
+              label="URL"
+              name="linkUrl"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+            />
 
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowLink(false)}
-                  className="rounded px-3 py-1 text-sm hover:bg-mail-hover"
-                >
-                  Cancelar
-                </button>
+            <div className="flex justify-end gap-2">
+              <SystemButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLink(false)}
+              >
+                Cancelar
+              </SystemButton>
 
-                <button
-                  type="button"
-                  onClick={insertLink}
-                  className="rounded bg-mail-accent px-3 py-1 text-sm text-mail-accent-foreground"
-                >
-                  Aceptar
-                </button>
-              </div>
+              <SystemButton
+                size="sm"
+                onClick={insertLink}
+              >
+                Aceptar
+              </SystemButton>
             </div>
-          ) : null}
-        </div>
+          </div>
+        </Popover>
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setShowFormat((v) => !v);
-              setShowLink(false);
-              setShowLabels(false);
-            }}
-            className={cn(
-              "flex size-9 items-center justify-center rounded-full hover:bg-mail-hover",
-              showFormat && "bg-mail-hover ring-1 ring-border",
-            )}
-            title="Formato de texto"
-          >
-            <Type className="size-5" />
-          </button>
+        <button
+          ref={formatAnchorRef}
+          type="button"
+          onClick={() => {
+            setShowFormat((v) => !v);
+            setShowLink(false);
+            setShowLabels(false);
+          }}
+          className={cn(
+            "flex size-9 items-center justify-center rounded-full hover:bg-mail-hover",
+            showFormat && "bg-mail-hover ring-1 ring-border",
+          )}
+          title="Formato de texto"
+        >
+          <Type className="size-5" />
+        </button>
 
-          {showFormat ? (
-            <div className="absolute bottom-full left-0 z-50 mb-2 w-85 rounded-xl border border-border bg-popover p-2 shadow-popover">
-              <div className="mb-2 flex items-center justify-between border-b border-border pb-2">
-                <span className="px-1 text-xs font-semibold text-muted-foreground">
-                  Formato
-                </span>
+        <Popover
+          open={showFormat}
+          onClose={() => setShowFormat(false)}
+          anchorRef={formatAnchorRef}
+          placement="top-start"
+          offset={8}
+          zIndex={10000}
+          hideHeader
+          className="w-85 rounded-xl border border-border bg-popover shadow-popover"
+          bodyClassName="p-2"
+        >
+          <div>
+            <div className="mb-2 flex items-center justify-between border-b border-border pb-2">
+              <span className="px-1 text-xs font-semibold text-muted-foreground">
+                Formato
+              </span>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().unsetAllMarks().clearNodes().run()
-                  }
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-mail-hover hover:text-foreground"
+              <button
+                type="button"
+                onClick={() =>
+                  editor?.chain().focus().unsetAllMarks().clearNodes().run()
+                }
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-mail-hover hover:text-foreground"
+              >
+                <RiEraserLine className="size-3.5" />
+                Limpiar
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 hover:bg-mail-hover">
+                <RiFontSize className="size-4 text-muted-foreground" />
+                <select
+                  onChange={(e) => {
+                    if (!editor) return;
+                    const size = e.target.value;
+                    if (size === "1")
+                      editor
+                        .chain()
+                        .focus()
+                        .setMark("textStyle", { fontSize: "0.8em" })
+                        .run();
+                    if (size === "3")
+                      editor
+                        .chain()
+                        .focus()
+                        .setMark("textStyle", { fontSize: "1em" })
+                        .run();
+                    if (size === "5")
+                      editor
+                        .chain()
+                        .focus()
+                        .setMark("textStyle", { fontSize: "1.2em" })
+                        .run();
+                    if (size === "7")
+                      editor
+                        .chain()
+                        .focus()
+                        .setMark("textStyle", { fontSize: "1.4em" })
+                        .run();
+                  }}
+                  defaultValue="3"
+                  className="h-full border-0 bg-transparent text-xs outline-none"
                 >
-                  <RiEraserLine className="size-3.5" />
-                  Limpiar
-                </button>
+                  <option value="1">Pequeño</option>
+                  <option value="3">Normal</option>
+                  <option value="5">Grande</option>
+                  <option value="7">Enorme</option>
+                </select>
               </div>
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                <div className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 hover:bg-mail-hover">
-                  <RiFontSize className="size-4 text-muted-foreground" />
-                  <select
-                    onChange={(e) => {
-                      if (!editor) return;
-                      const size = e.target.value;
-                      if (size === "1")
-                        editor
-                          .chain()
-                          .focus()
-                          .setMark("textStyle", { fontSize: "0.8em" })
-                          .run();
-                      if (size === "3")
-                        editor
-                          .chain()
-                          .focus()
-                          .setMark("textStyle", { fontSize: "1em" })
-                          .run();
-                      if (size === "5")
-                        editor
-                          .chain()
-                          .focus()
-                          .setMark("textStyle", { fontSize: "1.2em" })
-                          .run();
-                      if (size === "7")
-                        editor
-                          .chain()
-                          .focus()
-                          .setMark("textStyle", { fontSize: "1.4em" })
-                          .run();
-                    }}
-                    defaultValue="3"
-                    className="h-full border-0 bg-transparent text-xs outline-none"
-                  >
-                    <option value="1">Pequeño</option>
-                    <option value="3">Normal</option>
-                    <option value="5">Grande</option>
-                    <option value="7">Enorme</option>
-                  </select>
-                </div>
 
                 <button
                   type="button"
@@ -1189,10 +1259,9 @@ export default function NotificationComposeModal({
                 >
                   <RiListOrdered className="size-4" />
                 </button>
-              </div>
             </div>
-          ) : null}
-        </div>
+          </div>
+        </Popover>
 
         <button
           type="button"
@@ -1281,6 +1350,7 @@ export default function NotificationComposeModal({
         <button
           type="button"
           onClick={() => void onDiscard(draft.id)}
+          disabled={isBusy}
           className="ml-auto flex size-9 items-center justify-center rounded-full hover:bg-mail-hover"
           title="Descartar borrador"
         >

@@ -54,7 +54,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         message: payload?.message?.subject || payload?.message?.preview || "Tienes un nuevo mensaje.",
         priority: "NORMAL",
       });
-      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
+      // Unificar refresh para evitar dobles caminos de sincronizacion durante coexistencia legacy/v2.
+      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
     };
 
     socket.on('connect', onConnect);

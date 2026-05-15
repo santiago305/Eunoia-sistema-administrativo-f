@@ -12,11 +12,9 @@ import {
   bulkMessages,
   forwardMessage,
   getMessageDetail,
-  listSearchHistory,
   permanentlyDeleteMessage,
   replyMessage,
   restoreMessage,
-  saveSearchHistory,
   sendMessage,
   uploadAttachment,
   deleteAttachment as deleteRemoteAttachment,
@@ -24,7 +22,6 @@ import {
 import { createDraft, deleteDraft, updateDraft } from "@/features/mail/services/drafts.service";
 import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
 import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
-import { useMailModules } from "@/features/mail/hooks/useMailModules";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -32,6 +29,7 @@ import { Modal } from "@/shared/components/modales/Modal";
 
 const createComposeId = () => `compose-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const MAX_COMPOSE_DRAFTS = 4;
+const COMPOSE_AUTOSAVE_MS = 10_000;
 
 type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed";
 
@@ -138,6 +136,19 @@ const avatarColor = (seed: string): string => {
 };
 
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+const serializeComposeDraft = (draft: NotificationComposeDraft) =>
+  JSON.stringify({
+    to: draft.to.trim(),
+    cc: draft.cc.trim(),
+    bcc: draft.bcc.trim(),
+    subject: draft.subject.trim(),
+    body: stripHtml(draft.body),
+    bodyJson: draft.bodyJson ?? null,
+    labels: [...draft.selectedLabelIds].sort(),
+    attachments: [...(draft.attachmentIds ?? [])].sort(),
+    mode: draft.mode,
+    parentMessageId: draft.parentMessageId ?? null,
+  });
 
 const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mail | null => {
   if ("recipient" in item) {
@@ -196,7 +207,6 @@ export default function MailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = (searchParams.get("q") ?? "").trim();
   const labelId = (searchParams.get("labelId") ?? "").trim() || undefined;
-  const originModule = (searchParams.get("originModule") ?? "").trim() || undefined;
 
   const [folder, setFolder] = useState<UiFolder>("inbox");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -205,6 +215,9 @@ export default function MailPage() {
   const [activeMailId, setActiveMailId] = useState<string | null>(null);
 
   const [composeDrafts, setComposeDrafts] = useState<NotificationComposeDraft[]>([]);
+  const [savingComposeIds, setSavingComposeIds] = useState<Set<string>>(new Set());
+  const [sendingComposeIds, setSendingComposeIds] = useState<Set<string>>(new Set());
+  const [discardingComposeIds, setDiscardingComposeIds] = useState<Set<string>>(new Set());
   const [createLabelOpen, setCreateLabelOpen] = useState(false);
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState("#2563eb");
@@ -212,15 +225,12 @@ export default function MailPage() {
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
   const [customSnoozeAt, setCustomSnoozeAt] = useState("");
   const [activeMailDetail, setActiveMailDetail] = useState<MailDetailData>(null);
-  const [searchInput, setSearchInput] = useState(q);
-  const [searchHistoryItems, setSearchHistoryItems] = useState<Array<{ id: string; query: string }>>([]);
-  const [searchHistoryOpen, setSearchHistoryOpen] = useState(false);
-  const searchHistoryRef = useRef<HTMLDivElement | null>(null);
+  const composeDraftsRef = useRef<NotificationComposeDraft[]>([]);
+  const persistedSignaturesRef = useRef<Map<string, string>>(new Map());
 
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
   const { items: labels, createLabel, deleteLabel } = useMailLabels(true);
-  const { modules: allowedModules } = useMailModules();
 
   const {
     items,
@@ -236,7 +246,6 @@ export default function MailPage() {
     unsnoozeInboxRow,
   } = useMessagesV2({
     folder,
-    originModule,
     labelId,
     q,
     page,
@@ -245,14 +254,27 @@ export default function MailPage() {
 
   const mails = useMemo(() => items.map((item) => mapItemToMail(item, folder)).filter((v): v is Mail => Boolean(v)), [items, folder]);
 
+  useEffect(() => {
+    composeDraftsRef.current = composeDrafts;
+    const aliveIds = new Set(composeDrafts.map((item) => item.id));
+    Array.from(persistedSignaturesRef.current.keys()).forEach((id) => {
+      if (!aliveIds.has(id)) persistedSignaturesRef.current.delete(id);
+    });
+  }, [composeDrafts]);
+
   const openCompose = useCallback((payload?: ComposePayload) => {
+    if (composeDraftsRef.current.length >= MAX_COMPOSE_DRAFTS) {
+      setLabelError(`Solo se permiten ${MAX_COMPOSE_DRAFTS} ventanas de redactar abiertas.`);
+      return;
+    }
     setComposeDrafts((prev) => {
       const nextDraft = createComposeDraft(payload);
-
-      return [
+      const next = [
         ...prev.map((item) => ({ ...item, minimized: true })),
         nextDraft,
-      ].slice(-MAX_COMPOSE_DRAFTS);
+      ];
+      persistedSignaturesRef.current.set(nextDraft.id, serializeComposeDraft(nextDraft));
+      return next;
     });
   }, []);
 
@@ -280,49 +302,112 @@ export default function MailPage() {
     setComposeDrafts((prev) => prev.map((item) => (item.id === composeId ? { ...item, ...patch } : item)));
   }, []);
 
+  const persistComposeDraft = useCallback(async (composeId: string) => {
+    const draft = composeDraftsRef.current.find((item) => item.id === composeId);
+    if (!draft) return;
+    if (!draft.to.trim() && !draft.cc.trim() && !draft.bcc.trim() && !draft.subject.trim() && !stripHtml(draft.body)) return;
+    const signature = serializeComposeDraft(draft);
+    const lastSignature = persistedSignaturesRef.current.get(composeId);
+    if (signature === lastSignature) return;
+
+    setSavingComposeIds((prev) => new Set(prev).add(composeId));
+    try {
+      if (draft.editingDraftId) {
+        await updateDraft(draft.editingDraftId, {
+          recipients: draft.to,
+          subject: draft.subject,
+          bodyHtml: draft.body,
+          bodyJson: draft.bodyJson ?? undefined,
+        });
+      } else {
+        const created = await createDraft({
+          recipients: draft.to,
+          subject: draft.subject,
+          bodyHtml: draft.body,
+          bodyJson: draft.bodyJson ?? undefined,
+          originModule: "corporate",
+        });
+        const draftId = String(created?.id ?? "");
+        if (draftId) updateComposeDraft(composeId, { editingDraftId: draftId });
+      }
+      persistedSignaturesRef.current.set(composeId, signature);
+    } finally {
+      setSavingComposeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(composeId);
+        return next;
+      });
+    }
+  }, [updateComposeDraft]);
+
   const resolveComposeDraftId = useCallback(async (composeId: string) => {
-    const compose = composeDrafts.find((item) => item.id === composeId);
+    const compose = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!compose) throw new Error("COMPOSE_NOT_FOUND");
     if (compose.editingDraftId) return compose.editingDraftId;
-    const created = await createDraft({
-      recipients: compose.to,
-      subject: compose.subject,
-      bodyHtml: compose.body,
-      bodyJson: compose.bodyJson ?? undefined,
-      originModule: "corporate",
-    });
-    const draftId = String(created?.id ?? "");
-    if (!draftId) throw new Error("DRAFT_CREATE_FAILED");
-    updateComposeDraft(composeId, { editingDraftId: draftId });
-    return draftId;
-  }, [composeDrafts, updateComposeDraft]);
+    setSavingComposeIds((prev) => new Set(prev).add(composeId));
+    try {
+      const created = await createDraft({
+        recipients: compose.to || compose.cc || compose.bcc || "",
+        subject: compose.subject,
+        bodyHtml: compose.body,
+        bodyJson: compose.bodyJson ?? undefined,
+        originModule: "corporate",
+      });
+      const draftId = String(created?.id ?? "");
+      if (!draftId) throw new Error("DRAFT_CREATE_FAILED");
+      updateComposeDraft(composeId, { editingDraftId: draftId });
+      persistedSignaturesRef.current.set(composeId, serializeComposeDraft({ ...compose, editingDraftId: draftId }));
+      return draftId;
+    } finally {
+      setSavingComposeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(composeId);
+        return next;
+      });
+    }
+  }, [updateComposeDraft]);
 
   const removeComposeDraft = useCallback((composeId: string) => {
     setComposeDrafts((prev) => prev.filter((item) => item.id !== composeId));
+    persistedSignaturesRef.current.delete(composeId);
   }, []);
 
   const discardComposeDraft = useCallback(async (composeId: string) => {
-    const draft = composeDrafts.find((item) => item.id === composeId);
-    removeComposeDraft(composeId);
-    if (!draft?.editingDraftId) return;
+    const draft = composeDraftsRef.current.find((item) => item.id === composeId);
+    if (!draft) return;
+    if (sendingComposeIds.has(composeId) || savingComposeIds.has(composeId)) return;
+    setDiscardingComposeIds((prev) => new Set(prev).add(composeId));
     try {
+      removeComposeDraft(composeId);
+      if (!draft.editingDraftId) return;
       await deleteDraft(draft.editingDraftId);
     } catch {
       return;
+    } finally {
+      setDiscardingComposeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(composeId);
+        return next;
+      });
     }
-  }, [composeDrafts, removeComposeDraft]);
+  }, [removeComposeDraft, savingComposeIds, sendingComposeIds]);
 
   const toggleComposeMinimize = useCallback((composeId: string) => {
     setComposeDrafts((prev) => {
       const target = prev.find((item) => item.id === composeId);
+      if (!target) return prev;
+      if (sendingComposeIds.has(composeId) || savingComposeIds.has(composeId) || discardingComposeIds.has(composeId)) return prev;
       const willExpand = Boolean(target?.minimized);
+      if (!willExpand) {
+        void persistComposeDraft(composeId);
+      }
       return prev.map((item) => {
         if (item.id === composeId) return { ...item, minimized: !item.minimized };
         if (willExpand) return { ...item, minimized: true };
         return item;
       });
     });
-  }, []);
+  }, [discardingComposeIds, persistComposeDraft, savingComposeIds, sendingComposeIds]);
 
   const toggleComposeLabel = useCallback((composeId: string, id: string) => {
     setComposeDrafts((prev) =>
@@ -334,23 +419,18 @@ export default function MailPage() {
     );
   }, []);
 
-  const isComposeEmpty = (draft: NotificationComposeDraft) =>
-    !draft.to.trim() && !draft.cc.trim() && !draft.bcc.trim() && !draft.subject.trim() && !stripHtml(draft.body);
-
   const closeComposeWithDraft = async (composeId: string) => {
-    const draft = composeDrafts.find((item) => item.id === composeId);
+    const draft = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!draft) return;
-    removeComposeDraft(composeId);
-    if (isComposeEmpty(draft)) return;
+    if (sendingComposeIds.has(composeId) || discardingComposeIds.has(composeId)) return;
+    if (savingComposeIds.has(composeId)) return;
     try {
-      if (draft.editingDraftId) {
-        await updateDraft(draft.editingDraftId, { recipients: draft.to, subject: draft.subject, bodyHtml: draft.body, bodyJson: draft.bodyJson ?? undefined });
-      } else {
-        await createDraft({ recipients: draft.to, subject: draft.subject, bodyHtml: draft.body, bodyJson: draft.bodyJson ?? undefined, originModule: "corporate" });
-      }
+      await persistComposeDraft(composeId);
     } catch {
       setLabelError("No se pudo guardar el borrador.");
+      return;
     }
+    removeComposeDraft(composeId);
   };
 
   const parseRecipientList = (value: string) =>
@@ -360,7 +440,8 @@ export default function MailPage() {
       .filter(Boolean);
 
   const sendCompose = async (composeId: string, overrides?: Partial<Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds" | "attachmentIds" | "bodyJson">>) => {
-    const currentDraft = composeDrafts.find((item) => item.id === composeId);
+    if (sendingComposeIds.has(composeId) || savingComposeIds.has(composeId) || discardingComposeIds.has(composeId)) return;
+    const currentDraft = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!currentDraft) return;
     const draft = { ...currentDraft, ...overrides };
     if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) {
@@ -368,6 +449,7 @@ export default function MailPage() {
       return;
     }
     try {
+      setSendingComposeIds((prev) => new Set(prev).add(composeId));
       updateComposeDraft(composeId, { error: null });
       if (draft.mode === "reply" && draft.parentMessageId) {
         await replyMessage(draft.parentMessageId, {
@@ -406,11 +488,18 @@ export default function MailPage() {
         const detail = await getMessageDetail(activeMailId);
         setActiveMailDetail(detail);
       }
+      persistedSignaturesRef.current.delete(composeId);
     } catch (error: unknown) {
       const backendMessage = isAxiosError<BackendErrorPayload>(error)
         ? error.response?.data?.message
         : undefined;
       updateComposeDraft(composeId, { error: Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo enviar el mensaje." });
+    } finally {
+      setSendingComposeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(composeId);
+        return next;
+      });
     }
   };
 
@@ -437,13 +526,31 @@ export default function MailPage() {
   }, [params.folder, searchParams]);
 
   useEffect(() => {
-    if (!originModule) return;
-    const isAllowed = allowedModules.some((moduleItem) => moduleItem.key === originModule);
-    if (isAllowed) return;
-    const next = new URLSearchParams(searchParams);
-    next.delete("originModule");
-    setSearchParams(next, { replace: true });
-  }, [allowedModules, originModule, searchParams, setSearchParams]);
+    const id = window.setInterval(() => {
+      const drafts = composeDraftsRef.current;
+      drafts.forEach((draft) => {
+        if (draft.minimized) return;
+        if (sendingComposeIds.has(draft.id) || savingComposeIds.has(draft.id) || discardingComposeIds.has(draft.id)) return;
+        void persistComposeDraft(draft.id);
+      });
+    }, COMPOSE_AUTOSAVE_MS);
+    return () => window.clearInterval(id);
+  }, [discardingComposeIds, persistComposeDraft, savingComposeIds, sendingComposeIds]);
+
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      const hasDirtyDraft = composeDraftsRef.current.some((draft) => {
+        const current = serializeComposeDraft(draft);
+        const persisted = persistedSignaturesRef.current.get(draft.id);
+        return current !== persisted;
+      });
+      if (!hasDirtyDraft) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
   useEffect(() => {
     const id = (searchParams.get("deleteLabel") ?? "").trim();
@@ -464,34 +571,7 @@ export default function MailPage() {
   useEffect(() => {
     setPage(1);
     setSelectedIds(new Set());
-  }, [folder, q, labelId, originModule]);
-
-  useEffect(() => {
-    setSearchInput(q);
-  }, [q]);
-
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const history = await listSearchHistory();
-        setSearchHistoryItems(history ?? []);
-      } catch {
-        setSearchHistoryItems([]);
-      }
-    };
-    void loadHistory();
-  }, []);
-
-  useEffect(() => {
-    const onMouseDown = (event: MouseEvent) => {
-      if (!searchHistoryRef.current) return;
-      if (!searchHistoryRef.current.contains(event.target as Node)) {
-        setSearchHistoryOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
-  }, []);
+  }, [folder, q, labelId]);
 
   useEffect(() => {
     if (!activeMailId) {
@@ -626,23 +706,6 @@ export default function MailPage() {
     }
   };
 
-  const applySearch = async (value: string) => {
-    const term = value.trim();
-    const next = new URLSearchParams(searchParams);
-    if (term) {
-      next.set("q", term);
-      try {
-        const updated = await saveSearchHistory(term);
-        setSearchHistoryItems(updated ?? []);
-      } catch {
-        return;
-      }
-    } else {
-      next.delete("q");
-    }
-    setSearchParams(next, { replace: true });
-  };
-
   return (
     <div className="h-full">
       <div className="grid h-full grid-cols-1 gap-4">
@@ -676,41 +739,6 @@ export default function MailPage() {
               />
             ) : (
               <>
-                <div className="border-b border-border px-4 py-2">
-                  <div className="relative" ref={searchHistoryRef}>
-                    <input
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      onFocus={() => setSearchHistoryOpen(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          void applySearch(searchInput);
-                          setSearchHistoryOpen(false);
-                        }
-                      }}
-                      placeholder="Buscar por correo, asunto, cuerpo, adjunto..."
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
-                    />
-                    {searchHistoryOpen && searchHistoryItems.length > 0 ? (
-                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-md border border-border bg-background p-1 shadow-sm">
-                        {searchHistoryItems.map((item) => (
-                          <button
-                            key={item.id}
-                            className="block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted"
-                            onClick={() => {
-                              setSearchInput(item.query);
-                              void applySearch(item.query);
-                              setSearchHistoryOpen(false);
-                            }}
-                          >
-                            {item.query}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
                 <MailToolbar
                   total={total}
                   start={start}
@@ -774,6 +802,9 @@ export default function MailPage() {
       <NotificationComposeStack
         drafts={composeDrafts}
         labels={labels.filter((item) => item.type === "CUSTOM" || item.type === "MODULE")}
+        savingComposeIds={savingComposeIds}
+        sendingComposeIds={sendingComposeIds}
+        discardingComposeIds={discardingComposeIds}
         onToggleMinimize={toggleComposeMinimize}
       onClose={(composeId) => {
           void closeComposeWithDraft(composeId);

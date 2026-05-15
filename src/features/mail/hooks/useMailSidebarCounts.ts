@@ -9,7 +9,7 @@ import { listMailLabels } from "../services/messages.service";
 type SidebarCounts = {
   inbox: number;
   starred: number;
-  sent: number | undefined;
+  sent: number;
   drafts: number;
   trash: number;
   archived: number;
@@ -39,13 +39,14 @@ export function useMailSidebarCounts() {
     }
 
     try {
-      const folders: MessageFolder[] = ["inbox", "starred", "trash", "archived", "snoozed"];
-      const [inbox, starred, trash, archived, snoozed, drafts, labels] = await Promise.all([
+      const folders: MessageFolder[] = ["inbox", "starred", "trash", "archived", "snoozed", "sent"];
+      const [inbox, starred, trash, archived, snoozed, sent, drafts, labels] = await Promise.all([
         listMessages({ folder: folders[0], read: false, page: 1, limit: 1 }),
         listMessages({ folder: folders[1], read: false, page: 1, limit: 1 }),
         listMessages({ folder: folders[2], read: false, page: 1, limit: 1 }),
         listMessages({ folder: folders[3], read: false, page: 1, limit: 1 }),
         listMessages({ folder: folders[4], read: false, page: 1, limit: 1 }),
+        listMessages({ folder: folders[5], page: 1, limit: 1 }),
         listDrafts(),
         listMailLabels(),
       ]);
@@ -53,11 +54,7 @@ export function useMailSidebarCounts() {
       const labelUnreadById: Record<string, number> = {};
       await Promise.all(
         (labels ?? []).map(async (label) => {
-          const result = await listMessages(
-            label.type === "MODULE"
-              ? { folder: "inbox", read: false, originModule: label.key, page: 1, limit: 1 }
-              : { folder: "inbox", read: false, labelId: label.id, page: 1, limit: 1 },
-          );
+          const result = await listMessages({ folder: "inbox", read: false, labelId: label.id, page: 1, limit: 1 });
           labelUnreadById[label.id] = result.total ?? 0;
         }),
       );
@@ -65,7 +62,7 @@ export function useMailSidebarCounts() {
       setCounts({
         inbox: inbox.total ?? 0,
         starred: starred.total ?? 0,
-        sent: undefined,
+        sent: sent.total ?? 0,
         trash: trash.total ?? 0,
         drafts: drafts.length ?? 0,
         archived: archived.total ?? 0,

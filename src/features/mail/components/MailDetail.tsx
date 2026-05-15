@@ -149,11 +149,6 @@ export default function MailDetail(props: Props) {
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="font-semibold text-sm">{senderName}</span>
                 <span className="text-xs text-muted-foreground">&lt;{senderEmail}&gt;</span>
-                {mail.moduleLabel ? (
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
-                    {mail.moduleLabel}
-                  </span>
-                ) : null}
                 <span className="ml-auto text-xs text-muted-foreground">{props.formatFullDate(mail.date)}</span>
               </div>
               <div className="text-xs text-muted-foreground mt-1">

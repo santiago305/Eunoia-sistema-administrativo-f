@@ -101,7 +101,12 @@ export const API_NOTIFICATION_MESSAGES_GROUP = {
   sendDraft: (id: string) => `/api/notifications/drafts/${id}/send`,
   listLabels: "/api/notifications/labels",
   createLabel: "/api/notifications/labels",
+  updateLabel: (id: string) => `/api/notifications/labels/${id}`,
   deleteLabel: (id: string) => `/api/notifications/labels/${id}`,
+  assignLabelToMessage: (messageId: string, labelId: string) =>
+    `/api/notifications/messages/${messageId}/labels/${labelId}`,
+  removeLabelFromMessage: (messageId: string, labelId: string) =>
+    `/api/notifications/messages/${messageId}/labels/${labelId}`,
   listSearchHistory: "/api/notifications/search-history",
   saveSearchHistory: "/api/notifications/search-history",
   deleteSearchHistory: (id: string) => `/api/notifications/search-history/${id}`,

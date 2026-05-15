@@ -6,6 +6,9 @@ import type { MailLabelItem } from "../types/message.types";
 interface Props {
   drafts: NotificationComposeDraft[];
   labels?: MailLabelItem[];
+  savingComposeIds?: Set<string>;
+  sendingComposeIds?: Set<string>;
+  discardingComposeIds?: Set<string>;
   onToggleMinimize: (composeId: string) => void;
   onClose: (composeId: string) => void;
   onToChange: (composeId: string, value: string) => void;
@@ -32,6 +35,9 @@ interface Props {
 export default function NotificationComposeStack({
   drafts,
   labels,
+  savingComposeIds,
+  sendingComposeIds,
+  discardingComposeIds,
   onToggleMinimize,
   onClose,
   onToChange,
@@ -57,6 +63,9 @@ export default function NotificationComposeStack({
           key={draft.id}
           draft={draft}
           labels={labels}
+          isSaving={savingComposeIds?.has(draft.id)}
+          isSending={sendingComposeIds?.has(draft.id)}
+          isDiscarding={discardingComposeIds?.has(draft.id)}
           onToggleMinimize={onToggleMinimize}
           onClose={onClose}
           onToChange={onToChange}

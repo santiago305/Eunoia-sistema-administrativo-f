@@ -75,10 +75,7 @@ export const getMailSidebarItems = (
     children: [
       ...((labels ?? []).map((label) => ({
         label: label.name,
-        href:
-          label.type === "MODULE"
-            ? `${RoutesPaths.notifications}/inbox?originModule=${label.key}`
-            : `${RoutesPaths.notifications}/inbox?labelId=${label.id}`,
+        href: `${RoutesPaths.notifications}/inbox?labelId=${label.id}`,
         isCustomLabel: label.type === "CUSTOM",
         labelId: label.id,
         badgeCount: counts?.labelUnreadById?.[label.id] ?? 0,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MailLabelItem } from "../types/message.types";
-import { createMailLabel, deleteMailLabel, listMailLabels } from "../services/messages.service";
+import { createMailLabel, deleteMailLabel, listMailLabels, updateMailLabel } from "../services/messages.service";
 
 const MAIL_LABELS_UPDATED_EVENT = "mail-labels:updated";
 
@@ -46,5 +46,12 @@ export function useMailLabels(enabled = true) {
     window.dispatchEvent(new Event(MAIL_LABELS_UPDATED_EVENT));
   }, []);
 
-  return { items, loading, reload, createLabel, deleteLabel };
+  const editLabel = useCallback(async (id: string, payload: { name?: string; color?: string }) => {
+    const updated = await updateMailLabel(id, payload);
+    setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+    window.dispatchEvent(new Event(MAIL_LABELS_UPDATED_EVENT));
+    return updated;
+  }, []);
+
+  return { items, loading, reload, createLabel, editLabel, deleteLabel };
 }

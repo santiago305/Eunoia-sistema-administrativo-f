@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Trash2, MailOpen, Mail as MailIcon, ChevronLeft, ChevronRight, RefreshCw, MoreVertical, Archive } from "lucide-react";
+import { ChevronDown, Trash2, MailOpen, Mail as MailIcon, ChevronLeft, ChevronRight, RefreshCw, MoreVertical, Archive, Clock3, Tag } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { LiaTrashRestoreAltSolid } from "react-icons/lia";
+import type { MailLabelItem } from "../types/message.types";
 
 interface Props {
   total: number;
@@ -21,6 +22,10 @@ interface Props {
   onDeleteBulk: (ids: string[]) => void;
   onRestoreBulk: (ids: string[]) => void;
   onArchiveBulk: (ids: string[], archive: boolean) => void;
+  onSnoozeBulk: (ids: string[], snoozedUntil: string) => void;
+  onAssignLabelBulk: (ids: string[], labelId: string) => void;
+  onRemoveLabelBulk: (ids: string[], labelId: string) => void;
+  labels: MailLabelItem[];
   onPrevPage: () => void;
   onNextPage: () => void;
   onRefresh: () => void;
@@ -32,6 +37,7 @@ export default function MailToolbar(props: Props) {
   const someSelected = selectedArr.length > 0;
 
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [labelsOpen, setLabelsOpen] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => popRef.current && !popRef.current.contains(e.target as Node) && setPopoverOpen(false);
@@ -97,6 +103,58 @@ export default function MailToolbar(props: Props) {
           <button onClick={() => props.onArchiveBulk(selectedArr, props.folder !== "archived")} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title={props.folder === "archived" ? "Desarchivar" : "Archivar"}>
             <Archive className="size-5" />
           </button>
+          {props.folder !== "trash" ? (
+            <button
+              onClick={() => {
+                const next = window.prompt("Fecha/hora ISO para posponer (ej: 2026-05-20T08:00:00-05:00)");
+                if (!next?.trim()) return;
+                props.onSnoozeBulk(selectedArr, next.trim());
+              }}
+              className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title="Posponer seleccionados"
+            >
+              <Clock3 className="size-5" />
+            </button>
+          ) : null}
+          <div className="relative">
+            <button
+              onClick={() => setLabelsOpen((v) => !v)}
+              className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title="Etiquetar seleccionados"
+            >
+              <Tag className="size-5" />
+            </button>
+            {labelsOpen ? (
+              <div className="absolute left-0 top-10 z-40 min-w-[220px] rounded-lg border border-border bg-popover py-1 shadow-popover">
+                {(props.labels ?? []).length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">Sin etiquetas disponibles</p>
+                ) : (
+                  (props.labels ?? []).map((label) => (
+                    <div key={label.id} className="flex items-center gap-1 px-2 py-1">
+                      <button
+                        onClick={() => {
+                          props.onAssignLabelBulk(selectedArr, label.id);
+                          setLabelsOpen(false);
+                        }}
+                        className="flex-1 rounded px-2 py-1 text-left text-sm hover:bg-mail-hover"
+                      >
+                        + {label.name}
+                      </button>
+                      <button
+                        onClick={() => {
+                          props.onRemoveLabelBulk(selectedArr, label.id);
+                          setLabelsOpen(false);
+                        }}
+                        className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-mail-hover"
+                      >
+                        quitar
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
           <button className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center">
             <MoreVertical className="size-5" />
           </button>

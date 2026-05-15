@@ -54,8 +54,27 @@ export const createMailLabel = async (payload: { name: string; color: string }) 
   return response.data;
 };
 
+export const updateMailLabel = async (id: string, payload: { name?: string; color?: string }) => {
+  const response = await axiosInstance.patch<MailLabelItem>(API_NOTIFICATION_MESSAGES_GROUP.updateLabel(id), payload);
+  return response.data;
+};
+
 export const deleteMailLabel = async (id: string) => {
   const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.deleteLabel(id));
+  return response.data;
+};
+
+export const assignLabelToMessage = async (messageId: string, labelId: string) => {
+  const response = await axiosInstance.post(
+    API_NOTIFICATION_MESSAGES_GROUP.assignLabelToMessage(messageId, labelId),
+  );
+  return response.data;
+};
+
+export const removeLabelFromMessage = async (messageId: string, labelId: string) => {
+  const response = await axiosInstance.delete(
+    API_NOTIFICATION_MESSAGES_GROUP.removeLabelFromMessage(messageId, labelId),
+  );
   return response.data;
 };
 
@@ -115,8 +134,24 @@ export const unsnoozeMessage = async (recipientId: string) => {
 };
 
 export const bulkMessages = async (payload: {
-  messageRecipientIds: string[];
-  action: "MARK_AS_READ" | "MARK_AS_UNREAD" | "DELETE" | "STAR" | "UNSTAR" | "RESTORE" | "ARCHIVE" | "UNARCHIVE";
+  messageRecipientIds?: string[];
+  messageStateIds?: string[];
+  action:
+    | "MARK_AS_READ"
+    | "MARK_AS_UNREAD"
+    | "DELETE"
+    | "STAR"
+    | "UNSTAR"
+    | "RESTORE"
+    | "ARCHIVE"
+    | "UNARCHIVE"
+    | "SNOOZE"
+    | "UNSNOOZE"
+    | "MOVE_TO_TRASH"
+    | "ASSIGN_LABEL"
+    | "REMOVE_LABEL";
+  snoozedUntil?: string;
+  labelId?: string;
 }) => {
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.bulkMessages, payload);
   return response.data;
