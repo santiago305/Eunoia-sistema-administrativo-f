@@ -287,6 +287,15 @@ export default function MailPage() {
     setComposeDrafts((prev) => prev.filter((item) => item.id !== composeId));
   }, []);
 
+  const discardComposeDraft = useCallback(async (composeId: string) => {
+    const draft = composeDrafts.find((item) => item.id === composeId);
+    removeComposeDraft(composeId);
+    if (!draft?.editingDraftId) return;
+    try {
+      await deleteDraft(draft.editingDraftId);
+    } catch {}
+  }, [composeDrafts, removeComposeDraft]);
+
   const toggleComposeMinimize = useCallback((composeId: string) => {
     setComposeDrafts((prev) => {
       const target = prev.find((item) => item.id === composeId);
@@ -759,6 +768,9 @@ export default function MailPage() {
         onUploadAttachment={async ({ file, draftId }) => uploadAttachment({ file, draftId })}
         onDeleteAttachment={async (attachmentId) => {
           await deleteRemoteAttachment(attachmentId);
+        }}
+        onDiscard={(composeId) => {
+          void discardComposeDraft(composeId);
         }}
         onSend={sendCompose}
       />

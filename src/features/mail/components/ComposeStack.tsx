@@ -19,6 +19,7 @@ interface Props {
   onAttachmentRemoved: (composeId: string, attachmentId: string) => void;
   onUploadAttachment: (input: { composeId: string; file: File; draftId: string }) => Promise<{ id: string }>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  onDiscard: (composeId: string) => void | Promise<void>;
   onSend: (
     composeId: string,
     overrides?: Partial<
@@ -44,6 +45,7 @@ export default function NotificationComposeStack({
   onAttachmentRemoved,
   onUploadAttachment,
   onDeleteAttachment,
+  onDiscard,
   onSend,
 }: Props) {
   if (drafts.length === 0) return null;
@@ -68,6 +70,7 @@ export default function NotificationComposeStack({
           onAttachmentRemoved={onAttachmentRemoved}
           onUploadAttachment={onUploadAttachment}
           onDeleteAttachment={onDeleteAttachment}
+          onDiscard={onDiscard}
           onSend={onSend}
         />
       ))}

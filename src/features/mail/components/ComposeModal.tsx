@@ -71,6 +71,7 @@ interface Props {
   onAttachmentRemoved: (composeId: string, attachmentId: string) => void;
   onUploadAttachment: (input: { composeId: string; file: File; draftId: string }) => Promise<{ id: string }>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  onDiscard: (composeId: string) => void | Promise<void>;
   onSend: (
     composeId: string,
     overrides?: Partial<
@@ -96,6 +97,7 @@ export default function NotificationComposeModal({
   onAttachmentRemoved,
   onUploadAttachment,
   onDeleteAttachment,
+  onDiscard,
   onSend,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -896,9 +898,9 @@ export default function NotificationComposeModal({
 
         <button
           type="button"
-          onClick={() => onClose(draft.id)}
+          onClick={() => void onDiscard(draft.id)}
           className="ml-auto flex size-9 items-center justify-center rounded-full hover:bg-mail-hover"
-          title="Cerrar y guardar borrador"
+          title="Descartar borrador"
         >
           <Trash2 className="size-5" />
         </button>
