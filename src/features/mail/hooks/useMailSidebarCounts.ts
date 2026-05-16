@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { listMessages } from "../services/messages.service";
+import { countMessages } from "../services/messages.service";
 import { listDrafts } from "../services/drafts.service";
 import type { MessageFolder } from "../types/message.types";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -41,12 +41,12 @@ export function useMailSidebarCounts() {
     try {
       const folders: MessageFolder[] = ["inbox", "starred", "trash", "archived", "snoozed", "sent"];
       const [inbox, starred, trash, archived, snoozed, sent, drafts, labels] = await Promise.all([
-        listMessages({ folder: folders[0], read: false, page: 1, limit: 1 }),
-        listMessages({ folder: folders[1], read: false, page: 1, limit: 1 }),
-        listMessages({ folder: folders[2], read: false, page: 1, limit: 1 }),
-        listMessages({ folder: folders[3], read: false, page: 1, limit: 1 }),
-        listMessages({ folder: folders[4], read: false, page: 1, limit: 1 }),
-        listMessages({ folder: folders[5], page: 1, limit: 1 }),
+        countMessages({ view: folders[0], read: false }),
+        countMessages({ view: folders[1], read: false }),
+        countMessages({ view: folders[2], read: false }),
+        countMessages({ view: folders[3], read: false }),
+        countMessages({ view: folders[4], read: false }),
+        countMessages({ view: folders[5] }),
         listDrafts(),
         listMailLabels(),
       ]);
@@ -54,7 +54,7 @@ export function useMailSidebarCounts() {
       const labelUnreadById: Record<string, number> = {};
       await Promise.all(
         (labels ?? []).filter((label) => label.type === "CUSTOM").map(async (label) => {
-          const result = await listMessages({ folder: "inbox", read: false, labelId: label.id, page: 1, limit: 1 });
+          const result = await countMessages({ view: "inbox", read: false, labelId: label.id });
           labelUnreadById[label.id] = result.total ?? 0;
         }),
       );

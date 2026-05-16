@@ -4,6 +4,8 @@ import MailRow from "./MailRow";
 
 interface Props {
   mails: Mail[];
+  loading?: boolean;
+  error?: string | null;
   selectedIds: Set<string>;
   onOpen: (id: string) => void;
   onToggleSelect: (id: string) => void;
@@ -20,6 +22,8 @@ interface Props {
 
 export default function MailList({
   mails,
+  loading,
+  error,
   selectedIds,
   onOpen,
   onToggleSelect,
@@ -33,6 +37,24 @@ export default function MailList({
   initialsOf,
   avatarColor,
 }: Props) {
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+        <p className="text-sm">Cargando mensajes...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+        <Inbox className="size-12 opacity-40" />
+        <p className="text-sm">{error}</p>
+      </div>
+    );
+  }
+
   if (mails.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">

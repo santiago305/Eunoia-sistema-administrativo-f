@@ -46,6 +46,14 @@ export const createMailLabel = async (payload: { name: string; color: string }) 
   return response.data;
 };
 
+export const countMessages = async (query: Omit<MessageListQuery, "q" | "page" | "limit">) => {
+  const response = await axiosInstance.get<{ total: number }>(
+    API_NOTIFICATION_MESSAGES_GROUP.countMessages,
+    { params: query },
+  );
+  return response.data;
+};
+
 export const updateMailLabel = async (id: string, payload: { name?: string; color?: string }) => {
   const response = await axiosInstance.patch<MailLabelItem>(API_NOTIFICATION_MESSAGES_GROUP.updateLabel(id), payload);
   return response.data;

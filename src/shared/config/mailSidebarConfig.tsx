@@ -1,5 +1,4 @@
 import {
-  Layers,
   Archive,
   Bookmark,
   Clock3,
@@ -69,11 +68,6 @@ export const getMailSidebarItems = (
     href: `${RoutesPaths.notifications}/archived`,
     icon: <Archive className="text-sidebar-foreground" />,
     badgeCount: counts?.archived,
-  },
-  {
-    label: "Todos",
-    href: `${RoutesPaths.notifications}/all`,
-    icon: <Layers className="text-sidebar-foreground" />,
   },
   {
     label: "Mas",

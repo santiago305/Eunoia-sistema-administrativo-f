@@ -19,7 +19,7 @@ export interface MailLabelItem {
 }
 
 export interface MessageListQuery {
-  folder?: MessageFolder;
+  view?: MessageFolder;
   originModule?: string;
   read?: boolean;
   hasAttachments?: boolean;

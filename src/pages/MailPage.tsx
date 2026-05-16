@@ -257,6 +257,8 @@ export default function MailPage() {
   const {
     items,
     total,
+    loading,
+    error,
     reload,
     markInboxRowAsRead,
     markInboxRowAsUnread,
@@ -279,6 +281,17 @@ export default function MailPage() {
   });
 
   const mails = useMemo(() => items.map((item) => mapItemToMail(item, folder)).filter((v): v is Mail => Boolean(v)), [items, folder]);
+
+  useEffect(() => {
+    console.log("[mail:view] render-metrics", {
+      view: folder,
+      page,
+      pageSize,
+      total,
+      items: items.length,
+      mails: mails.length,
+    });
+  }, [folder, page, pageSize, total, items.length, mails.length]);
 
   useEffect(() => {
     composeDraftsRef.current = composeDrafts;
@@ -557,10 +570,11 @@ export default function MailPage() {
   }, [canCreateLabel, openCompose, params.messageId, searchParams, setSearchParams]);
 
   useEffect(() => {
-    const folderParam = (params.folder ?? searchParams.get("folder") ?? "").toLowerCase();
+    const folderParam = (params.folder ?? "").toLowerCase();
     const valid: UiFolder[] = ["inbox", "starred", "sent", "drafts", "trash", "archived", "snoozed", "all"];
     if (valid.includes(folderParam as UiFolder)) setFolder(folderParam as UiFolder);
-  }, [params.folder, searchParams]);
+    else setFolder("inbox");
+  }, [params.folder]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -861,6 +875,8 @@ export default function MailPage() {
 
                 <MailList
                   mails={mails}
+                  loading={loading}
+                  error={error}
                   selectedIds={selectedIds}
                   onOpen={(id) => {
                     if (folder === "drafts") {

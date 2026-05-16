@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { archiveMessage, deleteMessage, listMessages, markMessageAsRead, markMessageAsUnread, restoreMessage, snoozeMessage, starMessage, unarchiveMessage, unsnoozeMessage, unstarMessage } from "../services/messages.service";
 import type { InboxItem, MessageFolder, SentMessageItem } from "../types/message.types";
 
@@ -15,18 +15,34 @@ export function useMessagesV2(params: {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestSeqRef = useRef(0);
 
   const reload = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current;
     setLoading(true);
     setError(null);
     try {
-      const response = await listMessages({ folder, originModule, labelId, q, page, limit });
+      const response = await listMessages({ view: folder, originModule, labelId, q, page, limit });
+      if (requestSeq !== requestSeqRef.current) return;
+      console.log("[mail:list] response", {
+        view: folder,
+        page,
+        limit,
+        total: response.total,
+        items: Array.isArray(response.items) ? response.items.length : 0,
+      });
       setItems(response.items);
       setTotal(response.total);
     } catch {
+      if (requestSeq !== requestSeqRef.current) return;
       setError("No se pudieron cargar los mensajes.");
+      setItems([]);
+      setTotal(0);
+    } finally {
+      if (requestSeq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
-    setLoading(false);
   }, [folder, originModule, labelId, q, page, limit]);
 
   useEffect(() => {

@@ -68,6 +68,7 @@ export const API_NOTIFICATION_MESSAGES_GROUP = {
   listModuleLabelConfigs: "/api/notifications/module-label-configs",
   upsertModuleLabelConfig: (moduleKey: string) => `/api/notifications/module-label-configs/${moduleKey}`,
   listMessages: "/api/notifications/messages",
+  countMessages: "/api/notifications/messages/count",
   getMessageDetail: (id: string) => `/api/notifications/messages/${id}`,
   sendMessage: "/api/notifications/messages",
   markMessageRead: (id: string) => `/api/notifications/messages/${id}/read`,
