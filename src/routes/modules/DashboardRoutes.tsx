@@ -103,10 +103,6 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.notifications, <MailPage />),
             },
             {
-                path: "/notifications/:folder/:messageId?",
-                element: withRouteGuard(RoutesPaths.notifications, <MailPage />),
-            },
-            {
                 path: RoutesPaths.catalogProducts,
                 element: withRouteGuard(RoutesPaths.catalogProducts, <CatalogProducts />),
             },

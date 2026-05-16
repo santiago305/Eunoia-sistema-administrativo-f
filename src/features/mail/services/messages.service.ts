@@ -5,16 +5,8 @@ import type {
   MailLabelItem,
   MessageListQuery,
   MessageListResponse,
-  NotificationModuleItem,
   SentMessageItem,
 } from "../types/message.types";
-
-export const getNotificationModules = async () => {
-  const response = await axiosInstance.get<NotificationModuleItem[]>(
-    API_NOTIFICATION_MESSAGES_GROUP.modules,
-  );
-  return response.data;
-};
 
 export const listMessages = async (query: MessageListQuery) => {
   const response = await axiosInstance.get<MessageListResponse<InboxItem | SentMessageItem>>(
@@ -218,5 +210,20 @@ export const uploadAttachment = async (input: {
 
 export const deleteAttachment = async (id: string) => {
   const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.deleteAttachment(id));
+  return response.data;
+};
+
+export const listModuleLabelConfigs = async () => {
+  const response = await axiosInstance.get<
+    Array<{ id: string; moduleKey: string; labelId: string | null; updatedByUserId: string | null; updatedAt: string }>
+  >(API_NOTIFICATION_MESSAGES_GROUP.listModuleLabelConfigs);
+  return response.data;
+};
+
+export const upsertModuleLabelConfig = async (moduleKey: string, labelId?: string | null) => {
+  const response = await axiosInstance.patch(
+    API_NOTIFICATION_MESSAGES_GROUP.upsertModuleLabelConfig(moduleKey),
+    { labelId: labelId ?? null },
+  );
   return response.data;
 };

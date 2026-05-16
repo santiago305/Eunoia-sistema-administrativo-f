@@ -10,8 +10,36 @@ import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { PageShell } from "@/shared/layouts/PageShell";
+import {
+  listMailLabels,
+  listModuleLabelConfigs,
+  upsertModuleLabelConfig,
+} from "@/features/mail/services/messages.service";
+import type { MailLabelItem } from "@/features/mail/types/message.types";
 
 type RoleOption = { id: string; description: string };
+type ModuleLabelConfigItem = {
+  id: string;
+  moduleKey: string;
+  labelId: string | null;
+  updatedByUserId: string | null;
+  updatedAt: string;
+};
+
+const MODULE_LABELS: Record<string, string> = {
+  purchases: "Compras",
+  production: "Produccion",
+  warehouse: "Almacen",
+  catalog: "Catalogo",
+  supplies: "Suministros",
+  security: "Seguridad",
+  roles: "Roles",
+  providers: "Proveedores",
+  corporate: "Corporativo",
+  system: "Sistema",
+};
+
+const MODULE_KEYS = Object.keys(MODULE_LABELS);
 
 const groupByModule = (permissions: AccessPermissionItem[]) => {
   const grouped = new Map<string, AccessPermissionItem[]>();
@@ -28,10 +56,14 @@ export default function RolesPermissions() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canAssignRolePermissions = can("roles.assign_permissions");
+  const canManageNotifications = can("notifications.manage");
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [selectedRoleDescription, setSelectedRoleDescription] = useState("");
   const [allPermissions, setAllPermissions] = useState<AccessPermissionItem[]>([]);
+  const [mailLabels, setMailLabels] = useState<MailLabelItem[]>([]);
+  const [moduleConfigs, setModuleConfigs] = useState<Record<string, string | null>>({});
+  const [savingModuleKey, setSavingModuleKey] = useState<string | null>(null);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,9 +72,11 @@ export default function RolesPermissions() {
     let cancelled = false;
     const loadInitial = async () => {
       try {
-        const [rolesData, permissionsData] = await Promise.all([
+        const [rolesData, permissionsData, labelsData, configsData] = await Promise.all([
           findAllRoles(),
           listAccessPermissions(),
+          listMailLabels(),
+          listModuleLabelConfigs(),
         ]);
         if (cancelled) return;
         const normalizedRoles = (rolesData ?? []).map((role) => ({
@@ -51,6 +85,15 @@ export default function RolesPermissions() {
         }));
         setRoles(normalizedRoles);
         setAllPermissions(permissionsData ?? []);
+        setMailLabels((labelsData ?? []).filter((item) => item.isVisible && item.type !== "SYSTEM"));
+        const configMap: Record<string, string | null> = {};
+        MODULE_KEYS.forEach((key) => {
+          configMap[key] = null;
+        });
+        (configsData ?? []).forEach((item: ModuleLabelConfigItem) => {
+          configMap[item.moduleKey] = item.labelId ?? null;
+        });
+        setModuleConfigs(configMap);
         const firstRole = normalizedRoles[0];
         if (firstRole) {
           setSelectedRoleId(firstRole.id);
@@ -111,6 +154,20 @@ export default function RolesPermissions() {
     }
   };
 
+  const saveModuleLabelConfig = async (moduleKey: string, nextLabelId: string | null) => {
+    if (!canManageNotifications) return;
+    setSavingModuleKey(moduleKey);
+    try {
+      await upsertModuleLabelConfig(moduleKey, nextLabelId);
+      setModuleConfigs((prev) => ({ ...prev, [moduleKey]: nextLabelId }));
+      showFeedback(successResponse(`Configuracion guardada para ${MODULE_LABELS[moduleKey] ?? moduleKey}.`));
+    } catch {
+      showFeedback(errorResponse(`No se pudo guardar la etiqueta del modulo ${MODULE_LABELS[moduleKey] ?? moduleKey}.`));
+    } finally {
+      setSavingModuleKey(null);
+    }
+  };
+
   if (loading) {
     return <div className="p-6 text-sm text-zinc-600">Cargando matriz de permisos...</div>;
   }
@@ -159,6 +216,42 @@ export default function RolesPermissions() {
         </div>
 
         <div className="mt-4 grid gap-3">
+          <section className="rounded-2xl border border-zinc-200 bg-white p-4">
+            <div className="mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Modulo - etiqueta</h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                Define una etiqueta por modulo para notificaciones automaticas. Si dejas "Sin etiqueta", el modulo sigue notificando sin etiqueta.
+              </p>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {MODULE_KEYS.map((moduleKey) => (
+                <label key={moduleKey} className="rounded-xl border border-zinc-200 p-2 text-xs">
+                  <span className="mb-1 block font-medium text-zinc-800">{MODULE_LABELS[moduleKey] ?? moduleKey}</span>
+                  <select
+                    value={moduleConfigs[moduleKey] ?? ""}
+                    disabled={!canManageNotifications || savingModuleKey === moduleKey}
+                    onChange={(e) => {
+                      const rawValue = e.target.value;
+                      const nextLabelId = rawValue ? rawValue : null;
+                      void saveModuleLabelConfig(moduleKey, nextLabelId);
+                    }}
+                    className="h-8 w-full rounded-lg border border-zinc-200 bg-white px-2 text-xs"
+                  >
+                    <option value="">Sin etiqueta</option>
+                    {mailLabels.map((label) => (
+                      <option key={label.id} value={label.id}>
+                        {label.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+            {!canManageNotifications ? (
+              <p className="mt-2 text-xs text-zinc-500">Solo lectura: falta permiso `notifications.manage`.</p>
+            ) : null}
+          </section>
+
           {groupedPermissions.map(([module, permissions]) => (
             <section key={module} className="rounded-2xl border border-zinc-200 bg-white p-4">
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">{module}</h3>

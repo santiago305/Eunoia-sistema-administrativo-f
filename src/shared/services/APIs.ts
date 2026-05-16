@@ -64,19 +64,9 @@ export const API_SESSIONS_GROUP = {
   revokeAll: "/sessions",
 };
 
-export const API_NOTIFICATIONS_GROUP = {
-  list: "/api/notifications",
-  unreadCount: "/api/notifications/unread-count",
-  byId: (id: string) => `/api/notifications/${id}`,
-  markSeen: (id: string) => `/api/notifications/${id}/seen`,
-  markRead: (id: string) => `/api/notifications/${id}/read`,
-  markAllRead: "/api/notifications/read-all",
-  archive: (id: string) => `/api/notifications/${id}/archive`,
-  devSendToMe: "/api/notifications/dev/send-to-me",
-};
-
 export const API_NOTIFICATION_MESSAGES_GROUP = {
-  modules: "/api/notifications/modules",
+  listModuleLabelConfigs: "/api/notifications/module-label-configs",
+  upsertModuleLabelConfig: (moduleKey: string) => `/api/notifications/module-label-configs/${moduleKey}`,
   listMessages: "/api/notifications/messages",
   getMessageDetail: (id: string) => `/api/notifications/messages/${id}`,
   sendMessage: "/api/notifications/messages",

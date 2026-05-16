@@ -184,22 +184,9 @@ export default function NotificationComposeModal({
     bcc: [],
   });
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const allowedAttachmentExtensions = useRef(
-    new Set(["pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx", "txt"]),
+  const [recipientsExpanded, setRecipientsExpanded] = useState(
+    Boolean(draft.to.trim() || draft.cc.trim() || draft.bcc.trim()),
   );
-  const allowedAttachmentMimeTypes = useRef(
-    new Set([
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "text/plain",
-    ]),
-  );
-  const maxAttachmentSizeBytes = 20 * 1024 * 1024;
 
   useEffect(() => {
     setRecipientTokens((prev) => ({
@@ -210,6 +197,12 @@ export default function NotificationComposeModal({
         .filter(Boolean),
     }));
   }, [draft.to]);
+
+  useEffect(() => {
+    if (draft.to.trim() || draft.cc.trim() || draft.bcc.trim()) {
+      setRecipientsExpanded(true);
+    }
+  }, [draft.to, draft.cc, draft.bcc]);
 
   useEffect(() => {
     setRecipientTokens((prev) => ({
@@ -406,27 +399,7 @@ export default function NotificationComposeModal({
   }, [draft.body, draft.bodyJson, editor]);
 
   const toSizeLabel = (size: number) =>
-    `${Math.max(1, Math.round(size / 1024))} KB`;
-
-  const getFileExtension = (fileName: string) => {
-    const parts = fileName.toLowerCase().split(".");
-    if (parts.length < 2) return "";
-    return parts[parts.length - 1];
-  };
-
-  const validateAttachmentLocally = (file: File): string | null => {
-    const ext = getFileExtension(file.name);
-    if (!allowedAttachmentExtensions.current.has(ext)) {
-      return "Extension no permitida.";
-    }
-    if (!allowedAttachmentMimeTypes.current.has(file.type)) {
-      return "Tipo de archivo no permitido.";
-    }
-    if (file.size > maxAttachmentSizeBytes) {
-      return "Archivo excede 20 MB.";
-    }
-    return null;
-  };
+    `${Math.max(1, Math.round(size / 1024))} KB`
 
   const mapAttachmentBackendError = (error: unknown): string => {
     const payloadMessage = isAxiosError<BackendErrorPayload>(error)
@@ -434,9 +407,9 @@ export default function NotificationComposeModal({
       : undefined;
     const message = Array.isArray(payloadMessage) ? payloadMessage[0] : payloadMessage;
     if (!message) return "No se pudo subir.";
-    if (message.includes("ATTACHMENT_EXTENSION_NOT_ALLOWED")) return "Extension no permitida.";
-    if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED")) return "Tipo de archivo no permitido.";
-    if (message.includes("ATTACHMENT_TOO_LARGE")) return "Archivo excede 20 MB.";
+    if (message.includes("ATTACHMENT_EXTENSION_NOT_ALLOWED")) return "El servidor no permite esta extensión.";
+    if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED")) return "El servidor no permite este tipo de archivo.";
+    if (message.includes("ATTACHMENT_TOO_LARGE")) return "Archivo demasiado pesado.";
     if (message.includes("ATTACHMENT_ACCESS_DENIED")) return "No tienes permisos para adjuntar aquí.";
     if (message.includes("ATTACHMENT_TARGET_REQUIRED")) return "El adjunto no tiene destino válido.";
     return "No se pudo subir.";
@@ -449,8 +422,7 @@ export default function NotificationComposeModal({
 
     Array.from(files).forEach((file) => {
       const isImage = kind === "image" || file.type.startsWith("image/");
-      const localError = validateAttachmentLocally(file);
-
+      const localError = null;
       next.push({
         id: `att-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         name: file.name,
@@ -490,6 +462,17 @@ export default function NotificationComposeModal({
     } catch {
       setValidationError(
         "No se pudo crear el borrador para adjuntar archivos.",
+      );
+      setAttachments((prev) =>
+        prev.map((current) =>
+          next.some((item) => item.id === current.id)
+            ? {
+                ...current,
+                uploading: false,
+                uploadError: "No se pudo preparar la subida.",
+              }
+            : current,
+        ),
       );
       return;
     }
@@ -757,6 +740,19 @@ export default function NotificationComposeModal({
     return bccInputRef;
   };
 
+  const renderCollapsedRecipients = () => (
+    <button
+      type="button"
+      onClick={() => {
+        setRecipientsExpanded(true);
+        requestAnimationFrame(() => toInputRef.current?.focus());
+      }}
+      className="flex min-h-10 w-full items-center border-b border-border bg-transparent px-4 py-2 text-left text-sm text-muted-foreground hover:bg-mail-hover/50"
+    >
+      Destinatarios
+    </button>
+  );
+
   const renderRecipientField = (
     field: RecipientField,
     label: string,
@@ -936,11 +932,15 @@ export default function NotificationComposeModal({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {renderRecipientField("to", "Para", "")}
-        {showCc ? renderRecipientField("cc", "CC", "") : null}
-        {showBcc
-          ? renderRecipientField("bcc", "BCC", "")
-          : null}
+        {recipientsExpanded ? (
+          <>
+            {renderRecipientField("to", "Para", "")}
+            {showCc ? renderRecipientField("cc", "CC", "") : null}
+            {showBcc ? renderRecipientField("bcc", "BCC", "") : null}
+          </>
+        ) : (
+          renderCollapsedRecipients()
+        )}
 
         <input
           type="text"
@@ -954,7 +954,7 @@ export default function NotificationComposeModal({
           className="min-h-45 flex-1 overflow-y-auto scroll-area"
           onDrop={(e) => {
             e.preventDefault();
-            void addFiles(e.dataTransfer.files, "image");
+            void addFiles(e.dataTransfer.files, "file");
           }}
           onDragOver={(e) => e.preventDefault()}
         >
@@ -962,58 +962,60 @@ export default function NotificationComposeModal({
         </div>
 
         {attachments.some((a) => a.kind === "file") ? (
-          <div className="flex flex-wrap gap-3 border-t border-border px-4 py-2">
+          <div className="flex flex-col gap-2 border-t border-border px-4 py-2">
             {attachments
               .filter((a) => a.kind === "file")
               .map((a) => (
-              <div
-                key={a.id}
-                className={cn(
-                  "relative rounded-md border border-border p-2",
-                  a.kind === "image"
-                    ? "w-37.5"
-                    : "inline-flex items-center gap-2 pr-8",
-                )}
-              >
-                {a.kind === "image" && a.previewUrl ? (
-                  <img
-                    src={a.previewUrl}
-                    alt={a.name}
-                    className="h-37.5 w-37.5 rounded object-cover"
-                  />
-                ) : (
-                  <>
-                    <a href="#" className="text-xs text-mail-accent underline">
-                      {a.name}
-                    </a>
-
-                    <span className="text-xs text-muted-foreground">
-                      {a.sizeLabel}
-                    </span>
-                  </>
-                )}
-
-                {a.uploading ? (
-                  <span className="absolute bottom-1 left-2 rounded bg-background/80 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                    Subiendo...
-                  </span>
-                ) : null}
-
-                {a.uploadError ? (
-                  <span className="absolute bottom-1 left-2 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive">
-                    {a.uploadError}
-                  </span>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => void removeAttachment(a.id)}
-                  className="absolute right-1 top-1 rounded-full p-0.5 hover:bg-mail-hover"
+                <div
+                  key={a.id}
+                  className={cn(
+                    "rounded-lg border p-2 transition-colors",
+                    a.uploadError
+                      ? "border-destructive/40 bg-destructive/5"
+                      : "border-border bg-background",
+                  )}
                 >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            ))}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium text-foreground">
+                        {a.name}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {a.sizeLabel}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void removeAttachment(a.id)}
+                      className="shrink-0 rounded-full p-1 hover:bg-mail-hover"
+                      title="Quitar adjunto"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+
+                  {a.uploading ? (
+                    <div className="mt-2">
+                      <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>Subiendo archivo...</span>
+                        <span>Archivo pesado, no cierres esta ventana</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-mail-hover">
+                        <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {a.uploadError ? (
+                    <p className="mt-2 rounded-md bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
+                      {a.uploadError}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
           </div>
         ) : null}
 

@@ -49,7 +49,7 @@ export interface SentMessageItem {
   bodyHtml: string;
   bodyText: string;
   bodyJson?: Record<string, unknown> | null;
-  status: "DRAFT" | "SENT" | "FAILED" | "ARCHIVED";
+  status: "DRAFT" | "SENT" | "FAILED" | "SCHEDULED";
   isDraft: boolean;
   sentAt: string | null;
   createdAt: string;

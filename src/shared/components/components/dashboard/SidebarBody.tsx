@@ -53,9 +53,7 @@ const canAccessHref = (
 const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
-  const isNotifications =
-    location.pathname.startsWith(RoutesPaths.notifications) ||
-    location.pathname.startsWith("/notifications");
+  const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
   const notificationCounts = useMailSidebarCounts();
   const { items: mailLabels } = useMailLabels(isNotifications);
   const { can } = usePermissions();

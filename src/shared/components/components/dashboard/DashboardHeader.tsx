@@ -30,9 +30,7 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const historyRef = useRef<HTMLDivElement | null>(null);
   const unreadCount = count.unread ?? 0;
   const logoUrl = resolveCompanyAssetUrl(company?.logoPath);
-  const isEmailPage =
-    location.pathname.startsWith(RoutesPaths.notifications) ||
-    location.pathname.startsWith("/notifications");
+  const isEmailPage = location.pathname.startsWith(RoutesPaths.notifications);
   const emailSearch = searchParams.get("q") ?? "";
 
   const applySearch = async (value: string) => {

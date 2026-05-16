@@ -24,6 +24,7 @@ import {
 import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/mail/services/drafts.service";
 import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
 import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
+import { useSileoMessageEvents } from "@/features/mail/hooks/useSileoMessageEvents";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -271,6 +272,10 @@ export default function MailPage() {
     q,
     page,
     limit: pageSize,
+  });
+
+  useSileoMessageEvents({
+    onRefreshMessages: reload,
   });
 
   const mails = useMemo(() => items.map((item) => mapItemToMail(item, folder)).filter((v): v is Mail => Boolean(v)), [items, folder]);
