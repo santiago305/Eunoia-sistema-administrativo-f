@@ -49,6 +49,8 @@ export interface SentMessageItem {
   bodyHtml: string;
   bodyText: string;
   bodyJson?: Record<string, unknown> | null;
+  sourceEntityType?: string | null;
+  sourceEntityId?: string | null;
   status: "DRAFT" | "SENT" | "FAILED" | "SCHEDULED";
   isDraft: boolean;
   sentAt: string | null;

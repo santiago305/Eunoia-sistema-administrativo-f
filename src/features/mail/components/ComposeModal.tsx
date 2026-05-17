@@ -29,7 +29,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { isAxiosError } from "axios";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { getMarkRange } from "@tiptap/core";
+import { Extension, getMarkRange } from "@tiptap/core";
 import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -42,6 +42,140 @@ import type { MailLabelItem } from "../types/message.types";
 import { SystemButton } from "../../../shared/components/components/SystemButton";
 import { FloatingInput } from "../../../shared/components/components/FloatingInput";
 import { Popover } from "@/shared/components/modales/Popover";
+
+type FontSizeOption = {
+  value: string;
+  label: string;
+  fontSize: string | null;
+};
+
+const FONT_SIZE_OPTIONS: FontSizeOption[] = [
+  { value: "1", label: "Pequeño", fontSize: "8px" },
+  { value: "3", label: "Normal", fontSize: null },
+  { value: "5", label: "Grande", fontSize: "20px" },
+  { value: "7", label: "Enorme", fontSize: "25px" },
+];
+
+const FONT_SIZE_BY_VALUE = FONT_SIZE_OPTIONS.reduce<
+  Record<string, string | null>
+>((acc, option) => {
+  acc[option.value] = option.fontSize;
+  return acc;
+}, {});
+
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    fontSize: {
+      setFontSize: (fontSize: string) => ReturnType;
+      unsetFontSize: () => ReturnType;
+    };
+  }
+}
+
+const FontSize = Extension.create({
+  name: "fontSize",
+
+  addOptions() {
+    return {
+      types: ["textStyle"],
+    };
+  },
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (element) => element.style.fontSize || null,
+            renderHTML: (attributes) => {
+              if (!attributes.fontSize) return {};
+              return {
+                style: `font-size: ${attributes.fontSize}`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+
+  addCommands() {
+    return {
+      setFontSize:
+        (fontSize: string) =>
+        ({ state, commands, dispatch }) => {
+          if (!state.selection.empty) {
+            return commands.setMark("textStyle", { fontSize });
+          }
+
+          if (!dispatch) return true;
+
+          const markType = state.schema.marks.textStyle;
+          const currentMarks =
+            state.storedMarks ?? state.selection.$from.marks();
+          const currentTextStyle = currentMarks.find(
+            (mark) => mark.type === markType,
+          );
+          const otherMarks = currentMarks.filter(
+            (mark) => mark.type !== markType,
+          );
+
+          dispatch(
+            state.tr.setStoredMarks([
+              ...otherMarks,
+              markType.create({
+                ...(currentTextStyle?.attrs ?? {}),
+                fontSize,
+              }),
+            ]),
+          );
+
+          return true;
+        },
+      unsetFontSize:
+        () =>
+        ({ state, commands, dispatch }) => {
+          if (!state.selection.empty) {
+            const updated = commands.setMark("textStyle", { fontSize: null });
+            commands.removeEmptyTextStyle();
+            return updated;
+          }
+
+          if (!dispatch) return true;
+
+          const markType = state.schema.marks.textStyle;
+          const currentMarks =
+            state.storedMarks ?? state.selection.$from.marks();
+          const currentTextStyle = currentMarks.find(
+            (mark) => mark.type === markType,
+          );
+          const otherMarks = currentMarks.filter(
+            (mark) => mark.type !== markType,
+          );
+          const nextTextStyleAttrs = { ...(currentTextStyle?.attrs ?? {}) };
+          delete nextTextStyleAttrs.fontSize;
+
+          const hasRemainingTextStyleAttrs = Object.values(
+            nextTextStyleAttrs,
+          ).some(
+            (value) => value !== null && value !== undefined && value !== "",
+          );
+
+          dispatch(
+            state.tr.setStoredMarks(
+              hasRemainingTextStyleAttrs
+                ? [...otherMarks, markType.create(nextTextStyleAttrs)]
+                : otherMarks,
+            ),
+          );
+
+          return true;
+        },
+    };
+  },
+});
 
 type AttachmentItem = {
   id: string;
@@ -153,7 +287,9 @@ export default function NotificationComposeModal({
   const formatAnchorRef = useRef<HTMLButtonElement | null>(null);
   const labelsAnchorRef = useRef<HTMLButtonElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);
-  const bodyChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bodyChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const latestBodyRef = useRef<{
     html: string;
     json: Record<string, unknown> | null;
@@ -187,6 +323,7 @@ export default function NotificationComposeModal({
   const [recipientsExpanded, setRecipientsExpanded] = useState(
     Boolean(draft.to.trim() || draft.cc.trim() || draft.bcc.trim()),
   );
+  const [selectedFontSize, setSelectedFontSize] = useState("3");
 
   useEffect(() => {
     setRecipientTokens((prev) => ({
@@ -280,7 +417,6 @@ export default function NotificationComposeModal({
     onBodyChange(draft.id, latest.html, latest.json, latest.text);
   };
 
-
   const deleteActiveLinkAsUnit = () => {
     if (!editor) return false;
 
@@ -304,8 +440,12 @@ export default function NotificationComposeModal({
 
     const nodeBefore = $from.nodeBefore;
     const nodeAfter = $from.nodeAfter;
-    const hasLinkBefore = nodeBefore?.marks.some((mark) => mark.type === linkMark);
-    const hasLinkAfter = nodeAfter?.marks.some((mark) => mark.type === linkMark);
+    const hasLinkBefore = nodeBefore?.marks.some(
+      (mark) => mark.type === linkMark,
+    );
+    const hasLinkAfter = nodeAfter?.marks.some(
+      (mark) => mark.type === linkMark,
+    );
 
     if (hasLinkBefore && nodeBefore) {
       view.dispatch(
@@ -333,13 +473,15 @@ export default function NotificationComposeModal({
       StarterKit,
       Underline,
       TextStyle,
+      FontSize,
       Color,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TiptapImage.configure({
         inline: true,
         allowBase64: true,
         HTMLAttributes: {
-          class: "inline-block size-[50px] rounded-md border border-border object-cover align-middle",
+          class:
+            "inline-block size-[50px] rounded-md border border-border object-cover align-middle",
           width: "50",
           height: "50",
         },
@@ -391,27 +533,33 @@ export default function NotificationComposeModal({
       return;
     }
 
-    const nextContent =
-      (draft.bodyJson as JSONContent | null) ?? nextBody;
+    const nextContent = (draft.bodyJson as JSONContent | null) ?? nextBody;
 
     lastSyncedBodyRef.current = nextBody;
     editor.commands.setContent(nextContent, false);
   }, [draft.body, draft.bodyJson, editor]);
 
   const toSizeLabel = (size: number) =>
-    `${Math.max(1, Math.round(size / 1024))} KB`
+    `${Math.max(1, Math.round(size / 1024))} KB`;
 
   const mapAttachmentBackendError = (error: unknown): string => {
     const payloadMessage = isAxiosError<BackendErrorPayload>(error)
       ? error.response?.data?.message
       : undefined;
-    const message = Array.isArray(payloadMessage) ? payloadMessage[0] : payloadMessage;
+    const message = Array.isArray(payloadMessage)
+      ? payloadMessage[0]
+      : payloadMessage;
     if (!message) return "No se pudo subir.";
-    if (message.includes("ATTACHMENT_EXTENSION_NOT_ALLOWED")) return "El servidor no permite esta extensión.";
-    if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED")) return "El servidor no permite este tipo de archivo.";
-    if (message.includes("ATTACHMENT_TOO_LARGE")) return "Archivo demasiado pesado.";
-    if (message.includes("ATTACHMENT_ACCESS_DENIED")) return "No tienes permisos para adjuntar aquí.";
-    if (message.includes("ATTACHMENT_TARGET_REQUIRED")) return "El adjunto no tiene destino válido.";
+    if (message.includes("ATTACHMENT_EXTENSION_NOT_ALLOWED"))
+      return "El servidor no permite esta extensión.";
+    if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED"))
+      return "El servidor no permite este tipo de archivo.";
+    if (message.includes("ATTACHMENT_TOO_LARGE"))
+      return "Archivo demasiado pesado.";
+    if (message.includes("ATTACHMENT_ACCESS_DENIED"))
+      return "No tienes permisos para adjuntar aquí.";
+    if (message.includes("ATTACHMENT_TARGET_REQUIRED"))
+      return "El adjunto no tiene destino válido.";
     return "No se pudo subir.";
   };
 
@@ -444,7 +592,11 @@ export default function NotificationComposeModal({
           editor
             .chain()
             .focus()
-            .setImage({ src: item.previewUrl!, alt: item.name, title: item.name })
+            .setImage({
+              src: item.previewUrl!,
+              alt: item.name,
+              title: item.name,
+            })
             .insertContent(" ")
             .run();
         });
@@ -836,6 +988,31 @@ export default function NotificationComposeModal({
     );
   };
 
+  const syncEditorBody = () => {
+    if (!editor) return;
+
+    const html = editor.getHTML();
+    const json = editor.getJSON() as Record<string, unknown>;
+    const bodyText = editor.getText().trim();
+
+    latestBodyRef.current = { html, json, text: bodyText };
+    flushBodyChange();
+  };
+
+  const applyFontSize = (value: string) => {
+    if (!editor) return;
+
+    const fontSize = FONT_SIZE_BY_VALUE[value];
+    setSelectedFontSize(value);
+
+    const command = fontSize
+      ? editor.chain().focus().setFontSize(fontSize)
+      : editor.chain().focus().unsetFontSize();
+
+    command.run();
+    syncEditorBody();
+  };
+
   const formatButtonClass = (active?: boolean) =>
     cn(
       "flex size-8 items-center justify-center rounded-md border border-transparent text-xs transition-colors hover:border-border hover:bg-mail-hover",
@@ -1105,10 +1282,7 @@ export default function NotificationComposeModal({
                 Cancelar
               </SystemButton>
 
-              <SystemButton
-                size="sm"
-                onClick={insertLink}
-              >
+              <SystemButton size="sm" onClick={insertLink}>
                 Aceptar
               </SystemButton>
             </div>
@@ -1165,160 +1339,130 @@ export default function NotificationComposeModal({
               <div className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 hover:bg-mail-hover">
                 <RiFontSize className="size-4 text-muted-foreground" />
                 <select
-                  onChange={(e) => {
-                    if (!editor) return;
-                    const size = e.target.value;
-                    if (size === "1")
-                      editor
-                        .chain()
-                        .focus()
-                        .setMark("textStyle", { fontSize: "0.8em" })
-                        .run();
-                    if (size === "3")
-                      editor
-                        .chain()
-                        .focus()
-                        .setMark("textStyle", { fontSize: "1em" })
-                        .run();
-                    if (size === "5")
-                      editor
-                        .chain()
-                        .focus()
-                        .setMark("textStyle", { fontSize: "1.2em" })
-                        .run();
-                    if (size === "7")
-                      editor
-                        .chain()
-                        .focus()
-                        .setMark("textStyle", { fontSize: "1.4em" })
-                        .run();
-                  }}
-                  defaultValue="3"
+                  value={selectedFontSize}
+                  onChange={(e) => applyFontSize(e.target.value)}
                   className="h-full border-0 bg-transparent text-xs outline-none"
                 >
-                  <option value="1">Pequeño</option>
-                  <option value="3">Normal</option>
-                  <option value="5">Grande</option>
-                  <option value="7">Enorme</option>
+                  {FONT_SIZE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-                <button
-                  type="button"
-                  onClick={() => editor?.chain().focus().toggleBold().run()}
-                  className={cn(
-                    formatButtonClass(editor?.isActive("bold")),
-                    "font-bold",
-                  )}
-                  title="Negrita"
-                >
-                  <RiBold className="size-4" />
-                </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                className={cn(
+                  formatButtonClass(editor?.isActive("bold")),
+                  "font-bold",
+                )}
+                title="Negrita"
+              >
+                <RiBold className="size-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => editor?.chain().focus().toggleItalic().run()}
-                  className={cn(
-                    formatButtonClass(editor?.isActive("italic")),
-                    "italic",
-                  )}
-                  title="Cursiva"
-                >
-                  <RiItalic className="size-4" />
-                </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                className={cn(
+                  formatButtonClass(editor?.isActive("italic")),
+                  "italic",
+                )}
+                title="Cursiva"
+              >
+                <RiItalic className="size-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleUnderline().run()
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                className={cn(
+                  formatButtonClass(editor?.isActive("underline")),
+                  "underline",
+                )}
+                title="Subrayado"
+              >
+                <RiUnderline className="size-4" />
+              </button>
+
+              <label
+                className="flex size-8 cursor-pointer items-center justify-center rounded-md border border-transparent hover:border-border hover:bg-mail-hover"
+                title="Color"
+              >
+                <RiBrush3Line className="size-4" />
+                <input
+                  type="color"
+                  onChange={(e) =>
+                    editor?.chain().focus().setColor(e.target.value).run()
                   }
-                  className={cn(
-                    formatButtonClass(editor?.isActive("underline")),
-                    "underline",
-                  )}
-                  title="Subrayado"
-                >
-                  <RiUnderline className="size-4" />
-                </button>
+                  className="sr-only"
+                />
+              </label>
 
-                <label
-                  className="flex size-8 cursor-pointer items-center justify-center rounded-md border border-transparent hover:border-border hover:bg-mail-hover"
-                  title="Color"
-                >
-                  <RiBrush3Line className="size-4" />
-                  <input
-                    type="color"
-                    onChange={(e) =>
-                      editor?.chain().focus().setColor(e.target.value).run()
-                    }
-                    className="sr-only"
-                  />
-                </label>
+              <span className="mx-0.5 h-6 w-px bg-border" />
 
-                <span className="mx-0.5 h-6 w-px bg-border" />
+              <button
+                type="button"
+                onClick={() =>
+                  editor?.chain().focus().setTextAlign("left").run()
+                }
+                className={formatButtonClass(
+                  editor?.isActive({ textAlign: "left" }),
+                )}
+                title="Alinear izquierda"
+              >
+                <RiAlignLeft className="size-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().setTextAlign("left").run()
-                  }
-                  className={formatButtonClass(
-                    editor?.isActive({ textAlign: "left" }),
-                  )}
-                  title="Alinear izquierda"
-                >
-                  <RiAlignLeft className="size-4" />
-                </button>
+              <button
+                type="button"
+                onClick={() =>
+                  editor?.chain().focus().setTextAlign("center").run()
+                }
+                className={formatButtonClass(
+                  editor?.isActive({ textAlign: "center" }),
+                )}
+                title="Centrar"
+              >
+                <RiAlignCenter className="size-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().setTextAlign("center").run()
-                  }
-                  className={formatButtonClass(
-                    editor?.isActive({ textAlign: "center" }),
-                  )}
-                  title="Centrar"
-                >
-                  <RiAlignCenter className="size-4" />
-                </button>
+              <button
+                type="button"
+                onClick={() =>
+                  editor?.chain().focus().setTextAlign("right").run()
+                }
+                className={formatButtonClass(
+                  editor?.isActive({ textAlign: "right" }),
+                )}
+                title="Alinear derecha"
+              >
+                <RiAlignRight className="size-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().setTextAlign("right").run()
-                  }
-                  className={formatButtonClass(
-                    editor?.isActive({ textAlign: "right" }),
-                  )}
-                  title="Alinear derecha"
-                >
-                  <RiAlignRight className="size-4" />
-                </button>
+              <span className="mx-0.5 h-6 w-px bg-border" />
 
-                <span className="mx-0.5 h-6 w-px bg-border" />
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                className={formatButtonClass(editor?.isActive("bulletList"))}
+                title="Lista con viñetas"
+              >
+                <RiListUnordered className="size-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleBulletList().run()
-                  }
-                  className={formatButtonClass(editor?.isActive("bulletList"))}
-                  title="Lista con viñetas"
-                >
-                  <RiListUnordered className="size-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleOrderedList().run()
-                  }
-                  className={formatButtonClass(editor?.isActive("orderedList"))}
-                  title="Lista numerada"
-                >
-                  <RiListOrdered className="size-4" />
-                </button>
+              <button
+                type="button"
+                onClick={() =>
+                  editor?.chain().focus().toggleOrderedList().run()
+                }
+                className={formatButtonClass(editor?.isActive("orderedList"))}
+                title="Lista numerada"
+              >
+                <RiListOrdered className="size-4" />
+              </button>
             </div>
           </div>
         </Popover>

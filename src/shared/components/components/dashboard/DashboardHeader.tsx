@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useUnreadMailCount } from "@/features/mail/hooks/useUnreadMailCount";

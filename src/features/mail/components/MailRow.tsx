@@ -65,7 +65,26 @@ export default function MailRow({
         }}
         className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center shrink-0"
       >
-        <Star className={cn("size-4", mail.starred ? "fill-mail-star text-mail-star" : "text-muted-foreground")} />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleStar(mail.id);
+          }}
+          className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center shrink-0"
+          title={mail.starred ? "Quitar destacado" : "Destacar"}
+          aria-label={mail.starred ? "Quitar destacado" : "Destacar"}
+        >
+          <Star
+            strokeWidth={mail.starred ? 2.5 : 2}
+            className={cn(
+              "size-4 transition-colors",
+              mail.starred
+                  ? "fill-yellow-400 text-yellow-400"
+                  : "text-muted-foreground"
+            )}
+          />
+        </button>
       </button>
 
       <div className="size-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0" style={{ background: avatarColor(mail.from.email) }}>

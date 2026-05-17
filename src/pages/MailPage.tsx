@@ -247,6 +247,7 @@ export default function MailPage() {
   const [customSnoozeAt, setCustomSnoozeAt] = useState("");
   const [activeMailDetail, setActiveMailDetail] = useState<MailDetailData>(null);
   const [messageLabelIdsByMessage, setMessageLabelIdsByMessage] = useState<Record<string, string[]>>({});
+  const [localStarredById, setLocalStarredById] = useState<Record<string, boolean>>({});
   const composeDraftsRef = useRef<NotificationComposeDraft[]>([]);
   const persistedSignaturesRef = useRef<Map<string, string>>(new Map());
 
@@ -280,7 +281,28 @@ export default function MailPage() {
     onRefreshMessages: reload,
   });
 
-  const mails = useMemo(() => items.map((item) => mapItemToMail(item, folder)).filter((v): v is Mail => Boolean(v)), [items, folder]);
+  useEffect(() => {
+    setLocalStarredById({});
+  }, [items]);
+
+  const mails = useMemo(
+    () =>
+      items
+        .map((item) => mapItemToMail(item, folder))
+        .filter((v): v is Mail => Boolean(v))
+        .map((mail) => {
+          const actionId = mail.recipientId ?? mail.messageId ?? mail.id;
+          const localStarred = localStarredById[mail.id] ?? localStarredById[actionId];
+
+          if (typeof localStarred !== "boolean") return mail;
+
+          return {
+            ...mail,
+            starred: localStarred,
+          };
+        }),
+    [folder, items, localStarredById],
+  );
 
   useEffect(() => {
     console.log("[mail:view] render-metrics", {
@@ -747,8 +769,27 @@ export default function MailPage() {
   const toggleStar = async (id: string) => {
     const target = mails.find((m) => m.id === id);
     if (!target) return;
-    await starInboxRow(target.recipientId ?? target.messageId ?? target.id, !target.starred);
-    await reload();
+
+    const actionId = target.recipientId ?? target.messageId ?? target.id;
+    const previousStarred = target.starred;
+    const nextStarred = !previousStarred;
+
+    setLocalStarredById((prev) => ({
+      ...prev,
+      [target.id]: nextStarred,
+      [actionId]: nextStarred,
+    }));
+
+    try {
+      await starInboxRow(actionId, nextStarred);
+    } catch {
+      setLocalStarredById((prev) => ({
+        ...prev,
+        [target.id]: previousStarred,
+        [actionId]: previousStarred,
+      }));
+      setLabelError("No se pudo actualizar el destacado del mensaje.");
+    }
   };
 
   const toggleArchive = async (id: string) => {
