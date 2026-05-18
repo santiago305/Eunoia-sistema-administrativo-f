@@ -54,7 +54,7 @@ const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
   const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
-  const notificationCounts = useMailSidebarCounts();
+  const notificationCounts = useMailSidebarCounts(isNotifications);
   const { items: mailLabels } = useMailLabels(isNotifications);
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");

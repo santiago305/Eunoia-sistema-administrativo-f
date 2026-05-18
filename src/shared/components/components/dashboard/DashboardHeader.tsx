@@ -1,7 +1,6 @@
-import { memo, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { RoutesPaths } from "@/routes/config/routesPaths";
-import { useUnreadMailCount } from "@/features/mail/hooks/useUnreadMailCount";
 import { cn } from "@/shared/lib/utils";
 import { useSidebarContext } from "./SidebarContext";
 import { IconBell, IconMenu } from "./icons";
@@ -12,6 +11,7 @@ import { resolveCompanyAssetUrl } from "@/features/company/utils/companyAssets";
 import { getSidebarTitleByPath } from "@/shared/config/sidebarConfig";
 import { deleteSearchHistory, listSearchHistory, saveSearchHistory } from "@/features/mail/services/messages.service";
 import { X } from "lucide-react";
+import { NotificationContext } from "@/app/providers/NotificationProvider";
 
 interface DashboardHeaderProps {
   user: User;
@@ -20,7 +20,7 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const { isCollapsed, isMobile, toggleSidebar } = useSidebarContext();
-  const { count } = useUnreadMailCount();
+  const { hasUnreadMail } = useContext(NotificationContext);
   const { company } = useCompany();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,7 +28,6 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const [history, setHistory] = useState<Array<{ id: string; query: string }>>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const historyRef = useRef<HTMLDivElement | null>(null);
-  const unreadCount = count.unread ?? 0;
   const logoUrl = resolveCompanyAssetUrl(company?.logoPath);
   const isEmailPage = location.pathname.startsWith(RoutesPaths.notifications);
   const emailSearch = searchParams.get("q") ?? "";
@@ -165,10 +164,11 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
             title="Ir a mensajeria"
           >
             <IconBell />
-            {unreadCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
+            {hasUnreadMail ? (
+              <span
+                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-destructive"
+                aria-hidden="true"
+              />
             ) : null}
           </Link>
 

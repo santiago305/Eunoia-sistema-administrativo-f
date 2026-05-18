@@ -2,20 +2,30 @@ import { createContext, useEffect, useMemo, useState, type ReactNode } from 'rea
 import { useAuth } from '@/shared/hooks/useAuth';
 import { closeNotificationSocket, createNotificationSocket } from '@/shared/lib/socket';
 import { NOTIFICATION_SOCKET_EVENTS, NOTIFICATION_WINDOW_EVENTS } from '@/features/mail/constants/mail-events.constants';
-import type { NotificationPriority, NotificationUnreadCount } from '@/features/mail/types/notification.types';
-import { getUnreadCount } from '@/shared/services/notificationService';
+import type { NotificationPriority } from '@/features/mail/types/notification.types';
+import { getHasUnreadMail } from '@/shared/services/notificationService';
 import { showNotificationToast } from '@/features/mail/services/mail-toast.service';
 
-export const NotificationContext = createContext<{ connected: boolean }>({ connected: false });
+type NotificationContextValue = {
+  connected: boolean;
+  hasUnreadMail: boolean;
+};
+
+export const NotificationContext = createContext<NotificationContextValue>({
+  connected: false,
+  hasUnreadMail: false,
+});
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, userId } = useAuth();
   const [connected, setConnected] = useState(false);
+  const [hasUnreadMail, setHasUnreadMail] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !userId) {
       closeNotificationSocket();
       setConnected(false);
+      setHasUnreadMail(false);
       return;
     }
 
@@ -31,10 +41,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       });
     };
     const isSeen = (key: string) => dedupe.has(key);
-    const refreshUnreadCount = () => {
-      void getUnreadCount().then((payload) => {
-        window.dispatchEvent(new CustomEvent(NOTIFICATION_WINDOW_EVENTS.unreadCountUpdated, { detail: payload }));
-      });
+    const loadHasUnreadMail = () => {
+      void getHasUnreadMail()
+        .then((hasUnread) => {
+          setHasUnreadMail(hasUnread);
+        })
+        .catch(() => {
+          // Conserva el estado previo si falla la consulta inicial.
+        });
     };
 
     const onConnect = () => setConnected(true);
@@ -73,12 +87,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           });
         }
       }
+      setHasUnreadMail(true);
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
-      refreshUnreadCount();
-    };
-
-    const onUnreadCountUpdated = (payload: NotificationUnreadCount) => {
-      window.dispatchEvent(new CustomEvent(NOTIFICATION_WINDOW_EVENTS.unreadCountUpdated, { detail: payload }));
     };
 
     const onMessageCreated = (payload: { recipientId?: string; message?: { id?: string; subject?: string; preview?: string } }) => {
@@ -90,31 +100,34 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         message: payload?.message?.subject || payload?.message?.preview || "Tienes un nuevo mensaje.",
         priority: "NORMAL",
       });
+      setHasUnreadMail(true);
       // Unificar refresh para evitar dobles caminos de sincronizacion durante coexistencia legacy/v2.
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
-      refreshUnreadCount();
     };
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
     socket.on(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
-    socket.on(NOTIFICATION_SOCKET_EVENTS.unreadCountUpdated, onUnreadCountUpdated);
+    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.mailUnreadSync, loadHasUnreadMail);
 
-    refreshUnreadCount();
+    loadHasUnreadMail();
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
       socket.off(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
-      socket.off(NOTIFICATION_SOCKET_EVENTS.unreadCountUpdated, onUnreadCountUpdated);
+      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.mailUnreadSync, loadHasUnreadMail);
       closeNotificationSocket();
       setConnected(false);
     };
   }, [isAuthenticated, userId]);
 
-  const value = useMemo(() => ({ connected }), [connected]);
+  const value = useMemo(
+    () => ({ connected, hasUnreadMail }),
+    [connected, hasUnreadMail],
+  );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }

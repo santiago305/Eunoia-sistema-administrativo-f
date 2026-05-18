@@ -70,6 +70,7 @@ export const API_NOTIFICATION_MESSAGES_GROUP = {
   listMessages: "/mail/messages",
   countMessages: "/mail/messages/count",
   countSidebarMessages: "/mail/messages/sidebar-counts",
+  hasUnreadMessages: "/mail/messages/has-unread",
   getMessageDetail: (id: string) => `/mail/messages/${id}`,
   sendMessage: "/mail/messages",
   markMessageRead: (id: string) => `/mail/messages/${id}/read`,

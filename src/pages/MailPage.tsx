@@ -25,6 +25,7 @@ import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/mai
 import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
 import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
 import { useSileoMessageEvents } from "@/features/mail/hooks/useSileoMessageEvents";
+import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -685,6 +686,7 @@ export default function MailPage() {
     await Promise.all(selected.map((id) => (read ? markInboxRowAsRead(id) : markInboxRowAsUnread(id))));
     setSelectedIds(new Set());
     await reload();
+    window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.mailUnreadSync));
   };
 
   const moveToTrash = async (ids: string[]) => {

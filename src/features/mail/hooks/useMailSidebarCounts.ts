@@ -28,11 +28,16 @@ const INITIAL_COUNTS: SidebarCounts = {
   labelUnreadById: {},
 };
 
-export function useMailSidebarCounts() {
+export function useMailSidebarCounts(enabled = true) {
   const { isAuthenticated, authChecked, userId } = useAuth();
   const [counts, setCounts] = useState<SidebarCounts>(INITIAL_COUNTS);
 
   const reload = useCallback(async () => {
+    if (!enabled) {
+      setCounts(INITIAL_COUNTS);
+      return;
+    }
+
     if (!authChecked || !isAuthenticated || !userId) {
       setCounts(INITIAL_COUNTS);
       return;
@@ -72,13 +77,15 @@ export function useMailSidebarCounts() {
     } catch {
       // Mantiene el ultimo estado valido para no congelar el sidebar en 0.
     }
-  }, [authChecked, isAuthenticated, userId]);
+  }, [authChecked, enabled, isAuthenticated, userId]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
   useEffect(() => {
+    if (!enabled) return;
+
     const handleRefresh = () => void reload();
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, handleRefresh);
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
@@ -88,7 +95,7 @@ export function useMailSidebarCounts() {
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
       window.removeEventListener("focus", handleRefresh);
     };
-  }, [reload]);
+  }, [enabled, reload]);
 
   return counts;
 }

@@ -77,6 +77,13 @@ export const getUnreadCount = async () => {
   return { unread, unseen: unread } satisfies NotificationUnreadCount;
 };
 
+export const getHasUnreadMail = async () => {
+  const response = await axiosInstance.get<{ hasUnread: boolean }>(
+    API_NOTIFICATION_MESSAGES_GROUP.hasUnreadMessages,
+  );
+  return Boolean(response.data?.hasUnread);
+};
+
 export const getNotificationDetail = async (recipientId: string) => {
   const response = await axiosInstance.get<NotificationDetailResponse>(
     API_NOTIFICATION_MESSAGES_GROUP.getMessageDetail(recipientId),
