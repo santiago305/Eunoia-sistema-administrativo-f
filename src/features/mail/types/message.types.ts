@@ -72,6 +72,7 @@ export interface InboxItem {
     createdAt: string;
     updatedAt: string;
   };
+  labels?: Array<{ id: string; name?: string; type?: "SYSTEM" | "MODULE" | "CUSTOM" }>;
   sender?: {
     id: string;
     name: string;

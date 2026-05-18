@@ -49,6 +49,43 @@ export function useMessagesV2(params: {
     void reload();
   }, [reload]);
 
+  const removeRecipientFromCurrentList = useCallback((recipientId: string) => {
+    let removed = false;
+    setItems((prev) => {
+      const next = prev.filter((item) => {
+        if (!("recipient" in item)) return true;
+        const shouldKeep = item.recipient.id !== recipientId;
+        if (!shouldKeep) removed = true;
+        return shouldKeep;
+      });
+      return next;
+    });
+    if (removed) {
+      setTotal((prev) => Math.max(0, prev - 1));
+    }
+  }, []);
+
+  const removeMessageFromCurrentList = useCallback((messageId: string) => {
+    let removed = false;
+    setItems((prev) => {
+      const next = prev.filter((item) => {
+        if ("recipient" in item) {
+          const currentMessageId = item.recipient.messageId || item.message?.id;
+          const shouldKeep = currentMessageId !== messageId;
+          if (!shouldKeep) removed = true;
+          return shouldKeep;
+        }
+        const shouldKeep = item.id !== messageId;
+        if (!shouldKeep) removed = true;
+        return shouldKeep;
+      });
+      return next;
+    });
+    if (removed) {
+      setTotal((prev) => Math.max(0, prev - 1));
+    }
+  }, []);
+
   const markInboxRowAsRead = useCallback(async (recipientId: string) => {
     await markMessageAsRead(recipientId);
     setItems((prev) =>
@@ -85,33 +122,83 @@ export function useMessagesV2(params: {
 
   const deleteInboxRow = useCallback(async (recipientId: string) => {
     await deleteMessage(recipientId);
-    setItems((prev) => prev.filter((item) => !("recipient" in item && item.recipient.id === recipientId)));
-  }, []);
+    removeRecipientFromCurrentList(recipientId);
+  }, [removeRecipientFromCurrentList]);
 
   const restoreInboxRow = useCallback(async (recipientId: string) => {
     await restoreMessage(recipientId);
-    await reload();
-  }, [reload]);
+    if (folder === "trash") {
+      removeRecipientFromCurrentList(recipientId);
+      return;
+    }
+    setItems((prev) =>
+      prev.map((item) =>
+        "recipient" in item && item.recipient.id === recipientId
+          ? { ...item, recipient: { ...item.recipient, deletedAt: null } }
+          : item,
+      ),
+    );
+  }, [folder, removeRecipientFromCurrentList]);
 
   const archiveInboxRow = useCallback(async (recipientId: string) => {
     await archiveMessage(recipientId);
-    await reload();
-  }, [reload]);
+    if (folder === "inbox") {
+      removeRecipientFromCurrentList(recipientId);
+      return;
+    }
+    setItems((prev) =>
+      prev.map((item) =>
+        "recipient" in item && item.recipient.id === recipientId
+          ? { ...item, recipient: { ...item.recipient, updatedAt: new Date().toISOString() } }
+          : item,
+      ),
+    );
+  }, [folder, removeRecipientFromCurrentList]);
 
   const unarchiveInboxRow = useCallback(async (recipientId: string) => {
     await unarchiveMessage(recipientId);
-    await reload();
-  }, [reload]);
+    if (folder === "archived") {
+      removeRecipientFromCurrentList(recipientId);
+      return;
+    }
+    setItems((prev) =>
+      prev.map((item) =>
+        "recipient" in item && item.recipient.id === recipientId
+          ? { ...item, recipient: { ...item.recipient, updatedAt: new Date().toISOString() } }
+          : item,
+      ),
+    );
+  }, [folder, removeRecipientFromCurrentList]);
 
   const snoozeInboxRow = useCallback(async (recipientId: string, snoozedUntil: string) => {
     await snoozeMessage(recipientId, snoozedUntil);
-    await reload();
-  }, [reload]);
+    if (folder !== "snoozed" && folder !== "all") {
+      removeRecipientFromCurrentList(recipientId);
+      return;
+    }
+    setItems((prev) =>
+      prev.map((item) =>
+        "recipient" in item && item.recipient.id === recipientId
+          ? { ...item, recipient: { ...item.recipient, updatedAt: new Date().toISOString() } }
+          : item,
+      ),
+    );
+  }, [folder, removeRecipientFromCurrentList]);
 
   const unsnoozeInboxRow = useCallback(async (recipientId: string) => {
     await unsnoozeMessage(recipientId);
-    await reload();
-  }, [reload]);
+    if (folder === "snoozed") {
+      removeRecipientFromCurrentList(recipientId);
+      return;
+    }
+    setItems((prev) =>
+      prev.map((item) =>
+        "recipient" in item && item.recipient.id === recipientId
+          ? { ...item, recipient: { ...item.recipient, updatedAt: new Date().toISOString() } }
+          : item,
+      ),
+    );
+  }, [folder, removeRecipientFromCurrentList]);
 
   return {
     items,
@@ -128,5 +215,7 @@ export function useMessagesV2(params: {
     unarchiveInboxRow,
     snoozeInboxRow,
     unsnoozeInboxRow,
+    removeRecipientRowLocally: removeRecipientFromCurrentList,
+    removeMessageRowLocally: removeMessageFromCurrentList,
   };
 }

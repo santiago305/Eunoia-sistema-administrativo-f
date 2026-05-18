@@ -105,12 +105,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated));
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
     };
+    const onLocalUnreadStateChanged = (event: Event) => {
+      const customEvent = event as CustomEvent<boolean>;
+      if (typeof customEvent.detail === "boolean") {
+        setHasUnreadMail(customEvent.detail);
+      }
+    };
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
     socket.on(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.mailUnreadSync, loadHasUnreadMail);
+    window.addEventListener(
+      NOTIFICATION_WINDOW_EVENTS.mailUnreadStateChanged,
+      onLocalUnreadStateChanged as EventListener,
+    );
 
     loadHasUnreadMail();
 
@@ -120,6 +130,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       socket.off(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
       socket.off(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.mailUnreadSync, loadHasUnreadMail);
+      window.removeEventListener(
+        NOTIFICATION_WINDOW_EVENTS.mailUnreadStateChanged,
+        onLocalUnreadStateChanged as EventListener,
+      );
       closeNotificationSocket();
       setConnected(false);
     };
