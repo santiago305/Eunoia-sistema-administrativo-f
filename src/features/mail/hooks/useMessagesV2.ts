@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { archiveMessage, deleteMessage, listMessages, markMessageAsRead, markMessageAsUnread, restoreMessage, snoozeMessage, starMessage, unarchiveMessage, unsnoozeMessage, unstarMessage } from "../services/messages.service";
 import type { InboxItem, MessageFolder, SentMessageItem } from "../types/message.types";
+import type { MessageCreatedRealtimePayload } from "../types/realtime.types";
 
 export function useMessagesV2(params: {
   folder: MessageFolder;
@@ -92,6 +93,16 @@ export function useMessagesV2(params: {
       prev.map((item) =>
         "recipient" in item && item.recipient.id === recipientId
           ? { ...item, recipient: { ...item.recipient, readAt: new Date().toISOString() } }
+          : item,
+      ),
+    );
+  }, []);
+
+  const setInboxRowReadLocally = useCallback((recipientId: string, read: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        "recipient" in item && item.recipient.id === recipientId
+          ? { ...item, recipient: { ...item.recipient, readAt: read ? new Date().toISOString() : null } }
           : item,
       ),
     );
@@ -200,6 +211,76 @@ export function useMessagesV2(params: {
     );
   }, [folder, removeRecipientFromCurrentList]);
 
+  const insertRealtimeInboxItem = useCallback((payload: MessageCreatedRealtimePayload) => {
+    const recipient = payload.recipient;
+    const message = payload.message;
+    if (!recipient || !message) return false;
+
+    const now = Date.now();
+    const snoozedUntilTs = recipient.snoozedUntil ? new Date(recipient.snoozedUntil).getTime() : null;
+    const isSnoozedNow = typeof snoozedUntilTs === "number" && Number.isFinite(snoozedUntilTs) && snoozedUntilTs > now;
+    const isDeleted = Boolean(recipient.deletedAt);
+    const isArchived = Boolean(recipient.isArchived);
+    const isInInbox = recipient.isInInbox !== false;
+    const isStarred = Boolean(recipient.starredAt);
+    const hasLabel = !labelId || (payload.labels ?? []).some((label) => label.id === labelId);
+    const query = (q ?? "").trim().toLowerCase();
+    const queryHit = !query
+      || message.subject?.toLowerCase().includes(query)
+      || message.bodyText?.toLowerCase().includes(query)
+      || payload.sender?.name?.toLowerCase().includes(query)
+      || payload.sender?.email?.toLowerCase().includes(query);
+
+    const viewMatch = (() => {
+      if (!hasLabel || !queryHit) return false;
+      if (folder === "inbox") return !isDeleted && !isArchived && !isSnoozedNow && isInInbox;
+      if (folder === "all") return !isDeleted;
+      if (folder === "trash") return isDeleted;
+      if (folder === "starred") return !isDeleted && !isArchived && !isSnoozedNow && isStarred;
+      if (folder === "archived") return !isDeleted && isArchived;
+      if (folder === "snoozed") return !isDeleted && isSnoozedNow;
+      if (folder === "sent" || folder === "drafts") return false;
+      return false;
+    })();
+
+    if (!viewMatch) return false;
+
+    setTotal((prev) => prev + 1);
+    if ((page ?? 1) !== 1) return true;
+
+    const nextItem: InboxItem = {
+      recipient: {
+        id: recipient.id,
+        messageId: recipient.messageId,
+        recipientUserId: recipient.recipientUserId,
+        recipientEmail: recipient.recipientEmail,
+        recipientType: recipient.recipientType,
+        readAt: recipient.readAt,
+        starredAt: recipient.starredAt,
+        deletedAt: recipient.deletedAt,
+        deliveredAt: recipient.deliveredAt,
+        createdAt: recipient.createdAt,
+        updatedAt: recipient.updatedAt,
+      },
+      message,
+      sender: payload.sender ?? null,
+      labels: payload.labels ?? [],
+    };
+
+    setItems((prev) => {
+      if (prev.some((item) => "recipient" in item && item.recipient.id === recipient.id)) {
+        return prev;
+      }
+      const next = [nextItem, ...prev];
+      if (typeof limit === "number" && limit > 0 && next.length > limit) {
+        return next.slice(0, limit);
+      }
+      return next;
+    });
+
+    return true;
+  }, [folder, labelId, limit, page, q]);
+
   return {
     items,
     total,
@@ -208,6 +289,7 @@ export function useMessagesV2(params: {
     reload,
     markInboxRowAsRead,
     markInboxRowAsUnread,
+    setInboxRowReadLocally,
     starInboxRow,
     deleteInboxRow,
     restoreInboxRow,
@@ -217,5 +299,6 @@ export function useMessagesV2(params: {
     unsnoozeInboxRow,
     removeRecipientRowLocally: removeRecipientFromCurrentList,
     removeMessageRowLocally: removeMessageFromCurrentList,
+    insertRealtimeInboxItem,
   };
 }

@@ -69,12 +69,10 @@ export function useMailSidebarCounts(enabled = true) {
     if (!enabled) return;
 
     const handleRefresh = () => void reload();
-    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, handleRefresh);
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated, handleRefresh);
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
     window.addEventListener("focus", handleRefresh);
     return () => {
-      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, handleRefresh);
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated, handleRefresh);
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
       window.removeEventListener("focus", handleRefresh);

@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import {
   ArrowLeft,
   Trash2,
@@ -49,11 +48,6 @@ interface Props {
 
 export default function MailDetail(props: Props) {
   const mail = props.mail;
-  const { onSetRead } = props;
-
-  useEffect(() => {
-    if (mail && !mail.read) onSetRead(mail.id, true);
-  }, [mail, onSetRead]);
 
   if (!mail) {
     return <div className="flex-1 flex items-center justify-center text-muted-foreground">Mensaje no encontrado</div>;

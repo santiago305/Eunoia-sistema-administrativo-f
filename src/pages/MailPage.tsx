@@ -23,6 +23,9 @@ import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/mai
 import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
 import { useSileoMessageEvents } from "@/features/mail/hooks/useSileoMessageEvents";
 import { useMailDashboardContext } from "@/features/mail/context/MailDashboardProvider";
+import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
+import { showNotificationToast } from "@/features/mail/services/mail-toast.service";
+import type { MessageCreatedRealtimePayload } from "@/features/mail/types/realtime.types";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -30,7 +33,8 @@ import { Modal } from "@/shared/components/modales/Modal";
 
 const createComposeId = () => `compose-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const MAX_COMPOSE_DRAFTS = 4;
-const COMPOSE_AUTOSAVE_MS = 10_000;
+const COMPOSE_AUTOSAVE_DEBOUNCE_MS = 1_500;
+const COMPOSE_AUTOSAVE_FALLBACK_MS = 60_000;
 
 type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed" | "all";
 
@@ -248,6 +252,10 @@ export default function MailPage() {
   const [localStarredById, setLocalStarredById] = useState<Record<string, boolean>>({});
   const composeDraftsRef = useRef<NotificationComposeDraft[]>([]);
   const persistedSignaturesRef = useRef<Map<string, string>>(new Map());
+  const composeAutosaveTimeoutsRef = useRef<Map<string, number>>(new Map());
+  const savingComposeIdsRef = useRef<Set<string>>(new Set());
+  const sendingComposeIdsRef = useRef<Set<string>>(new Set());
+  const discardingComposeIdsRef = useRef<Set<string>>(new Set());
 
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
@@ -261,6 +269,7 @@ export default function MailPage() {
     reload,
     markInboxRowAsRead,
     markInboxRowAsUnread,
+    setInboxRowReadLocally,
     starInboxRow,
     deleteInboxRow,
     restoreInboxRow,
@@ -270,6 +279,7 @@ export default function MailPage() {
     unsnoozeInboxRow,
     removeRecipientRowLocally,
     removeMessageRowLocally,
+    insertRealtimeInboxItem,
   } = useMessagesV2({
     folder,
     labelId,
@@ -278,8 +288,29 @@ export default function MailPage() {
     limit: pageSize,
   });
 
+  const handleRealtimeMessageCreated = useCallback((payload: MessageCreatedRealtimePayload) => {
+    const defaultDelta = { inbox: 1 };
+    const countsDelta = payload.countsDelta ?? defaultDelta;
+    const canAffectUnreadLabelCounts = !payload.recipient?.readAt;
+    const labelUnreadById = canAffectUnreadLabelCounts
+      ? (payload.labels ?? [])
+          .filter((label) => label.type === "CUSTOM")
+          .reduce<Record<string, number>>((acc, label) => {
+            acc[label.id] = (acc[label.id] ?? 0) + 1;
+            return acc;
+          }, {})
+      : undefined;
+
+    applyCountsDelta({
+      ...countsDelta,
+      labelUnreadById,
+    });
+    insertRealtimeInboxItem(payload);
+  }, [applyCountsDelta, insertRealtimeInboxItem]);
+
   useSileoMessageEvents({
     onRefreshMessages: reload,
+    onRealtimeMessageCreated: handleRealtimeMessageCreated,
   });
 
   useEffect(() => {
@@ -322,7 +353,24 @@ export default function MailPage() {
     Array.from(persistedSignaturesRef.current.keys()).forEach((id) => {
       if (!aliveIds.has(id)) persistedSignaturesRef.current.delete(id);
     });
+    Array.from(composeAutosaveTimeoutsRef.current.entries()).forEach(([id, timeoutId]) => {
+      if (aliveIds.has(id)) return;
+      window.clearTimeout(timeoutId);
+      composeAutosaveTimeoutsRef.current.delete(id);
+    });
   }, [composeDrafts]);
+
+  useEffect(() => {
+    savingComposeIdsRef.current = savingComposeIds;
+  }, [savingComposeIds]);
+
+  useEffect(() => {
+    sendingComposeIdsRef.current = sendingComposeIds;
+  }, [sendingComposeIds]);
+
+  useEffect(() => {
+    discardingComposeIdsRef.current = discardingComposeIds;
+  }, [discardingComposeIds]);
 
   const openCompose = useCallback((payload?: ComposePayload) => {
     if (composeDraftsRef.current.length >= MAX_COMPOSE_DRAFTS) {
@@ -402,6 +450,46 @@ export default function MailPage() {
     }
   }, [updateComposeDraft]);
 
+  const isComposeDraftDirty = useCallback((draft: NotificationComposeDraft) => {
+    const current = serializeComposeDraft(draft);
+    const persisted = persistedSignaturesRef.current.get(draft.id);
+    return current !== persisted;
+  }, []);
+
+  const clearComposeAutosaveTimer = useCallback((composeId: string) => {
+    const timeoutId = composeAutosaveTimeoutsRef.current.get(composeId);
+    if (typeof timeoutId !== "number") return;
+    window.clearTimeout(timeoutId);
+    composeAutosaveTimeoutsRef.current.delete(composeId);
+  }, []);
+
+  const scheduleComposeAutosave = useCallback(
+    (composeId: string, delayMs = COMPOSE_AUTOSAVE_DEBOUNCE_MS) => {
+      clearComposeAutosaveTimer(composeId);
+      const timeoutId = window.setTimeout(() => {
+        composeAutosaveTimeoutsRef.current.delete(composeId);
+        const draft = composeDraftsRef.current.find((item) => item.id === composeId);
+        if (!draft || draft.minimized) return;
+        if (sendingComposeIdsRef.current.has(composeId) || savingComposeIdsRef.current.has(composeId) || discardingComposeIdsRef.current.has(composeId)) return;
+        if (!isComposeDraftDirty(draft)) return;
+        void persistComposeDraft(composeId);
+      }, delayMs);
+      composeAutosaveTimeoutsRef.current.set(composeId, timeoutId);
+    },
+    [clearComposeAutosaveTimer, isComposeDraftDirty, persistComposeDraft],
+  );
+
+  const flushDirtyComposeDrafts = useCallback(() => {
+    const drafts = composeDraftsRef.current;
+    drafts.forEach((draft) => {
+      if (draft.minimized) return;
+      if (sendingComposeIdsRef.current.has(draft.id) || savingComposeIdsRef.current.has(draft.id) || discardingComposeIdsRef.current.has(draft.id)) return;
+      if (!isComposeDraftDirty(draft)) return;
+      clearComposeAutosaveTimer(draft.id);
+      void persistComposeDraft(draft.id);
+    });
+  }, [clearComposeAutosaveTimer, isComposeDraftDirty, persistComposeDraft]);
+
   const resolveComposeDraftId = useCallback(async (composeId: string) => {
     const compose = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!compose) throw new Error("COMPOSE_NOT_FOUND");
@@ -430,9 +518,10 @@ export default function MailPage() {
   }, [updateComposeDraft]);
 
   const removeComposeDraft = useCallback((composeId: string) => {
+    clearComposeAutosaveTimer(composeId);
     setComposeDrafts((prev) => prev.filter((item) => item.id !== composeId));
     persistedSignaturesRef.current.delete(composeId);
-  }, []);
+  }, [clearComposeAutosaveTimer]);
 
   const discardComposeDraft = useCallback(async (composeId: string) => {
     const draft = composeDraftsRef.current.find((item) => item.id === composeId);
@@ -600,31 +689,58 @@ export default function MailPage() {
   }, [params.folder]);
 
   useEffect(() => {
+    composeDrafts.forEach((draft) => {
+      if (draft.minimized) {
+        clearComposeAutosaveTimer(draft.id);
+        return;
+      }
+      if (sendingComposeIdsRef.current.has(draft.id) || savingComposeIdsRef.current.has(draft.id) || discardingComposeIdsRef.current.has(draft.id)) return;
+      if (!isComposeDraftDirty(draft)) {
+        clearComposeAutosaveTimer(draft.id);
+        return;
+      }
+      scheduleComposeAutosave(draft.id);
+    });
+  }, [clearComposeAutosaveTimer, composeDrafts, isComposeDraftDirty, scheduleComposeAutosave]);
+
+  useEffect(() => {
     const id = window.setInterval(() => {
-      const drafts = composeDraftsRef.current;
-      drafts.forEach((draft) => {
-        if (draft.minimized) return;
-        if (sendingComposeIds.has(draft.id) || savingComposeIds.has(draft.id) || discardingComposeIds.has(draft.id)) return;
-        void persistComposeDraft(draft.id);
-      });
-    }, COMPOSE_AUTOSAVE_MS);
+      flushDirtyComposeDrafts();
+    }, COMPOSE_AUTOSAVE_FALLBACK_MS);
     return () => window.clearInterval(id);
-  }, [discardingComposeIds, persistComposeDraft, savingComposeIds, sendingComposeIds]);
+  }, [flushDirtyComposeDrafts]);
 
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
       const hasDirtyDraft = composeDraftsRef.current.some((draft) => {
-        const current = serializeComposeDraft(draft);
-        const persisted = persistedSignaturesRef.current.get(draft.id);
-        return current !== persisted;
+        if (draft.minimized) return false;
+        return isComposeDraftDirty(draft);
       });
       if (!hasDirtyDraft) return;
+      flushDirtyComposeDrafts();
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, []);
+  }, [flushDirtyComposeDrafts, isComposeDraftDirty]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState !== "hidden") return;
+      flushDirtyComposeDrafts();
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [flushDirtyComposeDrafts]);
+
+  useEffect(
+    () => () => {
+      Array.from(composeAutosaveTimeoutsRef.current.values()).forEach((timeoutId) => window.clearTimeout(timeoutId));
+      composeAutosaveTimeoutsRef.current.clear();
+    },
+    [],
+  );
 
   useEffect(() => {
     const id = (searchParams.get("deleteLabel") ?? "").trim();
@@ -647,28 +763,6 @@ export default function MailPage() {
     setSelectedIds(new Set());
   }, [folder, q, labelId]);
 
-  useEffect(() => {
-    if (!activeMailId) {
-      setActiveMailDetail(null);
-      return;
-    }
-    void (async () => {
-      try {
-        const detail = await getMessageDetail(activeMailId);
-        setActiveMailDetail(detail);
-        const rawLabels = Array.isArray((detail as { labels?: unknown })?.labels)
-          ? ((detail as { labels?: Array<{ id?: string; labelId?: string }> }).labels ?? [])
-          : [];
-        const extracted = rawLabels
-          .map((item) => item?.id ?? item?.labelId)
-          .filter((id): id is string => Boolean(id));
-        setMessageLabelIdsByMessage((prev) => ({ ...prev, [activeMailId]: extracted }));
-      } catch {
-        setActiveMailDetail(null);
-      }
-    })();
-  }, [activeMailId]);
-
   const start = total === 0 ? 0 : (page - 1) * pageSize;
   const end = Math.min(start + mails.length, total);
   const pageMailIds = mails.map((m) => m.id);
@@ -678,6 +772,18 @@ export default function MailPage() {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   const activeMail = useMemo(() => mails.find((m) => m.id === activeMailId) ?? null, [mails, activeMailId]);
+  const recoverMutationState = useCallback(
+    async (message: string) => {
+      await reload();
+      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
+      showNotificationToast({
+        title: "No se pudo completar la accion",
+        message,
+        priority: "HIGH",
+      });
+    },
+    [reload],
+  );
 
   const unreadBucketByFolder = (value: UiFolder): "inbox" | "trash" | "archived" | "snoozed" | null => {
     if (value === "inbox") return "inbox";
@@ -704,125 +810,239 @@ export default function MailPage() {
     });
     return map;
   }, [items, messageLabelIdsByMessage]);
-  const getMessageLabelIds = (mail: Mail) => rawLabelIdsByMessageId.get(mail.messageId ?? mail.id) ?? [];
+  const getMessageLabelIds = useCallback(
+    (mail: Mail) => rawLabelIdsByMessageId.get(mail.messageId ?? mail.id) ?? [],
+    [rawLabelIdsByMessageId],
+  );
 
-  const markRead = async (ids: string[], read: boolean) => {
-    const selectedMails = mails.filter((m) => ids.includes(m.id));
-    const selected = selectedMails
-      .map((m) => m.recipientId ?? m.messageId ?? m.id);
-    await Promise.all(selected.map((id) => (read ? markInboxRowAsRead(id) : markInboxRowAsUnread(id))));
-    const unreadBucket = unreadBucketByFolder(folder);
-    let unreadDelta = 0;
-    let starredDelta = 0;
-    const labelDeltaById: Record<string, number> = {};
-
-    selectedMails.forEach((mail) => {
-      const wasUnread = !mail.read;
-      const changedToRead = read && wasUnread;
-      const changedToUnread = !read && !wasUnread;
-      if (!changedToRead && !changedToUnread) return;
-
-      const direction = changedToRead ? -1 : 1;
-      unreadDelta += direction;
-      if (mail.starred) starredDelta += direction;
-      if (countsLabelAware) {
-        getMessageLabelIds(mail).forEach((labelId) => {
-          labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) + direction;
-        });
-      }
-    });
-
-    const deltaPayload: Partial<{ inbox: number; trash: number; archived: number; snoozed: number; starred: number }> = {
-      starred: starredDelta,
-    };
-    if (unreadBucket) {
-      deltaPayload[unreadBucket] = unreadDelta;
-    }
-    applyCountsDelta({
-      ...deltaPayload,
-      labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
-    });
-    setSelectedIds(new Set());
-  };
-
-  const moveToTrash = async (ids: string[]) => {
-    if (folder === "drafts") {
-      const selectedDraftIds = mails
-        .filter((m) => ids.includes(m.id))
-        .map((m) => m.messageId ?? m.id);
-      await Promise.all(selectedDraftIds.map((id) => deleteDraft(id)));
-      selectedDraftIds.forEach((id) => removeMessageRowLocally(id));
-      applyCountsDelta({ drafts: -selectedDraftIds.length });
-      setSelectedIds(new Set());
+  useEffect(() => {
+    if (!activeMailId) {
+      setActiveMailDetail(null);
       return;
     }
+    void (async () => {
+      const targetMail = mails.find((currentMail) => currentMail.id === activeMailId) ?? null;
+      const shouldMarkReadLocally = Boolean(targetMail && !targetMail.read && targetMail.recipientId);
+      try {
+        const detail = await getMessageDetail(activeMailId);
+        setActiveMailDetail(detail);
+        const rawLabels = Array.isArray((detail as { labels?: unknown })?.labels)
+          ? ((detail as { labels?: Array<{ id?: string; labelId?: string }> }).labels ?? [])
+          : [];
+        const extracted = rawLabels
+          .map((item) => item?.id ?? item?.labelId)
+          .filter((id): id is string => Boolean(id));
+        setMessageLabelIdsByMessage((prev) => ({ ...prev, [activeMailId]: extracted }));
+        if (shouldMarkReadLocally && targetMail?.recipientId) {
+          setInboxRowReadLocally(targetMail.recipientId, true);
+          const unreadBucket = unreadBucketByFolder(folder);
+          const labelDeltaById: Record<string, number> = {};
+          if (countsLabelAware) {
+            getMessageLabelIds(targetMail).forEach((labelId) => {
+              labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - 1;
+            });
+          }
+          const deltaPayload: Partial<{ inbox: number; trash: number; archived: number; snoozed: number; starred: number }> = {
+            starred: targetMail.starred ? -1 : 0,
+          };
+          if (unreadBucket) deltaPayload[unreadBucket] = -1;
+          applyCountsDelta({
+            ...deltaPayload,
+            labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
+          });
+        }
+      } catch {
+        setActiveMailDetail(null);
+      }
+    })();
+  }, [
+    activeMailId,
+    applyCountsDelta,
+    countsLabelAware,
+    folder,
+    getMessageLabelIds,
+    mails,
+    setInboxRowReadLocally,
+  ]);
 
-    const selectedMails = mails.filter((m) => ids.includes(m.id));
-    const selected = selectedMails
-      .map((m) => m.recipientId ?? m.messageId ?? m.id);
-    if (folder === "trash") {
-      await Promise.all(selected.map((id) => permanentlyDeleteMessage(id)));
-      selected.forEach((id) => removeRecipientRowLocally(id));
-      const unreadInTrash = selectedMails.filter((mail) => !mail.read).length;
-      applyCountsDelta({ trash: -unreadInTrash });
-    } else {
-      await Promise.all(selected.map((id) => deleteInboxRow(id)));
-      const unreadMoved = selectedMails.filter((mail) => !mail.read);
-      const unreadCount = unreadMoved.length;
+  const markRead = async (ids: string[], read: boolean) => {
+    try {
+      const selectedMails = mails.filter((m) => ids.includes(m.id));
+      const selected = selectedMails
+        .map((m) => m.recipientId ?? m.messageId ?? m.id);
+      await Promise.all(selected.map((id) => (read ? markInboxRowAsRead(id) : markInboxRowAsUnread(id))));
       const unreadBucket = unreadBucketByFolder(folder);
-      const labelDeltaById: Record<string, number> = {};
+      let unreadDelta = 0;
       let starredDelta = 0;
-      unreadMoved.forEach((mail) => {
-        if (mail.starred) starredDelta -= 1;
+      const labelDeltaById: Record<string, number> = {};
+
+      selectedMails.forEach((mail) => {
+        const wasUnread = !mail.read;
+        const changedToRead = read && wasUnread;
+        const changedToUnread = !read && !wasUnread;
+        if (!changedToRead && !changedToUnread) return;
+
+        const direction = changedToRead ? -1 : 1;
+        unreadDelta += direction;
+        if (mail.starred) starredDelta += direction;
         if (countsLabelAware) {
           getMessageLabelIds(mail).forEach((labelId) => {
-            labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - 1;
+            labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) + direction;
           });
         }
       });
+
       const deltaPayload: Partial<{ inbox: number; trash: number; archived: number; snoozed: number; starred: number }> = {
-        trash: unreadCount,
         starred: starredDelta,
       };
-      if (unreadBucket) deltaPayload[unreadBucket] = -unreadCount;
+      if (unreadBucket) {
+        deltaPayload[unreadBucket] = unreadDelta;
+      }
       applyCountsDelta({
         ...deltaPayload,
         labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
       });
+      setSelectedIds(new Set());
+    } catch {
+      await recoverMutationState("No se pudo actualizar el estado de lectura.");
     }
-    setSelectedIds(new Set());
+  };
+
+  const moveToTrash = async (ids: string[]) => {
+    try {
+      if (folder === "drafts") {
+        const selectedDraftIds = mails
+          .filter((m) => ids.includes(m.id))
+          .map((m) => m.messageId ?? m.id);
+        await Promise.all(selectedDraftIds.map((id) => deleteDraft(id)));
+        selectedDraftIds.forEach((id) => removeMessageRowLocally(id));
+        applyCountsDelta({ drafts: -selectedDraftIds.length });
+        setSelectedIds(new Set());
+        return;
+      }
+
+      const selectedMails = mails.filter((m) => ids.includes(m.id));
+      const selected = selectedMails
+        .map((m) => m.recipientId ?? m.messageId ?? m.id);
+      if (folder === "trash") {
+        await Promise.all(selected.map((id) => permanentlyDeleteMessage(id)));
+        selected.forEach((id) => removeRecipientRowLocally(id));
+        const unreadInTrash = selectedMails.filter((mail) => !mail.read).length;
+        applyCountsDelta({ trash: -unreadInTrash });
+      } else {
+        await Promise.all(selected.map((id) => deleteInboxRow(id)));
+        const unreadMoved = selectedMails.filter((mail) => !mail.read);
+        const unreadCount = unreadMoved.length;
+        const unreadBucket = unreadBucketByFolder(folder);
+        const labelDeltaById: Record<string, number> = {};
+        let starredDelta = 0;
+        unreadMoved.forEach((mail) => {
+          if (mail.starred) starredDelta -= 1;
+          if (countsLabelAware) {
+            getMessageLabelIds(mail).forEach((labelId) => {
+              labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - 1;
+            });
+          }
+        });
+        const deltaPayload: Partial<{ inbox: number; trash: number; archived: number; snoozed: number; starred: number }> = {
+          trash: unreadCount,
+          starred: starredDelta,
+        };
+        if (unreadBucket) deltaPayload[unreadBucket] = -unreadCount;
+        applyCountsDelta({
+          ...deltaPayload,
+          labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
+        });
+      }
+      setSelectedIds(new Set());
+    } catch {
+      await recoverMutationState("No se pudo mover el mensaje a papelera.");
+    }
   };
 
   const restoreFromTrash = async (ids: string[]) => {
-    const selectedMails = mails.filter((m) => ids.includes(m.id));
-    const selected = selectedMails
-      .map((m) => m.recipientId ?? m.messageId ?? m.id);
-    await Promise.all(selected.map((id) => restoreInboxRow(id)));
-    const unreadRestored = selectedMails.filter((mail) => !mail.read);
-    const labelDeltaById: Record<string, number> = {};
-    let starredDelta = 0;
-    unreadRestored.forEach((mail) => {
-      if (mail.starred) starredDelta += 1;
-      getMessageLabelIds(mail).forEach((labelId) => {
-        labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) + 1;
+    try {
+      const selectedMails = mails.filter((m) => ids.includes(m.id));
+      const selected = selectedMails
+        .map((m) => m.recipientId ?? m.messageId ?? m.id);
+      await Promise.all(selected.map((id) => restoreInboxRow(id)));
+      const unreadRestored = selectedMails.filter((mail) => !mail.read);
+      const labelDeltaById: Record<string, number> = {};
+      let starredDelta = 0;
+      unreadRestored.forEach((mail) => {
+        if (mail.starred) starredDelta += 1;
+        getMessageLabelIds(mail).forEach((labelId) => {
+          labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) + 1;
+        });
       });
-    });
-    applyCountsDelta({
-      trash: -unreadRestored.length,
-      inbox: unreadRestored.length,
-      starred: starredDelta,
-      labelUnreadById: labelDeltaById,
-    });
-    setSelectedIds(new Set());
+      applyCountsDelta({
+        trash: -unreadRestored.length,
+        inbox: unreadRestored.length,
+        starred: starredDelta,
+        labelUnreadById: labelDeltaById,
+      });
+      setSelectedIds(new Set());
+    } catch {
+      await recoverMutationState("No se pudo restaurar el mensaje.");
+    }
   };
 
   const archiveBulk = async (ids: string[], archive: boolean) => {
-    const selectedMails = mails.filter((m) => ids.includes(m.id));
-    const selected = selectedMails
-      .map((m) => m.recipientId ?? m.messageId ?? m.id);
-    if (!selected.length) return;
-    if (archive) {
-      await Promise.all(selected.map((id) => archiveInboxRow(id)));
+    try {
+      const selectedMails = mails.filter((m) => ids.includes(m.id));
+      const selected = selectedMails
+        .map((m) => m.recipientId ?? m.messageId ?? m.id);
+      if (!selected.length) return;
+      if (archive) {
+        await Promise.all(selected.map((id) => archiveInboxRow(id)));
+        const unreadMoved = selectedMails.filter((mail) => !mail.read);
+        const labelDeltaById: Record<string, number> = {};
+        let starredDelta = 0;
+        unreadMoved.forEach((mail) => {
+          if (mail.starred) starredDelta -= 1;
+          if (countsLabelAware) {
+            getMessageLabelIds(mail).forEach((labelId) => {
+              labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - 1;
+            });
+          }
+        });
+        applyCountsDelta({
+          inbox: -unreadMoved.length,
+          archived: unreadMoved.length,
+          starred: starredDelta,
+          labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
+        });
+      } else {
+        await Promise.all(selected.map((id) => unarchiveInboxRow(id)));
+        const unreadMoved = selectedMails.filter((mail) => !mail.read);
+        const labelDeltaById: Record<string, number> = {};
+        let starredDelta = 0;
+        unreadMoved.forEach((mail) => {
+          if (mail.starred) starredDelta += 1;
+          getMessageLabelIds(mail).forEach((labelId) => {
+            labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) + 1;
+          });
+        });
+        applyCountsDelta({
+          archived: -unreadMoved.length,
+          inbox: unreadMoved.length,
+          starred: starredDelta,
+          labelUnreadById: labelDeltaById,
+        });
+      }
+      setSelectedIds(new Set());
+    } catch {
+      await recoverMutationState(archive ? "No se pudo archivar los mensajes." : "No se pudo desarchivar los mensajes.");
+    }
+  };
+
+  const snoozeBulk = async (ids: string[], snoozedUntil: string) => {
+    try {
+      const selectedMails = mails.filter((m) => ids.includes(m.id));
+      const selected = selectedMails
+        .map((m) => m.recipientId ?? m.messageId ?? m.id);
+      if (!selected.length) return;
+      await Promise.all(selected.map((id) => snoozeInboxRow(id, snoozedUntil)));
       const unreadMoved = selectedMails.filter((mail) => !mail.read);
       const labelDeltaById: Record<string, number> = {};
       let starredDelta = 0;
@@ -836,108 +1056,75 @@ export default function MailPage() {
       });
       applyCountsDelta({
         inbox: -unreadMoved.length,
-        archived: unreadMoved.length,
+        snoozed: unreadMoved.length,
         starred: starredDelta,
         labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
       });
-    } else {
-      await Promise.all(selected.map((id) => unarchiveInboxRow(id)));
-      const unreadMoved = selectedMails.filter((mail) => !mail.read);
-      const labelDeltaById: Record<string, number> = {};
-      let starredDelta = 0;
-      unreadMoved.forEach((mail) => {
-        if (mail.starred) starredDelta += 1;
-        getMessageLabelIds(mail).forEach((labelId) => {
-          labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) + 1;
-        });
-      });
-      applyCountsDelta({
-        archived: -unreadMoved.length,
-        inbox: unreadMoved.length,
-        starred: starredDelta,
-        labelUnreadById: labelDeltaById,
-      });
+      setSelectedIds(new Set());
+    } catch {
+      await recoverMutationState("No se pudo posponer los mensajes.");
     }
-    setSelectedIds(new Set());
-  };
-
-  const snoozeBulk = async (ids: string[], snoozedUntil: string) => {
-    const selectedMails = mails.filter((m) => ids.includes(m.id));
-    const selected = selectedMails
-      .map((m) => m.recipientId ?? m.messageId ?? m.id);
-    if (!selected.length) return;
-    await Promise.all(selected.map((id) => snoozeInboxRow(id, snoozedUntil)));
-    const unreadMoved = selectedMails.filter((mail) => !mail.read);
-    const labelDeltaById: Record<string, number> = {};
-    let starredDelta = 0;
-    unreadMoved.forEach((mail) => {
-      if (mail.starred) starredDelta -= 1;
-      if (countsLabelAware) {
-        getMessageLabelIds(mail).forEach((labelId) => {
-          labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - 1;
-        });
-      }
-    });
-    applyCountsDelta({
-      inbox: -unreadMoved.length,
-      snoozed: unreadMoved.length,
-      starred: starredDelta,
-      labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
-    });
-    setSelectedIds(new Set());
   };
 
   const assignLabelBulk = async (ids: string[], labelIdToAssign: string) => {
-    const selected = mails
-      .filter((m) => ids.includes(m.id))
-      .map((m) => m.messageId ?? m.id);
-    if (!selected.length) return;
-    const unreadWithoutLabel = mails
-      .filter((mail) => ids.includes(mail.id) && !mail.read)
-      .filter((mail) => !getMessageLabelIds(mail).includes(labelIdToAssign))
-      .map((mail) => mail.id);
-    await Promise.all(selected.map((messageId) => assignLabelToMessage(messageId, labelIdToAssign)));
-    if (countsLabelAware && unreadWithoutLabel.length) {
-      applyUnreadByLabelDelta([labelIdToAssign], unreadWithoutLabel.length);
-    }
-    if (unreadWithoutLabel.length) {
-      setMessageLabelIdsByMessage((prev) => {
-        const next = { ...prev };
-        unreadWithoutLabel.forEach((mailId) => {
-          next[mailId] = Array.from(new Set([...(next[mailId] ?? []), labelIdToAssign]));
+    try {
+      const selected = mails
+        .filter((m) => ids.includes(m.id))
+        .map((m) => m.messageId ?? m.id);
+      if (!selected.length) return;
+      const unreadWithoutLabel = mails
+        .filter((mail) => ids.includes(mail.id) && !mail.read)
+        .filter((mail) => !getMessageLabelIds(mail).includes(labelIdToAssign))
+        .map((mail) => mail.id);
+      await Promise.all(selected.map((messageId) => assignLabelToMessage(messageId, labelIdToAssign)));
+      if (countsLabelAware && unreadWithoutLabel.length) {
+        applyUnreadByLabelDelta([labelIdToAssign], unreadWithoutLabel.length);
+      }
+      if (unreadWithoutLabel.length) {
+        setMessageLabelIdsByMessage((prev) => {
+          const next = { ...prev };
+          unreadWithoutLabel.forEach((mailId) => {
+            next[mailId] = Array.from(new Set([...(next[mailId] ?? []), labelIdToAssign]));
+          });
+          return next;
         });
-        return next;
-      });
+      }
+      setSelectedIds(new Set());
+    } catch {
+      await recoverMutationState("No se pudo asignar la etiqueta.");
     }
-    setSelectedIds(new Set());
   };
 
   const removeLabelBulk = async (ids: string[], labelIdToRemove: string) => {
-    const selected = mails
-      .filter((m) => ids.includes(m.id))
-      .map((m) => m.messageId ?? m.id);
-    if (!selected.length) return;
-    const unreadWithLabel = mails
-      .filter((mail) => ids.includes(mail.id) && !mail.read)
-      .filter((mail) => getMessageLabelIds(mail).includes(labelIdToRemove))
-      .map((mail) => mail.id);
-    await Promise.all(selected.map((messageId) => removeLabelFromMessage(messageId, labelIdToRemove)));
-    if (countsLabelAware && unreadWithLabel.length) {
-      applyUnreadByLabelDelta([labelIdToRemove], -unreadWithLabel.length);
-    }
-    if (labelId && labelIdToRemove === labelId) {
-      selected.forEach((messageId) => removeMessageRowLocally(messageId));
-    }
-    if (unreadWithLabel.length) {
-      setMessageLabelIdsByMessage((prev) => {
-        const next = { ...prev };
-        unreadWithLabel.forEach((mailId) => {
-          next[mailId] = (next[mailId] ?? []).filter((id) => id !== labelIdToRemove);
+    try {
+      const selected = mails
+        .filter((m) => ids.includes(m.id))
+        .map((m) => m.messageId ?? m.id);
+      if (!selected.length) return;
+      const unreadWithLabel = mails
+        .filter((mail) => ids.includes(mail.id) && !mail.read)
+        .filter((mail) => getMessageLabelIds(mail).includes(labelIdToRemove))
+        .map((mail) => mail.id);
+      await Promise.all(selected.map((messageId) => removeLabelFromMessage(messageId, labelIdToRemove)));
+      if (countsLabelAware && unreadWithLabel.length) {
+        applyUnreadByLabelDelta([labelIdToRemove], -unreadWithLabel.length);
+      }
+      if (labelId && labelIdToRemove === labelId) {
+        selected.forEach((messageId) => removeMessageRowLocally(messageId));
+      }
+      if (unreadWithLabel.length) {
+        setMessageLabelIdsByMessage((prev) => {
+          const next = { ...prev };
+          unreadWithLabel.forEach((mailId) => {
+            next[mailId] = (next[mailId] ?? []).filter((id) => id !== labelIdToRemove);
+          });
+          return next;
         });
-        return next;
-      });
+      }
+      setSelectedIds(new Set());
+    } catch {
+      await recoverMutationState("No se pudo quitar la etiqueta.");
     }
-    setSelectedIds(new Set());
   };
 
   const toggleStar = async (id: string) => {
@@ -974,26 +1161,30 @@ export default function MailPage() {
     if (!target) return;
     const actionId = target.recipientId ?? target.messageId ?? target.id;
     const labelDeltaIds = getMessageLabelIds(target);
-    if (folder === "archived") {
-      await unarchiveInboxRow(actionId);
+    try {
+      if (folder === "archived") {
+        await unarchiveInboxRow(actionId);
+        if (!target.read) {
+          applyCountsDelta({
+            archived: -1,
+            inbox: 1,
+            starred: target.starred ? 1 : 0,
+          });
+          applyUnreadByLabelDelta(labelDeltaIds, 1);
+        }
+        return;
+      }
+      await archiveInboxRow(actionId);
       if (!target.read) {
         applyCountsDelta({
-          archived: -1,
-          inbox: 1,
-          starred: target.starred ? 1 : 0,
+          inbox: folder === "inbox" || folder === "starred" || folder === "all" ? -1 : 0,
+          archived: 1,
+          starred: target.starred ? -1 : 0,
         });
-        applyUnreadByLabelDelta(labelDeltaIds, 1);
+        if (countsLabelAware) applyUnreadByLabelDelta(labelDeltaIds, -1);
       }
-      return;
-    }
-    await archiveInboxRow(actionId);
-    if (!target.read) {
-      applyCountsDelta({
-        inbox: folder === "inbox" || folder === "starred" || folder === "all" ? -1 : 0,
-        archived: 1,
-        starred: target.starred ? -1 : 0,
-      });
-      if (countsLabelAware) applyUnreadByLabelDelta(labelDeltaIds, -1);
+    } catch {
+      await recoverMutationState("No se pudo actualizar el estado de archivado.");
     }
   };
 
@@ -1006,29 +1197,37 @@ export default function MailPage() {
     if (!snoozeTargetId) return;
     const target = mails.find((m) => m.id === snoozeTargetId);
     if (!target) return;
-    await snoozeInboxRow(target.recipientId ?? target.messageId ?? target.id, iso);
-    if (!target.read) {
-      applyCountsDelta({
-        inbox: folder === "inbox" || folder === "starred" || folder === "all" ? -1 : 0,
-        snoozed: 1,
-        starred: target.starred ? -1 : 0,
-      });
-      if (countsLabelAware) applyUnreadByLabelDelta(getMessageLabelIds(target), -1);
+    try {
+      await snoozeInboxRow(target.recipientId ?? target.messageId ?? target.id, iso);
+      if (!target.read) {
+        applyCountsDelta({
+          inbox: folder === "inbox" || folder === "starred" || folder === "all" ? -1 : 0,
+          snoozed: 1,
+          starred: target.starred ? -1 : 0,
+        });
+        if (countsLabelAware) applyUnreadByLabelDelta(getMessageLabelIds(target), -1);
+      }
+      setSnoozeTargetId(null);
+    } catch {
+      await recoverMutationState("No se pudo posponer el mensaje.");
     }
-    setSnoozeTargetId(null);
   };
 
   const unsnooze = async (id: string) => {
     const target = mails.find((m) => m.id === id);
     if (!target) return;
-    await unsnoozeInboxRow(target.recipientId ?? target.messageId ?? target.id);
-    if (!target.read) {
-      applyCountsDelta({
-        snoozed: -1,
-        inbox: 1,
-        starred: target.starred ? 1 : 0,
-      });
-      applyUnreadByLabelDelta(getMessageLabelIds(target), 1);
+    try {
+      await unsnoozeInboxRow(target.recipientId ?? target.messageId ?? target.id);
+      if (!target.read) {
+        applyCountsDelta({
+          snoozed: -1,
+          inbox: 1,
+          starred: target.starred ? 1 : 0,
+        });
+        applyUnreadByLabelDelta(getMessageLabelIds(target), 1);
+      }
+    } catch {
+      await recoverMutationState("No se pudo quitar la posposicion del mensaje.");
     }
   };
 
@@ -1073,18 +1272,22 @@ export default function MailPage() {
                 selectedLabelIds={activeMailId ? (messageLabelIdsByMessage[activeMailId] ?? []) : []}
                 onToggleLabel={(messageId, labelId, selected) => {
                   void (async () => {
-                    if (selected) await removeLabelFromMessage(messageId, labelId);
-                    else await assignLabelToMessage(messageId, labelId);
-                    const isUnread = Boolean(activeMail && activeMail.messageId === messageId && !activeMail.read);
-                    if (isUnread && countsLabelAware) {
-                      applyUnreadByLabelDelta([labelId], selected ? -1 : 1);
+                    try {
+                      if (selected) await removeLabelFromMessage(messageId, labelId);
+                      else await assignLabelToMessage(messageId, labelId);
+                      const isUnread = Boolean(activeMail && activeMail.messageId === messageId && !activeMail.read);
+                      if (isUnread && countsLabelAware) {
+                        applyUnreadByLabelDelta([labelId], selected ? -1 : 1);
+                      }
+                      setMessageLabelIdsByMessage((prev) => ({
+                        ...prev,
+                        [messageId]: selected
+                          ? (prev[messageId] ?? []).filter((id) => id !== labelId)
+                          : Array.from(new Set([...(prev[messageId] ?? []), labelId])),
+                      }));
+                    } catch {
+                      await recoverMutationState("No se pudo actualizar la etiqueta del mensaje.");
                     }
-                    setMessageLabelIdsByMessage((prev) => ({
-                      ...prev,
-                      [messageId]: selected
-                        ? (prev[messageId] ?? []).filter((id) => id !== labelId)
-                        : Array.from(new Set([...(prev[messageId] ?? []), labelId])),
-                    }));
                   })();
                 }}
                 detailData={activeMailDetail}

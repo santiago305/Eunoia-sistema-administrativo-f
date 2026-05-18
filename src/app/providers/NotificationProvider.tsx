@@ -3,6 +3,7 @@ import { useAuth } from '@/shared/hooks/useAuth';
 import { closeNotificationSocket, createNotificationSocket } from '@/shared/lib/socket';
 import { NOTIFICATION_SOCKET_EVENTS, NOTIFICATION_WINDOW_EVENTS } from '@/features/mail/constants/mail-events.constants';
 import type { NotificationPriority } from '@/features/mail/types/notification.types';
+import type { MessageCreatedRealtimePayload } from '@/features/mail/types/realtime.types';
 import { getHasUnreadMail } from '@/shared/services/notificationService';
 import { showNotificationToast } from '@/features/mail/services/mail-toast.service';
 
@@ -92,8 +93,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
     };
 
-    const onMessageCreated = (payload: { recipientId?: string; message?: { id?: string; subject?: string; preview?: string } }) => {
-      const dedupeKey = payload?.recipientId || payload?.message?.id || '';
+    const onMessageCreated = (payload: MessageCreatedRealtimePayload) => {
+      const dedupeKey = payload?.recipientId || payload?.recipient?.id || payload?.message?.id || '';
       if (dedupeKey && isSeen(`message:${dedupeKey}`)) return;
       if (dedupeKey) markSeen(`message:${dedupeKey}`);
       showNotificationToast({
@@ -102,8 +103,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         priority: "NORMAL",
       });
       setHasUnreadMail(true);
-      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated));
-      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
+      window.dispatchEvent(
+        new CustomEvent<MessageCreatedRealtimePayload>(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, {
+          detail: payload,
+        }),
+      );
     };
     const onLocalUnreadStateChanged = (event: Event) => {
       const customEvent = event as CustomEvent<boolean>;
