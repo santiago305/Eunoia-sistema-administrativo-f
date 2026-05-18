@@ -6,7 +6,7 @@ export function useMessageDetailV2(id?: string) {
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const emitRefresh = useCallback(() => {
-    window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
+    window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
   }, []);
 
   const reload = useCallback(async () => {

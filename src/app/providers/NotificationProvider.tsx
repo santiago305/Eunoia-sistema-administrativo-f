@@ -88,7 +88,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       }
       setHasUnreadMail(true);
-      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
+      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated));
+      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
     };
 
     const onMessageCreated = (payload: { recipientId?: string; message?: { id?: string; subject?: string; preview?: string } }) => {
@@ -101,8 +102,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         priority: "NORMAL",
       });
       setHasUnreadMail(true);
-      // Unificar refresh para evitar dobles caminos de sincronizacion durante coexistencia legacy/v2.
-      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.refresh));
+      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated));
+      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
     };
 
     socket.on('connect', onConnect);

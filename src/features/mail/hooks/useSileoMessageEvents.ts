@@ -11,11 +11,11 @@ export function useSileoMessageEvents({ onRefreshMessages }: Input) {
       void onRefreshMessages();
     };
 
-    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, handleRefresh);
+    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, handleRefresh);
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
 
     return () => {
-      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, handleRefresh);
+      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, handleRefresh);
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
     };
   }, [onRefreshMessages]);

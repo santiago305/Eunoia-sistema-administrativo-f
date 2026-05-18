@@ -514,8 +514,8 @@ export default function Purchases() {
         const onRefresh = () => {
             void loadPurchases();
         };
-        window.addEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, onRefresh);
-        return () => window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.refresh, onRefresh);
+        window.addEventListener(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated, onRefresh);
+        return () => window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated, onRefresh);
     }, [loadPurchases]);
 
     useEffect(() => {
