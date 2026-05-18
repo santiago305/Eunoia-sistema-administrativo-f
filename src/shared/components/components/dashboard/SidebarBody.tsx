@@ -7,8 +7,7 @@ import { getRouteMetaByUrl } from "@/routes/config/routesConfig";
 import { useAuth } from "@/shared/hooks/useAuth";
 import type { SidebarItem } from "./types";
 import { RoutesPaths } from "@/routes/config/routesPaths";
-import { useMailSidebarCounts } from "@/features/mail/hooks/useMailSidebarCounts";
-import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
+import { useMailDashboardContext } from "@/features/mail/context/MailDashboardProvider";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 
 const normalizeRole = (role?: string | null) =>
@@ -54,8 +53,7 @@ const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
   const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
-  const notificationCounts = useMailSidebarCounts(isNotifications);
-  const { items: mailLabels } = useMailLabels(isNotifications);
+  const { counts: notificationCounts, labels: mailLabels } = useMailDashboardContext();
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
 

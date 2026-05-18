@@ -23,8 +23,8 @@ import {
 } from "@/features/mail/services/messages.service";
 import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/mail/services/drafts.service";
 import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
-import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
 import { useSileoMessageEvents } from "@/features/mail/hooks/useSileoMessageEvents";
+import { useMailDashboardContext } from "@/features/mail/context/MailDashboardProvider";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -254,7 +254,7 @@ export default function MailPage() {
 
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
-  const { items: labels, createLabel, deleteLabel } = useMailLabels(true);
+  const { labels, createLabel, deleteLabel } = useMailDashboardContext();
 
   const {
     items,

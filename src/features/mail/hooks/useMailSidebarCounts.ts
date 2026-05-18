@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { countMessages } from "../services/messages.service";
-import { listDrafts } from "../services/drafts.service";
-import type { MessageFolder } from "../types/message.types";
+import { countSidebarMessages, listMailLabels } from "../services/messages.service";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { NOTIFICATION_WINDOW_EVENTS } from "../constants/mail-events.constants";
-import { listMailLabels } from "../services/messages.service";
 
 type SidebarCounts = {
   inbox: number;
@@ -44,35 +41,20 @@ export function useMailSidebarCounts(enabled = true) {
     }
 
     try {
-      const folders: MessageFolder[] = ["inbox", "starred", "trash", "archived", "snoozed", "sent"];
-      const [inbox, starred, trash, archived, snoozed, sent, drafts, labels] = await Promise.all([
-        countMessages({ view: folders[0], read: false }),
-        countMessages({ view: folders[1], read: false }),
-        countMessages({ view: folders[2], read: false }),
-        countMessages({ view: folders[3], read: false }),
-        countMessages({ view: folders[4], read: false }),
-        countMessages({ view: folders[5] }),
-        listDrafts(),
-        listMailLabels(),
-      ]);
-
-      const labelUnreadById: Record<string, number> = {};
-      await Promise.all(
-        (labels ?? []).filter((label) => label.type === "CUSTOM").map(async (label) => {
-          const result = await countMessages({ view: "inbox", read: false, labelId: label.id });
-          labelUnreadById[label.id] = result.total ?? 0;
-        }),
-      );
-
+      const labels = await listMailLabels();
+      const customLabelIds = (labels ?? [])
+        .filter((label) => label.type === "CUSTOM")
+        .map((label) => label.id);
+      const consolidated = await countSidebarMessages(customLabelIds);
       setCounts({
-        inbox: inbox.total ?? 0,
-        starred: starred.total ?? 0,
-        sent: sent.total ?? 0,
-        trash: trash.total ?? 0,
-        drafts: drafts.length ?? 0,
-        archived: archived.total ?? 0,
-        snoozed: snoozed.total ?? 0,
-        labelUnreadById,
+        inbox: Number(consolidated?.inbox ?? 0),
+        starred: Number(consolidated?.starred ?? 0),
+        sent: Number(consolidated?.sent ?? 0),
+        drafts: Number(consolidated?.drafts ?? 0),
+        trash: Number(consolidated?.trash ?? 0),
+        archived: Number(consolidated?.archived ?? 0),
+        snoozed: Number(consolidated?.snoozed ?? 0),
+        labelUnreadById: consolidated?.labelUnreadById ?? {},
       });
     } catch {
       // Mantiene el ultimo estado valido para no congelar el sidebar en 0.

@@ -5,6 +5,7 @@ import { useLocationFeedback } from "@/shared/hooks/useLocationFeedback";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useUserDetails } from "@/shared/hooks/useUserDetails";
 import { resolveProfileAvatarUrl } from "@/features/profile/components/profile.utils";
+import { MailDashboardProvider } from "@/features/mail/context/MailDashboardProvider";
 import MobileSidebar from "../components/components/dashboard/MobileSidebar";
 import Sidebar from "../components/components/dashboard/Sidebar";
 import DashboardHeader from "../components/components/dashboard/DashboardHeader";
@@ -92,7 +93,9 @@ const DashboardLayout = () => {
 
   return (
     <SidebarProvider>
-      <DashboardContent />
+      <MailDashboardProvider>
+        <DashboardContent />
+      </MailDashboardProvider>
     </SidebarProvider>
   );
 };

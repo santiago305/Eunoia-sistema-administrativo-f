@@ -54,6 +54,25 @@ export const countMessages = async (query: Omit<MessageListQuery, "q" | "page" |
   return response.data;
 };
 
+export const countSidebarMessages = async (labelIds: string[] = []) => {
+  const normalizedLabelIds = Array.from(new Set(labelIds.filter(Boolean)));
+  const response = await axiosInstance.get<{
+    inbox: number;
+    starred: number;
+    sent: number;
+    drafts: number;
+    trash: number;
+    archived: number;
+    snoozed: number;
+    labelUnreadById: Record<string, number>;
+  }>(API_NOTIFICATION_MESSAGES_GROUP.countSidebarMessages, {
+    params: normalizedLabelIds.length
+      ? { labelIds: normalizedLabelIds.join(",") }
+      : undefined,
+  });
+  return response.data;
+};
+
 export const updateMailLabel = async (id: string, payload: { name?: string; color?: string }) => {
   const response = await axiosInstance.patch<MailLabelItem>(API_NOTIFICATION_MESSAGES_GROUP.updateLabel(id), payload);
   return response.data;
