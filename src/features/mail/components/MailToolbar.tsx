@@ -50,9 +50,6 @@ export default function MailToolbar(props: Props) {
     else props.onSelectVisible(props.pageMailIds);
   };
 
-  const allUnread = someSelected && selectedArr.every((id) => props.pageUnreadIds.includes(id));
-  const markRead = !allUnread;
-
   return (
     <div className="h-12 flex items-center px-4 gap-1 border-b border-border bg-background shrink-0">
       <div className="flex items-center" ref={popRef}>
@@ -97,8 +94,11 @@ export default function MailToolbar(props: Props) {
           <button onClick={() => props.onDeleteBulk(selectedArr)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Eliminar">
             <Trash2 className="size-5" />
           </button>
-          <button onClick={() => props.onSetReadBulk(selectedArr, markRead)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title={markRead ? "Marcar como leído" : "Marcar como no leído"}>
-            {markRead ? <MailOpen className="size-5" /> : <MailIcon className="size-5" />}
+          <button onClick={() => props.onSetReadBulk(selectedArr, true)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Marcar como leído">
+            <MailOpen className="size-5" />
+          </button>
+          <button onClick={() => props.onSetReadBulk(selectedArr, false)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Marcar como no leído">
+            <MailIcon className="size-5" />
           </button>
           <button onClick={() => props.onArchiveBulk(selectedArr, props.folder !== "archived")} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title={props.folder === "archived" ? "Desarchivar" : "Archivar"}>
             <Archive className="size-5" />

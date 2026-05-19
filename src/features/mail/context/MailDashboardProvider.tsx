@@ -5,6 +5,7 @@ import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
 import { useMailSidebarCounts } from "@/features/mail/hooks/useMailSidebarCounts";
 import type { MailLabelItem } from "@/features/mail/types/message.types";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
+import { hasAnyUnreadFromSidebarCounts } from "@/features/mail/utils/mail-state.utils";
 
 type SidebarCounts = {
   inbox: number;
@@ -62,9 +63,13 @@ const MailDashboardContext = createContext<MailDashboardContextValue>({
 export function MailDashboardProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const isMailRoute = location.pathname.startsWith(RoutesPaths.notifications);
-  const seedCounts = useMailSidebarCounts(isMailRoute);
   const [counts, setCounts] = useState<SidebarCounts>(INITIAL_COUNTS);
   const { items, loading, reload, createLabel, editLabel, deleteLabel } = useMailLabels(isMailRoute);
+  const customLabelIds = useMemo(
+    () => items.filter((label) => label.type === "CUSTOM").map((label) => label.id),
+    [items],
+  );
+  const seedCounts = useMailSidebarCounts(isMailRoute, customLabelIds);
 
   useEffect(() => {
     setCounts(seedCounts);
@@ -109,13 +114,14 @@ export function MailDashboardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const hasUnread = counts.inbox > 0 || counts.trash > 0 || counts.archived > 0 || counts.snoozed > 0;
+    if (!isMailRoute) return;
+    const hasUnread = hasAnyUnreadFromSidebarCounts(counts);
     window.dispatchEvent(
       new CustomEvent<boolean>(NOTIFICATION_WINDOW_EVENTS.mailUnreadStateChanged, {
         detail: hasUnread,
       }),
     );
-  }, [counts.archived, counts.inbox, counts.snoozed, counts.trash]);
+  }, [counts, isMailRoute]);
 
   const value = useMemo<MailDashboardContextValue>(
     () => ({

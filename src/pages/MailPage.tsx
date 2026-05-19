@@ -11,6 +11,7 @@ import { useMessagesV2 } from "@/features/mail/hooks/useMessagesV2";
 import {
   forwardMessage,
   getMessageDetail,
+  bulkMessages,
   assignLabelToMessage,
   removeLabelFromMessage,
   permanentlyDeleteMessage,
@@ -26,6 +27,7 @@ import { useMailDashboardContext } from "@/features/mail/context/MailDashboardPr
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { showNotificationToast } from "@/features/mail/services/mail-toast.service";
 import type { MessageCreatedRealtimePayload } from "@/features/mail/types/realtime.types";
+import { extractMailDetailLabelIds, sameStringArray } from "@/features/mail/utils/mail-state.utils";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -256,6 +258,8 @@ export default function MailPage() {
   const savingComposeIdsRef = useRef<Set<string>>(new Set());
   const sendingComposeIdsRef = useRef<Set<string>>(new Set());
   const discardingComposeIdsRef = useRef<Set<string>>(new Set());
+  const mailsRef = useRef<Mail[]>([]);
+  const rawLabelIdsByMessageIdRef = useRef<Map<string, string[]>>(new Map());
 
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
@@ -267,12 +271,8 @@ export default function MailPage() {
     loading,
     error,
     reload,
-    markInboxRowAsRead,
-    markInboxRowAsUnread,
     setInboxRowReadLocally,
     starInboxRow,
-    deleteInboxRow,
-    restoreInboxRow,
     archiveInboxRow,
     unarchiveInboxRow,
     snoozeInboxRow,
@@ -335,6 +335,10 @@ export default function MailPage() {
         }),
     [folder, items, localStarredById],
   );
+
+  useEffect(() => {
+    mailsRef.current = mails;
+  }, [mails]);
 
   useEffect(() => {
     console.log("[mail:view] render-metrics", {
@@ -816,29 +820,34 @@ export default function MailPage() {
   );
 
   useEffect(() => {
+    rawLabelIdsByMessageIdRef.current = rawLabelIdsByMessageId;
+  }, [rawLabelIdsByMessageId]);
+
+  useEffect(() => {
     if (!activeMailId) {
       setActiveMailDetail(null);
       return;
     }
+    let active = true;
     void (async () => {
-      const targetMail = mails.find((currentMail) => currentMail.id === activeMailId) ?? null;
+      const targetMail = mailsRef.current.find((currentMail) => currentMail.id === activeMailId) ?? null;
       const shouldMarkReadLocally = Boolean(targetMail && !targetMail.read && targetMail.recipientId);
       try {
         const detail = await getMessageDetail(activeMailId);
+        if (!active) return;
         setActiveMailDetail(detail);
-        const rawLabels = Array.isArray((detail as { labels?: unknown })?.labels)
-          ? ((detail as { labels?: Array<{ id?: string; labelId?: string }> }).labels ?? [])
-          : [];
-        const extracted = rawLabels
-          .map((item) => item?.id ?? item?.labelId)
-          .filter((id): id is string => Boolean(id));
-        setMessageLabelIdsByMessage((prev) => ({ ...prev, [activeMailId]: extracted }));
+        const extracted = extractMailDetailLabelIds(detail);
+        setMessageLabelIdsByMessage((prev) => {
+          const current = prev[activeMailId] ?? [];
+          if (sameStringArray(current, extracted)) return prev;
+          return { ...prev, [activeMailId]: extracted };
+        });
         if (shouldMarkReadLocally && targetMail?.recipientId) {
           setInboxRowReadLocally(targetMail.recipientId, true);
           const unreadBucket = unreadBucketByFolder(folder);
           const labelDeltaById: Record<string, number> = {};
           if (countsLabelAware) {
-            getMessageLabelIds(targetMail).forEach((labelId) => {
+            (rawLabelIdsByMessageIdRef.current.get(targetMail.messageId ?? targetMail.id) ?? []).forEach((labelId) => {
               labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - 1;
             });
           }
@@ -852,31 +861,46 @@ export default function MailPage() {
           });
         }
       } catch {
+        if (!active) return;
         setActiveMailDetail(null);
       }
     })();
+    return () => {
+      active = false;
+    };
   }, [
     activeMailId,
     applyCountsDelta,
     countsLabelAware,
     folder,
-    getMessageLabelIds,
-    mails,
     setInboxRowReadLocally,
   ]);
 
   const markRead = async (ids: string[], read: boolean) => {
     try {
       const selectedMails = mails.filter((m) => ids.includes(m.id));
-      const selected = selectedMails
-        .map((m) => m.recipientId ?? m.messageId ?? m.id);
-      await Promise.all(selected.map((id) => (read ? markInboxRowAsRead(id) : markInboxRowAsUnread(id))));
+      const targetMails = selectedMails.filter((mail) => (read ? !mail.read : mail.read));
+      const selectedStateIds = targetMails
+        .map((mail) => mail.recipientId)
+        .filter((id): id is string => Boolean(id));
+      if (!selectedStateIds.length) {
+        setSelectedIds(new Set());
+        return;
+      }
+      await bulkMessages({
+        messageStateIds: selectedStateIds,
+        action: read ? "MARK_AS_READ" : "MARK_AS_UNREAD",
+      });
+      targetMails.forEach((mail) => {
+        if (!mail.recipientId) return;
+        setInboxRowReadLocally(mail.recipientId, read);
+      });
       const unreadBucket = unreadBucketByFolder(folder);
       let unreadDelta = 0;
       let starredDelta = 0;
       const labelDeltaById: Record<string, number> = {};
 
-      selectedMails.forEach((mail) => {
+      targetMails.forEach((mail) => {
         const wasUnread = !mail.read;
         const changedToRead = read && wasUnread;
         const changedToUnread = !read && !wasUnread;
@@ -930,7 +954,18 @@ export default function MailPage() {
         const unreadInTrash = selectedMails.filter((mail) => !mail.read).length;
         applyCountsDelta({ trash: -unreadInTrash });
       } else {
-        await Promise.all(selected.map((id) => deleteInboxRow(id)));
+        const selectedStateIds = selectedMails
+          .map((mail) => mail.recipientId)
+          .filter((id): id is string => Boolean(id));
+        if (!selectedStateIds.length) {
+          setSelectedIds(new Set());
+          return;
+        }
+        await bulkMessages({
+          messageStateIds: selectedStateIds,
+          action: "DELETE",
+        });
+        selectedStateIds.forEach((id) => removeRecipientRowLocally(id));
         const unreadMoved = selectedMails.filter((mail) => !mail.read);
         const unreadCount = unreadMoved.length;
         const unreadBucket = unreadBucketByFolder(folder);
@@ -963,9 +998,18 @@ export default function MailPage() {
   const restoreFromTrash = async (ids: string[]) => {
     try {
       const selectedMails = mails.filter((m) => ids.includes(m.id));
-      const selected = selectedMails
-        .map((m) => m.recipientId ?? m.messageId ?? m.id);
-      await Promise.all(selected.map((id) => restoreInboxRow(id)));
+      const selectedStateIds = selectedMails
+        .map((mail) => mail.recipientId)
+        .filter((id): id is string => Boolean(id));
+      if (!selectedStateIds.length) {
+        setSelectedIds(new Set());
+        return;
+      }
+      await bulkMessages({
+        messageStateIds: selectedStateIds,
+        action: "RESTORE",
+      });
+      selectedStateIds.forEach((id) => removeRecipientRowLocally(id));
       const unreadRestored = selectedMails.filter((mail) => !mail.read);
       const labelDeltaById: Record<string, number> = {};
       let starredDelta = 0;
@@ -990,11 +1034,18 @@ export default function MailPage() {
   const archiveBulk = async (ids: string[], archive: boolean) => {
     try {
       const selectedMails = mails.filter((m) => ids.includes(m.id));
-      const selected = selectedMails
-        .map((m) => m.recipientId ?? m.messageId ?? m.id);
-      if (!selected.length) return;
+      const selectedStateIds = selectedMails
+        .map((mail) => mail.recipientId)
+        .filter((id): id is string => Boolean(id));
+      if (!selectedStateIds.length) return;
       if (archive) {
-        await Promise.all(selected.map((id) => archiveInboxRow(id)));
+        await bulkMessages({
+          messageStateIds: selectedStateIds,
+          action: "ARCHIVE",
+        });
+        selectedStateIds.forEach((id) => {
+          if (folder === "inbox") removeRecipientRowLocally(id);
+        });
         const unreadMoved = selectedMails.filter((mail) => !mail.read);
         const labelDeltaById: Record<string, number> = {};
         let starredDelta = 0;
@@ -1013,7 +1064,13 @@ export default function MailPage() {
           labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
         });
       } else {
-        await Promise.all(selected.map((id) => unarchiveInboxRow(id)));
+        await bulkMessages({
+          messageStateIds: selectedStateIds,
+          action: "UNARCHIVE",
+        });
+        selectedStateIds.forEach((id) => {
+          if (folder === "archived") removeRecipientRowLocally(id);
+        });
         const unreadMoved = selectedMails.filter((mail) => !mail.read);
         const labelDeltaById: Record<string, number> = {};
         let starredDelta = 0;
@@ -1039,10 +1096,18 @@ export default function MailPage() {
   const snoozeBulk = async (ids: string[], snoozedUntil: string) => {
     try {
       const selectedMails = mails.filter((m) => ids.includes(m.id));
-      const selected = selectedMails
-        .map((m) => m.recipientId ?? m.messageId ?? m.id);
-      if (!selected.length) return;
-      await Promise.all(selected.map((id) => snoozeInboxRow(id, snoozedUntil)));
+      const selectedStateIds = selectedMails
+        .map((mail) => mail.recipientId)
+        .filter((id): id is string => Boolean(id));
+      if (!selectedStateIds.length) return;
+      await bulkMessages({
+        messageStateIds: selectedStateIds,
+        action: "SNOOZE",
+        snoozedUntil,
+      });
+      selectedStateIds.forEach((id) => {
+        if (folder !== "snoozed" && folder !== "all") removeRecipientRowLocally(id);
+      });
       const unreadMoved = selectedMails.filter((mail) => !mail.read);
       const labelDeltaById: Record<string, number> = {};
       let starredDelta = 0;
@@ -1068,15 +1133,23 @@ export default function MailPage() {
 
   const assignLabelBulk = async (ids: string[], labelIdToAssign: string) => {
     try {
-      const selected = mails
-        .filter((m) => ids.includes(m.id))
-        .map((m) => m.messageId ?? m.id);
-      if (!selected.length) return;
-      const unreadWithoutLabel = mails
-        .filter((mail) => ids.includes(mail.id) && !mail.read)
-        .filter((mail) => !getMessageLabelIds(mail).includes(labelIdToAssign))
+      const selectedMails = mails.filter((mail) => ids.includes(mail.id));
+      const toAssign = selectedMails.filter((mail) => !getMessageLabelIds(mail).includes(labelIdToAssign));
+      const selectedStateIds = toAssign
+        .map((mail) => mail.recipientId)
+        .filter((id): id is string => Boolean(id));
+      if (!selectedStateIds.length) {
+        setSelectedIds(new Set());
+        return;
+      }
+      const unreadWithoutLabel = toAssign
+        .filter((mail) => !mail.read)
         .map((mail) => mail.id);
-      await Promise.all(selected.map((messageId) => assignLabelToMessage(messageId, labelIdToAssign)));
+      await bulkMessages({
+        messageStateIds: selectedStateIds,
+        action: "ASSIGN_LABEL",
+        labelId: labelIdToAssign,
+      });
       if (countsLabelAware && unreadWithoutLabel.length) {
         applyUnreadByLabelDelta([labelIdToAssign], unreadWithoutLabel.length);
       }
@@ -1097,20 +1170,28 @@ export default function MailPage() {
 
   const removeLabelBulk = async (ids: string[], labelIdToRemove: string) => {
     try {
-      const selected = mails
-        .filter((m) => ids.includes(m.id))
-        .map((m) => m.messageId ?? m.id);
-      if (!selected.length) return;
-      const unreadWithLabel = mails
-        .filter((mail) => ids.includes(mail.id) && !mail.read)
-        .filter((mail) => getMessageLabelIds(mail).includes(labelIdToRemove))
+      const selectedMails = mails.filter((mail) => ids.includes(mail.id));
+      const toRemove = selectedMails.filter((mail) => getMessageLabelIds(mail).includes(labelIdToRemove));
+      const selectedStateIds = toRemove
+        .map((mail) => mail.recipientId)
+        .filter((id): id is string => Boolean(id));
+      if (!selectedStateIds.length) {
+        setSelectedIds(new Set());
+        return;
+      }
+      const unreadWithLabel = toRemove
+        .filter((mail) => !mail.read)
         .map((mail) => mail.id);
-      await Promise.all(selected.map((messageId) => removeLabelFromMessage(messageId, labelIdToRemove)));
+      await bulkMessages({
+        messageStateIds: selectedStateIds,
+        action: "REMOVE_LABEL",
+        labelId: labelIdToRemove,
+      });
       if (countsLabelAware && unreadWithLabel.length) {
         applyUnreadByLabelDelta([labelIdToRemove], -unreadWithLabel.length);
       }
       if (labelId && labelIdToRemove === labelId) {
-        selected.forEach((messageId) => removeMessageRowLocally(messageId));
+        toRemove.forEach((mail) => removeMessageRowLocally(mail.messageId ?? mail.id));
       }
       if (unreadWithLabel.length) {
         setMessageLabelIdsByMessage((prev) => {

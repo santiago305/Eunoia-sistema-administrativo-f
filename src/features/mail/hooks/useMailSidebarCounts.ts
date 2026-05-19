@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { countSidebarMessages, listMailLabels } from "../services/messages.service";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { countSidebarMessages } from "../services/messages.service";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { NOTIFICATION_WINDOW_EVENTS } from "../constants/mail-events.constants";
 
@@ -25,9 +25,10 @@ const INITIAL_COUNTS: SidebarCounts = {
   labelUnreadById: {},
 };
 
-export function useMailSidebarCounts(enabled = true) {
+export function useMailSidebarCounts(enabled = true, labelIds: string[] = []) {
   const { isAuthenticated, authChecked, userId } = useAuth();
   const [counts, setCounts] = useState<SidebarCounts>(INITIAL_COUNTS);
+  const normalizedLabelIds = useMemo(() => Array.from(new Set(labelIds.filter(Boolean))), [labelIds]);
 
   const reload = useCallback(async () => {
     if (!enabled) {
@@ -41,11 +42,7 @@ export function useMailSidebarCounts(enabled = true) {
     }
 
     try {
-      const labels = await listMailLabels();
-      const customLabelIds = (labels ?? [])
-        .filter((label) => label.type === "CUSTOM")
-        .map((label) => label.id);
-      const consolidated = await countSidebarMessages(customLabelIds);
+      const consolidated = await countSidebarMessages(normalizedLabelIds);
       setCounts({
         inbox: Number(consolidated?.inbox ?? 0),
         starred: Number(consolidated?.starred ?? 0),
@@ -59,7 +56,7 @@ export function useMailSidebarCounts(enabled = true) {
     } catch {
       // Mantiene el ultimo estado valido para no congelar el sidebar en 0.
     }
-  }, [authChecked, enabled, isAuthenticated, userId]);
+  }, [authChecked, enabled, isAuthenticated, normalizedLabelIds, userId]);
 
   useEffect(() => {
     void reload();
@@ -71,11 +68,9 @@ export function useMailSidebarCounts(enabled = true) {
     const handleRefresh = () => void reload();
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated, handleRefresh);
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
-    window.addEventListener("focus", handleRefresh);
     return () => {
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated, handleRefresh);
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
-      window.removeEventListener("focus", handleRefresh);
     };
   }, [enabled, reload]);
 
