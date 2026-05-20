@@ -59,6 +59,31 @@ describe("InlineReplyForwardBox", () => {
     expect(onDiscard).not.toHaveBeenCalled();
   });
 
+  it("shows the logged user avatar next to the inline composer", () => {
+    render(
+      <InlineReplyForwardBox
+        mode="reply"
+        to="santiago@example.com"
+        cc=""
+        bcc=""
+        recipientLabel="Santiago <santiago@example.com>"
+        currentUserName="Martion"
+        currentUserEmail="martion@example.com"
+        currentUserAvatarUrl="/avatars/martion.png"
+        onModeChange={vi.fn()}
+        onToChange={vi.fn()}
+        onCcChange={vi.fn()}
+        onBccChange={vi.fn()}
+        onExpand={vi.fn()}
+        onSend={vi.fn()}
+        onDiscard={vi.fn()}
+        {...baseComposerProps}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Martion" }).getAttribute("src")).toBe("/avatars/martion.png");
+  });
+
   it("lets forward mode edit recipients and expand to modal", async () => {
     const onToChange = vi.fn();
     const onExpand = vi.fn();

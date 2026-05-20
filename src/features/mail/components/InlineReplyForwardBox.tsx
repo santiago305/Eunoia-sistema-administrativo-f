@@ -22,6 +22,11 @@ type InlineComposerProps = Omit<
   onExpand: () => void;
   onSend: (overrides: { to: string; cc: string; bcc: string }) => void | Promise<void>;
   onDiscard: () => void | Promise<void>;
+  currentUserName?: string;
+  currentUserEmail?: string;
+  currentUserAvatarUrl?: string;
+  initialsOf?: (name: string) => string;
+  avatarColor?: (seed: string) => string;
 };
 
 export default function InlineReplyForwardBox({
@@ -37,6 +42,11 @@ export default function InlineReplyForwardBox({
   onExpand,
   onSend,
   onDiscard,
+  currentUserName,
+  currentUserEmail,
+  currentUserAvatarUrl,
+  initialsOf,
+  avatarColor,
   ...composerProps
 }: InlineComposerProps) {
   const [showModeMenu, setShowModeMenu] = useState(false);
@@ -45,6 +55,9 @@ export default function InlineReplyForwardBox({
   const [localBcc, setLocalBcc] = useState(bcc);
   const modeMenuAnchorRef = useRef<HTMLButtonElement | null>(null);
   const isReply = mode === "reply";
+  const currentUserLabel = currentUserName?.trim() || currentUserEmail?.trim() || "Usuario";
+  const currentUserSeed = currentUserEmail?.trim() || currentUserName?.trim() || currentUserLabel;
+  const fallbackInitials = (initialsOf?.(currentUserLabel) || currentUserLabel.slice(0, 2).toUpperCase()).slice(0, 2);
 
   useEffect(() => setLocalTo(to), [to]);
   useEffect(() => setLocalCc(cc), [cc]);
@@ -53,7 +66,19 @@ export default function InlineReplyForwardBox({
   const modeIcon = isReply ? <Reply className="size-4" /> : <Forward className="size-4" />;
 
   return (
-    <section className="rounded-md border border-border bg-background shadow-sm" aria-label={isReply ? "Responder inline" : "Reenviar inline"}>
+    <div className="flex items-start gap-3">
+      <div
+        className="mt-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-semibold text-white"
+        style={currentUserAvatarUrl ? undefined : { background: avatarColor?.(currentUserSeed) }}
+      >
+        {currentUserAvatarUrl ? (
+          <img src={currentUserAvatarUrl} alt={currentUserLabel} className="h-full w-full object-cover" />
+        ) : (
+          <span>{fallbackInitials}</span>
+        )}
+      </div>
+
+      <section className="min-w-0 flex-1 rounded-md border border-border bg-background shadow-sm" aria-label={isReply ? "Responder inline" : "Reenviar inline"}>
       <div className="flex min-h-12 items-center gap-2 border-b border-border px-3">
         <div className="flex items-center gap-1">
           <span className="flex size-8 items-center justify-center rounded-full bg-mail-hover text-muted-foreground">{modeIcon}</span>
@@ -152,6 +177,7 @@ export default function InlineReplyForwardBox({
         onSend={() => onSend({ to: localTo, cc: localCc, bcc: localBcc })}
         onDiscard={onDiscard}
       />
-    </section>
+      </section>
+    </div>
   );
 }

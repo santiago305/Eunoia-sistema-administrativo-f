@@ -30,6 +30,8 @@ import type { MessageCreatedRealtimePayload } from "@/features/mail/types/realti
 import { extractMailDetailLabelIds, sameStringArray } from "@/features/mail/utils/mail-state.utils";
 import { mapMailAttachment, type BackendMailAttachment } from "@/features/mail/utils/mail-attachments.utils";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { useUserDetails } from "@/shared/hooks/useUserDetails";
+import { resolveProfileAvatarUrl } from "@/features/profile/components/profile.utils";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { Modal } from "@/shared/components/modales/Modal";
@@ -282,8 +284,12 @@ export default function MailPage() {
   const rawLabelIdsByMessageIdRef = useRef<Map<string, string[]>>(new Map());
 
   const { can } = usePermissions();
+  const { userDetails } = useUserDetails();
   const canCreateLabel = can("notifications.labels.create");
   const { labels, createLabel, deleteLabel, applyCountsDelta, applyUnreadByLabelDelta } = useMailDashboardContext();
+  const currentUserName = userDetails?.data?.name ?? "Usuario";
+  const currentUserEmail = userDetails?.data?.email ?? "";
+  const currentUserAvatarUrl = resolveProfileAvatarUrl(userDetails?.data?.avatarUrl) || undefined;
 
   const {
     items,
@@ -1464,7 +1470,9 @@ export default function MailPage() {
             {activeMailId ? (
               <MailDetail
                 mail={activeMail}
-                currentUserEmail={""}
+                currentUserEmail={currentUserEmail}
+                currentUserName={currentUserName}
+                currentUserAvatarUrl={currentUserAvatarUrl}
                 onBack={() => {
                   navigate(`/email/${folder}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
                   setActiveMailId(null);

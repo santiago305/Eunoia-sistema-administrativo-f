@@ -36,6 +36,8 @@ interface Props {
     permissions?: { canReply?: boolean; canForward?: boolean };
   } | null;
   currentUserEmail: string;
+  currentUserName?: string;
+  currentUserAvatarUrl?: string;
   onBack: () => void;
   onSetRead: (id: string, read: boolean) => void;
   onDelete: (id: string) => void;
@@ -412,7 +414,7 @@ export default function MailDetail(props: Props) {
           ) : null}
 
           {inlineMode ? (
-            <div className="pl-14 mt-8">
+            <div className="mt-8">
               <InlineReplyForwardBox
                 mode={inlineMode}
                 composeId={`inline-${parentMessageId}`}
@@ -420,6 +422,11 @@ export default function MailDetail(props: Props) {
                 cc={inlineCc}
                 bcc={inlineBcc}
                 recipientLabel={`${senderName} <${senderEmail}>`}
+                currentUserName={props.currentUserName}
+                currentUserEmail={props.currentUserEmail}
+                currentUserAvatarUrl={props.currentUserAvatarUrl}
+                initialsOf={props.initialsOf}
+                avatarColor={props.avatarColor}
                 subject={inlineSubject}
                 body={inlineBody}
                 bodyJson={inlineBodyJson}
