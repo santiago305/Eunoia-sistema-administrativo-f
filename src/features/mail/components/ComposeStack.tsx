@@ -16,6 +16,7 @@ interface Props {
   onBccChange: (composeId: string, value: string) => void;
   onSubjectChange: (composeId: string, value: string) => void;
   onBodyChange: (composeId: string, value: string, bodyJson: Record<string, unknown> | null, bodyText: string) => void;
+  onModeChange: (composeId: string, mode: "reply" | "forward") => void;
   onToggleLabel: (composeId: string, labelId: string) => void;
   onResolveDraftId: (composeId: string) => Promise<string>;
   onAttachmentUploaded: (composeId: string, attachmentId: string) => void;
@@ -45,6 +46,7 @@ export default function NotificationComposeStack({
   onBccChange,
   onSubjectChange,
   onBodyChange,
+  onModeChange,
   onToggleLabel,
   onResolveDraftId,
   onAttachmentUploaded,
@@ -73,6 +75,7 @@ export default function NotificationComposeStack({
           onBccChange={onBccChange}
           onSubjectChange={onSubjectChange}
           onBodyChange={onBodyChange}
+          onModeChange={onModeChange}
           onToggleLabel={onToggleLabel}
           onResolveDraftId={onResolveDraftId}
           onAttachmentUploaded={onAttachmentUploaded}

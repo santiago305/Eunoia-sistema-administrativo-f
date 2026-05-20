@@ -21,6 +21,7 @@ import type { MailLabelItem } from "../types/message.types";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import { isInlineImageAttachment, removeBrokenMailBodyImages } from "../utils/mail-attachments.utils";
 import { downloadAttachmentBlobUrl } from "../services/messages.service";
+import InlineReplyForwardBox from "./InlineReplyForwardBox";
 
 interface Props {
   mail: Mail | null;
@@ -49,9 +50,33 @@ interface Props {
     bcc?: string;
     subject?: string;
     body?: string;
+    bodyJson?: Record<string, unknown> | null;
+    attachmentIds?: string[];
     mode?: "new" | "reply" | "forward";
     parentMessageId?: string | null;
   }) => void;
+  onInlineComposeSend: (payload: {
+    mode: "reply" | "forward";
+    parentMessageId: string;
+    to: string;
+    cc: string;
+    bcc: string;
+    subject: string;
+    body: string;
+    bodyJson?: Record<string, unknown> | null;
+    attachmentIds?: string[];
+  }) => Promise<void>;
+  onCreateInlineDraft: (input: {
+    to: string;
+    cc: string;
+    bcc: string;
+    subject: string;
+    body: string;
+    bodyJson?: Record<string, unknown> | null;
+    attachmentIds?: string[];
+  }) => Promise<string>;
+  onUploadAttachment: (input: { file: File; draftId: string; kind: "image" | "file" }) => Promise<{ id: string }>;
+  onDeleteAttachment: (attachmentId: string) => Promise<void>;
   formatFullDate: (iso: string) => string;
   initialsOf: (name: string) => string;
   avatarColor: (seed: string) => string;
@@ -61,6 +86,16 @@ export default function MailDetail(props: Props) {
   const mail = props.mail;
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<Record<string, string>>({});
+  const [inlineMode, setInlineMode] = useState<"reply" | "forward" | null>(null);
+  const [inlineTo, setInlineTo] = useState("");
+  const [inlineCc, setInlineCc] = useState("");
+  const [inlineBcc, setInlineBcc] = useState("");
+  const [inlineBody, setInlineBody] = useState("");
+  const [inlineBodyJson, setInlineBodyJson] = useState<Record<string, unknown> | null>(null);
+  const [inlineAttachmentIds, setInlineAttachmentIds] = useState<string[]>([]);
+  const [inlineDraftId, setInlineDraftId] = useState<string | null>(null);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [inlineSending, setInlineSending] = useState(false);
   const attachments = mail?.attachments ?? [];
   const imageAttachments = useMemo(
     () => attachments.filter((attachment) => attachment.url && isInlineImageAttachment(attachment)),
@@ -135,6 +170,74 @@ export default function MailDetail(props: Props) {
     mail.kind === "SYSTEM_NOTIFICATION";
   const canReply = !isSystemMessage && props.detailData?.permissions?.canReply !== false;
   const canForward = !isSystemMessage && props.detailData?.permissions?.canForward !== false;
+  const parentMessageId = mail.messageId ?? mail.id;
+  const replySubject = mail.subject.startsWith("Re:") ? mail.subject : `Re: ${mail.subject}`;
+  const forwardSubject = mail.subject.startsWith("Fwd:") ? mail.subject : `Fwd: ${mail.subject}`;
+  const startInlineComposer = (mode: "reply" | "forward") => {
+    setInlineMode(mode);
+    setInlineTo(mode === "reply" ? senderEmail : "");
+    setInlineCc("");
+    setInlineBcc("");
+    setInlineBody("");
+    setInlineBodyJson(null);
+    setInlineAttachmentIds([]);
+    setInlineDraftId(null);
+    setInlineError(null);
+  };
+  const closeInlineComposer = () => {
+    setInlineMode(null);
+    setInlineBody("");
+    setInlineBodyJson(null);
+    setInlineAttachmentIds([]);
+    setInlineDraftId(null);
+    setInlineError(null);
+  };
+  const inlineSubject = inlineMode === "forward" ? forwardSubject : replySubject;
+  const handleInlineSend = async (overrides?: { to: string; cc: string; bcc: string }) => {
+    if (!inlineMode || inlineSending) return;
+    const nextTo = overrides?.to ?? inlineTo;
+    const nextCc = overrides?.cc ?? inlineCc;
+    const nextBcc = overrides?.bcc ?? inlineBcc;
+    if (!nextTo.trim() || !inlineBody.trim()) {
+      setInlineError("Completa destinatario y cuerpo.");
+      return;
+    }
+    setInlineSending(true);
+    setInlineError(null);
+    try {
+      await props.onInlineComposeSend({
+        mode: inlineMode,
+        parentMessageId,
+        to: nextTo,
+        cc: nextCc,
+        bcc: nextBcc,
+        subject: inlineSubject,
+        body: inlineBody,
+        bodyJson: inlineBodyJson,
+        attachmentIds: inlineAttachmentIds,
+      });
+      closeInlineComposer();
+    } catch {
+      setInlineError("No se pudo enviar el mensaje.");
+    } finally {
+      setInlineSending(false);
+    }
+  };
+  const expandInlineComposer = () => {
+    if (!inlineMode) return;
+    props.onComposePrefill({
+      to: inlineTo,
+      cc: inlineCc,
+      bcc: inlineBcc,
+      subject: inlineSubject,
+      body: inlineBody,
+      bodyJson: inlineBodyJson,
+      attachmentIds: inlineAttachmentIds,
+      mode: inlineMode,
+      parentMessageId,
+    });
+    closeInlineComposer();
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
@@ -173,17 +276,7 @@ export default function MailDetail(props: Props) {
         </button>
         {canForward ? (
           <button
-            onClick={() =>
-              props.onComposePrefill({
-                to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
-                cc: ccRecipients.join(", "),
-                bcc: bccRecipients.join(", "),
-                subject: mail.subject.startsWith("Fwd:") ? mail.subject : `Fwd: ${mail.subject}`,
-                body: `<br/><br/>---------- Mensaje reenviado ----------<br/><b>De:</b> ${senderName} &lt;${senderEmail}&gt;<br/><b>Asunto:</b> ${mail.subject}<br/><br/>${mail.body}`,
-                mode: "forward",
-                parentMessageId: mail.messageId ?? mail.id,
-              })
-            }
+            onClick={() => startInlineComposer("forward")}
             className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
             title="Reenviar"
           >
@@ -318,21 +411,59 @@ export default function MailDetail(props: Props) {
             </div>
           ) : null}
 
-          {canReply || canForward ? (
+          {inlineMode ? (
+            <div className="pl-14 mt-8">
+              <InlineReplyForwardBox
+                mode={inlineMode}
+                composeId={`inline-${parentMessageId}`}
+                to={inlineTo}
+                cc={inlineCc}
+                bcc={inlineBcc}
+                recipientLabel={`${senderName} <${senderEmail}>`}
+                subject={inlineSubject}
+                body={inlineBody}
+                bodyJson={inlineBodyJson}
+                attachmentIds={inlineAttachmentIds}
+                isBusy={inlineSending}
+                isSending={inlineSending}
+                error={inlineError}
+                onModeChange={(mode) => startInlineComposer(mode)}
+                onToChange={setInlineTo}
+                onCcChange={setInlineCc}
+                onBccChange={setInlineBcc}
+                onSubjectChange={() => undefined}
+                onBodyChange={(value, nextBodyJson) => {
+                  setInlineBody(value);
+                  setInlineBodyJson(nextBodyJson);
+                }}
+                onResolveDraftId={async () => {
+                  if (inlineDraftId) return inlineDraftId;
+                  const draftId = await props.onCreateInlineDraft({
+                    to: inlineTo,
+                    cc: inlineCc,
+                    bcc: inlineBcc,
+                    subject: inlineSubject,
+                    body: inlineBody,
+                    bodyJson: inlineBodyJson,
+                    attachmentIds: inlineAttachmentIds,
+                  });
+                  setInlineDraftId(draftId);
+                  return draftId;
+                }}
+                onAttachmentUploaded={(attachmentId) => setInlineAttachmentIds((prev) => Array.from(new Set([...prev, attachmentId])))}
+                onAttachmentRemoved={(attachmentId) => setInlineAttachmentIds((prev) => prev.filter((id) => id !== attachmentId))}
+                onUploadAttachment={props.onUploadAttachment}
+                onDeleteAttachment={props.onDeleteAttachment}
+                onSend={(overrides) => void handleInlineSend(overrides)}
+                onDiscard={closeInlineComposer}
+                onExpand={expandInlineComposer}
+              />
+            </div>
+          ) : canReply || canForward ? (
             <div className="pl-14 mt-8 flex gap-2">
               {canReply ? (
                 <button
-                  onClick={() =>
-                    props.onComposePrefill({
-                      to: senderEmail,
-                      cc: "",
-                      bcc: "",
-                      subject: mail.subject.startsWith("Re:") ? mail.subject : `Re: ${mail.subject}`,
-                      body: `<br/><br/>El ${props.formatFullDate(mail.date)}, ${senderName} escribio:<br/><blockquote style="border-left:2px solid #ccc;padding-left:10px;margin-left:0;color:#666">${mail.body}</blockquote>`,
-                      mode: "reply",
-                      parentMessageId: mail.messageId ?? mail.id,
-                    })
-                  }
+                  onClick={() => startInlineComposer("reply")}
                   className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
                 >
                   <Reply className="size-4" />
@@ -341,17 +472,7 @@ export default function MailDetail(props: Props) {
               ) : null}
               {canForward ? (
                 <button
-                  onClick={() =>
-                    props.onComposePrefill({
-                      to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
-                      cc: ccRecipients.join(", "),
-                      bcc: bccRecipients.join(", "),
-                      subject: `Fwd: ${mail.subject}`,
-                      body: `<br/><br/>---------- Mensaje reenviado ----------<br/>${mail.body}`,
-                      mode: "forward",
-                      parentMessageId: mail.messageId ?? mail.id,
-                    })
-                  }
+                  onClick={() => startInlineComposer("forward")}
                   className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
                 >
                   <Forward className="size-4" />

@@ -995,6 +995,67 @@ export default function MailPage() {
     }
   };
 
+  const createInlineDraft = async (input: {
+    to: string;
+    cc: string;
+    bcc: string;
+    subject: string;
+    body: string;
+    bodyJson?: Record<string, unknown> | null;
+    attachmentIds?: string[];
+  }) => {
+    const recipients = [input.to, input.cc, input.bcc].filter(Boolean).join(", ");
+    const created = await createDraft({
+      recipients,
+      subject: input.subject,
+      bodyHtml: input.body,
+      bodyJson: {
+        ...(input.bodyJson ?? {}),
+        draftRecipients: recipients,
+        draftAttachmentIds: input.attachmentIds ?? [],
+      },
+      originModule: "corporate",
+    });
+    const draftId = String(created?.id ?? "");
+    if (!draftId) throw new Error("DRAFT_CREATE_FAILED");
+    return draftId;
+  };
+
+  const sendInlineCompose = async (input: {
+    mode: "reply" | "forward";
+    parentMessageId: string;
+    to: string;
+    cc: string;
+    bcc: string;
+    subject: string;
+    body: string;
+    bodyJson?: Record<string, unknown> | null;
+    attachmentIds?: string[];
+  }) => {
+    if (input.mode === "reply") {
+      await replyMessage(input.parentMessageId, {
+        bodyHtml: input.body,
+        bodyJson: input.bodyJson ?? null,
+        to: parseRecipientList(input.to),
+        cc: parseRecipientList(input.cc),
+        bcc: parseRecipientList(input.bcc),
+        attachmentIds: input.attachmentIds ?? [],
+      });
+    } else {
+      await forwardMessage(input.parentMessageId, {
+        bodyHtml: input.body,
+        bodyJson: input.bodyJson ?? null,
+        to: parseRecipientList(input.to),
+        cc: parseRecipientList(input.cc),
+        bcc: parseRecipientList(input.bcc),
+        attachmentIds: input.attachmentIds ?? [],
+      });
+    }
+
+    const detail = await getMessageDetail(activeMailId || input.parentMessageId);
+    setActiveMailDetail(detail);
+  };
+
   const moveToTrash = async (ids: string[]) => {
     try {
       if (folder === "drafts") {
@@ -1438,12 +1499,22 @@ export default function MailPage() {
                 onComposePrefill={(payload) =>
                   openCompose({
                     to: payload.to,
+                    cc: payload.cc,
+                    bcc: payload.bcc,
                     subject: payload.subject,
                     body: payload.body,
+                    bodyJson: payload.bodyJson,
+                    attachmentIds: payload.attachmentIds,
                     mode: payload.mode,
                     parentMessageId: payload.parentMessageId,
                   })
                 }
+                onInlineComposeSend={sendInlineCompose}
+                onCreateInlineDraft={createInlineDraft}
+                onUploadAttachment={async ({ file, draftId, kind }) => uploadAttachment({ file, draftId, kind })}
+                onDeleteAttachment={async (attachmentId) => {
+                  await deleteRemoteAttachment(attachmentId);
+                }}
                 formatFullDate={formatFullDate}
                 initialsOf={initialsOf}
                 avatarColor={avatarColor}
@@ -1546,6 +1617,14 @@ export default function MailPage() {
         onBccChange={(composeId, value) => updateComposeDraft(composeId, { bcc: value })}
         onSubjectChange={(composeId, value) => updateComposeDraft(composeId, { subject: value })}
         onBodyChange={(composeId, value, bodyJson) => updateComposeDraft(composeId, { body: value, bodyJson })}
+        onModeChange={(composeId, mode) =>
+          updateComposeDraft(composeId, {
+            mode,
+            to: mode === "forward" ? "" : composeDraftsRef.current.find((item) => item.id === composeId)?.to ?? "",
+            cc: mode === "forward" ? "" : composeDraftsRef.current.find((item) => item.id === composeId)?.cc ?? "",
+            bcc: mode === "forward" ? "" : composeDraftsRef.current.find((item) => item.id === composeId)?.bcc ?? "",
+          })
+        }
         onToggleLabel={toggleComposeLabel}
         onResolveDraftId={resolveComposeDraftId}
         onAttachmentUploaded={onComposeAttachmentUploaded}

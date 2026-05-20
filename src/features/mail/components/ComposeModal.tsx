@@ -1,203 +1,9 @@
-import { useState, useRef, useEffect } from "react";
-import type { KeyboardEvent } from "react";
-import {
-  Check,
-  Bookmark,
-  X,
-  Minus,
-  Maximize2,
-  Trash2,
-  Paperclip,
-  Link as LinkIcon,
-  Type,
-  Send,
-  Image as ImageIcon,
-} from "lucide-react";
-import {
-  RiAlignCenter,
-  RiAlignLeft,
-  RiAlignRight,
-  RiBold,
-  RiBrush3Line,
-  RiEraserLine,
-  RiFontSize,
-  RiItalic,
-  RiListOrdered,
-  RiListUnordered,
-  RiUnderline,
-} from "react-icons/ri";
+import { useRef, useState } from "react";
+import { ChevronDown, Forward, Maximize2, Minus, Reply, X } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { isAxiosError } from "axios";
-import { EditorContent, useEditor } from "@tiptap/react";
-import { Extension, getMarkRange } from "@tiptap/core";
-import type { JSONContent } from "@tiptap/core";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
-import TiptapImage from "@tiptap/extension-image";
-import Underline from "@tiptap/extension-underline";
-import TextStyle from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import TextAlign from "@tiptap/extension-text-align";
 import type { MailLabelItem } from "../types/message.types";
-import { SystemButton } from "../../../shared/components/components/SystemButton";
-import { FloatingInput } from "../../../shared/components/components/FloatingInput";
+import MailComposerSurface from "./composer/MailComposerSurface";
 import { Popover } from "@/shared/components/modales/Popover";
-import {
-  MAX_MAIL_ATTACHMENT_BYTES,
-  formatMailAttachmentSize,
-} from "../utils/mail-attachments.utils";
-
-type FontSizeOption = {
-  value: string;
-  label: string;
-  fontSize: string | null;
-};
-
-const FONT_SIZE_OPTIONS: FontSizeOption[] = [
-  { value: "1", label: "Pequeño", fontSize: "8px" },
-  { value: "3", label: "Normal", fontSize: null },
-  { value: "5", label: "Grande", fontSize: "20px" },
-  { value: "7", label: "Enorme", fontSize: "25px" },
-];
-
-const FONT_SIZE_BY_VALUE = FONT_SIZE_OPTIONS.reduce<
-  Record<string, string | null>
->((acc, option) => {
-  acc[option.value] = option.fontSize;
-  return acc;
-}, {});
-
-declare module "@tiptap/core" {
-  interface Commands<ReturnType> {
-    fontSize: {
-      setFontSize: (fontSize: string) => ReturnType;
-      unsetFontSize: () => ReturnType;
-    };
-  }
-}
-
-const FontSize = Extension.create({
-  name: "fontSize",
-
-  addOptions() {
-    return {
-      types: ["textStyle"],
-    };
-  },
-
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          fontSize: {
-            default: null,
-            parseHTML: (element) => element.style.fontSize || null,
-            renderHTML: (attributes) => {
-              if (!attributes.fontSize) return {};
-              return {
-                style: `font-size: ${attributes.fontSize}`,
-              };
-            },
-          },
-        },
-      },
-    ];
-  },
-
-  addCommands() {
-    return {
-      setFontSize:
-        (fontSize: string) =>
-        ({ state, commands, dispatch }) => {
-          if (!state.selection.empty) {
-            return commands.setMark("textStyle", { fontSize });
-          }
-
-          if (!dispatch) return true;
-
-          const markType = state.schema.marks.textStyle;
-          const currentMarks =
-            state.storedMarks ?? state.selection.$from.marks();
-          const currentTextStyle = currentMarks.find(
-            (mark) => mark.type === markType,
-          );
-          const otherMarks = currentMarks.filter(
-            (mark) => mark.type !== markType,
-          );
-
-          dispatch(
-            state.tr.setStoredMarks([
-              ...otherMarks,
-              markType.create({
-                ...(currentTextStyle?.attrs ?? {}),
-                fontSize,
-              }),
-            ]),
-          );
-
-          return true;
-        },
-      unsetFontSize:
-        () =>
-        ({ state, commands, dispatch }) => {
-          if (!state.selection.empty) {
-            const updated = commands.setMark("textStyle", { fontSize: null });
-            commands.removeEmptyTextStyle();
-            return updated;
-          }
-
-          if (!dispatch) return true;
-
-          const markType = state.schema.marks.textStyle;
-          const currentMarks =
-            state.storedMarks ?? state.selection.$from.marks();
-          const currentTextStyle = currentMarks.find(
-            (mark) => mark.type === markType,
-          );
-          const otherMarks = currentMarks.filter(
-            (mark) => mark.type !== markType,
-          );
-          const nextTextStyleAttrs = { ...(currentTextStyle?.attrs ?? {}) };
-          delete nextTextStyleAttrs.fontSize;
-
-          const hasRemainingTextStyleAttrs = Object.values(
-            nextTextStyleAttrs,
-          ).some(
-            (value) => value !== null && value !== undefined && value !== "",
-          );
-
-          dispatch(
-            state.tr.setStoredMarks(
-              hasRemainingTextStyleAttrs
-                ? [...otherMarks, markType.create(nextTextStyleAttrs)]
-                : otherMarks,
-            ),
-          );
-
-          return true;
-        },
-    };
-  },
-});
-
-type AttachmentItem = {
-  id: string;
-  serverId?: string;
-  name: string;
-  sizeLabel: string;
-  kind: "image" | "file";
-  previewUrl?: string;
-  file: File;
-  uploading?: boolean;
-  uploadError?: string | null;
-};
-
-type BackendErrorPayload = {
-  message?: string | string[];
-};
-
-type RecipientField = "to" | "cc" | "bcc";
 
 export type NotificationComposeDraft = {
   id: string;
@@ -228,37 +34,32 @@ interface Props {
   onCcChange: (composeId: string, value: string) => void;
   onBccChange: (composeId: string, value: string) => void;
   onSubjectChange: (composeId: string, value: string) => void;
-  onBodyChange: (
-    composeId: string,
-    value: string,
-    bodyJson: Record<string, unknown> | null,
-    bodyText: string,
-  ) => void;
+  onBodyChange: (composeId: string, value: string, bodyJson: Record<string, unknown> | null, bodyText: string) => void;
+  onModeChange: (composeId: string, mode: "reply" | "forward") => void;
   onToggleLabel: (composeId: string, labelId: string) => void;
   onResolveDraftId: (composeId: string) => Promise<string>;
   onAttachmentUploaded: (composeId: string, attachmentId: string) => void;
   onAttachmentRemoved: (composeId: string, attachmentId: string) => void;
-  onUploadAttachment: (input: {
-    composeId: string;
-    file: File;
-    draftId: string;
-    kind: "image" | "file";
-  }) => Promise<{ id: string }>;
+  onUploadAttachment: (input: { composeId: string; file: File; draftId: string; kind: "image" | "file" }) => Promise<{ id: string }>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   onDiscard: (composeId: string) => void | Promise<void>;
   onSend: (
     composeId: string,
     overrides?: Partial<
-      Pick<
-        NotificationComposeDraft,
-        "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds"
-      > & {
+      Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds"> & {
         attachmentIds?: string[];
         bodyJson?: Record<string, unknown> | null;
       }
     >,
   ) => void | Promise<void>;
 }
+
+const titleByMode = (draft: NotificationComposeDraft) => {
+  if (draft.editingDraftId) return "Editar borrador";
+  if (draft.mode === "reply") return "Responder";
+  if (draft.mode === "forward") return "Reenviar";
+  return "Mensaje nuevo";
+};
 
 export default function NotificationComposeModal({
   draft,
@@ -273,6 +74,7 @@ export default function NotificationComposeModal({
   onBccChange,
   onSubjectChange,
   onBodyChange,
+  onModeChange,
   onToggleLabel,
   onResolveDraftId,
   onAttachmentUploaded,
@@ -283,752 +85,10 @@ export default function NotificationComposeModal({
   onSend,
 }: Props) {
   const isBusy = isSaving || isSending || isDiscarding;
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const toInputRef = useRef<HTMLInputElement>(null);
-  const ccInputRef = useRef<HTMLInputElement>(null);
-  const bccInputRef = useRef<HTMLInputElement>(null);
-  const linkAnchorRef = useRef<HTMLButtonElement | null>(null);
-  const formatAnchorRef = useRef<HTMLButtonElement | null>(null);
-  const labelsAnchorRef = useRef<HTMLButtonElement | null>(null);
-  const attachmentsRef = useRef<AttachmentItem[]>([]);
-  const bodyChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  const latestBodyRef = useRef<{
-    html: string;
-    json: Record<string, unknown> | null;
-    text: string;
-  } | null>(null);
-  const lastSyncedBodyRef = useRef<string>(draft.body || "");
-
-  const [showFormat, setShowFormat] = useState(false);
-  const [showLink, setShowLink] = useState(false);
-  const [showLabels, setShowLabels] = useState(false);
-  const [showCc, setShowCc] = useState(Boolean(draft.cc.trim()));
-  const [showBcc, setShowBcc] = useState(Boolean(draft.bcc.trim()));
-  const [linkName, setLinkName] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
-  const [validationError, setValidationError] = useState("");
-  const [recipientDrafts, setRecipientDrafts] = useState<
-    Record<RecipientField, string>
-  >({
-    to: "",
-    cc: "",
-    bcc: "",
-  });
-  const [recipientTokens, setRecipientTokens] = useState<
-    Record<RecipientField, string[]>
-  >({
-    to: [],
-    cc: [],
-    bcc: [],
-  });
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const [recipientsExpanded, setRecipientsExpanded] = useState(
-    Boolean(draft.to.trim() || draft.cc.trim() || draft.bcc.trim()),
-  );
-  const [selectedFontSize, setSelectedFontSize] = useState("3");
-
-  useEffect(() => {
-    setRecipientTokens((prev) => ({
-      ...prev,
-      to: draft.to
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    }));
-  }, [draft.to]);
-
-  useEffect(() => {
-    if (draft.to.trim() || draft.cc.trim() || draft.bcc.trim()) {
-      setRecipientsExpanded(true);
-    }
-  }, [draft.to, draft.cc, draft.bcc]);
-
-  useEffect(() => {
-    setRecipientTokens((prev) => ({
-      ...prev,
-      cc: draft.cc
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    }));
-    if (draft.cc.trim()) setShowCc(true);
-  }, [draft.cc]);
-
-  useEffect(() => {
-    setRecipientTokens((prev) => ({
-      ...prev,
-      bcc: draft.bcc
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    }));
-    if (draft.bcc.trim()) setShowBcc(true);
-  }, [draft.bcc]);
-
-  useEffect(() => {
-    attachmentsRef.current = attachments;
-  }, [attachments]);
-
-  useEffect(() => {
-    return () => {
-      attachmentsRef.current.forEach((item) => {
-        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-      });
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (bodyChangeTimeoutRef.current) {
-        clearTimeout(bodyChangeTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const scheduleBodyChange = (
-    html: string,
-    json: Record<string, unknown> | null,
-    text: string,
-  ) => {
-    latestBodyRef.current = { html, json, text };
-
-    if (bodyChangeTimeoutRef.current) {
-      clearTimeout(bodyChangeTimeoutRef.current);
-    }
-
-    bodyChangeTimeoutRef.current = setTimeout(() => {
-      const latest = latestBodyRef.current;
-      if (!latest) return;
-
-      lastSyncedBodyRef.current = latest.html;
-      onBodyChange(draft.id, latest.html, latest.json, latest.text);
-      bodyChangeTimeoutRef.current = null;
-    }, 250);
-  };
-
-  const flushBodyChange = () => {
-    if (bodyChangeTimeoutRef.current) {
-      clearTimeout(bodyChangeTimeoutRef.current);
-      bodyChangeTimeoutRef.current = null;
-    }
-
-    const latest = latestBodyRef.current;
-    if (!latest) return;
-
-    lastSyncedBodyRef.current = latest.html;
-    onBodyChange(draft.id, latest.html, latest.json, latest.text);
-  };
-
-  const deleteActiveLinkAsUnit = () => {
-    if (!editor) return false;
-
-    const { state, view } = editor;
-    const { selection, schema } = state;
-    const linkMark = schema.marks.link;
-
-    if (!linkMark || !selection.empty) return false;
-
-    const { $from } = selection;
-    const directRange = getMarkRange($from, linkMark);
-
-    if (directRange) {
-      view.dispatch(
-        state.tr
-          .delete(directRange.from, directRange.to)
-          .removeStoredMark(linkMark),
-      );
-      return true;
-    }
-
-    const nodeBefore = $from.nodeBefore;
-    const nodeAfter = $from.nodeAfter;
-    const hasLinkBefore = nodeBefore?.marks.some(
-      (mark) => mark.type === linkMark,
-    );
-    const hasLinkAfter = nodeAfter?.marks.some(
-      (mark) => mark.type === linkMark,
-    );
-
-    if (hasLinkBefore && nodeBefore) {
-      view.dispatch(
-        state.tr
-          .delete($from.pos - nodeBefore.nodeSize, $from.pos)
-          .removeStoredMark(linkMark),
-      );
-      return true;
-    }
-
-    if (hasLinkAfter && nodeAfter) {
-      view.dispatch(
-        state.tr
-          .delete($from.pos, $from.pos + nodeAfter.nodeSize)
-          .removeStoredMark(linkMark),
-      );
-      return true;
-    }
-
-    return false;
-  };
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      TextStyle,
-      FontSize,
-      Color,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TiptapImage.configure({
-        inline: true,
-        allowBase64: true,
-        HTMLAttributes: {
-          class:
-            "inline-block size-[50px] rounded-md border border-border object-cover align-middle",
-          width: "50",
-          height: "50",
-        },
-      }),
-      Link.configure({
-        openOnClick: true,
-        autolink: true,
-        linkOnPaste: true,
-        HTMLAttributes: {
-          class: "text-blue-600 underline underline-offset-2 cursor-pointer",
-          target: "_blank",
-          rel: "noopener noreferrer",
-        },
-      }),
-    ],
-    content: (draft.bodyJson as JSONContent | null) ?? (draft.body || ""),
-    onUpdate: ({ editor: instance }) => {
-      const html = instance.getHTML();
-      const json = instance.getJSON() as Record<string, unknown>;
-      const text = instance.getText().trim();
-
-      scheduleBodyChange(html, json, text);
-    },
-    editorProps: {
-      attributes: {
-        class:
-          "min-h-[180px] flex-1 px-4 py-3 text-sm outline-none prose prose-sm max-w-none [&_a]:text-blue-600 [&_a]:underline [&_a]:underline-offset-2 [&_img]:inline-block [&_img]:size-[50px] [&_img]:rounded-md [&_img]:border [&_img]:border-border [&_img]:object-cover [&_img]:align-middle [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1",
-      },
-      handleKeyDown: (_view, event) => {
-        if (event.key !== "Backspace" && event.key !== "Delete") return false;
-
-        const deleted = deleteActiveLinkAsUnit();
-        if (!deleted) return false;
-
-        event.preventDefault();
-        editor?.chain().focus().unsetLink().run();
-        return true;
-      },
-    },
-  });
-
-  useEffect(() => {
-    if (!editor) return;
-
-    const nextBody = draft.body || "";
-    const current = editor.getHTML();
-
-    if (nextBody === lastSyncedBodyRef.current || nextBody === current) {
-      return;
-    }
-
-    const nextContent = (draft.bodyJson as JSONContent | null) ?? nextBody;
-
-    lastSyncedBodyRef.current = nextBody;
-    editor.commands.setContent(nextContent, false);
-  }, [draft.body, draft.bodyJson, editor]);
-
-  const mapAttachmentBackendError = (error: unknown): string => {
-    const payloadMessage = isAxiosError<BackendErrorPayload>(error)
-      ? error.response?.data?.message
-      : undefined;
-    const message = Array.isArray(payloadMessage)
-      ? payloadMessage[0]
-      : payloadMessage;
-    if (!message) return "No se pudo subir.";
-    if (message.includes("ATTACHMENT_EXTENSION_NOT_ALLOWED"))
-      return "El servidor no permite esta extensión.";
-    if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED"))
-      return "El servidor no permite este tipo de archivo.";
-    if (message.includes("ATTACHMENT_TOO_LARGE"))
-      return "El archivo no debe superar 5 MB.";
-    if (message.includes("ATTACHMENT_IMAGE_MIME_REQUIRED"))
-      return "Solo puedes insertar imagenes desde el boton de imagen.";
-    if (message.includes("ATTACHMENT_ACCESS_DENIED"))
-      return "No tienes permisos para adjuntar aquí.";
-    if (message.includes("ATTACHMENT_TARGET_REQUIRED"))
-      return "El adjunto no tiene destino válido.";
-    return "No se pudo subir.";
-  };
-
-  const addFiles = async (files: FileList | null, kind: "image" | "file") => {
-    if (!files?.length) return;
-
-    const next: AttachmentItem[] = [];
-
-    Array.from(files).forEach((file) => {
-      const isImageFile = file.type.startsWith("image/");
-      const isInlineImage = kind === "image" && isImageFile;
-      const localError =
-        file.size > MAX_MAIL_ATTACHMENT_BYTES
-          ? "El archivo no debe superar 5 MB."
-          : kind === "image" && !isImageFile
-            ? "Solo puedes insertar imagenes desde este boton."
-            : null;
-      next.push({
-        id: `att-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        name: file.name,
-        sizeLabel: formatMailAttachmentSize(file.size),
-        kind: isInlineImage ? "image" : "file",
-        previewUrl: isInlineImage ? URL.createObjectURL(file) : undefined,
-        file,
-        uploading: !localError,
-        uploadError: localError,
-      });
-    });
-
-    setAttachments((prev) => [...prev, ...next]);
-
-    if (kind === "image" && editor) {
-      next
-        .filter((item) => item.kind === "image" && item.previewUrl)
-        .forEach((item) => {
-          editor
-            .chain()
-            .focus()
-            .setImage({
-              src: item.previewUrl!,
-              alt: item.name,
-              title: item.name,
-            })
-            .insertContent(" ")
-            .run();
-        });
-
-      const html = editor.getHTML();
-      const json = editor.getJSON() as Record<string, unknown>;
-      const bodyText = editor.getText().trim();
-      latestBodyRef.current = { html, json, text: bodyText };
-      flushBodyChange();
-    }
-
-    let draftId = draft.editingDraftId;
-    try {
-      draftId = draftId || (await onResolveDraftId(draft.id));
-    } catch {
-      setValidationError(
-        "No se pudo crear el borrador para adjuntar archivos.",
-      );
-      setAttachments((prev) =>
-        prev.map((current) =>
-          next.some((item) => item.id === current.id)
-            ? {
-                ...current,
-                uploading: false,
-                uploadError: "No se pudo preparar la subida.",
-              }
-            : current,
-        ),
-      );
-      return;
-    }
-
-    for (const item of next) {
-      if (item.uploadError) continue;
-      try {
-        const uploaded = await onUploadAttachment({
-          composeId: draft.id,
-          file: item.file,
-          draftId,
-          kind: item.kind,
-        });
-        setAttachments((prev) =>
-          prev.map((current) =>
-            current.id === item.id
-              ? {
-                  ...current,
-                  serverId: uploaded.id,
-                  uploading: false,
-                  uploadError: null,
-                }
-              : current,
-          ),
-        );
-        onAttachmentUploaded(draft.id, uploaded.id);
-      } catch (error: unknown) {
-        setAttachments((prev) =>
-          prev.map((current) =>
-            current.id === item.id
-              ? {
-                  ...current,
-                  uploading: false,
-                  uploadError: mapAttachmentBackendError(error),
-                }
-              : current,
-          ),
-        );
-      }
-    }
-
-    if (kind === "file" && fileInputRef.current)
-      fileInputRef.current.value = "";
-    if (kind === "image" && imageInputRef.current)
-      imageInputRef.current.value = "";
-  };
-
-  const removeAttachment = async (id: string) => {
-    const current = attachmentsRef.current.find((item) => item.id === id);
-    if (current?.serverId) {
-      try {
-        await onDeleteAttachment(current.serverId);
-        onAttachmentRemoved(draft.id, current.serverId);
-      } catch {
-        setValidationError("No se pudo eliminar el adjunto del servidor.");
-      }
-    }
-
-    setAttachments((prev) => {
-      const found = prev.find((item) => item.id === id);
-      if (found?.previewUrl) URL.revokeObjectURL(found.previewUrl);
-      return prev.filter((a) => a.id !== id);
-    });
-  };
-
-  const getOnChangeByField = (field: RecipientField) => {
-    if (field === "to") return onToChange;
-    if (field === "cc") return onCcChange;
-    return onBccChange;
-  };
-
-  const addRecipientToken = (field: RecipientField, value: string) => {
-    const token = value.trim();
-    if (!token) return;
-
-    const normalized = token.toLowerCase();
-
-    setRecipientTokens((prev) => {
-      if (prev[field].some((item) => item.toLowerCase() === normalized))
-        return prev;
-
-      const nextFieldTokens = [...prev[field], token];
-      getOnChangeByField(field)(draft.id, nextFieldTokens.join(","));
-
-      return {
-        ...prev,
-        [field]: nextFieldTokens,
-      };
-    });
-  };
-
-  const removeRecipientToken = (field: RecipientField, token: string) => {
-    setRecipientTokens((prev) => {
-      const nextFieldTokens = prev[field].filter((item) => item !== token);
-      getOnChangeByField(field)(draft.id, nextFieldTokens.join(","));
-
-      return {
-        ...prev,
-        [field]: nextFieldTokens,
-      };
-    });
-  };
-
-  const commitDraftRecipients = (field: RecipientField) => {
-    const value = recipientDrafts[field];
-    if (!value.trim()) return;
-
-    value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .forEach((item) => addRecipientToken(field, item));
-
-    setRecipientDrafts((prev) => ({ ...prev, [field]: "" }));
-  };
-
-  const getCommittedRecipients = (field: RecipientField) => {
-    const tokens = [
-      ...recipientTokens[field],
-      ...recipientDrafts[field]
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ];
-
-    return Array.from(
-      new Map(tokens.map((item) => [item.toLowerCase(), item])).values(),
-    );
-  };
-
-  const handleRecipientDraftChange = (field: RecipientField, value: string) => {
-    if (value.includes(",")) {
-      const [first, ...rest] = value.split(",");
-      addRecipientToken(field, first);
-      setRecipientDrafts((prev) => ({ ...prev, [field]: rest.join(",") }));
-      return;
-    }
-
-    setRecipientDrafts((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleRecipientKeyDown = (
-    field: RecipientField,
-    e: KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
-      e.preventDefault();
-      commitDraftRecipients(field);
-      return;
-    }
-
-    if (
-      e.key === "Backspace" &&
-      !recipientDrafts[field] &&
-      recipientTokens[field].length
-    ) {
-      removeRecipientToken(
-        field,
-        recipientTokens[field][recipientTokens[field].length - 1],
-      );
-    }
-  };
-
-  const handleSend = () => {
-    setValidationError("");
-    flushBodyChange();
-
-    const committedTo = getCommittedRecipients("to");
-    const committedCc = getCommittedRecipients("cc");
-    const committedBcc = getCommittedRecipients("bcc");
-
-    if (committedTo.length === 0) {
-      setValidationError("Debe especificar al menos un destinatario");
-      return;
-    }
-
-    const toValue = committedTo.join(",");
-    const ccValue = committedCc.join(",");
-    const bccValue = committedBcc.join(",");
-
-    onToChange(draft.id, toValue);
-    onCcChange(draft.id, ccValue);
-    onBccChange(draft.id, bccValue);
-    setRecipientDrafts({ to: "", cc: "", bcc: "" });
-
-    void onSend(draft.id, {
-      to: toValue,
-      cc: ccValue,
-      bcc: bccValue,
-      body: editor?.getHTML() ?? draft.body,
-      attachmentIds: draft.attachmentIds ?? [],
-      bodyJson: editor?.getJSON() ?? null,
-    });
-  };
-
-  const insertLink = () => {
-    setValidationError("");
-
-    if (!linkName.trim() || !linkUrl.trim()) {
-      setValidationError(
-        "Nombre y URL son obligatorios para insertar un enlace.",
-      );
-      return;
-    }
-
-    let normalizedUrl = linkUrl.trim();
-    if (!/^https?:\/\//i.test(normalizedUrl))
-      normalizedUrl = `https://${normalizedUrl}`;
-
-    try {
-      const parsed = new URL(normalizedUrl);
-
-      if (!/^https?:$/.test(parsed.protocol)) {
-        setValidationError("La URL debe ser http o https.");
-        return;
-      }
-
-      if (!editor) return;
-
-      const href = parsed.toString();
-      const text = linkName.trim();
-
-      editor
-        .chain()
-        .focus()
-        .insertContent([
-          {
-            type: "text",
-            text,
-            marks: [
-              {
-                type: "link",
-                attrs: {
-                  href,
-                  target: "_blank",
-                  rel: "noopener noreferrer",
-                },
-              },
-            ],
-          },
-          {
-            type: "text",
-            text: " ",
-          },
-        ])
-        .unsetLink()
-        .run();
-
-      const html = editor.getHTML();
-      const json = editor.getJSON() as Record<string, unknown>;
-      const bodyText = editor.getText().trim();
-      latestBodyRef.current = { html, json, text: bodyText };
-      flushBodyChange();
-
-      setLinkName("");
-      setLinkUrl("");
-      setShowLink(false);
-    } catch {
-      setValidationError("URL inválida.");
-    }
-  };
-
-  const recipientFieldRef = (field: RecipientField) => {
-    if (field === "to") return toInputRef;
-    if (field === "cc") return ccInputRef;
-    return bccInputRef;
-  };
-
-  const renderCollapsedRecipients = () => (
-    <button
-      type="button"
-      onClick={() => {
-        setRecipientsExpanded(true);
-        requestAnimationFrame(() => toInputRef.current?.focus());
-      }}
-      className="flex min-h-10 w-full items-center border-b border-border bg-transparent px-4 py-2 text-left text-sm text-muted-foreground hover:bg-mail-hover/50"
-    >
-      Destinatarios
-    </button>
-  );
-
-  const renderRecipientField = (
-    field: RecipientField,
-    label: string,
-    placeholder: string,
-  ) => {
-    const inputRef = recipientFieldRef(field);
-
-    return (
-      <div
-        className="flex min-h-10 flex-wrap items-center gap-2 border-b border-border bg-transparent px-4 py-2 text-sm"
-        onClick={() => inputRef.current?.focus()}
-      >
-        <span className="w-10 shrink-0 text-muted-foreground">{label}</span>
-
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          {recipientTokens[field].map((token) => (
-            <span
-              key={`${field}-${token}`}
-              className="inline-flex max-w-full items-center gap-1 rounded-full bg-mail-surface px-2 py-1 text-xs"
-            >
-              <span className="truncate">{token}</span>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeRecipientToken(field, token);
-                }}
-                className="rounded p-0.5 hover:bg-mail-hover"
-                title="Quitar correo"
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
-
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder={recipientTokens[field].length ? "" : placeholder}
-            value={recipientDrafts[field]}
-            onChange={(e) => handleRecipientDraftChange(field, e.target.value)}
-            onBlur={() => commitDraftRecipients(field)}
-            onKeyDown={(e) => handleRecipientKeyDown(field, e)}
-            className="min-w-40 flex-1 border-0 bg-transparent outline-none"
-          />
-        </div>
-
-        {field === "to" ? (
-          <div className="ml-auto flex shrink-0 items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {!showCc ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCc(true);
-                  requestAnimationFrame(() => ccInputRef.current?.focus());
-                }}
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                CC
-              </button>
-            ) : null}
-
-            {!showBcc ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowBcc(true);
-                  requestAnimationFrame(() => bccInputRef.current?.focus());
-                }}
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                BCC
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  const syncEditorBody = () => {
-    if (!editor) return;
-
-    const html = editor.getHTML();
-    const json = editor.getJSON() as Record<string, unknown>;
-    const bodyText = editor.getText().trim();
-
-    latestBodyRef.current = { html, json, text: bodyText };
-    flushBodyChange();
-  };
-
-  const applyFontSize = (value: string) => {
-    if (!editor) return;
-
-    const fontSize = FONT_SIZE_BY_VALUE[value];
-    setSelectedFontSize(value);
-
-    const command = fontSize
-      ? editor.chain().focus().setFontSize(fontSize)
-      : editor.chain().focus().unsetFontSize();
-
-    command.run();
-    syncEditorBody();
-  };
-
-  const formatButtonClass = (active?: boolean) =>
-    cn(
-      "flex size-8 items-center justify-center rounded-md border border-transparent text-xs transition-colors hover:border-border hover:bg-mail-hover",
-      active && "border-border bg-mail-hover shadow-sm ring-1 ring-black/5",
-    );
+  const showLabels = draft.mode === "new";
+  const showReplyHeader = draft.mode === "reply";
+  const modeMenuAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
   if (draft.minimized) {
     return (
@@ -1039,33 +99,29 @@ export default function NotificationComposeModal({
         onClick={() => onToggleMinimize(draft.id)}
       >
         <div className="flex items-center justify-between rounded-t-lg bg-primary/5 px-3 py-2 text-mail-compose-foreground">
-          <span className="truncate text-sm font-medium">
-            {draft.subject || "Mensaje nuevo"}
-          </span>
-
+          <span className="truncate text-sm font-medium">{draft.subject || titleByMode(draft)}</span>
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isBusy) return;
-                onToggleMinimize(draft.id);
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!isBusy) onToggleMinimize(draft.id);
               }}
               disabled={isBusy}
               className="flex size-6 items-center justify-center rounded hover:bg-black/10"
+              title="Restaurar"
             >
               <Maximize2 className="size-3.5" />
             </button>
-
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isBusy) return;
-                onClose(draft.id);
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!isBusy) onClose(draft.id);
               }}
               disabled={isBusy}
               className="flex size-6 items-center justify-center rounded hover:bg-black/10"
+              title="Cerrar"
             >
               <X className="size-3.5" />
             </button>
@@ -1079,520 +135,124 @@ export default function NotificationComposeModal({
     <div
       data-compose-modal
       data-compose-id={draft.id}
-      className="flex h-150 max-h-[calc(100vh-2rem)] w-[min(540px,calc(100vw-2rem))] shrink-0 flex-col rounded-t-lg border border-border bg-background shadow-2xl"
+      className={cn(
+        "flex h-150 max-h-[calc(100vh-2rem)] w-[min(540px,calc(100vw-2rem))] shrink-0 flex-col rounded-t-lg border border-border bg-background shadow-2xl",
+      )}
     >
       <div className="flex items-center justify-between rounded-t-lg bg-primary/5 px-4 py-2 text-mail-compose-foreground">
-        <span className="text-sm font-medium">
-          {draft.editingDraftId
-            ? "Editar borrador"
-            : draft.mode === "reply"
-              ? "Responder"
-              : draft.mode === "forward"
-                ? "Reenviar"
-                : "Mensaje nuevo"}
-        </span>
-
+        <span className="text-sm font-medium">{titleByMode(draft)}</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => {
-              if (isBusy) return;
-              onToggleMinimize(draft.id);
+              if (!isBusy) onToggleMinimize(draft.id);
             }}
             disabled={isBusy}
             className="flex size-7 items-center justify-center rounded hover:bg-black/10"
+            title="Minimizar"
           >
             <Minus className="size-4" />
           </button>
-
           <button
             type="button"
             onClick={() => {
-              if (isBusy) return;
-              onClose(draft.id);
+              if (!isBusy) onClose(draft.id);
             }}
             disabled={isBusy}
             className="flex size-7 items-center justify-center rounded hover:bg-black/10"
+            title="Cerrar"
           >
             <X className="size-4" />
           </button>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        {recipientsExpanded ? (
-          <>
-            {renderRecipientField("to", "Para", "")}
-            {showCc ? renderRecipientField("cc", "CC", "") : null}
-            {showBcc ? renderRecipientField("bcc", "BCC", "") : null}
-          </>
-        ) : (
-          renderCollapsedRecipients()
-        )}
-
-        <input
-          type="text"
-          placeholder="Asunto"
-          value={draft.subject}
-          onChange={(e) => onSubjectChange(draft.id, e.target.value)}
-          className="border-b border-border bg-transparent px-4 py-2 text-sm outline-none"
-        />
-
-        <div
-          className="min-h-45 flex-1 overflow-y-auto scroll-area"
-          onDrop={(e) => {
-            e.preventDefault();
-            void addFiles(e.dataTransfer.files, "file");
-          }}
-          onDragOver={(e) => e.preventDefault()}
-        >
-          <EditorContent editor={editor} />
-        </div>
-
-        {attachments.some((a) => a.kind === "file") ? (
-          <div className="flex flex-col gap-2 border-t border-border px-4 py-2">
-            {attachments
-              .filter((a) => a.kind === "file")
-              .map((a) => (
-                <div
-                  key={a.id}
-                  className={cn(
-                    "rounded-lg border p-2 transition-colors",
-                    a.uploadError
-                      ? "border-destructive/40 bg-destructive/5"
-                      : "border-border bg-background",
-                  )}
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Paperclip className="size-4 shrink-0 text-muted-foreground" />
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium text-foreground">
-                        {a.name}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {a.sizeLabel}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => void removeAttachment(a.id)}
-                      className="shrink-0 rounded-full p-1 hover:bg-mail-hover"
-                      title="Quitar adjunto"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-
-                  {a.uploading ? (
-                    <div className="mt-2">
-                      <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                        <span>Subiendo archivo...</span>
-                        <span>Archivo pesado, no cierres esta ventana</span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-mail-hover">
-                        <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {a.uploadError ? (
-                    <p className="mt-2 rounded-md bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
-                      {a.uploadError}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-          </div>
-        ) : null}
-
-        {validationError ? (
-          <div className="bg-destructive/10 px-4 py-2 text-xs text-destructive">
-            {validationError}
-          </div>
-        ) : null}
-
-        {draft.error ? (
-          <div className="bg-destructive/10 px-4 py-2 text-xs text-destructive">
-            {draft.error}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="relative flex items-center gap-1 border-t border-border p-2">
-        <SystemButton
-          onClick={handleSend}
-          leftIcon={<Send className="size-4" />}
-          className="rounded-full"
-          disabled={isBusy}
-        >
-          {isSending ? "Enviando..." : "Enviar"}
-        </SystemButton>
-
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="flex size-9 items-center justify-center rounded-full hover:bg-mail-hover"
-          title="Adjuntar archivo"
-        >
-          <Paperclip className="size-5" />
-        </button>
-
-        <button
-          ref={linkAnchorRef}
-          type="button"
-          onClick={() => {
-            setShowLink((v) => !v);
-            setShowFormat(false);
-            setShowLabels(false);
-          }}
-          className={cn(
-            "flex size-9 items-center justify-center rounded-full hover:bg-mail-hover",
-            showLink && "bg-mail-hover",
-          )}
-          title="Insertar enlace"
-        >
-          <LinkIcon className="size-5" />
-        </button>
-
-        <Popover
-          open={showLink}
-          onClose={() => setShowLink(false)}
-          anchorRef={linkAnchorRef}
-          placement="top-start"
-          offset={8}
-          zIndex={10000}
-          hideHeader
-          className="w-72 rounded-lg border border-border bg-popover shadow-popover"
-          bodyClassName="p-3"
-        >
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium">Insertar enlace</p>
-
-            <FloatingInput
-              label="Texto"
-              name="linkText"
-              value={linkName}
-              onChange={(e) => setLinkName(e.target.value)}
-            />
-
-            <FloatingInput
-              label="URL"
-              name="linkUrl"
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
-            />
-
-            <div className="flex justify-end gap-2">
-              <SystemButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowLink(false)}
-              >
-                Cancelar
-              </SystemButton>
-
-              <SystemButton size="sm" onClick={insertLink}>
-                Aceptar
-              </SystemButton>
-            </div>
-          </div>
-        </Popover>
-
-        <button
-          ref={formatAnchorRef}
-          type="button"
-          onClick={() => {
-            setShowFormat((v) => !v);
-            setShowLink(false);
-            setShowLabels(false);
-          }}
-          className={cn(
-            "flex size-9 items-center justify-center rounded-full hover:bg-mail-hover",
-            showFormat && "bg-mail-hover ring-1 ring-border",
-          )}
-          title="Formato de texto"
-        >
-          <Type className="size-5" />
-        </button>
-
-        <Popover
-          open={showFormat}
-          onClose={() => setShowFormat(false)}
-          anchorRef={formatAnchorRef}
-          placement="top-start"
-          offset={8}
-          zIndex={10000}
-          hideHeader
-          className="w-85 rounded-xl border border-border bg-popover shadow-popover"
-          bodyClassName="p-2"
-        >
-          <div>
-            <div className="mb-2 flex items-center justify-between border-b border-border pb-2">
-              <span className="px-1 text-xs font-semibold text-muted-foreground">
-                Formato
-              </span>
-
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().unsetAllMarks().clearNodes().run()
-                }
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-mail-hover hover:text-foreground"
-              >
-                <RiEraserLine className="size-3.5" />
-                Limpiar
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 hover:bg-mail-hover">
-                <RiFontSize className="size-4 text-muted-foreground" />
-                <select
-                  value={selectedFontSize}
-                  onChange={(e) => applyFontSize(e.target.value)}
-                  className="h-full border-0 bg-transparent text-xs outline-none"
-                >
-                  {FONT_SIZE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleBold().run()}
-                className={cn(
-                  formatButtonClass(editor?.isActive("bold")),
-                  "font-bold",
-                )}
-                title="Negrita"
-              >
-                <RiBold className="size-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleItalic().run()}
-                className={cn(
-                  formatButtonClass(editor?.isActive("italic")),
-                  "italic",
-                )}
-                title="Cursiva"
-              >
-                <RiItalic className="size-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleUnderline().run()}
-                className={cn(
-                  formatButtonClass(editor?.isActive("underline")),
-                  "underline",
-                )}
-                title="Subrayado"
-              >
-                <RiUnderline className="size-4" />
-              </button>
-
-              <label
-                className="flex size-8 cursor-pointer items-center justify-center rounded-md border border-transparent hover:border-border hover:bg-mail-hover"
-                title="Color"
-              >
-                <RiBrush3Line className="size-4" />
-                <input
-                  type="color"
-                  onChange={(e) =>
-                    editor?.chain().focus().setColor(e.target.value).run()
-                  }
-                  className="sr-only"
-                />
-              </label>
-
-              <span className="mx-0.5 h-6 w-px bg-border" />
-
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().setTextAlign("left").run()
-                }
-                className={formatButtonClass(
-                  editor?.isActive({ textAlign: "left" }),
-                )}
-                title="Alinear izquierda"
-              >
-                <RiAlignLeft className="size-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().setTextAlign("center").run()
-                }
-                className={formatButtonClass(
-                  editor?.isActive({ textAlign: "center" }),
-                )}
-                title="Centrar"
-              >
-                <RiAlignCenter className="size-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().setTextAlign("right").run()
-                }
-                className={formatButtonClass(
-                  editor?.isActive({ textAlign: "right" }),
-                )}
-                title="Alinear derecha"
-              >
-                <RiAlignRight className="size-4" />
-              </button>
-
-              <span className="mx-0.5 h-6 w-px bg-border" />
-
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                className={formatButtonClass(editor?.isActive("bulletList"))}
-                title="Lista con viñetas"
-              >
-                <RiListUnordered className="size-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().toggleOrderedList().run()
-                }
-                className={formatButtonClass(editor?.isActive("orderedList"))}
-                title="Lista numerada"
-              >
-                <RiListOrdered className="size-4" />
-              </button>
-            </div>
-          </div>
-        </Popover>
-
-        <button
-          type="button"
-          onClick={() => imageInputRef.current?.click()}
-          className="flex size-9 items-center justify-center rounded-full hover:bg-mail-hover"
-          title="Insertar imagen"
-        >
-          <ImageIcon className="size-5" />
-        </button>
-
-        <div className="relative">
+      {showReplyHeader ? (
+        <div className="flex min-h-12 items-center gap-2 border-b border-border px-3">
+          <span className="flex size-8 items-center justify-center rounded-full bg-mail-hover text-muted-foreground">
+            <Reply className="size-4" />
+          </span>
           <button
-            ref={labelsAnchorRef}
+            ref={modeMenuAnchorRef}
             type="button"
-            onClick={() => {
-              setShowLabels((v) => !v);
-              setShowFormat(false);
-              setShowLink(false);
-            }}
-            className={cn(
-              "flex size-9 items-center justify-center rounded-full hover:bg-mail-hover",
-              showLabels && "bg-mail-hover",
-            )}
-            title="Etiquetas"
+            onClick={() => setModeMenuOpen((value) => !value)}
+            className="flex size-8 items-center justify-center rounded-full hover:bg-mail-hover"
+            title="Cambiar modo"
           >
-            <Bookmark className="size-5 rotate-270" />
-
-            {draft.selectedLabelIds.length > 0 ? (
-              <span className="ml-1 text-[10px] font-semibold">
-                {draft.selectedLabelIds.length}
-              </span>
-            ) : null}
+            <ChevronDown className="size-4" />
           </button>
-
           <Popover
-            open={showLabels}
-            onClose={() => setShowLabels(false)}
-            anchorRef={labelsAnchorRef}
-            placement="top-start"
-            offset={8}
+            open={modeMenuOpen}
+            onClose={() => setModeMenuOpen(false)}
+            anchorRef={modeMenuAnchorRef}
+            placement="bottom-start"
+            offset={6}
             zIndex={10000}
             hideHeader
-            className="rounded-lg border border-border bg-popover shadow-popover"
-            bodyClassName="p-2 px-0"
+            className="w-36 rounded-md border border-border bg-popover shadow-popover"
+            bodyClassName="p-1"
           >
-            <div className="max-h-50 overflow-y-auto pr-1">
-              {(labels ?? []).length === 0 ? (
-                <p className="px-2 py-2 text-xs text-muted-foreground">
-                  No hay etiquetas creadas.
-                </p>
-              ) : (
-                (labels ?? []).map((label) => {
-                  const selected = draft.selectedLabelIds.includes(label.id);
-
-                  return (
-                    <button
-                      key={label.id}
-                      type="button"
-                      onClick={() => onToggleLabel(draft.id, label.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-2 rounded-md p-1 text-left text-sm hover:bg-mail-hover",
-                        selected && "bg-mail-hover",
-                      )}
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <Bookmark
-                          className="size-4 shrink-0 rotate-270"
-                          style={{
-                            color: label.color ?? "currentColor",
-                            fill: label.color ?? "transparent",
-                          }}
-                        />
-
-                        <span className="truncate">{label.name}</span>
-                      </span>
-
-                      {selected ? <Check className="size-4 shrink-0" /> : null}
-                    </button>
-                  );
-                })
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onModeChange(draft.id, "reply");
+                setModeMenuOpen(false);
+              }}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-mail-hover"
+            >
+              <Reply className="size-4" />
+              Responder
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onModeChange(draft.id, "forward");
+                setModeMenuOpen(false);
+              }}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-mail-hover"
+            >
+              <Forward className="size-4" />
+              Reenviar
+            </button>
           </Popover>
+          <div className="min-w-0 flex-1 text-sm">
+            <span className="font-medium">Responder</span>
+            <span className="ml-2 truncate text-muted-foreground">{draft.to}</span>
+          </div>
         </div>
+      ) : null}
 
-        <button
-          type="button"
-          onClick={() => void onDiscard(draft.id)}
-          disabled={isBusy}
-          className="ml-auto flex size-9 items-center justify-center rounded-full hover:bg-mail-hover"
-          title="Descartar borrador"
-        >
-          <Trash2 className="size-5" />
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            void addFiles(e.target.files, "file");
-          }}
-        />
-
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            void addFiles(e.target.files, "image");
-          }}
-        />
-      </div>
+      <MailComposerSurface
+        composeId={draft.id}
+        to={draft.to}
+        cc={draft.cc}
+        bcc={draft.bcc}
+        subject={draft.subject}
+        body={draft.body}
+        bodyJson={draft.bodyJson}
+        attachmentIds={draft.attachmentIds}
+        labels={labels}
+        selectedLabelIds={showLabels ? draft.selectedLabelIds : []}
+        showSubject={draft.mode === "new"}
+        showRecipients={draft.mode !== "reply"}
+        showLabels={showLabels}
+        isBusy={isBusy}
+        isSending={isSending}
+        error={draft.error}
+        onToChange={(value) => onToChange(draft.id, value)}
+        onCcChange={(value) => onCcChange(draft.id, value)}
+        onBccChange={(value) => onBccChange(draft.id, value)}
+        onSubjectChange={(value) => onSubjectChange(draft.id, value)}
+        onBodyChange={(value, nextBodyJson, bodyText) => onBodyChange(draft.id, value, nextBodyJson, bodyText)}
+        onToggleLabel={(labelId) => onToggleLabel(draft.id, labelId)}
+        onResolveDraftId={async () => draft.editingDraftId || onResolveDraftId(draft.id)}
+        onAttachmentUploaded={(attachmentId) => onAttachmentUploaded(draft.id, attachmentId)}
+        onAttachmentRemoved={(attachmentId) => onAttachmentRemoved(draft.id, attachmentId)}
+        onUploadAttachment={({ file, draftId, kind }) => onUploadAttachment({ composeId: draft.id, file, draftId, kind })}
+        onDeleteAttachment={onDeleteAttachment}
+        onDiscard={() => onDiscard(draft.id)}
+        onSend={(overrides) => onSend(draft.id, overrides)}
+      />
     </div>
   );
 }
