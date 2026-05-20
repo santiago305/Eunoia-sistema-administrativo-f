@@ -245,9 +245,6 @@ export function useMessagesV2(params: {
 
     if (!viewMatch) return false;
 
-    setTotal((prev) => prev + 1);
-    if ((page ?? 1) !== 1) return true;
-
     const nextItem: InboxItem = {
       recipient: {
         id: recipient.id,
@@ -267,10 +264,28 @@ export function useMessagesV2(params: {
       labels: payload.labels ?? [],
     };
 
+    const isThreadReply = Boolean(message.threadId && message.parentMessageId);
+    if ((page ?? 1) !== 1) {
+      if (!isThreadReply) setTotal((prev) => prev + 1);
+      return true;
+    }
+
     setItems((prev) => {
-      if (prev.some((item) => "recipient" in item && item.recipient.id === recipient.id)) {
-        return prev;
+      const sameRecipientIndex = prev.findIndex((item) => "recipient" in item && item.recipient.id === recipient.id);
+      const sameThreadIndex = message.threadId
+        ? prev.findIndex((item) => "recipient" in item && item.message?.threadId === message.threadId)
+        : -1;
+      const existingIndex = sameThreadIndex >= 0 ? sameThreadIndex : sameRecipientIndex;
+
+      if (existingIndex >= 0) {
+        const next = [nextItem, ...prev.filter((_, index) => index !== existingIndex)];
+        if (typeof limit === "number" && limit > 0 && next.length > limit) {
+          return next.slice(0, limit);
+        }
+        return next;
       }
+
+      setTotal((current) => current + 1);
       const next = [nextItem, ...prev];
       if (typeof limit === "number" && limit > 0 && next.length > limit) {
         return next.slice(0, limit);

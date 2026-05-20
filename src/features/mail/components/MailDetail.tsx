@@ -14,12 +14,13 @@ import {
   FileText,
   Image as ImageIcon,
 } from "lucide-react";
-import type { Mail } from "../types/mail-ui.types";
+import type { Attachment, Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
 import { LiaTrashRestoreAltSolid } from "react-icons/lia";
 import type { MailLabelItem } from "../types/message.types";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
-import { isInlineImageAttachment, removeBrokenMailBodyImages } from "../utils/mail-attachments.utils";
+import { isInlineImageAttachment, mapMailAttachment, removeBrokenMailBodyImages, type BackendMailAttachment } from "../utils/mail-attachments.utils";
+import { normalizeConversationSubject } from "../utils/mail-subject.utils";
 import { downloadAttachmentBlobUrl } from "../services/messages.service";
 import InlineReplyForwardBox from "./InlineReplyForwardBox";
 
@@ -27,12 +28,34 @@ interface Props {
   mail: Mail | null;
   detailData?: {
     message?: {
+      id?: string;
+      threadId?: string | null;
       kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
       senderType?: "USER" | "SYSTEM";
+      subject?: string;
+      bodyHtml?: string;
+      bodyText?: string;
+      bodyJson?: Record<string, unknown> | null;
+      sentAt?: string | null;
+      createdAt?: string;
     } | null;
     sender?: { id?: string; name?: string; email?: string } | null;
     recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
-    thread?: Array<{ id: string; subject: string; bodyHtml: string; createdAt: string; sentAt?: string | null }>;
+    attachments?: Array<Attachment | BackendMailAttachment>;
+    thread?: Array<{
+      id: string;
+      subject: string;
+      bodyHtml: string;
+      bodyJson?: Record<string, unknown> | null;
+      createdAt: string;
+      sentAt?: string | null;
+      kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
+      senderType?: "USER" | "SYSTEM";
+      sender?: { id?: string; name?: string; email?: string } | null;
+      recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
+      attachments?: Array<Attachment | BackendMailAttachment>;
+      threadLabel?: string | null;
+    }>;
     permissions?: { canReply?: boolean; canForward?: boolean };
   } | null;
   currentUserEmail: string;
@@ -84,6 +107,28 @@ interface Props {
   avatarColor: (seed: string) => string;
 }
 
+type ForwardedMessagePreview = {
+  subject?: string;
+  senderName?: string;
+  senderEmail?: string;
+  sentAt?: string | null;
+  bodyPreview?: string;
+};
+
+type DetailThreadItem = NonNullable<NonNullable<Props["detailData"]>["thread"]>[number];
+const EMPTY_THREAD_ITEMS: DetailThreadItem[] = [];
+
+const getForwardedMessagePreview = (bodyJson?: Record<string, unknown> | null): ForwardedMessagePreview | null => {
+  const raw = bodyJson?.forwardedMessage;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as ForwardedMessagePreview;
+};
+
+const normalizeDetailAttachment = (attachment: Attachment | BackendMailAttachment): Attachment => {
+  if ("url" in attachment && attachment.url) return attachment as Attachment;
+  return mapMailAttachment(attachment as BackendMailAttachment);
+};
+
 export default function MailDetail(props: Props) {
   const mail = props.mail;
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -99,18 +144,38 @@ export default function MailDetail(props: Props) {
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [inlineSending, setInlineSending] = useState(false);
   const attachments = mail?.attachments ?? [];
-  const imageAttachments = useMemo(
-    () => attachments.filter((attachment) => attachment.url && isInlineImageAttachment(attachment)),
-    [attachments],
+  const threadItems = props.detailData?.thread ?? EMPTY_THREAD_ITEMS;
+  const conversationItems = useMemo<DetailThreadItem[]>(() => {
+    if (!mail) return [];
+    if (threadItems.length > 0) return threadItems;
+
+    return [
+      {
+        id: mail.messageId ?? mail.id,
+        subject: mail.subject,
+        bodyHtml: mail.body,
+        bodyJson: null,
+        createdAt: mail.date,
+        sentAt: mail.date,
+        kind: mail.kind,
+        senderType: mail.senderType,
+        sender: props.detailData?.sender ?? { name: mail.from.name, email: mail.from.email },
+        recipients: props.detailData?.recipients,
+        attachments: attachments,
+      },
+    ];
+  }, [attachments, mail, props.detailData?.recipients, props.detailData?.sender, threadItems]);
+  const conversationImageAttachments = useMemo(
+    () =>
+      conversationItems
+        .flatMap((item) => item.attachments ?? [])
+        .map(normalizeDetailAttachment)
+        .filter((attachment) => isInlineImageAttachment(attachment)),
+    [conversationItems],
   );
-  const fileAttachments = useMemo(
-    () => attachments.filter((attachment) => !isInlineImageAttachment(attachment)),
-    [attachments],
-  );
-  const previewableImageAttachments = imageAttachments.filter((attachment) => Boolean(imagePreviewUrls[attachment.id]));
+  const previewableImageAttachments = conversationImageAttachments.filter((attachment) => Boolean(imagePreviewUrls[attachment.id]));
   const previewImages = previewableImageAttachments.map((attachment) => imagePreviewUrls[attachment.id]);
   const previewNames = previewableImageAttachments.map((attachment) => attachment.name);
-  const cleanBodyHtml = removeBrokenMailBodyImages(mail?.body ?? "");
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +183,7 @@ export default function MailDetail(props: Props) {
 
     setImagePreviewUrls({});
 
-    imageAttachments.forEach((attachment) => {
+    conversationImageAttachments.forEach((attachment) => {
       void (async () => {
         try {
           const objectUrl = await downloadAttachmentBlobUrl(attachment.id);
@@ -138,15 +203,12 @@ export default function MailDetail(props: Props) {
       cancelled = true;
       createdObjectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [imageAttachments]);
+  }, [conversationImageAttachments]);
 
   if (!mail) {
     return <div className="flex-1 flex items-center justify-center text-muted-foreground">Mensaje no encontrado</div>;
   }
 
-  const isSent = mail.folder === "sent";
-  const senderName = props.detailData?.sender?.name?.trim() || mail.from.name;
-  const senderEmail = props.detailData?.sender?.email?.trim() || mail.from.email;
   const recipientsFromDetail =
     props.detailData?.recipients?.filter((item) => Boolean(item?.recipientEmail?.trim())) ?? [];
   const toRecipients = recipientsFromDetail
@@ -160,7 +222,11 @@ export default function MailDetail(props: Props) {
     .map((item) => item.recipientEmail!.trim());
   const fallbackTo = mail.to.map((t) => t.name || t.email).filter(Boolean);
   const detailToLabel = (toRecipients.length > 0 ? toRecipients : fallbackTo).join(", ");
-  const threadItems = props.detailData?.thread ?? [];
+  const latestConversationItem = conversationItems[conversationItems.length - 1];
+  const replyTargetItem =
+    [...conversationItems].reverse().find((item) => item.sender?.email?.trim() !== props.currentUserEmail) ?? latestConversationItem;
+  const senderName = replyTargetItem?.sender?.name?.trim() || props.detailData?.sender?.name?.trim() || mail.from.name;
+  const senderEmail = replyTargetItem?.sender?.email?.trim() || props.detailData?.sender?.email?.trim() || mail.from.email;
   const labels = props.availableLabels ?? [];
   const selectedLabelIds = props.selectedLabelIds ?? [];
   const isSystemMessage =
@@ -172,7 +238,7 @@ export default function MailDetail(props: Props) {
     mail.kind === "SYSTEM_NOTIFICATION";
   const canReply = !isSystemMessage && props.detailData?.permissions?.canReply !== false;
   const canForward = !isSystemMessage && props.detailData?.permissions?.canForward !== false;
-  const parentMessageId = mail.messageId ?? mail.id;
+  const parentMessageId = latestConversationItem?.id ?? mail.messageId ?? mail.id;
   const replySubject = mail.subject.startsWith("Re:") ? mail.subject : `Re: ${mail.subject}`;
   const forwardSubject = mail.subject.startsWith("Fwd:") ? mail.subject : `Fwd: ${mail.subject}`;
   const startInlineComposer = (mode: "reply" | "forward") => {
@@ -240,6 +306,19 @@ export default function MailDetail(props: Props) {
     });
     closeInlineComposer();
   };
+  const getItemSenderName = (item: DetailThreadItem) =>
+    item.sender?.name?.trim() || (item.senderType === "SYSTEM" ? "Sistema" : "Usuario");
+  const getItemSenderEmail = (item: DetailThreadItem) =>
+    item.sender?.email?.trim() || (item.senderType === "SYSTEM" ? "no-reply@eunoia.local" : "usuario@eunoia.local");
+  const getItemToLabel = (item: DetailThreadItem) => {
+    const itemRecipients = item.recipients?.filter((recipient) => Boolean(recipient?.recipientEmail?.trim())) ?? [];
+    const itemToRecipients = itemRecipients
+      .filter((recipient) => (recipient.recipientType ?? "TO").toUpperCase() === "TO")
+      .map((recipient) => recipient.recipientEmail!.trim());
+    const selectedRecipients = itemToRecipients.length > 0 ? itemToRecipients : toRecipients;
+    if (selectedRecipients.some((email) => email === props.currentUserEmail)) return "mi";
+    return selectedRecipients.join(", ") || detailToLabel;
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
@@ -296,122 +375,162 @@ export default function MailDetail(props: Props) {
       <div className="flex-1 overflow-y-auto px-12 py-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start justify-between mb-6">
-            <h1 className="text-2xl font-normal">{mail.subject || "(Sin asunto)"}</h1>
+            <h1 className="text-2xl font-normal">{normalizeConversationSubject(mail.subject)}</h1>
             <button onClick={() => props.onToggleStar(mail.id)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center shrink-0">
               <Star className={cn("size-5", mail.starred ? "fill-mail-star text-mail-star" : "text-muted-foreground")} />
             </button>
           </div>
 
-          <div className="flex items-start gap-4 mb-4">
-            <div className="size-10 rounded-full flex items-center justify-center text-white font-semibold shrink-0" style={{ background: props.avatarColor(senderEmail) }}>
-              {props.initialsOf(senderName)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <span className="font-semibold text-sm">{senderName}</span>
-                <span className="text-xs text-muted-foreground">&lt;{senderEmail}&gt;</span>
-                <span className="ml-auto text-xs text-muted-foreground">{props.formatFullDate(mail.date)}</span>
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {isSent
-                  ? `Para: ${detailToLabel}`
-                  : `Para: ${mail.to.find((t) => t.email === props.currentUserEmail) ? "mi" : detailToLabel}`}
-              </div>
-              {ccRecipients.length > 0 ? (
-                <div className="text-xs text-muted-foreground mt-1">{`CC: ${ccRecipients.join(", ")}`}</div>
-              ) : null}
-              {bccRecipients.length > 0 ? (
-                <div className="text-xs text-muted-foreground mt-1">{`BCC: ${bccRecipients.join(", ")}`}</div>
-              ) : null}
-            </div>
-          </div>
+          <div className="space-y-8">
+            {conversationItems.map((threadItem, index) => {
+              const itemSenderName = getItemSenderName(threadItem);
+              const itemSenderEmail = getItemSenderEmail(threadItem);
+              const previousSenderEmail = index > 0 ? getItemSenderEmail(conversationItems[index - 1]) : null;
+              const showAvatar = index === 0 || previousSenderEmail !== itemSenderEmail;
+              const forwardedPreview = getForwardedMessagePreview(threadItem.bodyJson);
+              const itemAttachments = (threadItem.attachments ?? []).map(normalizeDetailAttachment);
+              const itemFileAttachments = itemAttachments.filter((attachment) => !isInlineImageAttachment(attachment));
+              const itemImageAttachments = itemAttachments.filter((attachment) => isInlineImageAttachment(attachment));
 
-          <div className="prose prose-sm max-w-none text-sm leading-relaxed pl-14" dangerouslySetInnerHTML={{ __html: cleanBodyHtml }} />
-
-          {labels.length > 0 ? (
-            <div className="pl-14 mt-4 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Tag className="size-3.5" />
-                Etiquetas
-              </span>
-              {labels.map((label) => {
-                const selected = selectedLabelIds.includes(label.id);
-                return (
-                  <button
-                    key={label.id}
-                    onClick={() => props.onToggleLabel?.(mail.messageId ?? mail.id, label.id, selected)}
+              return (
+                <article key={threadItem.id} className="flex items-start gap-4">
+                  <div
                     className={cn(
-                      "rounded-full border px-2 py-1 text-xs",
-                      selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted",
+                      "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white",
+                      !showAvatar && "invisible",
                     )}
+                    style={{ background: props.avatarColor(itemSenderEmail) }}
                   >
-                    {label.name}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {imageAttachments.length > 0 ? (
-            <div className="pl-14 mt-6">
-              <div className="text-sm font-medium mb-3 flex items-center gap-2">
-                <Paperclip className="size-4" />
-                {imageAttachments.length} imagen(es)
-              </div>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
-                {imageAttachments.map((a) => (
-                  imagePreviewUrls[a.id] ? (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => setPreviewIndex(previewableImageAttachments.findIndex((attachment) => attachment.id === a.id))}
-                    className="group overflow-hidden rounded-md border border-border bg-mail-surface text-left transition hover:border-primary/40 hover:bg-mail-hover"
-                    title={a.name}
-                  >
-                    <img
-                      src={imagePreviewUrls[a.id]}
-                      alt={a.name}
-                      className="aspect-square w-full object-cover transition group-hover:scale-[1.02]"
-                      loading="lazy"
-                    />
-                    <span className="block truncate px-2 py-1.5 text-xs text-muted-foreground">{a.name}</span>
-                  </button>
-                  ) : (
-                    <div
-                      key={a.id}
-                      className="flex aspect-square flex-col items-center justify-center rounded-md border border-border bg-mail-surface text-muted-foreground"
-                    >
-                      <ImageIcon className="mb-2 size-6" />
-                      <span className="max-w-full truncate px-2 text-xs">{a.name}</span>
+                    {props.initialsOf(itemSenderName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-3 flex flex-wrap items-baseline gap-2">
+                      <span className="text-sm font-semibold">{itemSenderName}</span>
+                      <span className="text-xs text-muted-foreground">&lt;{itemSenderEmail}&gt;</span>
+                      {threadItem.threadLabel ? (
+                        <span className="rounded-full bg-mail-hover px-2 py-0.5 text-xs text-muted-foreground">{threadItem.threadLabel}</span>
+                      ) : null}
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {props.formatFullDate(threadItem.sentAt ?? threadItem.createdAt)}
+                      </span>
                     </div>
-                  )
-                ))}
-              </div>
-            </div>
-          ) : null}
+                    <div className="mb-3 text-xs text-muted-foreground">{`Para: ${getItemToLabel(threadItem)}`}</div>
+                    {index === 0 && ccRecipients.length > 0 ? (
+                      <div className="mb-1 text-xs text-muted-foreground">{`CC: ${ccRecipients.join(", ")}`}</div>
+                    ) : null}
+                    {index === 0 && bccRecipients.length > 0 ? (
+                      <div className="mb-1 text-xs text-muted-foreground">{`BCC: ${bccRecipients.join(", ")}`}</div>
+                    ) : null}
+                    <div
+                      className="prose prose-sm max-w-none text-sm leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: removeBrokenMailBodyImages(threadItem.bodyHtml) }}
+                    />
 
-          {fileAttachments.length > 0 ? (
-            <div className="pl-14 mt-6">
-              <div className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Paperclip className="size-4" />
-                {fileAttachments.length} archivo(s)
-              </div>
-              <div className="flex flex-col gap-2">
-                {fileAttachments.map((a) => (
-                  <a
-                    key={a.id}
-                    href={a.url}
-                    download={a.name}
-                    className="flex max-w-xl items-center gap-3 rounded-md border border-border bg-mail-surface px-3 py-2 text-sm transition hover:border-primary/40 hover:bg-mail-hover"
-                  >
-                    <FileText className="size-5 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate text-mail-accent underline underline-offset-2">{a.name}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{a.size}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          ) : null}
+                    {index === 0 && labels.length > 0 ? (
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Tag className="size-3.5" />
+                          Etiquetas
+                        </span>
+                        {labels.map((label) => {
+                          const selected = selectedLabelIds.includes(label.id);
+                          return (
+                            <button
+                              key={label.id}
+                              onClick={() => props.onToggleLabel?.(mail.messageId ?? mail.id, label.id, selected)}
+                              className={cn(
+                                "rounded-full border px-2 py-1 text-xs",
+                                selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted",
+                              )}
+                            >
+                              {label.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+
+                    {forwardedPreview ? (
+                      <div className="mt-4 rounded-md bg-muted/20 p-3 text-sm">
+                        <p className="mb-2 font-medium">Mensaje reenviado</p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span>{forwardedPreview.senderName || "Usuario"}</span>
+                          {forwardedPreview.senderEmail ? <span>&lt;{forwardedPreview.senderEmail}&gt;</span> : null}
+                          {forwardedPreview.sentAt ? <span>{props.formatFullDate(forwardedPreview.sentAt)}</span> : null}
+                        </div>
+                        <p className="mt-2 text-sm font-medium">{forwardedPreview.subject || "(Sin asunto)"}</p>
+                        {forwardedPreview.bodyPreview ? (
+                          <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{forwardedPreview.bodyPreview}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {itemImageAttachments.length > 0 ? (
+                      <div className="mt-6">
+                        <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                          <Paperclip className="size-4" />
+                          {itemImageAttachments.length} imagen(es)
+                        </div>
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+                          {itemImageAttachments.map((attachment) => {
+                            const previewUrl = imagePreviewUrls[attachment.id];
+                            return previewUrl ? (
+                              <button
+                                key={attachment.id}
+                                type="button"
+                                onClick={() => setPreviewIndex(previewableImageAttachments.findIndex((item) => item.id === attachment.id))}
+                                className="group overflow-hidden rounded-md border border-border bg-mail-surface text-left transition hover:border-primary/40 hover:bg-mail-hover"
+                                title={attachment.name}
+                              >
+                                <img
+                                  src={previewUrl}
+                                  alt={attachment.name}
+                                  className="aspect-square w-full object-cover transition group-hover:scale-[1.02]"
+                                  loading="lazy"
+                                />
+                                <span className="block truncate px-2 py-1.5 text-xs text-muted-foreground">{attachment.name}</span>
+                              </button>
+                            ) : (
+                              <div
+                                key={attachment.id}
+                                className="flex aspect-square flex-col items-center justify-center rounded-md border border-border bg-mail-surface text-muted-foreground"
+                              >
+                                <ImageIcon className="mb-2 size-6" />
+                                <span className="max-w-full truncate px-2 text-xs">{attachment.name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {itemFileAttachments.length > 0 ? (
+                      <div className="mt-6">
+                        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+                          <Paperclip className="size-4" />
+                          {itemFileAttachments.length} archivo(s)
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {itemFileAttachments.map((attachment) => (
+                            <a
+                              key={attachment.id}
+                              href={attachment.url}
+                              download={attachment.name}
+                              className="flex max-w-xl items-center gap-3 rounded-md border border-border bg-mail-surface px-3 py-2 text-sm transition hover:border-primary/40 hover:bg-mail-hover"
+                            >
+                              <FileText className="size-5 shrink-0 text-muted-foreground" />
+                              <span className="min-w-0 flex-1 truncate text-mail-accent underline underline-offset-2">{attachment.name}</span>
+                              <span className="shrink-0 text-xs text-muted-foreground">{attachment.size}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
 
           {inlineMode ? (
             <div className="mt-8">
@@ -471,7 +590,7 @@ export default function MailDetail(props: Props) {
               {canReply ? (
                 <button
                   onClick={() => startInlineComposer("reply")}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
+                  className="flex items-center gap-2 rounded-full border border-border px-5 py-2 text-sm hover:bg-mail-hover"
                 >
                   <Reply className="size-4" />
                   Responder
@@ -480,32 +599,12 @@ export default function MailDetail(props: Props) {
               {canForward ? (
                 <button
                   onClick={() => startInlineComposer("forward")}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
+                  className="flex items-center gap-2 rounded-full border border-border px-5 py-2 text-sm hover:bg-mail-hover"
                 >
                   <Forward className="size-4" />
                   Reenviar
                 </button>
               ) : null}
-            </div>
-          ) : null}
-
-          {threadItems.length > 1 ? (
-            <div className="pl-14 mt-8 space-y-3">
-              <p className="text-sm font-medium text-foreground">Hilo de conversacion</p>
-              {threadItems.map((threadItem) => (
-                <article key={threadItem.id} className="rounded-lg border border-border bg-muted/20 p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{threadItem.subject || "(Sin asunto)"}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {props.formatFullDate(threadItem.sentAt ?? threadItem.createdAt)}
-                    </span>
-                  </div>
-                  <div
-                    className="prose prose-sm max-w-none text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: removeBrokenMailBodyImages(threadItem.bodyHtml) }}
-                  />
-                </article>
-              ))}
             </div>
           ) : null}
         </div>

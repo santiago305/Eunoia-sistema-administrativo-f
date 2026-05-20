@@ -96,6 +96,11 @@ export default function MailRow({
       </div>
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
+        {mail.threadLabel ? (
+          <span className="shrink-0 rounded-full bg-mail-hover px-2 py-0.5 text-[11px] text-muted-foreground">
+            {mail.threadLabel}
+          </span>
+        ) : null}
         <span className={cn("truncate text-sm", mail.read ? "text-foreground/70" : "font-semibold text-foreground")}>
           {mail.subject || "(Sin asunto)"}
         </span>

@@ -30,6 +30,10 @@ export interface Mail {
   senderType?: "USER" | "SYSTEM";
   originModule?: string;
   moduleLabel?: string;
+  latestMessageId?: string;
+  threadMessageCount?: number;
+  threadLatestIndex?: number;
+  threadLabel?: string | null;
   from: { name: string; email: string; avatar?: string };
   to: { name: string; email: string }[];
   subject: string;

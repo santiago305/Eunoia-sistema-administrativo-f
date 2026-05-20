@@ -29,6 +29,7 @@ import { showNotificationToast } from "@/features/mail/services/mail-toast.servi
 import type { MessageCreatedRealtimePayload } from "@/features/mail/types/realtime.types";
 import { extractMailDetailLabelIds, sameStringArray } from "@/features/mail/utils/mail-state.utils";
 import { mapMailAttachment, type BackendMailAttachment } from "@/features/mail/utils/mail-attachments.utils";
+import { normalizeConversationSubject } from "@/features/mail/utils/mail-subject.utils";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { useUserDetails } from "@/shared/hooks/useUserDetails";
 import { resolveProfileAvatarUrl } from "@/features/profile/components/profile.utils";
@@ -73,7 +74,20 @@ type MailDetailData = {
   sender?: { id?: string; name?: string; email?: string } | null;
   recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
   attachments?: BackendMailAttachment[];
-  thread?: Array<{ id: string; subject: string; bodyHtml: string; createdAt: string; sentAt?: string | null }>;
+  thread?: Array<{
+    id: string;
+    subject: string;
+    bodyHtml: string;
+    bodyJson?: Record<string, unknown> | null;
+    createdAt: string;
+    sentAt?: string | null;
+    kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
+    senderType?: "USER" | "SYSTEM";
+    sender?: { id?: string; name?: string; email?: string } | null;
+    recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
+    attachments?: BackendMailAttachment[];
+    threadLabel?: string | null;
+  }>;
   labels?: Array<{ id?: string; labelId?: string }>;
   permissions?: { canReply?: boolean; canForward?: boolean };
 } | null;
@@ -208,12 +222,16 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
       senderType: item.message.senderType,
       originModule,
       moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
+      latestMessageId: item.message.latestMessageId,
+      threadMessageCount: item.message.threadMessageCount,
+      threadLatestIndex: item.message.threadLatestIndex,
+      threadLabel: item.message.threadLabel,
       from: {
         name: senderName,
         email: senderEmail,
       },
       to: [{ name: "Yo", email: "" }],
-      subject: item.message.subject,
+      subject: normalizeConversationSubject(item.message.subject),
       body: item.message.bodyHtml,
       preview: item.message.bodyText?.slice(0, 110) ?? "",
       date: item.message.sentAt ?? item.message.createdAt,
@@ -234,9 +252,13 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     senderType: item.senderType,
     originModule,
     moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
+    latestMessageId: item.latestMessageId,
+    threadMessageCount: item.threadMessageCount,
+    threadLatestIndex: item.threadLatestIndex,
+    threadLabel: item.threadLabel,
     from: { name: "Yo", email: "" },
     to: [{ name: "Destinatarios", email: "" }],
-    subject: item.subject,
+    subject: normalizeConversationSubject(item.subject),
     body: item.bodyHtml,
     preview: item.bodyText?.slice(0, 110) ?? "",
     date: item.sentAt ?? item.createdAt,
