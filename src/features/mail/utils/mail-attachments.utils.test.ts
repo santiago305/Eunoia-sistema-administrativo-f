@@ -1,0 +1,58 @@
+import { describe, expect, it } from "vitest";
+import {
+  formatMailAttachmentSize,
+  isInlineImageAttachment,
+  mapMailAttachment,
+  removeBrokenMailBodyImages,
+} from "./mail-attachments.utils";
+
+describe("mail attachments utils", () => {
+  it("keeps an image uploaded as file out of inline preview", () => {
+    expect(
+      isInlineImageAttachment({
+        mimeType: "image/png",
+        attachmentKind: "file",
+      }),
+    ).toBe(false);
+  });
+
+  it("renders an image uploaded as image as inline preview", () => {
+    expect(
+      isInlineImageAttachment({
+        mimeType: "image/png",
+        attachmentKind: "image",
+      }),
+    ).toBe(true);
+  });
+
+  it("maps backend attachment metadata into a safe download model", () => {
+    expect(
+      mapMailAttachment(
+        {
+          id: "a/b",
+          originalName: "foto.png",
+          mimeType: "image/png",
+          sizeBytes: "2048",
+          attachmentKind: "file",
+        },
+        "/api",
+      ),
+    ).toMatchObject({
+      id: "a/b",
+      name: "foto.png",
+      mimeType: "image/png",
+      size: "2 KB",
+      sizeBytes: 2048,
+      attachmentKind: "file",
+      url: "/api/mail/attachments/a%2Fb/download",
+    });
+  });
+
+  it("formats MB without hiding the exact weight range", () => {
+    expect(formatMailAttachmentSize(5 * 1024 * 1024)).toBe("5 MB");
+  });
+
+  it("removes body images without src so stale blob images do not render broken", () => {
+    expect(removeBrokenMailBodyImages('<p>hola<img alt="foto.png" /></p>')).toBe("<p>hola</p>");
+  });
+});

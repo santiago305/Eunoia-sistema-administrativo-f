@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
 
 type ImagePreviewModalProps = {
   open: boolean;
@@ -9,6 +9,8 @@ type ImagePreviewModalProps = {
   onPrevious?: () => void;
   onNext?: () => void;
   altPrefix?: string;
+  downloadUrls?: string[];
+  fileNames?: string[];
 };
 
 export function ImagePreviewModal({
@@ -19,8 +21,12 @@ export function ImagePreviewModal({
   onPrevious,
   onNext,
   altPrefix = "Imagen",
+  downloadUrls,
+  fileNames,
 }: ImagePreviewModalProps) {
   const currentImage = images[currentIndex];
+  const currentDownloadUrl = downloadUrls?.[currentIndex] ?? currentImage;
+  const currentFileName = fileNames?.[currentIndex] ?? `${altPrefix}-${currentIndex + 1}`;
   const hasMultipleImages = images.length > 1;
 
   useEffect(() => {
@@ -58,6 +64,18 @@ export function ImagePreviewModal({
       >
         <X className="h-5 w-5" />
       </button>
+
+      {currentDownloadUrl ? (
+        <a
+          href={currentDownloadUrl}
+          download={currentFileName}
+          onClick={(event) => event.stopPropagation()}
+          className="absolute right-16 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-black/70 shadow-lg transition hover:bg-white hover:text-black"
+          aria-label="Descargar imagen"
+        >
+          <Download className="h-5 w-5" />
+        </a>
+      ) : null}
 
       {hasMultipleImages ? (
         <button

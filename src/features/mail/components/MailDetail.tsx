@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Trash2,
@@ -10,11 +11,16 @@ import {
   MoreVertical,
   Paperclip,
   Tag,
+  FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import type { Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
 import { LiaTrashRestoreAltSolid } from "react-icons/lia";
 import type { MailLabelItem } from "../types/message.types";
+import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
+import { isInlineImageAttachment, removeBrokenMailBodyImages } from "../utils/mail-attachments.utils";
+import { downloadAttachmentBlobUrl } from "../services/messages.service";
 
 interface Props {
   mail: Mail | null;
@@ -48,6 +54,49 @@ interface Props {
 
 export default function MailDetail(props: Props) {
   const mail = props.mail;
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Record<string, string>>({});
+  const attachments = mail?.attachments ?? [];
+  const imageAttachments = useMemo(
+    () => attachments.filter((attachment) => attachment.url && isInlineImageAttachment(attachment)),
+    [attachments],
+  );
+  const fileAttachments = useMemo(
+    () => attachments.filter((attachment) => !isInlineImageAttachment(attachment)),
+    [attachments],
+  );
+  const previewableImageAttachments = imageAttachments.filter((attachment) => Boolean(imagePreviewUrls[attachment.id]));
+  const previewImages = previewableImageAttachments.map((attachment) => imagePreviewUrls[attachment.id]);
+  const previewNames = previewableImageAttachments.map((attachment) => attachment.name);
+  const cleanBodyHtml = removeBrokenMailBodyImages(mail?.body ?? "");
+
+  useEffect(() => {
+    let cancelled = false;
+    const createdObjectUrls: string[] = [];
+
+    setImagePreviewUrls({});
+
+    imageAttachments.forEach((attachment) => {
+      void (async () => {
+        try {
+          const objectUrl = await downloadAttachmentBlobUrl(attachment.id);
+          if (cancelled) {
+            URL.revokeObjectURL(objectUrl);
+            return;
+          }
+          createdObjectUrls.push(objectUrl);
+          setImagePreviewUrls((prev) => ({ ...prev, [attachment.id]: objectUrl }));
+        } catch {
+          setImagePreviewUrls((prev) => ({ ...prev, [attachment.id]: "" }));
+        }
+      })();
+    });
+
+    return () => {
+      cancelled = true;
+      createdObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageAttachments]);
 
   if (!mail) {
     return <div className="flex-1 flex items-center justify-center text-muted-foreground">Mensaje no encontrado</div>;
@@ -166,7 +215,7 @@ export default function MailDetail(props: Props) {
             </div>
           </div>
 
-          <div className="prose prose-sm max-w-none text-sm leading-relaxed pl-14" dangerouslySetInnerHTML={{ __html: mail.body }} />
+          <div className="prose prose-sm max-w-none text-sm leading-relaxed pl-14" dangerouslySetInnerHTML={{ __html: cleanBodyHtml }} />
 
           {labels.length > 0 ? (
             <div className="pl-14 mt-4 flex flex-wrap items-center gap-2">
@@ -192,17 +241,61 @@ export default function MailDetail(props: Props) {
             </div>
           ) : null}
 
-          {mail.attachments && mail.attachments.length > 0 ? (
+          {imageAttachments.length > 0 ? (
+            <div className="pl-14 mt-6">
+              <div className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Paperclip className="size-4" />
+                {imageAttachments.length} imagen(es)
+              </div>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+                {imageAttachments.map((a) => (
+                  imagePreviewUrls[a.id] ? (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setPreviewIndex(previewableImageAttachments.findIndex((attachment) => attachment.id === a.id))}
+                    className="group overflow-hidden rounded-md border border-border bg-mail-surface text-left transition hover:border-primary/40 hover:bg-mail-hover"
+                    title={a.name}
+                  >
+                    <img
+                      src={imagePreviewUrls[a.id]}
+                      alt={a.name}
+                      className="aspect-square w-full object-cover transition group-hover:scale-[1.02]"
+                      loading="lazy"
+                    />
+                    <span className="block truncate px-2 py-1.5 text-xs text-muted-foreground">{a.name}</span>
+                  </button>
+                  ) : (
+                    <div
+                      key={a.id}
+                      className="flex aspect-square flex-col items-center justify-center rounded-md border border-border bg-mail-surface text-muted-foreground"
+                    >
+                      <ImageIcon className="mb-2 size-6" />
+                      <span className="max-w-full truncate px-2 text-xs">{a.name}</span>
+                    </div>
+                  )
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {fileAttachments.length > 0 ? (
             <div className="pl-14 mt-6">
               <div className="text-sm font-medium mb-2 flex items-center gap-2">
                 <Paperclip className="size-4" />
-                {mail.attachments.length} adjunto(s)
+                {fileAttachments.length} archivo(s)
               </div>
-              <div className="flex flex-wrap gap-2">
-                {mail.attachments.map((a) => (
-                  <a key={a.id} href="#" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-mail-surface hover:bg-mail-hover border border-border text-sm">
-                    <span className="text-mail-accent underline">{a.name}</span>
-                    <span className="text-xs text-muted-foreground">{a.size}</span>
+              <div className="flex flex-col gap-2">
+                {fileAttachments.map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    download={a.name}
+                    className="flex max-w-xl items-center gap-3 rounded-md border border-border bg-mail-surface px-3 py-2 text-sm transition hover:border-primary/40 hover:bg-mail-hover"
+                  >
+                    <FileText className="size-5 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate text-mail-accent underline underline-offset-2">{a.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{a.size}</span>
                   </a>
                 ))}
               </div>
@@ -259,7 +352,7 @@ export default function MailDetail(props: Props) {
                   </div>
                   <div
                     className="prose prose-sm max-w-none text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: threadItem.bodyHtml }}
+                    dangerouslySetInnerHTML={{ __html: removeBrokenMailBodyImages(threadItem.bodyHtml) }}
                   />
                 </article>
               ))}
@@ -267,6 +360,17 @@ export default function MailDetail(props: Props) {
           ) : null}
         </div>
       </div>
+
+      <ImagePreviewModal
+        open={previewIndex !== null}
+        images={previewImages}
+        currentIndex={previewIndex ?? 0}
+        onClose={() => setPreviewIndex(null)}
+        onPrevious={() => setPreviewIndex((current) => (current === null ? 0 : (current - 1 + previewImages.length) % previewImages.length))}
+        onNext={() => setPreviewIndex((current) => (current === null ? 0 : (current + 1) % previewImages.length))}
+        downloadUrls={previewImages}
+        fileNames={previewNames}
+      />
     </div>
   );
 }

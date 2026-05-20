@@ -42,6 +42,10 @@ import type { MailLabelItem } from "../types/message.types";
 import { SystemButton } from "../../../shared/components/components/SystemButton";
 import { FloatingInput } from "../../../shared/components/components/FloatingInput";
 import { Popover } from "@/shared/components/modales/Popover";
+import {
+  MAX_MAIL_ATTACHMENT_BYTES,
+  formatMailAttachmentSize,
+} from "../utils/mail-attachments.utils";
 
 type FontSizeOption = {
   value: string;
@@ -238,6 +242,7 @@ interface Props {
     composeId: string;
     file: File;
     draftId: string;
+    kind: "image" | "file";
   }) => Promise<{ id: string }>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   onDiscard: (composeId: string) => void | Promise<void>;
@@ -539,9 +544,6 @@ export default function NotificationComposeModal({
     editor.commands.setContent(nextContent, false);
   }, [draft.body, draft.bodyJson, editor]);
 
-  const toSizeLabel = (size: number) =>
-    `${Math.max(1, Math.round(size / 1024))} KB`;
-
   const mapAttachmentBackendError = (error: unknown): string => {
     const payloadMessage = isAxiosError<BackendErrorPayload>(error)
       ? error.response?.data?.message
@@ -555,7 +557,9 @@ export default function NotificationComposeModal({
     if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED"))
       return "El servidor no permite este tipo de archivo.";
     if (message.includes("ATTACHMENT_TOO_LARGE"))
-      return "Archivo demasiado pesado.";
+      return "El archivo no debe superar 5 MB.";
+    if (message.includes("ATTACHMENT_IMAGE_MIME_REQUIRED"))
+      return "Solo puedes insertar imagenes desde el boton de imagen.";
     if (message.includes("ATTACHMENT_ACCESS_DENIED"))
       return "No tienes permisos para adjuntar aquí.";
     if (message.includes("ATTACHMENT_TARGET_REQUIRED"))
@@ -569,14 +573,20 @@ export default function NotificationComposeModal({
     const next: AttachmentItem[] = [];
 
     Array.from(files).forEach((file) => {
-      const isImage = kind === "image" || file.type.startsWith("image/");
-      const localError = null;
+      const isImageFile = file.type.startsWith("image/");
+      const isInlineImage = kind === "image" && isImageFile;
+      const localError =
+        file.size > MAX_MAIL_ATTACHMENT_BYTES
+          ? "El archivo no debe superar 5 MB."
+          : kind === "image" && !isImageFile
+            ? "Solo puedes insertar imagenes desde este boton."
+            : null;
       next.push({
         id: `att-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         name: file.name,
-        sizeLabel: toSizeLabel(file.size),
-        kind: isImage ? "image" : "file",
-        previewUrl: isImage ? URL.createObjectURL(file) : undefined,
+        sizeLabel: formatMailAttachmentSize(file.size),
+        kind: isInlineImage ? "image" : "file",
+        previewUrl: isInlineImage ? URL.createObjectURL(file) : undefined,
         file,
         uploading: !localError,
         uploadError: localError,
@@ -636,6 +646,7 @@ export default function NotificationComposeModal({
           composeId: draft.id,
           file: item.file,
           draftId,
+          kind: item.kind,
         });
         setAttachments((prev) =>
           prev.map((current) =>

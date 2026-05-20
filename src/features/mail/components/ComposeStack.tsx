@@ -20,7 +20,7 @@ interface Props {
   onResolveDraftId: (composeId: string) => Promise<string>;
   onAttachmentUploaded: (composeId: string, attachmentId: string) => void;
   onAttachmentRemoved: (composeId: string, attachmentId: string) => void;
-  onUploadAttachment: (input: { composeId: string; file: File; draftId: string }) => Promise<{ id: string }>;
+  onUploadAttachment: (input: { composeId: string; file: File; draftId: string; kind: "image" | "file" }) => Promise<{ id: string }>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   onDiscard: (composeId: string) => void | Promise<void>;
   onSend: (

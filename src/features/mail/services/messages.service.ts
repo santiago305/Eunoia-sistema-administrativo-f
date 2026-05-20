@@ -216,11 +216,13 @@ export const uploadAttachment = async (input: {
   file: File;
   messageId?: string;
   draftId?: string;
+  kind?: "file" | "image";
 }) => {
   const form = new FormData();
   form.append("file", input.file);
   if (input.messageId) form.append("messageId", input.messageId);
   if (input.draftId) form.append("draftId", input.draftId);
+  form.append("kind", input.kind ?? "file");
   const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.uploadAttachment, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
@@ -229,6 +231,7 @@ export const uploadAttachment = async (input: {
     name: string;
     mimeType: string;
     sizeBytes: number;
+    attachmentKind: "file" | "image";
     messageId: string | null;
     draftId: string | null;
     createdAt: string;
@@ -238,6 +241,14 @@ export const uploadAttachment = async (input: {
 export const deleteAttachment = async (id: string) => {
   const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.deleteAttachment(id));
   return response.data;
+};
+
+export const downloadAttachmentBlobUrl = async (id: string) => {
+  const response = await axiosInstance.get<Blob>(
+    API_NOTIFICATION_MESSAGES_GROUP.downloadAttachment(id),
+    { responseType: "blob" },
+  );
+  return URL.createObjectURL(response.data);
 };
 
 export const listModuleLabelConfigs = async () => {

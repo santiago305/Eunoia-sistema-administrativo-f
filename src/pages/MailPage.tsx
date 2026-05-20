@@ -28,6 +28,7 @@ import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-event
 import { showNotificationToast } from "@/features/mail/services/mail-toast.service";
 import type { MessageCreatedRealtimePayload } from "@/features/mail/types/realtime.types";
 import { extractMailDetailLabelIds, sameStringArray } from "@/features/mail/utils/mail-state.utils";
+import { mapMailAttachment, type BackendMailAttachment } from "@/features/mail/utils/mail-attachments.utils";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -54,8 +55,21 @@ type ComposePayload = {
 };
 
 type MailDetailData = {
+  recipient?: { id?: string; readAt?: string | null; starredAt?: string | null } | null;
+  message?: {
+    id: string;
+    threadId?: string | null;
+    originModule?: string | null;
+    senderType?: "USER" | "SYSTEM";
+    subject?: string;
+    bodyHtml?: string;
+    bodyText?: string;
+    sentAt?: string | null;
+    createdAt?: string;
+  } | null;
   sender?: { id?: string; name?: string; email?: string } | null;
   recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
+  attachments?: BackendMailAttachment[];
   thread?: Array<{ id: string; subject: string; bodyHtml: string; createdAt: string; sentAt?: string | null }>;
   labels?: Array<{ id?: string; labelId?: string }>;
 } | null;
@@ -775,7 +789,46 @@ export default function MailPage() {
   const pageStarredIds = mails.filter((m) => m.starred).map((m) => m.id);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const activeMail = useMemo(() => mails.find((m) => m.id === activeMailId) ?? null, [mails, activeMailId]);
+  const activeMail = useMemo(() => {
+    const listMail = mails.find((m) => m.id === activeMailId) ?? null;
+    const detailMessage = activeMailDetail?.message;
+    const detailAttachments = (activeMailDetail?.attachments ?? []).map((attachment) => mapMailAttachment(attachment));
+
+    if (listMail) {
+      return {
+        ...listMail,
+        body: detailMessage?.bodyHtml ?? listMail.body,
+        preview: detailMessage?.bodyText?.slice(0, 110) ?? listMail.preview,
+        attachments: detailAttachments,
+      };
+    }
+
+    if (!detailMessage) return null;
+
+    const originModule = detailMessage.originModule ?? "corporate";
+    const senderName = activeMailDetail?.sender?.name?.trim() || (detailMessage.senderType === "SYSTEM" ? "Sistema" : "Usuario");
+    const senderEmail = activeMailDetail?.sender?.email?.trim() || (detailMessage.senderType === "SYSTEM" ? "no-reply@eunoia.local" : "usuario@eunoia.local");
+
+    return {
+      id: detailMessage.id,
+      messageId: detailMessage.id,
+      recipientId: activeMailDetail?.recipient?.id,
+      threadId: detailMessage.threadId ?? null,
+      originModule,
+      moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
+      from: { name: senderName, email: senderEmail },
+      to: [{ name: "Yo", email: "" }],
+      subject: detailMessage.subject ?? "(Sin asunto)",
+      body: detailMessage.bodyHtml ?? "",
+      preview: detailMessage.bodyText?.slice(0, 110) ?? "",
+      date: detailMessage.sentAt ?? detailMessage.createdAt ?? new Date().toISOString(),
+      read: Boolean(activeMailDetail?.recipient?.readAt),
+      starred: Boolean(activeMailDetail?.recipient?.starredAt),
+      folder,
+      category: ORIGIN_MODULE_TO_CATEGORY[originModule] ?? "personal",
+      attachments: detailAttachments,
+    } satisfies Mail;
+  }, [activeMailDetail, activeMailId, folder, mails]);
   const recoverMutationState = useCallback(
     async (message: string) => {
       await reload();
@@ -1487,7 +1540,7 @@ export default function MailPage() {
         onResolveDraftId={resolveComposeDraftId}
         onAttachmentUploaded={onComposeAttachmentUploaded}
         onAttachmentRemoved={onComposeAttachmentRemoved}
-        onUploadAttachment={async ({ file, draftId }) => uploadAttachment({ file, draftId })}
+        onUploadAttachment={async ({ file, draftId, kind }) => uploadAttachment({ file, draftId, kind })}
         onDeleteAttachment={async (attachmentId) => {
           await deleteRemoteAttachment(attachmentId);
         }}
