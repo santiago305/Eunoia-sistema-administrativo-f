@@ -25,9 +25,14 @@ import { downloadAttachmentBlobUrl } from "../services/messages.service";
 interface Props {
   mail: Mail | null;
   detailData?: {
+    message?: {
+      kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
+      senderType?: "USER" | "SYSTEM";
+    } | null;
     sender?: { id?: string; name?: string; email?: string } | null;
     recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
     thread?: Array<{ id: string; subject: string; bodyHtml: string; createdAt: string; sentAt?: string | null }>;
+    permissions?: { canReply?: boolean; canForward?: boolean };
   } | null;
   currentUserEmail: string;
   onBack: () => void;
@@ -121,6 +126,15 @@ export default function MailDetail(props: Props) {
   const threadItems = props.detailData?.thread ?? [];
   const labels = props.availableLabels ?? [];
   const selectedLabelIds = props.selectedLabelIds ?? [];
+  const isSystemMessage =
+    props.detailData?.message?.senderType === "SYSTEM" ||
+    mail.senderType === "SYSTEM" ||
+    props.detailData?.message?.kind === "SYSTEM_MESSAGE" ||
+    props.detailData?.message?.kind === "SYSTEM_NOTIFICATION" ||
+    mail.kind === "SYSTEM_MESSAGE" ||
+    mail.kind === "SYSTEM_NOTIFICATION";
+  const canReply = !isSystemMessage && props.detailData?.permissions?.canReply !== false;
+  const canForward = !isSystemMessage && props.detailData?.permissions?.canForward !== false;
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
@@ -157,23 +171,25 @@ export default function MailDetail(props: Props) {
         >
           {mail.read ? <MailIcon className="size-5" /> : <MailOpen className="size-5" />}
         </button>
-        <button
-          onClick={() =>
-            props.onComposePrefill({
-              to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
-              cc: ccRecipients.join(", "),
-              bcc: bccRecipients.join(", "),
-              subject: mail.subject.startsWith("Fwd:") ? mail.subject : `Fwd: ${mail.subject}`,
-              body: `<br/><br/>---------- Mensaje reenviado ----------<br/><b>De:</b> ${senderName} &lt;${senderEmail}&gt;<br/><b>Asunto:</b> ${mail.subject}<br/><br/>${mail.body}`,
-              mode: "forward",
-              parentMessageId: mail.messageId ?? mail.id,
-            })
-          }
-          className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
-          title="Reenviar"
-        >
-          <Forward className="size-5" />
-        </button>
+        {canForward ? (
+          <button
+            onClick={() =>
+              props.onComposePrefill({
+                to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
+                cc: ccRecipients.join(", "),
+                bcc: bccRecipients.join(", "),
+                subject: mail.subject.startsWith("Fwd:") ? mail.subject : `Fwd: ${mail.subject}`,
+                body: `<br/><br/>---------- Mensaje reenviado ----------<br/><b>De:</b> ${senderName} &lt;${senderEmail}&gt;<br/><b>Asunto:</b> ${mail.subject}<br/><br/>${mail.body}`,
+                mode: "forward",
+                parentMessageId: mail.messageId ?? mail.id,
+              })
+            }
+            className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+            title="Reenviar"
+          >
+            <Forward className="size-5" />
+          </button>
+        ) : null}
         <button className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Imprimir">
           <Printer className="size-5" />
         </button>
@@ -302,42 +318,48 @@ export default function MailDetail(props: Props) {
             </div>
           ) : null}
 
-          <div className="pl-14 mt-8 flex gap-2">
-            <button
-              onClick={() =>
-                props.onComposePrefill({
-                  to: senderEmail,
-                  cc: "",
-                  bcc: "",
-                  subject: mail.subject.startsWith("Re:") ? mail.subject : `Re: ${mail.subject}`,
-                  body: `<br/><br/>El ${props.formatFullDate(mail.date)}, ${senderName} escribio:<br/><blockquote style="border-left:2px solid #ccc;padding-left:10px;margin-left:0;color:#666">${mail.body}</blockquote>`,
-                  mode: "reply",
-                  parentMessageId: mail.messageId ?? mail.id,
-                })
-              }
-              className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
-            >
-              <Reply className="size-4" />
-              Responder
-            </button>
-            <button
-              onClick={() =>
-                props.onComposePrefill({
-                  to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
-                  cc: ccRecipients.join(", "),
-                  bcc: bccRecipients.join(", "),
-                  subject: `Fwd: ${mail.subject}`,
-                  body: `<br/><br/>---------- Mensaje reenviado ----------<br/>${mail.body}`,
-                  mode: "forward",
-                  parentMessageId: mail.messageId ?? mail.id,
-                })
-              }
-              className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
-            >
-              <Forward className="size-4" />
-              Reenviar
-            </button>
-          </div>
+          {canReply || canForward ? (
+            <div className="pl-14 mt-8 flex gap-2">
+              {canReply ? (
+                <button
+                  onClick={() =>
+                    props.onComposePrefill({
+                      to: senderEmail,
+                      cc: "",
+                      bcc: "",
+                      subject: mail.subject.startsWith("Re:") ? mail.subject : `Re: ${mail.subject}`,
+                      body: `<br/><br/>El ${props.formatFullDate(mail.date)}, ${senderName} escribio:<br/><blockquote style="border-left:2px solid #ccc;padding-left:10px;margin-left:0;color:#666">${mail.body}</blockquote>`,
+                      mode: "reply",
+                      parentMessageId: mail.messageId ?? mail.id,
+                    })
+                  }
+                  className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
+                >
+                  <Reply className="size-4" />
+                  Responder
+                </button>
+              ) : null}
+              {canForward ? (
+                <button
+                  onClick={() =>
+                    props.onComposePrefill({
+                      to: (toRecipients.length > 0 ? toRecipients : mail.to.map((t) => t.email).filter(Boolean)).join(", "),
+                      cc: ccRecipients.join(", "),
+                      bcc: bccRecipients.join(", "),
+                      subject: `Fwd: ${mail.subject}`,
+                      body: `<br/><br/>---------- Mensaje reenviado ----------<br/>${mail.body}`,
+                      mode: "forward",
+                      parentMessageId: mail.messageId ?? mail.id,
+                    })
+                  }
+                  className="flex items-center gap-2 px-5 py-2 rounded-full border border-border hover:bg-mail-hover text-sm"
+                >
+                  <Forward className="size-4" />
+                  Reenviar
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           {threadItems.length > 1 ? (
             <div className="pl-14 mt-8 space-y-3">

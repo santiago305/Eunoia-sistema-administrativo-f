@@ -26,6 +26,8 @@ export interface Mail {
   messageId?: string;
   recipientId?: string;
   threadId?: string | null;
+  kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
+  senderType?: "USER" | "SYSTEM";
   originModule?: string;
   moduleLabel?: string;
   from: { name: string; email: string; avatar?: string };

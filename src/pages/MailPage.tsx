@@ -60,6 +60,7 @@ type MailDetailData = {
     id: string;
     threadId?: string | null;
     originModule?: string | null;
+    kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
     senderType?: "USER" | "SYSTEM";
     subject?: string;
     bodyHtml?: string;
@@ -72,6 +73,7 @@ type MailDetailData = {
   attachments?: BackendMailAttachment[];
   thread?: Array<{ id: string; subject: string; bodyHtml: string; createdAt: string; sentAt?: string | null }>;
   labels?: Array<{ id?: string; labelId?: string }>;
+  permissions?: { canReply?: boolean; canForward?: boolean };
 } | null;
 
 type BackendErrorPayload = {
@@ -200,6 +202,8 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
       messageId: item.message.id,
       recipientId: item.recipient.id,
       threadId: item.message.threadId,
+      kind: item.message.kind,
+      senderType: item.message.senderType,
       originModule,
       moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
       from: {
@@ -224,6 +228,8 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     id: item.id,
     messageId: item.id,
     threadId: item.threadId,
+    kind: item.kind,
+    senderType: item.senderType,
     originModule,
     moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
     from: { name: "Yo", email: "" },
@@ -797,6 +803,8 @@ export default function MailPage() {
     if (listMail) {
       return {
         ...listMail,
+        kind: detailMessage?.kind ?? listMail.kind,
+        senderType: detailMessage?.senderType ?? listMail.senderType,
         body: detailMessage?.bodyHtml ?? listMail.body,
         preview: detailMessage?.bodyText?.slice(0, 110) ?? listMail.preview,
         attachments: detailAttachments,
@@ -814,6 +822,8 @@ export default function MailPage() {
       messageId: detailMessage.id,
       recipientId: activeMailDetail?.recipient?.id,
       threadId: detailMessage.threadId ?? null,
+      kind: detailMessage.kind,
+      senderType: detailMessage.senderType,
       originModule,
       moduleLabel: ORIGIN_MODULE_TO_LABEL[originModule] ?? originModule,
       from: { name: senderName, email: senderEmail },
