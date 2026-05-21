@@ -19,14 +19,15 @@ import {
   sendMessage,
   uploadAttachment,
   deleteAttachment as deleteRemoteAttachment,
+  executeMessageAction,
 } from "@/features/mail/services/messages.service";
 import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/mail/services/drafts.service";
-import type { InboxItem, SentMessageItem } from "@/features/mail/types/message.types";
+import type { InboxItem, MailMessageActionItem, SentMessageItem } from "@/features/mail/types/message.types";
 import { useSileoMessageEvents } from "@/features/mail/hooks/useSileoMessageEvents";
 import { useMailDashboardContext } from "@/features/mail/context/MailDashboardProvider";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { showNotificationToast } from "@/features/mail/services/mail-toast.service";
-import type { MessageCreatedRealtimePayload } from "@/features/mail/types/realtime.types";
+import type { MailActionUpdatedPayload, MessageCreatedRealtimePayload } from "@/features/mail/types/realtime.types";
 import { extractMailDetailLabelIds, sameStringArray } from "@/features/mail/utils/mail-state.utils";
 import { mapMailAttachment, type BackendMailAttachment } from "@/features/mail/utils/mail-attachments.utils";
 import { normalizeConversationSubject } from "@/features/mail/utils/mail-subject.utils";
@@ -74,7 +75,7 @@ type MailDetailData = {
   sender?: { id?: string; name?: string; email?: string } | null;
   recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
   attachments?: BackendMailAttachment[];
-  thread?: Array<{
+    thread?: Array<{
     id: string;
     subject: string;
     bodyHtml: string;
@@ -84,10 +85,11 @@ type MailDetailData = {
     kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
     senderType?: "USER" | "SYSTEM";
     sender?: { id?: string; name?: string; email?: string } | null;
-    recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
-    attachments?: BackendMailAttachment[];
-    threadLabel?: string | null;
-  }>;
+      recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
+      attachments?: BackendMailAttachment[];
+      actions?: MailMessageActionItem[];
+      threadLabel?: string | null;
+    }>;
   labels?: Array<{ id?: string; labelId?: string }>;
   permissions?: { canReply?: boolean; canForward?: boolean };
 } | null;
@@ -270,6 +272,29 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
   };
 };
 
+const mergeActionIntoDetail = (
+  detail: MailDetailData,
+  action: MailMessageActionItem,
+): MailDetailData => {
+  if (!detail?.thread?.length) return detail;
+  let touched = false;
+  const nextThread = detail.thread.map((threadItem, index) => {
+    const existing = threadItem.actions ?? [];
+    const indexById = existing.findIndex((item) => item.id === action.id);
+    const matchesMessage = action.messageId && threadItem.id === action.messageId;
+    const shouldAttachThreadLevel = !action.messageId && index === 0;
+    if (indexById < 0 && !matchesMessage && !shouldAttachThreadLevel) return threadItem;
+    touched = true;
+    if (indexById >= 0) {
+      const updated = [...existing];
+      updated[indexById] = action;
+      return { ...threadItem, actions: updated };
+    }
+    return { ...threadItem, actions: [...existing, action] };
+  });
+  return touched ? { ...detail, thread: nextThread } : detail;
+};
+
 export default function MailPage() {
   const navigate = useNavigate();
   const params = useParams<{ folder?: string; messageId?: string }>();
@@ -356,9 +381,21 @@ export default function MailPage() {
     insertRealtimeInboxItem(payload);
   }, [applyCountsDelta, insertRealtimeInboxItem]);
 
+  const handleMailActionUpdated = useCallback((payload: MailActionUpdatedPayload) => {
+    setActiveMailDetail((prev) => {
+      if (!prev) return prev;
+      const currentThreadId = prev.message?.threadId ?? null;
+      const payloadThreadId = payload.threadId ?? null;
+      const sameThread = Boolean(currentThreadId && payloadThreadId && currentThreadId === payloadThreadId);
+      if (!sameThread) return prev;
+      return mergeActionIntoDetail(prev, payload);
+    });
+  }, []);
+
   useSileoMessageEvents({
     onRefreshMessages: reload,
     onRealtimeMessageCreated: handleRealtimeMessageCreated,
+    onMailActionUpdated: handleMailActionUpdated,
   });
 
   useEffect(() => {
@@ -1084,6 +1121,19 @@ export default function MailPage() {
     setActiveMailDetail(detail);
   };
 
+  const executeThreadAction = async (actionId: string) => {
+    try {
+      const response = await executeMessageAction(actionId);
+      setActiveMailDetail((prev) => mergeActionIntoDetail(prev, response.action));
+    } catch {
+      showNotificationToast({
+        title: "No se pudo completar la acción",
+        message: "Verifica permisos o estado actual de la compra.",
+        priority: "HIGH",
+      });
+    }
+  };
+
   const moveToTrash = async (ids: string[]) => {
     try {
       if (folder === "drafts") {
@@ -1545,6 +1595,7 @@ export default function MailPage() {
                 onDeleteAttachment={async (attachmentId) => {
                   await deleteRemoteAttachment(attachmentId);
                 }}
+                onExecuteAction={executeThreadAction}
                 formatFullDate={formatFullDate}
                 initialsOf={initialsOf}
                 avatarColor={avatarColor}

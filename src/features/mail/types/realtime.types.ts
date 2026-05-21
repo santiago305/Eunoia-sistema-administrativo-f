@@ -25,3 +25,20 @@ export type MessageCreatedRealtimePayload = {
   labels?: MailLabelItem[];
 };
 
+export type MailActionUpdatedPayload = {
+  actionId: string;
+  threadId: string;
+  messageId?: string | null;
+  actionType: string;
+  actionKey: string;
+  targetEntityType: string;
+  targetEntityId: string;
+  status: 'PENDING' | 'COMPLETED' | 'EXPIRED' | 'CANCELLED';
+  completedByUserId?: string | null;
+  completedByName?: string | null;
+  completedAt?: string | null;
+  version: number;
+  metadata?: Record<string, unknown> | null;
+  canExecute: boolean;
+};
+

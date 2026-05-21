@@ -2,6 +2,7 @@ import axiosInstance from "@/shared/common/utils/axios";
 import { API_NOTIFICATION_MESSAGES_GROUP } from "@/shared/services/APIs";
 import type {
   InboxItem,
+  MailMessageActionItem,
   MailLabelItem,
   MessageListQuery,
   MessageListResponse,
@@ -18,6 +19,22 @@ export const listMessages = async (query: MessageListQuery) => {
 
 export const getMessageDetail = async (id: string) => {
   const response = await axiosInstance.get(API_NOTIFICATION_MESSAGES_GROUP.getMessageDetail(id));
+  return response.data;
+};
+
+export const listMessageActions = async (query: { threadId?: string; messageId?: string }) => {
+  const response = await axiosInstance.get<MailMessageActionItem[]>(
+    API_NOTIFICATION_MESSAGES_GROUP.listActions,
+    { params: query },
+  );
+  return response.data;
+};
+
+export const executeMessageAction = async (id: string, payload?: { comment?: string }) => {
+  const response = await axiosInstance.post<{
+    code: "ACTION_COMPLETED" | "ACTION_ALREADY_COMPLETED";
+    action: MailMessageActionItem;
+  }>(API_NOTIFICATION_MESSAGES_GROUP.executeAction(id), payload ?? {});
   return response.data;
 };
 

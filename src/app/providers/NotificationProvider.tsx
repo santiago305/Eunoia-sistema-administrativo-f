@@ -3,7 +3,7 @@ import { useAuth } from '@/shared/hooks/useAuth';
 import { closeNotificationSocket, createNotificationSocket } from '@/shared/lib/socket';
 import { NOTIFICATION_SOCKET_EVENTS, NOTIFICATION_WINDOW_EVENTS } from '@/features/mail/constants/mail-events.constants';
 import type { NotificationPriority } from '@/features/mail/types/notification.types';
-import type { MessageCreatedRealtimePayload } from '@/features/mail/types/realtime.types';
+import type { MailActionUpdatedPayload, MessageCreatedRealtimePayload } from '@/features/mail/types/realtime.types';
 import { getHasUnreadMail } from '@/shared/services/notificationService';
 import { showNotificationToast } from '@/features/mail/services/mail-toast.service';
 
@@ -109,6 +109,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }),
       );
     };
+    const onActionUpdated = (payload: MailActionUpdatedPayload) => {
+      if (!payload?.actionId) return;
+      window.dispatchEvent(
+        new CustomEvent<MailActionUpdatedPayload>(NOTIFICATION_WINDOW_EVENTS.mailActionUpdated, {
+          detail: payload,
+        }),
+      );
+    };
     const onLocalUnreadStateChanged = (event: Event) => {
       const customEvent = event as CustomEvent<boolean>;
       if (typeof customEvent.detail === "boolean") {
@@ -120,6 +128,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     socket.on('disconnect', onDisconnect);
     socket.on(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
     socket.on(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
+    socket.on(NOTIFICATION_SOCKET_EVENTS.actionUpdated, onActionUpdated);
     window.addEventListener(NOTIFICATION_WINDOW_EVENTS.mailUnreadSync, loadHasUnreadMail);
     window.addEventListener(
       NOTIFICATION_WINDOW_EVENTS.mailUnreadStateChanged,
@@ -133,6 +142,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       socket.off('disconnect', onDisconnect);
       socket.off(NOTIFICATION_SOCKET_EVENTS.created, onCreated);
       socket.off(NOTIFICATION_SOCKET_EVENTS.messageCreated, onMessageCreated);
+      socket.off(NOTIFICATION_SOCKET_EVENTS.actionUpdated, onActionUpdated);
       window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.mailUnreadSync, loadHasUnreadMail);
       window.removeEventListener(
         NOTIFICATION_WINDOW_EVENTS.mailUnreadStateChanged,

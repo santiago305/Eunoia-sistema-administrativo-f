@@ -44,6 +44,7 @@ const baseProps = {
   onCreateInlineDraft: vi.fn(),
   onUploadAttachment: vi.fn(),
   onDeleteAttachment: vi.fn(),
+  onExecuteAction: vi.fn(),
   formatFullDate: (iso: string) => iso,
   initialsOf: (name: string) => name.slice(0, 1).toUpperCase(),
   avatarColor: () => "rgb(37, 99, 235)",

@@ -17,12 +17,13 @@ import {
 import type { Attachment, Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
 import { LiaTrashRestoreAltSolid } from "react-icons/lia";
-import type { MailLabelItem } from "../types/message.types";
+import type { MailLabelItem, MailMessageActionItem } from "../types/message.types";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import { isInlineImageAttachment, mapMailAttachment, removeBrokenMailBodyImages, type BackendMailAttachment } from "../utils/mail-attachments.utils";
 import { normalizeConversationSubject } from "../utils/mail-subject.utils";
 import { downloadAttachmentBlobUrl } from "../services/messages.service";
 import InlineReplyForwardBox from "./InlineReplyForwardBox";
+import MailActionBlock from "./MailActionBlock";
 
 interface Props {
   mail: Mail | null;
@@ -41,8 +42,8 @@ interface Props {
     } | null;
     sender?: { id?: string; name?: string; email?: string } | null;
     recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
-    attachments?: Array<Attachment | BackendMailAttachment>;
-    thread?: Array<{
+      attachments?: Array<Attachment | BackendMailAttachment>;
+      thread?: Array<{
       id: string;
       subject: string;
       bodyHtml: string;
@@ -52,10 +53,11 @@ interface Props {
       kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
       senderType?: "USER" | "SYSTEM";
       sender?: { id?: string; name?: string; email?: string } | null;
-      recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
-      attachments?: Array<Attachment | BackendMailAttachment>;
-      threadLabel?: string | null;
-    }>;
+        recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
+        attachments?: Array<Attachment | BackendMailAttachment>;
+        actions?: MailMessageActionItem[];
+        threadLabel?: string | null;
+      }>;
     permissions?: { canReply?: boolean; canForward?: boolean };
   } | null;
   currentUserEmail: string;
@@ -102,6 +104,7 @@ interface Props {
   }) => Promise<string>;
   onUploadAttachment: (input: { file: File; draftId: string; kind: "image" | "file" }) => Promise<{ id: string }>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  onExecuteAction: (actionId: string) => Promise<void>;
   formatFullDate: (iso: string) => string;
   initialsOf: (name: string) => string;
   avatarColor: (seed: string) => string;
@@ -143,6 +146,7 @@ export default function MailDetail(props: Props) {
   const [inlineDraftId, setInlineDraftId] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [inlineSending, setInlineSending] = useState(false);
+  const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const attachments = mail?.attachments ?? [];
   const threadItems = props.detailData?.thread ?? EMPTY_THREAD_ITEMS;
   const conversationItems = useMemo<DetailThreadItem[]>(() => {
@@ -319,6 +323,15 @@ export default function MailDetail(props: Props) {
     if (selectedRecipients.some((email) => email === props.currentUserEmail)) return "mi";
     return selectedRecipients.join(", ") || detailToLabel;
   };
+  const executeAction = async (actionId: string) => {
+    if (busyActionId) return;
+    setBusyActionId(actionId);
+    try {
+      await props.onExecuteAction(actionId);
+    } finally {
+      setBusyActionId(null);
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
@@ -388,9 +401,10 @@ export default function MailDetail(props: Props) {
               const previousSenderEmail = index > 0 ? getItemSenderEmail(conversationItems[index - 1]) : null;
               const showAvatar = index === 0 || previousSenderEmail !== itemSenderEmail;
               const forwardedPreview = getForwardedMessagePreview(threadItem.bodyJson);
-              const itemAttachments = (threadItem.attachments ?? []).map(normalizeDetailAttachment);
-              const itemFileAttachments = itemAttachments.filter((attachment) => !isInlineImageAttachment(attachment));
-              const itemImageAttachments = itemAttachments.filter((attachment) => isInlineImageAttachment(attachment));
+	              const itemAttachments = (threadItem.attachments ?? []).map(normalizeDetailAttachment);
+	              const itemFileAttachments = itemAttachments.filter((attachment) => !isInlineImageAttachment(attachment));
+	              const itemImageAttachments = itemAttachments.filter((attachment) => isInlineImageAttachment(attachment));
+                const itemActions = threadItem.actions ?? [];
 
               return (
                 <article key={threadItem.id} className="flex items-start gap-4">
@@ -450,7 +464,7 @@ export default function MailDetail(props: Props) {
                       </div>
                     ) : null}
 
-                    {forwardedPreview ? (
+	                    {forwardedPreview ? (
                       <div className="mt-4 rounded-md bg-muted/20 p-3 text-sm">
                         <p className="mb-2 font-medium">Mensaje reenviado</p>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -463,9 +477,22 @@ export default function MailDetail(props: Props) {
                           <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{forwardedPreview.bodyPreview}</p>
                         ) : null}
                       </div>
+	                    ) : null}
+
+                    {itemActions.length > 0 ? (
+                      <div className="mt-4 flex flex-col gap-2">
+                        {itemActions.map((action) => (
+                          <MailActionBlock
+                            key={action.id}
+                            action={action}
+                            busy={busyActionId === action.id}
+                            onExecute={executeAction}
+                          />
+                        ))}
+                      </div>
                     ) : null}
 
-                    {itemImageAttachments.length > 0 ? (
+	                    {itemImageAttachments.length > 0 ? (
                       <div className="mt-6">
                         <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                           <Paperclip className="size-4" />

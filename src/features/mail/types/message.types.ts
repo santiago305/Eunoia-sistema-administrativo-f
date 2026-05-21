@@ -36,6 +36,23 @@ export interface MessageListResponse<T = unknown> {
   items: T[];
 }
 
+export interface MailMessageActionItem {
+  id: string;
+  threadId: string;
+  messageId?: string | null;
+  actionKey: string;
+  actionType: string;
+  targetEntityType: string;
+  targetEntityId: string;
+  status: "PENDING" | "COMPLETED" | "EXPIRED" | "CANCELLED";
+  completedByUserId?: string | null;
+  completedByName?: string | null;
+  completedAt?: string | null;
+  version: number;
+  metadata?: Record<string, unknown> | null;
+  canExecute: boolean;
+}
+
 export interface SentMessageItem {
   id: string;
   threadId: string | null;
@@ -55,6 +72,7 @@ export interface SentMessageItem {
   threadMessageCount?: number;
   threadLatestIndex?: number;
   threadLabel?: string | null;
+  actions?: MailMessageActionItem[];
   status: "DRAFT" | "SENT" | "FAILED" | "SCHEDULED";
   isDraft: boolean;
   sentAt: string | null;
