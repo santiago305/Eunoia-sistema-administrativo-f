@@ -58,6 +58,7 @@ export function ClientTelephonesModal({ clientId, close, className }: Props) {
   );
 
   const canSubmit = Boolean(number.trim()) && !saving;
+  const canUnsetMain = rows.length > 1;
 
   const loadTelephones = useCallback(
     async (silent = false) => {
@@ -265,7 +266,7 @@ export function ClientTelephonesModal({ clientId, close, className }: Props) {
             <Checkbox
               checked={isMain}
               onCheckedChange={(checked) => setIsMain(Boolean(checked))}
-              disabled={saving}
+              disabled={saving || (Boolean(editingId) && isMain && !canUnsetMain)}
             />
             Principal
           </label>
@@ -332,4 +333,3 @@ export function ClientTelephonesModal({ clientId, close, className }: Props) {
     </Modal>
   );
 }
-

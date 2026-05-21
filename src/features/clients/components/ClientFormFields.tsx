@@ -2,6 +2,7 @@ import type { CSSProperties, Dispatch, SetStateAction } from "react";
 import type { ClientForm } from "@/features/clients/types/client";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { CLIENT_TYPE_OPTIONS } from "@/features/clients/constants/clientType";
 
 const docTypeOptions: Array<{ value: ClientForm["docType"]; label: string }> = [
   { value: "DNI", label: "DNI" },
@@ -10,14 +11,7 @@ const docTypeOptions: Array<{ value: ClientForm["docType"]; label: string }> = [
   { value: "NONE", label: "SIN DOCUMENTO" },
 ];
 
-const clientTypeOptions: Array<{ value: ClientForm["type"]; label: string }> = [
-  { value: "NEW", label: "NUEVO" },
-  { value: "LAGGING", label: "REZAGADO" },
-  { value: "REPURCHASE", label: "RECOMPRA" },
-  { value: "UNDEFINED", label: "SIN DEFINIR" },
-];
 type Props = {
-  primaryColor: string;
   form: ClientForm;
   setForm: Dispatch<SetStateAction<ClientForm>>;
   departmentOptions: Array<{ value: string; label: string }>;
@@ -41,7 +35,6 @@ export function ClientFormFields({
   onDepartmentChange,
   onProvinceChange,
   onDistrictChange,
-  primaryColor: _primaryColor,
   disabled = false,
   fieldStyle,
 }: Props) {
@@ -62,7 +55,7 @@ export function ClientFormFields({
           label="Tipo de cliente"
           name="client-type"
           value={form.type}
-          options={clientTypeOptions}
+          options={CLIENT_TYPE_OPTIONS}
           onChange={(value) => updateField("type", value as ClientForm["type"])}
           disabled={disabled}
           className={inputClassName}

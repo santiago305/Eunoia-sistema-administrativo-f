@@ -4,9 +4,9 @@ import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { Client, ClientForm } from "@/features/clients/types/client";
 import { ClientFormFields } from "./ClientFormFields";
-import { getUbigeoCatalog, type UbigeoCatalog } from "@/shared/services/ubigeoCatalogService";
 import { listClientTelephones } from "@/shared/services/clientService";
 import { ClientTelephonesEditor, type TelephoneEditorRow } from "./ClientTelephonesEditor";
+import { useUbigeoCatalog } from "@/shared/hooks/useUbigeoCatalog";
 
 type Props = {
   open: boolean;
@@ -41,9 +41,9 @@ export function ClientFormModal({
   loading = false,
 }: Props) {
   const [form, setForm] = useState<ClientForm>(DEFAULT_FORM);
-  const [ubigeoCatalog, setUbigeoCatalog] = useState<UbigeoCatalog | null>(null);
   const [telephones, setTelephones] = useState<TelephoneEditorRow[]>([]);
   const [phonesLoading, setPhonesLoading] = useState(false);
+  const { catalog: ubigeoCatalog } = useUbigeoCatalog(open);
 
   useEffect(() => {
     if (!open) return;
@@ -106,24 +106,6 @@ export function ClientFormModal({
     };
   }, [client?.id, mode, open]);
 
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const catalog = await getUbigeoCatalog();
-        if (!cancelled) setUbigeoCatalog(catalog);
-      } catch {
-        if (!cancelled) setUbigeoCatalog({ departments: [], provinces: [], districts: [] });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
-
   const canSave = useMemo(
     () =>
       Boolean(
@@ -182,15 +164,6 @@ export function ClientFormModal({
     return map;
   }, [districts]);
 
-  const districtsByDepartmentId = useMemo(() => {
-    const map: Record<string, Array<{ id: string; name: string; provinceId: string; departmentId: string }>> = {};
-    for (const district of districts) {
-      map[district.departmentId] = map[district.departmentId] ?? [];
-      map[district.departmentId]!.push(district);
-    }
-    return map;
-  }, [districts]);
-
   const departmentOptions = useMemo(
     () =>
       departments.map((dep) => ({
@@ -209,16 +182,12 @@ export function ClientFormModal({
   }, [form.departmentId, provincesByDepartmentId]);
 
   const districtOptions = useMemo(() => {
-    const filtered = form.provinceId
-      ? districtsByProvinceId[form.provinceId] ?? []
-      : form.departmentId
-        ? districtsByDepartmentId[form.departmentId] ?? []
-        : [];
+    const filtered = form.provinceId ? districtsByProvinceId[form.provinceId] ?? [] : [];
     return filtered.map((dist) => ({
       value: dist.id,
       label: `${dist.name}`,
     }));
-  }, [districtsByDepartmentId, districtsByProvinceId, form.departmentId, form.provinceId]);
+  }, [districtsByProvinceId, form.provinceId]);
 
   const handleDepartmentChange = (departmentId: string) => {
     setForm((prev) => ({
@@ -267,7 +236,6 @@ export function ClientFormModal({
         onDepartmentChange={handleDepartmentChange}
         onProvinceChange={handleProvinceChange}
         onDistrictChange={handleDistrictChange}
-        primaryColor={primaryColor}
         disabled={loading}
         fieldStyle={fieldStyle}
       />
@@ -300,7 +268,7 @@ export function ClientFormModal({
 
           onSubmit({
             ...form,
-            telephonesPatch: telephonesPatch.length ? telephonesPatch : undefined,
+            telephonesReplace: telephonesPatch.length ? telephonesPatch : undefined,
           });
         }}>
           {mode === "edit" ? "Guardar cambios" : "Guardar"}

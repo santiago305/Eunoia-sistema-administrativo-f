@@ -109,6 +109,8 @@ export function ClientTelephonesEditor({
     setRows((current) => applyMainRule(current, id));
   };
 
+  const canRemoveMain = rows.length > 1;
+
   return (
     <div className="mt-4 rounded-md border border-border/70 bg-muted/10 p-3">
       <div className="mb-2">
@@ -193,7 +195,7 @@ export function ClientTelephonesEditor({
                     className="h-9 w-9"
                     title="Hacer principal"
                     onClick={() => setMain(row.id)}
-                    disabled={disabled || loading || !row.isActive}
+                    disabled={disabled || loading}
                   >
                     <Star className="h-4 w-4" />
                   </SystemButton>
@@ -203,7 +205,7 @@ export function ClientTelephonesEditor({
                     className="h-9 w-9"
                     title="Quitar"
                     onClick={() => remove(row.id)}
-                    disabled={disabled || loading}
+                    disabled={disabled || loading || !canRemoveMain}
                   >
                     <Trash2 className="h-4 w-4" />
                   </SystemButton>

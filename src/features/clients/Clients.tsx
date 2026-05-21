@@ -23,6 +23,7 @@ import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
 import { ClientSmartSearchPanel } from "@/features/clients/components/ClientSmartSearchPanel";
 import type { Client, ClientForm } from "@/features/clients/types/client";
 import type { ClientListItem } from "@/features/clients/types/clientApi";
+import { CLIENT_TYPE_META } from "@/features/clients/constants/clientType";
 import type {
   ClientSearchFilters,
   ClientSearchRule,
@@ -50,13 +51,6 @@ import {
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
-
-const clientTypeMeta = {
-  NEW: { label: "Nuevo", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  LAGGING: { label: "Rezagado", className: "border-amber-200 bg-amber-50 text-amber-700" },
-  REPURCHASE: { label: "Recompra", className: "border-sky-200 bg-sky-50 text-sky-700" },
-  UNDEFINED: { label: "Sin definir", className: "border-slate-200 bg-slate-50 text-slate-700" },
-} satisfies Record<Client["type"], { label: string; className: string }>;
 
 type BackendErrorPayload = {
   message?: string | string[];
@@ -425,13 +419,12 @@ export default function Clients() {
           provinceId: form.provinceId,
           districtId: form.districtId,
           isActive: form.isActive,
-          telephonesPatch: form.telephonesPatch?.length
-            ? form.telephonesPatch
+          telephonesReplace: form.telephonesReplace?.length
+            ? form.telephonesReplace
                 .filter((item) => !item.id && Boolean(item.number?.trim()))
                 .map((item) => ({
                   number: item.number!.trim(),
                   isMain: item.isMain,
-                  isActive: item.isActive,
                 }))
             : undefined,
         };
@@ -464,13 +457,12 @@ export default function Clients() {
           departmentId: form.departmentId,
           provinceId: form.provinceId,
           districtId: form.districtId,
-          telephonesPatch: form.telephonesPatch?.length
-            ? form.telephonesPatch
+          telephonesReplace: form.telephonesReplace?.length
+            ? form.telephonesReplace
                 .map((item) => ({
                   id: item.id,
                   number: item.number?.trim() || undefined,
                   isMain: item.isMain,
-                  isActive: item.isActive,
                 }))
                 .filter((item) => Boolean(item.id || item.number))
             : undefined,
@@ -523,8 +515,8 @@ export default function Clients() {
         id: "type",
         header: "Tipo",
         cell: (row) => (
-          <Badge variant="outline" className={clientTypeMeta[row.type].className}>
-            {clientTypeMeta[row.type].label}
+          <Badge variant="outline" className={CLIENT_TYPE_META[row.type].className}>
+            {CLIENT_TYPE_META[row.type].label}
           </Badge>
         ),
       },

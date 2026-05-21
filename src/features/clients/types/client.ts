@@ -26,10 +26,9 @@ export type ClientForm = {
   address: string;
   reference: string;
   isActive: boolean;
-  telephonesPatch?: Array<{
+  telephonesReplace?: Array<{
     id?: string;
     number?: string;
     isMain?: boolean;
-    isActive?: boolean;
   }>;
 };
