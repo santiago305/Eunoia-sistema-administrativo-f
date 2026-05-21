@@ -107,6 +107,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.providers
     },
     {
+        label: "Clientes",
+        icon: <IconUsers className="text-sidebar-foreground" />,
+        href: RoutesPaths.clients,
+    },
+    {
         label: "Usuarios",
         href: RoutesPaths.users,
         icon: <IconUsers className="text-sidebar-foreground" />,

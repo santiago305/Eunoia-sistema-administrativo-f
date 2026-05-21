@@ -53,6 +53,7 @@ export const API_UBIGEO_GROUP = {
   departments: "/ubigeo/departments",
   provinces: "/ubigeo/provinces",
   districts: "/ubigeo/districts",
+  ubigueo: "/ubigeo",
 };
 export const API_ROLES_GROUP = {
   findAll: "/roles",

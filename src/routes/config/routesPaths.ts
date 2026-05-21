@@ -45,6 +45,9 @@ export const RoutesPaths = {
   providers:'/contactos/proveedores',
   contacts:'/contactos',
 
+  //clients
+  clients: "/clientes",
+
   //purchase
   purchase: '/compra',
   purchases: '/compras',
