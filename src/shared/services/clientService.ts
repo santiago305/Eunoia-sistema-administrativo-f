@@ -11,6 +11,7 @@ import type {
   ClientSearchSnapshot,
   ClientSearchStateResponse,
 } from "@/features/clients/types/clientSearch";
+import { clientRoutes } from "./APIs";
 
 export const listClients = async (params: {
   q?: string;
@@ -27,19 +28,27 @@ export const listClients = async (params: {
           ? params.filters
           : undefined,
   };
-  const response = await axiosInstance.get<Paginated<ClientListItem>>("/clients", {
+
+  const response = await axiosInstance.get<Paginated<ClientListItem>>(clientRoutes.list, {
     params: requestParams,
   });
+
   return response.data;
 };
 
 export const getClientById = async (id: string): Promise<ClientDetail> => {
-  const response = await axiosInstance.get<ClientDetail>(`/clients/${id}`);
+  const response = await axiosInstance.get<ClientDetail>(clientRoutes.detail(id));
   return response.data;
 };
 
-export const createClient = async (payload: CreateClientBody): Promise<{ message: string; id?: string }> => {
-  const response = await axiosInstance.post<{ message: string; id?: string }>("/clients", payload);
+export const createClient = async (
+  payload: CreateClientBody,
+): Promise<{ message: string; id?: string }> => {
+  const response = await axiosInstance.post<{ message: string; id?: string }>(
+    clientRoutes.create,
+    payload,
+  );
+
   return response.data;
 };
 
@@ -47,7 +56,11 @@ export const updateClient = async (
   id: string,
   payload: UpdateClientBody,
 ): Promise<{ message: string; id?: string }> => {
-  const response = await axiosInstance.patch<{ message: string; id?: string }>(`/clients/${id}`, payload);
+  const response = await axiosInstance.patch<{ message: string; id?: string }>(
+    clientRoutes.update(id),
+    payload,
+  );
+
   return response.data;
 };
 
@@ -55,31 +68,40 @@ export const updateClientActive = async (
   id: string,
   payload: { isActive: boolean },
 ): Promise<{ message: string }> => {
-  const response = await axiosInstance.patch<{ message: string }>(`/clients/${id}/active`, payload);
+  const response = await axiosInstance.patch<{ message: string }>(
+    clientRoutes.active(id),
+    payload,
+  );
+
   return response.data;
 };
 
 export const listClientTelephones = async (clientId: string): Promise<Telephone[]> => {
-  const response = await axiosInstance.get<Telephone[]>(`/clients/${clientId}/telephones`);
+  const response = await axiosInstance.get<Telephone[]>(clientRoutes.telephones(clientId));
   return response.data;
 };
 
 export const createClientTelephone = async (
   clientId: string,
-  payload: { number: string; isMain?: boolean },
+  payload: { number: string; isMain?: boolean; isActive?: boolean },
 ): Promise<{ message: string }> => {
   const response = await axiosInstance.post<{ message: string }>(
-    `/clients/${clientId}/telephones`,
+    clientRoutes.telephones(clientId),
     payload,
   );
+
   return response.data;
 };
 
 export const updateTelephone = async (
   id: string,
-  payload: { number: string; isMain?: boolean },
+  payload: { number: string; isMain?: boolean; isActive?: boolean },
 ): Promise<{ message: string }> => {
-  const response = await axiosInstance.patch<{ message: string }>(`/clients/telephones/${id}`, payload);
+  const response = await axiosInstance.patch<{ message: string }>(
+    clientRoutes.telephoneDetail(id),
+    payload,
+  );
+
   return response.data;
 };
 
@@ -88,19 +110,26 @@ export const updateTelephoneActive = async (
   payload: { isActive: boolean },
 ): Promise<{ message: string }> => {
   const response = await axiosInstance.patch<{ message: string }>(
-    `/clients/telephones/${id}/active`,
+    clientRoutes.telephoneActive(id),
     payload,
   );
+
   return response.data;
 };
 
 export const setTelephoneMain = async (id: string): Promise<{ message: string }> => {
-  const response = await axiosInstance.patch<{ message: string }>(`/clients/telephones/${id}/main`);
+  const response = await axiosInstance.patch<{ message: string }>(
+    clientRoutes.telephoneMain(id),
+  );
+
   return response.data;
 };
 
 export const getClientSearchState = async (): Promise<ClientSearchStateResponse> => {
-  const response = await axiosInstance.get<ClientSearchStateResponse>("/clients/search-state");
+  const response = await axiosInstance.get<ClientSearchStateResponse>(
+    clientRoutes.searchState,
+  );
+
   return response.data;
 };
 
@@ -108,16 +137,23 @@ export const saveClientSearchMetric = async (
   name: string,
   snapshot: ClientSearchSnapshot,
 ): Promise<{ type: string; message: string }> => {
-  const response = await axiosInstance.post<{ type: string; message: string }>("/clients/search-metrics", {
-    name,
-    snapshot,
-  });
+  const response = await axiosInstance.post<{ type: string; message: string }>(
+    clientRoutes.searchMetrics,
+    {
+      name,
+      snapshot,
+    },
+  );
+
   return response.data;
 };
 
-export const deleteClientSearchMetric = async (metricId: string): Promise<{ type: string; message: string }> => {
+export const deleteClientSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
   const response = await axiosInstance.delete<{ type: string; message: string }>(
-    `/clients/search-metrics/${metricId}`,
+    clientRoutes.searchMetricDetail(metricId),
   );
+
   return response.data;
 };

@@ -27,6 +27,7 @@ const Securitypage = lazy(() => import("@/features/security/security"));
 const IpsDetails = lazy(() => import("@/features/security/IpDetailPage"));
 const CatalogSummary = lazy(() => import("@/features/catalog/products/Summary"));
 const CatalogProducts = lazy(() => import("@/features/catalog/products/Products"));
+const CatalogPacks = lazy(() => import("@/features/catalog/packs/Packs"));
 const CatalogTransferences = lazy(() => import("@/features/catalog/products/TransferProduts"));
 const CatalogAdjustments = lazy(() => import("@/features/catalog/products/AdjustmentProduts"));
 const CatalogAdjustment = lazy(() => import("@/features/catalog/products/components/AdjustmentFormProducts"));
@@ -106,6 +107,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.catalogProducts,
                 element: withRouteGuard(RoutesPaths.catalogProducts, <CatalogProducts />),
+            },
+            {
+                path: RoutesPaths.catalogPacks,
+                element: withRouteGuard(RoutesPaths.catalogPacks, <CatalogPacks />),
             },
             {
                 path: RoutesPaths.catalogSummary,

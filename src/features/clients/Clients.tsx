@@ -21,6 +21,7 @@ import { usePermissions } from "@/shared/hooks/usePermissions";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
 import { ClientSmartSearchPanel } from "@/features/clients/components/ClientSmartSearchPanel";
+import { ModalDetailClient } from "@/features/clients/components/ModalDetailClient";
 import type { Client, ClientForm } from "@/features/clients/types/client";
 import type { ClientListItem } from "@/features/clients/types/clientApi";
 import { CLIENT_TYPE_META } from "@/features/clients/constants/clientType";
@@ -119,6 +120,7 @@ export default function Clients() {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editingLoading, setEditingLoading] = useState(false);
+  const [detailClientId, setDetailClientId] = useState<string | null>(null);
 
   const [toggleClientId, setToggleClientId] = useState<string | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
@@ -590,12 +592,13 @@ export default function Clients() {
       {
         id: "actions",
         header: "Acciones",
+        stopRowClick: true,
         cell: (row) => (
           <ActionsPopover
             actions={[
               {
                 id: "edit",
-                label: "Detalles",
+                label: "Editar",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
                 hidden: !canManageClients,
                 onClick: () => setEditingClientId(row.id),
@@ -682,6 +685,7 @@ export default function Clients() {
         selectableColumns
         hoverable={false}
         animated={false}
+        onRowClick={(row) => setDetailClientId(row.id)}
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}
@@ -755,6 +759,13 @@ export default function Clients() {
         onConfirm={() => {
           void confirmToggleActive();
         }}
+      />
+
+      <ModalDetailClient
+        ubigeoNames={ubigeoNames}
+        open={Boolean(detailClientId)}
+        clientId={detailClientId}
+        onClose={() => setDetailClientId(null)}
       />
 
     </PageShell>

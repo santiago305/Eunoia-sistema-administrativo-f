@@ -48,6 +48,10 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 href: RoutesPaths.catalogProducts,
             },
             {
+                label: "Packs",
+                href: RoutesPaths.catalogPacks,
+            },
+            {
                 label: "Transferencias",
                 href: RoutesPaths.catalogTransferences,
             },
