@@ -25,13 +25,6 @@ export function useMessagesV2(params: {
     try {
       const response = await listMessages({ view: folder, originModule, labelId, q, page, limit });
       if (requestSeq !== requestSeqRef.current) return;
-      console.log("[mail:list] response", {
-        view: folder,
-        page,
-        limit,
-        total: response.total,
-        items: Array.isArray(response.items) ? response.items.length : 0,
-      });
       setItems(response.items);
       setTotal(response.total);
     } catch {

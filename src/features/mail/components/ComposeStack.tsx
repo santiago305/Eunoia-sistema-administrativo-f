@@ -31,6 +31,14 @@ interface Props {
       & { attachmentIds?: string[]; bodyJson?: Record<string, unknown> | null }
     >,
   ) => void | Promise<void>;
+  onSchedule: (
+    composeId: string,
+    scheduledAt: string,
+    overrides?: Partial<
+      Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds">
+      & { attachmentIds?: string[]; bodyJson?: Record<string, unknown> | null }
+    >,
+  ) => void | Promise<void>;
 }
 
 export default function NotificationComposeStack({
@@ -55,6 +63,7 @@ export default function NotificationComposeStack({
   onDeleteAttachment,
   onDiscard,
   onSend,
+  onSchedule,
 }: Props) {
   if (drafts.length === 0) return null;
 
@@ -84,6 +93,7 @@ export default function NotificationComposeStack({
           onDeleteAttachment={onDeleteAttachment}
           onDiscard={onDiscard}
           onSend={onSend}
+          onSchedule={onSchedule}
         />
       ))}
     </div>

@@ -97,12 +97,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const dedupeKey = payload?.recipientId || payload?.recipient?.id || payload?.message?.id || '';
       if (dedupeKey && isSeen(`message:${dedupeKey}`)) return;
       if (dedupeKey) markSeen(`message:${dedupeKey}`);
-      showNotificationToast({
-        title: "Nuevo correo",
-        message: payload?.message?.subject || payload?.message?.preview || "Tienes un nuevo mensaje.",
-        priority: "NORMAL",
-      });
-      setHasUnreadMail(true);
+      if (payload?.hasUnreadMail !== false) {
+        showNotificationToast({
+          title: "Nuevo correo",
+          message: payload?.message?.subject || payload?.message?.preview || "Tienes un nuevo mensaje.",
+          priority: "NORMAL",
+        });
+        setHasUnreadMail(true);
+      }
       window.dispatchEvent(
         new CustomEvent<MessageCreatedRealtimePayload>(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, {
           detail: payload,

@@ -52,6 +52,16 @@ interface Props {
       }
     >,
   ) => void | Promise<void>;
+  onSchedule: (
+    composeId: string,
+    scheduledAt: string,
+    overrides?: Partial<
+      Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds"> & {
+        attachmentIds?: string[];
+        bodyJson?: Record<string, unknown> | null;
+      }
+    >,
+  ) => void | Promise<void>;
 }
 
 const titleByMode = (draft: NotificationComposeDraft) => {
@@ -83,6 +93,7 @@ export default function NotificationComposeModal({
   onDeleteAttachment,
   onDiscard,
   onSend,
+  onSchedule,
 }: Props) {
   const isBusy = isSaving || isSending || isDiscarding;
   const showLabels = draft.mode === "new";
@@ -236,6 +247,7 @@ export default function NotificationComposeModal({
         showSubject={draft.mode === "new"}
         showRecipients={draft.mode !== "reply"}
         showLabels={showLabels}
+        showSchedule={draft.mode === "new"}
         isBusy={isBusy}
         isSending={isSending}
         error={draft.error}
@@ -252,6 +264,7 @@ export default function NotificationComposeModal({
         onDeleteAttachment={onDeleteAttachment}
         onDiscard={() => onDiscard(draft.id)}
         onSend={(overrides) => onSend(draft.id, overrides)}
+        onSchedule={(scheduledAt, overrides) => onSchedule(draft.id, scheduledAt, overrides)}
       />
     </div>
   );

@@ -6,6 +6,8 @@ import {
   MailOpen,
   Reply,
   Forward,
+  CalendarClock,
+  SendHorizontal,
   Star,
   Printer,
   MoreVertical,
@@ -105,6 +107,9 @@ interface Props {
   onUploadAttachment: (input: { file: File; draftId: string; kind: "image" | "file" }) => Promise<{ id: string }>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   onExecuteAction: (actionId: string) => Promise<void>;
+  onSendScheduledNow?: (id: string) => void;
+  onRescheduleScheduled?: (id: string) => void;
+  onCancelScheduled?: (id: string) => void;
   formatFullDate: (iso: string) => string;
   initialsOf: (name: string) => string;
   avatarColor: (seed: string) => string;
@@ -240,8 +245,9 @@ export default function MailDetail(props: Props) {
     props.detailData?.message?.kind === "SYSTEM_NOTIFICATION" ||
     mail.kind === "SYSTEM_MESSAGE" ||
     mail.kind === "SYSTEM_NOTIFICATION";
-  const canReply = !isSystemMessage && props.detailData?.permissions?.canReply !== false;
-  const canForward = !isSystemMessage && props.detailData?.permissions?.canForward !== false;
+  const isScheduledMessage = mail.folder === "scheduled";
+  const canReply = !isSystemMessage && !isScheduledMessage && props.detailData?.permissions?.canReply !== false;
+  const canForward = !isSystemMessage && !isScheduledMessage && props.detailData?.permissions?.canForward !== false;
   const parentMessageId = latestConversationItem?.id ?? mail.messageId ?? mail.id;
   const replySubject = mail.subject.startsWith("Re:") ? mail.subject : `Re: ${mail.subject}`;
   const forwardSubject = mail.subject.startsWith("Fwd:") ? mail.subject : `Fwd: ${mail.subject}`;
@@ -339,6 +345,31 @@ export default function MailDetail(props: Props) {
         <button onClick={props.onBack} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Volver">
           <ArrowLeft className="size-5" />
         </button>
+        {isScheduledMessage ? (
+          <>
+            <button
+              onClick={() => props.onSendScheduledNow?.(mail.id)}
+              className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title="Enviar ahora"
+            >
+              <SendHorizontal className="size-5" />
+            </button>
+            <button
+              onClick={() => props.onRescheduleScheduled?.(mail.id)}
+              className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title="Reprogramar"
+            >
+              <CalendarClock className="size-5" />
+            </button>
+            <button
+              onClick={() => props.onCancelScheduled?.(mail.id)}
+              className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title="Cancelar programación"
+            >
+              <Trash2 className="size-5" />
+            </button>
+          </>
+        ) : (
         <button
           onClick={() => {
             props.onDelete(mail.id);
@@ -349,6 +380,7 @@ export default function MailDetail(props: Props) {
         >
           <Trash2 className="size-5" />
         </button>
+        )}
         {mail.folder === "trash" ? (
           <button
             onClick={() => {
@@ -361,13 +393,15 @@ export default function MailDetail(props: Props) {
             <LiaTrashRestoreAltSolid className="size-5" />
           </button>
         ) : null}
-        <button
-          onClick={() => props.onSetRead(mail.id, !mail.read)}
-          className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
-          title={mail.read ? "Marcar como no leido" : "Marcar como leido"}
-        >
-          {mail.read ? <MailIcon className="size-5" /> : <MailOpen className="size-5" />}
-        </button>
+        {!isScheduledMessage ? (
+          <button
+            onClick={() => props.onSetRead(mail.id, !mail.read)}
+            className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
+            title={mail.read ? "Marcar como no leido" : "Marcar como leido"}
+          >
+            {mail.read ? <MailIcon className="size-5" /> : <MailOpen className="size-5" />}
+          </button>
+        ) : null}
         {canForward ? (
           <button
             onClick={() => startInlineComposer("forward")}

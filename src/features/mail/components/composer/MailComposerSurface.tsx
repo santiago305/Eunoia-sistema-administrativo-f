@@ -10,7 +10,7 @@ import Underline from "@tiptap/extension-underline";
 import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import TextAlign from "@tiptap/extension-text-align";
-import { Bookmark, Check, Image as ImageIcon, Link as LinkIcon, Paperclip, Send, Trash2, Type, X } from "lucide-react";
+import { Bookmark, CalendarClock, Check, Image as ImageIcon, Link as LinkIcon, Paperclip, Send, Trash2, Type, X } from "lucide-react";
 import { isAxiosError } from "axios";
 import {
   RiAlignCenter,
@@ -27,6 +27,7 @@ import {
 } from "react-icons/ri";
 import { Popover } from "@/shared/components/modales/Popover";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingDateTimePicker } from "@/shared/components/components/date-picker/FloatingDateTimePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { cn } from "@/shared/lib/utils";
 import type { MailLabelItem } from "../../types/message.types";
@@ -208,6 +209,8 @@ export interface MailComposerSurfaceProps {
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   onDiscard: () => void | Promise<void>;
   onSend: (overrides?: SendOverrides) => void | Promise<void>;
+  onSchedule?: (scheduledAt: string, overrides?: SendOverrides) => void | Promise<void>;
+  showSchedule?: boolean;
 }
 
 const mapAttachmentBackendError = (error: unknown): string => {
@@ -254,6 +257,8 @@ export default function MailComposerSurface({
   onDeleteAttachment,
   onDiscard,
   onSend,
+  onSchedule,
+  showSchedule = false,
 }: MailComposerSurfaceProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -263,6 +268,7 @@ export default function MailComposerSurface({
   const linkAnchorRef = useRef<HTMLButtonElement | null>(null);
   const formatAnchorRef = useRef<HTMLButtonElement | null>(null);
   const labelsAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const scheduleAnchorRef = useRef<HTMLButtonElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);
   const bodyChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestBodyRef = useRef<{
@@ -283,6 +289,8 @@ export default function MailComposerSurface({
   const [linkName, setLinkName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [validationError, setValidationError] = useState("");
+  const [showSchedulePopover, setShowSchedulePopover] = useState(false);
+  const [scheduleDateValue, setScheduleDateValue] = useState<Date | null>(null);
   const [selectedFontSize, setSelectedFontSize] = useState("3");
 
 
@@ -690,8 +698,7 @@ export default function MailComposerSurface({
     }
   };
 
-  const handleSend = () => {
-    setValidationError("");
+  const buildSendOverrides = (): SendOverrides => {
     flushBodyChange();
     const committedTo = getCommittedRecipients("to");
     const committedCc = getCommittedRecipients("cc");
@@ -709,14 +716,28 @@ export default function MailComposerSurface({
     onBccChange(bccValue);
     setRecipientDrafts({ to: "", cc: "", bcc: "" });
 
-    void onSend({
+    return {
       to: toValue,
       cc: ccValue,
       bcc: bccValue,
       body: bodyHtml,
       bodyJson: nextBodyJson,
       attachmentIds: Array.from(new Set([...attachmentIds, ...uploadedAttachmentIds])),
-    });
+    };
+  };
+
+  const handleSend = () => {
+    setValidationError("");
+    const overrides = buildSendOverrides();
+    void onSend(overrides);
+  };
+
+  const handleSchedule = (scheduledAtIso: string) => {
+    if (!onSchedule) return;
+    setValidationError("");
+    const overrides = buildSendOverrides();
+    void onSchedule(scheduledAtIso, overrides);
+    setShowSchedulePopover(false);
   };
 
   const renderCollapsedRecipients = () => (
@@ -897,6 +918,85 @@ export default function MailComposerSurface({
         <SystemButton onClick={handleSend} leftIcon={<Send className="size-4" />} className="rounded-full" disabled={isBusy}>
           {isSending ? "Enviando..." : "Enviar"}
         </SystemButton>
+        {showSchedule && onSchedule ? (
+          <>
+            <button
+              ref={scheduleAnchorRef}
+              type="button"
+              onClick={() => {
+                setScheduleDateValue((current) => current ?? new Date(Date.now() + 60 * 60_000));
+                setShowSchedulePopover((value) => !value);
+              }}
+              className="flex size-9 items-center justify-center rounded-full hover:bg-mail-hover"
+              title="Programar envío"
+            >
+              <CalendarClock className="size-5" />
+            </button>
+            <Popover
+              open={showSchedulePopover}
+              onClose={() => setShowSchedulePopover(false)}
+              anchorRef={scheduleAnchorRef}
+              placement="top-start"
+              offset={8}
+              zIndex={10000}
+              hideHeader
+              className="w-72 rounded-lg border border-border bg-popover shadow-popover"
+              bodyClassName="p-3"
+            >
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Programar envío</p>
+                <div className="grid grid-cols-1 gap-1">
+                  <button
+                    type="button"
+                    className="rounded px-2 py-1.5 text-left text-sm hover:bg-mail-hover"
+                    onClick={() => handleSchedule(new Date(Date.now() + 60 * 60_000).toISOString())}
+                  >
+                    En 1 hora
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded px-2 py-1.5 text-left text-sm hover:bg-mail-hover"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 1);
+                      d.setHours(8, 0, 0, 0);
+                      handleSchedule(d.toISOString());
+                    }}
+                  >
+                    Mañana 8:00
+                  </button>
+                </div>
+                <FloatingDateTimePicker
+                  label="Fecha y hora"
+                  name={`${composeId}-schedule-datetime`}
+                  value={scheduleDateValue}
+                  onChange={setScheduleDateValue}
+                  disablePast
+                  clearable={false}
+                  containerClassName="w-full"
+                />
+                <div className="flex justify-end gap-2">
+                  <SystemButton type="button" variant="ghost" size="sm" onClick={() => setShowSchedulePopover(false)}>
+                    Cancelar
+                  </SystemButton>
+                  <SystemButton
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      if (!scheduleDateValue || Number.isNaN(scheduleDateValue.getTime())) {
+                        setValidationError("Selecciona una fecha y hora válida.");
+                        return;
+                      }
+                      handleSchedule(scheduleDateValue.toISOString());
+                    }}
+                  >
+                    Programar
+                  </SystemButton>
+                </div>
+              </div>
+            </Popover>
+          </>
+        ) : null}
         <button type="button" onClick={() => fileInputRef.current?.click()} className="flex size-9 items-center justify-center rounded-full hover:bg-mail-hover" title="Adjuntar archivo">
           <Paperclip className="size-5" />
         </button>

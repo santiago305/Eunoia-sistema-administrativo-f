@@ -452,11 +452,15 @@ export function Popover({
       const target = event.target as Node;
       const currentPopover = popoverRef.current;
       const currentAnchor = anchorRef.current;
+      const targetElement = target instanceof Element ? target : null;
 
       const clickedInsidePopover = currentPopover?.contains(target);
       const clickedAnchor = currentAnchor?.contains(target);
+      const clickedFloatingOverlay = Boolean(
+        targetElement?.closest('[data-floating-overlay-root="true"]'),
+      );
 
-      if (!clickedInsidePopover && !clickedAnchor) {
+      if (!clickedInsidePopover && !clickedAnchor && !clickedFloatingOverlay) {
         onClose();
       }
     };

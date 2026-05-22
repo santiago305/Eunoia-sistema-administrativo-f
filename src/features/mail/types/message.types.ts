@@ -1,4 +1,4 @@
-export type MessageFolder = "inbox" | "sent" | "trash" | "starred" | "archived" | "snoozed" | "drafts" | "all";
+export type MessageFolder = "inbox" | "sent" | "scheduled" | "trash" | "starred" | "archived" | "snoozed" | "drafts" | "all";
 
 export interface NotificationModuleItem {
   key: string;
@@ -75,6 +75,7 @@ export interface SentMessageItem {
   actions?: MailMessageActionItem[];
   status: "DRAFT" | "SENT" | "FAILED" | "SCHEDULED";
   isDraft: boolean;
+  scheduledAt?: string | null;
   sentAt: string | null;
   createdAt: string;
   updatedAt: string;

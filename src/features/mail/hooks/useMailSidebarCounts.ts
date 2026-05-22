@@ -7,6 +7,7 @@ type SidebarCounts = {
   inbox: number;
   starred: number;
   sent: number;
+  scheduled: number;
   drafts: number;
   trash: number;
   archived: number;
@@ -18,6 +19,7 @@ const INITIAL_COUNTS: SidebarCounts = {
   inbox: 0,
   starred: 0,
   sent: 0,
+  scheduled: 0,
   drafts: 0,
   trash: 0,
   archived: 0,
@@ -47,6 +49,7 @@ export function useMailSidebarCounts(enabled = true, labelIds: string[] = []) {
         inbox: Number(consolidated?.inbox ?? 0),
         starred: Number(consolidated?.starred ?? 0),
         sent: Number(consolidated?.sent ?? 0),
+        scheduled: Number(consolidated?.scheduled ?? 0),
         drafts: Number(consolidated?.drafts ?? 0),
         trash: Number(consolidated?.trash ?? 0),
         archived: Number(consolidated?.archived ?? 0),

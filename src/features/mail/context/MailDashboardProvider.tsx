@@ -11,6 +11,7 @@ type SidebarCounts = {
   inbox: number;
   starred: number;
   sent: number;
+  scheduled: number;
   drafts: number;
   trash: number;
   archived: number;
@@ -35,6 +36,7 @@ const INITIAL_COUNTS: SidebarCounts = {
   inbox: 0,
   starred: 0,
   sent: 0,
+  scheduled: 0,
   drafts: 0,
   trash: 0,
   archived: 0,
@@ -83,6 +85,7 @@ export function MailDashboardProvider({ children }: { children: ReactNode }) {
           inbox: Math.max(0, prev.inbox + Number(delta.inbox ?? 0)),
           starred: Math.max(0, prev.starred + Number(delta.starred ?? 0)),
           sent: Math.max(0, prev.sent + Number(delta.sent ?? 0)),
+          scheduled: Math.max(0, prev.scheduled + Number(delta.scheduled ?? 0)),
           drafts: Math.max(0, prev.drafts + Number(delta.drafts ?? 0)),
           trash: Math.max(0, prev.trash + Number(delta.trash ?? 0)),
           archived: Math.max(0, prev.archived + Number(delta.archived ?? 0)),

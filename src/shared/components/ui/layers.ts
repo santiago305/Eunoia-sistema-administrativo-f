@@ -6,5 +6,6 @@ export const UI_LAYERS = {
   modalOverlay: 50,
   modalContent: 51,
   floatingSelect: 60,
+  floatingDatePanel: 10020,
   toast: 100,
 } as const;

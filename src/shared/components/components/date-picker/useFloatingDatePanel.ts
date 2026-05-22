@@ -44,7 +44,7 @@ export function useFloatingDatePanel({
       width: panelMinWidth,
       visibility: "hidden",
       pointerEvents: "none",
-      zIndex: UI_LAYERS.floatingSelect,
+      zIndex: UI_LAYERS.floatingDatePanel,
     }),
     [panelMinWidth],
   );
@@ -121,7 +121,7 @@ export function useFloatingDatePanel({
       width,
       visibility: "visible",
       pointerEvents: "auto",
-      zIndex: UI_LAYERS.floatingSelect,
+      zIndex: UI_LAYERS.floatingDatePanel,
     });
   }, [closePanel, panelMinWidth, preferredHeight]);
 

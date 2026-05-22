@@ -1,6 +1,7 @@
 import {
   Archive,
   Bookmark,
+  CalendarClock,
   Clock3,
   File,
   Inbox,
@@ -17,6 +18,7 @@ export type MailSidebarCounts = {
   inbox: number;
   starred: number;
   sent?: number;
+  scheduled?: number;
   drafts: number;
   trash: number;
   archived: number;
@@ -50,6 +52,12 @@ export const getMailSidebarItems = (
     label: "Enviados",
     href: `${RoutesPaths.notifications}/sent`,
     icon: <Send className="text-sidebar-foreground" />,
+  },
+  {
+    label: "Programados",
+    href: `${RoutesPaths.notifications}/scheduled`,
+    icon: <CalendarClock className="text-sidebar-foreground" />,
+    badgeCount: counts?.scheduled,
   },
   {
     label: "Borradores",

@@ -10,6 +10,10 @@ import NotificationComposeStack from "@/features/mail/components/ComposeStack";
 import type { NotificationComposeDraft } from "@/features/mail/components/ComposeModal";
 import { useMessagesV2 } from "@/features/mail/hooks/useMessagesV2";
 import {
+  cancelScheduledMessage,
+  rescheduleMessage,
+  scheduleMessage,
+  sendScheduledMessageNow,
   forwardMessage,
   getMessageDetail,
   bulkMessages,
@@ -44,7 +48,7 @@ const MAX_COMPOSE_DRAFTS = 4;
 const COMPOSE_AUTOSAVE_DEBOUNCE_MS = 1_500;
 const COMPOSE_AUTOSAVE_FALLBACK_MS = 60_000;
 
-type UiFolder = "inbox" | "starred" | "sent" | "drafts" | "trash" | "archived" | "snoozed" | "all";
+type UiFolder = "inbox" | "starred" | "sent" | "scheduled" | "drafts" | "trash" | "archived" | "snoozed" | "all";
 
 type ComposePayload = {
   to?: string;
@@ -264,8 +268,8 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     subject: normalizeConversationSubject(item.subject),
     body: item.bodyHtml,
     preview: item.bodyText?.slice(0, 110) ?? "",
-    date: item.sentAt ?? item.createdAt,
-    read: true,
+    date: folder === "scheduled" ? (item.scheduledAt ?? item.createdAt) : (item.sentAt ?? item.createdAt),
+    read: folder !== "scheduled",
     starred: false,
     folder,
     category: ORIGIN_MODULE_TO_CATEGORY[originModule] ?? "personal",
@@ -320,6 +324,9 @@ export default function MailPage() {
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
   const [snoozeDateModalOpen, setSnoozeDateModalOpen] = useState(false);
   const [customSnoozeDate, setCustomSnoozeDate] = useState<Date>(new Date());
+  const [scheduledTargetId, setScheduledTargetId] = useState<string | null>(null);
+  const [scheduledDateModalOpen, setScheduledDateModalOpen] = useState(false);
+  const [customScheduledDate, setCustomScheduledDate] = useState<Date>(new Date());
   const [activeMailDetail, setActiveMailDetail] = useState<MailDetailData>(null);
   const [messageLabelIdsByMessage, setMessageLabelIdsByMessage] = useState<Record<string, string[]>>({});
   const [localStarredById, setLocalStarredById] = useState<Record<string, boolean>>({});
@@ -364,8 +371,8 @@ export default function MailPage() {
   });
 
   const handleRealtimeMessageCreated = useCallback((payload: MessageCreatedRealtimePayload) => {
-    const defaultDelta = { inbox: 1 };
-    const countsDelta = payload.countsDelta ?? defaultDelta;
+    const countsDelta: NonNullable<MessageCreatedRealtimePayload["countsDelta"]> =
+      payload.countsDelta ?? { inbox: 1 };
     const canAffectUnreadLabelCounts = !payload.recipient?.readAt;
     const labelUnreadById = canAffectUnreadLabelCounts
       ? (payload.labels ?? [])
@@ -380,8 +387,16 @@ export default function MailPage() {
       ...countsDelta,
       labelUnreadById,
     });
-    insertRealtimeInboxItem(payload);
-  }, [applyCountsDelta, insertRealtimeInboxItem]);
+    const insertedInbox = insertRealtimeInboxItem(payload);
+
+    if (!insertedInbox && folder === "scheduled" && (countsDelta.scheduled ?? 0) < 0 && payload.message?.id) {
+      removeMessageRowLocally(payload.message.id);
+      if (activeMailId === payload.message.id) {
+        setActiveMailId(null);
+        setActiveMailDetail(null);
+      }
+    }
+  }, [activeMailId, applyCountsDelta, folder, insertRealtimeInboxItem, removeMessageRowLocally]);
 
   const handleMailActionUpdated = useCallback((payload: MailActionUpdatedPayload) => {
     const mappedAction: MailMessageActionItem = {
@@ -442,17 +457,6 @@ export default function MailPage() {
   useEffect(() => {
     mailsRef.current = mails;
   }, [mails]);
-
-  useEffect(() => {
-    console.log("[mail:view] render-metrics", {
-      view: folder,
-      page,
-      pageSize,
-      total,
-      items: items.length,
-      mails: mails.length,
-    });
-  }, [folder, page, pageSize, total, items.length, mails.length]);
 
   useEffect(() => {
     composeDraftsRef.current = composeDrafts;
@@ -790,7 +794,7 @@ export default function MailPage() {
 
   useEffect(() => {
     const folderParam = (params.folder ?? "").toLowerCase();
-    const valid: UiFolder[] = ["inbox", "starred", "sent", "drafts", "trash", "archived", "snoozed", "all"];
+    const valid: UiFolder[] = ["inbox", "starred", "sent", "scheduled", "drafts", "trash", "archived", "snoozed", "all"];
     if (valid.includes(folderParam as UiFolder)) setFolder(folderParam as UiFolder);
     else setFolder("inbox");
   }, [params.folder]);
@@ -1165,6 +1169,17 @@ export default function MailPage() {
         return;
       }
 
+      if (folder === "scheduled") {
+        const selectedScheduledIds = mails
+          .filter((m) => ids.includes(m.id))
+          .map((m) => m.messageId ?? m.id);
+        await Promise.all(selectedScheduledIds.map((id) => cancelScheduledMessage(id)));
+        selectedScheduledIds.forEach((id) => removeMessageRowLocally(id));
+        applyCountsDelta({ scheduled: -selectedScheduledIds.length, drafts: selectedScheduledIds.length });
+        setSelectedIds(new Set());
+        return;
+      }
+
       const selectedMails = mails.filter((m) => ids.includes(m.id));
       const selected = selectedMails
         .map((m) => m.recipientId ?? m.messageId ?? m.id);
@@ -1515,12 +1530,129 @@ export default function MailPage() {
     }
   };
 
+  const scheduleCompose = async (
+    composeId: string,
+    scheduledAt: string,
+    overrides?: Partial<Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds" | "attachmentIds" | "bodyJson">>,
+  ) => {
+    if (sendingComposeIds.has(composeId) || savingComposeIds.has(composeId) || discardingComposeIds.has(composeId)) return;
+    const currentDraft = composeDraftsRef.current.find((item) => item.id === composeId);
+    if (!currentDraft) return;
+    const draft = { ...currentDraft, ...overrides };
+    if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) {
+      updateComposeDraft(composeId, { error: "Completa destinatarios, asunto y cuerpo." });
+      return;
+    }
+    if (draft.mode !== "new") {
+      updateComposeDraft(composeId, { error: "La programación aplica para mensajes nuevos." });
+      return;
+    }
+    try {
+      setSendingComposeIds((prev) => new Set(prev).add(composeId));
+      updateComposeDraft(composeId, { error: null });
+      if (draft.editingDraftId) {
+        await updateDraft(draft.editingDraftId, {
+          recipients: draft.to,
+          subject: draft.subject,
+          bodyHtml: draft.body,
+          bodyJson: buildDraftBodyJson(draft),
+        });
+      }
+      await scheduleMessage({
+        to: parseRecipientList(draft.to),
+        cc: parseRecipientList(draft.cc),
+        bcc: parseRecipientList(draft.bcc),
+        subject: draft.subject,
+        bodyHtml: draft.body,
+        bodyJson: draft.bodyJson ?? null,
+        scheduledAt,
+        originModule: "corporate",
+        labelIds: draft.selectedLabelIds,
+        attachmentIds: draft.attachmentIds ?? [],
+      });
+      if (draft.editingDraftId) {
+        await deleteDraft(draft.editingDraftId);
+      }
+      removeComposeDraft(composeId);
+      applyCountsDelta({ scheduled: 1, drafts: draft.editingDraftId ? -1 : 0 });
+      if (folder === "scheduled") {
+        await reload();
+      }
+      persistedSignaturesRef.current.delete(composeId);
+    } catch (error: unknown) {
+      const backendMessage = isAxiosError<BackendErrorPayload>(error)
+        ? error.response?.data?.message
+        : undefined;
+      updateComposeDraft(composeId, { error: Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || "No se pudo programar el mensaje." });
+    } finally {
+      setSendingComposeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(composeId);
+        return next;
+      });
+    }
+  };
+
   const applyCustomSnooze = async (date: Date) => {
     if (!snoozeTargetId) return;
     const success = await applySnoozeById(snoozeTargetId, date.toISOString());
     if (!success) return;
     setSnoozeDateModalOpen(false);
     setSnoozeTargetId(null);
+  };
+
+  const openScheduledDateModal = (id: string) => {
+    setScheduledTargetId(id);
+    setCustomScheduledDate(new Date(Date.now() + 60 * 60 * 1000));
+    setScheduledDateModalOpen(true);
+  };
+
+  const sendScheduledNowById = async (id: string) => {
+    const target = mails.find((m) => m.id === id);
+    if (!target) return;
+    try {
+      await sendScheduledMessageNow(target.messageId ?? target.id);
+      removeMessageRowLocally(target.messageId ?? target.id);
+      applyCountsDelta({ scheduled: -1, sent: 1 });
+      if (activeMailId === id) {
+        setActiveMailId(null);
+        setActiveMailDetail(null);
+      }
+    } catch {
+      await recoverMutationState("No se pudo enviar el mensaje programado.");
+    }
+  };
+
+  const cancelScheduledById = async (id: string) => {
+    const target = mails.find((m) => m.id === id);
+    if (!target) return;
+    try {
+      await cancelScheduledMessage(target.messageId ?? target.id);
+      removeMessageRowLocally(target.messageId ?? target.id);
+      applyCountsDelta({ scheduled: -1, drafts: 1 });
+      if (activeMailId === id) {
+        setActiveMailId(null);
+        setActiveMailDetail(null);
+      }
+    } catch {
+      await recoverMutationState("No se pudo cancelar la programación.");
+    }
+  };
+
+  const applyCustomSchedule = async (date: Date) => {
+    if (!scheduledTargetId) return;
+    const target = mails.find((mail) => mail.id === scheduledTargetId);
+    if (!target) return;
+    try {
+      await rescheduleMessage(target.messageId ?? target.id, date.toISOString());
+      setScheduledDateModalOpen(false);
+      setScheduledTargetId(null);
+      if (folder === "scheduled") {
+        await reload();
+      }
+    } catch {
+      await recoverMutationState("No se pudo reprogramar el mensaje.");
+    }
   };
 
   const unsnooze = async (id: string) => {
@@ -1623,6 +1755,13 @@ export default function MailPage() {
                   await deleteRemoteAttachment(attachmentId);
                 }}
                 onExecuteAction={executeThreadAction}
+                onSendScheduledNow={(id) => {
+                  void sendScheduledNowById(id);
+                }}
+                onRescheduleScheduled={(id) => openScheduledDateModal(id)}
+                onCancelScheduled={(id) => {
+                  void cancelScheduledById(id);
+                }}
                 formatFullDate={formatFullDate}
                 initialsOf={initialsOf}
                 avatarColor={avatarColor}
@@ -1749,6 +1888,7 @@ export default function MailPage() {
           void discardComposeDraft(composeId);
         }}
         onSend={sendCompose}
+        onSchedule={scheduleCompose}
       />
 
       <SnoozeDateTimeModal
@@ -1761,6 +1901,19 @@ export default function MailPage() {
         onSave={(date) => {
           setCustomSnoozeDate(date);
           void applyCustomSnooze(date);
+        }}
+      />
+
+      <SnoozeDateTimeModal
+        open={scheduledDateModalOpen}
+        value={customScheduledDate}
+        onClose={() => {
+          setScheduledDateModalOpen(false);
+          setScheduledTargetId(null);
+        }}
+        onSave={(date) => {
+          setCustomScheduledDate(date);
+          void applyCustomSchedule(date);
         }}
       />
 

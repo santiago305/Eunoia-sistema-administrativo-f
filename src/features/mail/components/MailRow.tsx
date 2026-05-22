@@ -40,6 +40,7 @@ export default function MailRow({
   const snoozeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [snoozePopoverOpen, setSnoozePopoverOpen] = useState(false);
   const snoozeQuickOptions = useMemo(() => buildSnoozeQuickOptions(new Date()), [snoozePopoverOpen]);
+  const isScheduledFolder = mail.folder === "scheduled";
 
   return (
     <div
@@ -155,17 +156,19 @@ export default function MailRow({
           >
             <Trash2 className="size-4" />
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSetRead(mail.id, !mail.read);
-            }}
-            className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
-            title={mail.read ? "Marcar como no leído" : "Marcar como leído"}
-          >
-            {mail.read ? <MailIcon className="size-4" /> : <MailOpen className="size-4" />}
-          </button>
-          {mail.folder !== "trash" ? (
+          {!isScheduledFolder ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetRead(mail.id, !mail.read);
+              }}
+              className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
+              title={mail.read ? "Marcar como no leído" : "Marcar como leído"}
+            >
+              {mail.read ? <MailIcon className="size-4" /> : <MailOpen className="size-4" />}
+            </button>
+          ) : null}
+          {mail.folder !== "trash" && !isScheduledFolder ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -177,7 +180,7 @@ export default function MailRow({
               <Archive className="size-4" />
             </button>
           ) : null}
-          {mail.folder !== "trash" ? (
+          {mail.folder !== "trash" && !isScheduledFolder ? (
             <>
               <button
                 ref={snoozeButtonRef}

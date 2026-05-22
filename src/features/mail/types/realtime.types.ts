@@ -14,6 +14,7 @@ export type MessageCreatedRealtimePayload = {
     inbox: number;
     starred: number;
     sent: number;
+    scheduled: number;
     drafts: number;
     trash: number;
     archived: number;

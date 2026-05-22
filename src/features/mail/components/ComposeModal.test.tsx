@@ -39,6 +39,7 @@ const baseProps = {
   onDeleteAttachment: vi.fn(),
   onDiscard: vi.fn(),
   onSend: vi.fn(),
+  onSchedule: vi.fn(),
 };
 
 describe("NotificationComposeModal reply/forward chrome", () => {

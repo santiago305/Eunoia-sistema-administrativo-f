@@ -35,6 +35,7 @@ export default function MailToolbar(props: Props) {
   const selectedArr = Array.from(props.selectedIds);
   const allSelected = props.pageMailIds.length > 0 && props.pageMailIds.every((id) => props.selectedIds.has(id));
   const someSelected = selectedArr.length > 0;
+  const isScheduledView = props.folder === "scheduled";
 
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
@@ -91,9 +92,11 @@ export default function MailToolbar(props: Props) {
               <LiaTrashRestoreAltSolid className="size-5" />
             </button>
           ) : null}
-          <button onClick={() => props.onDeleteBulk(selectedArr)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Eliminar">
+          <button onClick={() => props.onDeleteBulk(selectedArr)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title={isScheduledView ? "Cancelar programación" : "Eliminar"}>
             <Trash2 className="size-5" />
           </button>
+          {!isScheduledView ? (
+            <>
           <button onClick={() => props.onSetReadBulk(selectedArr, true)} className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Marcar como leído">
             <MailOpen className="size-5" />
           </button>
@@ -158,6 +161,8 @@ export default function MailToolbar(props: Props) {
           <button className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center">
             <MoreVertical className="size-5" />
           </button>
+            </>
+          ) : null}
         </>
       ) : (
         <button className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center" title="Actualizar" onClick={props.onRefresh}>

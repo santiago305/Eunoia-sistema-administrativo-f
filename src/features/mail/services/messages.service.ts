@@ -53,6 +53,37 @@ export const sendMessage = async (payload: {
   return response.data;
 };
 
+export const scheduleMessage = async (payload: {
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  bodyHtml: string;
+  scheduledAt: string;
+  bodyJson?: Record<string, unknown> | null;
+  originModule?: string;
+  labelIds?: string[];
+  attachmentIds?: string[];
+}) => {
+  const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.scheduleMessage, payload);
+  return response.data;
+};
+
+export const rescheduleMessage = async (id: string, scheduledAt: string) => {
+  const response = await axiosInstance.patch(API_NOTIFICATION_MESSAGES_GROUP.rescheduleMessage(id), { scheduledAt });
+  return response.data;
+};
+
+export const cancelScheduledMessage = async (id: string) => {
+  const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.cancelScheduledMessage(id));
+  return response.data;
+};
+
+export const sendScheduledMessageNow = async (id: string) => {
+  const response = await axiosInstance.post(API_NOTIFICATION_MESSAGES_GROUP.sendScheduledMessageNow(id));
+  return response.data;
+};
+
 export const listMailLabels = async () => {
   const response = await axiosInstance.get<MailLabelItem[]>(API_NOTIFICATION_MESSAGES_GROUP.listLabels);
   return response.data;
@@ -77,6 +108,7 @@ export const countSidebarMessages = async (labelIds: string[] = []) => {
     inbox: number;
     starred: number;
     sent: number;
+    scheduled: number;
     drafts: number;
     trash: number;
     archived: number;
