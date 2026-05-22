@@ -48,11 +48,36 @@ export const API_COMPANY_GROUP = {
   uploadIsotype: "/company/isotype",
   uploadCert: "/company/cert",
 };
+export const clientRoutes = {
+  list: "/clients",
+  create: "/clients",
+  detail: (id: string) => `/clients/${id}`,
+  update: (id: string) => `/clients/${id}`,
+  active: (id: string) => `/clients/${id}/active`,
+  telephones: (clientId: string) => `/clients/${clientId}/telephones`,
+  telephoneDetail: (id: string) => `/clients/telephones/${id}`,
+  telephoneActive: (id: string) => `/clients/telephones/${id}/active`,
+  telephoneMain: (id: string) => `/clients/telephones/${id}/main`,
+  searchState: "/clients/search-state",
+  searchMetrics: "/clients/search-metrics",
+  searchMetricDetail: (metricId: string) => `/clients/search-metrics/${metricId}`,
+};
+export const packRoutes = {
+  list: "/packs",
+  create: "/packs",
+  detail: (id: string) => `/packs/${id}`,
+  active: (id: string) => `/packs/${id}/active`,
+  searchState: "/packs/search-state",
+  searchMetrics: "/packs/search-metrics",
+  searchMetricDetail: (metricId: string) => `/packs/search-metrics/${metricId}`,
+};
+
 
 export const API_UBIGEO_GROUP = {
   departments: "/ubigeo/departments",
   provinces: "/ubigeo/provinces",
   districts: "/ubigeo/districts",
+  ubigueo: "/ubigeo",
 };
 export const API_ROLES_GROUP = {
   findAll: "/roles",

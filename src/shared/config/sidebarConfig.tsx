@@ -48,6 +48,10 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 href: RoutesPaths.catalogProducts,
             },
             {
+                label: "Packs",
+                href: RoutesPaths.catalogPacks,
+            },
+            {
                 label: "Transferencias",
                 href: RoutesPaths.catalogTransferences,
             },
@@ -105,6 +109,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Proveedores",
         icon: <IconUsers className="text-sidebar-foreground" />,
         href: RoutesPaths.providers
+    },
+    {
+        label: "Clientes",
+        icon: <IconUsers className="text-sidebar-foreground" />,
+        href: RoutesPaths.clients,
     },
     {
         label: "Usuarios",
