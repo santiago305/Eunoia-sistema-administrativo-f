@@ -15,6 +15,7 @@ export interface CreateUserRequest {
   roleId?: string;
   avatarUrl?: string;
   telefono?: string;
+  mailStorageQuotaGb?: number;
 }
 
 // Respuesta estándar backend.
@@ -26,6 +27,17 @@ export interface ApiSuccess<T = unknown> {
 
 // Create user devuelve mensaje (sin data útil para UI hoy).
 export type CreateUserResponse = ApiSuccess;
+
+export type MailStorageSummary = {
+  userId: string;
+  quotaBytes: number;
+  quotaGb: number;
+  usedBytes: number;
+  remainingBytes: number;
+  usedPercent: number;
+  updatedAt?: string;
+  updatedByUserId?: string | null;
+};
 
 // DTO de usuario para listados/perfil.
 export interface UserDTO {

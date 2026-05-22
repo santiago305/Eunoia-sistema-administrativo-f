@@ -53,7 +53,7 @@ const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
   const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
-  const { counts: notificationCounts, labels: mailLabels } = useMailDashboardContext();
+  const { counts: notificationCounts, labels: mailLabels, storage } = useMailDashboardContext();
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
 
@@ -90,6 +90,20 @@ const SidebarBody = () => {
           <SidebarItemComponent key={item.href ?? item.label} item={item} />
         ))}
       </nav>
+      {isNotifications ? (
+        <div className="mt-4 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-muted">Almacenamiento</p>
+          <p className="mt-1 text-[11px] text-sidebar-foreground">
+            {(storage.usedBytes / (1024 * 1024)).toFixed(1)} MB / {(storage.quotaBytes / (1024 * 1024)).toFixed(1)} MB
+          </p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${Math.max(0, Math.min(100, storage.usedPercent || 0))}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

@@ -220,6 +220,7 @@ const mapAttachmentBackendError = (error: unknown): string => {
   if (message.includes("ATTACHMENT_EXTENSION_NOT_ALLOWED")) return "El servidor no permite esta extension.";
   if (message.includes("ATTACHMENT_MIME_NOT_ALLOWED")) return "El servidor no permite este tipo de archivo.";
   if (message.includes("ATTACHMENT_TOO_LARGE")) return "El archivo no debe superar 5 MB.";
+  if (message.includes("MAIL_STORAGE_QUOTA_EXCEEDED")) return "No tienes espacio disponible en tu cuota de correo.";
   if (message.includes("ATTACHMENT_IMAGE_MIME_REQUIRED")) return "Solo puedes insertar imagenes desde el boton de imagen.";
   if (message.includes("ATTACHMENT_ACCESS_DENIED")) return "No tienes permisos para adjuntar aqui.";
   if (message.includes("ATTACHMENT_TARGET_REQUIRED")) return "El adjunto no tiene destino valido.";

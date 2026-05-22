@@ -10,6 +10,7 @@ export const createUserSchema = z.object({
   roleId: z.string().optional(),
   avatarUrl: z.string().optional(),
   telefono: z.string().optional(),
+  mailStorageQuotaGb: z.number().int().min(1).max(5).default(1),
 });
 
 /**

@@ -68,6 +68,13 @@ interface UsersRightPanelProps {
   savingPreferredHomePath: boolean;
   savePreferredHomePath: () => Promise<void>;
   canEditPreferredHome: boolean;
+  mailStorageQuotaGbDraft: number;
+  setMailStorageQuotaGbDraft: (value: number) => void;
+  savingMailStorageQuota: boolean;
+  saveMailStorageQuota: () => Promise<void>;
+  canEditMailStorageQuota: boolean;
+  mailStorageUsedPercent?: number;
+  mailStorageUsedLabel?: string;
 }
 
 export function UsersRightPanel({
@@ -93,6 +100,13 @@ export function UsersRightPanel({
   savingPreferredHomePath,
   savePreferredHomePath,
   canEditPreferredHome,
+  mailStorageQuotaGbDraft,
+  setMailStorageQuotaGbDraft,
+  savingMailStorageQuota,
+  saveMailStorageQuota,
+  canEditMailStorageQuota,
+  mailStorageUsedPercent,
+  mailStorageUsedLabel,
 }: UsersRightPanelProps) {
   const isDeleted = Boolean(selected?.deleted || selected?.deletedAt);
   const [permissionCodeDraft, setPermissionCodeDraft] = useState("");
@@ -266,6 +280,38 @@ export function UsersRightPanel({
                   </button>
                 </div>
               </div>
+              ) : null}
+
+              {canEditMailStorageQuota ? (
+                <div className="rounded-2xl border border-zinc-200 p-4">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Almacenamiento mail</p>
+                  <p className="mt-1 text-[12px] font-medium text-zinc-800">Cuota por usuario (1 a 5 GB)</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px]">
+                    <input
+                      type="number"
+                      min={1}
+                      max={5}
+                      step={1}
+                      value={mailStorageQuotaGbDraft}
+                      onChange={(event) => setMailStorageQuotaGbDraft(Number(event.target.value || 1))}
+                      className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                    />
+                    <button
+                      disabled={savingMailStorageQuota}
+                      onClick={() => void saveMailStorageQuota()}
+                      className={cn(
+                        "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
+                        savingMailStorageQuota ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
+                      )}
+                      style={{ background: "hsl(var(--primary))" }}
+                    >
+                      {savingMailStorageQuota ? "Guardando..." : "Guardar"}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[11px] text-zinc-500">
+                    Uso actual: {mailStorageUsedLabel ?? "-"} ({Math.max(0, Math.min(100, Math.round(mailStorageUsedPercent ?? 0)))}%)
+                  </p>
+                </div>
               ) : null}
 
               {canManageOverrides ? (

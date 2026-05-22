@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useMailLabels } from "@/features/mail/hooks/useMailLabels";
 import { useMailSidebarCounts } from "@/features/mail/hooks/useMailSidebarCounts";
+import { useMailStorageSummary } from "@/features/mail/hooks/useMailStorageSummary";
 import type { MailLabelItem } from "@/features/mail/types/message.types";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { hasAnyUnreadFromSidebarCounts } from "@/features/mail/utils/mail-state.utils";
@@ -30,6 +31,14 @@ type MailDashboardContextValue = {
   createLabel: (name: string, color: string) => Promise<MailLabelItem>;
   editLabel: (id: string, payload: { name?: string; color?: string }) => Promise<MailLabelItem>;
   deleteLabel: (id: string) => Promise<void>;
+  storage: {
+    quotaBytes: number;
+    quotaGb: number;
+    usedBytes: number;
+    remainingBytes: number;
+    usedPercent: number;
+  };
+  reloadStorage: () => Promise<void>;
 };
 
 const INITIAL_COUNTS: SidebarCounts = {
@@ -60,6 +69,14 @@ const MailDashboardContext = createContext<MailDashboardContextValue>({
   createLabel: noopCreateLabel,
   editLabel: noopCreateLabel,
   deleteLabel: noopAsync,
+  storage: {
+    quotaBytes: 0,
+    quotaGb: 1,
+    usedBytes: 0,
+    remainingBytes: 0,
+    usedPercent: 0,
+  },
+  reloadStorage: noopAsync,
 });
 
 export function MailDashboardProvider({ children }: { children: ReactNode }) {
@@ -72,6 +89,7 @@ export function MailDashboardProvider({ children }: { children: ReactNode }) {
     [items],
   );
   const seedCounts = useMailSidebarCounts(isMailRoute, customLabelIds);
+  const { summary: storageSummary, reload: reloadStorage } = useMailStorageSummary(isMailRoute);
 
   useEffect(() => {
     setCounts(seedCounts);
@@ -138,8 +156,33 @@ export function MailDashboardProvider({ children }: { children: ReactNode }) {
       createLabel,
       editLabel,
       deleteLabel,
+      storage: {
+        quotaBytes: storageSummary.quotaBytes,
+        quotaGb: storageSummary.quotaGb,
+        usedBytes: storageSummary.usedBytes,
+        remainingBytes: storageSummary.remainingBytes,
+        usedPercent: storageSummary.usedPercent,
+      },
+      reloadStorage,
     }),
-    [isMailRoute, counts, applyCountsDelta, applyUnreadByLabelDelta, items, loading, reload, createLabel, editLabel, deleteLabel],
+    [
+      isMailRoute,
+      counts,
+      applyCountsDelta,
+      applyUnreadByLabelDelta,
+      items,
+      loading,
+      reload,
+      createLabel,
+      editLabel,
+      deleteLabel,
+      storageSummary.quotaBytes,
+      storageSummary.quotaGb,
+      storageSummary.usedBytes,
+      storageSummary.remainingBytes,
+      storageSummary.usedPercent,
+      reloadStorage,
+    ],
   );
 
   return <MailDashboardContext.Provider value={value}>{children}</MailDashboardContext.Provider>;

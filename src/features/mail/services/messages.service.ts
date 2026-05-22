@@ -22,6 +22,18 @@ export const getMessageDetail = async (id: string) => {
   return response.data;
 };
 
+export const getMyMailStorageSummary = async () => {
+  const response = await axiosInstance.get<{
+    userId: string;
+    quotaBytes: number;
+    quotaGb: number;
+    usedBytes: number;
+    remainingBytes: number;
+    usedPercent: number;
+  }>(API_NOTIFICATION_MESSAGES_GROUP.getMyStorageSummary);
+  return response.data;
+};
+
 export const listMessageActions = async (query: { threadId?: string; messageId?: string }) => {
   const response = await axiosInstance.get<MailMessageActionItem[]>(
     API_NOTIFICATION_MESSAGES_GROUP.listActions,

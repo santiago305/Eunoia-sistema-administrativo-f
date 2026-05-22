@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { findAllRoles } from "@/shared/services/roleService";
-import { createUser } from "@/shared/services/userService";
+import { createUser, updateUserMailStorageQuota } from "@/shared/services/userService";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { createUserSchema } from "@/shared/schemas/userSchemas";
@@ -11,9 +11,11 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { RolePicker } from "./roleButton";
 import type { CreateUserRequest, UserRoleOptionApi } from "@/features/users/types/users.types";
 import type { UserFormProps } from "../types/components.types";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
   const { showFeedback, clearFeedback } = useFeedbackToast();
+  const { isSuperAdmin } = useAuth();
   const [roles, setRoles] = useState<UserRoleOptionApi[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,6 +35,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
       roleId: "",
       password: "",
       telefono: "",
+      mailStorageQuotaGb: 1,
     },
   });
 
@@ -64,8 +67,23 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
 
     try {
       const res = await createUser(data);
+      const createdId = res?.data && typeof res.data === "object" ? String((res.data as { id?: string }).id ?? "") : "";
+      let quotaSaved = true;
+      if (createdId && isSuperAdmin) {
+        try {
+          await updateUserMailStorageQuota(createdId, Number(data.mailStorageQuotaGb ?? 1));
+        } catch {
+          quotaSaved = false;
+        }
+      }
 
-      showFeedback(successResponse(res.message || "Usuario creado satisfactoriamente"));
+      showFeedback(
+        successResponse(
+          quotaSaved
+            ? (res.message || "Usuario creado satisfactoriamente")
+            : "Usuario creado. No se pudo guardar la cuota de almacenamiento, actualizala en el panel del usuario.",
+        ),
+      );
       onCreated?.();
       closeModal?.();
 
@@ -75,6 +93,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
         roleId: "",
         telefono: "",
         password: "",
+        mailStorageQuotaGb: 1,
       });
     } catch {
       showFeedback(errorResponse("No se pudo crear el usuario"));
@@ -137,6 +156,20 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
             error={errors.roleId?.message}
           />
         </div>
+
+        {isSuperAdmin ? (
+          <div>
+            <FloatingInput
+              label="Almacenamiento mail (GB)"
+              type="number"
+              min={1}
+              max={5}
+              step={1}
+              error={errors.mailStorageQuotaGb?.message}
+              {...register("mailStorageQuotaGb", { valueAsNumber: true })}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-zinc-100 pt-4">

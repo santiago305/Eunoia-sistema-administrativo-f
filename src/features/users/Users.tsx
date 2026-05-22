@@ -9,6 +9,8 @@ import {
   listUsers,
   restoreUser as restoreUserById,
   updateUserRole,
+  getUserMailStorageSummary,
+  updateUserMailStorageQuota,
   type CountUsersByRoleResponse,
   type ListUsersResponse,
   type UserApiListItem,
@@ -29,6 +31,7 @@ import { UserForm } from "./components/formUser";
 import { RoleType } from "./types/roles.types";
 import type { Role, RoleOption, User, UserListStatus } from "./types/users.types";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { PageShell } from "@/shared/layouts/PageShell";
 
 const ROLES = Object.values(RoleType) as Role[];
@@ -69,6 +72,7 @@ const readError = (error: unknown) => {
 export default function Users() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
+  const { isSuperAdmin } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -101,6 +105,10 @@ export default function Users() {
   const [savingOverride, setSavingOverride] = useState(false);
   const [preferredHomePathDraft, setPreferredHomePathDraft] = useState("");
   const [savingPreferredHomePath, setSavingPreferredHomePath] = useState(false);
+  const [mailStorageQuotaGbDraft, setMailStorageQuotaGbDraft] = useState(1);
+  const [savingMailStorageQuota, setSavingMailStorageQuota] = useState(false);
+  const [mailStorageUsedPercent, setMailStorageUsedPercent] = useState(0);
+  const [mailStorageUsedLabel, setMailStorageUsedLabel] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -189,6 +197,35 @@ export default function Users() {
   useEffect(() => {
     if (selected) setRoleDraft(selected.role);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadStorage = async () => {
+      if (!selected?.id) {
+        setMailStorageQuotaGbDraft(1);
+        setMailStorageUsedPercent(0);
+        setMailStorageUsedLabel("");
+        return;
+      }
+      try {
+        const data = await getUserMailStorageSummary(selected.id);
+        if (cancelled) return;
+        setMailStorageQuotaGbDraft(Number(data?.quotaGb ?? 1));
+        setMailStorageUsedPercent(Number(data?.usedPercent ?? 0));
+        const usedMb = Number(data?.usedBytes ?? 0) / (1024 * 1024);
+        const quotaMb = Number(data?.quotaBytes ?? 0) / (1024 * 1024);
+        setMailStorageUsedLabel(`${usedMb.toFixed(1)} MB de ${quotaMb.toFixed(1)} MB`);
+      } catch {
+        if (cancelled) return;
+      }
+    };
+
+    void loadStorage();
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -418,6 +455,27 @@ export default function Users() {
     }
   }
 
+  async function saveMailStorageQuota() {
+    if (!selected?.id) return;
+    clearFeedback();
+    setSavingMailStorageQuota(true);
+    try {
+      const quotaGb = Math.max(1, Math.min(5, Math.trunc(Number(mailStorageQuotaGbDraft || 1))));
+      const data = await updateUserMailStorageQuota(selected.id, quotaGb);
+      setMailStorageQuotaGbDraft(Number(data?.quotaGb ?? quotaGb));
+      setMailStorageUsedPercent(Number(data?.usedPercent ?? 0));
+      const usedMb = Number(data?.usedBytes ?? 0) / (1024 * 1024);
+      const quotaMb = Number(data?.quotaBytes ?? 0) / (1024 * 1024);
+      setMailStorageUsedLabel(`${usedMb.toFixed(1)} MB de ${quotaMb.toFixed(1)} MB`);
+      showFeedback(successResponse("Cuota de almacenamiento actualizada."));
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo actualizar la cuota de almacenamiento."));
+    } finally {
+      setSavingMailStorageQuota(false);
+    }
+  }
+
   return (
     <PageShell
       className={cn(
@@ -478,6 +536,13 @@ export default function Users() {
             savingPreferredHomePath={savingPreferredHomePath}
             savePreferredHomePath={savePreferredHomePath}
             canEditPreferredHome={can("users.update")}
+            mailStorageQuotaGbDraft={mailStorageQuotaGbDraft}
+            setMailStorageQuotaGbDraft={setMailStorageQuotaGbDraft}
+            savingMailStorageQuota={savingMailStorageQuota}
+            saveMailStorageQuota={saveMailStorageQuota}
+            canEditMailStorageQuota={can("users.update") && isSuperAdmin}
+            mailStorageUsedPercent={mailStorageUsedPercent}
+            mailStorageUsedLabel={mailStorageUsedLabel}
           />
         </div>
       </div>

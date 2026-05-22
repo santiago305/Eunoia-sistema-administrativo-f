@@ -1,9 +1,10 @@
 import axiosInstance from "@/shared/common/utils/axios"
-import { API_ACCESS_CONTROL_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
+import { API_ACCESS_CONTROL_GROUP, API_NOTIFICATION_MESSAGES_GROUP, API_PROFILE_GROUP, API_USERS_GROUP } from "./APIs"
 import type {
   CountUsersByRoleData,
   CreateUserRequest,
   CreateUserResponse,
+  MailStorageSummary,
   RoleType,
   UserListStatus,
 } from "@/features/users/types/users.types";
@@ -73,9 +74,22 @@ export type EffectivePermissionsResponse = {
  * @returns {Promise<any>} Respuesta del servidor.
  */
 export const createUser = async (payload: CreateUserPayload) => {
-  const response = await axiosInstance.post<CreateUserResponse>(API_USERS_GROUP.createUser, payload)
+  const response = await axiosInstance.post<CreateUserResponse & { data?: { id?: string } }>(API_USERS_GROUP.createUser, payload)
   return response.data
 }
+
+export const getUserMailStorageSummary = async (id: string) => {
+  const response = await axiosInstance.get<MailStorageSummary>(API_NOTIFICATION_MESSAGES_GROUP.getUserStorageSummary(id));
+  return response.data;
+};
+
+export const updateUserMailStorageQuota = async (id: string, mailStorageQuotaGb: number) => {
+  const response = await axiosInstance.patch<MailStorageSummary>(
+    API_NOTIFICATION_MESSAGES_GROUP.updateUserStorageQuota(id),
+    { mailStorageQuotaGb },
+  );
+  return response.data;
+};
 
 export const listUsers = async (params?: ListUsersParams) => {
   const response = await axiosInstance.get<ListUsersResponse>(API_USERS_GROUP.list, {
