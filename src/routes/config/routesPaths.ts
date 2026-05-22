@@ -20,6 +20,7 @@ export const RoutesPaths = {
 
   catalogSummary: "/catalago",
   catalogProducts: "/catalago/productos",
+  catalogPacks: "/catalago/packs",
   catalogVariants: "/catalago/variantes",
   catalogTransferences: "/catalago/transferencias",
   catalogAdjustments: "/catalago/ajustes",
@@ -44,6 +45,9 @@ export const RoutesPaths = {
   //provedores
   providers:'/contactos/proveedores',
   contacts:'/contactos',
+
+  //clients
+  clients: "/clientes",
 
   //purchase
   purchase: '/compra',

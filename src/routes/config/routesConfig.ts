@@ -35,6 +35,7 @@ export const routesConfig: RouteMetadata[] = [
 
   { path: RoutesPaths.catalogSummary, name: "catalogSummary", isProtected: true, permissionsAllowed: ["page.catalog.view"] },
   { path: RoutesPaths.catalogProducts, name: "catalogProducts", isProtected: true, permissionsAllowed: ["page.catalog.view"] },
+  { path: RoutesPaths.catalogPacks, name: "catalogPacks", isProtected: true, permissionsAllowed: ["page.catalog.view"] },
   { path: RoutesPaths.catalogVariants, name: "catalogVariants", isProtected: true, permissionsAllowed: ["page.catalog.view"] },
   { path: RoutesPaths.catalogTransferences, name: "catalogTransferences", isProtected: true, permissionsAllowed: ["page.catalog.view"] },
   { path: RoutesPaths.catalogAdjustments, name: "catalogAdjustments", isProtected: true, permissionsAllowed: ["page.catalog.view"] },
@@ -56,6 +57,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.KardexPrima, name: "kardexPrima", isProtected: true, permissionsAllowed: ["page.raw-material.view"] },
 
   { path: RoutesPaths.providers, name: "providers", isProtected: true, permissionsAllowed: ["page.providers.view"] },
+  { path: RoutesPaths.clients, name: "clients", isProtected: true, permissionsAllowed: ["clients.read"] },
 
   { path: RoutesPaths.purchase, name: "purchase", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
   { path: RoutesPaths.purchases, name: "purchases", isProtected: true, permissionsAllowed: ["page.purchases.view"] },

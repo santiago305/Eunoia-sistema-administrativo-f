@@ -27,6 +27,7 @@ const Securitypage = lazy(() => import("@/features/security/security"));
 const IpsDetails = lazy(() => import("@/features/security/IpDetailPage"));
 const CatalogSummary = lazy(() => import("@/features/catalog/products/Summary"));
 const CatalogProducts = lazy(() => import("@/features/catalog/products/Products"));
+const CatalogPacks = lazy(() => import("@/features/catalog/packs/Packs"));
 const CatalogTransferences = lazy(() => import("@/features/catalog/products/TransferProduts"));
 const CatalogAdjustments = lazy(() => import("@/features/catalog/products/AdjustmentProduts"));
 const CatalogAdjustment = lazy(() => import("@/features/catalog/products/components/AdjustmentFormProducts"));
@@ -37,6 +38,7 @@ const RowMaterialSummary = lazy(() => import("@/features/catalog/raw-material/Su
 const RowMaterialAdjustments = lazy(() => import("@/features/catalog/raw-material/AdjustmentRowMaterials"));
 const RowMaterialDocuments = lazy(() => import("@/features/catalog/raw-material/InventoryRowMaterial"));
 const Providers = lazy(() => import("@/features/providers/Providers"));
+const Clients = lazy(() => import("@/features/clients/Clients"));
 const Purchase = lazy(() => import("@/features/purchases/Purchase"));
 const Purchases = lazy(() => import("@/features/purchases/Purchases"));
 const PurchaseHistory = lazy(() => import("@/features/purchases/PurchaseHistory"));
@@ -107,6 +109,10 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.catalogProducts, <CatalogProducts />),
             },
             {
+                path: RoutesPaths.catalogPacks,
+                element: withRouteGuard(RoutesPaths.catalogPacks, <CatalogPacks />),
+            },
+            {
                 path: RoutesPaths.catalogSummary,
                 element: withRouteGuard(RoutesPaths.catalogSummary, <CatalogSummary />),
             },
@@ -157,6 +163,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.providers,
                 element: withRouteGuard(RoutesPaths.providers, <Providers />),
+            },
+            {
+                path: RoutesPaths.clients,
+                element: withRouteGuard(RoutesPaths.clients, <Clients />),
             },
             {
                 path: RoutesPaths.purchase,
