@@ -41,6 +41,15 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  /* Mail semantic tokens */
+  --color-mail-hover: hsl(var(--mail-hover));
+  --color-mail-row-read: hsl(var(--mail-row-read));
+  --color-mail-row-unread: hsl(var(--mail-row-unread));
+  --color-mail-accent: hsl(var(--mail-accent));
+  --color-mail-surface: hsl(var(--mail-surface));
+  --color-mail-star: hsl(var(--mail-star));
+  --color-mail-compose-foreground: hsl(var(--mail-compose-foreground));
+
 }
 
 /* Modern Minimal Dashboard Design System
@@ -99,6 +108,15 @@
     --sidebar-accent-foreground: 0 0% 15%;
     --sidebar-border: 0 0% 92%;
     --sidebar-ring: 174 69% 42%;
+
+    /* Mail UI palette (Gmail-like, aligned to current product) */
+    --mail-hover: 210 20% 95%;
+    --mail-row-read: 210 33% 96%;
+    --mail-row-unread: 0 0% 100%;
+    --mail-accent: 217 89% 61%;
+    --mail-surface: 210 20% 98%;
+    --mail-star: 45 95% 50%;
+    --mail-compose-foreground: 0 0% 12%;
 
     /* Shared elevated surface tokens */
     --shadow-floating-panel: 0 16px 40px -16px rgba(0, 0, 0, 0.22);

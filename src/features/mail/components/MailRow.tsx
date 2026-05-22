@@ -1,7 +1,10 @@
-import { Star, Paperclip, Archive, Trash2, MailOpen, Mail as MailIcon, Clock } from "lucide-react";
+import { Star, Paperclip, Archive, Trash2, MailOpen, Mail as MailIcon, Clock, CalendarClock } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import type { Mail } from "../types/mail-ui.types";
 import { cn } from "@/shared/lib/utils";
 import { LiaTrashRestoreAltSolid } from "react-icons/lia";
+import { Popover } from "@/shared/components/modales/Popover";
+import { buildSnoozeQuickOptions, formatSnoozeQuickDate } from "../utils/mail-snooze.utils";
 
 interface Props {
   mail: Mail;
@@ -13,7 +16,7 @@ interface Props {
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onArchive: (id: string) => void;
-  onSnooze: (id: string) => void;
+  onSnooze: (id: string, snoozedUntil?: string) => void;
   formatMailDate: (iso: string) => string;
   initialsOf: (name: string) => string;
   avatarColor: (seed: string) => string;
@@ -34,12 +37,16 @@ export default function MailRow({
   initialsOf,
   avatarColor,
 }: Props) {
+  const snoozeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [snoozePopoverOpen, setSnoozePopoverOpen] = useState(false);
+  const snoozeQuickOptions = useMemo(() => buildSnoozeQuickOptions(new Date()), [snoozePopoverOpen]);
+
   return (
     <div
       onClick={() => onOpen(mail.id)}
       className={cn(
         "group flex items-center gap-3 px-4 h-10 cursor-pointer border-b border-border/40 hover:shadow-[inset_1px_0_0_oklch(0.85_0.005_260),inset_-1px_0_0_oklch(0.85_0.005_260),0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] hover:z-10 relative transition-shadow",
-        mail.read ? "bg-mail-row-read" : "bg-mail-row-unread",
+        mail.read ? "" : "bg-mail-row-unread",
         selected && "bg-mail-accent/10",
       )}
     >
@@ -110,10 +117,22 @@ export default function MailRow({
       {mail.attachments && mail.attachments.length > 0 ? <Paperclip className="size-4 text-muted-foreground shrink-0" /> : null}
 
       <div className="relative shrink-0 w-32 flex justify-end">
-        <span className={cn("text-xs whitespace-nowrap group-hover:invisible", mail.read ? "text-muted-foreground" : "font-semibold text-foreground")}>
+        <span
+          className={cn(
+            "text-xs whitespace-nowrap group-hover:invisible",
+            selected && "invisible",
+            snoozePopoverOpen && "invisible",
+            mail.read ? "text-muted-foreground" : "font-semibold text-foreground",
+          )}
+        >
           {formatMailDate(mail.date)}
         </span>
-        <div className="absolute inset-0 hidden group-hover:flex items-center justify-end gap-1 bg-inherit">
+        <div
+          className={cn(
+            "absolute inset-0 items-center justify-end gap-1 bg-inherit",
+            selected || snoozePopoverOpen ? "flex" : "hidden group-hover:flex",
+          )}
+        >
           {mail.folder === "trash" ? (
             <button
               onClick={(e) => {
@@ -159,16 +178,68 @@ export default function MailRow({
             </button>
           ) : null}
           {mail.folder !== "trash" ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSnooze(mail.id);
-              }}
-              className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
-              title={mail.folder === "snoozed" ? "Quitar pospuesto" : "Posponer"}
-            >
-              <Clock className="size-4" />
-            </button>
+            <>
+              <button
+                ref={snoozeButtonRef}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (mail.folder === "snoozed") {
+                    onSnooze(mail.id);
+                    return;
+                  }
+                  setSnoozePopoverOpen((prev) => !prev);
+                }}
+                className="size-7 rounded-full hover:bg-mail-hover flex items-center justify-center"
+                title={mail.folder === "snoozed" ? "Quitar pospuesto" : "Posponer"}
+              >
+                <Clock className="size-4" />
+              </button>
+              {mail.folder !== "snoozed" ? (
+                <Popover
+                  open={snoozePopoverOpen}
+                  onClose={() => setSnoozePopoverOpen(false)}
+                  anchorRef={snoozeButtonRef}
+                  placement="bottom-end"
+                  offset={2}
+                  hideHeader
+                  className="w-[280px] rounded-lg border border-border bg-popover shadow-popover"
+                  bodyClassName="px-0 py-2"
+                >
+                  <div className="px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Posponer hasta
+                  </div>
+                  <div className="flex flex-col ">
+                    {snoozeQuickOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSnooze(mail.id, option.date.toISOString());
+                          setSnoozePopoverOpen(false);
+                        }}
+                        className="flex items-center justify-between px-4 py-2 text-sm transition-colors hover:bg-black/5"
+                      >
+                        <span>{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{formatSnoozeQuickDate(option.date)}</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onSnooze(mail.id);
+                        setSnoozePopoverOpen(false);
+                      }}
+                      className="mt-1 flex items-center gap-2 border-t border-border px-4 py-2 text-sm transition-colors hover:bg-black/5"
+                    >
+                      <CalendarClock className="size-4 text-muted-foreground" />
+                      Elegir fecha y hora
+                    </button>
+                  </div>
+                </Popover>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>

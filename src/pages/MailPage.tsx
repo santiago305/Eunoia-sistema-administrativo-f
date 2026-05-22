@@ -5,6 +5,7 @@ import type { Mail } from "@/features/mail/types/mail-ui.types";
 import MailToolbar from "@/features/mail/components/MailToolbar";
 import MailList from "@/features/mail/components/MailList";
 import MailDetail from "@/features/mail/components/MailDetail";
+import SnoozeDateTimeModal from "@/features/mail/components/SnoozeDateTimeModal";
 import NotificationComposeStack from "@/features/mail/components/ComposeStack";
 import type { NotificationComposeDraft } from "@/features/mail/components/ComposeModal";
 import { useMessagesV2 } from "@/features/mail/hooks/useMessagesV2";
@@ -317,7 +318,8 @@ export default function MailPage() {
   const [newLabelColor, setNewLabelColor] = useState("#2563eb");
   const [labelError, setLabelError] = useState<string | null>(null);
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
-  const [customSnoozeAt, setCustomSnoozeAt] = useState("");
+  const [snoozeDateModalOpen, setSnoozeDateModalOpen] = useState(false);
+  const [customSnoozeDate, setCustomSnoozeDate] = useState<Date>(new Date());
   const [activeMailDetail, setActiveMailDetail] = useState<MailDetailData>(null);
   const [messageLabelIdsByMessage, setMessageLabelIdsByMessage] = useState<Record<string, string[]>>({});
   const [localStarredById, setLocalStarredById] = useState<Record<string, boolean>>({});
@@ -382,13 +384,29 @@ export default function MailPage() {
   }, [applyCountsDelta, insertRealtimeInboxItem]);
 
   const handleMailActionUpdated = useCallback((payload: MailActionUpdatedPayload) => {
+    const mappedAction: MailMessageActionItem = {
+      id: payload.actionId,
+      threadId: payload.threadId,
+      messageId: payload.messageId ?? null,
+      actionKey: payload.actionKey,
+      actionType: payload.actionType,
+      targetEntityType: payload.targetEntityType,
+      targetEntityId: payload.targetEntityId,
+      status: payload.status,
+      completedByUserId: payload.completedByUserId ?? null,
+      completedByName: payload.completedByName ?? null,
+      completedAt: payload.completedAt ?? null,
+      version: payload.version,
+      metadata: payload.metadata ?? null,
+      canExecute: payload.canExecute,
+    };
     setActiveMailDetail((prev) => {
       if (!prev) return prev;
       const currentThreadId = prev.message?.threadId ?? null;
       const payloadThreadId = payload.threadId ?? null;
       const sameThread = Boolean(currentThreadId && payloadThreadId && currentThreadId === payloadThreadId);
       if (!sameThread) return prev;
-      return mergeActionIntoDetail(prev, payload);
+      return mergeActionIntoDetail(prev, mappedAction);
     });
   }, []);
 
@@ -1471,14 +1489,14 @@ export default function MailPage() {
     }
   };
 
-  const openSnooze = (id: string) => {
+  const openSnoozeDateModal = (id: string) => {
     setSnoozeTargetId(id);
-    setCustomSnoozeAt("");
+    setCustomSnoozeDate(new Date());
+    setSnoozeDateModalOpen(true);
   };
 
-  const applySnooze = async (iso: string) => {
-    if (!snoozeTargetId) return;
-    const target = mails.find((m) => m.id === snoozeTargetId);
+  const applySnoozeById = async (id: string, iso: string) => {
+    const target = mails.find((m) => m.id === id);
     if (!target) return;
     try {
       await snoozeInboxRow(target.recipientId ?? target.messageId ?? target.id, iso);
@@ -1490,10 +1508,19 @@ export default function MailPage() {
         });
         if (countsLabelAware) applyUnreadByLabelDelta(getMessageLabelIds(target), -1);
       }
-      setSnoozeTargetId(null);
+      return true;
     } catch {
       await recoverMutationState("No se pudo posponer el mensaje.");
+      return false;
     }
+  };
+
+  const applyCustomSnooze = async (date: Date) => {
+    if (!snoozeTargetId) return;
+    const success = await applySnoozeById(snoozeTargetId, date.toISOString());
+    if (!success) return;
+    setSnoozeDateModalOpen(false);
+    setSnoozeTargetId(null);
   };
 
   const unsnooze = async (id: string) => {
@@ -1666,12 +1693,16 @@ export default function MailPage() {
                   onDelete={(id) => void moveToTrash([id])}
                   onRestore={(id) => void restoreFromTrash([id])}
                   onArchive={(id) => void toggleArchive(id)}
-                  onSnooze={(id) => {
+                  onSnooze={(id, snoozedUntil) => {
                     if (folder === "snoozed") {
                       void unsnooze(id);
                       return;
                     }
-                    openSnooze(id);
+                    if (snoozedUntil) {
+                      void applySnoozeById(id, snoozedUntil);
+                      return;
+                    }
+                    openSnoozeDateModal(id);
                   }}
                   formatMailDate={formatMailDate}
                   initialsOf={initialsOf}
@@ -1720,59 +1751,18 @@ export default function MailPage() {
         onSend={sendCompose}
       />
 
-      <Modal
-        open={Boolean(snoozeTargetId)}
-        onClose={() => setSnoozeTargetId(null)}
-        title="Posponer mensaje"
-        className="w-full max-w-sm"
-        bodyClassName="space-y-2 px-0"
-      >
-        <div className="grid gap-2">
-          <SystemButton type="button" variant="outline" size="sm" onClick={() => {
-            const d = new Date();
-            d.setDate(d.getDate() + 1);
-            d.setHours(8, 0, 0, 0);
-            void applySnooze(d.toISOString());
-          }}>
-            Mañana 8:00
-          </SystemButton>
-          <SystemButton type="button" variant="outline" size="sm" onClick={() => {
-            const d = new Date();
-            const day = d.getDay();
-            const add = day === 0 ? 6 : 6 - day;
-            d.setDate(d.getDate() + add);
-            d.setHours(8, 0, 0, 0);
-            void applySnooze(d.toISOString());
-          }}>
-            Fin de semana
-          </SystemButton>
-          <SystemButton type="button" variant="outline" size="sm" onClick={() => {
-            const d = new Date();
-            d.setMonth(d.getMonth() + 1, 0);
-            d.setHours(8, 0, 0, 0);
-            void applySnooze(d.toISOString());
-          }}>
-            Fin de mes
-          </SystemButton>
-          <input
-            type="datetime-local"
-            value={customSnoozeAt}
-            onChange={(e) => setCustomSnoozeAt(e.target.value)}
-            className="rounded-md border border-border px-3 py-2 text-sm"
-          />
-          <SystemButton
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              if (!customSnoozeAt) return;
-              void applySnooze(new Date(customSnoozeAt).toISOString());
-            }}
-          >
-            Elegir fecha y hora
-          </SystemButton>
-        </div>
-      </Modal>
+      <SnoozeDateTimeModal
+        open={snoozeDateModalOpen}
+        value={customSnoozeDate}
+        onClose={() => {
+          setSnoozeDateModalOpen(false);
+          setSnoozeTargetId(null);
+        }}
+        onSave={(date) => {
+          setCustomSnoozeDate(date);
+          void applyCustomSnooze(date);
+        }}
+      />
 
       <Modal
         open={createLabelOpen}

@@ -14,7 +14,7 @@ interface Props {
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onArchive: (id: string) => void;
-  onSnooze: (id: string) => void;
+  onSnooze: (id: string, snoozedUntil?: string) => void;
   formatMailDate: (iso: string) => string;
   initialsOf: (name: string) => string;
   avatarColor: (seed: string) => string;
