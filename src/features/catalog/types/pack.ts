@@ -9,6 +9,7 @@ export type PackItemSku = {
   name: string;
   barcode?: string | null;
   price: number;
+  image?: string | null;
   isActive: boolean;
   attributes: SkuAttribute[];
 };
@@ -22,6 +23,18 @@ export type PackListItem = {
   updatedAt?: string;
 };
 
+export type PackListEntry = {
+  pack: {
+    packId: PackIdDomain | string;
+    description: string;
+    total: number;
+    isActive: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+  items: PackDetailResponse["items"];
+};
+
 export type PackRow = {
   packId: string;
   description: string;
@@ -29,6 +42,8 @@ export type PackRow = {
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
+  itemsPreview: string[];
+  itemsCount: number;
 };
 
 export type PackDetailResponse = {

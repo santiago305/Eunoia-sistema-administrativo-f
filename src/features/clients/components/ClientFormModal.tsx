@@ -225,7 +225,7 @@ export function ClientFormModal({
       open={open}
       title={mode === "edit" ? "Detalle de cliente" : "Nuevo cliente"}
       onClose={onClose}
-      className="w-[560px] max-h-[640px]"
+      className="w-[560px] max-h-[600px]"
     >
       <ClientFormFields
         form={form}
