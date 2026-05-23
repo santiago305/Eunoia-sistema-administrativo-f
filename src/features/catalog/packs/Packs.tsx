@@ -294,6 +294,9 @@ export default function CatalogPacks() {
       startTransition(() => {
         const next = removePackSearchKey(sanitizePackSearchSnapshot({ q: searchText, filters: searchFilters }), fieldId);
         setSearchText(next.q ?? "");
+        if (fieldId === "q") {
+          setAppliedSearchText(next.q ?? "");
+        }
         setSearchFilters(next.filters);
         setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
       });
@@ -460,7 +463,7 @@ export default function CatalogPacks() {
               },
               {
                 id: "toggle",
-                label: row.isActive ? "Desactivar" : "Reactivar",
+                label: row.isActive ? "Eliminar" : "Restaurar",
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
                 className: row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50",
@@ -604,13 +607,13 @@ export default function CatalogPacks() {
       <AlertModal
         open={Boolean(togglePackId)}
         type={packPendingToggle?.isActive ? "warning" : "restore"}
-        title={packPendingToggle?.isActive ? "Desactivar pack" : "Reactivar pack"}
+        title={packPendingToggle?.isActive ? "Eliminar pack" : "Restaurar pack"}
         message={
           packPendingToggle?.isActive
-            ? "Estas por desactivar este pack. Hazlo solo si estas seguro."
-            : "Estas por reactivar este pack. Hazlo solo si estas seguro."
+            ? "Estas por eliminar este pack. Hazlo solo si estas seguro."
+            : "Estas por restaurar este pack. Hazlo solo si estas seguro."
         }
-        confirmText={packPendingToggle?.isActive ? "Desactivar" : "Reactivar"}
+        confirmText={packPendingToggle?.isActive ? "Eliminar" : "Restaurar"}
         loading={togglingStatus}
         onClose={() => {
           if (togglingStatus) return;
