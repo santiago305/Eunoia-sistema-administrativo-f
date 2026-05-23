@@ -22,7 +22,7 @@ interface Props {
   onDeleteBulk: (ids: string[]) => void;
   onRestoreBulk: (ids: string[]) => void;
   onArchiveBulk: (ids: string[], archive: boolean) => void;
-  onSnoozeBulk: (ids: string[], snoozedUntil: string) => void;
+  onSnoozeBulk: (ids: string[]) => void;
   onAssignLabelBulk: (ids: string[], labelId: string) => void;
   onRemoveLabelBulk: (ids: string[], labelId: string) => void;
   labels: MailLabelItem[];
@@ -109,9 +109,7 @@ export default function MailToolbar(props: Props) {
           {props.folder !== "trash" ? (
             <button
               onClick={() => {
-                const next = window.prompt("Fecha/hora ISO para posponer (ej: 2026-05-20T08:00:00-05:00)");
-                if (!next?.trim()) return;
-                props.onSnoozeBulk(selectedArr, next.trim());
+                props.onSnoozeBulk(selectedArr);
               }}
               className="size-9 rounded-full hover:bg-mail-hover flex items-center justify-center"
               title="Posponer seleccionados"

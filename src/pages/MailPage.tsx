@@ -325,7 +325,7 @@ export default function MailPage() {
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState("#2563eb");
   const [labelError, setLabelError] = useState<string | null>(null);
-  const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
+  const [snoozeTargetIds, setSnoozeTargetIds] = useState<string[]>([]);
   const [snoozeDateModalOpen, setSnoozeDateModalOpen] = useState(false);
   const [customSnoozeDate, setCustomSnoozeDate] = useState<Date>(new Date());
   const [scheduledTargetId, setScheduledTargetId] = useState<string | null>(null);
@@ -1374,7 +1374,7 @@ export default function MailPage() {
       const selectedStateIds = selectedMails
         .map((mail) => mail.recipientId)
         .filter((id): id is string => Boolean(id));
-      if (!selectedStateIds.length) return;
+      if (!selectedStateIds.length) return true;
       await bulkMessages({
         messageStateIds: selectedStateIds,
         action: "SNOOZE",
@@ -1401,8 +1401,10 @@ export default function MailPage() {
         labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
       });
       setSelectedIds(new Set());
+      return true;
     } catch {
       await recoverMutationState("No se pudo posponer los mensajes.");
+      return false;
     }
   };
 
@@ -1544,8 +1546,10 @@ export default function MailPage() {
     }
   };
 
-  const openSnoozeDateModal = (id: string) => {
-    setSnoozeTargetId(id);
+  const openSnoozeDateModal = (ids: string[]) => {
+    const normalizedIds = Array.from(new Set((ids ?? []).filter(Boolean)));
+    if (!normalizedIds.length) return;
+    setSnoozeTargetIds(normalizedIds);
     setCustomSnoozeDate(new Date());
     setSnoozeDateModalOpen(true);
   };
@@ -1634,11 +1638,16 @@ export default function MailPage() {
   };
 
   const applyCustomSnooze = async (date: Date) => {
-    if (!snoozeTargetId) return;
-    const success = await applySnoozeById(snoozeTargetId, date.toISOString());
-    if (!success) return;
+    if (!snoozeTargetIds.length) return;
+    if (snoozeTargetIds.length === 1) {
+      const success = await applySnoozeById(snoozeTargetIds[0], date.toISOString());
+      if (!success) return;
+    } else {
+      const success = await snoozeBulk(snoozeTargetIds, date.toISOString());
+      if (!success) return;
+    }
     setSnoozeDateModalOpen(false);
-    setSnoozeTargetId(null);
+    setSnoozeTargetIds([]);
   };
 
   const openScheduledDateModal = (id: string) => {
@@ -1874,7 +1883,7 @@ export default function MailPage() {
                   onDeleteBulk={(ids) => void moveToTrash(ids)}
                   onRestoreBulk={(ids) => void restoreFromTrash(ids)}
                   onArchiveBulk={(ids, archive) => void archiveBulk(ids, archive)}
-                  onSnoozeBulk={(ids, snoozedUntil) => void snoozeBulk(ids, snoozedUntil)}
+                  onSnoozeBulk={(ids) => openSnoozeDateModal(ids)}
                   onAssignLabelBulk={(ids, labelIdToAssign) => void assignLabelBulk(ids, labelIdToAssign)}
                   onRemoveLabelBulk={(ids, labelIdToRemove) => void removeLabelBulk(ids, labelIdToRemove)}
                   labels={labels.filter((item) => item.type === "CUSTOM")}
@@ -1929,7 +1938,7 @@ export default function MailPage() {
                       void applySnoozeById(id, snoozedUntil);
                       return;
                     }
-                    openSnoozeDateModal(id);
+                    openSnoozeDateModal([id]);
                   }}
                   formatMailDate={formatMailDate}
                   initialsOf={initialsOf}
@@ -1984,7 +1993,7 @@ export default function MailPage() {
         value={customSnoozeDate}
         onClose={() => {
           setSnoozeDateModalOpen(false);
-          setSnoozeTargetId(null);
+          setSnoozeTargetIds([]);
         }}
         onSave={(date) => {
           setCustomSnoozeDate(date);
