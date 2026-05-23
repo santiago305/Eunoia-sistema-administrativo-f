@@ -1,4 +1,5 @@
 import { 
+    IconAgencies,
     IconCompany,
     IconHome,
     IconOutOrder,
@@ -124,6 +125,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Roles",
         href: RoutesPaths.roles,
         icon: <IconUsers className="text-sidebar-foreground" />,
+    },
+    {
+        label: "Agencias",
+        icon: <IconAgencies className="text-sidebar-foreground" />,
+        href: RoutesPaths.agencies,
     },
     {
         label: "Empresa",

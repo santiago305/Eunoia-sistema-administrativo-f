@@ -49,6 +49,9 @@ export const RoutesPaths = {
   //clients
   clients: "/clientes",
 
+  //agencies
+  agencies: "/agencias",
+
   //purchase
   purchase: '/compra',
   purchases: '/compras',
