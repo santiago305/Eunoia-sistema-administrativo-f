@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
@@ -109,11 +109,11 @@ export function PackItemsEditor({
   lockSkuOnEdit = false,
   disabled = false,
   loading = false,
-}: Props) {  const [skuId, setSkuId] = useState("");
+}: Props) {
+  const [skuId, setSkuId] = useState("");
   const [skuOptions, setSkuOptions] = useState<Array<{ value: string; label: string; price?: number }>>([]);
   const [skuLoading, setSkuLoading] = useState(false);
-  const skuQueryRef = useRef("");
-  const skuTimeoutRef = useRef<number | null>(null);
+  const [skuQuery, setSkuQuery] = useState("");
 
   const [quantityText, setQuantityText] = useState("1");
   const [priceText, setPriceText] = useState("");
@@ -142,7 +142,7 @@ export function PackItemsEditor({
     setEditingId(null);
   };
 
-  const loadSkus = async (q: string) => {
+  const loadSkus = useCallback(async (q: string) => {
     const query = q.trim();
     setSkuLoading(true);
     try {
@@ -151,7 +151,7 @@ export function PackItemsEditor({
         productType: ProductTypes.PRODUCT,
         isActive: true,
         page: 1,
-        limit: 20 
+        limit: 10,
       });
       const items = (res.items ?? []) as ProductSkuWithAttributes[];
       const mapped = items.map((item) => ({
@@ -165,19 +165,23 @@ export function PackItemsEditor({
     } finally {
       setSkuLoading(false);
     }
-  };
+  }, []);
 
   const handleSkuSearchChange = (text: string) => {
-    skuQueryRef.current = text;
-    if (skuTimeoutRef.current) window.clearTimeout(skuTimeoutRef.current);
-    const delay = text.trim() ? 350 : 0;
-    skuTimeoutRef.current = window.setTimeout(() => {
-      skuTimeoutRef.current = null;
-      void loadSkus(skuQueryRef.current);
-    }, delay);
+    setSkuQuery(text);
   };
 
   const canSubmit = !disabled && !loading;
+
+  useEffect(() => {
+    if (disabled || loading || isEditingPersisted) return;
+
+    const id = window.setTimeout(() => {
+      void loadSkus(skuQuery);
+    }, skuQuery.trim() ? 350 : 0);
+
+    return () => window.clearTimeout(id);
+  }, [disabled, isEditingPersisted, loadSkus, loading, skuQuery]);
 
   const submit = () => {
     if (!canSubmit) return;
@@ -245,17 +249,16 @@ export function PackItemsEditor({
   );
 
   return (
-    <div className="mt-4 rounded-md border border-border/70 bg-muted/10 p-3">
-      <div className="mb-2">
-        <div className="text-sm font-semibold text-slate-900">Ítems</div>
-        <div className="text-[11px] text-muted-foreground">Agrega SKUs al pack (no se puede repetir un SKU).</div>
+    <div className="mt-4 rounded-md border border-border/70 bg-muted/10 p-3 ">
+      <div className="mb-4">
+        <div className="text-sm font-semibold text-slate-900">Agregar Productos</div>
       </div>
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[240px]">
             <FloatingSelect
-              label="SKU"
+              label="Productos"
               name="pack-item-sku"
               value={skuId}
               options={skuOptions.map((opt) => ({ value: opt.value, label: opt.label }))}
@@ -267,8 +270,8 @@ export function PackItemsEditor({
                 }
               }}
               searchable
-              searchPlaceholder="Buscar SKU..."
-              emptyMessage={skuLoading ? "Cargando..." : "Sin SKUs"}
+              searchPlaceholder="Buscar productos..."
+              emptyMessage={skuLoading ? "Cargando..." : "Sin productos"}
               onSearchChange={handleSkuSearchChange}
               className="h-10 text-xs"
               disabled={disabled || loading || isEditingPersisted}
@@ -320,7 +323,7 @@ export function PackItemsEditor({
           ) : null}
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1 mb-6">
           {rowsWithTotals.length ? (
             rowsWithTotals.map((row) => {
               const parts = splitSkuLabel(row.skuLabel);
@@ -365,21 +368,19 @@ export function PackItemsEditor({
               );
             })
           ) : (
-            <div className="rounded-md bg-slate-50 px-3 py-3 text-[11px] text-slate-500">Aún no agregaste ítems.</div>
+              <p></p>
           )}
         </div>
 
-        <div className="rounded-sm border border-border/60 bg-background px-3 py-2">
-          <FloatingInput
-            label="Total"
-            name="pack-items-total"
-            value={totalText}
-            onChange={(e) => setTotalText(e.target.value)}
-            onBlur={onTotalBlur}
-            disabled={disabled || loading || rows.length === 0}
-            className="h-10 text-xs tabular-nums"
-          />
-        </div>
+        <FloatingInput
+          label="Total"
+          name="pack-items-total"
+          value={totalText}
+          onChange={(e) => setTotalText(e.target.value)}
+          onBlur={onTotalBlur}
+          disabled={disabled || loading || rows.length === 0}
+          className="h-10 text-xs tabular-nums"
+        />
       </div>
     </div>
   );

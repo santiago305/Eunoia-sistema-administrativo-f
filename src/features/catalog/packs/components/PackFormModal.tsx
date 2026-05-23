@@ -161,7 +161,7 @@ export function PackFormModal(props: Props) {
   const title = mode === "edit" ? "Editar pack" : "Nuevo pack";
 
   return (
-    <Modal open={props.open} title={title} onClose={props.onClose} className="w-[680px] max-h-[760px]">
+    <Modal open={props.open} title={title} onClose={props.onClose} className="w-[680px] max-h-[600px]">
       <div className="space-y-3">
         <FloatingInput
           label="Descripción"
