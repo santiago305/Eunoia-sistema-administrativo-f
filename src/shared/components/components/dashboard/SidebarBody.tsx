@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { getSidebarItems } from "@/shared/config/sidebarConfig";
 import { getMailSidebarItems } from "@/shared/config/mailSidebarConfig";
@@ -9,6 +9,7 @@ import type { SidebarItem } from "./types";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { useMailDashboardContext } from "@/features/mail/context/MailDashboardProvider";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { updateMyMailStorageQuota } from "@/features/mail/services/messages.service";
 
 const normalizeRole = (role?: string | null) =>
   String(role ?? "").trim().toLowerCase();
@@ -53,9 +54,15 @@ const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const location = useLocation();
   const isNotifications = location.pathname.startsWith(RoutesPaths.notifications);
-  const { counts: notificationCounts, labels: mailLabels, storage } = useMailDashboardContext();
+  const { counts: notificationCounts, labels: mailLabels, storage, reloadStorage } = useMailDashboardContext();
   const { can } = usePermissions();
   const canCreateLabel = can("notifications.labels.create");
+  const [quotaDraft, setQuotaDraft] = useState<number>(1);
+  const [savingQuota, setSavingQuota] = useState(false);
+
+  useEffect(() => {
+    setQuotaDraft(Math.max(1, Math.min(5, Math.trunc(Number(storage.quotaGb || 1)))));
+  }, [storage.quotaGb]);
 
   const items = useMemo(() => {
     const sourceItems = isNotifications
@@ -83,24 +90,61 @@ const SidebarBody = () => {
     return filtered;
   }, [canCreateLabel, isSuperAdmin, isNotifications, mailLabels, notificationCounts, permissions, userRole]);
 
+  const handleSaveOwnQuota = async () => {
+    const safeValue = Math.max(1, Math.min(5, Math.trunc(Number(quotaDraft || 1))));
+    setSavingQuota(true);
+    try {
+      await updateMyMailStorageQuota(safeValue);
+      await reloadStorage();
+    } finally {
+      setSavingQuota(false);
+    }
+  };
+
   return (
-    <div className="scroll-area flex-1 overflow-y-auto px-2 lg:pr-1 py-4 select-none">
-      <nav>
-        {items.map((item) => (
-          <SidebarItemComponent key={item.href ?? item.label} item={item} />
-        ))}
-      </nav>
+    <div className="flex h-full min-h-0 flex-col select-none">
+      <div className="scroll-area min-h-0 flex-1 overflow-y-auto px-2 py-4 lg:pr-1">
+        <nav>
+          {items.map((item) => (
+            <SidebarItemComponent key={item.href ?? item.label} item={item} />
+          ))}
+        </nav>
+      </div>
       {isNotifications ? (
-        <div className="mt-4 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 p-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-muted">Almacenamiento</p>
-          <p className="mt-1 text-[11px] text-sidebar-foreground">
-            {(storage.usedBytes / (1024 * 1024)).toFixed(1)} MB / {(storage.quotaBytes / (1024 * 1024)).toFixed(1)} MB
-          </p>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${Math.max(0, Math.min(100, storage.usedPercent || 0))}%` }}
-            />
+        <div className="border-t border-sidebar-border/70 px-2 pb-3 pt-2 lg:pr-1">
+          <div className="rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 p-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-muted">Almacenamiento</p>
+            <p className="mt-1 text-[11px] text-sidebar-foreground">
+              {(storage.usedBytes / (1024 * 1024)).toFixed(1)} MB / {(storage.quotaBytes / (1024 * 1024)).toFixed(1)} MB
+            </p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${Math.max(0, Math.min(100, storage.usedPercent || 0))}%` }}
+              />
+            </div>
+            {isSuperAdmin ? (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={quotaDraft}
+                  onChange={(event) => setQuotaDraft(Number(event.target.value || 1))}
+                  className="h-7 w-14 rounded border border-sidebar-border bg-background px-2 text-[11px] outline-none"
+                />
+                <span className="text-[11px] text-sidebar-muted">GB</span>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveOwnQuota()}
+                  disabled={savingQuota}
+                  className="ml-auto rounded border border-sidebar-border bg-background px-2 py-1 text-[10px] font-medium hover:bg-sidebar-accent disabled:opacity-60"
+                >
+                  {savingQuota ? "..." : "Guardar"}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

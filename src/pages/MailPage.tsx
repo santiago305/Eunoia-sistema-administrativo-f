@@ -5,6 +5,7 @@ import type { Mail } from "@/features/mail/types/mail-ui.types";
 import MailToolbar from "@/features/mail/components/MailToolbar";
 import MailList from "@/features/mail/components/MailList";
 import MailDetail from "@/features/mail/components/MailDetail";
+import MailFilesView from "@/features/mail/components/MailFilesView";
 import SnoozeDateTimeModal from "@/features/mail/components/SnoozeDateTimeModal";
 import NotificationComposeStack from "@/features/mail/components/ComposeStack";
 import type { NotificationComposeDraft } from "@/features/mail/components/ComposeModal";
@@ -25,9 +26,12 @@ import {
   uploadAttachment,
   deleteAttachment as deleteRemoteAttachment,
   executeMessageAction,
+  listMyMailFiles,
+  bulkDeleteMyMailFiles,
+  deleteMyMailFile,
 } from "@/features/mail/services/messages.service";
 import { createDraft, deleteDraft, sendDraft, updateDraft } from "@/features/mail/services/drafts.service";
-import type { InboxItem, MailMessageActionItem, SentMessageItem } from "@/features/mail/types/message.types";
+import type { InboxItem, MailFileItem, MailMessageActionItem, SentMessageItem } from "@/features/mail/types/message.types";
 import { useSileoMessageEvents } from "@/features/mail/hooks/useSileoMessageEvents";
 import { useMailDashboardContext } from "@/features/mail/context/MailDashboardProvider";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
@@ -48,7 +52,7 @@ const MAX_COMPOSE_DRAFTS = 4;
 const COMPOSE_AUTOSAVE_DEBOUNCE_MS = 1_500;
 const COMPOSE_AUTOSAVE_FALLBACK_MS = 60_000;
 
-type UiFolder = "inbox" | "starred" | "sent" | "scheduled" | "drafts" | "trash" | "archived" | "snoozed" | "all";
+type UiFolder = "inbox" | "starred" | "sent" | "scheduled" | "drafts" | "trash" | "archived" | "snoozed" | "all" | "files";
 
 type ComposePayload = {
   to?: string;
@@ -321,12 +325,16 @@ export default function MailPage() {
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState("#2563eb");
   const [labelError, setLabelError] = useState<string | null>(null);
-  const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
+  const [snoozeTargetIds, setSnoozeTargetIds] = useState<string[]>([]);
   const [snoozeDateModalOpen, setSnoozeDateModalOpen] = useState(false);
   const [customSnoozeDate, setCustomSnoozeDate] = useState<Date>(new Date());
   const [scheduledTargetId, setScheduledTargetId] = useState<string | null>(null);
   const [scheduledDateModalOpen, setScheduledDateModalOpen] = useState(false);
   const [customScheduledDate, setCustomScheduledDate] = useState<Date>(new Date());
+  const [mailFiles, setMailFiles] = useState<MailFileItem[]>([]);
+  const [mailFilesTotal, setMailFilesTotal] = useState(0);
+  const [mailFilesLoading, setMailFilesLoading] = useState(false);
+  const [mailFilesError, setMailFilesError] = useState<string | null>(null);
   const [activeMailDetail, setActiveMailDetail] = useState<MailDetailData>(null);
   const [messageLabelIdsByMessage, setMessageLabelIdsByMessage] = useState<Record<string, string[]>>({});
   const [localStarredById, setLocalStarredById] = useState<Record<string, boolean>>({});
@@ -342,10 +350,11 @@ export default function MailPage() {
   const { can } = usePermissions();
   const { userDetails } = useUserDetails();
   const canCreateLabel = can("notifications.labels.create");
-  const { labels, createLabel, deleteLabel, applyCountsDelta, applyUnreadByLabelDelta } = useMailDashboardContext();
+  const { labels, createLabel, deleteLabel, applyCountsDelta, applyUnreadByLabelDelta, reloadStorage } = useMailDashboardContext();
   const currentUserName = userDetails?.data?.name ?? "Usuario";
   const currentUserEmail = userDetails?.data?.email ?? "";
   const currentUserAvatarUrl = resolveProfileAvatarUrl(userDetails?.data?.avatarUrl) || undefined;
+  const isFilesFolder = folder === "files";
 
   const {
     items,
@@ -363,11 +372,12 @@ export default function MailPage() {
     removeMessageRowLocally,
     insertRealtimeInboxItem,
   } = useMessagesV2({
-    folder,
+    folder: isFilesFolder ? "inbox" : folder,
     labelId,
     q,
     page,
     limit: pageSize,
+    enabled: !isFilesFolder,
   });
 
   const handleRealtimeMessageCreated = useCallback((payload: MessageCreatedRealtimePayload) => {
@@ -430,6 +440,34 @@ export default function MailPage() {
     onRealtimeMessageCreated: handleRealtimeMessageCreated,
     onMailActionUpdated: handleMailActionUpdated,
   });
+
+  const loadMailFiles = useCallback(async () => {
+    if (!isFilesFolder) return;
+    setMailFilesLoading(true);
+    setMailFilesError(null);
+    try {
+      const response = await listMyMailFiles({ page, limit: pageSize, q });
+      setMailFiles(response.items ?? []);
+      setMailFilesTotal(Number(response.total ?? 0));
+    } catch {
+      setMailFiles([]);
+      setMailFilesTotal(0);
+      setMailFilesError("No se pudieron cargar los archivos.");
+    } finally {
+      setMailFilesLoading(false);
+    }
+  }, [isFilesFolder, page, pageSize, q]);
+
+  useEffect(() => {
+    if (!isFilesFolder) {
+      setMailFiles([]);
+      setMailFilesTotal(0);
+      setMailFilesError(null);
+      setMailFilesLoading(false);
+      return;
+    }
+    void loadMailFiles();
+  }, [isFilesFolder, loadMailFiles]);
 
   useEffect(() => {
     setLocalStarredById({});
@@ -794,7 +832,7 @@ export default function MailPage() {
 
   useEffect(() => {
     const folderParam = (params.folder ?? "").toLowerCase();
-    const valid: UiFolder[] = ["inbox", "starred", "sent", "scheduled", "drafts", "trash", "archived", "snoozed", "all"];
+    const valid: UiFolder[] = ["inbox", "starred", "sent", "scheduled", "drafts", "trash", "archived", "snoozed", "all", "files"];
     if (valid.includes(folderParam as UiFolder)) setFolder(folderParam as UiFolder);
     else setFolder("inbox");
   }, [params.folder]);
@@ -874,13 +912,15 @@ export default function MailPage() {
     setSelectedIds(new Set());
   }, [folder, q, labelId]);
 
-  const start = total === 0 ? 0 : (page - 1) * pageSize;
-  const end = Math.min(start + mails.length, total);
-  const pageMailIds = mails.map((m) => m.id);
-  const pageReadIds = mails.filter((m) => m.read).map((m) => m.id);
-  const pageUnreadIds = mails.filter((m) => !m.read).map((m) => m.id);
-  const pageStarredIds = mails.filter((m) => m.starred).map((m) => m.id);
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const currentTotal = isFilesFolder ? mailFilesTotal : total;
+  const currentListLength = isFilesFolder ? mailFiles.length : mails.length;
+  const start = currentTotal === 0 ? 0 : (page - 1) * pageSize;
+  const end = Math.min(start + currentListLength, currentTotal);
+  const pageMailIds = isFilesFolder ? mailFiles.map((file) => file.id) : mails.map((mail) => mail.id);
+  const pageReadIds = isFilesFolder ? [] : mails.filter((mail) => mail.read).map((mail) => mail.id);
+  const pageUnreadIds = isFilesFolder ? [] : mails.filter((mail) => !mail.read).map((mail) => mail.id);
+  const pageStarredIds = isFilesFolder ? [] : mails.filter((mail) => mail.starred).map((mail) => mail.id);
+  const pageCount = Math.max(1, Math.ceil(currentTotal / pageSize));
 
   const activeMail = useMemo(() => {
     const listMail = mails.find((m) => m.id === activeMailId) ?? null;
@@ -1334,7 +1374,7 @@ export default function MailPage() {
       const selectedStateIds = selectedMails
         .map((mail) => mail.recipientId)
         .filter((id): id is string => Boolean(id));
-      if (!selectedStateIds.length) return;
+      if (!selectedStateIds.length) return true;
       await bulkMessages({
         messageStateIds: selectedStateIds,
         action: "SNOOZE",
@@ -1361,8 +1401,10 @@ export default function MailPage() {
         labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
       });
       setSelectedIds(new Set());
+      return true;
     } catch {
       await recoverMutationState("No se pudo posponer los mensajes.");
+      return false;
     }
   };
 
@@ -1504,8 +1546,10 @@ export default function MailPage() {
     }
   };
 
-  const openSnoozeDateModal = (id: string) => {
-    setSnoozeTargetId(id);
+  const openSnoozeDateModal = (ids: string[]) => {
+    const normalizedIds = Array.from(new Set((ids ?? []).filter(Boolean)));
+    if (!normalizedIds.length) return;
+    setSnoozeTargetIds(normalizedIds);
     setCustomSnoozeDate(new Date());
     setSnoozeDateModalOpen(true);
   };
@@ -1594,11 +1638,16 @@ export default function MailPage() {
   };
 
   const applyCustomSnooze = async (date: Date) => {
-    if (!snoozeTargetId) return;
-    const success = await applySnoozeById(snoozeTargetId, date.toISOString());
-    if (!success) return;
+    if (!snoozeTargetIds.length) return;
+    if (snoozeTargetIds.length === 1) {
+      const success = await applySnoozeById(snoozeTargetIds[0], date.toISOString());
+      if (!success) return;
+    } else {
+      const success = await snoozeBulk(snoozeTargetIds, date.toISOString());
+      if (!success) return;
+    }
     setSnoozeDateModalOpen(false);
-    setSnoozeTargetId(null);
+    setSnoozeTargetIds([]);
   };
 
   const openScheduledDateModal = (id: string) => {
@@ -1693,12 +1742,60 @@ export default function MailPage() {
     }
   };
 
+  const deleteMailFiles = useCallback(
+    async (attachmentIds: string[]) => {
+      const ids = Array.from(new Set((attachmentIds ?? []).filter(Boolean)));
+      if (!ids.length) return;
+      try {
+        if (ids.length === 1) {
+          await deleteMyMailFile(ids[0]);
+        } else {
+          await bulkDeleteMyMailFiles(ids);
+        }
+        setSelectedIds(new Set());
+        await loadMailFiles();
+        await reloadStorage();
+      } catch {
+        showNotificationToast({
+          title: "No se pudo eliminar archivo(s)",
+          message: "Verifica permisos y vuelve a intentar.",
+          priority: "HIGH",
+        });
+      }
+    },
+    [loadMailFiles, reloadStorage],
+  );
+
   return (
     <div className="h-full">
       <div className="grid h-full grid-cols-1 gap-4">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-md border bg-background">
           <main className="flex flex-1 flex-col overflow-hidden bg-background">
-            {activeMailId ? (
+            {isFilesFolder ? (
+              <MailFilesView
+                files={mailFiles}
+                total={mailFilesTotal}
+                loading={mailFilesLoading}
+                error={mailFilesError}
+                selectedIds={selectedIds}
+                onToggleSelect={(id) =>
+                  setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  })
+                }
+                onSelectVisible={(ids) => setSelectedIds(new Set(ids))}
+                onClearSelection={() => setSelectedIds(new Set())}
+                onDeleteSelected={(ids) => {
+                  return deleteMailFiles(ids);
+                }}
+                onDeleteOne={(id) => {
+                  return deleteMailFiles([id]);
+                }}
+              />
+            ) : activeMailId ? (
               <MailDetail
                 mail={activeMail}
                 currentUserEmail={currentUserEmail}
@@ -1769,7 +1866,7 @@ export default function MailPage() {
             ) : (
               <>
                 <MailToolbar
-                  total={total}
+                  total={currentTotal}
                   start={start}
                   end={end}
                   page={page - 1}
@@ -1786,7 +1883,7 @@ export default function MailPage() {
                   onDeleteBulk={(ids) => void moveToTrash(ids)}
                   onRestoreBulk={(ids) => void restoreFromTrash(ids)}
                   onArchiveBulk={(ids, archive) => void archiveBulk(ids, archive)}
-                  onSnoozeBulk={(ids, snoozedUntil) => void snoozeBulk(ids, snoozedUntil)}
+                  onSnoozeBulk={(ids) => openSnoozeDateModal(ids)}
                   onAssignLabelBulk={(ids, labelIdToAssign) => void assignLabelBulk(ids, labelIdToAssign)}
                   onRemoveLabelBulk={(ids, labelIdToRemove) => void removeLabelBulk(ids, labelIdToRemove)}
                   labels={labels.filter((item) => item.type === "CUSTOM")}
@@ -1841,7 +1938,7 @@ export default function MailPage() {
                       void applySnoozeById(id, snoozedUntil);
                       return;
                     }
-                    openSnoozeDateModal(id);
+                    openSnoozeDateModal([id]);
                   }}
                   formatMailDate={formatMailDate}
                   initialsOf={initialsOf}
@@ -1896,7 +1993,7 @@ export default function MailPage() {
         value={customSnoozeDate}
         onClose={() => {
           setSnoozeDateModalOpen(false);
-          setSnoozeTargetId(null);
+          setSnoozeTargetIds([]);
         }}
         onSave={(date) => {
           setCustomSnoozeDate(date);

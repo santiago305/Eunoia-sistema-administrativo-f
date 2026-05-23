@@ -1,4 +1,4 @@
-export type MessageFolder = "inbox" | "sent" | "scheduled" | "trash" | "starred" | "archived" | "snoozed" | "drafts" | "all";
+export type MessageFolder = "inbox" | "sent" | "scheduled" | "trash" | "starred" | "archived" | "snoozed" | "drafts" | "all" | "files";
 
 export interface NotificationModuleItem {
   key: string;
@@ -34,6 +34,16 @@ export interface MessageListResponse<T = unknown> {
   limit: number;
   total: number;
   items: T[];
+}
+
+export interface MailFileItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  attachmentKind: "file" | "image";
+  createdAt: string;
+  messageId: string | null;
 }
 
 export interface MailMessageActionItem {

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMyMailStorageSummary } from "../services/messages.service";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { NOTIFICATION_WINDOW_EVENTS } from "../constants/mail-events.constants";
 
 type MailStorageSummary = {
   userId: string;
@@ -49,18 +48,6 @@ export function useMailStorageSummary(enabled = true) {
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const handleRefresh = () => void reload();
-    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
-    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, handleRefresh);
-    return () => {
-      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.messagesRefresh, handleRefresh);
-      window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.mailMessageCreated, handleRefresh);
-    };
-  }, [enabled, reload]);
 
   return { summary, reload };
 }

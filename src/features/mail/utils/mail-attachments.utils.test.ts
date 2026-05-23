@@ -7,13 +7,13 @@ import {
 } from "./mail-attachments.utils";
 
 describe("mail attachments utils", () => {
-  it("keeps an image uploaded as file out of inline preview", () => {
+  it("renders an image uploaded as file as inline preview", () => {
     expect(
       isInlineImageAttachment({
         mimeType: "image/png",
         attachmentKind: "file",
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("renders an image uploaded as image as inline preview", () => {
