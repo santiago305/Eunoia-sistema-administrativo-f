@@ -4,6 +4,7 @@ import {
   CalendarClock,
   Clock3,
   File,
+  Paperclip,
   Inbox,
   Pencil,
   Send,
@@ -103,6 +104,11 @@ export const getMailSidebarItems = (
         href: `${RoutesPaths.notifications}/inbox?createLabel=1`,
       }] : []),
     ],
+  },
+  {
+    label: "Archivos",
+    href: `${RoutesPaths.notifications}/files`,
+    icon: <Paperclip className="text-sidebar-foreground" />,
   },
   {
     label: "Papelera",

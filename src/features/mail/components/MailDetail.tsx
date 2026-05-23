@@ -552,13 +552,17 @@ export default function MailDetail(props: Props) {
                                 <span className="block truncate px-2 py-1.5 text-xs text-muted-foreground">{attachment.name}</span>
                               </button>
                             ) : (
-                              <div
+                              <a
                                 key={attachment.id}
-                                className="flex aspect-square flex-col items-center justify-center rounded-md border border-border bg-mail-surface text-muted-foreground"
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex max-w-xl items-center gap-3 rounded-md border border-border bg-mail-surface px-3 py-2 text-sm transition hover:border-primary/40 hover:bg-mail-hover"
                               >
-                                <ImageIcon className="mb-2 size-6" />
-                                <span className="max-w-full truncate px-2 text-xs">{attachment.name}</span>
-                              </div>
+                                <ImageIcon className="size-5 shrink-0 text-muted-foreground" />
+                                <span className="min-w-0 flex-1 truncate text-mail-accent underline underline-offset-2">{attachment.name}</span>
+                                <span className="shrink-0 text-xs text-muted-foreground">Imagen inexistente</span>
+                              </a>
                             );
                           })}
                         </div>

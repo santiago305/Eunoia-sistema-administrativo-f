@@ -33,7 +33,7 @@ export const buildMailAttachmentDownloadUrl = (id: string, baseUrl = env.apiBase
 };
 
 export const isInlineImageAttachment = (attachment: Pick<BackendMailAttachment, "attachmentKind" | "mimeType">) =>
-  attachment.attachmentKind === "image" && String(attachment.mimeType ?? "").toLowerCase().startsWith("image/");
+  String(attachment.mimeType ?? "").toLowerCase().startsWith("image/");
 
 export const removeBrokenMailBodyImages = (html: string) =>
   String(html ?? "").replace(/<img\b(?![^>]*\bsrc=)[^>]*\/?>/gi, "");

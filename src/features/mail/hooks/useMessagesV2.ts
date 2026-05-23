@@ -10,8 +10,9 @@ export function useMessagesV2(params: {
   q?: string;
   page?: number;
   limit?: number;
+  enabled?: boolean;
 }) {
-  const { folder, originModule, labelId, q, page, limit } = params;
+  const { folder, originModule, labelId, q, page, limit, enabled = true } = params;
   const [items, setItems] = useState<Array<InboxItem | SentMessageItem>>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,13 @@ export function useMessagesV2(params: {
   const requestSeqRef = useRef(0);
 
   const reload = useCallback(async () => {
+    if (!enabled) {
+      setItems([]);
+      setTotal(0);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     const requestSeq = ++requestSeqRef.current;
     setLoading(true);
     setError(null);
@@ -37,7 +45,7 @@ export function useMessagesV2(params: {
         setLoading(false);
       }
     }
-  }, [folder, originModule, labelId, q, page, limit]);
+  }, [enabled, folder, originModule, labelId, q, page, limit]);
 
   useEffect(() => {
     void reload();

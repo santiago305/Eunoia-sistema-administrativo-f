@@ -6,6 +6,7 @@ import type {
   MailLabelItem,
   MessageListQuery,
   MessageListResponse,
+  MailFileItem,
   SentMessageItem,
 } from "../types/message.types";
 
@@ -31,6 +32,18 @@ export const getMyMailStorageSummary = async () => {
     remainingBytes: number;
     usedPercent: number;
   }>(API_NOTIFICATION_MESSAGES_GROUP.getMyStorageSummary);
+  return response.data;
+};
+
+export const updateMyMailStorageQuota = async (mailStorageQuotaGb: number) => {
+  const response = await axiosInstance.patch<{
+    userId: string;
+    quotaBytes: number;
+    quotaGb: number;
+    usedBytes: number;
+    remainingBytes: number;
+    usedPercent: number;
+  }>(API_NOTIFICATION_MESSAGES_GROUP.updateMyStorageQuota, { mailStorageQuotaGb });
   return response.data;
 };
 
@@ -310,6 +323,32 @@ export const downloadAttachmentBlobUrl = async (id: string) => {
     { responseType: "blob" },
   );
   return URL.createObjectURL(response.data);
+};
+
+export const listMyMailFiles = async (query?: {
+  type?: "all" | "image" | "file";
+  q?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  const response = await axiosInstance.get<MessageListResponse<MailFileItem>>(
+    API_NOTIFICATION_MESSAGES_GROUP.listMyFiles,
+    { params: query },
+  );
+  return response.data;
+};
+
+export const deleteMyMailFile = async (attachmentId: string) => {
+  const response = await axiosInstance.delete(API_NOTIFICATION_MESSAGES_GROUP.deleteMyFile(attachmentId));
+  return response.data;
+};
+
+export const bulkDeleteMyMailFiles = async (attachmentIds: string[]) => {
+  const response = await axiosInstance.post<{ deleted: number }>(
+    API_NOTIFICATION_MESSAGES_GROUP.bulkDeleteMyFiles,
+    { attachmentIds },
+  );
+  return response.data;
 };
 
 export const listModuleLabelConfigs = async () => {
