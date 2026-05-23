@@ -213,9 +213,7 @@ export function ClientTelephonesEditor({
               </div>
             ))
           ) : (
-            <div className="rounded-md bg-slate-50 px-3 py-3 text-[11px] text-slate-500">
-              Aún no agregaste teléfonos.
-            </div>
+            <div></div>
           )}
         </div>
       </div>

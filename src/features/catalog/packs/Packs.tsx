@@ -18,7 +18,7 @@ import {
 } from "@/shared/components/table/search";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
-import type { PackListItem, PackRow } from "@/features/catalog/types/pack";
+import type { PackListEntry, PackRow } from "@/features/catalog/types/pack";
 import type { PackSearchRule, PackSearchSnapshot, PackSearchStateResponse } from "@/features/catalog/types/packSearch";
 import { PackSmartSearchPanel } from "@/features/catalog/components/PackSmartSearchPanel";
 import {
@@ -57,16 +57,39 @@ function extractErrorMessage(error: unknown, fallback: string) {
   return message || fallback;
 }
 
-function mapListItemToRow(item: PackListItem): PackRow {
+function mapListEntryToRow(entry: PackListEntry): PackRow {
+  const pack = entry.pack;
+  const packId = typeof pack.packId === "string" ? pack.packId : pack.packId?.value ?? "";
+  const items = entry.items ?? [];
+  const preview = items.slice(0, 3).map(buildSkuLabelFromDetailItem);
+
   return {
-    packId: item.packId?.value ?? "",
-    description: item.description,
-    total: item.total,
-    isActive: item.isActive,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
+    packId,
+    description: pack.description,
+    total: pack.total,
+    isActive: pack.isActive,
+    createdAt: pack.createdAt,
+    updatedAt: pack.updatedAt,
+    itemsPreview: preview,
+    itemsCount: items.length,
   };
 }
+const buildSkuLabelFromDetailItem = (
+  item: PackDetailResponse["items"][number],
+) => {
+  const name = item.sku?.name?.trim() || "SKU";
+
+  const attrsText = (item.sku?.attributes ?? [])
+    .map((attr) => attr.value?.trim())
+    .filter(Boolean)
+    .join(" ");
+
+  const code = item.sku?.backendSku || item.sku?.customSku || item.skuId;
+  const attrsPart = attrsText ? ` ${attrsText}` : "";
+  const codePart = code ? ` (${code})` : "";
+
+  return `${name}${attrsPart}${codePart},`.trim();
+};
 
 export default function CatalogPacks() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
@@ -165,7 +188,7 @@ export default function CatalogPacks() {
         limit,
       });
 
-      const mapped = (response.items ?? []).map(mapListItemToRow);
+      const mapped = (response.items ?? []).map(mapListEntryToRow);
       setItems(mapped);
 
       const total = response.total ?? 0;
@@ -396,7 +419,19 @@ export default function CatalogPacks() {
       {
         id: "description",
         header: "Descripción",
-        cell: (row) => <span className="text-black/80">{row.description}</span>,
+        cell: (row) => (
+          <div className="min-w-0">
+            <div className="truncate text-black/80">{row.description}</div>
+            {row.itemsPreview.length ? (
+              <div className="mt-0.5 truncate text-[10px] text-black/45">
+                {row.itemsPreview.join(" · ")}
+                {row.itemsCount > row.itemsPreview.length
+                  ? ` · +${row.itemsCount - row.itemsPreview.length} más`
+                  : ""}
+              </div>
+            ) : null}
+          </div>
+        ),
         className: "text-black/80",
       },
       {

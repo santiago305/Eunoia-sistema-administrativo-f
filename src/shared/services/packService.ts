@@ -3,7 +3,7 @@ import type {
   CreatePackBody,
   Paginated,
   PackDetailResponse,
-  PackListItem,
+  PackListEntry,
   UpdatePackBody,
 } from "@/features/catalog/types/pack";
 import type {
@@ -18,7 +18,7 @@ export const listPacks = async (params: {
   limit?: number;
   isActive?: "true" | "false";
   filters?: unknown[] | string;
-}): Promise<Paginated<PackListItem>> => {
+}): Promise<Paginated<PackListEntry>> => {
   const requestParams = {
     ...params,
     filters:
@@ -29,7 +29,7 @@ export const listPacks = async (params: {
           : undefined,
   };
 
-  const response = await axiosInstance.get<Paginated<PackListItem>>(
+  const response = await axiosInstance.get<Paginated<PackListEntry>>(
     packRoutes.list,
     {
       params: requestParams,
