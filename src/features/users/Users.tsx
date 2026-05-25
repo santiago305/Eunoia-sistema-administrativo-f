@@ -17,9 +17,10 @@ import {
 } from "@/shared/services/userService";
 import {
   getEffectivePermissionsDetailByUser,
+  listAccessPermissions,
   removeUserPermissionOverride,
-  setUserPreferredHomePath,
   setUserPermissionOverride,
+  type AccessPermissionItem,
   type PermissionEffect,
   type UserPermissionOverride,
 } from "@/shared/services/accessControlService";
@@ -102,9 +103,8 @@ export default function Users() {
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [effectivePermissions, setEffectivePermissions] = useState<string[]>([]);
   const [permissionOverrides, setPermissionOverrides] = useState<UserPermissionOverride[]>([]);
+  const [allPermissions, setAllPermissions] = useState<AccessPermissionItem[]>([]);
   const [savingOverride, setSavingOverride] = useState(false);
-  const [preferredHomePathDraft, setPreferredHomePathDraft] = useState("");
-  const [savingPreferredHomePath, setSavingPreferredHomePath] = useState(false);
   const [mailStorageQuotaGbDraft, setMailStorageQuotaGbDraft] = useState(1);
   const [savingMailStorageQuota, setSavingMailStorageQuota] = useState(false);
   const [mailStorageUsedPercent, setMailStorageUsedPercent] = useState(0);
@@ -168,7 +168,10 @@ export default function Users() {
 
     const loadRoles = async () => {
       try {
-        const response = await findAllRoles();
+        const [response, permissionsResponse] = await Promise.all([
+          findAllRoles(),
+          listAccessPermissions().catch(() => []),
+        ]);
         const list = Array.isArray(response) ? response : [];
         const normalized = (Array.isArray(list) ? list : [])
           .map((r: { id?: unknown; description?: unknown }) => ({
@@ -179,6 +182,7 @@ export default function Users() {
 
         if (!cancelled) {
           setRoles(normalized);
+          setAllPermissions(Array.isArray(permissionsResponse) ? permissionsResponse : []);
         }
       } finally {
         if (!cancelled) void 0;
@@ -239,15 +243,11 @@ export default function Users() {
         if (!cancelled) {
           setEffectivePermissions(Array.isArray(data?.permissions) ? data.permissions : []);
           setPermissionOverrides(Array.isArray(data?.overrides) ? data.overrides : []);
-          setPreferredHomePathDraft(
-            typeof data?.preferredHomePath === "string" ? data.preferredHomePath : "",
-          );
         }
       } catch {
         if (!cancelled) {
           setEffectivePermissions([]);
           setPermissionOverrides([]);
-          setPreferredHomePathDraft("");
         }
       }
     };
@@ -263,16 +263,6 @@ export default function Users() {
   }, [debouncedQuery, status]);
 
   const safePage = Math.max(1, pagination.page || page);
-
-  const counts = useMemo(() => {
-    const byRole = {} as Record<Role, number>;
-
-    for (const u of users) {
-      byRole[u.role] = (byRole[u.role] ?? 0) + 1;
-    }
-
-    return byRole;
-  }, [users]);
 
   useEffect(() => {
     let cancelled = false;
@@ -291,12 +281,7 @@ export default function Users() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const visibleRoles = useMemo(() => {
-    const apiRoles = Object.keys(countsByRole?.byRole ?? {}) as Role[];
-    return apiRoles.length ? apiRoles : ROLES;
-  }, [countsByRole]);
+  }, [reloadTick]);
 
   const handleQueryChange = useCallback((value: string) => {
     startTransition(() => {
@@ -436,25 +421,6 @@ export default function Users() {
     }
   }
 
-  async function savePreferredHomePath() {
-    if (!selected?.id) return;
-    clearFeedback();
-    setSavingPreferredHomePath(true);
-    try {
-      const preferredHomePath = preferredHomePathDraft.trim() || null;
-      await setUserPreferredHomePath({
-        userId: selected.id,
-        preferredHomePath,
-      });
-      showFeedback(successResponse("Pagina inicial actualizada."));
-    } catch (error: unknown) {
-      const parsed = readError(error);
-      showFeedback(errorResponse(parsed.message.trim() || "No se pudo actualizar la pagina inicial."));
-    } finally {
-      setSavingPreferredHomePath(false);
-    }
-  }
-
   async function saveMailStorageQuota() {
     if (!selected?.id) return;
     clearFeedback();
@@ -478,22 +444,17 @@ export default function Users() {
 
   return (
     <PageShell
-      className={cn(
-        "bg-gradient-to-b from-white via-white to-zinc-50",
-        "flex flex-col",
-      )}
-      contentClassName="h-full min-h-0 gap-0 py-4 sm:py-6 2xl:py-8 3xl:py-10 4xl:py-12"
+      className="flex flex-col"
+      contentClassName="h-full min-h-0 gap-0"
     >
-      <div className="flex h-full w-full min-h-0 flex-col px-4 sm:px-6 lg:px-8 2xl:px-10">
+      <div className="flex h-full w-full min-h-0 flex-col">
         <UsersHeader
           onCreateClick={() => setModalOpen(true)}
           canCreateUser={can("users.create")}
-          visibleRoles={visibleRoles}
-          countsByRole={countsByRole}
-          counts={counts}
+          total={countsByRole?.total ?? pagination.total}
         />
 
-        <div className={cn("mt-4 grid min-h-0 flex-1 gap-3", "lg:grid-cols-[420px_1fr]", "2xl:gap-4 3xl:gap-5")}>
+        <div className={cn("mt-4 grid min-h-0 flex-1 gap-3", "lg:grid-cols-[380px_1fr]", "2xl:gap-4")}>
           <UsersLeftPanel
             query={query}
             setQuery={handleQueryChange}
@@ -525,17 +486,13 @@ export default function Users() {
             canRestoreUser={can("users.restore")}
             effectivePermissions={effectivePermissions}
             permissionOverrides={permissionOverrides}
+            allPermissions={allPermissions}
             savingOverride={savingOverride}
             savePermissionOverride={savePermissionOverride}
             deletePermissionOverride={deletePermissionOverride}
             canManageOverrides={
               can("users.assign_permissions") || can("users.deny_permissions")
             }
-            preferredHomePath={preferredHomePathDraft}
-            setPreferredHomePathDraft={setPreferredHomePathDraft}
-            savingPreferredHomePath={savingPreferredHomePath}
-            savePreferredHomePath={savePreferredHomePath}
-            canEditPreferredHome={can("users.update")}
             mailStorageQuotaGbDraft={mailStorageQuotaGbDraft}
             setMailStorageQuotaGbDraft={setMailStorageQuotaGbDraft}
             savingMailStorageQuota={savingMailStorageQuota}
@@ -551,6 +508,10 @@ export default function Users() {
         open={modalOpen && can("users.create")}
         onClose={() => setModalOpen(false)}
         title="Crear usuario"
+        className="w-[min(760px,calc(100vw-2rem))] rounded-sm border border-zinc-100"
+        headerClassName="border-b-0 bg-white px-5 pt-5 pb-2"
+        bodyClassName="px-5 pb-5 pt-2"
+        overlayBlur
       >
         <UserForm
           closeModal={() => setModalOpen(false)}

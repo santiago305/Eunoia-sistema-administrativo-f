@@ -12,6 +12,7 @@ import { RolePicker } from "./roleButton";
 import type { CreateUserRequest, UserRoleOptionApi } from "@/features/users/types/users.types";
 import type { UserFormProps } from "../types/components.types";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { Minus, Plus } from "lucide-react";
 
 export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
   const { showFeedback, clearFeedback } = useFeedbackToast();
@@ -40,6 +41,15 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
   });
 
   const roleId = watch("roleId") ?? "";
+  const mailStorageQuotaGb = Number(watch("mailStorageQuotaGb") ?? 1);
+
+  const setQuota = (nextValue: number) => {
+    setValue("mailStorageQuotaGb", Math.max(1, Math.min(5, nextValue)), {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
 
   useEffect(() => {
     const getRoles = async () => {
@@ -104,6 +114,13 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
 
   return (
     <form onSubmit={handleSubmit(submit)} className="p-1">
+      <div className="mb-5 border-b border-zinc-100 pb-4">
+        <p className="text-xs uppercase tracking-[0.18em] text-primary">Nueva cuenta</p>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">
+          Define sus datos iniciales, rol y cuota de almacenamiento. Luego puedes ajustar permisos directos desde el panel del usuario.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <FloatingInput
@@ -158,16 +175,44 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
         </div>
 
         {isSuperAdmin ? (
-          <div>
-            <FloatingInput
-              label="Almacenamiento mail (GB)"
-              type="number"
-              min={1}
-              max={5}
-              step={1}
-              error={errors.mailStorageQuotaGb?.message}
-              {...register("mailStorageQuotaGb", { valueAsNumber: true })}
-            />
+          <div className="rounded-sm bg-primary/5 p-4 sm:col-span-2">
+            <input type="hidden" {...register("mailStorageQuotaGb", { valueAsNumber: true })} />
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">Almacenamiento</p>
+                <p className="mt-1 text-sm font-semibold text-zinc-900">{mailStorageQuotaGb} GB para correo</p>
+                {errors.mailStorageQuotaGb?.message ? (
+                  <p className="mt-1 text-xs text-red-600">{errors.mailStorageQuotaGb.message}</p>
+                ) : null}
+              </div>
+
+              <div className="flex min-w-[240px] items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuota(mailStorageQuotaGb - 1)}
+                  className="grid h-10 w-10 place-items-center rounded-sm bg-white text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-100"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={mailStorageQuotaGb}
+                  onChange={(event) => setQuota(Number(event.target.value))}
+                  className="h-2 flex-1 accent-primary"
+                  aria-label="Cuota de almacenamiento"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuota(mailStorageQuotaGb + 1)}
+                  className="grid h-10 w-10 place-items-center rounded-sm bg-white text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-100"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
         ) : null}
       </div>

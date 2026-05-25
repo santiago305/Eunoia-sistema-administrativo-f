@@ -20,7 +20,8 @@ import {
   ClipboardList,
   Bell
   ,
-  Menu
+  Menu,
+  UserCog
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -55,6 +56,10 @@ export const IconRowMaterial = ({ className }: { className?: string }) => (
 
 export const IconUsers = ({ className }: { className?: string }) => (
   <Users className={className} size={20} />
+);
+
+export const IconAccounts = ({ className }: { className?: string }) => (
+  <UserCog className={className} size={20} />
 );
 
 export const IconStock = ({ className }: { className?: string }) => (

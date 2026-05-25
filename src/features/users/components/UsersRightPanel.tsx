@@ -1,46 +1,29 @@
-import type { Role, User } from "../types/users.types";
+import { Database, KeyRound, Minus, Plus, Power, RotateCcw, ShieldCheck } from "lucide-react";
+import { useMemo, useState } from "react";
+import { SystemButton } from "@/shared/components/components/SystemButton";
+import type {
+  AccessPermissionItem,
+  PermissionEffect,
+  UserPermissionOverride,
+} from "@/shared/services/accessControlService";
 import { ROLE_LABELS, RoleType } from "../types/roles.types";
+import type { Role, User } from "../types/users.types";
 import { formatDateTimeLabel } from "../utils/dateFormat";
-import { useState } from "react";
-import type { PermissionEffect, UserPermissionOverride } from "@/shared/services/accessControlService";
+import { UserPermissionsModal } from "./UserPermissionsModal";
 
 const ROLES = Object.values(RoleType) as Role[];
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
 
-function RoleChip({ role }: { role: Role }) {
-  const styles: Record<Role, string> = {
-    admin: "border-zinc-300 bg-zinc-900 text-white",
-    moderator: "border-primary/20 bg-primary/8 text-[#16897d]",
-    adviser: "border-indigo-200 bg-indigo-50 text-indigo-600",
-  };
-
-  return (
-    <span className={cn("inline-flex h-6 items-center rounded-full border px-2 text-[10px] font-medium", styles[role])}>
-      {ROLE_LABELS[role]}
-    </span>
-  );
+function getRoleLabel(role: string) {
+  return ROLE_LABELS[role as Role] ?? role.replace(/[._-]+/g, " ");
 }
 
-function StatusChip({ inactive }: { inactive: boolean }) {
+function DetailLine({ label, value }: { label: string; value?: string | null }) {
   return (
-    <span
-      className={cn(
-        "inline-flex h-6 items-center rounded-full border px-2 text-[10px] font-medium",
-        inactive ? "border-rose-200 bg-rose-50 text-rose-600" : "border-emerald-200 bg-emerald-50 text-emerald-600",
-      )}
-    >
-      <span className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", inactive ? "bg-rose-500" : "bg-emerald-500")} />
-      {inactive ? "Desactivado" : "Activo"}
-    </span>
-  );
-}
-
-function Field({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">{label}</p>
-      <p className="truncate text-[12px] text-zinc-800">{value || "-"}</p>
+    <div>
+      <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">{label}</p>
+      <p className="mt-1 truncate text-sm text-zinc-800">{value || "-"}</p>
     </div>
   );
 }
@@ -59,15 +42,11 @@ interface UsersRightPanelProps {
   canRestoreUser: boolean;
   effectivePermissions: string[];
   permissionOverrides: UserPermissionOverride[];
+  allPermissions: AccessPermissionItem[];
   savingOverride: boolean;
   savePermissionOverride: (permissionCode: string, effect: PermissionEffect, reason?: string) => Promise<void>;
   deletePermissionOverride: (permissionCode: string) => Promise<void>;
   canManageOverrides: boolean;
-  preferredHomePath: string;
-  setPreferredHomePathDraft: (value: string) => void;
-  savingPreferredHomePath: boolean;
-  savePreferredHomePath: () => Promise<void>;
-  canEditPreferredHome: boolean;
   mailStorageQuotaGbDraft: number;
   setMailStorageQuotaGbDraft: (value: number) => void;
   savingMailStorageQuota: boolean;
@@ -91,15 +70,11 @@ export function UsersRightPanel({
   canRestoreUser,
   effectivePermissions,
   permissionOverrides,
+  allPermissions,
   savingOverride,
   savePermissionOverride,
   deletePermissionOverride,
   canManageOverrides,
-  preferredHomePath,
-  setPreferredHomePathDraft,
-  savingPreferredHomePath,
-  savePreferredHomePath,
-  canEditPreferredHome,
   mailStorageQuotaGbDraft,
   setMailStorageQuotaGbDraft,
   savingMailStorageQuota,
@@ -108,289 +83,227 @@ export function UsersRightPanel({
   mailStorageUsedPercent,
   mailStorageUsedLabel,
 }: UsersRightPanelProps) {
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
   const isDeleted = Boolean(selected?.deleted || selected?.deletedAt);
-  const [permissionCodeDraft, setPermissionCodeDraft] = useState("");
-  const [effectDraft, setEffectDraft] = useState<PermissionEffect>("ALLOW");
-  const [reasonDraft, setReasonDraft] = useState("");
+  const allowedOverrides = useMemo(
+    () => permissionOverrides.filter((item) => item.effect === "ALLOW").length,
+    [permissionOverrides],
+  );
+  const deniedOverrides = useMemo(
+    () => permissionOverrides.filter((item) => item.effect === "DENY").length,
+    [permissionOverrides],
+  );
+
+  const changeQuota = (direction: 1 | -1) => {
+    const next = Math.max(1, Math.min(5, Number(mailStorageQuotaGbDraft) + direction));
+    setMailStorageQuotaGbDraft(next);
+  };
+
+  if (!selected) {
+    return (
+      <section className="flex h-full min-h-[420px] items-center justify-center rounded-sm bg-white">
+        <div className="max-w-xs text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-sm bg-primary/10">
+            <ShieldCheck className="h-6 w-6 text-zinc-500" />
+          </div>
+          <p className="mt-4 text-sm font-semibold text-zinc-900">Selecciona un usuario</p>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            Aqui veras sus datos, cuota y permisos directos.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="h-full rounded-2xl border border-zinc-200 bg-white">
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
-          <div>
-            <h2 className="text-[12px] font-semibold text-zinc-900">Usuario</h2>
-            <p className="mt-0.5 text-[11px] text-zinc-500">Detalle y acciones</p>
+    <section className="h-full rounded-sm bg-white">
+      <div className="flex h-full flex-col p-5">
+        <div className="flex flex-col gap-4 border-b border-zinc-100 pb-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  "rounded-sm px-2.5 py-1 text-xs font-medium",
+                  isDeleted ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700",
+                )}
+              >
+                {isDeleted ? "Desactivado" : "Activo"}
+              </span>
+              <span className="rounded-sm bg-primary/10 px-2.5 py-1 text-xs font-medium text-zinc-800">
+                {getRoleLabel(selected.role)}
+              </span>
+            </div>
+            <h2 className="mt-3 truncate text-2xl font-semibold tracking-tight text-zinc-950">
+              {selected.name}
+            </h2>
+            <p className="mt-1 truncate text-sm text-zinc-500">{selected.email}</p>
           </div>
 
-          <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[10px] text-zinc-500">
-            {selected ? `#${selected.id}` : "Sin seleccion"}
-          </span>
+          <div className="flex flex-wrap gap-2">
+            <SystemButton
+              variant="secondary"
+              leftIcon={<KeyRound className="h-4 w-4" />}
+              onClick={() => setPermissionsOpen(true)}
+            >
+              Permisos
+            </SystemButton>
+
+            {!isDeleted && canDeleteUser ? (
+              <SystemButton
+                variant="danger"
+                loading={togglingStatus}
+                leftIcon={<Power className="h-4 w-4" />}
+                onClick={() => void deactivateUser()}
+              >
+                Desactivar
+              </SystemButton>
+            ) : null}
+
+            {isDeleted && canRestoreUser ? (
+              <SystemButton
+                variant="success"
+                loading={togglingStatus}
+                leftIcon={<RotateCcw className="h-4 w-4" />}
+                onClick={() => void restoreUser()}
+              >
+                Activar
+              </SystemButton>
+            ) : null}
+          </div>
         </div>
 
-        <div className="flex-1 p-4">
-          {!selected ? (
-            <div className="flex h-full min-h-[260px] items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/70">
-              <div className="text-center">
-                <p className="text-[12px] font-medium text-zinc-700">Selecciona un usuario</p>
-                <p className="mt-1 text-[11px] text-zinc-500">Aqui veras su informacion.</p>
-              </div>
+        <div className="grid gap-5 py-5 xl:grid-cols-[1fr_310px]">
+          <div className="grid content-start gap-5">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <DetailLine label="Telefono" value={selected.phone} />
+              <DetailLine label="Creado" value={formatDateTimeLabel(selected.createdAt)} />
+              <DetailLine label="Actualizado" value={formatDateTimeLabel(selected.updatedAt)} />
             </div>
-          ) : (
-            <div key={selected.id} className="flex h-full flex-col gap-4">
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50/40 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-zinc-900">{selected.name}</p>
-                    <p className="mt-1 truncate text-[11px] text-zinc-500">{selected.email}</p>
-                  </div>
 
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <StatusChip inactive={isDeleted} />
-                    <RoleChip role={selected.role} />
-
-                    {!isDeleted && canDeleteUser ? (
-                      <button
-                        onClick={deactivateUser}
-                        disabled={togglingStatus}
-                        className={cn(
-                          "h-7 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-medium text-rose-600 transition",
-                          togglingStatus ? "cursor-not-allowed opacity-60" : "hover:bg-rose-100 active:scale-[.99]",
-                        )}
-                      >
-                        {togglingStatus ? "..." : "Eliminar"}
-                      </button>
-                    ) : null}
-                    {isDeleted && canRestoreUser ? (
-                      <button
-                        onClick={restoreUser}
-                        disabled={togglingStatus}
-                        className={cn(
-                          "h-7 rounded-lg px-2.5 text-[11px] font-medium text-white transition",
-                          togglingStatus ? "cursor-not-allowed opacity-60" : "hover:opacity-90 active:scale-[.99]",
-                        )}
-                        style={{ background: "hsl(var(--primary))" }}
-                      >
-                        {togglingStatus ? "..." : "Restablecer"}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Telefono" value={selected.phone} />
-                  <Field label="Creado" value={formatDateTimeLabel(selected.createdAt)} />
-                  <Field label="Ult. actualizado" value={formatDateTimeLabel(selected.updatedAt)} />
-                </div>
-              </div>
-
-              {canEditRole ? (
-                <div className="rounded-2xl border border-zinc-200 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Rol</p>
-                    <p className="mt-1 text-[12px] font-medium text-zinc-800">Editar rol del usuario</p>
-                  </div>
-
-                  {roleDraft !== selected.role ? (
-                    <span className="rounded-full border border-primary/20 bg-primary/8 px-2 py-1 text-[10px] text-[#16897d]">
-                      Pendiente
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <select
-                    value={roleDraft}
-                    onChange={(e) => setRoleDraft(e.target.value as Role)}
-                    className={cn(
-                      "h-9 flex-1 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition",
-                      "focus:border-primary/40 focus:ring-4 focus:ring-primary/10",
-                    )}
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {ROLE_LABELS[r]}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    onClick={saveRole}
-                    disabled={savingRole || roleDraft === selected.role}
-                    className={cn(
-                      "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
-                      savingRole || roleDraft === selected.role ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
-                    )}
-                    style={{ background: "hsl(var(--primary))" }}
-                  >
-                    {savingRole ? "Guardando..." : "Guardar"}
-                  </button>
-                </div>
-              </div>
-              ) : null}
-
-              <div className="rounded-2xl border border-zinc-200 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Permisos efectivos</p>
-                    <p className="mt-1 text-[12px] font-medium text-zinc-800">Base del nuevo control por permisos</p>
-                  </div>
-                  <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[10px] text-zinc-600">
-                    {effectivePermissions.length} permisos
-                  </span>
-                </div>
-
-                {!effectivePermissions.length ? (
-                  <p className="mt-3 text-[11px] text-zinc-500">No se encontraron permisos para este usuario.</p>
-                ) : (
-                  <div className="mt-3 flex max-h-36 flex-wrap gap-1 overflow-y-auto rounded-xl border border-zinc-100 bg-zinc-50 p-2">
-                    {effectivePermissions.map((permission) => (
-                      <span
-                        key={permission}
-                        className="inline-flex rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] text-zinc-700"
-                      >
-                        {permission}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {canEditPreferredHome ? (
-                <div className="rounded-2xl border border-zinc-200 p-4">
-                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Pagina inicial</p>
-                <p className="mt-1 text-[12px] font-medium text-zinc-800">Ruta preferida al iniciar sesion</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px]">
-                  <input
-                    value={preferredHomePath}
-                    onChange={(e) => setPreferredHomePathDraft(e.target.value)}
-                    placeholder="Ej: /compras (vacío = automatico)"
-                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
-                  />
-                  <button
-                    disabled={savingPreferredHomePath}
-                    onClick={() => void savePreferredHomePath()}
-                    className={cn(
-                      "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
-                      savingPreferredHomePath ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
-                    )}
-                    style={{ background: "hsl(var(--primary))" }}
-                  >
-                    {savingPreferredHomePath ? "Guardando..." : "Guardar"}
-                  </button>
-                </div>
-              </div>
-              ) : null}
-
-              {canEditMailStorageQuota ? (
-                <div className="rounded-2xl border border-zinc-200 p-4">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Almacenamiento mail</p>
-                  <p className="mt-1 text-[12px] font-medium text-zinc-800">Cuota por usuario (1 a 5 GB)</p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px]">
-                    <input
-                      type="number"
-                      min={1}
-                      max={5}
-                      step={1}
-                      value={mailStorageQuotaGbDraft}
-                      onChange={(event) => setMailStorageQuotaGbDraft(Number(event.target.value || 1))}
-                      className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
-                    />
-                    <button
-                      disabled={savingMailStorageQuota}
-                      onClick={() => void saveMailStorageQuota()}
-                      className={cn(
-                        "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
-                        savingMailStorageQuota ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
-                      )}
-                      style={{ background: "hsl(var(--primary))" }}
+            {canEditRole ? (
+              <div className="rounded-sm bg-zinc-50 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">Rol</p>
+                    <select
+                      value={roleDraft}
+                      onChange={(event) => setRoleDraft(event.target.value as Role)}
+                      className="mt-2 h-11 w-full rounded-sm border-0 bg-white px-3 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200 transition focus:ring-2 focus:ring-primary/30"
                     >
-                      {savingMailStorageQuota ? "Guardando..." : "Guardar"}
-                    </button>
+                      {ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {getRoleLabel(role)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <p className="mt-2 text-[11px] text-zinc-500">
-                    Uso actual: {mailStorageUsedLabel ?? "-"} ({Math.max(0, Math.min(100, Math.round(mailStorageUsedPercent ?? 0)))}%)
+                  <SystemButton
+                    variant="secondary"
+                    loading={savingRole}
+                    disabled={roleDraft === selected.role}
+                    onClick={() => void saveRole()}
+                  >
+                    Guardar rol
+                  </SystemButton>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="rounded-sm bg-zinc-50 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">Permisos</p>
+                  <p className="mt-2 text-sm text-zinc-600">
+                    {effectivePermissions.length} efectivos, {allowedOverrides} extras y {deniedOverrides} denegados.
                   </p>
                 </div>
-              ) : null}
+                <SystemButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPermissionsOpen(true)}
+                >
+                  Administrar
+                </SystemButton>
+              </div>
+            </div>
+          </div>
 
-              {canManageOverrides ? (
-                <div className="rounded-2xl border border-zinc-200 p-4">
-                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">Delegar permisos</p>
-                <p className="mt-1 text-[12px] font-medium text-zinc-800">Asignar override directo al usuario</p>
+          <aside className="rounded-sm bg-primary/5 p-4">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-primary" />
+              <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Almacenamiento</p>
+            </div>
+            <p className="mt-4 text-4xl font-semibold leading-none text-zinc-950">{mailStorageQuotaGbDraft} GB</p>
+            <p className="mt-2 text-sm text-zinc-500">{mailStorageUsedLabel ?? "Sin uso registrado"}</p>
 
-                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px]">
-                  <input
-                    value={permissionCodeDraft}
-                    onChange={(e) => setPermissionCodeDraft(e.target.value)}
-                    placeholder="Ej: purchases.approve"
-                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
-                  />
-                  <select
-                    value={effectDraft}
-                    onChange={(e) => setEffectDraft(e.target.value as PermissionEffect)}
-                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+            <div className="mt-5 h-2 overflow-hidden rounded-sm bg-zinc-200">
+              <div
+                className="h-full rounded-sm bg-primary transition-all"
+                style={{
+                  width: `${Math.max(0, Math.min(100, Math.round(mailStorageUsedPercent ?? 0)))}%`,
+                }}
+              />
+            </div>
+
+            {canEditMailStorageQuota ? (
+              <>
+                <div className="mt-5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => changeQuota(-1)}
+                    disabled={savingMailStorageQuota || mailStorageQuotaGbDraft <= 1}
+                    className="grid h-10 w-10 place-items-center rounded-sm bg-white text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-50 disabled:opacity-35"
+                    title="Bajar almacenamiento"
                   >
-                    <option value="ALLOW">ALLOW</option>
-                    <option value="DENY">DENY</option>
-                  </select>
-                </div>
-
-                <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_120px]">
+                    <Minus className="h-4 w-4" />
+                  </button>
                   <input
-                    value={reasonDraft}
-                    onChange={(e) => setReasonDraft(e.target.value)}
-                    placeholder="Motivo (opcional)"
-                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-[12px] text-zinc-800 outline-none transition focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                    type="range"
+                    min={1}
+                    max={5}
+                    step={1}
+                    value={mailStorageQuotaGbDraft}
+                    onChange={(event) => setMailStorageQuotaGbDraft(Number(event.target.value))}
+                    className="h-2 flex-1 accent-primary"
+                    aria-label="Cuota de almacenamiento"
                   />
                   <button
-                    disabled={savingOverride || !permissionCodeDraft.trim()}
-                    onClick={async () => {
-                      await savePermissionOverride(permissionCodeDraft.trim(), effectDraft, reasonDraft.trim() || undefined);
-                      setPermissionCodeDraft("");
-                      setReasonDraft("");
-                    }}
-                    className={cn(
-                      "h-9 rounded-xl px-4 text-[12px] font-medium text-white transition",
-                      savingOverride || !permissionCodeDraft.trim() ? "cursor-not-allowed opacity-60" : "active:scale-[.99]",
-                    )}
-                    style={{ background: "hsl(var(--primary))" }}
+                    type="button"
+                    onClick={() => changeQuota(1)}
+                    disabled={savingMailStorageQuota || mailStorageQuotaGbDraft >= 5}
+                    className="grid h-10 w-10 place-items-center rounded-sm bg-white text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-50 disabled:opacity-35"
+                    title="Subir almacenamiento"
                   >
-                    {savingOverride ? "Guardando..." : "Aplicar"}
+                    <Plus className="h-4 w-4" />
                   </button>
                 </div>
-
-                <div className="mt-3 space-y-2">
-                  {permissionOverrides.length === 0 ? (
-                    <p className="text-[11px] text-zinc-500">Sin overrides directos.</p>
-                  ) : (
-                    permissionOverrides.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-[11px] font-medium text-zinc-800">{item.permissionCode ?? "-"}</p>
-                          <p className="text-[10px] text-zinc-500">
-                            {item.effect} {item.reason ? `• ${item.reason}` : ""}
-                          </p>
-                        </div>
-                        {item.permissionCode ? (
-                          <button
-                            disabled={savingOverride}
-                            onClick={() => void deletePermissionOverride(item.permissionCode!)}
-                            className="ml-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-600"
-                          >
-                            Quitar
-                          </button>
-                        ) : null}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-              ) : null}
-            </div>
-          )}
+                <SystemButton
+                  className="mt-4"
+                  fullWidth
+                  variant="primary"
+                  loading={savingMailStorageQuota}
+                  onClick={() => void saveMailStorageQuota()}
+                >
+                  Guardar cuota
+                </SystemButton>
+              </>
+            ) : null}
+          </aside>
         </div>
       </div>
+
+      <UserPermissionsModal
+        open={permissionsOpen}
+        onClose={() => setPermissionsOpen(false)}
+        selected={selected}
+        allPermissions={allPermissions}
+        effectivePermissions={effectivePermissions}
+        permissionOverrides={permissionOverrides}
+        savingOverride={savingOverride}
+        savePermissionOverride={savePermissionOverride}
+        deletePermissionOverride={deletePermissionOverride}
+        canManageOverrides={canManageOverrides}
+      />
     </section>
   );
 }

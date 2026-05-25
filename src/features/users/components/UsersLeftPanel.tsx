@@ -6,12 +6,13 @@ const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean)
 
 function RoleChip({ role }: { role: User["role"] }) {
   const map: Record<User["role"], string> = {
-    admin: "border-zinc-300 bg-zinc-900 text-white",
-    moderator: "border-[rgba(33,184,166,.25)] bg-[rgba(33,184,166,.08)] text-[rgba(12,98,88,1)]",
-    adviser: "border-indigo-200 bg-indigo-50 text-indigo-700",
+    admin: "bg-primary/10 text-primary",
+    moderator: "bg-emerald-50 text-emerald-700",
+    adviser: "bg-indigo-50 text-indigo-700",
+    purchasing_manager: "bg-amber-50 text-amber-700",
   };
 
-  return <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", map[role])}>{ROLE_LABELS[role]}</span>;
+  return <span className={cn("rounded-sm px-2 py-0.5 text-[11px] font-medium", map[role])}>{ROLE_LABELS[role]}</span>;
 }
 
 interface UsersLeftPanelProps {
@@ -47,11 +48,19 @@ export function UsersLeftPanel({
   usersError,
   status,
   setStatus,
+  total,
 }: UsersLeftPanelProps) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_34px_rgba(0,0,0,.04)]">
-      <div className="border-b border-zinc-100 p-3">
-        <div className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-zinc-100 p-1">
+    <section className="flex h-full flex-col overflow-hidden rounded-sm bg-white">
+      <div className="p-3">
+        <div className="mb-3 flex items-center justify-between px-1">
+          <div>
+            <p className="text-sm font-semibold text-zinc-900">Lista</p>
+            <p className="text-xs text-zinc-500">{total} usuarios encontrados</p>
+          </div>
+        </div>
+
+        <div className="mb-2 grid grid-cols-2 gap-1 rounded-sm bg-zinc-100 p-1">
           {([
             { key: "active", label: "Activos" },
             { key: "inactive", label: "Eliminados" },
@@ -60,8 +69,8 @@ export function UsersLeftPanel({
               key={opt.key}
               onClick={() => setStatus(opt.key)}
               className={cn(
-                "rounded-lg px-2 py-1.5 text-[11px] font-medium transition 2xl:text-[12px]",
-                status === opt.key ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-600 hover:text-zinc-800",
+                "rounded-sm px-2 py-1.5 text-[11px] font-medium transition 2xl:text-[12px]",
+                status === opt.key ? "bg-primary/10 text-zinc-900" : "text-zinc-600 hover:text-zinc-800",
               )}
             >
               {opt.label}
@@ -77,8 +86,8 @@ export function UsersLeftPanel({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar... ( / )"
             className={cn(
-              "w-full rounded-xl border border-zinc-200 bg-zinc-50 px-9 py-2.5 text-[13px] text-zinc-800",
-              "outline-none focus:border-[rgba(33,184,166,.45)] focus:bg-white focus:ring-4 focus:ring-[rgba(33,184,166,.10)]",
+              "w-full rounded-sm border-0 bg-zinc-100 px-9 py-2.5 text-[13px] text-zinc-800",
+              "outline-none focus:bg-white focus:ring-2 focus:ring-primary/30",
               "2xl:text-[14px]",
             )}
           />
@@ -95,8 +104,8 @@ export function UsersLeftPanel({
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={!hasPrevPage}
               className={cn(
-                "rounded-lg border px-2.5 py-1.5 text-[12px] transition",
-                !hasPrevPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
+                "rounded-sm px-2.5 py-1.5 text-[12px] transition",
+                !hasPrevPage ? "cursor-not-allowed bg-zinc-50 text-zinc-400" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200",
               )}
             >
               ←
@@ -105,8 +114,8 @@ export function UsersLeftPanel({
               onClick={() => setPage((p) => p + 1)}
               disabled={!hasNextPage}
               className={cn(
-                "rounded-lg border px-2.5 py-1.5 text-[12px] transition",
-                !hasNextPage ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
+                "rounded-sm px-2.5 py-1.5 text-[12px] transition",
+                !hasNextPage ? "cursor-not-allowed bg-zinc-50 text-zinc-400" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200",
               )}
             >
               →
@@ -125,10 +134,10 @@ export function UsersLeftPanel({
                   key={u.id}
                   onClick={() => setSelectedId(u.id)}
                   className={cn(
-                    "w-full rounded-xl border p-3 text-left transition-colors",
+                    "w-full rounded-sm p-3 text-left transition-colors",
                     active
-                      ? "border-[rgba(33,184,166,.45)] bg-[rgba(33,184,166,.05)] shadow-[0_10px_22px_rgba(33,184,166,.10)]"
-                      : "border-zinc-200 bg-white hover:bg-zinc-50",
+                      ? "bg-primary/10 text-zinc-950 ring-1 ring-primary/20"
+                      : "bg-zinc-50 hover:bg-zinc-100",
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -144,7 +153,7 @@ export function UsersLeftPanel({
             })}
 
             {!loading && !users.length ? (
-              <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center">
+              <div className="rounded-sm bg-zinc-50 p-6 text-center">
                 <div className="text-[13px] font-medium text-zinc-900">Sin resultados</div>
                 <div className="mt-1 text-[12px] text-zinc-600">{usersError || "No encontramos usuarios."}</div>
               </div>
