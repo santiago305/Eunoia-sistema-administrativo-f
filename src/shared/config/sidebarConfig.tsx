@@ -1,4 +1,5 @@
 import { 
+    IconAgencies,
     IconCompany,
     IconAccounts,
     IconHome,
@@ -131,6 +132,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 icon: <IconUsers className="text-sidebar-foreground" />,
             },
         ],
+    },
+    {
+        label: "Agencias",
+        icon: <IconAgencies className="text-sidebar-foreground" />,
+        href: RoutesPaths.agencies,
     },
     {
         label: "Empresa",

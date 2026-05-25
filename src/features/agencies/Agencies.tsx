@@ -6,7 +6,6 @@ import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { Badge } from "@/shared/components/ui/badge";
 import {
   DataTableSearchBar,
   DataTableSearchChips,
@@ -18,37 +17,35 @@ import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { useUbigeoCatalog } from "@/shared/hooks/useUbigeoCatalog";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
-import { ClientSmartSearchPanel } from "@/features/clients/components/ClientSmartSearchPanel";
-import { ModalDetailClient } from "@/features/clients/components/ModalDetailClient";
-import type { Client, ClientForm } from "@/features/clients/types/client";
-import type { ClientListItem } from "@/features/clients/types/clientApi";
-import { CLIENT_TYPE_META } from "@/features/clients/constants/clientType";
+import { AgencyFormModal } from "@/features/agencies/components/AgencyFormModal";
+import { AgencySmartSearchPanel } from "@/features/agencies/components/AgencySmartSearchPanel";
+import { ModalDetailAgency } from "@/features/agencies/components/ModalDetailAgency";
+import type { Agency, AgencyForm } from "@/features/agencies/types/agency";
+import type { AgencyDetail, AgencyListItem } from "@/features/agencies/types/agencyApi";
 import type {
-  ClientSearchFilters,
-  ClientSearchRule,
-  ClientSearchSnapshot,
-  ClientSearchStateResponse,
-} from "@/features/clients/types/clientSearch";
+  AgencySearchRule,
+  AgencySearchSnapshot,
+  AgencySearchStateResponse,
+} from "@/features/agencies/types/agencySearch";
 import {
-  createClient,
-  deleteClientSearchMetric,
-  getClientSearchState,
-  getClientById,
-  listClients,
-  saveClientSearchMetric,
-  updateClient,
-  updateClientActive,
-} from "@/shared/services/clientService";
-import { getUbigeoCatalog } from "@/shared/services/ubigeoCatalogService";
+  createAgency,
+  deleteAgencySearchMetric,
+  getAgencyById,
+  getAgencySearchState,
+  listAgencies,
+  saveAgencySearchMetric,
+  updateAgency,
+  updateAgencyActive,
+} from "@/shared/services/agencyService";
 import {
-  applyClientSearchRuleWithDependencies,
-  buildClientSearchChips,
-  removeClientSearchKeyWithDependencies,
-  sanitizeClientSearchSnapshot,
-  type ClientSearchFilterKey,
-} from "@/features/clients/utils/clientSmartSearch";
+  applyAgencySearchRuleWithDependencies,
+  buildAgencySearchChips,
+  removeAgencySearchKeyWithDependencies,
+  sanitizeAgencySearchSnapshot,
+  type AgencySearchFilterKey,
+} from "@/features/agencies/utils/agencySmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -64,23 +61,33 @@ function extractErrorMessage(error: unknown, fallback: string) {
   return message || fallback;
 }
 
-function mapListItemToClient(item: ClientListItem): Client {
+function mapListItemToAgency(item: AgencyListItem): Agency {
   return {
     id: item.id,
-    type: item.type,
-    fullName: item.fullName,
-    docType: item.docType,
-    docNumber: item.docNumber,
+    name: item.name,
+    reference: item.reference ?? null,
+    address: item.address ?? null,
     departmentId: item.departmentId,
     provinceId: item.provinceId,
     districtId: item.districtId,
-    address: item.address ?? null,
-    reference: item.reference ?? null,
     isActive: item.isActive,
   };
 }
 
-export default function Clients() {
+function mapDetailToAgency(detail: AgencyDetail): Agency {
+  return {
+    id: detail.id,
+    name: detail.name,
+    reference: detail.reference ?? null,
+    address: detail.address ?? null,
+    departmentId: detail.departmentId,
+    provinceId: detail.provinceId,
+    districtId: detail.districtId,
+    isActive: detail.isActive,
+  };
+}
+
+export default function Agencies() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const showFeedbackRef = useRef(showFeedback);
   useEffect(() => {
@@ -88,9 +95,11 @@ export default function Clients() {
   }, [showFeedback]);
 
   const { can } = usePermissions();
-  const canManageClients = can("clients.manage");
+  const canManageAgencies = can("agencies.manage");
 
-  const [items, setItems] = useState<Client[]>([]);
+  const { namesById: ubigeoNames } = useUbigeoCatalog(true);
+
+  const [items, setItems] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [serverPagination, setServerPagination] = useState({
@@ -112,69 +121,30 @@ export default function Clients() {
 
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
-  const [searchState, setSearchState] = useState<ClientSearchStateResponse | null>(null);
+  const [searchState, setSearchState] = useState<AgencySearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
-  const [searchFilters, setSearchFilters] = useState<ClientSearchFilters>(() => []);
+  const [searchFilters, setSearchFilters] = useState<AgencySearchRule[]>(() => []);
 
   const [openCreate, setOpenCreate] = useState(false);
-  const [editingClientId, setEditingClientId] = useState<string | null>(null);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editingAgencyId, setEditingAgencyId] = useState<string | null>(null);
+  const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
   const [editingLoading, setEditingLoading] = useState(false);
-  const [detailClientId, setDetailClientId] = useState<string | null>(null);
+  const [detailAgencyId, setDetailAgencyId] = useState<string | null>(null);
 
-  const [toggleClientId, setToggleClientId] = useState<string | null>(null);
+  const [toggleAgencyId, setToggleAgencyId] = useState<string | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
 
-  const [ubigeoNames, setUbigeoNames] = useState<{
-    departmentsById: Record<string, string>;
-    provincesById: Record<string, string>;
-    districtsById: Record<string, string>;
-  }>({
-    departmentsById: {},
-    provincesById: {},
-    districtsById: {},
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const catalog = await getUbigeoCatalog();
-        if (cancelled) return;
-
-        const departmentsById: Record<string, string> = {};
-        const provincesById: Record<string, string> = {};
-        const districtsById: Record<string, string> = {};
-
-        for (const dep of catalog.departments ?? []) departmentsById[dep.id] = dep.name;
-        for (const prov of catalog.provinces ?? []) provincesById[prov.id] = prov.name;
-        for (const dist of catalog.districts ?? []) districtsById[dist.id] = dist.name;
-
-        setUbigeoNames({ departmentsById, provincesById, districtsById });
-      } catch {
-        if (!cancelled) {
-          setUbigeoNames({ departmentsById: {}, provincesById: {}, districtsById: {} });
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const draftSnapshot = useMemo<ClientSearchSnapshot>(
-    () => sanitizeClientSearchSnapshot({ q: searchText, filters: searchFilters }),
+  const draftSnapshot = useMemo<AgencySearchSnapshot>(
+    () => sanitizeAgencySearchSnapshot({ q: searchText, filters: searchFilters }),
     [searchFilters, searchText],
   );
 
-  const executedSnapshot = useMemo<ClientSearchSnapshot>(
-    () => sanitizeClientSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+  const executedSnapshot = useMemo<AgencySearchSnapshot>(
+    () => sanitizeAgencySearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
     [appliedSearchText, searchFilters],
   );
 
-  const recentSearches = useMemo<DataTableRecentSearchItem<ClientSearchSnapshot>[]>(
+  const recentSearches = useMemo<DataTableRecentSearchItem<AgencySearchSnapshot>[]>(
     () =>
       (searchState?.recent ?? []).map((item) => ({
         id: item.recentId,
@@ -184,7 +154,7 @@ export default function Clients() {
     [searchState],
   );
 
-  const savedMetrics = useMemo<DataTableSavedSearchItem<ClientSearchSnapshot>[]>(
+  const savedMetrics = useMemo<DataTableSavedSearchItem<AgencySearchSnapshot>[]>(
     () =>
       (searchState?.saved ?? []).map((metric) => ({
         id: metric.metricId,
@@ -197,26 +167,26 @@ export default function Clients() {
 
   const loadSearchState = useCallback(async () => {
     try {
-      const response = await getClientSearchState();
+      const response = await getAgencySearchState();
       setSearchState(response);
     } catch {
       showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
   }, []);
 
-  const loadClients = useCallback(async () => {
+  const loadAgencies = useCallback(async () => {
     setLoading(true);
     clearFeedback();
 
     try {
-      const response = await listClients({
+      const response = await listAgencies({
         q: executedSnapshot.q,
         filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
         page,
         limit,
       });
 
-      const mapped = (response.items ?? []).map(mapListItemToClient);
+      const mapped = (response.items ?? []).map(mapListItemToAgency);
       setItems(mapped);
 
       const total = response.total ?? 0;
@@ -238,23 +208,23 @@ export default function Clients() {
       }
     } catch (error: unknown) {
       setItems([]);
-      showFeedbackRef.current(errorResponse(extractErrorMessage(error, "No se pudieron cargar los clientes.")));
+      showFeedbackRef.current(errorResponse(extractErrorMessage(error, "No se pudieron cargar las agencias.")));
     } finally {
       setLoading(false);
     }
   }, [clearFeedback, executedSnapshot, limit, loadSearchState, page]);
 
   useEffect(() => {
-    void loadClients();
-  }, [loadClients]);
+    void loadAgencies();
+  }, [loadAgencies]);
 
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
 
   useEffect(() => {
-    if (!editingClientId) {
-      setEditingClient(null);
+    if (!editingAgencyId) {
+      setEditingAgency(null);
       return;
     }
 
@@ -263,27 +233,14 @@ export default function Clients() {
 
     void (async () => {
       try {
-        const detail = await getClientById(editingClientId);
+        const detail = await getAgencyById(editingAgencyId);
         if (cancelled) return;
-
-        setEditingClient({
-          id: detail.id,
-          type: detail.type,
-          fullName: detail.fullName,
-          docType: detail.docType,
-          docNumber: detail.docNumber,
-          departmentId: detail.departmentId,
-          provinceId: detail.provinceId,
-          districtId: detail.districtId,
-          address: detail.address ?? null,
-          reference: detail.reference ?? null,
-          isActive: detail.isActive,
-        });
+        setEditingAgency(mapDetailToAgency(detail));
       } catch (error: unknown) {
         if (!cancelled) {
-          showFeedbackRef.current(errorResponse(extractErrorMessage(error, "No se pudo cargar el cliente.")));
-          setEditingClient(null);
-          setEditingClientId(null);
+          showFeedbackRef.current(errorResponse(extractErrorMessage(error, "No se pudo cargar la agencia.")));
+          setEditingAgency(null);
+          setEditingAgencyId(null);
         }
       } finally {
         if (!cancelled) setEditingLoading(false);
@@ -293,7 +250,7 @@ export default function Clients() {
     return () => {
       cancelled = true;
     };
-  }, [editingClientId]);
+  }, [editingAgencyId]);
 
   const submitSearch = useCallback(() => {
     startTransition(() => {
@@ -305,12 +262,12 @@ export default function Clients() {
   const searchCatalogs = useMemo(() => searchState?.catalogs ?? null, [searchState]);
 
   const searchChips = useMemo(
-    () => buildClientSearchChips(executedSnapshot, searchCatalogs),
+    () => buildAgencySearchChips(executedSnapshot, searchCatalogs),
     [executedSnapshot, searchCatalogs],
   );
 
-  const applySmartSnapshot = useCallback((snapshot: ClientSearchSnapshot) => {
-    const normalized = sanitizeClientSearchSnapshot(snapshot);
+  const applySmartSnapshot = useCallback((snapshot: AgencySearchSnapshot) => {
+    const normalized = sanitizeAgencySearchSnapshot(snapshot);
     startTransition(() => {
       setSearchText(normalized.q ?? "");
       setAppliedSearchText(normalized.q ?? "");
@@ -320,11 +277,11 @@ export default function Clients() {
   }, []);
 
   const handleApplySearchRule = useCallback(
-    (rule: ClientSearchRule) => {
+    (rule: AgencySearchRule) => {
       startTransition(() => {
         setSearchFilters((current) => {
-          const next = applyClientSearchRuleWithDependencies(
-            sanitizeClientSearchSnapshot({ q: searchText, filters: current }),
+          const next = applyAgencySearchRuleWithDependencies(
+            sanitizeAgencySearchSnapshot({ q: searchText, filters: current }),
             rule,
           );
           return next.filters;
@@ -336,7 +293,7 @@ export default function Clients() {
   );
 
   const handleRemoveSearchRule = useCallback(
-    (fieldId: "q" | ClientSearchFilterKey) => {
+    (fieldId: "q" | AgencySearchFilterKey) => {
       startTransition(() => {
         if (fieldId === "q") {
           setSearchText("");
@@ -346,19 +303,20 @@ export default function Clients() {
         }
 
         setSearchFilters((current) => {
-          const next = removeClientSearchKeyWithDependencies(
-            sanitizeClientSearchSnapshot({ q: searchText, filters: current }),
+          const next = removeAgencySearchKeyWithDependencies(
+            sanitizeAgencySearchSnapshot({ q: searchText, filters: current }),
             fieldId,
           );
           return next.filters;
         });
+
         setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
       });
     },
     [searchText],
   );
 
-  const canSaveMetric = Boolean(draftSnapshot.q || draftSnapshot.filters.length);
+  const canSaveMetric = Boolean(draftSnapshot.q || draftSnapshot.filters.length) && !savingMetric;
 
   const handleSaveMetric = useCallback(
     async (name: string) => {
@@ -368,7 +326,7 @@ export default function Clients() {
       setSavingMetric(true);
 
       try {
-        const response = await saveClientSearchMetric(name, draftSnapshot);
+        const response = await saveAgencySearchMetric(name, draftSnapshot);
         showFeedback(successResponse(response.message || "Métrica guardada"));
         await loadSearchState();
       } catch (error: unknown) {
@@ -385,7 +343,7 @@ export default function Clients() {
     async (metricId: string) => {
       clearFeedback();
       try {
-        const response = await deleteClientSearchMetric(metricId);
+        const response = await deleteAgencySearchMetric(metricId);
         showFeedback(successResponse(response.message || "Métrica eliminada"));
         await loadSearchState();
       } catch (error: unknown) {
@@ -404,151 +362,96 @@ export default function Clients() {
   }, []);
 
   const handleCreateSubmit = useCallback(
-    async (form: ClientForm) => {
-      if (!canManageClients) return;
+    async (form: AgencyForm) => {
+      if (!canManageAgencies) return;
 
       clearFeedback();
 
       try {
         const payload = {
-          type: form.type,
-          fullName: form.fullName.trim(),
-          docType: form.docType,
-          docNumber: form.docType === "NONE" ? "" : form.docNumber.trim(),
-          reference: form.docType === "NONE" ? form.reference.trim() : form.reference.trim() || undefined,
-          address: form.address.trim() || undefined,
+          name: form.name.trim(),
+          reference: form.reference.trim() || undefined,
+          address: form.address.trim(),
           departmentId: form.departmentId,
           provinceId: form.provinceId,
           districtId: form.districtId,
           isActive: form.isActive,
-          telephonesReplace: form.telephonesReplace?.length
-            ? form.telephonesReplace
-                .filter((item) => !item.id && Boolean(item.number?.trim()))
-                .map((item) => ({
-                  number: item.number!.trim(),
-                  isMain: item.isMain,
-                }))
-            : undefined,
         };
 
-        const response = await createClient(payload);
-        showFeedback(successResponse(response.message || "Cliente creado con éxito"));
+        const response = await createAgency(payload);
+        showFeedback(successResponse(response.message || "Agencia creada con éxito"));
         setOpenCreate(false);
-        await loadClients();
+        await loadAgencies();
       } catch (error: unknown) {
-        showFeedback(errorResponse(extractErrorMessage(error, "No se pudo crear el cliente.")));
+        showFeedback(errorResponse(extractErrorMessage(error, "No se pudo crear la agencia.")));
       }
     },
-    [canManageClients, clearFeedback, loadClients, showFeedback],
+    [canManageAgencies, clearFeedback, loadAgencies, showFeedback],
   );
 
   const handleEditSubmit = useCallback(
-    async (form: ClientForm) => {
-      if (!canManageClients || !editingClientId) return;
+    async (form: AgencyForm) => {
+      if (!canManageAgencies || !editingAgencyId) return;
 
       clearFeedback();
 
       try {
         const payload = {
-          type: form.type,
-          fullName: form.fullName.trim(),
-          docType: form.docType,
-          docNumber: form.docType === "NONE" ? "" : form.docNumber.trim(),
-          reference: form.docType === "NONE" ? form.reference.trim() : form.reference.trim() || undefined,
-          address: form.address.trim() || undefined,
+          name: form.name.trim(),
+          reference: form.reference.trim() || undefined,
+          address: form.address.trim(),
           departmentId: form.departmentId,
           provinceId: form.provinceId,
           districtId: form.districtId,
-          telephonesReplace: form.telephonesReplace?.length
-            ? form.telephonesReplace
-                .map((item) => ({
-                  id: item.id,
-                  number: item.number?.trim() || undefined,
-                  isMain: item.isMain,
-                }))
-                .filter((item) => Boolean(item.id || item.number))
-            : undefined,
         };
 
-        const response = await updateClient(editingClientId, payload);
-        showFeedback(successResponse(response.message || "Cliente actualizado con éxito"));
-        setEditingClientId(null);
-        await loadClients();
+        const response = await updateAgency(editingAgencyId, payload);
+        showFeedback(successResponse(response.message || "Agencia actualizada con éxito"));
+        setEditingAgencyId(null);
+        await loadAgencies();
       } catch (error: unknown) {
-        showFeedback(errorResponse(extractErrorMessage(error, "No se pudo actualizar el cliente.")));
+        showFeedback(errorResponse(extractErrorMessage(error, "No se pudo actualizar la agencia.")));
       }
     },
-    [canManageClients, clearFeedback, editingClientId, loadClients, showFeedback],
+    [canManageAgencies, clearFeedback, editingAgencyId, loadAgencies, showFeedback],
   );
 
-  const clientPendingToggle = useMemo(
-    () => (toggleClientId ? items.find((row) => row.id === toggleClientId) ?? null : null),
-    [items, toggleClientId],
+  const agencyPendingToggle = useMemo(
+    () => (toggleAgencyId ? items.find((row) => row.id === toggleAgencyId) ?? null : null),
+    [items, toggleAgencyId],
   );
 
   const confirmToggleActive = useCallback(async () => {
-    if (!canManageClients || !toggleClientId || togglingStatus) return;
+    if (!canManageAgencies || !toggleAgencyId || togglingStatus) return;
 
     clearFeedback();
     setTogglingStatus(true);
 
     try {
-      const nextActive = !Boolean(clientPendingToggle?.isActive);
-      const response = await updateClientActive(toggleClientId, { isActive: nextActive });
+      const nextActive = !Boolean(agencyPendingToggle?.isActive);
+      const response = await updateAgencyActive(toggleAgencyId, { isActive: nextActive });
       showFeedback(successResponse(response.message || "Estado actualizado"));
-      setToggleClientId(null);
-      await loadClients();
+      setToggleAgencyId(null);
+      await loadAgencies();
     } catch (error: unknown) {
-      showFeedback(errorResponse(extractErrorMessage(error, "No se pudo actualizar el estado del cliente.")));
+      showFeedback(errorResponse(extractErrorMessage(error, "No se pudo actualizar el estado de la agencia.")));
     } finally {
       setTogglingStatus(false);
     }
-  }, [canManageClients, clientPendingToggle?.isActive, clearFeedback, loadClients, showFeedback, toggleClientId, togglingStatus]);
+  }, [agencyPendingToggle?.isActive, canManageAgencies, clearFeedback, loadAgencies, showFeedback, toggleAgencyId, togglingStatus]);
 
-  const columns = useMemo<DataTableColumn<Client>[]>(
+  const columns = useMemo<DataTableColumn<Agency>[]>(
     () => [
       {
-        id: "fullName",
-        header: "Cliente",
-        cell: (row) => <span className="text-black/70">{row.fullName}</span>,
-        className: "text-black/70",
-      },
-      {
-        id: "type",
-        header: "Tipo",
-        cell: (row) => (
-          <Badge variant="outline" className={CLIENT_TYPE_META[row.type].className}>
-            {CLIENT_TYPE_META[row.type].label}
-          </Badge>
-        ),
-      },
-      {
-        id: "doc",
-        header: "Documento",
-        cell: (row) => (
-          row.docType === "NONE" ? (
-            <span className="text-black/70">
-              S/D - {row.reference}
-            </span>
-          ) : (
-            <span className="text-black/70">
-              {row.docType} - {row.docNumber}
-            </span>
-          )
-        ),
-        className: "text-black/70",
-      },
-      {
-        id: "reference",
-        header: "Referencia",
-        accessorKey: "reference",
-        cell: (row) => <span className="text-black/70">{row.reference ?? "—"}</span>,
+        id: "name",
+        header: "Nombre",
+        accessorKey: "name",
+        cell: (row) => <span className="text-black/70">{row.name}</span>,
         className: "text-black/70",
       },
       {
         id: "departmentId",
         header: "Departamento",
-        accessorKey: "departmentId",
         cell: (row) => {
           const name = ubigeoNames.departmentsById[row.departmentId];
           return <span className="text-black/70">{name ? `${name}` : row.departmentId}</span>;
@@ -558,7 +461,6 @@ export default function Clients() {
       {
         id: "provinceId",
         header: "Provincia",
-        accessorKey: "provinceId",
         cell: (row) => {
           const name = ubigeoNames.provincesById[row.provinceId];
           return <span className="text-black/70">{name ? `${name}` : row.provinceId}</span>;
@@ -568,7 +470,6 @@ export default function Clients() {
       {
         id: "districtId",
         header: "Distrito",
-        accessorKey: "districtId",
         cell: (row) => {
           const name = ubigeoNames.districtsById[row.districtId];
           return <span className="text-black/70">{name ? `${name}` : row.districtId}</span>;
@@ -579,6 +480,12 @@ export default function Clients() {
         id: "address",
         header: "Dirección",
         cell: (row) => <span className="text-black/70">{row.address ?? "—"}</span>,
+        className: "text-black/70",
+      },
+      {
+        id: "reference",
+        header: "Referencia",
+        cell: (row) => <span className="text-black/70">{row.reference ?? "—"}</span>,
         className: "text-black/70",
       },
       {
@@ -600,17 +507,17 @@ export default function Clients() {
                 id: "edit",
                 label: "Editar",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
-                hidden: !canManageClients,
-                onClick: () => setEditingClientId(row.id),
+                hidden: !canManageAgencies,
+                onClick: () => setEditingAgencyId(row.id),
               },
               {
                 id: "toggle",
                 label: row.isActive ? "Eliminar" : "Restaurar",
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
-                hidden: !canManageClients,
+                hidden: !canManageAgencies,
                 className: row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50",
-                onClick: () => setToggleClientId(row.id),
+                onClick: () => setToggleAgencyId(row.id),
               },
             ]}
             columns={1}
@@ -644,10 +551,10 @@ export default function Clients() {
         showInCards: false,
       },
     ],
-    [canManageClients, ubigeoNames.departmentsById, ubigeoNames.districtsById, ubigeoNames.provincesById],
+    [canManageAgencies, ubigeoNames.departmentsById, ubigeoNames.districtsById, ubigeoNames.provincesById],
   );
 
-  const companyActionTitle = canManageClients ? undefined : "Sin permisos para gestionar clientes.";
+  const companyActionTitle = canManageAgencies ? undefined : "Sin permisos para gestionar agencias.";
 
   return (
     <PageShell>
@@ -661,10 +568,10 @@ export default function Clients() {
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
-          disabled={!canManageClients}
+          disabled={!canManageAgencies}
           title={companyActionTitle}
         >
-          Crear cliente
+          Crear agencia
         </SystemButton>
       </PageActionsRow>
 
@@ -676,28 +583,28 @@ export default function Clients() {
       />
 
       <DataTable
-        tableId="clients-table"
+        tableId="agencies-table"
         data={items}
         columns={columns}
         rowKey="id"
         loading={loading}
-        emptyMessage="No hay clientes con los filtros actuales."
+        emptyMessage="No hay agencias con los filtros actuales."
         selectableColumns
         hoverable={false}
         animated={false}
-        onRowClick={(row) => setDetailClientId(row.id)}
+        onRowClick={(row) => setDetailAgencyId(row.id)}
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}
             onChange={setSearchText}
             onSubmitSearch={submitSearch}
-            searchLabel="Busca tu cliente"
-            searchName="client-smart-search"
+            searchLabel="Busca tu agencia"
+            searchName="agency-smart-search"
             canSaveMetric={canSaveMetric}
             saveLoading={savingMetric}
             onSaveMetric={handleSaveMetric}
           >
-            <ClientSmartSearchPanel
+            <AgencySmartSearchPanel
               recent={recentSearches}
               saved={savedMetrics}
               snapshot={draftSnapshot}
@@ -719,8 +626,8 @@ export default function Clients() {
         tableClassName="text-[10px]"
       />
 
-      <ClientFormModal
-        open={openCreate && canManageClients}
+      <AgencyFormModal
+        open={openCreate && canManageAgencies}
         mode="create"
         onClose={() => setOpenCreate(false)}
         onSubmit={(form) => {
@@ -729,12 +636,12 @@ export default function Clients() {
         primaryColor={PRIMARY}
       />
 
-      <ClientFormModal
-        open={Boolean(editingClientId) && canManageClients}
+      <AgencyFormModal
+        open={Boolean(editingAgencyId) && canManageAgencies}
         mode="edit"
-        client={editingClient}
+        agency={editingAgency}
         loading={editingLoading}
-        onClose={() => setEditingClientId(null)}
+        onClose={() => setEditingAgencyId(null)}
         onSubmit={(form) => {
           void handleEditSubmit(form);
         }}
@@ -742,32 +649,32 @@ export default function Clients() {
       />
 
       <AlertModal
-        open={Boolean(toggleClientId) && canManageClients}
-        type={clientPendingToggle?.isActive ? "warning" : "restore"}
-        title={clientPendingToggle?.isActive ? "Eliminar cliente" : "Restaurar cliente"}
+        open={Boolean(toggleAgencyId) && canManageAgencies}
+        type={agencyPendingToggle?.isActive ? "warning" : "restore"}
+        title={agencyPendingToggle?.isActive ? "Eliminar agencia" : "Restaurar agencia"}
         message={
-          clientPendingToggle?.isActive
-            ? "Estas por eliminar este cliente. Hazlo solo si estas seguro."
-            : "Estas por restaurar este cliente. Hazlo solo si estas seguro."
+          agencyPendingToggle?.isActive
+            ? "Estas por eliminar esta agencia. Hazlo solo si estas seguro."
+            : "Estas por restaurar esta agencia. Hazlo solo si estas seguro."
         }
-        confirmText={clientPendingToggle?.isActive ? "Eliminar" : "Restaurar"}
+        confirmText={agencyPendingToggle?.isActive ? "Eliminar" : "Restaurar"}
         loading={togglingStatus}
         onClose={() => {
           if (togglingStatus) return;
-          setToggleClientId(null);
+          setToggleAgencyId(null);
         }}
         onConfirm={() => {
           void confirmToggleActive();
         }}
       />
 
-      <ModalDetailClient
+      <ModalDetailAgency
         ubigeoNames={ubigeoNames}
-        open={Boolean(detailClientId)}
-        clientId={detailClientId}
-        onClose={() => setDetailClientId(null)}
+        open={Boolean(detailAgencyId)}
+        agencyId={detailAgencyId}
+        onClose={() => setDetailAgencyId(null)}
       />
-
     </PageShell>
   );
 }
+

@@ -18,10 +18,10 @@ import {
   Banknote,
   PencilRuler,
   ClipboardList,
-  Bell
-  ,
+  Bell,
   Menu,
-  UserCog
+  UserCog,
+  Truck
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -56,6 +56,9 @@ export const IconRowMaterial = ({ className }: { className?: string }) => (
 
 export const IconUsers = ({ className }: { className?: string }) => (
   <Users className={className} size={20} />
+);
+export const IconAgencies = ({ className }: { className?: string }) => (
+  <Truck className={className} size={20} />
 );
 
 export const IconAccounts = ({ className }: { className?: string }) => (
