@@ -21,7 +21,8 @@ import {
   Bell
   ,
   Truck,
-  Menu
+  Menu,
+  Megaphone
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -103,6 +104,10 @@ export const IconBell = ({ className }: { className?: string }) => (
 
 export const IconMenu = ({ className }: { className?: string }) => (
   <Menu className={className} size={18} />
+);
+
+export const IconCampaigns = ({ className }: { className?: string }) => (
+  <Megaphone className={className} size={20} />
 );
 
 

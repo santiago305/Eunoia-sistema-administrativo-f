@@ -1,5 +1,6 @@
 import { 
     IconAgencies,
+    IconCampaigns,
     IconCompany,
     IconHome,
     IconOutOrder,
@@ -130,6 +131,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Agencias",
         icon: <IconAgencies className="text-sidebar-foreground" />,
         href: RoutesPaths.agencies,
+    },
+    {
+        label: "Campañas",
+        icon: <IconCampaigns className="text-sidebar-foreground" />,
+        href: RoutesPaths.sources,
     },
     {
         label: "Empresa",

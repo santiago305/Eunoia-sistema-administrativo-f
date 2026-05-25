@@ -52,6 +52,9 @@ export const RoutesPaths = {
   //agencies
   agencies: "/agencias",
 
+  //sources (campaigns)
+  sources: "/campanas",
+
   //purchase
   purchase: '/compra',
   purchases: '/compras',

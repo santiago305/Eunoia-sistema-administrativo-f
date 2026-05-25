@@ -83,6 +83,17 @@ export const agencyRoutes = {
   searchMetricDetail: (metricId: string) => `/agencies/search-metrics/${metricId}`,
 };
 
+export const sourceRoutes = {
+  list: "/sources",
+  create: "/sources",
+  detail: (id: string) => `/sources/${id}`,
+  update: (id: string) => `/sources/${id}`,
+  active: (id: string) => `/sources/${id}/active`,
+  searchState: "/sources/search-state",
+  searchMetrics: "/sources/search-metrics",
+  searchMetricDetail: (metricId: string) => `/sources/search-metrics/${metricId}`,
+};
+
 
 export const API_UBIGEO_GROUP = {
   departments: "/ubigeo/departments",
