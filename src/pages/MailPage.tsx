@@ -139,14 +139,14 @@ const ORIGIN_MODULE_TO_CATEGORY: Record<string, Mail["category"]> = {
 
 const ORIGIN_MODULE_TO_LABEL: Record<string, string> = {
   purchases: "Compras",
-  production: "Produccion",
-  warehouse: "Almacen",
-  catalog: "Catalogo",
+  production: "Producción",
+  warehouse: "Almacenes",
+  catalog: "Catálogo",
   supplies: "Suministros",
   security: "Seguridad",
   roles: "Roles",
   providers: "Proveedores",
-  corporate: "Corporativo",
+  corporate: "Sistema",
   system: "Sistema",
 };
 
