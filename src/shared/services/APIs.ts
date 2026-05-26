@@ -18,6 +18,7 @@ export const API_USERS_GROUP = {
   countByRole: '/users/count-by-role',
   findOwnUser: '/users/me',
   updateUserRole: (id: string) => `/users/${id}/role`,
+  updateManagementScope: (id: string) => `/users/${id}/management-scope`,
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
 };
@@ -92,6 +93,9 @@ export const API_UBIGEO_GROUP = {
 };
 export const API_ROLES_GROUP = {
   findAll: "/roles",
+  create: "/roles/create",
+  update: (id: string) => `/roles/${id}`,
+  deactivate: (id: string) => `/roles/${id}/deactivate`,
 };
 
 export const API_SESSIONS_GROUP = {

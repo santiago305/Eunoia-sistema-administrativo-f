@@ -1,4 +1,4 @@
-export type Role = "admin" | "moderator" | "adviser" | "purchasing_manager";
+export type Role = string;
 
 export enum RoleType {
   ADMIN = "admin",
@@ -7,7 +7,7 @@ export enum RoleType {
   PURCHASING_MANAGER = "purchasing_manager",
 }
 
-export const ROLE_LABELS: Record<Role, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   moderator: "Moderador",
   adviser: "Asesor",

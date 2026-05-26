@@ -4,6 +4,8 @@ import type { AccessPermissionItem } from "@/shared/services/accessControlServic
 export type RoleOption = {
   id: string;
   description: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
 };
 
 export type ModuleLabelConfigItem = {

@@ -50,6 +50,8 @@ export interface UserDTO {
   role?: string;
   rol?: string;
   roleId?: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
   createdAt?: string | Date;
 }
 
@@ -85,6 +87,10 @@ export type User = {
   deletedAt?: string | null;
   createdAt: string;
   updatedAt?: string | null;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
+  manageableRoleDescriptions?: string[] | null;
+  manageableUserIds?: string[] | null;
 };
 
 export type RoleOption = {
@@ -102,6 +108,8 @@ export interface RoleItem {
   description: RoleType | string;
   deleted: boolean;
   createdAt: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
 }
 
 export type { Role };

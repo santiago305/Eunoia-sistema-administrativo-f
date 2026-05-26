@@ -66,7 +66,7 @@ export const RolePicker = ({ roles, value, onChange, error }: { roles: Role[]; v
 
     return (
         <div className="w-full">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {visibleRoles.map((role) => (
                     <RoleButton key={role.id} role={role} />
                 ))}

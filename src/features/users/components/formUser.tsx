@@ -56,6 +56,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
       try {
         const response = await findAllRoles({ status: "all" });
         const normalized: UserRoleOptionApi[] = (Array.isArray(response) ? response : [])
+          .filter((r) => !Boolean((r as { deleted?: boolean }).deleted))
           .map((r) => ({
             id: String(r.id ?? ""),
             description: String(r.description ?? "").toLowerCase(),

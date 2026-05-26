@@ -1,4 +1,4 @@
-import { LockKeyhole, Save, ShieldCheck } from "lucide-react";
+import { LockKeyhole, Plus, Save, ShieldCheck } from "lucide-react";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { RoleOption } from "@/features/roles/types/rolesPermissions.types";
@@ -8,28 +8,34 @@ type RolesPermissionsHeaderProps = {
   roles: RoleOption[];
   selectedRoleId: string;
   selectedRoleDescription: string;
+  selectedRoleCreatedByLabel?: string | null;
   selectedCodesCount: number;
   totalPermissionsCount: number;
   activeModules: number;
   totalPercent: number;
   saving: boolean;
   canAssignRolePermissions: boolean;
+  canCreateRoles: boolean;
   onRoleChange: (roleId: string) => void;
   onSave: () => void;
+  onCreateRole: () => void;
 };
 
 export function RolesPermissionsHeader({
   roles,
   selectedRoleId,
   selectedRoleDescription,
+  selectedRoleCreatedByLabel,
   selectedCodesCount,
   totalPermissionsCount,
   activeModules,
   totalPercent,
   saving,
   canAssignRolePermissions,
+  canCreateRoles,
   onRoleChange,
   onSave,
+  onCreateRole,
 }: RolesPermissionsHeaderProps) {
   const roleOptions = roles.map((role) => ({
     value: role.id,
@@ -67,6 +73,9 @@ export function RolesPermissionsHeader({
                 <strong className="font-semibold text-zinc-900">{activeModules}</strong> módulos
               </span>
             </div>
+            {selectedRoleCreatedByLabel ? (
+              <p className="mt-1 text-xs text-zinc-500">Creado por: {selectedRoleCreatedByLabel}</p>
+            ) : null}
 
             <div className="mt-3 h-1 overflow-hidden rounded-sm bg-zinc-100">
               <div
@@ -77,15 +86,28 @@ export function RolesPermissionsHeader({
           </div>
         </div>
 
-        <SystemButton
-          onClick={onSave}
-          loading={saving}
-          disabled={!selectedRoleId || !canAssignRolePermissions}
-          className="h-10 w-full justify-center gap-2 rounded-sm sm:w-auto"
-        >
-          <Save className="h-4 w-4" />
-          Guardar cambios
-        </SystemButton>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {canCreateRoles ? (
+            <SystemButton
+              onClick={onCreateRole}
+              variant="outline"
+              className="h-10 w-full justify-center gap-2 rounded-sm sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Nuevo rol
+            </SystemButton>
+          ) : null}
+
+          <SystemButton
+            onClick={onSave}
+            loading={saving}
+            disabled={!selectedRoleId || !canAssignRolePermissions}
+            className="h-10 w-full justify-center gap-2 rounded-sm sm:w-auto"
+          >
+            <Save className="h-4 w-4" />
+            Guardar cambios
+          </SystemButton>
+        </div>
       </div>
 
       {!canAssignRolePermissions ? (

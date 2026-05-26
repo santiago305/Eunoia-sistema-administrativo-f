@@ -2,6 +2,7 @@ import { ChevronRight, Info, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { FloatingMultiSelect } from "@/shared/components/components/FloatingMultiSelect";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
   Tooltip,
@@ -38,6 +39,15 @@ type UserPermissionsModalProps = {
     reason?: string,
   ) => Promise<void>;
   deletePermissionOverride: (permissionCode: string) => Promise<void>;
+  canManageScope: boolean;
+  managementRoleOptions: Array<{ value: string; label: string }>;
+  managementUserOptions: Array<{ value: string; label: string }>;
+  managementRoleValues: string[];
+  managementUserValues: string[];
+  savingManagementScope: boolean;
+  onChangeManagementRoles: (nextValues: string[]) => void;
+  onChangeManagementUsers: (nextValues: string[]) => void;
+  onSaveManagementScope: () => Promise<void>;
 };
 
 const getPermissionTone = (permission: PresentedPermission) => {
@@ -80,6 +90,15 @@ export function UserPermissionsModal({
   canManageOverrides,
   savePermissionOverride,
   deletePermissionOverride,
+  canManageScope,
+  managementRoleOptions,
+  managementUserOptions,
+  managementRoleValues,
+  managementUserValues,
+  savingManagementScope,
+  onChangeManagementRoles,
+  onChangeManagementUsers,
+  onSaveManagementScope,
 }: UserPermissionsModalProps) {
   const groups = useMemo(
     () =>
@@ -158,6 +177,44 @@ export function UserPermissionsModal({
           </aside>
 
           <section className="min-h-[520px] rounded-sm bg-zinc-50 p-2">
+            {canManageScope ? (
+              <div className="mb-3 rounded-sm border border-zinc-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Alcance de gestión</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Define qué roles y usuarios adicionales puede ver/gestionar este usuario al crear cuentas.
+                </p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <FloatingMultiSelect
+                    label="Roles permitidos"
+                    name="management-role-scope"
+                    value={managementRoleValues}
+                    options={managementRoleOptions}
+                    onChange={onChangeManagementRoles}
+                    placeholder="Sin alcance por rol"
+                  />
+                  <FloatingMultiSelect
+                    label="Usuarios permitidos"
+                    name="management-user-scope"
+                    value={managementUserValues}
+                    options={managementUserOptions}
+                    onChange={onChangeManagementUsers}
+                    placeholder="Sin alcance por usuario"
+                    searchable
+                  />
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <SystemButton
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void onSaveManagementScope()}
+                    loading={savingManagementScope}
+                  >
+                    Guardar alcance
+                  </SystemButton>
+                </div>
+              </div>
+            ) : null}
+
             <div className="max-h-[66vh] overflow-y-auto pr-1">
               {groups.map((group) => {
                 const isOpen = openModules.has(group.module);

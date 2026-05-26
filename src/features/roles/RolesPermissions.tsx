@@ -3,6 +3,8 @@ import { RolesPermissionsHeader } from "@/features/roles/components/RolesPermiss
 import { RoleModuleConfigPanel } from "@/features/roles/components/RoleModuleConfigPanel";
 import { RolePermissionsMatrix } from "@/features/roles/components/RolePermissionsMatrix";
 import { RolesPermissionsSkeleton } from "@/features/roles/components/RolesPermissionsSkeleton";
+import { CreateRoleModal } from "@/features/roles/components/CreateRoleModal";
+import { RolesManagementPanel } from "@/features/roles/components/RolesManagementPanel";
 import type {
   ModuleLabelConfigItem,
   ModuleLabelConfigMap,
@@ -18,7 +20,7 @@ import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { findAllRoles } from "@/shared/services/roleService";
+import { createRole, deactivateRole, findAllRoles, updateRole } from "@/shared/services/roleService";
 import {
   assignPermissionsToRole,
   listAccessPermissions,
@@ -37,6 +39,9 @@ export default function RolesPermissions() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canAssignRolePermissions = can("roles.assign_permissions");
+  const canCreateRoles = can("roles.create");
+  const canUpdateRoles = can("roles.update");
+  const canDeleteRoles = can("roles.delete");
   const canManageNotifications = can("notifications.manage");
 
   const [roles, setRoles] = useState<RoleOption[]>([]);
@@ -51,6 +56,9 @@ export default function RolesPermissions() {
   const [configsOpen, setConfigsOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [createRoleOpen, setCreateRoleOpen] = useState(false);
+  const [creatingRole, setCreatingRole] = useState(false);
+  const [savingRoleCrud, setSavingRoleCrud] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,10 +74,14 @@ export default function RolesPermissions() {
 
         if (cancelled) return;
 
-        const normalizedRoles = (rolesData ?? []).map((role) => ({
+        const normalizedRoles = (rolesData ?? [])
+          .filter((role) => !role.deleted)
+          .map((role) => ({
           id: String(role.id),
           description: String(role.description ?? "").toLowerCase(),
-        }));
+          createdByUserId: (role as { createdByUserId?: string | null }).createdByUserId ?? null,
+          createdByUserName: (role as { createdByUserName?: string | null }).createdByUserName ?? null,
+          }));
 
         const configMap: ModuleLabelConfigMap = {};
         MODULE_LABEL_KEYS.forEach((key) => {
@@ -130,6 +142,28 @@ export default function RolesPermissions() {
   }, [selectedRoleId]);
 
   const groupedPermissions = useMemo(() => groupByModule(allPermissions), [allPermissions]);
+  const selectedRoleMeta = useMemo(
+    () => roles.find((role) => role.id === selectedRoleId) ?? null,
+    [roles, selectedRoleId],
+  );
+
+  const reloadRoles = async () => {
+    const rolesData = await findAllRoles({ status: "all" });
+    const normalizedRoles = (rolesData ?? [])
+      .filter((role) => !role.deleted)
+      .map((role) => ({
+      id: String(role.id),
+      description: String(role.description ?? "").toLowerCase(),
+      createdByUserId: (role as { createdByUserId?: string | null }).createdByUserId ?? null,
+      createdByUserName: (role as { createdByUserName?: string | null }).createdByUserName ?? null,
+      }));
+    setRoles(normalizedRoles);
+    const currentSelected = normalizedRoles.find((role) => role.id === selectedRoleId);
+    if (currentSelected) {
+      setSelectedRoleDescription(currentSelected.description);
+    }
+    return normalizedRoles;
+  };
 
   const activeModules = useMemo(
     () =>
@@ -216,24 +250,96 @@ export default function RolesPermissions() {
     }
   };
 
+  const handleCreateRole = async (description: string) => {
+    clearFeedback();
+    setCreatingRole(true);
+
+    try {
+      const result = await createRole({ description });
+      const updatedRoles = await reloadRoles();
+      const createdRoleId =
+        (result?.data && typeof result.data === "object" ? String(result.data.id ?? "") : "") || "";
+      if (createdRoleId) {
+        handleRoleChange(createdRoleId);
+      } else {
+        const createdRole = updatedRoles.find((role) => role.description === description.trim().toLowerCase());
+        if (createdRole?.id) handleRoleChange(createdRole.id);
+      }
+      showFeedback(successResponse(result?.message || "Rol creado correctamente."));
+      setCreateRoleOpen(false);
+    } catch {
+      showFeedback(errorResponse("No se pudo crear el rol."));
+    } finally {
+      setCreatingRole(false);
+    }
+  };
+
+  const handleRenameRole = async (roleId: string, description: string) => {
+    if (!description.trim()) {
+      showFeedback(errorResponse("Nombre de rol requerido."));
+      return;
+    }
+    setSavingRoleCrud(true);
+    clearFeedback();
+    try {
+      const response = await updateRole(roleId, { description: description.trim() });
+      await reloadRoles();
+      showFeedback(successResponse(response?.message || "Rol actualizado correctamente."));
+    } catch {
+      showFeedback(errorResponse("No se pudo actualizar rol."));
+      throw new Error("rename_role_failed");
+    } finally {
+      setSavingRoleCrud(false);
+    }
+  };
+
+  const handleDeactivateRole = async (params: {
+    roleId: string;
+    replacementRoleId: string;
+    confirmationText: string;
+  }) => {
+    setSavingRoleCrud(true);
+    clearFeedback();
+    try {
+      const response = await deactivateRole(params.roleId, {
+        replacementRoleId: params.replacementRoleId,
+        confirmationText: params.confirmationText,
+      });
+      const updatedRoles = await reloadRoles();
+      if (selectedRoleId === params.roleId) {
+        const fallbackRole = updatedRoles.find((role) => role.id === params.replacementRoleId) ?? updatedRoles[0];
+        if (fallbackRole) handleRoleChange(fallbackRole.id);
+      }
+      showFeedback(successResponse(response?.message || "Rol desactivado correctamente."));
+    } catch {
+      showFeedback(errorResponse("No se pudo desactivar rol."));
+      throw new Error("deactivate_role_failed");
+    } finally {
+      setSavingRoleCrud(false);
+    }
+  };
+
   if (loading) return <RolesPermissionsSkeleton />;
 
   return (
-    <PageShell contentClassName="gap-0">
+    <PageShell>
       <TooltipProvider delayDuration={120}>
         <div className="w-full space-y-5">
           <RolesPermissionsHeader
             roles={roles}
             selectedRoleId={selectedRoleId}
             selectedRoleDescription={selectedRoleDescription}
+            selectedRoleCreatedByLabel={selectedRoleMeta?.createdByUserName ?? selectedRoleMeta?.createdByUserId ?? null}
             selectedCodesCount={selectedCodes.size}
             totalPermissionsCount={allPermissions.length}
             activeModules={activeModules}
             totalPercent={totalPercent}
             saving={saving}
             canAssignRolePermissions={canAssignRolePermissions}
+            canCreateRoles={canCreateRoles}
             onRoleChange={handleRoleChange}
             onSave={saveMatrix}
+            onCreateRole={() => setCreateRoleOpen(true)}
           />
 
           <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)] xl:items-start">
@@ -246,6 +352,14 @@ export default function RolesPermissions() {
                 savingModuleKey={savingModuleKey}
                 onToggleConfigs={() => setConfigsOpen((prev) => !prev)}
                 onSaveModuleConfig={saveModuleLabelConfig}
+              />
+              <RolesManagementPanel
+                roles={roles}
+                canEditRoles={canUpdateRoles}
+                canDeleteRoles={canDeleteRoles}
+                saving={savingRoleCrud}
+                onRenameRole={handleRenameRole}
+                onDeactivateRole={handleDeactivateRole}
               />
             </aside>
 
@@ -263,6 +377,13 @@ export default function RolesPermissions() {
           </div>
         </div>
       </TooltipProvider>
+
+      <CreateRoleModal
+        open={createRoleOpen}
+        saving={creatingRole}
+        onClose={() => setCreateRoleOpen(false)}
+        onCreate={handleCreateRole}
+      />
     </PageShell>
   );
 }
