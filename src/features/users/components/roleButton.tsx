@@ -1,11 +1,12 @@
-import { MonitorCog, ShieldCheck, ShoppingCart, User } from "lucide-react";
+import { Crown, MonitorCog, ShieldCheck, ShoppingCart, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type Role = { id: string; description: string };
 
-type RoleDesc = "admin" | "moderator" | "adviser" | "purchasing_manager";
+type RoleDesc = "super_administrator" | "admin" | "moderator" | "adviser" | "purchasing_manager";
 
 const LABELS: Record<RoleDesc, string> = {
+    super_administrator: "Super administrador",
     admin: "Administrador",
     moderator: "Moderador",
     adviser: "Asesor",
@@ -13,6 +14,7 @@ const LABELS: Record<RoleDesc, string> = {
 };
 
 const ICONS: Record<RoleDesc, LucideIcon> = {
+    super_administrator: Crown,
     admin: MonitorCog,
     moderator: ShieldCheck,
     adviser: User,

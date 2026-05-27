@@ -7,12 +7,14 @@ import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { createUserSchema } from "@/shared/schemas/userSchemas";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { RolePicker } from "./roleButton";
 import type { CreateUserRequest, UserRoleOptionApi } from "@/features/users/types/users.types";
 import type { UserFormProps } from "../types/components.types";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Minus, Plus } from "lucide-react";
+
+const MASTER_ROLE_DESCRIPTION = "super_administrator";
 
 export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
   const { showFeedback, clearFeedback } = useFeedbackToast();
@@ -61,7 +63,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
             id: String(r.id ?? ""),
             description: String(r.description ?? "").toLowerCase(),
           }))
-          .filter((r) => !!r.id);
+          .filter((r) => !!r.id && r.description !== MASTER_ROLE_DESCRIPTION);
 
         setRoles(normalized);
       } catch (error) {
@@ -158,12 +160,16 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
           />
         </div>
 
-        <div>
+        <div className="sm:col-span-2">
           <input type="hidden" {...register("roleId")} />
-
-          <RolePicker
-            roles={roles}
+          <FloatingSelect
+            label="Rol"
+            name="roleId"
             value={roleId}
+            options={roles.map((role) => ({
+              value: role.id,
+              label: role.description,
+            }))}
             onChange={(id) =>
               setValue("roleId", id, {
                 shouldValidate: true,
@@ -172,6 +178,10 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
               })
             }
             error={errors.roleId?.message}
+            placeholder="Selecciona un rol"
+            searchable
+            searchPlaceholder="Buscar rol..."
+            emptyMessage="No hay roles disponibles"
           />
         </div>
 
@@ -233,6 +243,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
           variant="primary"
           size="md"
           loading={submitting}
+          disabled={!roleId}
         >
           Crear usuario
         </SystemButton>

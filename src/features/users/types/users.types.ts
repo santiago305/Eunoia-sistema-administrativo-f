@@ -12,7 +12,7 @@ export interface CreateUserRequest {
   name: string;
   email: string;
   password: string;
-  roleId?: string;
+  roleId: string;
   avatarUrl?: string;
   telefono?: string;
   mailStorageQuotaGb?: number;

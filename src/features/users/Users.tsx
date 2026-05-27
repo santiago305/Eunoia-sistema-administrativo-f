@@ -51,6 +51,7 @@ import { PageShell } from "@/shared/layouts/PageShell";
 import { formatDateTimeLabel } from "./utils/dateFormat";
 
 const cn = (...s: Array<string | false | null | undefined>) => s.filter(Boolean).join(" ");
+const MASTER_ROLE_DESCRIPTION = "super_administrator";
 
 const normalizeUser = (u: UserApiListItem): User => {
   const raw = u as UserApiListItem & {
@@ -110,6 +111,7 @@ function getInitials(name?: string | null) {
 
 function roleTone(role: User["role"]) {
   const map: Record<User["role"], string> = {
+    super_administrator: "bg-rose-50 text-rose-700 ring-rose-100",
     admin: "bg-primary/10 text-primary ring-primary/20",
     moderator: "bg-emerald-50 text-emerald-700 ring-emerald-100",
     adviser: "bg-indigo-50 text-indigo-700 ring-indigo-100",
@@ -392,7 +394,7 @@ export default function Users() {
       roles.map((role) => ({
         value: role.description,
         label: getRoleLabel(role.description),
-      })),
+      })).filter((role) => role.value !== MASTER_ROLE_DESCRIPTION),
     [roles],
   );
   const managementUserOptions = useMemo(
@@ -812,7 +814,7 @@ export default function Users() {
                       </div>
                     ) : null}
 
-                    {can("users.assign_roles") ? (
+                    {can("users.assign_roles") && selected.role !== MASTER_ROLE_DESCRIPTION ? (
                       <section className="border-b border-zinc-100 py-5">
                         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px] lg:items-end">
                           <div className="min-w-0">
@@ -824,7 +826,9 @@ export default function Users() {
                               label="Rol operativo"
                               name="users-role-draft"
                               value={roleDraft}
-                              options={roles.map((role) => ({ value: role.description, label: getRoleLabel(role.description) }))}
+                              options={roles
+                                .map((role) => ({ value: role.description, label: getRoleLabel(role.description) }))
+                                .filter((role) => role.value !== MASTER_ROLE_DESCRIPTION)}
                               onChange={(value) => setRoleDraft(value as Role)}
                               className="mt-3 h-10 rounded-sm text-sm"
                             />
