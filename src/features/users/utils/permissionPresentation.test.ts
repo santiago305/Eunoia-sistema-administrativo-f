@@ -28,7 +28,7 @@ describe("permissionPresentation", () => {
   it("uses Spanish labels for known modules and readable fallback labels", () => {
     expect(getPermissionModuleLabel("purchases")).toBe("Compras");
     expect(getPermissionModuleLabel("raw_material")).toBe("Materia prima");
-    expect(getPermissionModuleLabel("payment_methods")).toBe("Metodos de pago");
+    expect(getPermissionModuleLabel("payment_methods")).toBe("Métodos de pago");
   });
 
   it("detects inherited, granted and denied user permission states", () => {

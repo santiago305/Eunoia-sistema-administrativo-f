@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Building2, MapPin } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
@@ -109,11 +109,6 @@ export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Prop
   const departmentName = detail?.departmentId ? ubigeoNames.departmentsById[detail.departmentId] ?? detail.departmentId : "-";
   const provinceName = detail?.provinceId ? ubigeoNames.provincesById[detail.provinceId] ?? detail.provinceId : "-";
   const districtName = detail?.districtId ? ubigeoNames.districtsById[detail.districtId] ?? detail.districtId : "-";
-
-  const ubigeoLabel = useMemo(() => {
-    if (!detail) return "";
-    return `${departmentName} / ${provinceName} / ${districtName}`;
-  }, [departmentName, detail, districtName, provinceName]);
 
   return (
     <Modal open={open} onClose={onClose} title="Detalle de agencia" className="max-h-[70vh]" bodyClassName="p-0 overflow-hidden">

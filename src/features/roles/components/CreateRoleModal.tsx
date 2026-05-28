@@ -46,6 +46,7 @@ export function CreateRoleModal({ open, saving, onClose, onCreate }: CreateRoleM
       <div className="space-y-4">
         <FloatingInput
           label="Nombre del rol"
+          name="create-role-description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           error={error}
@@ -63,4 +64,3 @@ export function CreateRoleModal({ open, saving, onClose, onCreate }: CreateRoleM
     </Modal>
   );
 }
-

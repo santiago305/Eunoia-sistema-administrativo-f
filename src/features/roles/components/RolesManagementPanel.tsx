@@ -123,6 +123,7 @@ export function RolesManagementPanel({
         <div className="space-y-4">
           <FloatingInput
             label="Nombre del rol"
+            name="edit-role-description"
             value={editValue}
             onChange={(event) => setEditValue(event.target.value)}
           />
@@ -176,6 +177,7 @@ export function RolesManagementPanel({
 
           <FloatingInput
             label={`Escribe: ${expectedConfirmationText}`}
+            name="deactivate-role-confirmation"
             value={confirmationText}
             onChange={(event) => setConfirmationText(event.target.value)}
           />

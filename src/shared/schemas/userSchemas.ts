@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const createUserSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   email: z.string().email('Email inválido'),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  password: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres'),
   roleId: z.string().min(1, "El rol es obligatorio"),
   avatarUrl: z.string().optional(),
   telefono: z.string().optional(),
