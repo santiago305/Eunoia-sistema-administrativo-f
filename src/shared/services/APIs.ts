@@ -72,6 +72,14 @@ export const packRoutes = {
   searchMetricDetail: (metricId: string) => `/packs/search-metrics/${metricId}`,
 };
 
+export const API_BANK_ACCOUNTS_GROUP = {
+  create: "/bank-accounts",
+  byCompany: (companyId: string) => `/bank-accounts/by-company/${companyId}`,
+  byId: (id: string) => `/bank-accounts/${id}`,
+  update: (id: string) => `/bank-accounts/${id}`,
+  setActive: (id: string) => `/bank-accounts/${id}/active`,
+};
+
 export const agencyRoutes = {
   list: "/agencies",
   create: "/agencies",
@@ -319,6 +327,11 @@ export const API_PDF_GENERATED_GROUP = {
 
 export const API_DOCUMENT_SERIES_GROUP = {
   list: "/series/active",
+};
+
+export const API_SALE_ORDERS_GROUP = {
+  base: "/sale-orders",
+  create: "/sale-orders",
 };
 
 export const API_KARDEX_GROUP = {

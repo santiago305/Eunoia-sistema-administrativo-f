@@ -42,6 +42,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.payments,
     },
     {
+        label: "Pedidos",
+        icon: <IconPurchase className="text-sidebar-foreground" />,
+        href: RoutesPaths.saleOrders,
+    },
+    {
         label: "Catalogo",
         icon: <IconStock className="text-sidebar-foreground" />,
         children: [

@@ -906,7 +906,7 @@ export default function PurchaseCreateLocal({
                     !form.supplierId ||
                     !form.correlative ||
                     !form.warehouseId ||
-                    form.total === 0
+                    totals.totalPrice === 0                   
                   }
                   onClick={() => {
                     setForm((prev) => {
