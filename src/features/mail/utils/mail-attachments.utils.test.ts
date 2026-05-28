@@ -4,6 +4,7 @@ import {
   isInlineImageAttachment,
   mapMailAttachment,
   removeBrokenMailBodyImages,
+  sanitizeMailHtml,
 } from "./mail-attachments.utils";
 
 describe("mail attachments utils", () => {
@@ -54,5 +55,17 @@ describe("mail attachments utils", () => {
 
   it("removes body images without src so stale blob images do not render broken", () => {
     expect(removeBrokenMailBodyImages('<p>hola<img alt="foto.png" /></p>')).toBe("<p>hola</p>");
+  });
+
+  it("sanitizes dangerous html before rendering mail body", () => {
+    const sanitized = sanitizeMailHtml(
+      '<p onclick="alert(1)">hola</p><script>alert(1)</script><a href="javascript:alert(2)">x</a><img src="javascript:alert(3)" />',
+    );
+
+    expect(sanitized).toContain("<p>hola</p>");
+    expect(sanitized).not.toContain("script");
+    expect(sanitized).not.toContain("onclick");
+    expect(sanitized).not.toContain("javascript:");
+    expect(sanitized).not.toContain("<img");
   });
 });

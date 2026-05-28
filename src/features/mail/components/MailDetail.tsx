@@ -21,7 +21,7 @@ import { cn } from "@/shared/lib/utils";
 import { LiaTrashRestoreAltSolid } from "react-icons/lia";
 import type { MailLabelItem, MailMessageActionItem } from "../types/message.types";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
-import { isInlineImageAttachment, mapMailAttachment, removeBrokenMailBodyImages, type BackendMailAttachment } from "../utils/mail-attachments.utils";
+import { isInlineImageAttachment, mapMailAttachment, sanitizeMailHtml, type BackendMailAttachment } from "../utils/mail-attachments.utils";
 import { normalizeConversationSubject } from "../utils/mail-subject.utils";
 import { downloadAttachmentBlobUrl } from "../services/messages.service";
 import InlineReplyForwardBox from "./InlineReplyForwardBox";
@@ -471,7 +471,7 @@ export default function MailDetail(props: Props) {
                     ) : null}
                     <div
                       className="prose prose-sm max-w-none text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: removeBrokenMailBodyImages(threadItem.bodyHtml) }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeMailHtml(threadItem.bodyHtml) }}
                     />
 
                     {index === 0 && labels.length > 0 ? (
