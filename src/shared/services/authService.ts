@@ -10,7 +10,7 @@ export interface LoginApiSuccessResponse {
 
 export interface UserInfoAuthResponse {
   user_id: string;
-  rol: string;
+  rol: string | null;
   roles?: string[];
   permissions?: string[];
   preferredHomePath?: string | null;

@@ -76,10 +76,18 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
 
   const submit = async (data: CreateUserRequest) => {
     clearFeedback();
+    if (!isSuperAdmin && (!data.roleId || data.roleId.trim().length === 0)) {
+      showFeedback(errorResponse("Debes seleccionar un rol."));
+      return;
+    }
     setSubmitting(true);
 
     try {
-      const res = await createUser(data);
+      const payload: CreateUserRequest = {
+        ...data,
+        roleId: data.roleId?.trim() ? data.roleId : undefined,
+      };
+      const res = await createUser(payload);
       const createdId = res?.data && typeof res.data === "object" ? String((res.data as { id?: string }).id ?? "") : "";
       let quotaSaved = true;
       if (createdId && isSuperAdmin) {
@@ -178,7 +186,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
               })
             }
             error={errors.roleId?.message}
-            placeholder="Selecciona un rol"
+            placeholder={isSuperAdmin ? "Selecciona un rol (opcional)" : "Selecciona un rol"}
             searchable
             searchPlaceholder="Buscar rol..."
             emptyMessage="No hay roles disponibles"
@@ -243,7 +251,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
           variant="primary"
           size="md"
           loading={submitting}
-          disabled={!roleId}
+          disabled={!isSuperAdmin && !roleId}
         >
           Crear usuario
         </SystemButton>

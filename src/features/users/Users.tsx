@@ -65,7 +65,7 @@ const normalizeUser = (u: UserApiListItem): User => {
     name: u.name,
     email: u.email,
     phone: String(u.telefono ?? ""),
-    role: u.rol,
+    role: u.rol ?? "sin_rol",
     deleted: Boolean(u.deleted),
     deletedAt: u.deletedAt ?? null,
     createdAt: raw.createdAt ?? raw.created_at ?? "",
@@ -89,8 +89,9 @@ const readError = (error: unknown) => {
   return { status: 0, message: "" };
 };
 
-function getRoleLabel(role: string) {
+function getRoleLabel(role: string | null | undefined) {
   const normalized = String(role ?? "").trim().toLowerCase();
+  if (!normalized || normalized === "sin_rol") return "Sin rol";
   return (
     ROLE_LABELS[normalized as Role] ??
     normalized
@@ -116,6 +117,7 @@ function roleTone(role: User["role"]) {
     moderator: "bg-emerald-50 text-emerald-700 ring-emerald-100",
     adviser: "bg-indigo-50 text-indigo-700 ring-indigo-100",
     purchasing_manager: "bg-amber-50 text-amber-700 ring-amber-100",
+    sin_rol: "bg-zinc-100 text-zinc-700 ring-zinc-200",
   };
 
   return map[role] ?? "bg-zinc-50 text-zinc-700 ring-zinc-100";
@@ -254,7 +256,7 @@ export default function Users() {
   const selected = useMemo(() => users.find((u) => u.id === selectedId) ?? null, [users, selectedId]);
 
   useEffect(() => {
-    if (selected) setRoleDraft(selected.role);
+    if (selected) setRoleDraft(selected.role === "sin_rol" ? "" : selected.role);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

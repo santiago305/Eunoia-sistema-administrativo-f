@@ -20,8 +20,8 @@ export type UserApiListItem = {
   name: string;
   email: string;
   telefono?: string | null;
-  rol: UserRoleCount;
-  roleId?: string;
+  rol: UserRoleCount | null;
+  roleId?: string | null;
   deleted: boolean;
   deletedAt?: string | null;
   createdAt: string;
