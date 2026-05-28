@@ -39,6 +39,7 @@ type UserPermissionsModalProps = {
     reason?: string,
   ) => Promise<void>;
   deletePermissionOverride: (permissionCode: string) => Promise<void>;
+  showManagementScope: boolean;
   canManageScope: boolean;
   managementRoleOptions: Array<{ value: string; label: string }>;
   managementUserOptions: Array<{ value: string; label: string }>;
@@ -90,6 +91,7 @@ export function UserPermissionsModal({
   canManageOverrides,
   savePermissionOverride,
   deletePermissionOverride,
+  showManagementScope,
   canManageScope,
   managementRoleOptions,
   managementUserOptions,
@@ -177,7 +179,7 @@ export function UserPermissionsModal({
           </aside>
 
           <section className="min-h-[520px] rounded-sm bg-zinc-50 p-2">
-            {canManageScope ? (
+            {showManagementScope ? (
               <div className="mb-3 rounded-sm border border-zinc-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Alcance de gestión</p>
                 <p className="mt-1 text-xs text-zinc-500">
@@ -189,6 +191,7 @@ export function UserPermissionsModal({
                     name="management-role-scope"
                     value={managementRoleValues}
                     options={managementRoleOptions}
+                    disabled={!canManageScope || savingManagementScope}
                     onChange={onChangeManagementRoles}
                     placeholder="Sin alcance por rol"
                   />
@@ -197,6 +200,7 @@ export function UserPermissionsModal({
                     name="management-user-scope"
                     value={managementUserValues}
                     options={managementUserOptions}
+                    disabled={!canManageScope || savingManagementScope}
                     onChange={onChangeManagementUsers}
                     placeholder="Sin alcance por usuario"
                     searchable
@@ -206,6 +210,7 @@ export function UserPermissionsModal({
                   <SystemButton
                     type="button"
                     variant="secondary"
+                    disabled={!canManageScope}
                     onClick={() => void onSaveManagementScope()}
                     loading={savingManagementScope}
                   >

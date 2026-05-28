@@ -33,6 +33,11 @@ export type EffectivePermissionsDetailResponse = {
   preferredHomePath?: string | null;
 };
 
+export type UserGrantablePermissionsResponse = {
+  userId: string;
+  permissionCodes: string[];
+};
+
 export const getEffectivePermissionsDetailByUser = async (id: string) => {
   const response = await axiosInstance.get<EffectivePermissionsDetailResponse>(
     API_ACCESS_CONTROL_GROUP.effectivePermissionsByUser(id)
@@ -90,6 +95,24 @@ export const setUserPreferredHomePath = async (params: {
     {
       preferredHomePath: params.preferredHomePath,
     }
+  );
+  return response.data;
+};
+
+export const getUserGrantablePermissions = async (userId: string) => {
+  const response = await axiosInstance.get<UserGrantablePermissionsResponse>(
+    API_ACCESS_CONTROL_GROUP.grantablePermissionsByUser(userId),
+  );
+  return response.data;
+};
+
+export const setUserGrantablePermissions = async (params: {
+  userId: string;
+  permissionCodes: string[];
+}) => {
+  const response = await axiosInstance.patch<UserGrantablePermissionsResponse>(
+    API_ACCESS_CONTROL_GROUP.grantablePermissionsByUser(params.userId),
+    { permissionCodes: params.permissionCodes },
   );
   return response.data;
 };

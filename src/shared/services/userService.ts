@@ -168,7 +168,7 @@ export type ProfileMutationResponse = {
 };
 
 export type UpdateUserRolePayload = {
-  roleId: string;
+  roleId?: string | null;
 };
 
 export type UpdateUserManagementScopePayload = {

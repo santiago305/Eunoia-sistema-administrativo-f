@@ -26,6 +26,7 @@ export const API_USERS_GROUP = {
 export const API_ACCESS_CONTROL_GROUP = {
   listPermissions: "/access-control/permissions",
   effectivePermissionsByUser: (id: string) => `/access-control/users/${id}/effective-permissions`,
+  grantablePermissionsByUser: (id: string) => `/access-control/users/${id}/grantable-permissions`,
   setUserPreferredHomePath: (id: string) => `/access-control/users/${id}/preferred-home`,
   setUserPermissionOverride: (id: string) => `/access-control/users/${id}/permissions`,
   removeUserPermissionOverride: (id: string, permissionCode: string) =>

@@ -31,8 +31,10 @@ import {
 } from "@/shared/services/userService";
 import {
   getEffectivePermissionsDetailByUser,
+  getUserGrantablePermissions,
   listAccessPermissions,
   removeUserPermissionOverride,
+  setUserGrantablePermissions,
   setUserPermissionOverride,
   type AccessPermissionItem,
   type PermissionEffect,
@@ -40,6 +42,7 @@ import {
 } from "@/shared/services/accessControlService";
 import { findAllRoles } from "@/shared/services/roleService";
 import { UserForm } from "./components/formUser";
+import { UserGrantablePermissionsModal } from "./components/UserGrantablePermissionsModal";
 import { UserPermissionsModal } from "./components/UserPermissionsModal";
 import { ROLE_LABELS } from "./types/roles.types";
 import type { Role, RoleOption, User, UserListStatus } from "./types/users.types";
@@ -163,6 +166,9 @@ export default function Users() {
   const [mailStorageUsedPercent, setMailStorageUsedPercent] = useState(0);
   const [mailStorageUsedLabel, setMailStorageUsedLabel] = useState("");
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [grantablePermissionsOpen, setGrantablePermissionsOpen] = useState(false);
+  const [grantablePermissionCodes, setGrantablePermissionCodes] = useState<string[]>([]);
+  const [savingGrantablePermissions, setSavingGrantablePermissions] = useState(false);
   const [managementRoleScopeDraft, setManagementRoleScopeDraft] = useState<string[]>([]);
   const [managementUserScopeDraft, setManagementUserScopeDraft] = useState<string[]>([]);
   const [savingManagementScope, setSavingManagementScope] = useState(false);
@@ -260,6 +266,10 @@ export default function Users() {
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    setGrantablePermissionCodes([]);
+  }, [selected?.id]);
+
+  useEffect(() => {
     setManagementRoleScopeDraft(Array.isArray(selected?.manageableRoleDescriptions) ? selected.manageableRoleDescriptions : []);
     setManagementUserScopeDraft(Array.isArray(selected?.manageableUserIds) ? selected.manageableUserIds : []);
   }, [selected?.id, selected?.manageableRoleDescriptions, selected?.manageableUserIds]);
@@ -298,8 +308,11 @@ export default function Users() {
     const loadEffectivePermissions = async () => {
       if (!selected?.id) {
         setEffectivePermissions([]);
+        setPermissionOverrides([]);
         return;
       }
+      setEffectivePermissions([]);
+      setPermissionOverrides([]);
       try {
         const data = await getEffectivePermissionsDetailByUser(selected.id);
         if (!cancelled) {
@@ -391,6 +404,35 @@ export default function Users() {
 
   const storagePercent = Math.max(0, Math.min(100, Math.round(mailStorageUsedPercent ?? 0)));
   const totalUsers = countsByRole?.total ?? pagination.total;
+  const selectedHasUserManagementBase = [
+    "users.read",
+    "users.create",
+    "users.update",
+    "users.delete",
+    "users.restore",
+    "users.assign_roles",
+  ].every((permissionCode) => effectivePermissions.includes(permissionCode));
+  const selectedHasDelegationBase = [
+    "users.assign_permissions",
+    "users.deny_permissions",
+    "users.manage_grantable_permissions",
+  ].every((permissionCode) => effectivePermissions.includes(permissionCode));
+  const selectedCanUseManagementScope = selectedHasUserManagementBase;
+  const selectedCanManageGrantablePermissions =
+    selectedCanUseManagementScope &&
+    selectedHasDelegationBase;
+  const actorCanManageManagementScope = isSuperAdmin || can("users.assign_permissions");
+  const actorCanManageGrantablePermissions =
+    isSuperAdmin ||
+    (can("users.create") &&
+      can("users.assign_permissions") &&
+      can("users.manage_grantable_permissions"));
+  const canManageGrantablePermissions =
+    actorCanManageGrantablePermissions &&
+    selectedCanManageGrantablePermissions;
+  const canManageScopeForSelected =
+    actorCanManageManagementScope &&
+    selectedCanUseManagementScope;
   const managementRoleOptions = useMemo(
     () =>
       roles.map((role) => ({
@@ -417,21 +459,29 @@ export default function Users() {
 
   async function saveRole() {
     if (!selected) return;
-    if (!roleDraft) return;
-    if (roleDraft === selected.role) return;
+    const normalizedSelectedRole = selected.role === "sin_rol" ? "" : selected.role;
+    if (roleDraft === normalizedSelectedRole) return;
     clearFeedback();
     setSavingRole(true);
 
     try {
-      const roleId = roles.find((r) => r.description === roleDraft)?.id;
-      if (!roleId) {
-        showFeedback(errorResponse("No se pudo resolver el rol seleccionado."));
+      let roleId: string | null = null;
+      if (roleDraft) {
+        roleId = roles.find((r) => r.description === roleDraft)?.id ?? null;
+        if (!roleId) {
+          showFeedback(errorResponse("No se pudo resolver el rol seleccionado."));
+          return;
+        }
+      } else if (!isSuperAdmin) {
+        showFeedback(errorResponse("Solo super administrador puede quitar el rol."));
         return;
       }
 
       const res = await updateUserRole(selected.id, { roleId });
       const nowIso = new Date().toISOString();
-      setUsers((p) => p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft, updatedAt: nowIso } : u)));
+      setUsers((p) =>
+        p.map((u) => (u.id === selected.id ? { ...u, role: roleDraft || "sin_rol", updatedAt: nowIso } : u)),
+      );
       showFeedback(successResponse((res as { message?: string })?.message || "Rol actualizado"));
     } catch (error: unknown) {
       const parsed = readError(error);
@@ -517,6 +567,39 @@ export default function Users() {
       showFeedback(errorResponse(parsed.message.trim() || "No se pudo eliminar el override."));
     } finally {
       setSavingOverride(false);
+    }
+  }
+
+  async function openGrantablePermissionsModal() {
+    if (!selected?.id || !canManageGrantablePermissions) return;
+    clearFeedback();
+    try {
+      const response = await getUserGrantablePermissions(selected.id);
+      setGrantablePermissionCodes(Array.isArray(response?.permissionCodes) ? response.permissionCodes : []);
+      setGrantablePermissionsOpen(true);
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo cargar permisos delegables."));
+    }
+  }
+
+  async function saveGrantablePermissions(permissionCodes: string[]) {
+    if (!selected?.id) return;
+    clearFeedback();
+    setSavingGrantablePermissions(true);
+    try {
+      const response = await setUserGrantablePermissions({
+        userId: selected.id,
+        permissionCodes,
+      });
+      setGrantablePermissionCodes(Array.isArray(response?.permissionCodes) ? response.permissionCodes : permissionCodes);
+      showFeedback(successResponse("Permisos delegables actualizados."));
+      setGrantablePermissionsOpen(false);
+    } catch (error: unknown) {
+      const parsed = readError(error);
+      showFeedback(errorResponse(parsed.message.trim() || "No se pudo guardar permisos delegables."));
+    } finally {
+      setSavingGrantablePermissions(false);
     }
   }
 
@@ -768,6 +851,17 @@ export default function Users() {
                       Permisos
                     </SystemButton>
 
+                    {selectedCanManageGrantablePermissions ? (
+                      <SystemButton
+                        variant="outline"
+                        disabled={!actorCanManageGrantablePermissions}
+                        leftIcon={<ShieldCheck className="h-4 w-4" />}
+                        onClick={() => void openGrantablePermissionsModal()}
+                      >
+                        Permisos que puede dar
+                      </SystemButton>
+                    ) : null}
+
                     {!selectedIsDeleted && can("users.delete") ? (
                       <SystemButton
                         variant="danger"
@@ -828,15 +922,23 @@ export default function Users() {
                               label="Rol operativo"
                               name="users-role-draft"
                               value={roleDraft}
-                              options={roles
-                                .map((role) => ({ value: role.description, label: getRoleLabel(role.description) }))
-                                .filter((role) => role.value !== MASTER_ROLE_DESCRIPTION)}
+                              options={[
+                                ...(isSuperAdmin ? [{ value: "", label: "Sin rol" }] : []),
+                                ...roles
+                                  .map((role) => ({ value: role.description, label: getRoleLabel(role.description) }))
+                                  .filter((role) => role.value !== MASTER_ROLE_DESCRIPTION),
+                              ]}
                               onChange={(value) => setRoleDraft(value as Role)}
                               className="mt-3 h-10 rounded-sm text-sm"
                             />
                           </div>
 
-                          <SystemButton variant="secondary" loading={savingRole} disabled={roleDraft === selected.role} onClick={() => void saveRole()}>
+                          <SystemButton
+                            variant="secondary"
+                            loading={savingRole}
+                            disabled={roleDraft === (selected.role === "sin_rol" ? "" : selected.role)}
+                            onClick={() => void saveRole()}
+                          >
                             Guardar rol
                           </SystemButton>
                         </div>
@@ -963,7 +1065,8 @@ export default function Users() {
         savePermissionOverride={savePermissionOverride}
         deletePermissionOverride={deletePermissionOverride}
         canManageOverrides={can("users.assign_permissions") || can("users.deny_permissions")}
-        canManageScope={isSuperAdmin && can("users.assign_permissions")}
+        showManagementScope={selectedCanUseManagementScope}
+        canManageScope={canManageScopeForSelected}
         managementRoleOptions={managementRoleOptions}
         managementUserOptions={managementUserOptions}
         managementRoleValues={managementRoleScopeDraft}
@@ -972,6 +1075,17 @@ export default function Users() {
         onChangeManagementRoles={setManagementRoleScopeDraft}
         onChangeManagementUsers={setManagementUserScopeDraft}
         onSaveManagementScope={saveManagementScope}
+      />
+
+      <UserGrantablePermissionsModal
+        open={grantablePermissionsOpen}
+        onClose={() => setGrantablePermissionsOpen(false)}
+        selected={selected}
+        allPermissions={allPermissions}
+        grantablePermissionCodes={grantablePermissionCodes}
+        saving={savingGrantablePermissions}
+        canAssignWildcard={isSuperAdmin}
+        onSave={saveGrantablePermissions}
       />
 
       <Modal
