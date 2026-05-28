@@ -67,9 +67,9 @@ export default function RolesPermissions() {
       try {
         const [rolesData, permissionsData, labelsData, configsData] = await Promise.all([
           findAllRoles(),
-          listAccessPermissions(),
-          listMailLabels(),
-          listModuleLabelConfigs(),
+          canAssignRolePermissions ? listAccessPermissions().catch(() => []) : Promise.resolve([]),
+          canManageNotifications ? listMailLabels().catch(() => []) : Promise.resolve([]),
+          canManageNotifications ? listModuleLabelConfigs().catch(() => []) : Promise.resolve([]),
         ]);
 
         if (cancelled) return;
@@ -114,12 +114,16 @@ export default function RolesPermissions() {
     return () => {
       cancelled = true;
     };
-  }, [showFeedback]);
+  }, [canAssignRolePermissions, canManageNotifications, showFeedback]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadRolePermissions = async () => {
+      if (!canAssignRolePermissions) {
+        setSelectedCodes(new Set());
+        return;
+      }
       if (!selectedRoleId) {
         setSelectedCodes(new Set());
         return;
@@ -139,7 +143,7 @@ export default function RolesPermissions() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRoleId]);
+  }, [canAssignRolePermissions, selectedRoleId]);
 
   const groupedPermissions = useMemo(() => groupByModule(allPermissions), [allPermissions]);
   const selectedRoleMeta = useMemo(

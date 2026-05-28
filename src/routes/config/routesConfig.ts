@@ -24,7 +24,6 @@ export const routesConfig: RouteMetadata[] = [
     name: "permissions",
     isProtected: true,
     permissionsAllowed: ["page.roles.view"],
-    superAdminOnly: true,
   },
   {
     path: RoutesPaths.company,
