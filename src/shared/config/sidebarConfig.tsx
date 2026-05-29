@@ -1,5 +1,6 @@
 import { 
     IconAgencies,
+    IconCampaigns,
     IconCompany,
     IconAccounts,
     IconHome,
@@ -7,6 +8,7 @@ import {
     IconProduction,
     IconPurchase, 
     IconRowMaterial, 
+    IconSaleOrder, 
     IconStock, IconUsers, 
     IconWarehouse 
 } from "../components/components/dashboard/icons";
@@ -40,6 +42,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Pagos",
         icon: <IconPurchase className="text-sidebar-foreground" />,
         href: RoutesPaths.payments,
+    },
+    {
+        label: "Pedidos",
+        icon: <IconSaleOrder className="text-sidebar-foreground" />,
+        href: RoutesPaths.saleOrders,
     },
     {
         label: "Catalogo",
@@ -137,6 +144,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Agencias",
         icon: <IconAgencies className="text-sidebar-foreground" />,
         href: RoutesPaths.agencies,
+    },
+    {
+        label: "Enganches",
+        icon: <IconCampaigns className="text-sidebar-foreground" />,
+        href: RoutesPaths.sources,
     },
     {
         label: "Empresa",

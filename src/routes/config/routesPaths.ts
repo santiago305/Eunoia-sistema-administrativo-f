@@ -52,12 +52,18 @@ export const RoutesPaths = {
   //agencies
   agencies: "/agencias",
 
+  //sources (campaigns)
+  sources: "/campanas",
+
   //purchase
   purchase: '/compra',
   purchases: '/compras',
   purchasesHistory: "/compras/historial",
   purchaseEdit: "/compra/:poId",
   payments: "/pagos",
+
+  // sale orders
+  saleOrders: "/pedidos",
 
   //company
   company:'/empresa',
