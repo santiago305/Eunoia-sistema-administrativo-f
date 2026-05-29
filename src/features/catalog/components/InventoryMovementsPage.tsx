@@ -68,7 +68,7 @@ type MovementRow = {
   documentNumber: string;
   skuLabel: string;
   warehouse: string;
-  quantity: number;
+  quantityLabel: string;
   user: string;
   direction: "IN" | "OUT";
 };
@@ -76,6 +76,11 @@ type MovementRow = {
 const statusLabel: Record<MovementRow["direction"], string> = {
   IN: "Entrada",
   OUT: "Salida",
+};
+
+const formatQuantityWithUnit = (quantity: number, unitCode?: string | null) => {
+  const normalizedUnit = unitCode?.trim();
+  return normalizedUnit ? `${quantity} ${normalizedUnit}` : `${quantity}`;
 };
 
 type InventoryMovementsPageConfig = {
@@ -415,7 +420,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           documentNumber,
           skuLabel,
           warehouse,
-          quantity: item.quantity ?? 0,
+          quantityLabel: formatQuantityWithUnit(item.quantity ?? 0, item.baseUnit?.code),
           user,
           direction: item.direction,
         };
@@ -468,7 +473,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       {
         id: "quantity",
         header: "Cantidad",
-        accessorKey: "quantity",
+        accessorKey: "quantityLabel",
         headerClassName: "text-center [&>div]:justify-center",
         className: "text-black/70 text-center",
         hideable: true,

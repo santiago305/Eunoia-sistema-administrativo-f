@@ -88,6 +88,11 @@ type InventorySnapshotRow = {
   available: number;
 };
 
+const formatQuantityWithUnit = (quantity: number, unitCode?: string | null) => {
+  const normalizedUnit = unitCode?.trim();
+  return normalizedUnit ? `${quantity} ${normalizedUnit}` : `${quantity}`;
+};
+
 export function InventoryStockPage({ config }: { config: InventoryStockPageConfig }) {
   const shouldReduceMotion = useReducedMotion();
   const { showFeedback } = useFeedbackToast();
@@ -648,21 +653,21 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         header: "Stock",
         className: "text-center tabular-nums",
         headerClassName: "text-center [&>div]:justify-center",
-        cell: (row) => row.onHand,
+        cell: (row) => formatQuantityWithUnit(row.onHand, row.sku.unit?.code),
       },
       {
         id: "reserved",
         header: "Reservado",
         className: "text-center tabular-nums",
         headerClassName: "text-center [&>div]:justify-center",
-        cell: (row) => row.reserved,
+        cell: (row) => formatQuantityWithUnit(row.reserved, row.sku.unit?.code),
       },
       {
         id: "available",
         header: "Disponible",
         className: "text-center tabular-nums font-semibold",
         headerClassName: "text-center [&>div]:justify-center",
-        cell: (row) => row.available,
+        cell: (row) => formatQuantityWithUnit(row.available, row.sku.unit?.code),
       },
       {
         id: "actions",

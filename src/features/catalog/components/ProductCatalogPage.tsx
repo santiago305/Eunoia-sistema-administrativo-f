@@ -49,6 +49,12 @@ import {
 
 const PRIMARY = "hsl(var(--primary))";
 
+const formatQuantityWithUnit = (quantity?: number | null, unitCode?: string | null) => {
+    const safeQuantity = Number(quantity ?? 0);
+    const normalizedUnit = unitCode?.trim();
+    return normalizedUnit ? `${safeQuantity} ${normalizedUnit}` : `${safeQuantity}`;
+};
+
 type CatalogListFn = typeof listCatalogProducts;
 
 type ProductCatalogPageConfig = {
@@ -303,7 +309,11 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 header: "Stock",
                 headerClassName: "text-center [&>div]:justify-center",
                 className: "text-center",
-                cell: (row) => <span className="text-black/70">{row.inventoryTotal ?? 0}</span>,
+                cell: (row) => (
+                    <span className="text-black/70">
+                        {formatQuantityWithUnit(row.inventoryTotal, row.baseUnitCode ?? row.baseUnitName)}
+                    </span>
+                ),
             },
             {
                 id: "status",

@@ -21,6 +21,11 @@ export type InventoryLedgerMovementListItem = {
     type: ProductCatalogProductType;
     baseUnitId: string | null;
   };
+  baseUnit: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
   user: {
     id: string;
     name: string | null;
