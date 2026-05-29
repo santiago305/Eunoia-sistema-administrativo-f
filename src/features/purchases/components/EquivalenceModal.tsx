@@ -61,16 +61,16 @@ export function EquivalenceModal({
   const [pendingItemQuantity, setPendingItemQuantity] = useState<number>(1);
   const [pendingItemUnitPrice, setPendingItemUnitPrice] = useState<number>(0);
   const [pendingFactor, setPendingFactor] = useState<number>(0);
-  const [pendingEquivalence, setPendingEquivalence] = useState<string | null>(null);
-  const [pendingUnitBase, setPendingUnitBase] = useState<string | null>(null);
+  const [pendingStockUnit, setPendingStockUnit] = useState<string | null>(null);
+  const [pendingPurchaseUnit, setPendingPurchaseUnit] = useState<string | null>(null);
 
   const resetPending = () => {
     setPendingItemAfectType(AfectType.TAXED);
     setPendingItemQuantity(1);
     setPendingItemUnitPrice(0);
     setPendingFactor(0);
-    setPendingEquivalence("");
-    setPendingUnitBase("");
+    setPendingStockUnit("");
+    setPendingPurchaseUnit("");
   };
 
   const handleClose = useCallback(() => {
@@ -114,12 +114,14 @@ export function EquivalenceModal({
         const fromCode = fromLabel?.code ?? best.fromUnit?.code ?? "NIU";
         const toCode = toLabel?.code ?? best.toUnit?.code ?? "NIU";
 
-        setPendingEquivalence(fromCode);
-        setPendingUnitBase(toCode);
-        setPendingFactor(best.factor ?? 1);
+        // Se guarda la unidad comprada (toCode) y la unidad base de stock (fromCode).
+        setPendingPurchaseUnit(toCode);
+        setPendingStockUnit(fromCode);
+        const nextFactor = Number(best.factor ?? 1);
+        setPendingFactor(Number.isFinite(nextFactor) && nextFactor > 0 ? nextFactor : 1);
       } else {
-        setPendingEquivalence("NIU");
-        setPendingUnitBase("NIU");
+        setPendingPurchaseUnit("NIU");
+        setPendingStockUnit("NIU");
         setPendingFactor(1);
       }
     } catch {
@@ -147,11 +149,13 @@ export function EquivalenceModal({
     const finalItemId = selectedItemId ?? itemId;
     if (!finalItemId) return;
 
-    const quantity = Math.max(1, opts?.quantity ?? 1);
+    const nextQuantity = Number(opts?.quantity ?? 1);
+    const quantity = Number.isFinite(nextQuantity) && nextQuantity > 0 ? nextQuantity : 1;
     const unitPrice = Math.max(0, opts?.unitPrice ?? 0);
     const afectType = opts?.afectType ?? AfectType.TAXED;
     const equivalence = opts?.equivalence ?? "";
-    const factor = Math.max(0, opts?.factor ?? 0);
+    const nextFactor = Number(opts?.factor ?? 1);
+    const factor = Number.isFinite(nextFactor) && nextFactor > 0 ? nextFactor : 1;
     const unitBase = opts?.unitBase ?? "";
 
     setForm((prev) => {
@@ -231,8 +235,8 @@ export function EquivalenceModal({
       setPendingItemQuantity(1);
       setPendingItemUnitPrice(0);
       setPendingFactor(0);
-      setPendingEquivalence(null);
-      setPendingUnitBase(null);
+      setPendingStockUnit(null);
+      setPendingPurchaseUnit(null);
 
       const unitList = await loadUnits(canUpdate);
       if (!active) return;
@@ -263,7 +267,8 @@ export function EquivalenceModal({
       const toName = toLabel?.name ?? eq.toUnit?.name ?? "UNIDADES";
       const fromCode = fromLabel?.code ?? eq.fromUnit?.code ?? "NIU";
       const toCode = toLabel?.code ?? eq.toUnit?.code ?? "NIU";
-      const factor = Number(eq.factor ?? 1);
+      const rawFactor = Number(eq.factor ?? 1);
+      const factor = Number.isFinite(rawFactor) && rawFactor > 0 ? rawFactor : 1;
 
       return {
         id: eq.id,
@@ -272,18 +277,18 @@ export function EquivalenceModal({
         toName,
         toCode,
         factor,
-        unitLabel: fromLabel ? `${toName} (${factor})` : eq.toUnitId,
-        equivalenceLabel: `Equivale a ${factor} - ${fromName}`,
+        unitLabel: `Comprar en ${toName} (${toCode})`,
+        equivalenceLabel: `1 ${toCode} = ${factor} ${fromCode}`,
       };
     });
   }, [equivalences, units]);
 
   const isActiveRow = useCallback(
     (row: EquivalenceRow) =>
-      pendingEquivalence === row.fromCode &&
-      pendingUnitBase === row.toCode &&
+      pendingPurchaseUnit === row.toCode &&
+      pendingStockUnit === row.fromCode &&
       pendingFactor === row.factor,
-    [pendingEquivalence, pendingFactor, pendingUnitBase],
+    [pendingFactor, pendingPurchaseUnit, pendingStockUnit],
   );
 
   const equivalenceColumns = useMemo<DataTableColumn<EquivalenceRow>[]>(() => {
@@ -355,7 +360,8 @@ export function EquivalenceModal({
                 label="Cantidad"
                 name="quantity"
                 type="number"
-                min={0}
+                min={0.001}
+                step={0.001}
                 value={String(pendingItemQuantity)}
                 onChange={(e) => setPendingItemQuantity(parseDecimalInput(e.target.value))}
               />
@@ -385,9 +391,11 @@ export function EquivalenceModal({
                 hoverable={false}
                 animated={false}
                 onRowClick={(row) => {
-                  setPendingEquivalence(row.fromCode || "NIU");
-                  setPendingFactor(row.factor ?? 1);
-                  setPendingUnitBase(row.toCode || "NIU");
+                  // Compra en la unidad destino (toCode), inventario queda en la base (fromCode).
+                  setPendingPurchaseUnit(row.toCode || "NIU");
+                  setPendingStockUnit(row.fromCode || "NIU");
+                  const nextFactor = Number(row.factor ?? 1);
+                  setPendingFactor(Number.isFinite(nextFactor) && nextFactor > 0 ? nextFactor : 1);
                 }}
                 rowClassName={(row) =>
                   isActiveRow(row) ? "bg-black/5 hover:bg-black/5" : "hover:bg-black/[0.03]"
@@ -411,7 +419,7 @@ export function EquivalenceModal({
               clearFeedback();
               if (!itemId) return;
 
-              const hasSelection = Boolean(pendingEquivalence || pendingUnitBase);
+              const hasSelection = Boolean(pendingPurchaseUnit || pendingStockUnit);
               const hasEquivalences = equivalences.length > 0;
 
               if (hasEquivalences && !hasSelection) {
@@ -426,9 +434,9 @@ export function EquivalenceModal({
                   documentType === VoucherDocTypes.NOTA_VENTA
                     ? AfectType.EXEMPT
                     : pendingItemAfectType,
-                equivalence: pendingUnitBase,
+                equivalence: pendingStockUnit,
                 factor: pendingFactor,
-                unitBase:pendingEquivalence,
+                unitBase: pendingPurchaseUnit,
                 name: buildProductLabel(products.find((p) => p.skuId === itemId)),
               });
 

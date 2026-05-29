@@ -65,7 +65,7 @@ export const addPurchaseOrderItemSchema = z.object({
   equivalence: z.string().min(1).optional(),
   factor: z.number().min(0).optional(),
   afectType: afectTypeEnum,
-  quantity: z.number().int().min(1),
+  quantity: z.number().min(0.001),
   porcentageIgv: z.number().min(0),
   baseWithoutIgv: z.number().min(0),
   amountIgv: z.number().min(0),

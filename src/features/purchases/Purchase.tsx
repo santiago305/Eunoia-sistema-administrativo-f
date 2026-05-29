@@ -374,12 +374,13 @@ export default function PurchaseCreateLocal({
       dateExpiration: form.dateExpiration?.trim() ? form.dateExpiration : undefined,
       items: (form.items ?? []).map((item) => {
         const calculatedItem = recalcItem(item);
+        const resolvedFactor = Number(calculatedItem.factor ?? 1);
 
         return {
           skuId: calculatedItem.skuId,
           unitBase: calculatedItem.unitBase,
           equivalence: calculatedItem.equivalence,
-          factor: Number(calculatedItem.factor ?? 1),
+          factor: Number.isFinite(resolvedFactor) && resolvedFactor > 0 ? resolvedFactor : 1,
           afectType: calculatedItem.afectType,
           quantity: normalizeQuantity(calculatedItem.quantity),
           porcentageIgv: calculatedItem.porcentageIgv ?? IGV,
