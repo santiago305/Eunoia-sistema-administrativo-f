@@ -48,19 +48,22 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const location = useLocation();
   const canManageLabels = permissions.includes("notifications.labels.create");
   const isSidebarCollapsed = isCollapsed && !isMobile;
-  const composeHref = item.isComposeAction
-    ? (() => {
-        const current = new URLSearchParams(location.search);
-        current.set("compose", "1");
-        return `${location.pathname}?${current.toString()}`;
-      })()
-    : undefined;
-  const itemHref = composeHref ?? item.href;
+  const buildCurrentRouteActionHref = (paramName: string) => {
+    const current = new URLSearchParams(location.search);
+    current.set(paramName, "1");
+    return `${location.pathname}?${current.toString()}`;
+  };
+  const resolveItemHref = (sidebarItem: SidebarItemType) => {
+    if (sidebarItem.isComposeAction) return buildCurrentRouteActionHref("compose");
+    if (sidebarItem.isCreateLabelAction) return buildCurrentRouteActionHref("createLabel");
+    return sidebarItem.href;
+  };
+  const itemHref = resolveItemHref(item);
 
   const hasChildren = !!item.children?.length;
   const isActive = isLinkActive(itemHref, location.pathname, location.search);
   const isChildActive = item.children?.some(
-    (child) => isLinkActive(child.href, location.pathname, location.search)
+    (child) => isLinkActive(resolveItemHref(child), location.pathname, location.search)
   );
 
   // Solo abre inicialmente si algún hijo está activo.
@@ -244,12 +247,13 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
               )}
 
               {item.children?.map((child, index) => {
-                const childActive = isLinkActive(child.href, location.pathname, location.search);
+                const childHref = resolveItemHref(child);
+                const childActive = isLinkActive(childHref, location.pathname, location.search);
 
                 return (
                   <Link
                     key={`${child.href ?? child.label}-${index}`}
-                    to={child.href || "#"}
+                    to={childHref || "#"}
                     onClick={() => setPopoverOpen(false)}
                     className={cn(
                       "flex min-h-[34px] items-center rounded-xl px-3 py-1.5 text-[13px] transition-all duration-200",
@@ -356,12 +360,13 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
             <div className="space-y-1">
               {item.children?.map((child, index) => {
-                const childActive = isLinkActive(child.href, location.pathname, location.search);
+                const childHref = resolveItemHref(child);
+                const childActive = isLinkActive(childHref, location.pathname, location.search);
 
                 return (
                   <Link
                     key={`${child.href ?? child.label}-${index}`}
-                    to={child.href || "#"}
+                    to={childHref || "#"}
                     className={childLinkClass(childActive)}
                   >
                     {child.icon && isValidElement(child.icon)

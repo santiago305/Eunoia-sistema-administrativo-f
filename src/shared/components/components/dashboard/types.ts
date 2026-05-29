@@ -8,6 +8,7 @@ export interface SidebarItem {
   isCustomLabel?: boolean;
   labelId?: string;
   isComposeAction?: boolean;
+  isCreateLabelAction?: boolean;
   collapsibleLabels?: {
     open: string;
     closed: string;

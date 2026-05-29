@@ -101,7 +101,7 @@ export const getMailSidebarItems = (
       }))),
       ...(canCreateLabel ? [{
         label: "+ Etiqueta",
-        href: `${RoutesPaths.notifications}/inbox?createLabel=1`,
+        isCreateLabelAction: true,
       }] : []),
     ],
   },
