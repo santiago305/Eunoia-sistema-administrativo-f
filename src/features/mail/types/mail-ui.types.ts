@@ -34,6 +34,7 @@ export interface Mail {
   threadMessageCount?: number;
   threadLatestIndex?: number;
   threadLabel?: string | null;
+  threadUnreadCount?: number;
   from: { name: string; email: string; avatar?: string };
   to: { name: string; email: string }[];
   subject: string;

@@ -474,9 +474,6 @@ export default function MailDetail(props: Props) {
                     <div className="mb-3 flex flex-wrap items-baseline gap-2">
                       <span className="text-sm font-semibold">{itemSenderName}</span>
                       <span className="text-xs text-muted-foreground">&lt;{itemSenderEmail}&gt;</span>
-                      {threadItem.threadLabel ? (
-                        <span className="rounded-full bg-mail-hover px-2 py-0.5 text-xs text-muted-foreground">{threadItem.threadLabel}</span>
-                      ) : null}
                       <span className="ml-auto text-xs text-muted-foreground">
                         {props.formatFullDate(threadItem.sentAt ?? threadItem.createdAt)}
                       </span>

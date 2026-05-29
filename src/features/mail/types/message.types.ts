@@ -82,6 +82,7 @@ export interface SentMessageItem {
   threadMessageCount?: number;
   threadLatestIndex?: number;
   threadLabel?: string | null;
+  threadUnreadCount?: number;
   actions?: MailMessageActionItem[];
   status: "DRAFT" | "SENT" | "FAILED" | "SCHEDULED";
   isDraft: boolean;

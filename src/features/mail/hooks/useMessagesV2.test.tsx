@@ -46,6 +46,7 @@ const makeInboxItem = (overrides?: Partial<InboxItem>): InboxItem => ({
     bodyHtml: "<p>Mensaje original</p>",
     bodyText: "Mensaje original",
     bodyJson: null,
+    threadUnreadCount: 3,
     status: "SENT",
     isDraft: false,
     sentAt: "2026-05-20T10:00:00.000Z",
@@ -122,5 +123,6 @@ describe("useMessagesV2 realtime thread merge", () => {
     expect("recipient" in item ? item.recipient.id : "").toBe("state-reply");
     expect("recipient" in item ? item.message?.id : "").toBe("message-reply");
     expect("recipient" in item ? item.message?.bodyText : "").toBe("Respuesta nueva");
+    expect("recipient" in item ? item.message?.threadUnreadCount : 0).toBe(4);
   });
 });

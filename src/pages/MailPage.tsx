@@ -40,6 +40,15 @@ import type { MailActionUpdatedPayload, MessageCreatedRealtimePayload } from "@/
 import { extractMailDetailLabelIds, sameStringArray } from "@/features/mail/utils/mail-state.utils";
 import { mapMailAttachment, type BackendMailAttachment } from "@/features/mail/utils/mail-attachments.utils";
 import { normalizeConversationSubject } from "@/features/mail/utils/mail-subject.utils";
+import {
+  buildDraftBodyJson,
+  extractDraftAttachmentIds,
+  extractDraftBccRecipients,
+  extractDraftCcRecipients,
+  extractDraftRecipients,
+  extractDraftSelectedLabelIds,
+  hasMeaningfulComposeDraft,
+} from "@/features/mail/utils/draft-compose.utils";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { useUserDetails } from "@/shared/hooks/useUserDetails";
 import { resolveProfileAvatarUrl } from "@/features/profile/components/profile.utils";
@@ -62,6 +71,7 @@ type ComposePayload = {
   body?: string;
   bodyJson?: Record<string, unknown> | null;
   attachmentIds?: string[];
+  selectedLabelIds?: string[];
   editingDraftId?: string | null;
   mode?: "new" | "reply" | "forward";
   parentMessageId?: string | null;
@@ -118,7 +128,7 @@ const createComposeDraft = (payload?: ComposePayload): NotificationComposeDraft 
   body: payload?.body ?? "",
   bodyJson: payload?.bodyJson ?? null,
   error: null,
-  selectedLabelIds: [],
+  selectedLabelIds: payload?.selectedLabelIds ?? [],
   attachmentIds: payload?.attachmentIds ?? [],
   mode: payload?.mode ?? "new",
   parentMessageId: payload?.parentMessageId ?? null,
@@ -188,22 +198,6 @@ const avatarColor = (seed: string): string => {
 };
 
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-const extractDraftRecipients = (bodyJson: Record<string, unknown> | null | undefined): string => {
-  const raw = bodyJson && typeof bodyJson === "object" ? bodyJson.draftRecipients : "";
-  return typeof raw === "string" ? raw : "";
-};
-const extractDraftAttachmentIds = (bodyJson: Record<string, unknown> | null | undefined): string[] => {
-  const raw = bodyJson && typeof bodyJson === "object" ? bodyJson.draftAttachmentIds : [];
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
-};
-const buildDraftBodyJson = (
-  draft: Pick<NotificationComposeDraft, "bodyJson" | "to" | "attachmentIds">,
-): Record<string, unknown> => ({
-  ...(draft.bodyJson ?? {}),
-  draftRecipients: draft.to,
-  draftAttachmentIds: draft.attachmentIds ?? [],
-});
 const serializeComposeDraft = (draft: NotificationComposeDraft) =>
   JSON.stringify({
     to: draft.to.trim(),
@@ -237,6 +231,7 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
       threadMessageCount: item.message.threadMessageCount,
       threadLatestIndex: item.message.threadLatestIndex,
       threadLabel: item.message.threadLabel,
+      threadUnreadCount: item.message.threadUnreadCount ?? (item.recipient.readAt ? 0 : 1),
       from: {
         name: senderName,
         email: senderEmail,
@@ -268,6 +263,7 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     threadMessageCount: item.threadMessageCount,
     threadLatestIndex: item.threadLatestIndex,
     threadLabel: item.threadLabel,
+    threadUnreadCount: item.threadUnreadCount ?? 0,
     from: { name: "Yo", email: "" },
     to: [{ name: "Destinatarios", email: "" }],
     subject: normalizeConversationSubject(item.subject),
@@ -565,7 +561,14 @@ export default function MailPage() {
   const persistComposeDraft = useCallback(async (composeId: string) => {
     const draft = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!draft) return;
-    if (!draft.to.trim() && !draft.cc.trim() && !draft.bcc.trim() && !draft.subject.trim() && !stripHtml(draft.body)) return;
+    if (!hasMeaningfulComposeDraft(draft)) {
+      if (draft.editingDraftId) {
+        await deleteDraft(draft.editingDraftId);
+        updateComposeDraft(composeId, { editingDraftId: null });
+      }
+      persistedSignaturesRef.current.set(composeId, serializeComposeDraft({ ...draft, editingDraftId: null }));
+      return;
+    }
     const signature = serializeComposeDraft(draft);
     const lastSignature = persistedSignaturesRef.current.get(composeId);
     if (signature === lastSignature) return;
@@ -634,6 +637,7 @@ export default function MailPage() {
     drafts.forEach((draft) => {
       if (draft.minimized) return;
       if (sendingComposeIdsRef.current.has(draft.id) || savingComposeIdsRef.current.has(draft.id) || discardingComposeIdsRef.current.has(draft.id)) return;
+      if (!hasMeaningfulComposeDraft(draft) && !draft.editingDraftId) return;
       if (!isComposeDraftDirty(draft)) return;
       clearComposeAutosaveTimer(draft.id);
       void persistComposeDraft(draft.id);
@@ -650,7 +654,10 @@ export default function MailPage() {
         recipients: compose.to || compose.cc || compose.bcc || "",
         subject: compose.subject,
         bodyHtml: compose.body,
-        bodyJson: buildDraftBodyJson(compose),
+        bodyJson: {
+          ...buildDraftBodyJson(compose),
+          draftPendingAttachment: true,
+        },
         originModule: "corporate",
       });
       const draftId = String(created?.id ?? "");
@@ -725,6 +732,18 @@ export default function MailPage() {
     if (!draft) return;
     if (sendingComposeIds.has(composeId) || discardingComposeIds.has(composeId)) return;
     if (savingComposeIds.has(composeId)) return;
+    if (!hasMeaningfulComposeDraft(draft)) {
+      if (draft.editingDraftId) {
+        try {
+          await deleteDraft(draft.editingDraftId);
+        } catch {
+          setLabelError("No se pudo eliminar el borrador vacío.");
+          return;
+        }
+      }
+      removeComposeDraft(composeId);
+      return;
+    }
     try {
       await persistComposeDraft(composeId);
     } catch {
@@ -779,7 +798,11 @@ export default function MailPage() {
         });
         await sendDraft(draft.editingDraftId, {
           recipients: draft.to,
+          to: parseRecipientList(draft.to),
+          cc: parseRecipientList(draft.cc),
+          bcc: parseRecipientList(draft.bcc),
           attachmentIds: draft.attachmentIds ?? [],
+          labelIds: draft.selectedLabelIds,
         });
       } else {
         await sendMessage({
@@ -1022,7 +1045,7 @@ export default function MailPage() {
     let active = true;
     void (async () => {
       const targetMail = mailsRef.current.find((currentMail) => currentMail.id === activeMailId) ?? null;
-      const shouldMarkReadLocally = Boolean(targetMail && !targetMail.read && targetMail.recipientId);
+      const unreadClearCount = targetMail ? Math.max(targetMail.threadUnreadCount ?? 0, targetMail.read ? 0 : 1) : 0;
       try {
         const detail = await getMessageDetail(activeMailId);
         if (!active) return;
@@ -1033,23 +1056,28 @@ export default function MailPage() {
           if (sameStringArray(current, extracted)) return prev;
           return { ...prev, [activeMailId]: extracted };
         });
-        if (shouldMarkReadLocally && targetMail?.recipientId) {
-          setInboxRowReadLocally(targetMail.recipientId, true);
+        if (targetMail && unreadClearCount > 0) {
+          if (targetMail.recipientId) {
+            setInboxRowReadLocally(targetMail.recipientId, true);
+          }
           const unreadBucket = unreadBucketByFolder(folder);
           const labelDeltaById: Record<string, number> = {};
           if (countsLabelAware) {
             (rawLabelIdsByMessageIdRef.current.get(targetMail.messageId ?? targetMail.id) ?? []).forEach((labelId) => {
-              labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - 1;
+              labelDeltaById[labelId] = Number(labelDeltaById[labelId] ?? 0) - unreadClearCount;
             });
           }
           const deltaPayload: Partial<{ inbox: number; trash: number; archived: number; snoozed: number; starred: number }> = {
-            starred: targetMail.starred ? -1 : 0,
+            starred: targetMail.starred ? -unreadClearCount : 0,
           };
-          if (unreadBucket) deltaPayload[unreadBucket] = -1;
+          if (unreadBucket) deltaPayload[unreadBucket] = -unreadClearCount;
           applyCountsDelta({
             ...deltaPayload,
             labelUnreadById: countsLabelAware ? labelDeltaById : undefined,
           });
+          if (!targetMail.recipientId) {
+            await reload();
+          }
         }
       } catch {
         if (!active) return;
@@ -1064,6 +1092,7 @@ export default function MailPage() {
     applyCountsDelta,
     countsLabelAware,
     folder,
+    reload,
     setInboxRowReadLocally,
   ]);
 
@@ -1133,15 +1162,28 @@ export default function MailPage() {
     attachmentIds?: string[];
   }) => {
     const recipients = [input.to, input.cc, input.bcc].filter(Boolean).join(", ");
+    const bodyJson = buildDraftBodyJson({
+      bodyJson: input.bodyJson,
+      to: input.to,
+      cc: input.cc,
+      bcc: input.bcc,
+      attachmentIds: input.attachmentIds ?? [],
+      selectedLabelIds: [],
+    });
     const created = await createDraft({
       recipients,
       subject: input.subject,
       bodyHtml: input.body,
-      bodyJson: {
-        ...(input.bodyJson ?? {}),
-        draftRecipients: recipients,
-        draftAttachmentIds: input.attachmentIds ?? [],
-      },
+      bodyJson: hasMeaningfulComposeDraft({
+        to: input.to,
+        cc: input.cc,
+        bcc: input.bcc,
+        subject: input.subject,
+        body: input.body,
+        bodyJson: input.bodyJson ?? null,
+        attachmentIds: input.attachmentIds ?? [],
+        selectedLabelIds: [],
+      }) ? bodyJson : { ...bodyJson, draftPendingAttachment: true },
       originModule: "corporate",
     });
     const draftId = String(created?.id ?? "");
@@ -1905,10 +1947,13 @@ export default function MailPage() {
                       openCompose({
                         editingDraftId: rawDraft.id,
                         to: extractDraftRecipients(rawDraft.bodyJson),
+                        cc: extractDraftCcRecipients(rawDraft.bodyJson),
+                        bcc: extractDraftBccRecipients(rawDraft.bodyJson),
                         subject: rawDraft.subject || "",
                         body: rawDraft.bodyHtml || "",
                         bodyJson: rawDraft.bodyJson ?? null,
                         attachmentIds: extractDraftAttachmentIds(rawDraft.bodyJson),
+                        selectedLabelIds: extractDraftSelectedLabelIds(rawDraft.bodyJson),
                         mode: "new",
                         parentMessageId: null,
                       });

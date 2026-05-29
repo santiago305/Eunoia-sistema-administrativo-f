@@ -421,6 +421,29 @@ export default function MailComposerSurface({
   }, [attachments]);
 
   useEffect(() => {
+    attachmentsRef.current.forEach((item) => {
+      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    });
+    attachmentsRef.current = [];
+    setAttachments([]);
+    setValidationError("");
+    setShowFormat(false);
+    setShowLink(false);
+    setShowLabelMenu(false);
+    setShowSchedulePopover(false);
+    setScheduleDateValue(null);
+    setLinkName("");
+    setLinkUrl("");
+    setSelectedFontSize("3");
+    setRecipientDrafts({ to: "", cc: "", bcc: "" });
+    setShowCc(Boolean(cc.trim()));
+    setShowBcc(Boolean(bcc.trim()));
+    setRecipientsExpanded(Boolean(to.trim() || cc.trim() || bcc.trim()));
+    latestBodyRef.current = null;
+    lastSyncedBodyRef.current = body || "";
+  }, [composeId]);
+
+  useEffect(() => {
     return () => {
       attachmentsRef.current.forEach((item) => {
         if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);

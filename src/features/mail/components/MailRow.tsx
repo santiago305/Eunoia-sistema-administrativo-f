@@ -104,9 +104,12 @@ export default function MailRow({
       </div>
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
-        {mail.threadLabel ? (
-          <span className="shrink-0 rounded-full bg-mail-hover px-2 py-0.5 text-[11px] text-muted-foreground">
-            {mail.threadLabel}
+        {mail.threadUnreadCount && mail.threadUnreadCount > 0 ? (
+          <span
+            className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold tabular-nums text-primary-foreground"
+            aria-label={`${mail.threadUnreadCount} mensajes no leidos`}
+          >
+            {mail.threadUnreadCount}
           </span>
         ) : null}
         <span className={cn("truncate text-sm", mail.read ? "text-foreground/70" : "font-semibold text-foreground")}>

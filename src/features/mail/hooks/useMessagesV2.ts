@@ -93,7 +93,11 @@ export function useMessagesV2(params: {
     setItems((prev) =>
       prev.map((item) =>
         "recipient" in item && item.recipient.id === recipientId
-          ? { ...item, recipient: { ...item.recipient, readAt: new Date().toISOString() } }
+          ? {
+              ...item,
+              recipient: { ...item.recipient, readAt: new Date().toISOString() },
+              message: item.message ? { ...item.message, threadUnreadCount: 0 } : item.message,
+            }
           : item,
       ),
     );
@@ -103,7 +107,13 @@ export function useMessagesV2(params: {
     setItems((prev) =>
       prev.map((item) =>
         "recipient" in item && item.recipient.id === recipientId
-          ? { ...item, recipient: { ...item.recipient, readAt: read ? new Date().toISOString() : null } }
+          ? {
+              ...item,
+              recipient: { ...item.recipient, readAt: read ? new Date().toISOString() : null },
+              message: item.message
+                ? { ...item.message, threadUnreadCount: read ? 0 : Math.max(item.message.threadUnreadCount ?? 0, 1) }
+                : item.message,
+            }
           : item,
       ),
     );
@@ -114,7 +124,13 @@ export function useMessagesV2(params: {
     setItems((prev) =>
       prev.map((item) =>
         "recipient" in item && item.recipient.id === recipientId
-          ? { ...item, recipient: { ...item.recipient, readAt: null } }
+          ? {
+              ...item,
+              recipient: { ...item.recipient, readAt: null },
+              message: item.message
+                ? { ...item.message, threadUnreadCount: Math.max(item.message.threadUnreadCount ?? 0, 1) }
+                : item.message,
+            }
           : item,
       ),
     );
@@ -246,6 +262,7 @@ export function useMessagesV2(params: {
 
     if (!viewMatch) return false;
 
+    const incomingThreadUnreadCount = message.threadUnreadCount ?? (recipient.readAt ? 0 : 1);
     const nextItem: InboxItem = {
       recipient: {
         id: recipient.id,
@@ -260,7 +277,10 @@ export function useMessagesV2(params: {
         createdAt: recipient.createdAt,
         updatedAt: recipient.updatedAt,
       },
-      message,
+      message: {
+        ...message,
+        threadUnreadCount: incomingThreadUnreadCount,
+      },
       sender: payload.sender ?? null,
       labels: payload.labels ?? [],
     };
@@ -279,7 +299,18 @@ export function useMessagesV2(params: {
       const existingIndex = sameThreadIndex >= 0 ? sameThreadIndex : sameRecipientIndex;
 
       if (existingIndex >= 0) {
-        const next = [nextItem, ...prev.filter((_, index) => index !== existingIndex)];
+        const existingItem = prev[existingIndex];
+        const previousUnreadCount = "recipient" in existingItem
+          ? existingItem.message?.threadUnreadCount ?? (existingItem.recipient.readAt ? 0 : 1)
+          : 0;
+        const shouldIncrementThreadUnread = sameThreadIndex >= 0 && sameRecipientIndex < 0 && !recipient.readAt;
+        const threadUnreadCount = message.threadUnreadCount
+          ?? (shouldIncrementThreadUnread ? previousUnreadCount + 1 : incomingThreadUnreadCount);
+        const mergedItem: InboxItem = {
+          ...nextItem,
+          message: nextItem.message ? { ...nextItem.message, threadUnreadCount } : null,
+        };
+        const next = [mergedItem, ...prev.filter((_, index) => index !== existingIndex)];
         if (typeof limit === "number" && limit > 0 && next.length > limit) {
           return next.slice(0, limit);
         }
