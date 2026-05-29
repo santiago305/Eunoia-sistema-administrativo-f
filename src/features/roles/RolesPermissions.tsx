@@ -53,7 +53,7 @@ export default function RolesPermissions() {
   const [savingModuleKey, setSavingModuleKey] = useState<string | null>(null);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [openModules, setOpenModules] = useState<Set<string>>(new Set());
-  const [configsOpen, setConfigsOpen] = useState(true);
+  const [configsOpen, setConfigsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [createRoleOpen, setCreateRoleOpen] = useState(false);

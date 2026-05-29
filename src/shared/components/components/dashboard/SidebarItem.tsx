@@ -126,6 +126,30 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
       : "text-sidebar-foreground hover:bg-sidebar-accent/70"
   );
 
+  /**
+   * Fila padre para items con submenu.
+   *
+   * Antes los items con hijos usaban `px-2.5 py-2`, mientras que los items
+   * simples usaban `px-2 py-1.5`. Esa diferencia hacía que módulos como
+   * "Catálogo" se vieran ligeramente desalineados frente a los módulos sin hijos.
+   *
+   * Esta clase replica la misma base visual del item simple, pero sin padding
+   * horizontal en el contenedor para que el link interno y el botón del caret
+   * puedan convivir sin mover el icono ni el texto.
+   */
+  const parentWithChildrenClass = cn(
+    "group flex w-full items-center rounded-xl transition-all duration-200",
+    item.isComposeAction ? "min-h-10" : "min-h-8",
+    item.isComposeAction
+      ? "bg-primary text-white shadow-sm hover:shadow-md"
+      : isParentHighlighted
+      ? "bg-primary/10 text-primary shadow-sm"
+      : "text-sidebar-foreground hover:bg-sidebar-accent/70"
+  );
+
+  const parentWithChildrenMainClass =
+    "flex min-w-0 flex-1 items-center px-2 py-1.5 text-left";
+
   const labelClass = cn(
     "truncate text-[12px] font-medium transition-all duration-200",
     isSidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
@@ -278,18 +302,11 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   return (
     <div className="mb-1">
       {hasChildren ? (
-        <div
-          className={cn(
-            "flex items-center rounded-xl transition-all duration-200",
-            isParentHighlighted
-              ? "bg-primary/10 shadow-sm"
-              : "hover:bg-sidebar-accent/70"
-          )}
-        >
+        <div className={parentWithChildrenClass}>
           {itemHref ? (
             <Link
               to={itemHref}
-              className="flex min-w-0 flex-1 items-center px-2.5 py-2"
+              className={parentWithChildrenMainClass}
             >
               <ParentInnerContent />
             </Link>
@@ -298,7 +315,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
               title="button"
               type="button"
               onClick={toggleChildren}
-              className="flex min-w-0 flex-1 items-center px-2.5 py-2 text-left"
+              className={parentWithChildrenMainClass}
             >
               <ParentInnerContent />
             </button>
@@ -309,7 +326,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
             onClick={toggleChildren}
             title={isOpen ? `Ocultar submenu de ${item.label}` : `Mostrar submenu de ${item.label}`}
             className={cn(
-              "mr-1 flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+              "mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
               "hover:bg-black/5"
             )}
             aria-label={isOpen ? "Ocultar submenú" : "Mostrar submenú"}
