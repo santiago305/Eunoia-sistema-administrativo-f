@@ -1,4 +1,4 @@
-import { ChevronRight, Info, RotateCcw } from "lucide-react";
+﻿import { ChevronRight, Info, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -181,9 +181,9 @@ export function UserPermissionsModal({
           <section className="min-h-[520px] rounded-sm bg-zinc-50 p-2">
             {showManagementScope ? (
               <div className="mb-3 rounded-sm border border-zinc-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Alcance de gestión</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Alcance de gestion</p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Define qué roles y usuarios adicionales puede ver/gestionar este usuario al crear cuentas.
+                  Define que roles y usuarios adicionales puede ver/gestionar este usuario al crear cuentas.
                 </p>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <FloatingMultiSelect
@@ -330,3 +330,4 @@ export function UserPermissionsModal({
     </Modal>
   );
 }
+
