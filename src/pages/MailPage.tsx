@@ -81,7 +81,7 @@ type MailDetailData = {
     sentAt?: string | null;
     createdAt?: string;
   } | null;
-  sender?: { id?: string; name?: string; email?: string } | null;
+  sender?: { id?: string; name?: string; email?: string; avatarUrl?: string | null } | null;
   recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
   attachments?: BackendMailAttachment[];
     thread?: Array<{
@@ -93,7 +93,7 @@ type MailDetailData = {
     sentAt?: string | null;
     kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
     senderType?: "USER" | "SYSTEM";
-    sender?: { id?: string; name?: string; email?: string } | null;
+    sender?: { id?: string; name?: string; email?: string; avatarUrl?: string | null } | null;
       recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
       attachments?: BackendMailAttachment[];
       actions?: MailMessageActionItem[];
@@ -240,6 +240,7 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
       from: {
         name: senderName,
         email: senderEmail,
+        avatar: resolveProfileAvatarUrl(item.sender?.avatarUrl),
       },
       to: [{ name: "Yo", email: "" }],
       subject: normalizeConversationSubject(item.message.subject),

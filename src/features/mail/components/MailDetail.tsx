@@ -26,6 +26,7 @@ import { normalizeConversationSubject } from "../utils/mail-subject.utils";
 import { downloadAttachmentBlobUrl } from "../services/messages.service";
 import InlineReplyForwardBox from "./InlineReplyForwardBox";
 import MailActionBlock from "./MailActionBlock";
+import { resolveProfileAvatarUrl } from "@/features/profile/components/profile.utils";
 
 interface Props {
   mail: Mail | null;
@@ -42,7 +43,7 @@ interface Props {
       sentAt?: string | null;
       createdAt?: string;
     } | null;
-    sender?: { id?: string; name?: string; email?: string } | null;
+    sender?: { id?: string; name?: string; email?: string; avatarUrl?: string | null } | null;
     recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
       attachments?: Array<Attachment | BackendMailAttachment>;
       thread?: Array<{
@@ -54,7 +55,7 @@ interface Props {
       sentAt?: string | null;
       kind?: "SYSTEM_NOTIFICATION" | "USER_MESSAGE" | "SYSTEM_MESSAGE";
       senderType?: "USER" | "SYSTEM";
-      sender?: { id?: string; name?: string; email?: string } | null;
+      sender?: { id?: string; name?: string; email?: string; avatarUrl?: string | null } | null;
         recipients?: Array<{ id?: string; recipientEmail?: string; recipientType?: string }>;
         attachments?: Array<Attachment | BackendMailAttachment>;
         actions?: MailMessageActionItem[];
@@ -320,6 +321,14 @@ export default function MailDetail(props: Props) {
     item.sender?.name?.trim() || (item.senderType === "SYSTEM" ? "Sistema" : "Usuario");
   const getItemSenderEmail = (item: DetailThreadItem) =>
     item.sender?.email?.trim() || (item.senderType === "SYSTEM" ? "no-reply@eunoia.local" : "usuario@eunoia.local");
+  const getItemSenderAvatarUrl = (item: DetailThreadItem, email: string) => {
+    const senderAvatarUrl = resolveProfileAvatarUrl(item.sender?.avatarUrl);
+    if (senderAvatarUrl) return senderAvatarUrl;
+    if (email.trim().toLowerCase() === props.currentUserEmail.trim().toLowerCase()) {
+      return props.currentUserAvatarUrl ?? "";
+    }
+    return "";
+  };
   const getItemToLabel = (item: DetailThreadItem) => {
     const itemRecipients = item.recipients?.filter((recipient) => Boolean(recipient?.recipientEmail?.trim())) ?? [];
     const itemToRecipients = itemRecipients
@@ -432,6 +441,7 @@ export default function MailDetail(props: Props) {
             {conversationItems.map((threadItem, index) => {
               const itemSenderName = getItemSenderName(threadItem);
               const itemSenderEmail = getItemSenderEmail(threadItem);
+              const itemSenderAvatarUrl = getItemSenderAvatarUrl(threadItem, itemSenderEmail);
               const previousSenderEmail = index > 0 ? getItemSenderEmail(conversationItems[index - 1]) : null;
               const showAvatar = index === 0 || previousSenderEmail !== itemSenderEmail;
               const forwardedPreview = getForwardedMessagePreview(threadItem.bodyJson);
@@ -444,12 +454,21 @@ export default function MailDetail(props: Props) {
                 <article key={threadItem.id} className="flex items-start gap-4">
                   <div
                     className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white",
+                      "flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold text-white",
                       !showAvatar && "invisible",
                     )}
                     style={{ background: props.avatarColor(itemSenderEmail) }}
                   >
-                    {props.initialsOf(itemSenderName)}
+                    {itemSenderAvatarUrl ? (
+                      <img
+                        src={itemSenderAvatarUrl}
+                        alt={`Foto de perfil de ${itemSenderName}`}
+                        className="size-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      props.initialsOf(itemSenderName)
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="mb-3 flex flex-wrap items-baseline gap-2">

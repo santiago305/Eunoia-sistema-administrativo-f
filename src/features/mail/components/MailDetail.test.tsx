@@ -162,4 +162,66 @@ describe("MailDetail thread view", () => {
     await waitFor(() => expect(downloadAttachmentBlobUrlMock).toHaveBeenCalledWith("image-1"));
     expect(screen.getByAltText("foto.png").getAttribute("src")).toBe("blob:thread-image");
   });
+
+  it("renders profile photos for thread senders when avatar urls are available", () => {
+    render(
+      <MailDetail
+        {...baseProps}
+        currentUserAvatarUrl="https://cdn.example.com/me.png"
+        detailData={{
+          sender: {
+            id: "user-admin",
+            name: "Admin",
+            email: "admin@example.com",
+            avatarUrl: "https://cdn.example.com/admin.png",
+          },
+          recipients: [],
+          attachments: [],
+          permissions: { canReply: true, canForward: true },
+          thread: [
+            {
+              id: "message-1",
+              subject: "Reporte",
+              bodyHtml: "<p>Mensaje original</p>",
+              bodyJson: null,
+              createdAt: "2026-05-20T10:00:00.000Z",
+              sentAt: "2026-05-20T10:00:00.000Z",
+              sender: {
+                id: "user-santiago",
+                name: "Santiago",
+                email: "santiago@example.com",
+              },
+              recipients: [],
+              attachments: [],
+            },
+            {
+              id: "message-2",
+              subject: "Re: Reporte",
+              bodyHtml: "<p>Respuesta actual</p>",
+              bodyJson: null,
+              createdAt: "2026-05-20T11:00:00.000Z",
+              sentAt: "2026-05-20T11:00:00.000Z",
+              sender: {
+                id: "user-admin",
+                name: "Admin",
+                email: "admin@example.com",
+                avatarUrl: "https://cdn.example.com/admin.png",
+              },
+              recipients: [],
+              attachments: [],
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByAltText("Foto de perfil de Santiago")).toHaveAttribute(
+      "src",
+      "https://cdn.example.com/me.png",
+    );
+    expect(screen.getByAltText("Foto de perfil de Admin")).toHaveAttribute(
+      "src",
+      "https://cdn.example.com/admin.png",
+    );
+  });
 });

@@ -110,6 +110,7 @@ export interface InboxItem {
     id: string;
     name: string;
     email: string;
+    avatarUrl?: string | null;
   } | null;
   message: SentMessageItem | null;
 }
