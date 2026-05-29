@@ -74,7 +74,7 @@ function mapListEntryToRow(entry: PackListEntry): PackRow {
     itemsCount: items.length,
   };
 }
-const buildSkuLabelFromDetailItem = (
+export const buildSkuLabelFromDetailItem = (
   item: PackDetailResponse["items"][number],
 ) => {
   const name = item.sku?.name?.trim() || "SKU";

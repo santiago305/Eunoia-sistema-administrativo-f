@@ -18,10 +18,12 @@ import {
   Banknote,
   PencilRuler,
   ClipboardList,
+  Megaphone,
   Bell,
   Menu,
   UserCog,
-  Truck
+  Truck,
+  FileText
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -46,6 +48,9 @@ export const IconCompany = ({ className }: { className?: string }) => (
 );
 export const IconPurchase = ({ className }: { className?: string }) => (
   <Store className={className} size={20} />
+);
+export const IconSaleOrder = ({ className }: { className?: string }) => (
+  <FileText className={className} size={20} />
 );
 export const IconOutOrder = ({ className }: { className?: string }) => (
   <ClipboardList  className={className} size={20} />
@@ -107,6 +112,10 @@ export const IconBell = ({ className }: { className?: string }) => (
 
 export const IconMenu = ({ className }: { className?: string }) => (
   <Menu className={className} size={18} />
+);
+
+export const IconCampaigns = ({ className }: { className?: string }) => (
+  <Megaphone className={className} size={20} />
 );
 
 

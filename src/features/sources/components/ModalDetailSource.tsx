@@ -1,22 +1,15 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Building2, MapPin } from "lucide-react";
+import { Megaphone } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
-import { getAgencyById } from "@/shared/services/agencyService";
+import { getSourceById } from "@/shared/services/sourceService";
 import { Badge } from "@/shared/components/ui/badge";
-import type { AgencyDetail } from "@/features/agencies/types/agencyApi";
-
-type UbigeoNames = {
-  departmentsById: Record<string, string>;
-  provincesById: Record<string, string>;
-  districtsById: Record<string, string>;
-};
+import type { SourceDetail } from "@/features/sources/types/sourceApi";
 
 type Props = {
   open: boolean;
-  agencyId: string | null;
+  sourceId: string | null;
   onClose: () => void;
-  ubigeoNames: UbigeoNames;
 };
 
 function SectionHeader({ icon, title, meta }: { icon: ReactNode; title: string; meta?: string }) {
@@ -56,8 +49,8 @@ const formatDateTime = (value?: string | null) => {
   });
 };
 
-export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Props) {
-  const [detail, setDetail] = useState<AgencyDetail | null>(null);
+export function ModalDetailSource({ open, sourceId, onClose }: Props) {
+  const [detail, setDetail] = useState<SourceDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +62,7 @@ export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Prop
       return;
     }
 
-    if (!agencyId) {
+    if (!sourceId) {
       setDetail(null);
       setError(null);
       setLoading(false);
@@ -83,13 +76,13 @@ export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Prop
       setError(null);
 
       try {
-        const response = await getAgencyById(agencyId);
+        const response = await getSourceById(sourceId);
         if (cancelled) return;
         setDetail(response);
       } catch (err) {
         if (cancelled) return;
         setDetail(null);
-        setError(parseApiError(err, "No se pudo cargar la agencia."));
+        setError(parseApiError(err, "No se pudo cargar el enganche."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -100,32 +93,28 @@ export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Prop
     return () => {
       cancelled = true;
     };
-  }, [agencyId, open]);
+  }, [open, sourceId]);
 
   const statusMeta = detail?.isActive
     ? { label: "Activo", className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
     : { label: "Inactivo", className: "border-rose-200 bg-rose-50 text-rose-700" };
 
-  const departmentName = detail?.departmentId ? ubigeoNames.departmentsById[detail.departmentId] ?? detail.departmentId : "-";
-  const provinceName = detail?.provinceId ? ubigeoNames.provincesById[detail.provinceId] ?? detail.provinceId : "-";
-  const districtName = detail?.districtId ? ubigeoNames.districtsById[detail.districtId] ?? detail.districtId : "-";
-
   return (
-    <Modal open={open} onClose={onClose} title="Detalle de agencia" className="max-h-[70vh]" bodyClassName="p-0 overflow-hidden">
-      {!agencyId ? (
-        <div className="px-5 py-8 text-center text-xs text-black/50">No hay agencia seleccionada.</div>
+    <Modal open={open} onClose={onClose} title="Detalle de enganche" className="max-h-[70vh]" bodyClassName="p-0 overflow-hidden">
+      {!sourceId ? (
+        <div className="px-5 py-8 text-center text-xs text-black/50">No hay enganche seleccionada.</div>
       ) : (
         <div className="bg-white">
           <header className="border-b border-black/5 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 gap-2.5">
                 <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700">
-                  <Building2 className="h-3.5 w-3.5" />
+                  <Megaphone className="h-3.5 w-3.5" />
                 </div>
 
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45">Agencia</p>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45">Enganche</p>
                     {detail ? (
                       <Badge variant="outline" className={`text-[9px] uppercase tracking-wide ${statusMeta.className}`}>
                         {statusMeta.label}
@@ -134,8 +123,7 @@ export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Prop
                   </div>
 
                   <h3 className="mt-0.5 truncate text-sm font-semibold text-black/85">{detail?.name ?? "—"}</h3>
-
-                  <p className="mt-0.5 truncate text-[11px] text-black/45">{detail?.reference ?? "—"}</p>
+                  <p className="mt-0.5 truncate text-[11px] text-black/45">{detail?.detail ?? "—"}</p>
                 </div>
               </div>
             </div>
@@ -146,26 +134,10 @@ export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Prop
           ) : error ? (
             <div className="px-5 py-8 text-center text-xs text-rose-600">{error}</div>
           ) : !detail ? (
-            <div className="px-5 py-8 text-center text-xs text-black/50">No hay agencia seleccionada.</div>
+            <div className="px-5 py-8 text-center text-xs text-black/50">No hay enganche seleccionada.</div>
           ) : (
             <div className="max-h-[calc(80vh-6rem)] space-y-4 overflow-y-auto px-4 py-3">
-              <section>
-                <SectionHeader icon={<MapPin className="h-3.5 w-3.5" />} title="Ubicación" />
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                  <FieldItem label="Departamento" value={departmentName} />
-                  <FieldItem label="Provincia" value={provinceName} />
-                  <FieldItem label="Distrito" value={districtName} />
-                </div>
-              </section>
-
-              <section>
-                <SectionHeader icon={<Building2 className="h-3.5 w-3.5" />} title="Datos" />
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  <FieldItem label="Dirección" value={detail.address ?? "-"} />
-                  <FieldItem label="Referencia" value={detail.reference ?? "-"} />
-                </div>
-              </section>
-
+            
               <section>
                 <SectionHeader icon={<span className="h-3.5 w-3.5" />} title="Registro" />
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -180,3 +152,4 @@ export function ModalDetailAgency({ open, agencyId, onClose, ubigeoNames }: Prop
     </Modal>
   );
 }
+

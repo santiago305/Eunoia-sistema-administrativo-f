@@ -14,7 +14,8 @@ type ButtonVariant =
   | "danger"
   | "outline"
   | "ghost"
-  | "link";
+  | "link"
+  | "motion";
 
 type ButtonSize = "sm" | "md" | "lg" | "icon" | "custom";
 
@@ -49,7 +50,9 @@ const variantClasses: Record<ButtonVariant, string> = {
     "bg-transparent text-black hover:bg-black/[0.04] active:scale-[0.98] focus-visible:ring-black/10",
   link:
     "bg-transparent text-primary underline-offset-4 hover:underline active:scale-[0.99] focus-visible:ring-primary/20 shadow-none",
-};
+  motion:
+  "bg-purple-600 text-white shadow-sm hover:bg-purple-700  hover:shadow-md active:translate-y-0 active:scale-[0.97] focus-visible:ring-purple-200",
+  };
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "h-9 px-3 text-xs rounded-lg",

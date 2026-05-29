@@ -32,6 +32,7 @@ import {
 } from "@/shared/services/companyService";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { PageShell } from "@/shared/layouts/PageShell";
+import { BankAccountListModal } from "./components/BankAccountListModal";
 
 const COMPANY_PRIMARY = "hsl(var(--primary))";
 
@@ -52,6 +53,7 @@ export default function CompanyPage() {
   const [openPaymentMethods, setOpenPaymentMethods] = useState(false);
   const [formValues, setFormValues] = useState<CompanyFormValues>(emptyCompanyForm);
   const [formErrors, setFormErrors] = useState<CompanyFormErrors>({});
+  const [openBankAccounts, setOpenBankAccounts] = useState(false);
 
   const hasCompany = Boolean(company && (company.companyId || company.ruc || company.name));
   const logoUrl = useMemo(
@@ -266,7 +268,18 @@ export default function CompanyPage() {
             </Card>
 
             {hasCompany && (
-              <div className="mt-2 rounded-lg shadow-sm">
+              <div className="mt-2 rounded-lg grid grid-cols-2 gap-3">
+                <SystemButton
+                  fullWidth
+                  variant="outline"
+                  disabled={loading}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setOpenBankAccounts(true);
+                  }}
+                >
+                  Ver cuentas bancarias
+                </SystemButton>
                 <SystemButton
                   fullWidth
                   variant="outline"
@@ -309,6 +322,13 @@ export default function CompanyPage() {
         <PaymentMethodListModal
           title="Métodos de pago"
           close={() => setOpenPaymentMethods(false)}
+          companyId={company.companyId}
+        />
+      )}
+      {openBankAccounts && company?.companyId && (
+        <BankAccountListModal
+          title="Cuentas bancarias"
+          close={() => setOpenBankAccounts(false)}
           companyId={company.companyId}
         />
       )}

@@ -31,7 +31,7 @@ export function FloatingDatePicker({
   value,
   onChange,
   error,
-  placeholder = "Seleccionar fecha",
+  placeholder = "Seleccionar",
   disabled = false,
   readOnly = false,
   className,

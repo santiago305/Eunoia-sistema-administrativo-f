@@ -262,7 +262,6 @@ export function ClientFormModal({
               .map((row) => ({
                 number: row.number.trim(),
                 isMain: row.isMain,
-                isActive: row.isActive,
             }))
             .filter((row) => row.number);
 

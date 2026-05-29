@@ -1,6 +1,7 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import type {
   CreatePackBody,
+  PackIdDomain,
   Paginated,
   PackDetailResponse,
   PackListEntry,
@@ -40,13 +41,20 @@ export const listPacks = async (params: {
 };
 
 export const getPackById = async (
-  id: string,
+  id: string | PackIdDomain,
 ): Promise<PackDetailResponse> => {
-  const response = await axiosInstance.get<PackDetailResponse>(
-    packRoutes.detail(id),
-  );
+  const normalizedId = typeof id === "string" ? id : id?.value;
+  if (!normalizedId) {
+    throw new Error("Pack ID inválido.");
+  }
 
-  return response.data;
+  const response = await axiosInstance.get<
+    PackDetailResponse | { data: PackDetailResponse }
+  >(packRoutes.detail(normalizedId));
+
+  const data = response.data;
+  if ("data" in data) return data.data;
+  return data;
 };
 
 export const createPack = async (

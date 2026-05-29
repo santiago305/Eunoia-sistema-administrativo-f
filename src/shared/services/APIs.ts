@@ -74,6 +74,14 @@ export const packRoutes = {
   searchMetricDetail: (metricId: string) => `/packs/search-metrics/${metricId}`,
 };
 
+export const API_BANK_ACCOUNTS_GROUP = {
+  create: "/bank-accounts",
+  byCompany: (companyId: string) => `/bank-accounts/by-company/${companyId}`,
+  byId: (id: string) => `/bank-accounts/${id}`,
+  update: (id: string) => `/bank-accounts/${id}`,
+  setActive: (id: string) => `/bank-accounts/${id}/active`,
+};
+
 export const agencyRoutes = {
   list: "/agencies",
   create: "/agencies",
@@ -83,6 +91,17 @@ export const agencyRoutes = {
   searchState: "/agencies/search-state",
   searchMetrics: "/agencies/search-metrics",
   searchMetricDetail: (metricId: string) => `/agencies/search-metrics/${metricId}`,
+};
+
+export const sourceRoutes = {
+  list: "/sources",
+  create: "/sources",
+  detail: (id: string) => `/sources/${id}`,
+  update: (id: string) => `/sources/${id}`,
+  active: (id: string) => `/sources/${id}/active`,
+  searchState: "/sources/search-state",
+  searchMetrics: "/sources/search-metrics",
+  searchMetricDetail: (metricId: string) => `/sources/search-metrics/${metricId}`,
 };
 
 
@@ -315,6 +334,21 @@ export const API_DOCUMENT_SERIES_GROUP = {
   list: "/series/active",
 };
 
+export const API_SALE_ORDERS_GROUP = {
+  base: "/sale-orders",
+  create: "/sale-orders",
+  list: "/sale-orders",
+  detail: (id: string) => `/sale-orders/${id}`,
+  update: (id: string) => `/sale-orders/${id}`,
+  cancel: (id: string) => `/sale-orders/${id}/cancel`,
+  confirmDelivery: (id: string) => `/sale-orders/${id}/confirm-delivery`,
+  payments: (id: string) => `/sale-orders/${id}/payments`,
+  paymentById: (id: string, paymentId: string) => `/sale-orders/${id}/payments/${paymentId}`,
+  searchState: "/sale-orders/search-state",
+  saveSearchMetric: "/sale-orders/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/sale-orders/search-metrics/${metricId}`,
+  saleOrderPdf: (id: string) => `/pdf-generated/sale-orders/${id}/pdf`,
+};
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
   totals: "/stock-items/ledger/daily-totals/by-sku",
