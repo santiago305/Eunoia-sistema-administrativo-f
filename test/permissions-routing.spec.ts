@@ -16,9 +16,9 @@ describe("permissions routing regression", () => {
     expect(canAccess).toBe(true);
   });
 
-  it("resolves first protected route from permissions only", () => {
+  it("resolves first protected route for authenticated users without role", () => {
     const path = getFirstAccessibleProtectedPath(null, ["page.providers.view"]);
-    expect(path).toBe(RoutesPaths.providers);
+    expect(path).toBe(RoutesPaths.profile);
   });
 
   it("allows production page only with page.production.view", () => {
@@ -31,6 +31,14 @@ describe("permissions routing regression", () => {
     const meta = getRouteMetaByPath(RoutesPaths.providers);
     expect(canAccessRoute(meta, null, [])).toBe(false);
     expect(canAccessRoute(meta, null, ["page.providers.view"])).toBe(true);
+  });
+
+  it("allows profile and sessions with authentication only", () => {
+    const profileMeta = getRouteMetaByPath(RoutesPaths.profile);
+    const sessionsMeta = getRouteMetaByPath(RoutesPaths.sessions);
+
+    expect(canAccessRoute(profileMeta, null, [])).toBe(true);
+    expect(canAccessRoute(sessionsMeta, null, [])).toBe(true);
   });
 
   it("keeps all protected route metadata without rolesAllowed residual", () => {

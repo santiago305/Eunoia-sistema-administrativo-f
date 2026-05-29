@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       const id = extractUserId(response);
       const superAdmin = Boolean(response.isSuperAdmin);
 
-      if (!id || (!role && !superAdmin)) {
+      if (!id) {
         resetAuthState(true);
         return {
           success: false,

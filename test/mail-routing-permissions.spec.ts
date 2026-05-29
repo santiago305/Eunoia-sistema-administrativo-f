@@ -4,11 +4,10 @@ import { getRouteMetaByPath } from '@/routes/config/routesConfig';
 import { canAccessRoute } from '@/routes/config/routeAccess';
 
 describe('mail routing and permissions regression', () => {
-  it('keeps mail base route protected by notifications permission', () => {
+  it('keeps mail base route protected only by authentication', () => {
     const meta = getRouteMetaByPath(RoutesPaths.notifications);
     expect(meta).toBeTruthy();
-    expect(canAccessRoute(meta, null, [])).toBe(false);
-    expect(canAccessRoute(meta, null, ['page.notifications.view'])).toBe(true);
+    expect(canAccessRoute(meta, null, [])).toBe(true);
   });
 
   it('uses /email as canonical notifications path', () => {

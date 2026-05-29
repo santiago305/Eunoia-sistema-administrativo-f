@@ -21,8 +21,6 @@ export type PermissionGroup = {
 
 const MODULE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
-  profile: "Perfil",
-  sessions: "Sesiones",
   users: "Usuarios",
   roles: "Permisos",
   permissions: "Catálogo de permisos",

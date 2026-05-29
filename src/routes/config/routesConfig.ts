@@ -8,11 +8,11 @@ export const routesConfig: RouteMetadata[] = [
 
   // Dashboard
   { path: RoutesPaths.dashboard, name: "Dashboard", isProtected: true, permissionsAllowed: ["page.dashboard.view"] },
-  { path: RoutesPaths.profile, name: "profile", isProtected: true, permissionsAllowed: ["page.profile.view"] },
-  { path: RoutesPaths.sessions, name: "sessions", isProtected: true, permissionsAllowed: ["page.sessions.view"] },
-  { path: RoutesPaths.notifications, name: "notifications", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
-  { path: RoutesPaths.notificationView, name: "notificationView", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
-  { path: RoutesPaths.notificationDetail, name: "notificationDetail", isProtected: true, permissionsAllowed: ["page.notifications.view"] },
+  { path: RoutesPaths.profile, name: "profile", isProtected: true },
+  { path: RoutesPaths.sessions, name: "sessions", isProtected: true },
+  { path: RoutesPaths.notifications, name: "notifications", isProtected: true },
+  { path: RoutesPaths.notificationView, name: "notificationView", isProtected: true },
+  { path: RoutesPaths.notificationDetail, name: "notificationDetail", isProtected: true },
   {
     path: RoutesPaths.users,
     name: "users",
