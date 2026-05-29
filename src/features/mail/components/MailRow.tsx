@@ -95,9 +95,18 @@ export default function MailRow({
         </button>
       </button>
 
-      <div className="size-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0" style={{ background: avatarColor(mail.from.email) }}>
-        {initialsOf(mail.from.name)}
-      </div>
+      {mail.from.avatar ? (
+        <img
+          src={mail.from.avatar}
+          alt={`Avatar de ${mail.from.name}`}
+          loading="lazy"
+          className="size-6 rounded-full object-cover shrink-0"
+        />
+      ) : (
+        <div className="size-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0" style={{ background: avatarColor(mail.from.email) }}>
+          {initialsOf(mail.from.name)}
+        </div>
+      )}
 
       <div className={cn("w-44 truncate text-sm shrink-0", mail.read ? "text-foreground/70" : "font-semibold text-foreground")}>
         {mail.from.name}

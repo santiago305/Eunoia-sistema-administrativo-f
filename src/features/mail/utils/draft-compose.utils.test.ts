@@ -5,6 +5,7 @@ import {
   extractDraftCcRecipients,
   extractDraftRecipients,
   extractDraftSelectedLabelIds,
+  hasMeaningfulComposeContentDraft,
   hasMeaningfulComposeDraft,
 } from "./draft-compose.utils";
 
@@ -37,6 +38,11 @@ describe("draft-compose utils", () => {
         },
       }),
     ).toBe(true);
+  });
+
+  it("separates draft content from labels-only metadata", () => {
+    expect(hasMeaningfulComposeContentDraft({ selectedLabelIds: ["label-1"] })).toBe(false);
+    expect(hasMeaningfulComposeDraft({ selectedLabelIds: ["label-1"] })).toBe(true);
   });
 
   it("stores and extracts draft metadata with stable keys", () => {

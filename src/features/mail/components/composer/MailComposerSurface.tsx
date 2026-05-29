@@ -58,6 +58,7 @@ type SendOverrides = {
   body?: string;
   bodyJson?: Record<string, unknown> | null;
   attachmentIds?: string[];
+  selectedLabelIds?: string[];
 };
 
 type FontSizeOption = {
@@ -747,6 +748,7 @@ export default function MailComposerSurface({
       body: bodyHtml,
       bodyJson: nextBodyJson,
       attachmentIds: Array.from(new Set([...attachmentIds, ...uploadedAttachmentIds])),
+      selectedLabelIds: [...selectedLabelIds],
     };
   };
 

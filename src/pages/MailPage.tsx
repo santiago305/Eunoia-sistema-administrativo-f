@@ -47,6 +47,7 @@ import {
   extractDraftCcRecipients,
   extractDraftRecipients,
   extractDraftSelectedLabelIds,
+  hasMeaningfulComposeContentDraft,
   hasMeaningfulComposeDraft,
 } from "@/features/mail/utils/draft-compose.utils";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -212,7 +213,17 @@ const serializeComposeDraft = (draft: NotificationComposeDraft) =>
     parentMessageId: draft.parentMessageId ?? null,
   });
 
-const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mail | null => {
+type CurrentUserMailIdentity = {
+  name?: string;
+  email?: string;
+  avatar?: string;
+};
+
+const mapItemToMail = (
+  item: InboxItem | SentMessageItem,
+  folder: UiFolder,
+  currentUser: CurrentUserMailIdentity,
+): Mail | null => {
   if ("recipient" in item) {
     if (!item.message) return null;
     const senderName = item.sender?.name?.trim() || (item.message.senderType === "SYSTEM" ? "Sistema" : "Usuario");
@@ -264,7 +275,11 @@ const mapItemToMail = (item: InboxItem | SentMessageItem, folder: UiFolder): Mai
     threadLatestIndex: item.threadLatestIndex,
     threadLabel: item.threadLabel,
     threadUnreadCount: item.threadUnreadCount ?? 0,
-    from: { name: "Yo", email: "" },
+    from: {
+      name: currentUser.name?.trim() || "Yo",
+      email: currentUser.email?.trim() || "",
+      avatar: currentUser.avatar,
+    },
     to: [{ name: "Destinatarios", email: "" }],
     subject: normalizeConversationSubject(item.subject),
     body: item.bodyHtml,
@@ -348,7 +363,7 @@ export default function MailPage() {
   const { userDetails } = useUserDetails();
   const canCreateLabel = can("notifications.labels.create");
   const { labels, createLabel, deleteLabel, applyCountsDelta, applyUnreadByLabelDelta, reloadStorage } = useMailDashboardContext();
-  const currentUserName = userDetails?.data?.name ?? "Usuario";
+  const currentUserName = userDetails?.data?.name?.trim() ?? "";
   const currentUserEmail = userDetails?.data?.email ?? "";
   const currentUserAvatarUrl = resolveProfileAvatarUrl(userDetails?.data?.avatarUrl) || undefined;
   const isFilesFolder = folder === "files";
@@ -473,7 +488,13 @@ export default function MailPage() {
   const mails = useMemo(
     () =>
       items
-        .map((item) => mapItemToMail(item, folder))
+        .map((item) =>
+          mapItemToMail(item, folder, {
+            name: currentUserName,
+            email: currentUserEmail,
+            avatar: currentUserAvatarUrl,
+          }),
+        )
         .filter((v): v is Mail => Boolean(v))
         .map((mail) => {
           const actionId = mail.recipientId ?? mail.messageId ?? mail.id;
@@ -486,7 +507,7 @@ export default function MailPage() {
             starred: localStarred,
           };
         }),
-    [folder, items, localStarredById],
+    [currentUserAvatarUrl, currentUserEmail, currentUserName, folder, items, localStarredById],
   );
 
   useEffect(() => {
@@ -558,12 +579,31 @@ export default function MailPage() {
     setComposeDrafts((prev) => prev.map((item) => (item.id === composeId ? { ...item, ...patch } : item)));
   }, []);
 
+  const getBackendErrorMessage = (error: unknown): string | null => {
+    if (!isAxiosError<BackendErrorPayload>(error)) return null;
+    const backendMessage = error.response?.data?.message;
+    if (Array.isArray(backendMessage)) return backendMessage[0] ?? null;
+    return typeof backendMessage === "string" ? backendMessage : null;
+  };
+
+  const isDraftNotFoundError = (error: unknown) => getBackendErrorMessage(error) === "DRAFT_NOT_FOUND";
+
+  const deleteDraftIdempotent = useCallback(async (draftId: string) => {
+    try {
+      await deleteDraft(draftId);
+      return true;
+    } catch (error: unknown) {
+      if (isDraftNotFoundError(error)) return true;
+      throw error;
+    }
+  }, []);
+
   const persistComposeDraft = useCallback(async (composeId: string) => {
     const draft = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!draft) return;
     if (!hasMeaningfulComposeDraft(draft)) {
       if (draft.editingDraftId) {
-        await deleteDraft(draft.editingDraftId);
+        await deleteDraftIdempotent(draft.editingDraftId);
         updateComposeDraft(composeId, { editingDraftId: null });
       }
       persistedSignaturesRef.current.set(composeId, serializeComposeDraft({ ...draft, editingDraftId: null }));
@@ -601,7 +641,7 @@ export default function MailPage() {
         return next;
       });
     }
-  }, [updateComposeDraft]);
+  }, [deleteDraftIdempotent, updateComposeDraft]);
 
   const isComposeDraftDirty = useCallback((draft: NotificationComposeDraft) => {
     const current = serializeComposeDraft(draft);
@@ -680,6 +720,13 @@ export default function MailPage() {
     persistedSignaturesRef.current.delete(composeId);
   }, [clearComposeAutosaveTimer]);
 
+  const closeComposeWindowsByEditingDraftId = useCallback((editingDraftId: string) => {
+    const composeIds = composeDraftsRef.current
+      .filter((compose) => compose.editingDraftId === editingDraftId)
+      .map((compose) => compose.id);
+    composeIds.forEach((composeId) => removeComposeDraft(composeId));
+  }, [removeComposeDraft]);
+
   const discardComposeDraft = useCallback(async (composeId: string) => {
     const draft = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!draft) return;
@@ -688,7 +735,7 @@ export default function MailPage() {
     try {
       removeComposeDraft(composeId);
       if (!draft.editingDraftId) return;
-      await deleteDraft(draft.editingDraftId);
+      await deleteDraftIdempotent(draft.editingDraftId);
     } catch {
       return;
     } finally {
@@ -698,7 +745,7 @@ export default function MailPage() {
         return next;
       });
     }
-  }, [removeComposeDraft, savingComposeIds, sendingComposeIds]);
+  }, [deleteDraftIdempotent, removeComposeDraft, savingComposeIds, sendingComposeIds]);
 
   const toggleComposeMinimize = useCallback((composeId: string) => {
     setComposeDrafts((prev) => {
@@ -735,7 +782,7 @@ export default function MailPage() {
     if (!hasMeaningfulComposeDraft(draft)) {
       if (draft.editingDraftId) {
         try {
-          await deleteDraft(draft.editingDraftId);
+          await deleteDraftIdempotent(draft.editingDraftId);
         } catch {
           setLabelError("No se pudo eliminar el borrador vacío.");
           return;
@@ -759,11 +806,15 @@ export default function MailPage() {
       .map((item) => item.trim())
       .filter(Boolean);
 
+  const normalizeLabelIds = (labelIds?: string[]) =>
+    Array.from(new Set((labelIds ?? []).filter(Boolean)));
+
   const sendCompose = async (composeId: string, overrides?: Partial<Pick<NotificationComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "selectedLabelIds" | "attachmentIds" | "bodyJson">>) => {
     if (sendingComposeIds.has(composeId) || savingComposeIds.has(composeId) || discardingComposeIds.has(composeId)) return;
     const currentDraft = composeDraftsRef.current.find((item) => item.id === composeId);
     if (!currentDraft) return;
     const draft = { ...currentDraft, ...overrides };
+    const normalizedLabelIds = normalizeLabelIds(draft.selectedLabelIds);
     if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) {
       updateComposeDraft(composeId, { error: "Completa destinatarios, asunto y cuerpo." });
       return;
@@ -802,7 +853,7 @@ export default function MailPage() {
           cc: parseRecipientList(draft.cc),
           bcc: parseRecipientList(draft.bcc),
           attachmentIds: draft.attachmentIds ?? [],
-          labelIds: draft.selectedLabelIds,
+          labelIds: normalizedLabelIds,
         });
       } else {
         await sendMessage({
@@ -813,7 +864,7 @@ export default function MailPage() {
           bodyHtml: draft.body,
           bodyJson: draft.bodyJson ?? null,
           originModule: "corporate",
-          labelIds: draft.selectedLabelIds,
+          labelIds: normalizedLabelIds,
           attachmentIds: draft.attachmentIds ?? [],
         });
       }
@@ -1174,7 +1225,7 @@ export default function MailPage() {
       recipients,
       subject: input.subject,
       bodyHtml: input.body,
-      bodyJson: hasMeaningfulComposeDraft({
+      bodyJson: hasMeaningfulComposeContentDraft({
         to: input.to,
         cc: input.cc,
         bcc: input.bcc,
@@ -1245,8 +1296,9 @@ export default function MailPage() {
         const selectedDraftIds = mails
           .filter((m) => ids.includes(m.id))
           .map((m) => m.messageId ?? m.id);
-        await Promise.all(selectedDraftIds.map((id) => deleteDraft(id)));
+        await Promise.all(selectedDraftIds.map((id) => deleteDraftIdempotent(id)));
         selectedDraftIds.forEach((id) => removeMessageRowLocally(id));
+        selectedDraftIds.forEach((id) => closeComposeWindowsByEditingDraftId(id));
         applyCountsDelta({ drafts: -selectedDraftIds.length });
         setSelectedIds(new Set());
         return;
@@ -1658,7 +1710,7 @@ export default function MailPage() {
         attachmentIds: draft.attachmentIds ?? [],
       });
       if (draft.editingDraftId) {
-        await deleteDraft(draft.editingDraftId);
+        await deleteDraftIdempotent(draft.editingDraftId);
       }
       removeComposeDraft(composeId);
       applyCountsDelta({ scheduled: 1, drafts: draft.editingDraftId ? -1 : 0 });
@@ -1842,7 +1894,7 @@ export default function MailPage() {
               <MailDetail
                 mail={activeMail}
                 currentUserEmail={currentUserEmail}
-                currentUserName={currentUserName}
+                currentUserName={currentUserName || "Usuario"}
                 currentUserAvatarUrl={currentUserAvatarUrl}
                 onBack={() => {
                   navigate(`/email/${folder}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });

@@ -26,11 +26,16 @@ const hasMeaningfulBodyJsonNode = (node: unknown): boolean => {
 };
 
 export const hasMeaningfulComposeDraft = (draft: ComposeDraftLike): boolean => {
+  if (hasMeaningfulComposeContentDraft(draft)) return true;
+  if ((draft.selectedLabelIds ?? []).some((id) => id.trim())) return true;
+  return false;
+};
+
+export const hasMeaningfulComposeContentDraft = (draft: ComposeDraftLike): boolean => {
   if (draft.to?.trim() || draft.cc?.trim() || draft.bcc?.trim() || draft.subject?.trim()) return true;
   if (stripHtml(draft.body)) return true;
   if (hasMeaningfulBodyJsonNode(draft.bodyJson)) return true;
   if ((draft.attachmentIds ?? []).some((id) => id.trim())) return true;
-  if ((draft.selectedLabelIds ?? []).some((id) => id.trim())) return true;
   return false;
 };
 
