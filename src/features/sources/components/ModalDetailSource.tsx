@@ -82,7 +82,7 @@ export function ModalDetailSource({ open, sourceId, onClose }: Props) {
       } catch (err) {
         if (cancelled) return;
         setDetail(null);
-        setError(parseApiError(err, "No se pudo cargar la campaña."));
+        setError(parseApiError(err, "No se pudo cargar el enganche."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -100,9 +100,9 @@ export function ModalDetailSource({ open, sourceId, onClose }: Props) {
     : { label: "Inactivo", className: "border-rose-200 bg-rose-50 text-rose-700" };
 
   return (
-    <Modal open={open} onClose={onClose} title="Detalle de campaña" className="max-h-[70vh]" bodyClassName="p-0 overflow-hidden">
+    <Modal open={open} onClose={onClose} title="Detalle de enganche" className="max-h-[70vh]" bodyClassName="p-0 overflow-hidden">
       {!sourceId ? (
-        <div className="px-5 py-8 text-center text-xs text-black/50">No hay campaña seleccionada.</div>
+        <div className="px-5 py-8 text-center text-xs text-black/50">No hay enganche seleccionada.</div>
       ) : (
         <div className="bg-white">
           <header className="border-b border-black/5 px-4 py-3">
@@ -114,7 +114,7 @@ export function ModalDetailSource({ open, sourceId, onClose }: Props) {
 
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45">Campaña</p>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45">Enganche</p>
                     {detail ? (
                       <Badge variant="outline" className={`text-[9px] uppercase tracking-wide ${statusMeta.className}`}>
                         {statusMeta.label}
@@ -134,7 +134,7 @@ export function ModalDetailSource({ open, sourceId, onClose }: Props) {
           ) : error ? (
             <div className="px-5 py-8 text-center text-xs text-rose-600">{error}</div>
           ) : !detail ? (
-            <div className="px-5 py-8 text-center text-xs text-black/50">No hay campaña seleccionada.</div>
+            <div className="px-5 py-8 text-center text-xs text-black/50">No hay enganche seleccionada.</div>
           ) : (
             <div className="max-h-[calc(80vh-6rem)] space-y-4 overflow-y-auto px-4 py-3">
             

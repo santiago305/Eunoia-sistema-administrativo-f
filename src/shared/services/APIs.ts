@@ -337,8 +337,18 @@ export const API_DOCUMENT_SERIES_GROUP = {
 export const API_SALE_ORDERS_GROUP = {
   base: "/sale-orders",
   create: "/sale-orders",
+  list: "/sale-orders",
+  detail: (id: string) => `/sale-orders/${id}`,
+  update: (id: string) => `/sale-orders/${id}`,
+  cancel: (id: string) => `/sale-orders/${id}/cancel`,
+  confirmDelivery: (id: string) => `/sale-orders/${id}/confirm-delivery`,
+  payments: (id: string) => `/sale-orders/${id}/payments`,
+  paymentById: (id: string, paymentId: string) => `/sale-orders/${id}/payments/${paymentId}`,
+  searchState: "/sale-orders/search-state",
+  saveSearchMetric: "/sale-orders/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/sale-orders/search-metrics/${metricId}`,
+  saleOrderPdf: (id: string) => `/pdf-generated/sale-orders/${id}/pdf`,
 };
-
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
   totals: "/stock-items/ledger/daily-totals/by-sku",

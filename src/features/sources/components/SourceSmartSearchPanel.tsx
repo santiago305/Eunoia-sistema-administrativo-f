@@ -47,7 +47,7 @@ export function SourceSmartSearchPanel({
       getRuleSummary={(currentSnapshot, fieldId) => getSourceSearchRuleSummary(currentSnapshot, fieldId, catalogs)}
       getSelectionCount={getSourceSearchSelectionCount}
       fieldsSectionTitle="Filtros"
-      fieldsSectionDescription="Filtra campañas por estado, nombre o detalle."
+      fieldsSectionDescription="Filtra enganches por estado, nombre o detalle."
       initialVisibleFields={3}
       filterQuery={filterQuery}
     />

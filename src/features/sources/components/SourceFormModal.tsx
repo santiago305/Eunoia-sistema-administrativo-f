@@ -61,7 +61,7 @@ export function SourceFormModal({
 
   if (!open) return null;
 
-  const title = mode === "edit" ? "Editar campaña" : "Nueva campaña";
+  const title = mode === "edit" ? "Editar enganche" : "Nueva enganche";
 
   return (
     <Modal open={open} title={title} onClose={onClose} className="w-[300px] max-h-[400px]">

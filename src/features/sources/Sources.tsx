@@ -491,7 +491,7 @@ export default function Sources() {
     [canManageSources],
   );
 
-  const actionTitle = canManageSources ? undefined : "Sin permisos para gestionar campañas.";
+  const actionTitle = canManageSources ? undefined : "Sin permisos para gestionar enganches.";
 
   return (
     <PageShell>
@@ -508,7 +508,7 @@ export default function Sources() {
           disabled={!canManageSources}
           title={actionTitle}
         >
-          Crear campaña
+          Crear enganche
         </SystemButton>
       </PageActionsRow>
 
@@ -525,7 +525,7 @@ export default function Sources() {
         columns={columns}
         rowKey="id"
         loading={loading}
-        emptyMessage="No hay campañas con los filtros actuales."
+        emptyMessage="No hay enganches con los filtros actuales."
         selectableColumns
         hoverable={false}
         animated={false}
@@ -535,7 +535,7 @@ export default function Sources() {
             value={searchText}
             onChange={setSearchText}
             onSubmitSearch={submitSearch}
-            searchLabel="Busca tu campaña"
+            searchLabel="Busca tu enganche"
             searchName="source-smart-search"
             canSaveMetric={canSaveMetric}
             saveLoading={savingMetric}
@@ -588,11 +588,11 @@ export default function Sources() {
       <AlertModal
         open={Boolean(toggleSourceId) && canManageSources}
         type={sourcePendingToggle?.isActive ? "warning" : "restore"}
-        title={sourcePendingToggle?.isActive ? "Eliminar campaña" : "Restaurar campaña"}
+        title={sourcePendingToggle?.isActive ? "Eliminar enganche" : "Restaurar enganche"}
         message={
           sourcePendingToggle?.isActive
-            ? "Estas por eliminar esta campaña. Hazlo solo si estas seguro."
-            : "Estas por restaurar esta campaña. Hazlo solo si estas seguro."
+            ? "Estas por eliminar este enganche. Hazlo solo si estas seguro."
+            : "Estas por restaurar este enganche. Hazlo solo si estas seguro."
         }
         confirmText={sourcePendingToggle?.isActive ? "Eliminar" : "Restaurar"}
         loading={togglingStatus}

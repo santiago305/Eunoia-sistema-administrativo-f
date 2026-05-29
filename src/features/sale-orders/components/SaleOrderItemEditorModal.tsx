@@ -39,8 +39,10 @@ const upsertComponent = (
   components: SaleOrderItemComponentInput[] = [],
   next: SaleOrderItemComponentInput,
 ) => {
-  const filtered = components.filter((c) => c.skuId !== next.skuId);
-  return [...filtered, next];
+  const index = components.findIndex((c) => c.skuId === next.skuId);
+  if (index === -1) return [...components, next];
+
+  return components.map((component, i) => (i === index ? { ...component, ...next } : component));
 };
 
 const distributeTotalToComponents = (
@@ -484,7 +486,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                           className="h-9 w-9"
                           title={disabledDelete ? "Debe existir al menos un SKU" : "Eliminar SKU"}
                           disabled={disabledDelete}
-                          onClick={() => removePackSku(row.skuId)}
+                          onClick={() => (row.skuId ? removePackSku(row.skuId) : undefined)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </SystemButton>

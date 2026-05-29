@@ -7,6 +7,7 @@ const isValidIsoDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 export function validateSaleOrderForm(form: CreateSaleOrderDto): SaleOrderValidationResult {
   if (!form.warehouseId) return { ok: false, message: "Selecciona un almacén." };
   if (!form.clientId) return { ok: false, message: "Selecciona un cliente." };
+  if (!form.deliveryType) return { ok: false, message: "Selecciona un tipo de entrega." };
   if (!form.scheduleDate || !isValidIsoDateOnly(form.scheduleDate)) {
     return { ok: false, message: "ScheduleDate es obligatorio (YYYY-MM-DD)." };
   }

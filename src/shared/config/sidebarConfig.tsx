@@ -8,6 +8,7 @@ import {
     IconProduction,
     IconPurchase, 
     IconRowMaterial, 
+    IconSaleOrder, 
     IconStock, IconUsers, 
     IconWarehouse 
 } from "../components/components/dashboard/icons";
@@ -44,7 +45,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     },
     {
         label: "Pedidos",
-        icon: <IconPurchase className="text-sidebar-foreground" />,
+        icon: <IconSaleOrder className="text-sidebar-foreground" />,
         href: RoutesPaths.saleOrders,
     },
     {
@@ -145,7 +146,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.agencies,
     },
     {
-        label: "Campañas",
+        label: "Enganches",
         icon: <IconCampaigns className="text-sidebar-foreground" />,
         href: RoutesPaths.sources,
     },
