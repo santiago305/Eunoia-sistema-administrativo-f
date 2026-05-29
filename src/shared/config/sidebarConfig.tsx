@@ -2,6 +2,7 @@ import {
     IconAgencies,
     IconCampaigns,
     IconCompany,
+    IconAccounts,
     IconHome,
     IconOutOrder,
     IconProduction,
@@ -123,14 +124,20 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.clients,
     },
     {
-        label: "Usuarios",
-        href: RoutesPaths.users,
-        icon: <IconUsers className="text-sidebar-foreground" />,
-    },
-    {
-        label: "Roles",
-        href: RoutesPaths.roles,
-        icon: <IconUsers className="text-sidebar-foreground" />,
+        label: "Cuentas",
+        icon: <IconAccounts className="text-sidebar-foreground" />,
+        children: [
+            {
+                label: "Usuarios",
+                href: RoutesPaths.users,
+                icon: <IconUsers className="text-sidebar-foreground" />,
+            },
+            {
+                label: "Permisos",
+                href: RoutesPaths.roles,
+                icon: <IconUsers className="text-sidebar-foreground" />,
+            },
+        ],
     },
     {
         label: "Agencias",

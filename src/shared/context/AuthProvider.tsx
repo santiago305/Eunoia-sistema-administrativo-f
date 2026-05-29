@@ -61,8 +61,10 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const extractRole = (data: UserInfoAuthResponse | null | undefined) =>
-    data?.rol ?? null;
+  const extractRole = (data: UserInfoAuthResponse | null | undefined) => {
+    const raw = data?.rol;
+    return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : null;
+  };
 
   const extractUserId = (data: UserInfoAuthResponse | null | undefined) =>
     data?.user_id ?? null;
@@ -82,8 +84,9 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     (response: UserInfoAuthResponse): AuthResponse => {
       const role = extractRole(response);
       const id = extractUserId(response);
+      const superAdmin = Boolean(response.isSuperAdmin);
 
-      if (!role || !id) {
+      if (!id || (!role && !superAdmin)) {
         resetAuthState(true);
         return {
           success: false,
@@ -92,14 +95,20 @@ export const AuthProvider = ({ children }: PropsUrl) => {
       }
 
       setUserRole(role);
-      setUserRoles(Array.isArray(response.roles) ? response.roles : [role]);
+      setUserRoles(
+        Array.isArray(response.roles)
+          ? response.roles.filter((value) => typeof value === "string" && value.trim().length > 0)
+          : role
+            ? [role]
+            : [],
+      );
       setPermissions(Array.isArray(response.permissions) ? response.permissions : []);
       setPreferredHomePath(
         typeof response.preferredHomePath === "string" && response.preferredHomePath.trim().length > 0
           ? response.preferredHomePath.trim()
           : null
       );
-      setIsSuperAdmin(Boolean(response.isSuperAdmin));
+      setIsSuperAdmin(superAdmin);
       setUserId(String(id));
       setIsAuthenticated(true);
       setAuthChecked(true);

@@ -12,7 +12,7 @@ export interface CreateUserRequest {
   name: string;
   email: string;
   password: string;
-  roleId?: string;
+  roleId?: string | null;
   avatarUrl?: string;
   telefono?: string;
   mailStorageQuotaGb?: number;
@@ -47,9 +47,11 @@ export interface UserDTO {
   telefono?: string;
   avatarUrl?: string;
   deleted?: boolean;
-  role?: string;
-  rol?: string;
-  roleId?: string;
+  role?: string | null;
+  rol?: string | null;
+  roleId?: string | null;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
   createdAt?: string | Date;
 }
 
@@ -80,11 +82,15 @@ export type User = {
   name: string;
   email: string;
   phone: string;
-  role: Role;
+  role: Role | "sin_rol";
   deleted: boolean;
   deletedAt?: string | null;
   createdAt: string;
   updatedAt?: string | null;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
+  manageableRoleDescriptions?: string[] | null;
+  manageableUserIds?: string[] | null;
 };
 
 export type RoleOption = {
@@ -102,6 +108,8 @@ export interface RoleItem {
   description: RoleType | string;
   deleted: boolean;
   createdAt: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
 }
 
 export type { Role };

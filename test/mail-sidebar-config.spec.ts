@@ -7,10 +7,10 @@ const labels = [
 ] as any;
 
 describe('mail sidebar config', () => {
-  it('includes all route for all messages view', () => {
+  it('includes inbox route as default all-messages entry point', () => {
     const items = getMailSidebarItems();
-    const all = items.find((item) => item.label === 'Todos');
-    expect(all?.href).toBe('/email/all');
+    const inbox = items.find((item) => item.label === 'Recibidos');
+    expect(inbox?.href).toBe('/email/inbox');
   });
 
   it('shows only custom labels in collapsed More section', () => {

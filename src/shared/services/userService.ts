@@ -20,12 +20,16 @@ export type UserApiListItem = {
   name: string;
   email: string;
   telefono?: string | null;
-  rol: UserRoleCount;
-  roleId?: string;
+  rol: UserRoleCount | null;
+  roleId?: string | null;
   deleted: boolean;
   deletedAt?: string | null;
   createdAt: string;
   updatedAt?: string | null;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
+  manageableRoleDescriptions?: string[] | null;
+  manageableUserIds?: string[] | null;
 };
 
 export type ListUsersParams = {
@@ -164,7 +168,12 @@ export type ProfileMutationResponse = {
 };
 
 export type UpdateUserRolePayload = {
-  roleId: string;
+  roleId?: string | null;
+};
+
+export type UpdateUserManagementScopePayload = {
+  manageableRoleDescriptions?: string[];
+  manageableUserIds?: string[];
 };
 
 export const updateOwnUser = async (payload: UpdateOwnProfilePayload) => {
@@ -174,6 +183,11 @@ export const updateOwnUser = async (payload: UpdateOwnProfilePayload) => {
 
 export const updateUserRole = async (id: string, payload: UpdateUserRolePayload) => {
   const response = await axiosInstance.patch(API_USERS_GROUP.updateUserRole(id), payload);
+  return response.data;
+};
+
+export const updateUserManagementScope = async (id: string, payload: UpdateUserManagementScopePayload) => {
+  const response = await axiosInstance.patch(API_USERS_GROUP.updateManagementScope(id), payload);
   return response.data;
 };
 

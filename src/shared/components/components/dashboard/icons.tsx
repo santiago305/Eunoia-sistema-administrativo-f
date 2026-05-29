@@ -18,11 +18,18 @@ import {
   Banknote,
   PencilRuler,
   ClipboardList,
+<<<<<<< HEAD
   Bell
   ,
   Truck,
   Menu,
   Megaphone
+=======
+  Bell,
+  Menu,
+  UserCog,
+  Truck
+>>>>>>> a519d99d447c4e9619758ce5974cd0c548808fbe
 } from "lucide-react";
 
 export const IconHome = ({ className }: { className?: string }) => (
@@ -60,6 +67,10 @@ export const IconUsers = ({ className }: { className?: string }) => (
 );
 export const IconAgencies = ({ className }: { className?: string }) => (
   <Truck className={className} size={20} />
+);
+
+export const IconAccounts = ({ className }: { className?: string }) => (
+  <UserCog className={className} size={20} />
 );
 
 export const IconStock = ({ className }: { className?: string }) => (

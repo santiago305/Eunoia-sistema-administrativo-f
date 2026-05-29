@@ -14,9 +14,9 @@ export const RoutesPaths = {
   notificationView: "/email/:folder",
   notificationDetail: "/email/:folder/:messageId",
 
-  createUser: "/users/create",
-  users: "/users",
-  roles: "/roles",
+  createUser: "/usuarios/crear",
+  users: "/usuarios",
+  roles: "/permisos",
 
   catalogSummary: "/catalago",
   catalogProducts: "/catalago/productos",

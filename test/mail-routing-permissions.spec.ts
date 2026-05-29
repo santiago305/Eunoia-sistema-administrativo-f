@@ -8,7 +8,7 @@ describe('mail routing and permissions regression', () => {
     const meta = getRouteMetaByPath(RoutesPaths.notifications);
     expect(meta).toBeTruthy();
     expect(canAccessRoute(meta, null, [])).toBe(false);
-    expect(canAccessRoute(meta, null, ['notifications.read'])).toBe(true);
+    expect(canAccessRoute(meta, null, ['page.notifications.view'])).toBe(true);
   });
 
   it('uses /email as canonical notifications path', () => {

@@ -1,120 +1,134 @@
 import { useEffect, useMemo, useState } from "react";
-import { findAllRoles } from "@/shared/services/roleService";
+import { RolesPermissionsHeader } from "@/features/roles/components/RolesPermissionsHeader";
+import { RoleModuleConfigPanel } from "@/features/roles/components/RoleModuleConfigPanel";
+import { RolePermissionsMatrix } from "@/features/roles/components/RolePermissionsMatrix";
+import { RolesPermissionsSkeleton } from "@/features/roles/components/RolesPermissionsSkeleton";
+import { CreateRoleModal } from "@/features/roles/components/CreateRoleModal";
+import { RolesManagementPanel } from "@/features/roles/components/RolesManagementPanel";
+import type {
+  ModuleLabelConfigItem,
+  ModuleLabelConfigMap,
+  RoleOption,
+  VisibleMailLabelItem,
+} from "@/features/roles/types/rolesPermissions.types";
+import {
+  MODULE_LABEL_KEYS,
+  getPercent,
+  groupByModule,
+} from "@/features/roles/utils/rolesPermissions.utils";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { errorResponse, successResponse } from "@/shared/common/utils/response";
+import { PageShell } from "@/shared/layouts/PageShell";
+import { createRole, deactivateRole, findAllRoles, updateRole } from "@/shared/services/roleService";
 import {
   assignPermissionsToRole,
   listAccessPermissions,
   listRolePermissions,
   type AccessPermissionItem,
 } from "@/shared/services/accessControlService";
-import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
-import { usePermissions } from "@/shared/hooks/usePermissions";
-import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { PageShell } from "@/shared/layouts/PageShell";
 import {
   listMailLabels,
   listModuleLabelConfigs,
   upsertModuleLabelConfig,
 } from "@/features/mail/services/messages.service";
-import type { MailLabelItem } from "@/features/mail/types/message.types";
-
-type RoleOption = { id: string; description: string };
-type ModuleLabelConfigItem = {
-  id: string;
-  moduleKey: string;
-  labelId: string | null;
-  updatedByUserId: string | null;
-  updatedAt: string;
-};
-
-const MODULE_LABELS: Record<string, string> = {
-  purchases: "Compras",
-  production: "Produccion",
-  warehouse: "Almacen",
-  catalog: "Catalogo",
-  supplies: "Suministros",
-  security: "Seguridad",
-  roles: "Roles",
-  providers: "Proveedores",
-  corporate: "Corporativo",
-  system: "Sistema",
-};
-
-const MODULE_KEYS = Object.keys(MODULE_LABELS);
-
-const groupByModule = (permissions: AccessPermissionItem[]) => {
-  const grouped = new Map<string, AccessPermissionItem[]>();
-  for (const permission of permissions) {
-    const key = permission.module || "general";
-    const current = grouped.get(key) ?? [];
-    current.push(permission);
-    grouped.set(key, current);
-  }
-  return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
-};
+import { getPermissionModuleLabel } from "@/features/users/utils/permissionPresentation";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 
 export default function RolesPermissions() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canAssignRolePermissions = can("roles.assign_permissions");
+  const canCreateRoles = can("roles.create");
+  const canUpdateRoles = can("roles.update");
+  const canDeleteRoles = can("roles.delete");
   const canManageNotifications = can("notifications.manage");
+
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [selectedRoleDescription, setSelectedRoleDescription] = useState("");
   const [allPermissions, setAllPermissions] = useState<AccessPermissionItem[]>([]);
-  const [mailLabels, setMailLabels] = useState<MailLabelItem[]>([]);
-  const [moduleConfigs, setModuleConfigs] = useState<Record<string, string | null>>({});
+  const [mailLabels, setMailLabels] = useState<VisibleMailLabelItem[]>([]);
+  const [moduleConfigs, setModuleConfigs] = useState<ModuleLabelConfigMap>({});
   const [savingModuleKey, setSavingModuleKey] = useState<string | null>(null);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
+  const [openModules, setOpenModules] = useState<Set<string>>(new Set());
+  const [configsOpen, setConfigsOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [createRoleOpen, setCreateRoleOpen] = useState(false);
+  const [creatingRole, setCreatingRole] = useState(false);
+  const [savingRoleCrud, setSavingRoleCrud] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
     const loadInitial = async () => {
       try {
         const [rolesData, permissionsData, labelsData, configsData] = await Promise.all([
           findAllRoles(),
-          listAccessPermissions(),
-          listMailLabels(),
-          listModuleLabelConfigs(),
+          canAssignRolePermissions ? listAccessPermissions().catch(() => []) : Promise.resolve([]),
+          canManageNotifications ? listMailLabels().catch(() => []) : Promise.resolve([]),
+          canManageNotifications ? listModuleLabelConfigs().catch(() => []) : Promise.resolve([]),
         ]);
+
         if (cancelled) return;
-        const normalizedRoles = (rolesData ?? []).map((role) => ({
+
+        const normalizedRoles = (rolesData ?? [])
+          .filter((role) => !role.deleted)
+          .map((role) => ({
           id: String(role.id),
           description: String(role.description ?? "").toLowerCase(),
-        }));
-        setRoles(normalizedRoles);
-        setAllPermissions(permissionsData ?? []);
-        setMailLabels((labelsData ?? []).filter((item) => item.isVisible && item.type !== "SYSTEM"));
-        const configMap: Record<string, string | null> = {};
-        MODULE_KEYS.forEach((key) => {
+          createdByUserId: (role as { createdByUserId?: string | null }).createdByUserId ?? null,
+          createdByUserName: (role as { createdByUserName?: string | null }).createdByUserName ?? null,
+          }));
+
+        const configMap: ModuleLabelConfigMap = {};
+        MODULE_LABEL_KEYS.forEach((key) => {
           configMap[key] = null;
         });
+
         (configsData ?? []).forEach((item: ModuleLabelConfigItem) => {
           configMap[item.moduleKey] = item.labelId ?? null;
         });
+
+        setRoles(normalizedRoles);
+        setAllPermissions(permissionsData ?? []);
+        setMailLabels((labelsData ?? []).filter((item) => item.isVisible && item.type !== "SYSTEM"));
         setModuleConfigs(configMap);
+
         const firstRole = normalizedRoles[0];
         if (firstRole) {
           setSelectedRoleId(firstRole.id);
           setSelectedRoleDescription(firstRole.description);
         }
       } catch {
-        if (!cancelled) showFeedback(errorResponse("No se pudo cargar roles/permisos."));
+        if (!cancelled) showFeedback(errorResponse("No se pudo cargar permisos."));
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
+
     void loadInitial();
+
     return () => {
       cancelled = true;
     };
-  }, [showFeedback]);
+  }, [canAssignRolePermissions, canManageNotifications, showFeedback]);
 
   useEffect(() => {
     let cancelled = false;
+
     const loadRolePermissions = async () => {
-      if (!selectedRoleId) return;
+      if (!canAssignRolePermissions) {
+        setSelectedCodes(new Set());
+        return;
+      }
+      if (!selectedRoleId) {
+        setSelectedCodes(new Set());
+        return;
+      }
+
       try {
         const data = await listRolePermissions(selectedRoleId);
         if (cancelled) return;
@@ -123,15 +137,57 @@ export default function RolesPermissions() {
         if (!cancelled) setSelectedCodes(new Set());
       }
     };
+
     void loadRolePermissions();
+
     return () => {
       cancelled = true;
     };
-  }, [allPermissions, selectedRoleId]);
+  }, [canAssignRolePermissions, selectedRoleId]);
 
   const groupedPermissions = useMemo(() => groupByModule(allPermissions), [allPermissions]);
+  const selectedRoleMeta = useMemo(
+    () => roles.find((role) => role.id === selectedRoleId) ?? null,
+    [roles, selectedRoleId],
+  );
+
+  const reloadRoles = async () => {
+    const rolesData = await findAllRoles({ status: "all" });
+    const normalizedRoles = (rolesData ?? [])
+      .filter((role) => !role.deleted)
+      .map((role) => ({
+      id: String(role.id),
+      description: String(role.description ?? "").toLowerCase(),
+      createdByUserId: (role as { createdByUserId?: string | null }).createdByUserId ?? null,
+      createdByUserName: (role as { createdByUserName?: string | null }).createdByUserName ?? null,
+      }));
+    setRoles(normalizedRoles);
+    const currentSelected = normalizedRoles.find((role) => role.id === selectedRoleId);
+    if (currentSelected) {
+      setSelectedRoleDescription(currentSelected.description);
+    }
+    return normalizedRoles;
+  };
+
+  const activeModules = useMemo(
+    () =>
+      groupedPermissions.filter((group) =>
+        group.permissions.some((permission) => selectedCodes.has(permission.code)),
+      ).length,
+    [groupedPermissions, selectedCodes],
+  );
+
+  const totalPercent = getPercent(selectedCodes.size, allPermissions.length);
+
+  const handleRoleChange = (nextId: string) => {
+    setSelectedRoleId(nextId);
+    const match = roles.find((role) => role.id === nextId);
+    setSelectedRoleDescription(match?.description ?? "");
+  };
 
   const togglePermission = (code: string) => {
+    if (!canAssignRolePermissions) return;
+
     setSelectedCodes((prev) => {
       const next = new Set(prev);
       if (next.has(code)) next.delete(code);
@@ -140,10 +196,37 @@ export default function RolesPermissions() {
     });
   };
 
+  const toggleModule = (module: string) => {
+    setOpenModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(module)) next.delete(module);
+      else next.add(module);
+      return next;
+    });
+  };
+
+  const toggleEveryPermissionInModule = (permissions: AccessPermissionItem[]) => {
+    if (!canAssignRolePermissions) return;
+
+    setSelectedCodes((prev) => {
+      const next = new Set(prev);
+      const allSelected = permissions.every((permission) => next.has(permission.code));
+
+      permissions.forEach((permission) => {
+        if (allSelected) next.delete(permission.code);
+        else next.add(permission.code);
+      });
+
+      return next;
+    });
+  };
+
   const saveMatrix = async () => {
     if (!selectedRoleId) return;
+
     clearFeedback();
     setSaving(true);
+
     try {
       await assignPermissionsToRole(selectedRoleId, Array.from(selectedCodes));
       showFeedback(successResponse("Permisos del rol actualizados."));
@@ -156,140 +239,155 @@ export default function RolesPermissions() {
 
   const saveModuleLabelConfig = async (moduleKey: string, nextLabelId: string | null) => {
     if (!canManageNotifications) return;
+    if ((moduleConfigs[moduleKey] ?? null) === nextLabelId) return;
+
     setSavingModuleKey(moduleKey);
+
     try {
       await upsertModuleLabelConfig(moduleKey, nextLabelId);
       setModuleConfigs((prev) => ({ ...prev, [moduleKey]: nextLabelId }));
-      showFeedback(successResponse(`Configuracion guardada para ${MODULE_LABELS[moduleKey] ?? moduleKey}.`));
+      showFeedback(successResponse(`Configuración guardada para ${getPermissionModuleLabel(moduleKey)}.`));
     } catch {
-      showFeedback(errorResponse(`No se pudo guardar la etiqueta del modulo ${MODULE_LABELS[moduleKey] ?? moduleKey}.`));
+      showFeedback(errorResponse(`No se pudo guardar la etiqueta de ${getPermissionModuleLabel(moduleKey)}.`));
     } finally {
       setSavingModuleKey(null);
     }
   };
 
-  if (loading) {
-    return <div className="p-6 text-sm text-zinc-600">Cargando matriz de permisos...</div>;
-  }
+  const handleCreateRole = async (description: string) => {
+    clearFeedback();
+    setCreatingRole(true);
+
+    try {
+      const result = await createRole({ description });
+      const updatedRoles = await reloadRoles();
+      const createdRoleId =
+        (result?.data && typeof result.data === "object" ? String(result.data.id ?? "") : "") || "";
+      if (createdRoleId) {
+        handleRoleChange(createdRoleId);
+      } else {
+        const createdRole = updatedRoles.find((role) => role.description === description.trim().toLowerCase());
+        if (createdRole?.id) handleRoleChange(createdRole.id);
+      }
+      showFeedback(successResponse(result?.message || "Rol creado correctamente."));
+      setCreateRoleOpen(false);
+    } catch {
+      showFeedback(errorResponse("No se pudo crear el rol."));
+    } finally {
+      setCreatingRole(false);
+    }
+  };
+
+  const handleRenameRole = async (roleId: string, description: string) => {
+    if (!description.trim()) {
+      showFeedback(errorResponse("Nombre de rol requerido."));
+      return;
+    }
+    setSavingRoleCrud(true);
+    clearFeedback();
+    try {
+      const response = await updateRole(roleId, { description: description.trim() });
+      await reloadRoles();
+      showFeedback(successResponse(response?.message || "Rol actualizado correctamente."));
+    } catch {
+      showFeedback(errorResponse("No se pudo actualizar rol."));
+      throw new Error("rename_role_failed");
+    } finally {
+      setSavingRoleCrud(false);
+    }
+  };
+
+  const handleDeactivateRole = async (params: {
+    roleId: string;
+    replacementRoleId: string;
+    confirmationText: string;
+  }) => {
+    setSavingRoleCrud(true);
+    clearFeedback();
+    try {
+      const response = await deactivateRole(params.roleId, {
+        replacementRoleId: params.replacementRoleId,
+        confirmationText: params.confirmationText,
+      });
+      const updatedRoles = await reloadRoles();
+      if (selectedRoleId === params.roleId) {
+        const fallbackRole = updatedRoles.find((role) => role.id === params.replacementRoleId) ?? updatedRoles[0];
+        if (fallbackRole) handleRoleChange(fallbackRole.id);
+      }
+      showFeedback(successResponse(response?.message || "Rol desactivado correctamente."));
+    } catch {
+      showFeedback(errorResponse("No se pudo desactivar rol."));
+      throw new Error("deactivate_role_failed");
+    } finally {
+      setSavingRoleCrud(false);
+    }
+  };
+
+  if (loading) return <RolesPermissionsSkeleton />;
 
   return (
-    <PageShell
-      className="bg-gradient-to-b from-white via-white to-zinc-50"
-      contentClassName="py-4 sm:py-6 2xl:py-8"
-    >
-      <div className="w-full px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-zinc-900">Delegación por rol</h2>
-              <p className="text-xs text-zinc-500">Selecciona un rol y marca sus permisos base.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedRoleId}
-                onChange={(e) => {
-                  const nextId = e.target.value;
-                  setSelectedRoleId(nextId);
-                  const match = roles.find((role) => role.id === nextId);
-                  setSelectedRoleDescription(match?.description ?? "");
-                }}
-                className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-xs"
-              >
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.description}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={saveMatrix}
-                disabled={saving || !selectedRoleId || !canAssignRolePermissions}
-                className="h-9 rounded-xl bg-zinc-900 px-3 text-xs font-medium text-white disabled:opacity-60"
-              >
-                {saving ? "Guardando..." : "Guardar matriz"}
-              </button>
-            </div>
+    <PageShell>
+      <TooltipProvider delayDuration={120}>
+        <div className="w-full space-y-5">
+          <RolesPermissionsHeader
+            roles={roles}
+            selectedRoleId={selectedRoleId}
+            selectedRoleDescription={selectedRoleDescription}
+            selectedRoleCreatedByLabel={selectedRoleMeta?.createdByUserName ?? selectedRoleMeta?.createdByUserId ?? null}
+            selectedCodesCount={selectedCodes.size}
+            totalPermissionsCount={allPermissions.length}
+            activeModules={activeModules}
+            totalPercent={totalPercent}
+            saving={saving}
+            canAssignRolePermissions={canAssignRolePermissions}
+            canCreateRoles={canCreateRoles}
+            onRoleChange={handleRoleChange}
+            onSave={saveMatrix}
+            onCreateRole={() => setCreateRoleOpen(true)}
+          />
+
+          <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)] xl:items-start">
+            <aside className="xl:sticky xl:top-4">
+              <RoleModuleConfigPanel
+                configsOpen={configsOpen}
+                moduleConfigs={moduleConfigs}
+                mailLabels={mailLabels}
+                canManageNotifications={canManageNotifications}
+                savingModuleKey={savingModuleKey}
+                onToggleConfigs={() => setConfigsOpen((prev) => !prev)}
+                onSaveModuleConfig={saveModuleLabelConfig}
+              />
+              <RolesManagementPanel
+                roles={roles}
+                canEditRoles={canUpdateRoles}
+                canDeleteRoles={canDeleteRoles}
+                saving={savingRoleCrud}
+                onRenameRole={handleRenameRole}
+                onDeactivateRole={handleDeactivateRole}
+              />
+            </aside>
+
+            <main className="min-w-0">
+              <RolePermissionsMatrix
+                groupedPermissions={groupedPermissions}
+                openModules={openModules}
+                selectedCodes={selectedCodes}
+                canAssignRolePermissions={canAssignRolePermissions}
+                onToggleModule={toggleModule}
+                onTogglePermission={togglePermission}
+                onToggleEveryPermissionInModule={toggleEveryPermissionInModule}
+              />
+            </main>
           </div>
-          {!canAssignRolePermissions ? (
-            <p className="mt-2 text-xs text-zinc-500">Solo lectura: falta permiso `roles.assign_permissions`.</p>
-          ) : null}
         </div>
+      </TooltipProvider>
 
-        <div className="mt-4 grid gap-3">
-          <section className="rounded-2xl border border-zinc-200 bg-white p-4">
-            <div className="mb-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Modulo - etiqueta</h3>
-              <p className="mt-1 text-xs text-zinc-500">
-                Define una etiqueta por modulo para notificaciones automaticas. Si dejas "Sin etiqueta", el modulo sigue notificando sin etiqueta.
-              </p>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {MODULE_KEYS.map((moduleKey) => (
-                <label key={moduleKey} className="rounded-xl border border-zinc-200 p-2 text-xs">
-                  <span className="mb-1 block font-medium text-zinc-800">{MODULE_LABELS[moduleKey] ?? moduleKey}</span>
-                  <select
-                    value={moduleConfigs[moduleKey] ?? ""}
-                    disabled={!canManageNotifications || savingModuleKey === moduleKey}
-                    onChange={(e) => {
-                      const rawValue = e.target.value;
-                      const nextLabelId = rawValue ? rawValue : null;
-                      void saveModuleLabelConfig(moduleKey, nextLabelId);
-                    }}
-                    className="h-8 w-full rounded-lg border border-zinc-200 bg-white px-2 text-xs"
-                  >
-                    <option value="">Sin etiqueta</option>
-                    {mailLabels.map((label) => (
-                      <option key={label.id} value={label.id}>
-                        {label.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
-            {!canManageNotifications ? (
-              <p className="mt-2 text-xs text-zinc-500">Solo lectura: falta permiso `notifications.manage`.</p>
-            ) : null}
-          </section>
-
-          {groupedPermissions.map(([module, permissions]) => (
-            <section key={module} className="rounded-2xl border border-zinc-200 bg-white p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">{module}</h3>
-              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {permissions.map((permission) => {
-                  const checked = selectedCodes.has(permission.code);
-                  return (
-                    <label
-                      key={permission.code}
-                      className="flex cursor-pointer items-start gap-2 rounded-xl border border-zinc-200 p-2 text-xs"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        disabled={!canAssignRolePermissions}
-                        onChange={() => togglePermission(permission.code)}
-                        className="mt-0.5"
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium text-zinc-800">{permission.code}</span>
-                        <span className="block text-zinc-500">{permission.name}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {selectedRoleDescription ? (
-          <p className="mt-3 text-xs text-zinc-500">
-            Rol actual: <span className="font-medium text-zinc-700">{selectedRoleDescription}</span>
-          </p>
-        ) : null}
-      </div>
+      <CreateRoleModal
+        open={createRoleOpen}
+        saving={creatingRole}
+        onClose={() => setCreateRoleOpen(false)}
+        onCreate={handleCreateRole}
+      />
     </PageShell>
   );
 }
-
-

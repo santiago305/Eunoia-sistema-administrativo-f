@@ -18,6 +18,7 @@ export const API_USERS_GROUP = {
   countByRole: '/users/count-by-role',
   findOwnUser: '/users/me',
   updateUserRole: (id: string) => `/users/${id}/role`,
+  updateManagementScope: (id: string) => `/users/${id}/management-scope`,
   deleteUser: (id: string) => `/users/delete/${id}`,
   restoreUser: (id: string) => `/users/restore/${id}`,
 };
@@ -25,6 +26,7 @@ export const API_USERS_GROUP = {
 export const API_ACCESS_CONTROL_GROUP = {
   listPermissions: "/access-control/permissions",
   effectivePermissionsByUser: (id: string) => `/access-control/users/${id}/effective-permissions`,
+  grantablePermissionsByUser: (id: string) => `/access-control/users/${id}/grantable-permissions`,
   setUserPreferredHomePath: (id: string) => `/access-control/users/${id}/preferred-home`,
   setUserPermissionOverride: (id: string) => `/access-control/users/${id}/permissions`,
   removeUserPermissionOverride: (id: string, permissionCode: string) =>
@@ -111,6 +113,9 @@ export const API_UBIGEO_GROUP = {
 };
 export const API_ROLES_GROUP = {
   findAll: "/roles",
+  create: "/roles/create",
+  update: (id: string) => `/roles/${id}`,
+  deactivate: (id: string) => `/roles/${id}/deactivate`,
 };
 
 export const API_SESSIONS_GROUP = {

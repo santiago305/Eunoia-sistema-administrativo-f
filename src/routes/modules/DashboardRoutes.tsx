@@ -19,7 +19,7 @@ const DashboardLayout = lazy(() => import("@/shared/layouts/DashboardLayout"));
 const ErrorPage = lazy(() => import("@/pages/Error404"));
 const Dashboard = lazy(() => import("@/features/dashboard/Index"));
 const Users = lazy(() => import("@/features/users/Users"));
-const RolesPermissions = lazy(() => import("@/features/roles/RolesPermissions"));
+const RolesConfigurationPage = lazy(() => import("@/pages/RolesConfigurationPage"));
 const ProfilePage = lazy(() => import("@/features/profile/Profile"));
 const Sessions = lazy(() => import("@/features/sessions/Sessions"));
 const MailPage = lazy(() => import("@/pages/MailPage"));
@@ -89,7 +89,7 @@ export const dashboardRoutes: RouteObject[] = [
             },
             {
                 path: RoutesPaths.roles,
-                element: withRouteGuard(RoutesPaths.roles, <RolesPermissions />),
+                element: withRouteGuard(RoutesPaths.roles, <RolesConfigurationPage />),
             },
             {
                 path: RoutesPaths.profile,
