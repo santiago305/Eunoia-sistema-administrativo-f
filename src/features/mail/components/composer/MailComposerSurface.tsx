@@ -855,7 +855,7 @@ export default function MailComposerSurface({
     );
 
   return (
-    <div data-mail-composer-surface={composeId} className="flex min-h-0 flex-1 flex-col">
+    <div data-mail-composer-surface={composeId} className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {showRecipients ? (
         recipientsExpanded ? (
           <>
@@ -874,11 +874,12 @@ export default function MailComposerSurface({
           placeholder="Asunto"
           value={subject}
           onChange={(event) => onSubjectChange(event.target.value)}
-          className="border-b border-border bg-transparent px-4 py-2 text-sm outline-none"
+          className="w-full shrink-0 border-b border-border bg-transparent px-4 py-2 text-sm outline-none"
         />
       ) : null}
 
       <div
+        data-compose-body
         className="min-h-0 flex-1 overflow-y-auto scroll-area"
         onDrop={(event) => {
           event.preventDefault();
@@ -890,7 +891,7 @@ export default function MailComposerSurface({
       </div>
 
       {attachments.some((item) => item.kind === "file") ? (
-        <div className="flex flex-col gap-2 border-t border-border px-4 py-2">
+        <div className="flex max-h-44 shrink-0 flex-col gap-2 overflow-y-auto border-t border-border px-4 py-2 scrollbar-panel">
           {attachments
             .filter((item) => item.kind === "file")
             .map((item) => (
@@ -915,7 +916,7 @@ export default function MailComposerSurface({
       {validationError ? <div className="bg-destructive/10 px-4 py-2 text-xs text-destructive">{validationError}</div> : null}
       {error ? <div className="bg-destructive/10 px-4 py-2 text-xs text-destructive">{error}</div> : null}
 
-      <div className="relative flex items-center gap-1 border-t border-border p-2">
+      <div data-compose-toolbar className="relative flex shrink-0 items-center gap-1 overflow-x-auto border-t border-border p-2 scrollbar-panel">
         <SystemButton onClick={handleSend} leftIcon={<Send className="size-4" />} className="rounded-full" disabled={isBusy}>
           {isSending ? "Enviando..." : "Enviar"}
         </SystemButton>
@@ -1165,7 +1166,7 @@ export default function MailComposerSurface({
               {selectedLabelIds.length > 0 ? <span className="ml-1 text-[10px] font-semibold">{selectedLabelIds.length}</span> : null}
             </button>
             <Popover open={showLabelMenu} onClose={() => setShowLabelMenu(false)} anchorRef={labelsAnchorRef} placement="top-start" offset={8} zIndex={10000} hideHeader className="rounded-lg border border-border bg-popover shadow-popover" bodyClassName="p-2 px-0">
-              <div className="max-h-50 overflow-y-auto pr-1">
+              <div className="max-h-50 overflow-y-auto pr-1 scrollbar-panel">
                 {(labels ?? []).length === 0 ? <p className="px-2 py-2 text-xs text-muted-foreground">No hay etiquetas creadas.</p> : null}
                 {(labels ?? []).map((label) => {
                   const selected = selectedLabelIds.includes(label.id);

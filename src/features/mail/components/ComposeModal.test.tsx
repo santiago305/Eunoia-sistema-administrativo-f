@@ -79,4 +79,23 @@ describe("NotificationComposeModal reply/forward chrome", () => {
     expect(screen.getByRole("button", { name: "CC" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "BCC" })).toBeTruthy();
   });
+
+  it("keeps compose chrome fixed while only the editor body uses scroll-area", () => {
+    const { container } = render(
+      <NotificationComposeModal
+        {...baseProps}
+        draft={makeDraft({
+          subject: "Reporte con adjuntos",
+        })}
+      />,
+    );
+
+    const modal = container.querySelector("[data-compose-modal]");
+    const bodyRegion = container.querySelector("[data-compose-body]");
+    const toolbar = container.querySelector("[data-compose-toolbar]");
+
+    expect(modal).toHaveClass("min-h-0", "overflow-hidden");
+    expect(bodyRegion).toHaveClass("min-h-0", "flex-1", "overflow-y-auto", "scroll-area");
+    expect(toolbar).toHaveClass("shrink-0");
+  });
 });

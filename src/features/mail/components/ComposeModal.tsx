@@ -147,10 +147,10 @@ export default function NotificationComposeModal({
       data-compose-modal
       data-compose-id={draft.id}
       className={cn(
-        "flex h-150 max-h-[calc(100vh-2rem)] w-[min(540px,calc(100vw-2rem))] shrink-0 flex-col rounded-t-lg border border-border bg-background shadow-2xl",
+        "flex h-[min(38rem,calc(100dvh-2rem))] max-h-[calc(100dvh-2rem)] min-h-0 w-[min(540px,calc(100vw-2rem))] shrink-0 flex-col overflow-hidden rounded-t-lg border border-border bg-background shadow-2xl",
       )}
     >
-      <div className="flex items-center justify-between rounded-t-lg bg-primary/5 px-4 py-2 text-mail-compose-foreground">
+      <div className="flex shrink-0 items-center justify-between rounded-t-lg bg-primary/5 px-4 py-2 text-mail-compose-foreground">
         <span className="text-sm font-medium">{titleByMode(draft)}</span>
         <div className="flex items-center gap-1">
           <button
@@ -179,7 +179,7 @@ export default function NotificationComposeModal({
       </div>
 
       {showReplyHeader ? (
-        <div className="flex min-h-12 items-center gap-2 border-b border-border px-3">
+        <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border px-3">
           <span className="flex size-8 items-center justify-center rounded-full bg-mail-hover text-muted-foreground">
             <Reply className="size-4" />
           </span>

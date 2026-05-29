@@ -68,7 +68,7 @@ export default function NotificationComposeStack({
   if (drafts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 right-6 z-[9999] flex max-w-[calc(100vw-3rem)] items-end gap-2 overflow-x-auto">
+    <div className="fixed inset-x-3 bottom-0 z-[9999] flex max-w-full items-end justify-end gap-2 overflow-x-auto overscroll-x-contain sm:inset-x-auto sm:right-6 sm:max-w-[calc(100vw-3rem)]">
       {drafts.map((draft) => (
         <NotificationComposeModal
           key={draft.id}
