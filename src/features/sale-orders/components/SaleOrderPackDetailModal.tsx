@@ -180,9 +180,9 @@ export function SaleOrderPackDetailModal({ open, packId, warehouseId, onClose, p
                   </div>
                   <h3 className="mt-0.5 truncate text-md font-semibold text-black/85">{pack?.description ?? "—"}</h3>
                   {warehouseId ? (
-                    <p className="mt-0.5 text-xs text-black/40">Stock segÃºn almacÃ©n seleccionado</p>
+                    <p className="mt-0.5 text-xs text-black/40">Stock según almacén seleccionado</p>
                   ) : (
-                    <p className="mt-0.5 text-xs text-black/40">Selecciona un almacÃ©n para ver stock</p>
+                    <p className="mt-0.5 text-xs text-black/40">Selecciona un almacén para ver stock</p>
                   )}
                 </div>
               </div>
@@ -274,7 +274,7 @@ export function SaleOrderPackDetailModal({ open, packId, warehouseId, onClose, p
                               </div>
                             ) : (
                               <div className="rounded-md bg-slate-50 px-3 py-2 text-center text-xs text-black/45">
-                                Selecciona un almacÃ©n para ver stock.
+                                Selecciona un almacen para ver stock.
                               </div>
                             )}
                           </div>

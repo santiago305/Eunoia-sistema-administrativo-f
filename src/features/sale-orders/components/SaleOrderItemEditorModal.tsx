@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { listPacks, getPackById } from "@/shared/services/packService";
-import type { PackDetailResponse } from "@/features/catalog/types/pack";
+import type { PackDetailResponse, PackItemSku } from "@/features/catalog/types/pack";
 import type { SaleOrderItemComponentInput, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { buildSkuLabelFromDetailItem } from "@/features/catalog/packs/Packs";
+import { SaleOrderAddSkuModal } from "@/features/sale-orders/components/SaleOrderAddSkuModal";
 
 type Props = {
   open: boolean;
@@ -17,6 +18,16 @@ type Props = {
   onChange: (next: SaleOrderItemInput) => void;
   onClose: () => void;
   onConfirm: () => void;
+};
+
+type ComponentRow = {
+  id: string;
+  skuId: string;
+  label: string;
+  packQuantity: number;
+  packPrice: number;
+  referencePackItemId?: string;
+  component: SaleOrderItemComponentInput;
 };
 
 const roundMoney = (value: number) => Math.round((Number(value) || 0) * 100) / 100;
@@ -35,20 +46,22 @@ const sumComponentsTotal = (components: SaleOrderItemComponentInput[] = []) => {
   return roundMoney(components.reduce((acc, item) => acc + (Number(item.total) || 0), 0));
 };
 
-const upsertComponent = (
-  components: SaleOrderItemComponentInput[] = [],
-  next: SaleOrderItemComponentInput,
-) => {
+const getSkuCode = (sku: PackItemSku | null | undefined, skuId: string) => {
+  return sku?.backendSku ?? sku?.customSku ?? skuId ?? "-";
+};
+
+const getSkuImage = (sku: PackItemSku | null | undefined) => {
+  return sku?.image ?? null;
+};
+
+const upsertComponent = (components: SaleOrderItemComponentInput[] = [], next: SaleOrderItemComponentInput) => {
   const index = components.findIndex((c) => c.skuId === next.skuId);
   if (index === -1) return [...components, next];
 
   return components.map((component, i) => (i === index ? { ...component, ...next } : component));
 };
 
-const distributeTotalToComponents = (
-  components: SaleOrderItemComponentInput[] = [],
-  newTotal: number,
-) => {
+const distributeTotalToComponents = (components: SaleOrderItemComponentInput[] = [], newTotal: number) => {
   const currentTotal = sumComponentsTotal(components);
 
   if (currentTotal <= 0 || components.length === 0) return components;
@@ -75,6 +88,8 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
   const [packOptions, setPackOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [packDetail, setPackDetail] = useState<PackDetailResponse | null>(null);
   const [excludedSkuIds, setExcludedSkuIds] = useState<string[]>([]);
+  const [openAddSku, setOpenAddSku] = useState(false);
+  const [skuMetaById, setSkuMetaById] = useState<Record<string, { label: string; price?: number }>>({});
 
   const hasPack = Boolean(value.referencePackId);
   const isEditing = Boolean(value.components?.length);
@@ -119,13 +134,17 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
       const description = String(res.pack.description ?? "").trim();
       const quantity = Number(value.quantity) > 0 ? Number(value.quantity) : 1;
 
-      const components = (res.items ?? []).map((row) => {
+      const components: SaleOrderItemComponentInput[] = (res.items ?? []).map((row) => {
         const componentQuantity = roundMoney((Number(row.quantity) || 0) * quantity);
         const componentUnitPrice = Number(row.price ?? row.sku?.price ?? 0);
         const componentTotal = calcTotal(componentQuantity, componentUnitPrice);
+        const skuLabel = buildSkuLabelFromDetailItem(row);
 
         return {
           skuId: row.skuId,
+          skuLabel,
+          skuCode: getSkuCode(row.sku, row.skuId),
+          skuImage: getSkuImage(row.sku),
           quantity: componentQuantity,
           unitPrice: componentUnitPrice,
           total: componentTotal,
@@ -147,7 +166,6 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     };
 
     void loadDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, value.referencePackId]);
 
   useEffect(() => {
@@ -163,48 +181,64 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     [excludedSkuSet, packItems],
   );
 
-  const componentRows = useMemo(() => {
+  const componentRows = useMemo<ComponentRow[]>(() => {
     if (isEditing) {
       return (value.components ?? []).map((component) => {
+        const resolvedSkuId = component.skuId ?? component.sku?.id ?? "";
+        const cached = resolvedSkuId ? skuMetaById[resolvedSkuId] : undefined;
         const packItem = packItems.find(
-          (item) => item.id === component.referencePackItemId || item.skuId === component.skuId,
+          (item) => item.id === component.referencePackItemId || item.skuId === resolvedSkuId,
         );
 
+        const fallbackLabel = packItem ? buildSkuLabelFromDetailItem(packItem) : cached?.label ?? resolvedSkuId;
+        const label = component.skuLabel ?? fallbackLabel;
+
         return {
-          id: component.referencePackItemId ?? component.skuId,
-          skuId: component.skuId,
-          label: packItem ? buildSkuLabelFromDetailItem(packItem) : component.skuId,
-          packQuantity: Number(packItem?.quantity) || 0,
+          id: component.referencePackItemId ?? resolvedSkuId,
+          skuId: resolvedSkuId,
+          label,
+          packQuantity: Number(packItem?.quantity) || Number(component.quantity) || 0,
           packPrice: Number(packItem?.price ?? packItem?.sku?.price ?? component.unitPrice ?? 0),
           referencePackItemId: component.referencePackItemId ?? packItem?.id,
-          component,
+          component: {
+            ...component,
+            skuId: resolvedSkuId,
+            skuLabel: label,
+            skuCode: component.skuCode ?? (packItem ? getSkuCode(packItem.sku, resolvedSkuId) : resolvedSkuId),
+            skuImage: component.skuImage ?? (packItem ? getSkuImage(packItem.sku) : null),
+          },
         };
       });
     }
 
     return visiblePackItems.map((row) => {
-      const component = (value.components ?? []).find((c) => c.skuId === row.skuId);
+      const existingComponent = (value.components ?? []).find((c) => c.skuId === row.skuId);
       const baseQty = roundMoney((Number(row.quantity) || 0) * (Number(value.quantity) || 0));
-      const unitPrice = component?.unitPrice ?? Number(row.price ?? row.sku?.price ?? 0);
-      const quantity = component?.quantity ?? baseQty;
+      const unitPrice = existingComponent?.unitPrice ?? Number(row.price ?? row.sku?.price ?? 0);
+      const quantity = existingComponent?.quantity ?? baseQty;
+      const label = existingComponent?.skuLabel ?? buildSkuLabelFromDetailItem(row);
 
       return {
         id: row.id,
         skuId: row.skuId,
-        label: buildSkuLabelFromDetailItem(row),
+        label,
         packQuantity: Number(row.quantity) || 0,
         packPrice: Number(row.price ?? row.sku?.price ?? 0),
         referencePackItemId: row.id,
         component: {
+          ...(existingComponent ?? {}),
           skuId: row.skuId,
+          skuLabel: label,
+          skuCode: existingComponent?.skuCode ?? getSkuCode(row.sku, row.skuId),
+          skuImage: existingComponent?.skuImage ?? getSkuImage(row.sku),
           quantity,
           unitPrice,
-          total: component?.total ?? calcTotal(quantity, unitPrice),
+          total: existingComponent?.total ?? calcTotal(quantity, unitPrice),
           referencePackItemId: row.id,
         },
       };
     });
-  }, [isEditing, packItems, value.components, value.quantity, visiblePackItems]);
+  }, [isEditing, packItems, skuMetaById, value.components, value.quantity, visiblePackItems]);
 
   const buildComponentsFromQuantity = (quantity: number) => {
     return componentRows.map((row) => {
@@ -216,7 +250,11 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
       const componentTotal = calcTotal(componentQuantity, componentUnitPrice);
 
       return {
+        ...row.component,
         skuId: row.skuId,
+        skuLabel: row.component.skuLabel ?? row.label,
+        skuCode: row.component.skuCode,
+        skuImage: row.component.skuImage ?? null,
         quantity: componentQuantity,
         unitPrice: componentUnitPrice,
         total: componentTotal,
@@ -244,13 +282,15 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     (skuId: string) => {
       if ((value.components ?? []).length <= 1) return;
 
-      setExcludedSkuIds((prev) => (prev.includes(skuId) ? prev : [...prev, skuId]));
+      if (packItems.some((row) => row.skuId === skuId)) {
+        setExcludedSkuIds((prev) => (prev.includes(skuId) ? prev : [...prev, skuId]));
+      }
 
       const components = (value.components ?? []).filter((component) => component.skuId !== skuId);
 
       onChange(recalcParentFromComponents(value, components));
     },
-    [onChange, value],
+    [onChange, packItems, value],
   );
 
   return (
@@ -389,122 +429,174 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
             />
           </div>
 
-          {hasPack && (
-            <div className="rounded-xl bg-white p-3 text-sm shadow-inherit">
-              <div className="font-semibold">Productos del pack</div>
-
-              <div className="mt-2 space-y-2">
-                {componentRows.map((row) => {
-                  const currentQty = Number(row.component.quantity) || 0;
-                  const currentUnitPrice = Number(row.component.unitPrice) || 0;
-                  const currentTotal = Number(row.component.total) || 0;
-                  const disabledDelete = componentRows.length <= 1;
-
-                  return (
-                    <div key={row.id} className="grid grid-cols-[1fr_90px_90px_90px_50px] gap-2 items-center">
-                      <div className="truncate">{row.label}</div>
-
-                      <FloatingInput
-                        label="Cantidad"
-                        name={`pack-sku-qty-${row.skuId}`}
-                        type="number"
-                        min={0}
-                        step="0.001"
-                        value={String(currentQty)}
-                        onChange={(e) => {
-                          const quantity = parseDecimalInput(e.target.value);
-                          const total = calcTotal(quantity, currentUnitPrice);
-
-                          const nextComponent: SaleOrderItemComponentInput = {
-                            skuId: row.skuId,
-                            quantity,
-                            unitPrice: currentUnitPrice,
-                            total,
-                            referencePackItemId: row.referencePackItemId,
-                          };
-
-                          const components = upsertComponent(value.components ?? [], nextComponent);
-
-                          onChange(recalcParentFromComponents(value, components));
-                        }}
-                      />
-
-                      <FloatingInput
-                        label="Precio unit."
-                        name={`pack-sku-price-${row.skuId}`}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={String(currentUnitPrice)}
-                        onChange={(e) => {
-                          const unitPrice = parseDecimalInput(e.target.value);
-                          const total = calcTotal(currentQty, unitPrice);
-
-                          const nextComponent: SaleOrderItemComponentInput = {
-                            skuId: row.skuId,
-                            quantity: currentQty,
-                            unitPrice,
-                            total,
-                            referencePackItemId: row.referencePackItemId,
-                          };
-
-                          const components = upsertComponent(value.components ?? [], nextComponent);
-
-                          onChange(recalcParentFromComponents(value, components));
-                        }}
-                      />
-
-                      <FloatingInput
-                        label="Total"
-                        name={`pack-sku-total-${row.skuId}`}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={String(currentTotal)}
-                        onChange={(e) => {
-                          const total = parseDecimalInput(e.target.value);
-                          const unitPrice = calcUnitPrice(currentQty, total);
-
-                          const nextComponent: SaleOrderItemComponentInput = {
-                            skuId: row.skuId,
-                            quantity: currentQty,
-                            unitPrice,
-                            total,
-                            referencePackItemId: row.referencePackItemId,
-                          };
-
-                          const components = upsertComponent(value.components ?? [], nextComponent);
-
-                          onChange(recalcParentFromComponents(value, components));
-                        }}
-                      />
-
-                      <div className="flex justify-center">
-                        <SystemButton
-                          variant="danger"
-                          size="icon"
-                          className="h-9 w-9"
-                          title={disabledDelete ? "Debe existir al menos un SKU" : "Eliminar SKU"}
-                          disabled={disabledDelete}
-                          onClick={() => (row.skuId ? removePackSku(row.skuId) : undefined)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </SystemButton>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          <div className="rounded-xl bg-white p-3 text-sm shadow-inherit">
+            <div className="flex">
+              <div className="font-semibold p-2">Productos</div>
+              <SystemButton
+                size="sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                aria-label="Agregar SKU"
+                title="Agregar SKU"
+                onClick={() => setOpenAddSku(true)}
+              />
             </div>
-          )}
+
+            <div className="mt-2 space-y-2">
+              {componentRows.map((row) => {
+                const currentQty = Number(row.component.quantity) || 0;
+                const currentUnitPrice = Number(row.component.unitPrice) || 0;
+                const currentTotal = Number(row.component.total) || 0;
+                const disabledDelete = componentRows.length <= 1;
+
+                return (
+                  <div key={row.id} className="grid grid-cols-[1fr_90px_90px_90px_50px] gap-2 items-center">
+                    <div className="truncate">{row.label}</div>
+
+                    <FloatingInput
+                      label="Cantidad"
+                      name={`pack-sku-qty-${row.skuId}`}
+                      type="number"
+                      min={0}
+                      step="0.001"
+                      value={String(currentQty)}
+                      onChange={(e) => {
+                        const quantity = parseDecimalInput(e.target.value);
+                        const total = calcTotal(quantity, currentUnitPrice);
+
+                        const nextComponent: SaleOrderItemComponentInput = {
+                          ...row.component,
+                          skuId: row.skuId,
+                          skuLabel: row.component.skuLabel ?? row.label,
+                          skuCode: row.component.skuCode,
+                          skuImage: row.component.skuImage ?? null,
+                          quantity,
+                          unitPrice: currentUnitPrice,
+                          total,
+                          referencePackItemId: row.referencePackItemId,
+                        };
+
+                        const components = upsertComponent(value.components ?? [], nextComponent);
+
+                        onChange(recalcParentFromComponents(value, components));
+                      }}
+                    />
+
+                    <FloatingInput
+                      label="Precio unit."
+                      name={`pack-sku-price-${row.skuId}`}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={String(currentUnitPrice)}
+                      onChange={(e) => {
+                        const unitPrice = parseDecimalInput(e.target.value);
+                        const total = calcTotal(currentQty, unitPrice);
+
+                        const nextComponent: SaleOrderItemComponentInput = {
+                          ...row.component,
+                          skuId: row.skuId,
+                          skuLabel: row.component.skuLabel ?? row.label,
+                          skuCode: row.component.skuCode,
+                          skuImage: row.component.skuImage ?? null,
+                          quantity: currentQty,
+                          unitPrice,
+                          total,
+                          referencePackItemId: row.referencePackItemId,
+                        };
+
+                        const components = upsertComponent(value.components ?? [], nextComponent);
+
+                        onChange(recalcParentFromComponents(value, components));
+                      }}
+                    />
+
+                    <FloatingInput
+                      label="Total"
+                      name={`pack-sku-total-${row.skuId}`}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={String(currentTotal)}
+                      onChange={(e) => {
+                        const total = parseDecimalInput(e.target.value);
+                        const unitPrice = calcUnitPrice(currentQty, total);
+
+                        const nextComponent: SaleOrderItemComponentInput = {
+                          ...row.component,
+                          skuId: row.skuId,
+                          skuLabel: row.component.skuLabel ?? row.label,
+                          skuCode: row.component.skuCode,
+                          skuImage: row.component.skuImage ?? null,
+                          quantity: currentQty,
+                          unitPrice,
+                          total,
+                          referencePackItemId: row.referencePackItemId,
+                        };
+
+                        const components = upsertComponent(value.components ?? [], nextComponent);
+
+                        onChange(recalcParentFromComponents(value, components));
+                      }}
+                    />
+
+                    <div className="flex justify-center">
+                      <SystemButton
+                        variant="danger"
+                        size="icon"
+                        className="h-9 w-9"
+                        title={disabledDelete ? "Debe existir al menos un SKU" : "Eliminar SKU"}
+                        disabled={disabledDelete}
+                        onClick={() => (row.skuId ? removePackSku(row.skuId) : undefined)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </SystemButton>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
+
+        <SaleOrderAddSkuModal
+          open={openAddSku}
+          onClose={() => setOpenAddSku(false)}
+          onAdd={({ skuId, label, quantity, unitPrice }) => {
+            setSkuMetaById((prev) => ({ ...prev, [skuId]: { label, price: unitPrice } }));
+            setExcludedSkuIds((prev) => prev.filter((id) => id !== skuId));
+
+            const total = calcTotal(quantity, unitPrice);
+
+            const nextComponent: SaleOrderItemComponentInput = {
+              skuId,
+              skuLabel: label,
+              skuCode: skuId,
+              skuImage: null,
+              quantity,
+              unitPrice,
+              total,
+              referencePackItemId: undefined,
+            };
+
+            const components = upsertComponent(value.components ?? [], nextComponent);
+            onChange(recalcParentFromComponents(value, components));
+            setOpenAddSku(false);
+          }}
+        />
 
         <div className="flex justify-end gap-2">
           <SystemButton variant="outline" onClick={onClose}>
             Cancelar
           </SystemButton>
 
-          <SystemButton onClick={onConfirm}>Guardar</SystemButton>
+          <SystemButton
+            onClick={() => {
+              onConfirm();
+              console.log("confirm", value);
+            }}
+          >
+            Guardar
+          </SystemButton>
         </div>
       </div>
     </Modal>
