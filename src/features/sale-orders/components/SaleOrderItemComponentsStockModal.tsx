@@ -4,6 +4,7 @@ import { Modal } from "@/shared/components/modales/Modal";
 import type { SaleOrderItemComponentInput, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
 import { getStockSku } from "@/shared/services/documentService";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
+import { getSku } from "@/shared/services/skuService";
 import { getSaleOrderItemComponents } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 
@@ -15,22 +16,14 @@ type Props = {
   showStock?: boolean;
 };
 
-type ComponentSku = {
-  id: string;
-  name: string;
-  backendSku: string;
-  customSku: string | null;
-  barcode?: string | null;
-  image?: string | null;
-  attributes?: Array<{
-    code?: string | null;
-    name?: string | null;
-    value?: string | null;
-  }>;
-};
+type SkuDetail = Awaited<ReturnType<typeof getSku>>;
 
-type ComponentForDisplay = SaleOrderItemComponentInput & {
-  skuDetail?: ComponentSku | null;
+type SkuData = {
+  name?: string | null;
+  backendSku?: string | null;
+  customSku?: string | null;
+  image?: string | null;
+  attributes?: Array<{ value?: string | null }>;
 };
 
 const formatStock = (value?: number | null) => {
@@ -46,19 +39,55 @@ const formatSkuAttrs = (attributes?: Array<{ value?: string | null }> | null) =>
     .join(" ");
 };
 
-const buildSkuLabel = (component: ComponentForDisplay) => {
-  const sku = component.skuDetail;
+const normalizeSku = (sku: SkuDetail | null | undefined): SkuData => {
+  const data = sku as unknown as {
+    sku?: {
+      name?: string | null;
+      backendSku?: string | null;
+      customSku?: string | null;
+      image?: string | null;
+    } | null;
+    attributes?: Array<{ value?: string | null }>;
+  } | null | undefined;
 
-  if (!sku) {
-    return component.skuLabel || "SKU";
-  }
+  return {
+    name: data?.sku?.name ?? null,
+    backendSku: data?.sku?.backendSku ?? null,
+    customSku: data?.sku?.customSku ?? null,
+    image: data?.sku?.image ?? null,
+    attributes: data?.attributes ?? [],
+  };
+};
 
-  const attrsText = formatSkuAttrs(sku.attributes);
-  const skuPart = sku.backendSku ? ` -${sku.backendSku}` : "";
-  const customPart = sku.customSku ? ` (${sku.customSku})` : "";
+const buildSkuLabel = (sku: SkuDetail | null | undefined, fallback = "SKU") => {
+  const data = normalizeSku(sku);
+
+  const name = (data.name ?? "").trim();
+  const attrsText = formatSkuAttrs(data.attributes);
+  const skuPart = data.backendSku ? ` -${data.backendSku}` : "";
+  const customPart = data.customSku ? ` (${data.customSku})` : "";
   const attrsPart = attrsText ? ` ${attrsText}` : "";
 
-  return `${sku.name}${attrsPart}${skuPart}${customPart}`.trim();
+  const label = `${name}${attrsPart}${skuPart}${customPart}`.trim();
+
+  return label || fallback;
+};
+
+const buildComponentSkuLabel = (sku: {
+  name?: string | null;
+  backendSku?: string | null;
+  customSku?: string | null;
+}) => {
+  const name = (sku.name ?? "").trim();
+  const skuPart = sku.backendSku ? ` -${sku.backendSku}` : "";
+  const customPart = sku.customSku ? ` (${sku.customSku})` : "";
+
+  return `${name}${skuPart}${customPart}`.trim();
+};
+
+const getSkuImage = (sku: SkuDetail | null | undefined) => {
+  const data = normalizeSku(sku);
+  return data.image ?? null;
 };
 
 function EmptyState({ message }: { message: string }) {
@@ -66,12 +95,12 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, item, showStock = true }: Props) {
-  const [loadedComponents, setLoadedComponents] = useState<ComponentForDisplay[]>([]);
+  const [loadedComponents, setLoadedComponents] = useState<SaleOrderItemComponentInput[]>([]);
   const [loadingComponents, setLoadingComponents] = useState(false);
   const [componentsError, setComponentsError] = useState<string | null>(null);
 
-  const components = useMemo<ComponentForDisplay[]>(() => {
-    if (item?.components?.length) return item.components as ComponentForDisplay[];
+  const components = useMemo<SaleOrderItemComponentInput[]>(() => {
+    if (item?.components?.length) return item.components;
     return loadedComponents;
   }, [item?.components, loadedComponents]);
 
@@ -80,6 +109,10 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
   const [stocksBySkuId, setStocksBySkuId] = useState<Record<string, skuStock | null>>({});
   const [loadingStock, setLoadingStock] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
+
+  const [skuById, setSkuById] = useState<Record<string, SkuDetail | null>>({});
+  const [loadingSku, setLoadingSku] = useState(false);
+  const [skuError, setSkuError] = useState<string | null>(null);
 
   const hasComponents = components.length > 0;
 
@@ -97,13 +130,17 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
       setStocksBySkuId({});
       setLoadingStock(false);
       setStockError(null);
+
+      setSkuById({});
+      setLoadingSku(false);
+      setSkuError(null);
     }
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
 
-    const itemId = (item as SaleOrderItemInput & { id?: string })?.id;
+    const itemId = item?.id;
 
     if (!itemId || item?.components?.length) {
       setLoadedComponents([]);
@@ -122,13 +159,9 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
         const response = await getSaleOrderItemComponents(itemId);
         const found = response.items.find((row) => row.saleOrderItemId === itemId);
 
-        const nextComponents: ComponentForDisplay[] = (found?.components ?? []).map((component) => ({
+        const nextComponents: SaleOrderItemComponentInput[] = (found?.components ?? []).map((component) => ({
           skuId: component.sku.id,
-          skuDetail: component.sku,
-          skuLabel: `${component.sku.name}${
-            component.sku.backendSku ? ` -${component.sku.backendSku}` : ""
-          }${component.sku.customSku ? ` (${component.sku.customSku})` : ""}`.trim(),
-          skuImage: component.sku.image ?? null,
+          skuLabel: buildComponentSkuLabel(component.sku),
           quantity: Number(component.quantity ?? 0),
           unitPrice: Number(component.unitPrice ?? 0),
           total: Number(component.total ?? 0),
@@ -151,7 +184,51 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
     return () => {
       cancelled = true;
     };
-  }, [open, item]);
+  }, [open, item?.id, item?.components]);
+
+  useEffect(() => {
+    if (!open || !uniqueSkuIds.length) {
+      setSkuById({});
+      setLoadingSku(false);
+      setSkuError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      setLoadingSku(true);
+      setSkuError(null);
+
+      try {
+        const pairs = await Promise.all(
+          uniqueSkuIds.map(async (skuId) => {
+            try {
+              const data = await getSku(skuId);
+              return [skuId, data] as const;
+            } catch {
+              return [skuId, null] as const;
+            }
+          }),
+        );
+
+        if (!cancelled) setSkuById(Object.fromEntries(pairs));
+      } catch (err) {
+        if (!cancelled) {
+          setSkuById({});
+          setSkuError(parseApiError(err, "No se pudo cargar la información de los SKU."));
+        }
+      } finally {
+        if (!cancelled) setLoadingSku(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, uniqueSkuIds]);
 
   useEffect(() => {
     if (!open) return;
@@ -236,12 +313,16 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
 
                 {stockError ? <div className="mb-3 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-700">{stockError}</div> : null}
 
+                {skuError ? <div className="mb-3 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-700">{skuError}</div> : null}
+
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {components.map((component, index) => {
                     const skuId = component.skuId ?? "";
+                    const sku = skuId ? skuById[skuId] ?? null : null;
                     const stock = skuId ? stocksBySkuId[skuId] ?? null : null;
-                    const label = buildSkuLabel(component);
-                    const image = component.skuDetail?.image ?? component.skuImage ?? null;
+
+                    const label = buildSkuLabel(sku, component.skuLabel || "Cargando SKU...");
+                    const image = getSkuImage(sku) ?? component.skuImage ?? null;
 
                     const stockValue = (value?: number | null) => {
                       if (!shouldShowStock) return null;
@@ -272,7 +353,9 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
                           </div>
 
                           <div className="min-w-0">
-                            <div className="truncate text-md font-semibold text-black/80">{label}</div>
+                            <div className="truncate text-md font-semibold text-black/80">
+                              {loadingSku && !sku ? "Cargando SKU..." : label}
+                            </div>
                           </div>
                         </div>
 
