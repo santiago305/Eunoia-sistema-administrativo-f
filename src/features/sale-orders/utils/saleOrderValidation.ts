@@ -17,9 +17,9 @@ export function validateSaleOrderForm(form: CreateSaleOrderDto): SaleOrderValida
     if (!(item.quantity > 0)) return { ok: false, message: `Item #${index + 1}: quantity debe ser > 0.` };
     if (!(item.unitPrice >= 0)) return { ok: false, message: `Item #${index + 1}: unitPrice debe ser >= 0.` };
     if (!(item.total >= 0)) return { ok: false, message: `Item #${index + 1}: total debe ser >= 0.` };
-    if (!String(item.description ?? "").trim()) {
-      return { ok: false, message: `Item #${index + 1}: description es obligatorio.` };
-    }
+    // if (!String(item.description ?? "").trim()) {
+    //   return { ok: false, message: `Item #${index + 1}: description es obligatorio.` };
+    // }
 
     const hasPack = Boolean(item.referencePackId);
     const components = item.components ?? [];

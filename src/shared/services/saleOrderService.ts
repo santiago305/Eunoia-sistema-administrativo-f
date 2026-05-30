@@ -29,6 +29,45 @@ export type ConfirmSaleOrderDeliveryResponse = {
   saleOrderId: string;
   deliveryStatus: "DELIVERED";
 };
+export type SaleOrderItemComponentOutput = {
+  id: string;
+  saleOrderItemId: string;
+  sku: {
+    id: string;
+    name: string;
+    backendSku: string;
+    customSku: string | null;
+    barcode: string | null;
+    image: string | null;
+    attributes: Array<{
+      code: string;
+      name: string;
+      value: string;
+    }>;
+  };
+  referencePackItemId: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  createdAt: string;
+};
+
+export type SaleOrderComponentsOutput = {
+  saleOrderId: string;
+  items: Array<{
+    saleOrderItemId: string;
+    components: SaleOrderItemComponentOutput[];
+  }>;
+};
+
+export const getSaleOrderItemComponents = async (
+  itemId: string,
+): Promise<SaleOrderComponentsOutput> => {
+  const response = await axiosInstance.get(
+    API_SALE_ORDERS_GROUP.itemComponents(itemId),
+  );
+  return response.data;
+};
 
 export const createSaleOrder = async (payload: CreateSaleOrderDto): Promise<CreateSaleOrderResponse> => {
   const response = await axiosInstance.post<CreateSaleOrderResponse>(API_SALE_ORDERS_GROUP.create, payload);

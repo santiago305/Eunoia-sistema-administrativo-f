@@ -5,6 +5,7 @@ export type SaleOrderAgendaStatus = "COORDINATED" | "PROGRAMMED" | "CANCELED";
 export type SaleOrderDeliveryStatus = "WAITING" | "IN_PROGRESS" | "DELIVERED" | "CANCELED";
 
 export type SaleOrderItemComponentInput = {
+  id?: string;
   skuId?: string;
   sku?: {
     id?: string;
@@ -13,9 +14,14 @@ export type SaleOrderItemComponentInput = {
   unitPrice: number;
   total: number;
   referencePackItemId?: string;
+
+  skuLabel?: string;
+  skuCode?: string;
+  skuImage?: string | null;
 };
 
 export type SaleOrderItemInput = {
+  id?: string;
   quantity: number;
   unitPrice: number;
   total: number;

@@ -348,6 +348,7 @@ export const API_SALE_ORDERS_GROUP = {
   saveSearchMetric: "/sale-orders/search-metrics",
   deleteSearchMetric: (metricId: string) => `/sale-orders/search-metrics/${metricId}`,
   saleOrderPdf: (id: string) => `/pdf-generated/sale-orders/${id}/pdf`,
+  itemComponents: (itemId: string) => `/sale-orders/items/${itemId}/components`,
 };
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
