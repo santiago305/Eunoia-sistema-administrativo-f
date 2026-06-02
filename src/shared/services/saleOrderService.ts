@@ -4,6 +4,8 @@ import type {
   CreateSaleOrderDto,
   CreateSaleOrderResponse,
   SaleOrder,
+  SaleOrderJsonImportPreviewResponse,
+  SaleOrderJsonImportRow,
   SaleOrderListResponse,
   SaleOrderPayment,
   SaleOrderSearchSnapshot,
@@ -71,6 +73,16 @@ export const getSaleOrderItemComponents = async (
 
 export const createSaleOrder = async (payload: CreateSaleOrderDto): Promise<CreateSaleOrderResponse> => {
   const response = await axiosInstance.post<CreateSaleOrderResponse>(API_SALE_ORDERS_GROUP.create, payload);
+  return response.data;
+};
+
+export const previewSaleOrdersJsonImport = async (
+  rows: SaleOrderJsonImportRow[],
+): Promise<SaleOrderJsonImportPreviewResponse> => {
+  const response = await axiosInstance.post<SaleOrderJsonImportPreviewResponse>(
+    API_SALE_ORDERS_GROUP.importPreview,
+    rows,
+  );
   return response.data;
 };
 

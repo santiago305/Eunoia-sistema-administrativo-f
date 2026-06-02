@@ -337,6 +337,7 @@ export const API_DOCUMENT_SERIES_GROUP = {
 export const API_SALE_ORDERS_GROUP = {
   base: "/sale-orders",
   create: "/sale-orders",
+  importPreview: "/sale-orders/import-preview",
   list: "/sale-orders",
   detail: (id: string) => `/sale-orders/${id}`,
   update: (id: string) => `/sale-orders/${id}`,
@@ -350,6 +351,10 @@ export const API_SALE_ORDERS_GROUP = {
   saleOrderPdf: (id: string) => `/pdf-generated/sale-orders/${id}/pdf`,
   itemComponents: (itemId: string) => `/sale-orders/items/${itemId}/components`,
 };
+export const API_IMPORTS_GROUP = {
+  saleOrders: "/imports/orders/create",
+}
+
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
   totals: "/stock-items/ledger/daily-totals/by-sku",
