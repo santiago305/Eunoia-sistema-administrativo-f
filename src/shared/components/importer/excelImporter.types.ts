@@ -12,6 +12,20 @@ export type ImportField = {
   transform?: (value: unknown) => unknown;
 };
 
+export type ImportUbigeoCatalog = {
+  departments: Array<{ id: string; name: string }>;
+  provinces: Array<{ id: string; name: string; departmentId: string }>;
+  districts: Array<{ id: string; name: string; provinceId: string; departmentId: string }>;
+};
+
+export type ImportUbigeoConfig = {
+  departmentKey: string;
+  provinceKey: string;
+  districtKey: string;
+  valueMode?: "id" | "name";
+  catalog?: ImportUbigeoCatalog;
+};
+
 export type ExcelRow = Record<string, unknown>;
 
 export type ExcelColumnMapping = Record<string, string>;
@@ -34,6 +48,7 @@ export type ExcelImportModalProps<TData extends Record<string, unknown>> = {
   onClose: () => void;
   onSubmit: (data: TData[], file: File) => void | Promise<void>;
   maxRows?: number;
+  ubigeoConfig?: ImportUbigeoConfig;
 };
 
 export type ExcelWorkbook = WorkBook;

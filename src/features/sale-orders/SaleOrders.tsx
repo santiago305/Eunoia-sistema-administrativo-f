@@ -872,6 +872,12 @@
           open={importOpen}
           title="Importar pedidos"
           fields={saleOrderImportFields}
+          ubigeoConfig={{
+            departmentKey: "departmentName",
+            provinceKey: "provinceName",
+            districtKey: "districtName",
+            valueMode: "name",
+          }}
           onClose={() => setImportOpen(false)}
           onSubmit={handleImportPreview}
         />

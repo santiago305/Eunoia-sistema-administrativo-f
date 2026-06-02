@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { useUbigeoCatalog } from "@/shared/hooks/useUbigeoCatalog";
 import { ExcelColumnMapper } from "./ExcelColumnMapper";
 import { ExcelDropzone } from "./ExcelDropzone";
 import { ExcelPreviewTable } from "./ExcelPreviewTable";
@@ -37,7 +38,9 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
   onClose,
   onSubmit,
   maxRows = DEFAULT_MAX_ROWS,
+  ubigeoConfig,
 }: ExcelImportModalProps<TData>) {
+  const { catalog: ubigeoCatalog } = useUbigeoCatalog(open && Boolean(ubigeoConfig));
   const [step, setStep] = useState<Step>("file");
   const [file, setFile] = useState<File | null>(null);
   const [workbook, setWorkbook] = useState<ExcelWorkbook | null>(null);
@@ -62,6 +65,16 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
   );
   const canConfirm = file && selectedRows.length > 0 && !validation.hasErrors && missingRequiredMappings.length === 0;
   const currentStepIndex = steps.findIndex((item) => item.key === step);
+  const previewUbigeoConfig = useMemo(
+    () =>
+      ubigeoConfig
+        ? {
+            ...ubigeoConfig,
+            catalog: ubigeoConfig.catalog ?? ubigeoCatalog ?? { departments: [], provinces: [], districts: [] },
+          }
+        : undefined,
+    [ubigeoCatalog, ubigeoConfig],
+  );
 
   const reset = useCallback(() => {
     setStep("file");
@@ -262,6 +275,7 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
           rows={rowsForPreview}
           errors={validation.errors}
           selectedRowIndexes={selectedRowIndexes}
+          ubigeoConfig={previewUbigeoConfig}
           onToggleRow={handleToggleRow}
           onToggleAllRows={handleToggleAllRows}
           onChangeCell={handleUpdatePreviewCell}

@@ -4,7 +4,7 @@ import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { cn } from "@/shared/lib/utils";
-import type { ExcelRow, ExcelRowError, ImportField } from "./excelImporter.types";
+import type { ExcelRow, ExcelRowError, ImportField, ImportUbigeoConfig } from "./excelImporter.types";
 import { SystemButton } from "../components/SystemButton";
 import { FloatingDatePicker } from "../components/date-picker/FloatingDatePicker";
 
@@ -13,6 +13,7 @@ type ExcelPreviewTableProps = {
   rows: ExcelRow[];
   errors: ExcelRowError[];
   selectedRowIndexes: ReadonlySet<number>;
+  ubigeoConfig?: ImportUbigeoConfig;
   onToggleRow: (rowIndex: number, checked: boolean) => void;
   onToggleAllRows: (checked: boolean) => void;
   onChangeCell: (rowIndex: number, fieldKey: string, value: unknown) => void;
@@ -29,6 +30,7 @@ export function ExcelPreviewTable({
   rows,
   errors,
   selectedRowIndexes,
+  ubigeoConfig,
   onToggleRow,
   onToggleAllRows,
   onChangeCell,
@@ -100,6 +102,7 @@ export function ExcelPreviewTable({
                 fields={fields}
                 row={row}
                 rowIndex={index}
+                ubigeoConfig={ubigeoConfig}
                 selected={selected}
                 editing={selected && editingRowIndex === index}
                 rowHasError={rowHasError}
@@ -149,6 +152,7 @@ type RowFragmentProps = {
   fields: ImportField[];
   row: ExcelRow;
   rowIndex: number;
+  ubigeoConfig?: ImportUbigeoConfig;
   selected: boolean;
   editing: boolean;
   rowHasError: boolean;
@@ -162,6 +166,7 @@ function RowFragment({
   fields,
   row,
   rowIndex,
+  ubigeoConfig,
   selected,
   editing,
   rowHasError,
@@ -210,7 +215,9 @@ function RowFragment({
           {editing ? (
             <PreviewCellEditor
               field={field}
+              row={row}
               rowIndex={rowIndex}
+              ubigeoConfig={ubigeoConfig}
               value={row[field.key]}
               disabled={!selected}
               error={
@@ -264,7 +271,9 @@ function PreviewCellText({ field, value, error }: PreviewCellTextProps) {
 
 type PreviewCellEditorProps = {
   field: ImportField;
+  row: ExcelRow;
   rowIndex: number;
+  ubigeoConfig?: ImportUbigeoConfig;
   value: unknown;
   disabled: boolean;
   error?: string;
@@ -273,13 +282,30 @@ type PreviewCellEditorProps = {
 
 function PreviewCellEditor({
   field,
+  row,
   rowIndex,
+  ubigeoConfig,
   value,
   disabled,
   error,
   onChange,
 }: PreviewCellEditorProps) {
   const name = `preview-${rowIndex}-${field.key}`;
+
+  if (isUbigeoField(field.key, ubigeoConfig)) {
+    return (
+      <UbigeoCellEditor
+        field={field}
+        row={row}
+        rowIndex={rowIndex}
+        name={name}
+        config={ubigeoConfig}
+        disabled={disabled}
+        error={error}
+        onChange={onChange}
+      />
+    );
+  }
 
   if (field.type === "boolean") {
     return (
@@ -327,6 +353,180 @@ function PreviewCellEditor({
       className="h-8 w-full min-w-0 rounded-md px-2 py-1 text-xs"
     />
   );
+}
+
+type UbigeoCellEditorProps = {
+  field: ImportField;
+  row: ExcelRow;
+  rowIndex: number;
+  name: string;
+  config: ImportUbigeoConfig;
+  disabled: boolean;
+  error?: string;
+  onChange: (rowIndex: number, fieldKey: string, value: unknown) => void;
+};
+
+function UbigeoCellEditor({
+  field,
+  row,
+  rowIndex,
+  name,
+  config,
+  disabled,
+  error,
+  onChange,
+}: UbigeoCellEditorProps) {
+  const catalog = config.catalog ?? { departments: [], provinces: [], districts: [] };
+  const valueMode = config.valueMode ?? "name";
+  const department = findDepartment(catalog.departments, row[config.departmentKey]);
+  const province = findProvince(catalog.provinces, row[config.provinceKey]);
+  const district = findDistrict(catalog.districts, row[config.districtKey]);
+  const departmentId = department?.id ?? province?.departmentId ?? district?.departmentId ?? "";
+  const provinceId = province?.id ?? district?.provinceId ?? "";
+
+  const departmentOptions = catalog.departments.map((item) => ({
+    value: item.id,
+    label: item.name,
+  }));
+  const provinceOptions = catalog.provinces
+    .filter((item) => !departmentId || item.departmentId === departmentId)
+    .map((item) => ({ value: item.id, label: item.name }));
+  const districtOptions = catalog.districts
+    .filter((item) => {
+      if (provinceId) return item.provinceId === provinceId;
+      if (departmentId) return item.departmentId === departmentId;
+      return true;
+    })
+    .map((item) => ({ value: item.id, label: item.name }));
+
+  const setUbigeoValues = (
+    nextDepartment?: { id: string; name: string },
+    nextProvince?: { id: string; name: string; departmentId: string },
+    nextDistrict?: { id: string; name: string; provinceId: string; departmentId: string },
+  ) => {
+    onChange(rowIndex, config.departmentKey, formatUbigeoValue(nextDepartment, valueMode));
+    onChange(rowIndex, config.provinceKey, formatUbigeoValue(nextProvince, valueMode));
+    onChange(rowIndex, config.districtKey, formatUbigeoValue(nextDistrict, valueMode));
+  };
+
+  if (field.key === config.departmentKey) {
+    return (
+      <FloatingSelect
+        label={field.label}
+        name={name}
+        value={departmentId}
+        options={departmentOptions}
+        onChange={(nextDepartmentId) => {
+          const nextDepartment = catalog.departments.find((item) => item.id === nextDepartmentId);
+          setUbigeoValues(nextDepartment);
+        }}
+        error={error}
+        disabled={disabled}
+        placeholder="Seleccionar"
+        panelWidthMode="min-trigger"
+        className="h-8 w-full min-w-0 rounded-md px-2 py-1 text-xs"
+        searchable
+        searchPlaceholder="Buscar departamento..."
+        emptyMessage="Sin departamentos"
+      />
+    );
+  }
+
+  if (field.key === config.provinceKey) {
+    return (
+      <FloatingSelect
+        label={field.label}
+        name={name}
+        value={provinceId}
+        options={provinceOptions}
+        onChange={(nextProvinceId) => {
+          const nextProvince = catalog.provinces.find((item) => item.id === nextProvinceId);
+          const nextDepartment = catalog.departments.find((item) => item.id === nextProvince?.departmentId);
+          setUbigeoValues(nextDepartment, nextProvince);
+        }}
+        error={error}
+        disabled={disabled}
+        placeholder="Seleccionar"
+        panelWidthMode="min-trigger"
+        className="h-8 w-full min-w-0 rounded-md px-2 py-1 text-xs"
+        searchable
+        searchPlaceholder="Buscar provincia..."
+        emptyMessage="Sin provincias"
+      />
+    );
+  }
+
+  return (
+    <FloatingSelect
+      label={field.label}
+      name={name}
+      value={district?.id ?? ""}
+      options={districtOptions}
+      onChange={(nextDistrictId) => {
+        const nextDistrict = catalog.districts.find((item) => item.id === nextDistrictId);
+        const nextProvince = catalog.provinces.find((item) => item.id === nextDistrict?.provinceId);
+        const nextDepartment = catalog.departments.find((item) => item.id === nextDistrict?.departmentId);
+        setUbigeoValues(nextDepartment, nextProvince, nextDistrict);
+      }}
+      error={error}
+      disabled={disabled}
+      placeholder="Seleccionar"
+      panelWidthMode="min-trigger"
+      className="h-8 w-full min-w-0 rounded-md px-2 py-1 text-xs"
+      searchable
+      searchPlaceholder="Buscar distrito..."
+      emptyMessage="Sin distritos"
+    />
+  );
+}
+
+function isUbigeoField(fieldKey: string, config?: ImportUbigeoConfig): config is ImportUbigeoConfig {
+  return Boolean(
+    config &&
+      (fieldKey === config.departmentKey ||
+        fieldKey === config.provinceKey ||
+        fieldKey === config.districtKey),
+  );
+}
+
+function formatUbigeoValue(
+  value: { id: string; name: string } | undefined,
+  valueMode: "id" | "name",
+): string {
+  if (!value) return "";
+  return valueMode === "id" ? value.id : value.name;
+}
+
+function findDepartment(
+  departments: Array<{ id: string; name: string }>,
+  value: unknown,
+) {
+  const normalizedValue = normalizeUbigeoValue(value);
+  return departments.find((item) => item.id === String(value ?? "") || normalizeUbigeoValue(item.name) === normalizedValue);
+}
+
+function findProvince(
+  provinces: Array<{ id: string; name: string; departmentId: string }>,
+  value: unknown,
+) {
+  const normalizedValue = normalizeUbigeoValue(value);
+  return provinces.find((item) => item.id === String(value ?? "") || normalizeUbigeoValue(item.name) === normalizedValue);
+}
+
+function findDistrict(
+  districts: Array<{ id: string; name: string; provinceId: string; departmentId: string }>,
+  value: unknown,
+) {
+  const normalizedValue = normalizeUbigeoValue(value);
+  return districts.find((item) => item.id === String(value ?? "") || normalizeUbigeoValue(item.name) === normalizedValue);
+}
+
+function normalizeUbigeoValue(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 function getCellKey(rowIndex: number, fieldKey: string): string {
