@@ -13,6 +13,7 @@ import { useCompany } from "@/shared/hooks/useCompany";
 import { sileo } from "sileo";
 import { buildEmptySaleOrderForm } from "@/features/sale-orders/utils/saleOrderForm";
 import { SaleOrderDeliveryType, type CreateSaleOrderDto } from "@/features/sale-orders/types/saleOrder";
+import { deriveSkuPresentation } from "@/features/sale-orders/utils/skuPresentation";
 import { toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { createSaleOrder, fetchSaleOrderById, getSaleOrderPdf, updateSaleOrder } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
@@ -106,18 +107,28 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
           total: Number(order.total ?? 0),
           note: order.note ?? "",
           items: (order.items ?? []).map((item) => ({
+            id: item.id,
             quantity: Number(item.quantity ?? 0),
             unitPrice: Number(item.unitPrice ?? 0),
             total: Number(item.total ?? 0),
             description: item.description ?? "",
             referencePackId: item.referencePackId ?? undefined,
-            components: (item.components ?? []).map((component) => ({
-              skuId: component.skuId ?? component.sku?.id ?? "",
-              quantity: Number(component.quantity ?? 0),
-              unitPrice: Number(component.unitPrice ?? 0),
-              total: Number(component.total ?? 0),
-              referencePackItemId: component.referencePackItemId ?? undefined,
-            })),
+            components: (item.components ?? []).map((component) => {
+              const skuId = component.skuId ?? component.sku?.id ?? "";
+              const { skuLabel, skuCode, skuImage } = deriveSkuPresentation(component.sku ?? null, skuId);
+
+              return {
+                id: component.id,
+                skuId,
+                quantity: Number(component.quantity ?? 0),
+                unitPrice: Number(component.unitPrice ?? 0),
+                total: Number(component.total ?? 0),
+                referencePackItemId: component.referencePackItemId ?? undefined,
+                skuLabel,
+                skuCode,
+                skuImage,
+              };
+            }),
           })),
           payments: (order.payments ?? []).map((payment) => ({
             method: payment.method ?? "",
@@ -318,7 +329,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                 <FloatingSuggestInput
                   label="Agencia/Dirección exacta"
                   name="agencyDetail"
-                  className="text-black/70 text-xs"
+                  className="text-black text-xs"
                   value={form.agencyDetail ?? ""}
                   onChange={(text) => setForm((prev) => ({ ...prev, agencyDetail: text.trim() ? text : undefined }))}
                   options={agencyOptions}
@@ -327,7 +338,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
 
                 <FloatingSelect
                   label="Tipo de entrega"
-                  className="text-black/70 text-xs"
+                  className="text-black text-xs"
                   name="delivery-type"
                   value={form.deliveryType ?? ""}
                   onChange={(value) => setForm((prev) => ({ ...prev, deliveryType: (value || undefined) as DeliveryType | undefined }))}
@@ -357,7 +368,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
               <FloatingInput
                 label="Nota"
                 name="note"
-                className="text-black/70 text-xs"
+                className="text-black text-xs"
                 value={form.note ?? ""}
                 onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
               />

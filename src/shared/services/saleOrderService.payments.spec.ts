@@ -5,6 +5,7 @@ import {
   createSaleOrderPayment,
   deleteSaleOrderPayment,
   listSaleOrderPayments,
+  previewSaleOrdersJsonImport,
 } from "@/shared/services/saleOrderService";
 
 vi.mock("@/shared/common/utils/axios", () => {
@@ -73,5 +74,35 @@ describe("saleOrderService payments/cancel", () => {
 
     expect(axiosInstance.delete).toHaveBeenCalledWith("/sale-orders/so-4/payments/p-9");
     expect(res.deleted).toBe(true);
+  });
+
+  it("previewSaleOrdersJsonImport -> POST /sale-orders/import-preview with direct rows array", async () => {
+    (axiosInstance.post as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: {
+        totalRows: 1,
+        processedRows: 1,
+        importedRows: 1,
+        failedRows: 0,
+        rows: [],
+        errors: [],
+      },
+    });
+
+    const rows = [
+      {
+        departmentName: "Lima",
+        provinceName: "Lima",
+        districtName: "Miraflores",
+        recipientName: "Ana Perez",
+        phone: "999888777",
+        productCodes: "AMPOLLA - ROJO - EVA001",
+        total: 120,
+      },
+    ];
+
+    const res = await previewSaleOrdersJsonImport(rows);
+
+    expect(axiosInstance.post).toHaveBeenCalledWith("/sale-orders/import-preview", rows);
+    expect(res.importedRows).toBe(1);
   });
 });

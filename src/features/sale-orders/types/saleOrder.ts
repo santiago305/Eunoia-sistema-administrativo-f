@@ -7,9 +7,16 @@ export type SaleOrderDeliveryStatus = "WAITING" | "IN_PROGRESS" | "DELIVERED" | 
 export type SaleOrderItemComponentInput = {
   id?: string;
   skuId?: string;
-  sku?: {
-    id?: string;
-  };
+  sku?:
+    | {
+        id?: string;
+        name?: string | null;
+        backendSku?: string | null;
+        customSku?: string | null;
+        image?: string | null;
+        attributes?: Array<{ value?: string | null }> | null;
+      }
+    | null;
   quantity: number;
   unitPrice: number;
   total: number;
@@ -66,6 +73,52 @@ export type CreateSaleOrderResponse = {
   correlative: number;
   agendaStatus: string;
   deliveryStatus: string | null;
+};
+
+export type SaleOrderJsonImportRow = {
+  productName?: string;
+  orderDate?: string;
+  deliveryDate?: string;
+  deliveryType?: string;
+  departmentName: string;
+  provinceName: string;
+  districtName: string;
+  recipientName: string;
+  address?: string;
+  deliveryNote?: string;
+  phone: string;
+  couponCode?: string;
+  productCodes: string;
+  quantity?: number;
+  total: number;
+  advance?: number;
+  codAmount?: number;
+  internalNote?: string;
+  confirmedBy?: string;
+};
+
+export type SaleOrderJsonImportPreviewResponse = {
+  totalRows: number;
+  processedRows: number;
+  importedRows: number;
+  failedRows: number;
+  rows: Array<{
+    rowNumber: number;
+    clientId: string;
+    sourceId: string;
+    saleOrderId: string;
+    skus: Array<{
+      productId: string;
+      skuId: string;
+      skuName: string;
+      customSku: string;
+      quantity: number;
+    }>;
+  }>;
+  errors: Array<{
+    rowNumber: number;
+    message: string;
+  }>;
 };
 
 export type SaleOrderPaymentStatus = "PAID" | "PENDING";

@@ -117,7 +117,9 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
   const hasComponents = components.length > 0;
 
   const uniqueSkuIds = useMemo(() => {
-    const values = components.map((component) => component.skuId ?? "").filter(Boolean);
+    const values = components
+      .map((component) => component.skuId ?? component.sku?.id ?? "")
+      .filter(Boolean);
     return Array.from(new Set(values));
   }, [components]);
 
@@ -317,7 +319,7 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
 
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {components.map((component, index) => {
-                    const skuId = component.skuId ?? "";
+                    const skuId = component.skuId ?? component.sku?.id ?? "";
                     const sku = skuId ? skuById[skuId] ?? null : null;
                     const stock = skuId ? stocksBySkuId[skuId] ?? null : null;
 
