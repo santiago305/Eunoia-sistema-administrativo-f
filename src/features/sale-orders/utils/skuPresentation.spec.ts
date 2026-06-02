@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { deriveSkuPresentation } from "@/features/sale-orders/utils/skuPresentation";
 
 describe("deriveSkuPresentation", () => {
-  it("builds label with attrs and prefers backendSku", () => {
+  it("builds label with attrs, backendSku and customSku", () => {
     const sku = {
       id: "sku-1",
       name: "JABON AZUFRE",
@@ -15,7 +15,7 @@ describe("deriveSkuPresentation", () => {
     const out = deriveSkuPresentation(sku, sku.id);
 
     expect(out.skuCode).toBe("10017");
-    expect(out.skuLabel).toBe("JABON AZUFRE AZUFRE (10017)");
+    expect(out.skuLabel).toBe("JABON AZUFRE AZUFRE -10017 (EVA01893)");
     expect(out.skuImage).toBe("https://example.test/x.png");
   });
 

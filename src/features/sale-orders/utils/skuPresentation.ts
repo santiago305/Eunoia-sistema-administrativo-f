@@ -24,7 +24,9 @@ export function deriveSkuPresentation(sku: SkuLike, skuId?: string | null) {
   const rawName = (sku?.name ?? "").trim();
   const attrsText = joinAttrValues(sku?.attributes);
 
-  const code = ((sku?.backendSku ?? sku?.customSku ?? safeSkuId) ?? "").trim();
+  const backendSku = (sku?.backendSku ?? "").trim();
+  const customSku = (sku?.customSku ?? "").trim();
+  const code = (backendSku || customSku || safeSkuId).trim();
   const skuCode = code || "-";
   const skuImage = sku?.image ?? null;
 
@@ -34,9 +36,11 @@ export function deriveSkuPresentation(sku: SkuLike, skuId?: string | null) {
 
   const name = rawName || "SKU";
   const attrsPart = attrsText ? ` ${attrsText}` : "";
-  const codePart = skuCode && skuCode !== "-" ? ` (${skuCode})` : "";
+  const backendPart = backendSku ? ` -${backendSku}` : "";
+  const customPart = customSku ? ` (${customSku})` : "";
+  const fallbackCodePart = !backendPart && !customPart && skuCode && skuCode !== "-" ? ` (${skuCode})` : "";
 
-  const skuLabel = `${name}${attrsPart}${codePart}`.trim() || safeSkuId || "SKU";
+  const skuLabel = `${name}${attrsPart}${backendPart}${customPart}${fallbackCodePart}`.trim() || safeSkuId || "SKU";
   return { skuLabel, skuCode, skuImage };
 }
 
