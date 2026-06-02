@@ -47,7 +47,7 @@ const sumComponentsTotal = (components: SaleOrderItemComponentInput[] = []) => {
 };
 
 const getSkuCode = (sku: PackItemSku | null | undefined, skuId: string) => {
-  return sku?.backendSku ?? sku?.customSku ?? skuId ?? "-";
+  return `${sku?.backendSku ?? ""}${sku?.customSku ?? ""}${skuId ?? ""}`;
 };
 
 const getSkuImage = (sku: PackItemSku | null | undefined) => {

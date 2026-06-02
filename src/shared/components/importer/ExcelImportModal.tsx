@@ -225,7 +225,7 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
       onClose={handleClose}
       title={title}
       description="Carga, mapea y valida filas antes de enviarlas."
-      className={`${step === "preview" ? "w-screen h-screen" : "w-full max-w-5xl "}`}
+      className={`${step === "preview" ? "w-screen h-screen" : "w-full max-w-2xl "}`}
       bodyClassName="space-y-4"
       footer={footer}
       preventClose={loading || submitting}

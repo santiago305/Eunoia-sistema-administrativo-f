@@ -84,11 +84,12 @@ export const buildSkuLabelFromDetailItem = (
     .filter(Boolean)
     .join(" ");
 
-  const code = item.sku?.backendSku || item.sku?.customSku || item.skuId;
   const attrsPart = attrsText ? ` ${attrsText}` : "";
-  const codePart = code ? ` (${code})` : "";
+  const backendPart = item.sku?.backendSku ? ` -${item.sku.backendSku}` : "";
+  const customPart = item.sku?.customSku ? ` (${item.sku.customSku})` : "";
+  const fallbackPart = !backendPart && !customPart && item.skuId ? ` (${item.skuId})` : "";
 
-  return `${name}${attrsPart}${codePart},`.trim();
+  return `${name}${attrsPart}${backendPart}${customPart}${fallbackPart},`.trim();
 };
 
 export default function CatalogPacks() {

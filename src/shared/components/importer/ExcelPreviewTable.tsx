@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { cn } from "@/shared/lib/utils";
 import type { ExcelRow, ExcelRowError, ImportField } from "./excelImporter.types";
+import { SystemButton } from "../components/SystemButton";
 
 type ExcelPreviewTableProps = {
   fields: ImportField[];
@@ -29,6 +32,7 @@ export function ExcelPreviewTable({
   onToggleAllRows,
   onChangeCell,
 }: ExcelPreviewTableProps) {
+  const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
   const errorsByRow = new Map<number, ExcelRowError[]>();
   const errorsByCell = new Map<string, string>();
 
@@ -43,7 +47,7 @@ export function ExcelPreviewTable({
   const selectedCount = selectedRowIndexes.size;
   const allRowsSelected = rows.length > 0 && selectedCount === rows.length;
 
-  const gridTemplateColumns = `44px 60px repeat(${fields.length}, minmax(140px, 1fr))`;
+  const gridTemplateColumns = `72px 60px repeat(${fields.length}, minmax(140px, 1fr))`;
 
   if (rows.length === 0) {
     return (
@@ -63,7 +67,7 @@ export function ExcelPreviewTable({
             gridTemplateColumns,
           }}
         >
-          <div className="sticky top-0 z-10 flex items-center bg-muted px-2 py-2 font-semibold text-foreground">
+          <div className="sticky top-0 z-10 flex items-center gap-2 bg-muted px-2 py-2 font-semibold text-foreground">
             <Checkbox
               checked={allRowsSelected}
               onCheckedChange={(checked) => onToggleAllRows(checked === true)}
@@ -96,9 +100,15 @@ export function ExcelPreviewTable({
                 row={row}
                 rowIndex={index}
                 selected={selected}
+                editing={selected && editingRowIndex === index}
                 rowHasError={rowHasError}
                 errorsByCell={errorsByCell}
                 onToggleRow={onToggleRow}
+                onToggleEditing={() =>
+                  setEditingRowIndex((currentIndex) =>
+                    currentIndex === index ? null : index,
+                  )
+                }
                 onChangeCell={onChangeCell}
               />
             );
@@ -139,9 +149,11 @@ type RowFragmentProps = {
   row: ExcelRow;
   rowIndex: number;
   selected: boolean;
+  editing: boolean;
   rowHasError: boolean;
   errorsByCell: Map<string, string>;
   onToggleRow: (rowIndex: number, checked: boolean) => void;
+  onToggleEditing: () => void;
   onChangeCell: (rowIndex: number, fieldKey: string, value: unknown) => void;
 };
 
@@ -150,9 +162,11 @@ function RowFragment({
   row,
   rowIndex,
   selected,
+  editing,
   rowHasError,
   errorsByCell,
   onToggleRow,
+  onToggleEditing,
   onChangeCell,
 }: RowFragmentProps) {
   const rowClassName = cn(
@@ -163,12 +177,27 @@ function RowFragment({
 
   return (
     <>
-      <div className={cn(rowClassName, "flex items-start")}>
+      <div className={cn(rowClassName, "flex items-start gap-2")}>
         <Checkbox
           checked={selected}
           onCheckedChange={(checked) => onToggleRow(rowIndex, checked === true)}
           aria-label={`Seleccionar fila ${rowIndex + 2}`}
         />
+        <SystemButton
+          variant="ghost"
+          size="custom"
+          className={cn(
+            "h-6 w-6 rounded-md p-0 text-muted-foreground",
+            editing ? "bg-black/[0.06] text-foreground" : undefined,
+          )}
+          disabled={!selected}
+          aria-pressed={editing}
+          aria-label={`Editar fila ${rowIndex + 2}`}
+          title={`Editar fila ${rowIndex + 2}`}
+          onClick={onToggleEditing}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </SystemButton>
       </div>
 
       <div className={cn(rowClassName, "text-muted-foreground")}>
@@ -177,21 +206,58 @@ function RowFragment({
 
       {fields.map((field) => (
         <div key={field.key} className={cn(rowClassName, "min-w-0")}>
-          <PreviewCellEditor
-            field={field}
-            rowIndex={rowIndex}
-            value={row[field.key]}
-            disabled={!selected}
-            error={
-              selected
-                ? errorsByCell.get(getCellKey(rowIndex, field.key))
-                : undefined
-            }
-            onChange={onChangeCell}
-          />
+          {editing ? (
+            <PreviewCellEditor
+              field={field}
+              rowIndex={rowIndex}
+              value={row[field.key]}
+              disabled={!selected}
+              error={
+                selected
+                  ? errorsByCell.get(getCellKey(rowIndex, field.key))
+                  : undefined
+              }
+              onChange={onChangeCell}
+            />
+          ) : (
+            <PreviewCellText
+              field={field}
+              value={row[field.key]}
+              error={
+                selected
+                  ? errorsByCell.get(getCellKey(rowIndex, field.key))
+                  : undefined
+              }
+            />
+          )}
         </div>
       ))}
     </>
+  );
+}
+
+type PreviewCellTextProps = {
+  field: ImportField;
+  value: unknown;
+  error?: string;
+};
+
+function PreviewCellText({ field, value, error }: PreviewCellTextProps) {
+  return (
+    <div className="min-h-8 min-w-0">
+      <span
+        className={cn(
+          "block truncate rounded-md px-2 py-1 text-xs leading-6 text-foreground",
+          error ? "border border-red-200 bg-red-50 text-red-700" : undefined,
+        )}
+        title={formatCellForDisplay(value, field)}
+      >
+        {formatCellForDisplay(value, field) || (
+          <span className="text-muted-foreground">Sin valor</span>
+        )}
+      </span>
+      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+    </div>
   );
 }
 
@@ -254,4 +320,14 @@ function formatCell(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return String(value);
+}
+
+function formatCellForDisplay(value: unknown, field: ImportField): string {
+  if (field.type === "boolean") {
+    if (value === true) return "Sí";
+    if (value === false) return "No";
+    return "";
+  }
+
+  return formatCell(value);
 }
