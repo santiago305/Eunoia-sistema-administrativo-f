@@ -6,6 +6,7 @@ import { Checkbox } from "@/shared/components/ui/checkbox";
 import { cn } from "@/shared/lib/utils";
 import type { ExcelRow, ExcelRowError, ImportField } from "./excelImporter.types";
 import { SystemButton } from "../components/SystemButton";
+import { FloatingDatePicker } from "../components/date-picker/FloatingDatePicker";
 
 type ExcelPreviewTableProps = {
   fields: ImportField[];
@@ -297,6 +298,22 @@ function PreviewCellEditor({
     );
   }
 
+  if (field.type === "date") {
+    return (
+      <FloatingDatePicker
+        label={field.label}
+        name={name}
+        value={parseDateValue(value)}
+        onChange={(date) => onChange(rowIndex, field.key, date)}
+        error={error}
+        disabled={disabled}
+        placeholder="Seleccionar"
+        className="h-8 w-full min-w-0 rounded-md px-2 py-1 text-xs"
+        containerClassName="w-full min-w-0"
+      />
+    );
+  }
+
   return (
     <FloatingInput
       label={field.label}
@@ -305,7 +322,7 @@ function PreviewCellEditor({
       onChange={(event) => onChange(rowIndex, field.key, event.target.value)}
       error={error}
       disabled={disabled}
-      type={field.type === "date" ? "date" : "text"}
+      type="text"
       inputMode={field.type === "number" ? "decimal" : undefined}
       className="h-8 w-full min-w-0 rounded-md px-2 py-1 text-xs"
     />
@@ -328,6 +345,16 @@ function formatCellForDisplay(value: unknown, field: ImportField): string {
     if (value === false) return "No";
     return "";
   }
-
   return formatCell(value);
+}
+function parseDateValue(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === "string") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  return null;
 }
