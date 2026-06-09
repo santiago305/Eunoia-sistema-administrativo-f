@@ -1,9 +1,6 @@
 export type RuleMode = "include" | "exclude";
 export type DateOperator = "on" | "before" | "after" | "between" | "onOrBefore" | "onOrAfter";
 
-export type DeliveryType = "CONTRA_ENTREGA" | "ABONADO_ENVIO";
-export type AgendaStatus = "COORDINATED" | "PROGRAMMED" | "CANCELED";
-export type DeliveryStatus = "WAITING" | "IN_PROGRESS" | "DELIVERED" | "CANCELED";
 export type PaymentStatus = "PAID" | "PENDING";
 
 export type NumberRule = { field: "number"; operator: "contains" | "eq"; value: string };
@@ -11,9 +8,6 @@ export type NumberRule = { field: "number"; operator: "contains" | "eq"; value: 
 export type ClientRule = { field: "clientId"; operator: "in"; mode?: RuleMode; values: string[] };
 export type WarehouseRule = { field: "warehouseId"; operator: "in"; mode?: RuleMode; values: string[] };
 
-export type AgendaStatusRule = { field: "agendaStatus"; operator: "in"; mode?: RuleMode; values: AgendaStatus[] };
-export type DeliveryStatusRule = { field: "deliveryStatus"; operator: "in"; mode?: RuleMode; values: DeliveryStatus[] };
-export type DeliveryTypeRule = { field: "deliveryType"; operator: "in"; mode?: RuleMode; values: DeliveryType[] };
 export type PaymentStatusRule = { field: "paymentStatus"; operator: "in"; mode?: RuleMode; values: PaymentStatus[] };
 
 export type DateRule = {
@@ -27,9 +21,6 @@ export type Rule =
   | NumberRule
   | ClientRule
   | WarehouseRule
-  | AgendaStatusRule
-  | DeliveryStatusRule
-  | DeliveryTypeRule
   | PaymentStatusRule
   | DateRule;
 
@@ -54,9 +45,8 @@ export type SaleOrderRow = {
   createdBy: { id: string; name: string; email: string } | null;
   scheduleDate: string | null;
   deliveryDate: string | null;
-  deliveryType: DeliveryType | null;
-  agendaStatus: AgendaStatus;
-  deliveryStatus: DeliveryStatus | null;
+  workflowId: string | null;
+  currentStateId: string | null;
   subTotal: number;
   deliveryCost: number;
   total: number;
@@ -88,9 +78,6 @@ export type SearchState = {
   catalogs: {
     clients: Array<{ id: string; label: string }>;
     warehouses: Array<{ id: string; label: string }>;
-    agendaStatuses: SearchOption[];
-    deliveryStatuses: SearchOption[];
-    deliveryTypes: SearchOption[];
     paymentStatuses: SearchOption[];
   };
 };

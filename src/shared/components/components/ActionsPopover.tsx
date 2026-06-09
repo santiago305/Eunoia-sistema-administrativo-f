@@ -67,6 +67,7 @@ type ActionsPopoverProps = {
   gridClassName?: string;
   itemClassName?: string;
   renderAction?: RenderAction;
+  triggerText?: string;
 };
 
 function getTriggerVariantClasses(variant: ActionsTriggerVariant) {
@@ -124,6 +125,7 @@ export function ActionsPopover({
   gridClassName,
   itemClassName,
   renderAction,
+  triggerText,
 }: ActionsPopoverProps) {
   const anchorRef = useRef<HTMLButtonElement | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -198,6 +200,11 @@ export function ActionsPopover({
         >
           {triggerIcon ?? <Menu className="h-full w-full" />}
         </span>
+        {triggerText ? (
+          <span className="whitespace-nowrap font-medium">
+            {triggerText}
+          </span>
+        ) : null}
       </button>
 
       <Popover

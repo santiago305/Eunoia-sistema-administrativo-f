@@ -24,7 +24,6 @@ export const createSaleOrderSchema = z.object({
   sourceId: z.string().min(1).optional(),
   scheduleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  deliveryType: z.enum(["CONTRA_ENTREGA", "ABONADO_ENVIO"]).optional(),
   subTotal: z.number().min(0).optional(),
   total: z.number().min(0).optional(),
   note: z.string().optional(),

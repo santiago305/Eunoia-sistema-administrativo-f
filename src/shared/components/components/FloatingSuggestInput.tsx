@@ -24,6 +24,7 @@ export type FloatingSuggestInputProps = {
   name: string;
   value: string;
   onChange: (text: string) => void;
+  onOptionSelect?: (option: FloatingSuggestOption) => void;
   options: FloatingSuggestOption[];
   placeholder?: string;
   disabled?: boolean;
@@ -41,6 +42,7 @@ export function FloatingSuggestInput({
   name,
   value,
   onChange,
+  onOptionSelect,
   options,
   placeholder,
   disabled = false,
@@ -208,9 +210,10 @@ export function FloatingSuggestInput({
       const option = filteredOptions[index];
       if (!option) return;
       onChange(option.label);
+      onOptionSelect?.(option);
       closePanel();
     },
-    [closePanel, filteredOptions, onChange],
+    [closePanel, filteredOptions, onChange, onOptionSelect],
   );
 
   const handleKeyDown = useCallback(
@@ -330,6 +333,7 @@ export function FloatingSuggestInput({
           ref={inputRef}
           id={name}
           name={name}
+          autoComplete="off"
           value={value}
           onChange={(event) => {
             onChange(event.target.value);

@@ -52,6 +52,7 @@
     "@tiptap/react": "^2.27.2",
     "@tiptap/starter-kit": "^2.27.2",
     "@types/react-router-dom": "^5.3.3",
+    "@xyflow/react": "^12.11.0",
     "axios": "^1.9.0",
     "big.js": "^7.0.1",
     "class-variance-authority": "^0.7.1",

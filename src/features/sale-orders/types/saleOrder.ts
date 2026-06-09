@@ -1,9 +1,3 @@
-export type DeliveryType = "CONTRA_ENTREGA" | "ABONADO_ENVIO";
-
-export type SaleOrderAgendaStatus = "COORDINATED" | "PROGRAMMED" | "CANCELED";
-
-export type SaleOrderDeliveryStatus = "WAITING" | "IN_PROGRESS" | "DELIVERED" | "CANCELED";
-
 export type SaleOrderItemComponentInput = {
   id?: string;
   skuId?: string;
@@ -37,11 +31,6 @@ export type SaleOrderItemInput = {
   components?: SaleOrderItemComponentInput[];
 };
 
-export enum SaleOrderDeliveryType {
-  CONTRA_ENTREGA = "CONTRA_ENTREGA",
-  ABONADO_ENVIO = "ABONADO_ENVIO",
-}
-
 export type SaleOrderPaymentInput = {
   method: string;
   amount: number;
@@ -52,13 +41,13 @@ export type SaleOrderPaymentInput = {
 };
 
 export type CreateSaleOrderDto = {
+  workflowId: string;
   warehouseId: string;
   clientId: string;
   agencyDetail?: string;
   sourceId?: string;
   scheduleDate: string;
   deliveryDate?: string;
-  deliveryType?: DeliveryType;
   deliveryCost?: number;
   subTotal?: number;
   total?: number;
@@ -71,15 +60,15 @@ export type CreateSaleOrderResponse = {
   orderId: string;
   serie: string;
   correlative: number;
-  agendaStatus: string;
-  deliveryStatus: string | null;
+  workflowId: string | null;
+  currentStateId: string | null;
 };
 
 export type SaleOrderJsonImportRow = {
+  workflowName?: string;
   productName?: string;
   orderDate?: string;
   deliveryDate?: string;
-  deliveryType?: string;
   departmentName: string;
   provinceName: string;
   districtName: string;
@@ -138,15 +127,46 @@ export type SaleOrder = {
   id: string;
   serie: string | null;
   correlative: number | null;
-  client: { id: string; type: ClientType; fullName: string; docNumber?: string | null; reference?: string | null, count?:number } | null;
+  client: { id: string; type: ClientType; fullName: string; docNumber?: string | null; reference?: string | null, count?:number,
+    mainPhone?: string | null; 
+    departmentId?: string | null;
+    provinceId?: string | null;
+    districtId?: string | null;
+    department?: {
+      id: string;
+      name: string;
+    } | null;
+
+    province?: {
+      id: string;
+      name: string;
+      departmentId: string;
+    } | null;
+
+    district?: {
+      id: string;
+      name: string;
+      provinceId: string;
+    } | null;
+   } | null;
   warehouse: { id: string; name: string } | null;
   source: { id: string; name: string; detail?: string | null } | null;
   createdBy: { id: string; name: string; email: string } | null;
   scheduleDate: string | null;
   deliveryDate: string | null;
-  deliveryType: DeliveryType | null;
-  agendaStatus: SaleOrderAgendaStatus;
-  deliveryStatus: SaleOrderDeliveryStatus | null;
+  workflowId: string | null;
+  currentStateId: string | null;
+  workflow: { id: string; name: string; description: string | null; isActive: boolean } | null;
+  currentState: {
+    id: string;
+    name: string;
+    code: string;
+    color: string;
+    isInitial: boolean;
+    isFinal: boolean;
+    isActive: boolean;
+  } | null;
+  invoiceSend: boolean;
   subTotal: number;
   deliveryCost: number;
   total: number;
@@ -170,7 +190,10 @@ export type SaleOrderListResponse = {
 };
 
 export type SaleOrderSearchOption = {
-  id: string;
+  id?: string;
+  saleOrderStateId?: string;
+  workflowId?: string;
+  value?: string;
   label: string;
   keywords?: string[];
 };
@@ -182,10 +205,9 @@ export type SaleOrderSearchRule = {
     | "number"
     | "clientId"
     | "warehouseId"
-    | "agendaStatus"
-    | "deliveryStatus"
-    | "deliveryType"
     | "paymentStatus"
+    | "workflowId"
+    | "saleOrderStateId"
     | "scheduleDate"
     | "deliveryDate";
   operator:
@@ -232,16 +254,42 @@ export type SaleOrderSearchStateResponse = {
   catalogs: {
     clients: SaleOrderSearchOption[];
     warehouses: SaleOrderSearchOption[];
-    agendaStatuses: SaleOrderSearchOption[];
-    deliveryStatuses: SaleOrderSearchOption[];
-    deliveryTypes: SaleOrderSearchOption[];
     paymentStatuses: SaleOrderSearchOption[];
+    workflows: SaleOrderSearchOption[];
+    states: SaleOrderSearchOption[];
   };
 };
-export enum DeliveryTypeEnum {
-  CONTRA_ENTREGA = "CONTRA_ENTREGA",
-  ABONADO_ENVIO = "ABONADO_ENVIO",
-}
+
+export type SaleOrderStatisticsParams = {
+  q?: string;
+  filters?: SaleOrderSearchRule[];
+  includeCancelled?: boolean;
+};
+
+export type SaleOrderStatisticsResponse = {
+  byWorkflow: Array<{
+    id: string | null;
+    label: string;
+    count: number;
+  }>;
+  byState: Array<{
+    id: string | null;
+    label: string;
+    color: string | null;
+    count: number;
+  }>;
+  byClientType: Array<{
+    type: "NEW" | "LAGGING" | "REPURCHASE" | "UNDEFINED";
+    label: string;
+    count: number;
+  }>;
+  totals: {
+    orders: number;
+    total: number;
+    collected: number;
+    pending: number;
+  };
+};
 export enum ClientType {
   NEW = "NEW",
   LAGGING = "LAGGING",
@@ -249,16 +297,4 @@ export enum ClientType {
   UNDEFINED = "UNDEFINED",
 }
 
-export enum DeliveryStatus {
-  IN_PROGRESS = "IN_PROGRESS",
-  DELIVERED = "DELIVERED",
-  CANCELED = "CANCELED",
-  WAITING = "WAITING",
-}
-
-export enum AgendaStatus {
-  COORDINATED = "COORDINATED",
-  PROGRAMMED = "PROGRAMMED",
-  CANCELED = "CANCELED",
-}
 

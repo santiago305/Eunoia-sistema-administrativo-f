@@ -4,11 +4,13 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import type { SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
 import { SaleOrderItemComponentsStockModal } from "@/features/sale-orders/components/SaleOrderItemComponentsStockModal";
+import { SaleOrderWorkflowPanel } from "@/features/sale-orders/components/SaleOrderWorkflowPanel";
 
 type Props = {
   open: boolean;
   order: SaleOrder | null;
   onClose: () => void;
+  onOrderChanged: () => void | Promise<void>;
 };
 
 const DASH = "\u2014";
@@ -29,7 +31,7 @@ const formatClientLabel = (client?: { fullName: string; docNumber?: string | nul
   return docOrRef ? `${client.fullName} (${docOrRef})` : client.fullName;
 };
 
-export function SaleOrderDetailsModal({ open, order, onClose }: Props) {
+export function SaleOrderDetailsModal({ open, order, onClose, onOrderChanged }: Props) {
   const title = useMemo(() => {
     if (!order) return "Detalle de pedido";
     const correlative = order.correlative ?? 0;
@@ -58,6 +60,24 @@ export function SaleOrderDetailsModal({ open, order, onClose }: Props) {
             <div>
               <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-black/45">Cliente</div>
               <div className="mt-0.5 truncate text-[13px] font-semibold text-black/80">{formatClientLabel(order.client)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-black/45">Workflow</div>
+              <div className="mt-0.5 text-[13px] font-semibold text-black/80">{order.workflow?.name ?? "Sin workflow"}</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-black/45">Estado actual</div>
+              <div className="mt-1">
+                <span
+                  className="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset"
+                  style={{
+                    color: order.currentState?.color ?? "#475569",
+                    backgroundColor: `${order.currentState?.color ?? "#64748b"}18`,
+                  }}
+                >
+                  {order.currentState?.name ?? "Sin estado"}
+                </span>
+              </div>
             </div>
             <div>
               <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-black/45">Almacén</div>
@@ -89,7 +109,19 @@ export function SaleOrderDetailsModal({ open, order, onClose }: Props) {
                 </span>
               </div>
             </div>
+            <div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-black/45">Factura</div>
+              <div className="mt-0.5 text-[13px] font-semibold text-black/80">
+                {order.invoiceSend ? "Factura enviada" : "Pendiente de envio"}
+              </div>
+            </div>
           </div>
+
+          <SaleOrderWorkflowPanel
+            saleOrderId={order.id}
+            workflowId={order.workflowId}
+            onOrderChanged={onOrderChanged}
+          />
 
           <div className="rounded-xl border border-black/10 overflow-hidden">
             <div className="bg-black/[0.02] px-3 py-2 text-xs font-semibold text-black/70">Items del pedido</div>

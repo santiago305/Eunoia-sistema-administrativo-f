@@ -1,21 +1,37 @@
-export type Agency = {
+export type Subsidiary = {
   id: string;
-  name: string;
-  reference: string | null;
-  address: string | null;
+  agencyId: string;
+  alias: string;
   departmentId: string;
   provinceId: string;
   districtId: string;
+  address?: string | null;
+  basePrice: number;
+  note?: string | null;
+  isActive: boolean;
+};
+
+export type Agency = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  subsidiaries?: Subsidiary[];
+};
+
+export type AgencySubsidiaryForm = {
+  id?: string;
+  alias: string;
+  departmentId: string;
+  provinceId: string;
+  districtId: string;
+  address: string;
+  basePrice: number | string;
+  note: string;
   isActive: boolean;
 };
 
 export type AgencyForm = {
   name: string;
-  reference: string;
-  address: string;
-  departmentId: string;
-  provinceId: string;
-  districtId: string;
   isActive: boolean;
+  subsidiaries: AgencySubsidiaryForm[];
 };
-

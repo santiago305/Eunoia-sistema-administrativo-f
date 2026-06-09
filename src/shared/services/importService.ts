@@ -10,7 +10,6 @@ export type OrdersImportPreviewResponse = {
     productName: ExcelValue;
     orderDate: ExcelValue;
     deliveryDate: ExcelValue;
-    deliveryType: ExcelValue;
     city: ExcelValue;
     district: ExcelValue;
     recipientName: ExcelValue;

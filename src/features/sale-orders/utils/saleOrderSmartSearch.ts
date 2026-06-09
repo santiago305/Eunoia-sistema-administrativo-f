@@ -15,10 +15,9 @@ export const SaleOrderSearchFields = {
   NUMBER: "number",
   CLIENT_ID: "clientId",
   WAREHOUSE_ID: "warehouseId",
-  AGENDA_STATUS: "agendaStatus",
-  DELIVERY_STATUS: "deliveryStatus",
-  DELIVERY_TYPE: "deliveryType",
   PAYMENT_STATUS: "paymentStatus",
+  WORKFLOW_ID: "workflowId",
+  SALE_ORDER_STATE_ID: "saleOrderStateId",
   SCHEDULE_DATE: "scheduleDate",
   DELIVERY_DATE: "deliveryDate",
 } as const;
@@ -51,10 +50,9 @@ const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
   number: "Número",
   clientId: "Cliente",
   warehouseId: "Almacén",
-  agendaStatus: "Estado agenda",
-  deliveryStatus: "Estado entrega",
-  deliveryType: "Tipo entrega",
   paymentStatus: "Estado de pago",
+  workflowId: "Flujo",
+  saleOrderStateId: "Estado",
   scheduleDate: "Fecha agenda",
   deliveryDate: "Fecha entrega",
 };
@@ -62,10 +60,9 @@ const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
 const CATALOG_FIELDS = new Set<SaleOrderSearchField>([
   SaleOrderSearchFields.CLIENT_ID,
   SaleOrderSearchFields.WAREHOUSE_ID,
-  SaleOrderSearchFields.AGENDA_STATUS,
-  SaleOrderSearchFields.DELIVERY_STATUS,
-  SaleOrderSearchFields.DELIVERY_TYPE,
   SaleOrderSearchFields.PAYMENT_STATUS,
+  SaleOrderSearchFields.WORKFLOW_ID,
+  SaleOrderSearchFields.SALE_ORDER_STATE_ID,
 ]);
 
 const DATE_FIELDS = new Set<SaleOrderSearchField>([
@@ -217,13 +214,28 @@ export function removeSaleOrderSearchKey(snapshot: SaleOrderSearchSnapshot, key:
 }
 
 function getPaymentStatusLabel(values: string[], searchState?: SaleOrderSearchStateResponse | null) {
-  const map = new Map((searchState?.catalogs.paymentStatuses ?? []).map((item) => [item.id, item.label]));
+  const map = new Map((searchState?.catalogs.paymentStatuses ?? []).map((item) => [getOptionId(item), item.label]));
   const labels = values.map((id) => map.get(id) ?? id).filter(Boolean);
   return labels.join(", ");
 }
 
-function getCatalogLabel(values: string[], options: DataTableSearchOption[] | undefined) {
-  const map = new Map((options ?? []).map((item) => [item.id, item.label]));
+function getOptionId(option: SaleOrderSearchStateResponse["catalogs"][keyof SaleOrderSearchStateResponse["catalogs"]][number]) {
+  return option.id ?? option.saleOrderStateId ?? option.workflowId ?? option.value ?? "";
+}
+
+function normalizeSearchOptions(
+  options: SaleOrderSearchStateResponse["catalogs"][keyof SaleOrderSearchStateResponse["catalogs"]] | undefined,
+): DataTableSearchOption[] {
+  return (options ?? [])
+    .map((item) => ({
+      ...item,
+      id: getOptionId(item),
+    }))
+    .filter((item): item is DataTableSearchOption => Boolean(item.id));
+}
+
+function getCatalogLabel(values: string[], options: SaleOrderSearchStateResponse["catalogs"][keyof SaleOrderSearchStateResponse["catalogs"]] | undefined) {
+  const map = new Map(normalizeSearchOptions(options).map((item) => [item.id, item.label]));
   const labels = values.map((id) => map.get(id) ?? id).filter(Boolean);
   return labels.join(", ");
 }
@@ -240,13 +252,11 @@ function getRuleLabel(rule: SaleOrderSearchRule, searchState?: SaleOrderSearchSt
           ? getCatalogLabel(values, searchState?.catalogs.clients)
           : rule.field === SaleOrderSearchFields.WAREHOUSE_ID
             ? getCatalogLabel(values, searchState?.catalogs.warehouses)
-            : rule.field === SaleOrderSearchFields.AGENDA_STATUS
-              ? getCatalogLabel(values, searchState?.catalogs.agendaStatuses)
-              : rule.field === SaleOrderSearchFields.DELIVERY_STATUS
-                ? getCatalogLabel(values, searchState?.catalogs.deliveryStatuses)
-                : rule.field === SaleOrderSearchFields.DELIVERY_TYPE
-                  ? getCatalogLabel(values, searchState?.catalogs.deliveryTypes)
-                  : getCatalogLabel(values, undefined);
+            : rule.field === SaleOrderSearchFields.WORKFLOW_ID
+              ? getCatalogLabel(values, searchState?.catalogs.workflows)
+              : rule.field === SaleOrderSearchFields.SALE_ORDER_STATE_ID
+                ? getCatalogLabel(values, searchState?.catalogs.states)
+            : getCatalogLabel(values, undefined);
     if (!label) return null;
     const modePrefix = rule.mode === "exclude" ? "No" : "";
     return `${fieldLabel}: ${modePrefix ? `${modePrefix} ` : ""}${label}`.trim();
@@ -322,12 +332,11 @@ export function getSaleOrderSearchRuleSummary(
 export function buildSaleOrderSmartSearchColumns(
   searchState?: SaleOrderSearchStateResponse | null,
 ): SaleOrderSmartSearchColumn[] {
-  const paymentStatusOptions: DataTableSearchOption[] = (searchState?.catalogs.paymentStatuses ?? []) as DataTableSearchOption[];
-  const clientOptions: DataTableSearchOption[] = (searchState?.catalogs.clients ?? []) as DataTableSearchOption[];
-  const warehouseOptions: DataTableSearchOption[] = (searchState?.catalogs.warehouses ?? []) as DataTableSearchOption[];
-  const agendaStatusOptions: DataTableSearchOption[] = (searchState?.catalogs.agendaStatuses ?? []) as DataTableSearchOption[];
-  const deliveryStatusOptions: DataTableSearchOption[] = (searchState?.catalogs.deliveryStatuses ?? []) as DataTableSearchOption[];
-  const deliveryTypeOptions: DataTableSearchOption[] = (searchState?.catalogs.deliveryTypes ?? []) as DataTableSearchOption[];
+  const paymentStatusOptions = normalizeSearchOptions(searchState?.catalogs.paymentStatuses);
+  const clientOptions = normalizeSearchOptions(searchState?.catalogs.clients);
+  const warehouseOptions = normalizeSearchOptions(searchState?.catalogs.warehouses);
+  const workflowOptions = normalizeSearchOptions(searchState?.catalogs.workflows);
+  const stateOptions = normalizeSearchOptions(searchState?.catalogs.states);
 
   return [
     {
@@ -360,33 +369,6 @@ export function buildSaleOrderSmartSearchColumns(
       options: warehouseOptions,
     },
     {
-      id: SaleOrderSearchFields.AGENDA_STATUS,
-      label: "Estado agenda",
-      kind: "catalog",
-      description: "Filtra por estado de agenda.",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: agendaStatusOptions,
-    },
-    {
-      id: SaleOrderSearchFields.DELIVERY_STATUS,
-      label: "Estado entrega",
-      kind: "catalog",
-      description: "Filtra por estado de entrega.",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: deliveryStatusOptions,
-    },
-    {
-      id: SaleOrderSearchFields.DELIVERY_TYPE,
-      label: "Tipo entrega",
-      kind: "catalog",
-      description: "Filtra por tipo de entrega.",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: deliveryTypeOptions,
-    },
-    {
       id: SaleOrderSearchFields.PAYMENT_STATUS,
       label: "Estado de pago",
       kind: "catalog",
@@ -394,6 +376,24 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: paymentStatusOptions,
+    },
+    {
+      id: SaleOrderSearchFields.WORKFLOW_ID,
+      label: "Flujo",
+      kind: "catalog",
+      description: "Filtra por flujo.",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: workflowOptions,
+    },
+    {
+      id: SaleOrderSearchFields.SALE_ORDER_STATE_ID,
+      label: "Estado",
+      kind: "catalog",
+      description: "Filtra por estado actual.",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: stateOptions,
     },
     {
       id: SaleOrderSearchFields.SCHEDULE_DATE,

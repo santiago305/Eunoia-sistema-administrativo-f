@@ -185,9 +185,9 @@ export function WarehouseFormModal({
   const handleUbigeoChange = (next: UbigeoSelection) => {
     setForm((prev) => ({
       ...prev,
-      department: next.department,
-      province: next.province,
-      district: next.district,
+      department: next.department ?? "",
+      province: next.province ?? "",
+      district: next.district ?? "",
     }));
   };
 

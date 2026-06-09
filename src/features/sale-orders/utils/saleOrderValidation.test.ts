@@ -4,14 +4,20 @@ import { buildEmptySaleOrderForm } from "@/features/sale-orders/utils/saleOrderF
 
 describe("saleOrderValidation", () => {
   it("requiere warehouseId y clientId", () => {
-    const form = buildEmptySaleOrderForm();
+    const form = { ...buildEmptySaleOrderForm(), workflowId: "wf" };
     const result = validateSaleOrderForm(form);
     expect(result.ok).toBe(false);
     expect((result as any).message).toMatch(/almacén/i);
   });
 
   it("requiere scheduleDate", () => {
-    const form = { ...buildEmptySaleOrderForm(), warehouseId: "w", clientId: "c", scheduleDate: "" };
+    const form = {
+      ...buildEmptySaleOrderForm(),
+      workflowId: "wf",
+      warehouseId: "w",
+      clientId: "c",
+      scheduleDate: "",
+    };
     const result = validateSaleOrderForm(form);
     expect(result.ok).toBe(false);
     expect((result as any).message).toMatch(/scheduleDate|fecha/i);
@@ -20,6 +26,7 @@ describe("saleOrderValidation", () => {
   it("sin pack requiere components", () => {
     const form = {
       ...buildEmptySaleOrderForm(),
+      workflowId: "wf",
       warehouseId: "w",
       clientId: "c",
       scheduleDate: "2026-05-25",
@@ -32,6 +39,7 @@ describe("saleOrderValidation", () => {
   it("con pack permite components vacío", () => {
     const form = {
       ...buildEmptySaleOrderForm(),
+      workflowId: "wf",
       warehouseId: "w",
       clientId: "c",
       scheduleDate: "2026-05-25",
@@ -41,4 +49,3 @@ describe("saleOrderValidation", () => {
     expect(result.ok).toBe(true);
   });
 });
-
