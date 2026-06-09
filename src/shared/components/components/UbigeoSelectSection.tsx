@@ -100,7 +100,7 @@ export function UbigeoSelectSection({
 
   useEffect(() => {
     const department = findByName(departments, value.department);
-    const nextDepartmentId = department?.id ?? "";
+    const nextDepartmentId = value.departmentId ?? department?.id ?? "";
 
     setIds((prev) => {
       if (prev.departmentId === nextDepartmentId) return prev;
@@ -110,7 +110,7 @@ export function UbigeoSelectSection({
         districtId: nextDepartmentId === prev.departmentId ? prev.districtId : "",
       };
     });
-  }, [departments, value.department]);
+  }, [departments, value.department, value.departmentId]);
 
   useEffect(() => {
     if (!ids.departmentId) {
@@ -147,7 +147,7 @@ export function UbigeoSelectSection({
 
   useEffect(() => {
     const province = findByName(provinces, value.province);
-    const nextProvinceId = province?.id ?? "";
+    const nextProvinceId = value.provinceId ?? province?.id ?? "";
 
     setIds((prev) => {
       if (prev.provinceId === nextProvinceId) return prev;
@@ -157,7 +157,7 @@ export function UbigeoSelectSection({
         districtId: nextProvinceId === prev.provinceId ? prev.districtId : "",
       };
     });
-  }, [provinces, value.province]);
+  }, [provinces, value.province, value.provinceId]);
 
   useEffect(() => {
     if (!ids.provinceId) {
@@ -189,7 +189,8 @@ export function UbigeoSelectSection({
 
   useEffect(() => {
     const district = findByName(districts, value.district);
-    const nextDistrictId = district?.id ?? "";
+    const nextDistrictId = value.districtId ?? value.ubigeo ?? district?.id ?? "";
+    const nextDistrict = districts.find((item) => item.id === nextDistrictId) ?? district ?? null;
 
     setIds((prev) => {
       if (prev.districtId === nextDistrictId) return prev;
@@ -199,23 +200,36 @@ export function UbigeoSelectSection({
       };
     });
 
-    if (!district) {
+    if (!nextDistrict) {
       hydratedDistrictRef.current = "";
       return;
     }
 
-    if (value.ubigeo === district.id || hydratedDistrictRef.current === district.id) {
+    if (value.ubigeo === nextDistrict.id || hydratedDistrictRef.current === nextDistrict.id) {
       return;
     }
 
-    hydratedDistrictRef.current = district.id;
+    hydratedDistrictRef.current = nextDistrict.id;
     onChange({
-      ubigeo: district.id,
+      ubigeo: nextDistrict.id,
       department: value.department,
       province: value.province,
-      district: value.district,
+      district: value.district ?? nextDistrict.name,
+      departmentId: ids.departmentId,
+      provinceId: ids.provinceId,
+      districtId: nextDistrict.id,
     });
-  }, [districts, onChange, value.department, value.district, value.province, value.ubigeo]);
+  }, [
+    districts,
+    ids.departmentId,
+    ids.provinceId,
+    onChange,
+    value.department,
+    value.district,
+    value.districtId,
+    value.province,
+    value.ubigeo,
+  ]);
 
   return (
     <section className="space-y-3">
@@ -246,6 +260,9 @@ export function UbigeoSelectSection({
               department: departmentName,
               province: "",
               district: "",
+              departmentId,
+              provinceId: "",
+              districtId: "",
             });
           }}
           options={departmentOptions}
@@ -278,6 +295,9 @@ export function UbigeoSelectSection({
               department: value.department,
               province: provinceName,
               district: "",
+              departmentId: ids.departmentId,
+              provinceId,
+              districtId: "",
             });
           }}
           options={provinceOptions}
@@ -308,6 +328,9 @@ export function UbigeoSelectSection({
               department: value.department,
               province: value.province,
               district: districtName,
+              departmentId: ids.departmentId,
+              provinceId: ids.provinceId,
+              districtId,
             });
           }}
           options={districtOptions}

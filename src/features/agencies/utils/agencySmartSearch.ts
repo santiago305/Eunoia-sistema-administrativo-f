@@ -33,7 +33,7 @@ const CATALOG_FIELDS = new Set<AgencySearchField>([
 
 const TEXT_FIELDS = new Set<AgencySearchField>([
   AgencySearchFields.NAME,
-  AgencySearchFields.REFERENCE,
+  AgencySearchFields.ALIAS,
   AgencySearchFields.ADDRESS,
 ]);
 
@@ -55,18 +55,16 @@ const OPERATOR_LABELS: Record<AgencySearchOperator, string> = {
 
 const FIELD_LABELS: Record<AgencySearchField, string> = {
   [AgencySearchFields.NAME]: "Nombre",
-  [AgencySearchFields.REFERENCE]: "Referencia",
-  [AgencySearchFields.ADDRESS]: "Dirección",
+  [AgencySearchFields.ALIAS]: "Alias",
+  [AgencySearchFields.ADDRESS]: "Direccion",
   [AgencySearchFields.DEPARTMENT_ID]: "Departamento",
   [AgencySearchFields.PROVINCE_ID]: "Provincia",
   [AgencySearchFields.DISTRICT_ID]: "Distrito",
-  [AgencySearchFields.IS_ACTIVE]: "Estado",
+  [AgencySearchFields.IS_ACTIVE]: "Estado de sucursal",
 };
 
 function uniqueStrings(values: string[] | undefined) {
-  return Array.from(
-    new Set((values ?? []).map((value) => value?.trim()).filter(Boolean)),
-  ) as string[];
+  return Array.from(new Set((values ?? []).map((value) => value?.trim()).filter(Boolean))) as string[];
 }
 
 function sanitizeRule(rule?: Partial<AgencySearchRule> | null): AgencySearchRule | null {
@@ -215,18 +213,18 @@ export function buildAgencySmartSearchColumns(catalogs?: AgencySearchCatalogs | 
       placeholder: "Ej. Lima Centro",
     },
     {
-      id: AgencySearchFields.REFERENCE,
-      label: "Referencia",
+      id: AgencySearchFields.ALIAS,
+      label: "Alias",
       kind: "text",
-      description: "Busca por referencia.",
+      description: "Busca por alias de sucursal.",
       operators: TEXT_OPERATOR_OPTIONS,
-      placeholder: "Ej. Ref opcional",
+      placeholder: "Ej. Lima Centro",
     },
     {
       id: AgencySearchFields.ADDRESS,
-      label: "Dirección",
+      label: "Direccion",
       kind: "text",
-      description: "Busca por dirección.",
+      description: "Busca por direccion.",
       operators: TEXT_OPERATOR_OPTIONS,
       placeholder: "Ej. Av. Principal 123",
     },
@@ -298,4 +296,3 @@ export function removeAgencySearchKeyWithDependencies(snapshot: AgencySearchSnap
 
   return nextSnapshot;
 }
-

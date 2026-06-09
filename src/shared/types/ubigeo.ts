@@ -17,8 +17,11 @@ export type UbigeoDistrict = {
 };
 
 export type UbigeoSelection = {
-  ubigeo: string;
-  department: string;
-  province: string;
-  district: string;
+  ubigeo?: string;
+  department?: string;
+  province?: string;
+  district?: string;
+  departmentId?: string;
+  provinceId?: string;
+  districtId?: string;
 };

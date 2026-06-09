@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  cancelSaleOrder,
-  confirmSaleOrderDelivery,
+  assignSaleOrderWorkflow,
+  changeSaleOrderState,
   createSaleOrderPayment,
   deleteSaleOrderPayment,
+  getAvailableSaleOrderTransitions,
+  getSaleOrderWorkflowHistory,
   listSaleOrderPayments,
   previewSaleOrdersJsonImport,
 } from "@/shared/services/saleOrderService";
@@ -21,20 +23,15 @@ vi.mock("@/shared/common/utils/axios", () => {
 
 import axiosInstance from "@/shared/common/utils/axios";
 
-describe("saleOrderService payments/cancel", () => {
+describe("saleOrderService payments/workflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("cancelSaleOrder -> PATCH /sale-orders/:id/cancel", async () => {
-    (axiosInstance.patch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: { saleOrderId: "so-1", agendaStatus: "CANCELED", deliveryStatus: "CANCELED" },
-    });
-
-    const res = await cancelSaleOrder("so-1");
-
-    expect(axiosInstance.patch).toHaveBeenCalledWith("/sale-orders/so-1/cancel");
-    expect(res.agendaStatus).toBe("CANCELED");
+  it("assignSaleOrderWorkflow -> POST /sale-orders/:id/assign-workflow", async () => {
+    (axiosInstance.post as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { id: "so-1" } });
+    await assignSaleOrderWorkflow("so-1", "wf-1");
+    expect(axiosInstance.post).toHaveBeenCalledWith("/sale-orders/so-1/assign-workflow", { workflowId: "wf-1" });
   });
 
   it("listSaleOrderPayments -> GET /sale-orders/:id/payments", async () => {
@@ -46,15 +43,23 @@ describe("saleOrderService payments/cancel", () => {
     expect(res).toEqual([]);
   });
 
-  it("confirmSaleOrderDelivery -> PATCH /sale-orders/:id/confirm-delivery", async () => {
-    (axiosInstance.patch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: { saleOrderId: "so-10", deliveryStatus: "DELIVERED" },
+  it("changeSaleOrderState sends transitionId and metadata", async () => {
+    (axiosInstance.post as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { type: "success" } });
+    await changeSaleOrderState("so-1", "tr-1", { source: "sale-order-details" });
+    expect(axiosInstance.post).toHaveBeenCalledWith("/sale-orders/so-1/change-state", {
+      transitionId: "tr-1",
+      metadata: { source: "sale-order-details" },
     });
+  });
 
-    const res = await confirmSaleOrderDelivery("so-10");
-
-    expect(axiosInstance.patch).toHaveBeenCalledWith("/sale-orders/so-10/confirm-delivery");
-    expect(res.deliveryStatus).toBe("DELIVERED");
+  it("gets available transitions and history", async () => {
+    (axiosInstance.get as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] });
+    await getAvailableSaleOrderTransitions("so-1");
+    await getSaleOrderWorkflowHistory("so-1");
+    expect(axiosInstance.get).toHaveBeenNthCalledWith(1, "/sale-orders/so-1/available-transitions");
+    expect(axiosInstance.get).toHaveBeenNthCalledWith(2, "/sale-orders/so-1/history");
   });
 
   it("createSaleOrderPayment -> POST /sale-orders/:id/payments", async () => {

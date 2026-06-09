@@ -7,12 +7,12 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import { createClient, getClientById, listClients } from "@/shared/services/clientService";
-import { listAgencies } from "@/shared/services/agencyService";
+import { listSubsidiaries } from "@/shared/services/agencyService";
 import { errorResponse } from "@/shared/common/utils/response";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { sileo } from "sileo";
 import { buildEmptySaleOrderForm } from "@/features/sale-orders/utils/saleOrderForm";
-import { SaleOrderDeliveryType, type CreateSaleOrderDto } from "@/features/sale-orders/types/saleOrder";
+import type { CreateSaleOrderDto } from "@/features/sale-orders/types/saleOrder";
 import { deriveSkuPresentation } from "@/features/sale-orders/utils/skuPresentation";
 import { toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { createSaleOrder, fetchSaleOrderById, getSaleOrderPdf, updateSaleOrder } from "@/shared/services/saleOrderService";
@@ -22,10 +22,10 @@ import { SaleOrderItemsSection } from "@/features/sale-orders/components/SaleOrd
 import { SaleOrderPaymentsModal } from "@/features/sale-orders/components/SaleOrderPaymentsModal";
 import { FloatingSuggestInput } from "@/shared/components/components/FloatingSuggestInput";
 import { listSources } from "@/shared/services/sourceService";
-import { DeliveryType } from "@/modules/sale-orders/types";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
 import type { ClientForm } from "@/features/clients/types/client";
+import { listWorkflows } from "@/features/workflows/services/workflowService";
 
 type Props = {
   inModal?: boolean;
@@ -41,11 +41,6 @@ const dateOnlyToDate = (value?: string) => {
   const parsed = new Date(`${value}T00:00:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
-
-const deliveryTypeOptions = [
-  { value: SaleOrderDeliveryType.CONTRA_ENTREGA, label: "Contra entrega" },
-  { value: SaleOrderDeliveryType.ABONADO_ENVIO, label: "Abonado envío" },
-];
 
 export default function SaleOrderCreate({ inModal = false, onClose, orderId, onSaved }: Props) {
   const showFeedbackRef = useRef((msg: { type?: string; message?: string }) => {
@@ -65,7 +60,9 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
   const [warehouseOptions, setWarehouseOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [clientOptions, setClientOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [agencyOptions, setAgencyOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [subsidiaryBasePrices, setSubsidiaryBasePrices] = useState<Record<string, number>>({});
   const [sourceOptions, setSourceOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [workflowOptions, setWorkflowOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfOrderId, setPdfOrderId] = useState<string | null>(null);
 
@@ -95,13 +92,13 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
         const order = await fetchSaleOrderById(orderId);
 
         setForm({
+          workflowId: order.workflow?.id ?? order.workflowId ?? "",
           warehouseId: order.warehouse?.id ?? "",
           clientId: order.client?.id ?? "",
           agencyDetail: order.agencyDetail ?? undefined,
           sourceId: order.source?.id ?? undefined,
           scheduleDate: order.scheduleDate ?? toLocalDateKey(new Date()),
           deliveryDate: order.deliveryDate ?? undefined,
-          deliveryType: order.deliveryType ?? undefined,
           deliveryCost: Number(order.deliveryCost ?? 0),
           subTotal: Number(order.subTotal ?? 0),
           total: Number(order.total ?? 0),
@@ -152,15 +149,32 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
   useEffect(() => {
     const load = async () => {
       try {
-        const [warehouses, agencies, sources] = await Promise.all([
+        const [warehouses, subsidiaries, sources, workflows] = await Promise.all([
           listActiveWarehouses({ page: 1, limit: 100 }),
-          listAgencies({ page: 1, limit: 100, isActive: "true" }),
+          listSubsidiaries({ isActive: true }),
           listSources({ page: 1, limit: 100, isActive: "true" }),
+          listWorkflows(),
         ]);
 
         setWarehouseOptions((warehouses.items ?? []).map((w) => ({ value: w.warehouseId, label: w.name })));
-        setAgencyOptions((agencies.items ?? []).map((a) => ({ value: a.id, label: a.name })));
+        setAgencyOptions(
+          subsidiaries.map((subsidiary) => ({
+            value: subsidiary.id,
+            label: [subsidiary.alias, subsidiary.address].filter(Boolean).join(" - "),
+          })),
+        );
+        setSubsidiaryBasePrices(
+          Object.fromEntries(
+            subsidiaries.map((subsidiary) => [subsidiary.id, Number(subsidiary.basePrice ?? 0)]),
+          ),
+        );
         setSourceOptions((sources.items ?? []).map((s) => ({ value: s.id, label: s.name })));
+        setWorkflowOptions(
+          workflows.filter((workflow) => workflow.isActive).map((workflow) => ({
+            value: workflow.id,
+            label: workflow.name,
+          })),
+        );
 
         await loadClientsOptions();
       } catch {
@@ -301,6 +315,18 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
 
               <div className="grid grid-cols-2 gap-3">
                 <FloatingSelect
+                  label="Flujo"
+                  name="workflow"
+                  className="text-black/70 text-xs"
+                  value={form.workflowId}
+                  onChange={(value) => setForm((prev) => ({ ...prev, workflowId: value }))}
+                  options={workflowOptions}
+                  searchable
+                  disabled={isEdit && Boolean(form.workflowId)}
+                  searchPlaceholder="Buscar flujo..."
+                  emptyMessage="Sin flujos activos"
+                />
+                <FloatingSelect
                   label="Almacén"
                   name="warehouse"
                   className="text-black/70 text-xs"
@@ -311,7 +337,8 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                   searchPlaceholder="Buscar almacén..."
                   emptyMessage="Sin almacenes"
                 />
-
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <FloatingSelect
                   label="Enganche"
                   name="source"
@@ -323,27 +350,25 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                   searchPlaceholder="Buscar enganche..."
                   emptyMessage="Sin enganches"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <FloatingSuggestInput
                   label="Agencia/Dirección exacta"
                   name="agencyDetail"
                   className="text-black text-xs"
                   value={form.agencyDetail ?? ""}
                   onChange={(text) => setForm((prev) => ({ ...prev, agencyDetail: text.trim() ? text : undefined }))}
+                  onOptionSelect={(option) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      agencyDetail: option.label,
+                      deliveryCost: subsidiaryBasePrices[option.value] ?? 0,
+                    }))
+                  }
                   options={agencyOptions}
-                  emptyMessage="Sin agencias"
+                  searchPlaceholder="Selecciona una sucursal"
+                  emptyMessage="Sin sucursales"
+                  panelWidthMode="min-trigger"
                 />
 
-                <FloatingSelect
-                  label="Tipo de entrega"
-                  className="text-black text-xs"
-                  name="delivery-type"
-                  value={form.deliveryType ?? ""}
-                  onChange={(value) => setForm((prev) => ({ ...prev, deliveryType: (value || undefined) as DeliveryType | undefined }))}
-                  options={deliveryTypeOptions}
-                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -10,13 +10,13 @@ import type {
   SaleOrderPayment,
   SaleOrderSearchSnapshot,
   SaleOrderSearchStateResponse,
+  SaleOrderStatisticsParams,
+  SaleOrderStatisticsResponse,
 } from "@/features/sale-orders/types/saleOrder";
-
-export type CancelSaleOrderResponse = {
-  saleOrderId: string;
-  agendaStatus: "CANCELED";
-  deliveryStatus: "CANCELED";
-};
+import type {
+  AvailableTransition,
+  SaleOrderWorkflowHistoryItem,
+} from "@/features/workflows/types/workflow";
 
 export type CreateSaleOrderPaymentDto = {
   bankAccountId: string;
@@ -27,10 +27,6 @@ export type CreateSaleOrderPaymentDto = {
   note?: string;
 };
 
-export type ConfirmSaleOrderDeliveryResponse = {
-  saleOrderId: string;
-  deliveryStatus: "DELIVERED";
-};
 export type SaleOrderItemComponentOutput = {
   id: string;
   saleOrderItemId: string;
@@ -118,13 +114,38 @@ export const updateSaleOrder = async (id: string, payload: CreateSaleOrderDto): 
   return response.data;
 };
 
-export const cancelSaleOrder = async (saleOrderId: string): Promise<CancelSaleOrderResponse> => {
-  const response = await axiosInstance.patch<CancelSaleOrderResponse>(API_SALE_ORDERS_GROUP.cancel(saleOrderId));
+export const assignSaleOrderWorkflow = async (saleOrderId: string, workflowId: string) => {
+  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.assignWorkflow(saleOrderId), { workflowId });
   return response.data;
 };
 
-export const confirmSaleOrderDelivery = async (saleOrderId: string): Promise<ConfirmSaleOrderDeliveryResponse> => {
-  const response = await axiosInstance.patch<ConfirmSaleOrderDeliveryResponse>(API_SALE_ORDERS_GROUP.confirmDelivery(saleOrderId));
+export const getAvailableSaleOrderTransitions = async (
+  saleOrderId: string,
+): Promise<AvailableTransition[]> => {
+  const response = await axiosInstance.get<AvailableTransition[]>(
+    API_SALE_ORDERS_GROUP.availableTransitions(saleOrderId),
+  );
+  return response.data;
+};
+
+export const changeSaleOrderState = async (
+  saleOrderId: string,
+  transitionId: string,
+  metadata: Record<string, unknown> = {},
+) => {
+  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.changeState(saleOrderId), {
+    transitionId,
+    metadata,
+  });
+  return response.data;
+};
+
+export const getSaleOrderWorkflowHistory = async (
+  saleOrderId: string,
+): Promise<SaleOrderWorkflowHistoryItem[]> => {
+  const response = await axiosInstance.get<SaleOrderWorkflowHistoryItem[]>(
+    API_SALE_ORDERS_GROUP.history(saleOrderId),
+  );
   return response.data;
 };
 
@@ -148,6 +169,26 @@ export const deleteSaleOrderPayment = async (saleOrderId: string, paymentId: str
 
 export const getSaleOrderSearchState = async (): Promise<SaleOrderSearchStateResponse> => {
   const response = await axiosInstance.get<SaleOrderSearchStateResponse>(API_SALE_ORDERS_GROUP.searchState);
+  return response.data;
+};
+
+export const getSaleOrderStatistics = async (
+  params: SaleOrderStatisticsParams,
+): Promise<SaleOrderStatisticsResponse> => {
+  const q = params.q?.trim() || undefined;
+  const filters = params.filters?.length
+    ? JSON.stringify(params.filters)
+    : undefined;
+  const response = await axiosInstance.get<SaleOrderStatisticsResponse>(
+    API_SALE_ORDERS_GROUP.statistics,
+    {
+      params: {
+        q,
+        filters,
+        includeCancelled: params.includeCancelled ?? false,
+      },
+    },
+  );
   return response.data;
 };
 

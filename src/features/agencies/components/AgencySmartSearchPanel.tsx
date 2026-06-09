@@ -49,10 +49,9 @@ export function AgencySmartSearchPanel({
       }
       getSelectionCount={getAgencySearchSelectionCount}
       fieldsSectionTitle="Filtros"
-      fieldsSectionDescription="Filtra agencias por ubigeo, nombre o estado."
+      fieldsSectionDescription="Filtra agencias por nombre, alias de sucursal, ubigeo, direccion o estado de sucursal."
       initialVisibleFields={3}
       filterQuery={filterQuery}
     />
   );
 }
-

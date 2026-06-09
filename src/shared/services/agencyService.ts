@@ -1,9 +1,12 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import type { Paginated } from "@/features/clients/types/clientApi";
 import type {
+  AgenciesListQuery,
   AgencyDetail,
   AgencyListItem,
   CreateAgencyBody,
+  SubsidiariesListQuery,
+  SubsidiaryDto,
   UpdateAgencyBody,
 } from "@/features/agencies/types/agencyApi";
 import type {
@@ -12,13 +15,9 @@ import type {
 } from "@/features/agencies/types/agencySearch";
 import { agencyRoutes } from "./APIs";
 
-export const listAgencies = async (params: {
-  q?: string;
-  page?: number;
-  limit?: number;
-  isActive?: "true" | "false";
-  filters?: unknown[] | string;
-}): Promise<Paginated<AgencyListItem>> => {
+export const listAgencies = async (
+  params: AgenciesListQuery,
+): Promise<Paginated<AgencyListItem>> => {
   const requestParams = {
     ...params,
     filters:
@@ -44,6 +43,11 @@ export const getAgencyById = async (id: string): Promise<AgencyDetail> => {
   return response.data;
 };
 
+export const getAgencyWithSubsidiaries = async (id: string): Promise<AgencyDetail> => {
+  const response = await axiosInstance.get<AgencyDetail>(agencyRoutes.withSubsidiaries(id));
+  return response.data;
+};
+
 export const createAgency = async (
   payload: CreateAgencyBody,
 ): Promise<{ message: string; id?: string }> => {
@@ -64,6 +68,15 @@ export const updateAgency = async (
     payload,
   );
 
+  return response.data;
+};
+
+export const listSubsidiaries = async (
+  params: SubsidiariesListQuery,
+): Promise<SubsidiaryDto[]> => {
+  const response = await axiosInstance.get<SubsidiaryDto[]>(agencyRoutes.subsidiaries, {
+    params,
+  });
   return response.data;
 };
 
@@ -111,4 +124,3 @@ export const deleteAgencySearchMetric = async (
 
   return response.data;
 };
-

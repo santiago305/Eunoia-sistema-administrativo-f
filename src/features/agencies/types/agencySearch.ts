@@ -5,7 +5,7 @@ import type {
 
 export const AgencySearchFields = {
   NAME: "name",
-  REFERENCE: "reference",
+  ALIAS: "alias",
   ADDRESS: "address",
   DEPARTMENT_ID: "departmentId",
   PROVINCE_ID: "provinceId",
@@ -65,4 +65,3 @@ export type AgencySearchStateResponse = {
 };
 
 export type AgencySearchCatalogs = AgencySearchStateResponse["catalogs"];
-
