@@ -101,7 +101,7 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
           type="button"
           className={[
             "nodrag nopan pointer-events-auto absolute max-w-[260px]",
-            "rounded-xl border bg-white px-2.5 py-2 text-left shadow-sm",
+            "rounded-xl px-2.5 py-2 text-left shadow-sm",
             selected ? "border-primary ring-2 ring-primary/20" : "border-black/10",
           ].join(" ")}
           style={{
@@ -128,7 +128,7 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
             </span>
           </div>
 
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="mt-1 grid grid-cols-1 gap-1">
             {isGlobal ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[9px] font-medium text-violet-700">
                 <Globe2 className="h-3 w-3" />
@@ -158,7 +158,6 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
                 </span>
               </span>
             ) : null}
-
             {transition.actions.length ? (
               <span
                 className="inline-flex max-w-[110px] items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-700"

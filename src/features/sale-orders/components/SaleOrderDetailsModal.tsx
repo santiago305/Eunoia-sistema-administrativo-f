@@ -122,6 +122,7 @@ export function SaleOrderDetailsModal({ open, order, onClose, onOrderChanged }: 
             workflowId={order.workflowId}
             onOrderChanged={onOrderChanged}
           />
+          
 
           <div className="rounded-xl border border-black/10 overflow-hidden">
             <div className="bg-black/[0.02] px-3 py-2 text-xs font-semibold text-black/70">Items del pedido</div>
@@ -167,6 +168,7 @@ export function SaleOrderDetailsModal({ open, order, onClose, onOrderChanged }: 
           </div>
         </div>
       )}
+      
 
       <SaleOrderItemComponentsStockModal
         open={openItemDetail}

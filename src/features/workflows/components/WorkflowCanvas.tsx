@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import {
   Background,
+  ConnectionMode,
   Controls,
   MarkerType,
   MiniMap,
@@ -29,7 +30,9 @@ import {
   TRANSITION_EFFECTS,
   TRANSITION_PURPOSES,
 } from "@/features/workflows/types/workflow";
+import { normalizeWorkflowHandleId } from "@/features/workflows/utils/workflowConnections";
 import { WorkflowStateNode } from "./WorkflowStateNode";
+import { WorkflowTransitionEdge } from "./WorkflowTransitionEdge";
 import { CONDITION_LABELS } from "./WorkflowConditionEditor";
 import { ACTION_LABELS } from "./WorkflowActionEditor";
 
@@ -206,6 +209,10 @@ const nodeTypes = {
   workflowGlobalTransition: WorkflowGlobalTransitionNode,
 };
 
+const edgeTypes = {
+  workflowTransition: WorkflowTransitionEdge,
+};
+
 export function WorkflowCanvas({
   draft,
   selectedId,
@@ -356,11 +363,17 @@ export function WorkflowCanvas({
 
           return {
             id: transition.clientId,
+            type: "workflowTransition",
             source: transition.fromStateClientId!,
             target: transition.toStateClientId!,
-            sourceHandle: transition.sourceHandle ?? undefined,
-            targetHandle: transition.targetHandle ?? undefined,
+            sourceHandle: normalizeWorkflowHandleId(
+              transition.sourceHandle,
+            ) ?? undefined,
+            targetHandle: normalizeWorkflowHandleId(
+              transition.targetHandle,
+            ) ?? undefined,
             label: getTransitionLabel(transition),
+            data: { transition, onSelect },
             selected: selectedId === transition.clientId,
             animated: transition.isActive,
             markerEnd: {
@@ -373,7 +386,7 @@ export function WorkflowCanvas({
             },
           };
         }),
-    [draft.transitions, selectedId, visibleStateIds],
+    [draft.transitions, onSelect, selectedId, visibleStateIds],
   );
 
   const globalEdges = useMemo<Edge[]>(
@@ -393,10 +406,12 @@ export function WorkflowCanvas({
 
           return {
             id: transition.clientId,
+            type: "workflowTransition",
             source: getGlobalTransitionNodeId(transition.clientId),
             target: transition.toStateClientId!,
             sourceHandle: "global-source",
             label: getTransitionLabel(transition),
+            data: { transition, onSelect },
             selected: selectedId === transition.clientId,
             animated: transition.isActive,
             markerEnd: {
@@ -410,7 +425,7 @@ export function WorkflowCanvas({
             },
           };
         }),
-    [draft.transitions, selectedId, visibleStateIds],
+    [draft.transitions, onSelect, selectedId, visibleStateIds],
   );
 
   const edges = useMemo<Edge[]>(
@@ -425,6 +440,8 @@ export function WorkflowCanvas({
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
+      connectionMode={ConnectionMode.Loose}
       fitView
       fitViewOptions={{ padding: 0.35, maxZoom: 0.8 }}
       onInit={(instance) => emitViewportCenter(instance.getViewport())}
@@ -465,8 +482,8 @@ export function WorkflowCanvas({
         onConnect(
           connection.source,
           connection.target,
-          connection.sourceHandle,
-          connection.targetHandle,
+          normalizeWorkflowHandleId(connection.sourceHandle),
+          normalizeWorkflowHandleId(connection.targetHandle),
         );
       }}
     >

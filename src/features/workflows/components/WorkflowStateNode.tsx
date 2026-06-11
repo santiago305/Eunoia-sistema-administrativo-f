@@ -4,6 +4,25 @@ import type { WorkflowDraftState } from "@/features/workflows/types/workflow";
 const handleClass =
   "!h-5 !w-5 !border-2 !border-white !bg-primary !opacity-80 hover:!opacity-100";
 
+type Side = "top" | "right" | "bottom" | "left";
+
+function ConnectionPoint({
+  side,
+  position,
+}: {
+  side: Side;
+  position: Position;
+}) {
+  return (
+    <Handle
+      id={side}
+      type="source"
+      position={position}
+      className={handleClass}
+    />
+  );
+}
+
 export function WorkflowStateNode({ data, selected }: NodeProps) {
   const state = data.state as WorkflowDraftState;
   const isGlobalDestination = data.isGlobalDestination === true;
@@ -17,8 +36,10 @@ export function WorkflowStateNode({ data, selected }: NodeProps) {
     >
       {!isGlobalDestination ? (
         <>
-          <Handle id="left" type="target" position={Position.Left} className={handleClass} />
-          <Handle id="top" type="target" position={Position.Top} className={handleClass} />
+          <ConnectionPoint side="top" position={Position.Top} />
+          <ConnectionPoint side="right" position={Position.Right} />
+          <ConnectionPoint side="bottom" position={Position.Bottom} />
+          <ConnectionPoint side="left" position={Position.Left} />
         </>
       ) : null}
 
@@ -32,9 +53,9 @@ export function WorkflowStateNode({ data, selected }: NodeProps) {
         </span>
       </div>
 
-      <div className="mt-1 text-[10px] text-black/45">
+      {/* <div className="mt-1 text-[10px] text-black/45">
         {state.code || "SIN_CODIGO"}
-      </div>
+      </div> */}
 
       <div className="mt-2 flex gap-1">
         {state.isInitial ? (
@@ -54,13 +75,6 @@ export function WorkflowStateNode({ data, selected }: NodeProps) {
           </span>
         ) : null}
       </div>
-
-      {!isGlobalDestination ? (
-        <>
-          <Handle id="right" type="source" position={Position.Right} className={handleClass} />
-          <Handle id="bottom" type="source" position={Position.Bottom} className={handleClass} />
-        </>
-      ) : null}
     </div>
   );
 }

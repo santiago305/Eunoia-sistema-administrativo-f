@@ -5,15 +5,6 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
-import {
-  createFullWorkflow,
-  getWorkflow,
-  listWorkflowConditions,
-  listWorkflowActions,
-  listWorkflows,
-  listSaleOrderStates,
-  updateFullWorkflow,
-} from "@/features/workflows/services/workflowService";
 import type {
   ActionCatalogItem,
   ConditionCatalogItem,
@@ -38,11 +29,13 @@ import {
   removeWorkflowElement,
   validateWorkflowDraft,
 } from "@/features/workflows/utils/workflowDraft";
+import { getDestinationStateName } from "@/features/workflows/utils/workflowConnections";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowGlobalTransitions } from "./WorkflowGlobalTransitions";
 import { WorkflowPropertiesPanel } from "./WorkflowPropertiesPanel";
 import { SaleOrderStateFormModal } from "./SaleOrderStateFormModal";
 import { AlertModal } from "@/shared/components/components/AlertModal";
+import { listWorkflows, listWorkflowConditions, listWorkflowActions, listSaleOrderStates, getWorkflow, updateFullWorkflow, createFullWorkflow } from "@/shared/services/workflowService";
 
 type Props = {
   open: boolean;
@@ -630,21 +623,29 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                 }))
               }
               onConnect={(from, to, sourceHandle, targetHandle) => {
-                const transition = {
-                  ...createDraftTransition(from, to),
-                  isGlobal: false,
-                  effect: TRANSITION_EFFECTS.MOVE_STATE,
-                  purpose: TRANSITION_PURPOSES.STANDARD,
-                  sourceHandle,
-                  targetHandle,
-                };
+                setDraft((current) => {
+                  const transition = {
+                    ...createDraftTransition(
+                      from,
+                      to,
+                      false,
+                      TRANSITION_PURPOSES.STANDARD,
+                      getDestinationStateName(current.states, to),
+                    ),
+                    isGlobal: false,
+                    effect: TRANSITION_EFFECTS.MOVE_STATE,
+                    purpose: TRANSITION_PURPOSES.STANDARD,
+                    sourceHandle,
+                    targetHandle,
+                  };
 
-                setDraft((current) => ({
-                  ...current,
-                  transitions: [...current.transitions, transition],
-                }));
+                  setSelectedId(transition.clientId);
 
-                setSelectedId(transition.clientId);
+                  return {
+                    ...current,
+                    transitions: [...current.transitions, transition],
+                  };
+                });
               }}
             />
           </main>

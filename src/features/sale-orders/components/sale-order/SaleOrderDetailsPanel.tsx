@@ -4,6 +4,7 @@ import {
   Box,
   CalendarDays,
   FileText,
+  History,
   Menu,
   Pencil,
   Truck,
@@ -20,6 +21,7 @@ import {
   getAvailableSaleOrderTransitions,
 } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
+import { SaleOrderWorkflowHistoryModal } from "./SaleOrderWorkflowHistoryModal";
 
 type Props = {
   order: SaleOrder | null;
@@ -85,6 +87,7 @@ export function SaleOrderDetailsPanel({
   const [transitions, setTransitions] = useState<AvailableTransition[]>([]);
   const [loadingTransitionId, setLoadingTransitionId] = useState<string | null>(null);
   const [transitionError, setTransitionError] = useState("");
+  const [workflowHistoryOpen, setWorkflowHistoryOpen] = useState(false);
 
   const [openItemDetail, setOpenItemDetail] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SaleOrderItemInput | null>(null);
@@ -114,6 +117,7 @@ export function SaleOrderDetailsPanel({
   useEffect(() => {
     setOpenItemDetail(false);
     setSelectedItem(null);
+    setWorkflowHistoryOpen(false);
     setTransitionError("");
   }, [order?.id]);
 
@@ -170,6 +174,12 @@ export function SaleOrderDetailsPanel({
         label: "Pagos",
         icon: <Banknote className="h-4 w-4" />,
         onClick: () => onOpenPayments(order),
+      },
+      {
+        id: "workflow-history",
+        label: "Historial del flujo",
+        icon: <History className="h-4 w-4" />,
+        onClick: () => setWorkflowHistoryOpen(true),
       },
     ];
 
@@ -377,6 +387,12 @@ export function SaleOrderDetailsPanel({
         onClose={() => setOpenItemDetail(false)}
         item={selectedItem}
         showStock={false}
+      />
+      <SaleOrderWorkflowHistoryModal
+        open={workflowHistoryOpen}
+        saleOrderId={order.id}
+        saleOrderLabel={code}
+        onClose={() => setWorkflowHistoryOpen(false)}
       />
     </>
   );
