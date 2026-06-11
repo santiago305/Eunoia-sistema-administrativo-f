@@ -74,13 +74,7 @@ export function WorkflowPropertiesPanel(props: Props) {
               <div className="truncate text-xs font-semibold text-black/80">
                 {state.name || "Estado sin nombre"}
               </div>
-              <div className="text-[10px] text-black/45">
-                {state.code || "SIN_CODIGO"}
-              </div>
             </div>
-          </div>
-          <div className="text-[11px] text-black/50">
-            El nombre, c&oacute;digo y color vienen del cat&aacute;logo global.
           </div>
         </div>
 

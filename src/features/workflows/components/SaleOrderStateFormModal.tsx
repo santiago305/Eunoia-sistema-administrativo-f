@@ -1,25 +1,29 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Modal } from "@/shared/components/settings/modal";
-import { SystemButton } from "@/shared/components/components/SystemButton";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
-import {
-  createSaleOrderState,
-  getSaleOrderState,
-  updateSaleOrderState,
-} from "@/features/workflows/services/workflowService";
+
+import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { SystemButton } from "@/shared/components/components/SystemButton";
+import { getSaleOrderState, updateSaleOrderState, createSaleOrderState } from "@/shared/services/workflowService";
 
 type SaleOrderStateFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   stateId?: string | null;
   onClose: () => void;
-  onSaved?: (state: { id?: string | null; name: string; color: string }) => void;
+  onSaved?: (state: {
+    id?: string | null;
+    name: string;
+    code: string;
+    color: string;
+  }) => void;
   primaryColor?: string;
 };
 
 const DEFAULT_FORM = {
   name: "",
+  code: "",
   color: "#64748b",
 };
 
@@ -33,6 +37,10 @@ const COLOR_OPTIONS = [
   "#64748b",
   "#111827",
 ];
+
+function createInternalCode() {
+  return crypto.randomUUID();
+}
 
 export function SaleOrderStateFormModal({
   open,
@@ -74,6 +82,7 @@ export function SaleOrderStateFormModal({
 
         setForm({
           name: state.name ?? "",
+          code: state.code ?? "",
           color: state.color || DEFAULT_FORM.color,
         });
       } catch (err) {
@@ -92,7 +101,10 @@ export function SaleOrderStateFormModal({
 
   const title = mode === "edit" ? "Editar estado" : "Nuevo estado";
   const submitLabel = mode === "edit" ? "Guardar cambios" : "Guardar";
-  const canSubmit = Boolean(form.name.trim()) && Boolean(form.color.trim()) && !saving;
+
+  const canSubmit =
+    Boolean(form.name.trim()) && Boolean(form.color.trim()) && !saving;
+
   const ringStyle = {
     "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
   } as CSSProperties;
@@ -103,17 +115,30 @@ export function SaleOrderStateFormModal({
     setSaving(true);
     setError(null);
 
+    const internalCode =
+      mode === "edit"
+        ? form.code.trim() || createInternalCode()
+        : createInternalCode();
+
     try {
       const payload = {
         name: form.name.trim(),
-        color: form.color,
+        code: internalCode,
+        color: form.color.trim(),
       };
+
       const saved =
         mode === "edit" && stateId
           ? await updateSaleOrderState(stateId, payload)
           : await createSaleOrderState(payload);
 
-      onSaved?.(saved);
+      onSaved?.({
+        id: saved.id ?? null,
+        name: saved.name ?? payload.name,
+        code: saved.code ?? payload.code,
+        color: saved.color ?? payload.color,
+      });
+
       onClose();
     } catch (err) {
       setError(parseApiError(err));
@@ -123,69 +148,93 @@ export function SaleOrderStateFormModal({
   };
 
   return (
-    <Modal title={title} onClose={onClose} className="max-w-lx">
+    <Modal title={title} onClose={onClose} className="max-w-xl">
       <motion.div
         initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 6 }}
         animate={shouldReduceMotion ? false : { opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.16 }}
       >
         {loading ? (
-          <div className="px-1 py-6 text-sm text-black/60">Cargando estado...</div>
+          <div className="px-1 py-6 text-sm text-black/60">
+            Cargando estado...
+          </div>
         ) : (
-          <div className="space-y-3">
-            <label className="text-xs">
-              Nombre
-              <input
-                className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-xs outline-none focus:ring-2"
-                style={ringStyle}
-                value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.target.value }))
-                }
-                disabled={saving}
-              />
-            </label>
+          <div className="space-y-4">
+            <FloatingInput
+              name="name"
+              label="Nombre"
+              value={form.name}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
+              }
+              disabled={saving}
+              style={ringStyle}
+            />
 
             <div className="space-y-2">
-              <span className="text-xs">Color</span>
+              <span className="text-xs font-medium text-black/60">Color</span>
+
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={form.color}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, color: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      color: event.target.value,
+                    }))
                   }
                   disabled={saving}
-                  className="h-10 w-12 cursor-pointer rounded-lg border border-black/10 bg-white p-1 disabled:cursor-not-allowed"
+                  className="h-11 w-12 cursor-pointer rounded-xl border border-black/10 bg-white p-1 disabled:cursor-not-allowed disabled:opacity-60"
                   aria-label="Color del estado"
                 />
-                <input
+
+                <FloatingInput
+                  name="color"
+                  label="Código HEX"
                   value={form.color}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, color: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      color: event.target.value,
+                    }))
                   }
                   disabled={saving}
-                  className="h-10 flex-1 rounded-lg border border-black/10 px-3 text-xs outline-none focus:ring-2"
                   style={ringStyle}
+                  className="flex-1"
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_OPTIONS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    disabled={saving}
-                    onClick={() => setForm((current) => ({ ...current, color }))}
-                    className={[
-                      "h-7 w-7 rounded-full border transition",
-                      form.color.toLowerCase() === color
-                        ? "border-black ring-2 ring-black/15"
-                        : "border-black/10 hover:scale-105",
-                    ].join(" ")}
-                    style={{ backgroundColor: color }}
-                    aria-label={`Usar color ${color}`}
-                  />
-                ))}
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                {COLOR_OPTIONS.map((color) => {
+                  const selected =
+                    form.color.toLowerCase() === color.toLowerCase();
+
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      disabled={saving}
+                      onClick={() =>
+                        setForm((current) => ({
+                          ...current,
+                          color,
+                        }))
+                      }
+                      className={[
+                        "h-7 w-7 rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60",
+                        selected
+                          ? "border-black ring-2 ring-black/15"
+                          : "border-black/10 hover:scale-105",
+                      ].join(" ")}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Usar color ${color}`}
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -198,9 +247,15 @@ export function SaleOrderStateFormModal({
         ) : null}
 
         <div className="mt-4 flex justify-end gap-2">
-          <SystemButton variant="outline" size="sm" onClick={onClose} disabled={saving}>
+          <SystemButton
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cancelar
           </SystemButton>
+
           <SystemButton
             size="sm"
             onClick={() => void handleSubmit()}

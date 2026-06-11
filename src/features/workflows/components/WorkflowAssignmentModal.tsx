@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
-import { listWorkflows } from "@/features/workflows/services/workflowService";
 import { assignSaleOrderWorkflow } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
+import { listWorkflows } from "@/shared/services/workflowService";
 
 type Props = {
   open: boolean;

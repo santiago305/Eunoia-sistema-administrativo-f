@@ -25,7 +25,7 @@ import { listSources } from "@/shared/services/sourceService";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
 import type { ClientForm } from "@/features/clients/types/client";
-import { listWorkflows } from "@/features/workflows/services/workflowService";
+import { listWorkflows } from "@/shared/services/workflowService";
 
 type Props = {
   inModal?: boolean;

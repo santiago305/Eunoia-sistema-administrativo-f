@@ -219,18 +219,11 @@ export type AvailableTransition = {
 
 export type SaleOrderWorkflowHistoryItem = {
   id: string;
-  saleOrderId: string;
   workflowId: string;
-  transitionId: string | null;
-  transitionName: string | null;
-  transitionCode: string | null;
-  fromStateId: string | null;
-  fromStateName: string | null;
-  fromStateCode: string | null;
-  toStateId: string;
-  toStateName: string;
-  toStateCode: string;
-  executedBy: string | null;
+  transition: Omit<WorkflowTransition, "conditions" | "actions">;
+  fromState: WorkflowState;
+  toState: WorkflowState;
+  executedByUser: { id: string; email: string } | null;
   executedAt: string;
   metadata: Record<string, unknown> | null;
 };
