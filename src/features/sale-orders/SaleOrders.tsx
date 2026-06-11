@@ -46,8 +46,6 @@ import { SaleOrderPaymentsOrderModal } from "@/features/sale-orders/components/S
 import { ExcelImportModal, type ImportField } from "@/shared/components/importer";
 import { WorkflowEditorModal } from "@/features/workflows/components/WorkflowEditorModal";
 import { SaleOrdersBoard } from "./components/sale-order/SaleOrdersBoard";
-import { SaleOrderStatisticsTotals } from "./components/statistics/SaleOrderStatisticsPanel";
-import { Checkbox } from "@/shared/components/ui/checkbox";
 
 const saleOrderImportFields: ImportField[] = [
   { key: "workflowName", label: "Workflow", aliases: ["workflow", "flujo", "nombre workflow", "workflow name"] },
@@ -141,7 +139,6 @@ export default function SaleOrders() {
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
   const [searchFilters, setSearchFilters] = useState(() => createEmptySaleOrderSearchFilters());
-  const [includeCancelled, setIncludeCancelled] = useState(false);
   const [statistics, setStatistics] = useState<SaleOrderStatisticsResponse | null>(null);
   const [statisticsLoading, setStatisticsLoading] = useState(false);
   const [statisticsError, setStatisticsError] = useState<string | null>(null);
@@ -261,7 +258,7 @@ export default function SaleOrders() {
         setStatisticsLoading(false);
       }
     }
-  }, [executedSnapshot, includeCancelled]);
+  }, [executedSnapshot]);
 
   const refreshSelectedOrder = useCallback(async (saleOrderId: string) => {
     const updated = await fetchSaleOrderById(saleOrderId);
