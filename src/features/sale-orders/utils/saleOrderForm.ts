@@ -22,32 +22,39 @@ export const buildEmptySaleOrderForm = (): CreateSaleOrderDto => ({
   items: [],
   payments: [],
 });
-export function getClientTypeBadge(type?: ClientType | null, count?: number | null) {
+export function getClientTypeBadge(
+  type?: ClientType | null,
+  count?: number | null,
+) {
   const quantity = count ? ` (${count})` : "";
 
   if (type === ClientType.NEW) {
     return {
       label: `Nuevo${quantity}`,
-      className: "bg-sky-50 text-sky-700 ring-sky-200",
+      className:
+        "bg-sky-50 text-sky-700 ring-sky-200 shadow-[inset_0_0_5px_rgba(14,165,233,0.22)]",
     };
   }
 
   if (type === ClientType.REPURCHASE) {
     return {
       label: `Recompra${quantity}`,
-      className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+      className:
+        "bg-emerald-50 text-emerald-700 ring-emerald-200 shadow-[inset_0_0_5px_rgba(16,185,129,0.22)]",
     };
   }
 
   if (type === ClientType.LAGGING) {
     return {
       label: `Rezagado${quantity}`,
-      className: "bg-amber-50 text-amber-700 ring-amber-200",
+      className:
+        "bg-amber-50 text-amber-700 ring-amber-200 shadow-[inset_0_0_5px_rgba(245,158,11,0.24)]",
     };
   }
 
   return {
     label: `Sin definir${quantity}`,
-    className: "bg-slate-50 text-slate-500 ring-slate-200",
+    className:
+      "bg-slate-50 text-slate-500 ring-slate-200 shadow-[inset_0_0_5px_rgba(100,116,139,0.18)]",
   };
 }

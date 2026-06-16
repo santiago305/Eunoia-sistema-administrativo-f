@@ -33,6 +33,13 @@ import {
 import { normalizeWorkflowHandleId } from "@/features/workflows/utils/workflowConnections";
 import { WorkflowStateNode } from "./WorkflowStateNode";
 import { WorkflowTransitionEdge } from "./WorkflowTransitionEdge";
+import { WorkflowTransitionCardNode } from "./WorkflowTransitionCardNode";
+import {
+  TRANSITION_ELSE_HANDLE,
+  getTransitionCardId,
+  getTransitionCardPosition,
+  isTransitionCard,
+} from "../utils/workflowTransitionCard";
 import { CONDITION_LABELS } from "./WorkflowConditionEditor";
 import { ACTION_LABELS } from "./WorkflowActionEditor";
 
@@ -42,6 +49,11 @@ type Props = {
   onSelect: (id: string | null) => void;
   onMoveState: (clientId: string, positionX: number, positionY: number) => void;
   onMoveGlobalTransition: (
+    clientId: string,
+    positionX: number,
+    positionY: number,
+  ) => void;
+  onMoveTransitionCard: (
     clientId: string,
     positionX: number,
     positionY: number,
@@ -207,6 +219,7 @@ function WorkflowGlobalTransitionNode({ data, selected }: NodeProps) {
 const nodeTypes = {
   workflowState: WorkflowStateNode,
   workflowGlobalTransition: WorkflowGlobalTransitionNode,
+  workflowTransitionCard: WorkflowTransitionCardNode,
 };
 
 const edgeTypes = {
@@ -219,6 +232,7 @@ export function WorkflowCanvas({
   onSelect,
   onMoveState,
   onMoveGlobalTransition,
+  onMoveTransitionCard,
   onViewportCenterChange,
   onConnect,
 }: Props) {
@@ -339,10 +353,27 @@ export function WorkflowCanvas({
         }),
     [draft.transitions, onSelect, selectedId, stateNameById, statePositionById],
   );
+  const transitionCardNodes = useMemo<Node[]>(
+    () => {
+      const positions = Object.fromEntries(statePositionById);
+      return draft.transitions.filter(isTransitionCard).map((transition) => ({
+        id: getTransitionCardId(transition.clientId),
+        type: "workflowTransitionCard",
+        position: (() => {
+          const position = getTransitionCardPosition(transition, positions);
+          return { x: position.x + 88, y: position.y + 24 };
+        })(),
+        data: { transition, onSelect },
+        selected: selectedId === transition.clientId,
+        draggable: false,
+      }));
+    },
+    [draft.transitions, onSelect, selectedId, statePositionById],
+  );
 
   const nodes = useMemo<Node[]>(
-    () => [...stateNodes, ...globalTransitionNodes],
-    [stateNodes, globalTransitionNodes],
+    () => [...stateNodes, ...globalTransitionNodes, ...transitionCardNodes],
+    [stateNodes, globalTransitionNodes, transitionCardNodes],
   );
 
   const normalEdges = useMemo<Edge[]>(
@@ -358,11 +389,11 @@ export function WorkflowCanvas({
             visibleStateIds.has(transition.fromStateClientId) &&
             visibleStateIds.has(transition.toStateClientId),
         )
-        .map((transition) => {
+        .flatMap((transition) => {
           const isCancel = transition.purpose === TRANSITION_PURPOSES.CANCEL;
 
-          return {
-            id: transition.clientId,
+          const thenEdge: Edge = {
+            id: `${transition.clientId}:then`,
             type: "workflowTransition",
             source: transition.fromStateClientId!,
             target: transition.toStateClientId!,
@@ -373,7 +404,7 @@ export function WorkflowCanvas({
               transition.targetHandle,
             ) ?? undefined,
             label: getTransitionLabel(transition),
-            data: { transition, onSelect },
+            data: { transition, onSelect, branch: "THEN" },
             selected: selectedId === transition.clientId,
             animated: transition.isActive,
             markerEnd: {
@@ -385,7 +416,59 @@ export function WorkflowCanvas({
               strokeWidth: selectedId === transition.clientId ? 3 : 2,
             },
           };
+          const elseEdge: Edge | null =
+            transition.elseEffect === TRANSITION_EFFECTS.MOVE_STATE &&
+            transition.elseToStateClientId &&
+            visibleStateIds.has(transition.elseToStateClientId)
+              ? {
+                  id: `${transition.clientId}:else`,
+                  type: "workflowTransition",
+                  source: transition.fromStateClientId!,
+                  target: transition.elseToStateClientId,
+                  label: getTransitionLabel(transition),
+                  data: { transition, onSelect, branch: "ELSE" },
+                  selected: selectedId === transition.clientId,
+                  animated: transition.isActive,
+                  markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    color: "#d97706",
+                  },
+                  style: {
+                    stroke: "#d97706",
+                    strokeWidth: selectedId === transition.clientId ? 3 : 2,
+                    strokeDasharray: "5 5",
+                  },
+                }
+              : null;
+
+          return elseEdge ? [thenEdge, elseEdge] : [thenEdge];
         }),
+    [draft.transitions, onSelect, selectedId, visibleStateIds],
+  );
+  const transitionCardEdges = useMemo<Edge[]>(
+    () =>
+      draft.transitions.filter(isTransitionCard).flatMap((transition) => {
+        const cardId = getTransitionCardId(transition.clientId);
+        const common = {
+          data: { transition, onSelect },
+          selected: selectedId === transition.clientId,
+          animated: transition.isActive,
+        };
+        const edges: Edge[] = [];
+        if (transition.elseToStateClientId && visibleStateIds.has(transition.elseToStateClientId)) {
+          edges.push({
+            ...common,
+            id: `${transition.clientId}:else`,
+            source: cardId,
+            sourceHandle: TRANSITION_ELSE_HANDLE,
+            target: transition.elseToStateClientId,
+            label: "SI NO",
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#d97706" },
+            style: { stroke: "#d97706", strokeWidth: 2, strokeDasharray: "5 5" },
+          });
+        }
+        return edges;
+      }),
     [draft.transitions, onSelect, selectedId, visibleStateIds],
   );
 
@@ -429,8 +512,8 @@ export function WorkflowCanvas({
   );
 
   const edges = useMemo<Edge[]>(
-    () => [...normalEdges, ...globalEdges],
-    [normalEdges, globalEdges],
+    () => [...normalEdges, ...transitionCardEdges, ...globalEdges],
+    [normalEdges, transitionCardEdges, globalEdges],
   );
 
   return (
@@ -453,10 +536,20 @@ export function WorkflowCanvas({
           onSelect(data.transition.clientId);
           return;
         }
+        if (node.type === "workflowTransitionCard") {
+          const data = node.data as unknown as GlobalTransitionNodeData;
+          onSelect(data.transition.clientId);
+          return;
+        }
 
         onSelect(node.id);
       }}
-      onEdgeClick={(_, edge) => onSelect(edge.id)}
+      onEdgeClick={(_, edge) => {
+        const data = edge.data as
+          | { transition?: WorkflowDraftTransition }
+          | undefined;
+        onSelect(data?.transition?.clientId ?? edge.id);
+      }}
       onNodeDragStop={(_, node) => {
         if (node.type === "workflowState") {
           onMoveState(node.id, node.position.x, node.position.y);
@@ -471,6 +564,15 @@ export function WorkflowCanvas({
             node.position.x,
             node.position.y,
           );
+          return;
+        }
+        if (node.type === "workflowTransitionCard") {
+          const data = node.data as unknown as GlobalTransitionNodeData;
+          onMoveTransitionCard(
+            data.transition.clientId,
+            node.position.x,
+            node.position.y,
+          );
         }
       }}
       onConnect={(connection: Connection) => {
@@ -478,11 +580,16 @@ export function WorkflowCanvas({
 
         if (connection.source.startsWith(GLOBAL_NODE_PREFIX)) return;
         if (connection.target.startsWith(GLOBAL_NODE_PREFIX)) return;
+        const isTransitionCardSource = connection.source.startsWith(
+          "transition-card-",
+        );
 
         onConnect(
           connection.source,
           connection.target,
-          normalizeWorkflowHandleId(connection.sourceHandle),
+          isTransitionCardSource
+            ? connection.sourceHandle
+            : normalizeWorkflowHandleId(connection.sourceHandle),
           normalizeWorkflowHandleId(connection.targetHandle),
         );
       }}

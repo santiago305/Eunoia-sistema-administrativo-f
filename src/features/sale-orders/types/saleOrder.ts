@@ -288,6 +288,7 @@ export type SaleOrderStatisticsResponse = {
     total: number;
     collected: number;
     pending: number;
+    deliveryCostSum: number;
   };
 };
 export enum ClientType {

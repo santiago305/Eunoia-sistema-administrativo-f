@@ -13,6 +13,45 @@ import type {
 } from "@/features/workflows/types/workflow";
 import { TRANSITION_EFFECTS, TRANSITION_PURPOSES } from "@/features/workflows/types/workflow";
 
+type AutomaticTransitionCandidate = Pick<
+  WorkflowDraftTransition,
+  "clientId" | "fromStateClientId" | "autoTrigger" | "isActive"
+>;
+
+export function hasAutomaticTransitionSibling(
+  transitions: AutomaticTransitionCandidate[],
+  current: Pick<WorkflowDraftTransition, "clientId" | "fromStateClientId">,
+) {
+  if (!current.fromStateClientId) return false;
+
+  return transitions.some(
+    (transition) =>
+      transition.clientId !== current.clientId &&
+      transition.fromStateClientId === current.fromStateClientId &&
+      transition.autoTrigger &&
+      transition.isActive,
+  );
+}
+
+export function getAutoTriggerPatch(
+  checked: boolean,
+): Partial<WorkflowDraftTransition> {
+  if (checked) {
+    return {
+      autoTrigger: true,
+      priority: 0,
+    };
+  }
+
+  return {
+    autoTrigger: false,
+    priority: 0,
+    elseEffect: null,
+    elseToStateClientId: null,
+    elseActions: [],
+  };
+}
+
 const DEFAULT_COLOR = "#64748b";
 const X_GAP = 240;
 const Y_GAP = 130;
@@ -96,12 +135,17 @@ export function createDraftTransition(
     effect,
     fromStateClientId: isGlobal ? null : fromStateClientId,
     toStateClientId,
+    elseToStateClientId: null,
     isGlobal,
     excludedStateClientIds: [],
     purpose,
     isActive: true,
+    autoTrigger: false,
+    priority: 0,
+    elseEffect: null,
     conditions: [],
     actions: [],
+    elseActions: [],
   };
 }
 
@@ -131,7 +175,14 @@ export function mapWorkflowToDraft(workflow: Workflow): WorkflowDraft {
     description: workflow.description ?? "",
     isActive: workflow.isActive,
     states,
-    transitions: workflow.transitions.map((transition) => ({
+    transitions: workflow.transitions.map((transition) => {
+      const thenActions = (transition.actions ?? []).filter(
+        (action) => action.branch !== "ELSE",
+      );
+      const elseActions = (transition.actions ?? []).filter(
+        (action) => action.branch === "ELSE",
+      );
+      return {
       id: transition.id,
       clientId: `transition-${transition.id}`,
       name: transition.name,
@@ -142,6 +193,9 @@ export function mapWorkflowToDraft(workflow: Workflow): WorkflowDraft {
       toStateClientId: transition.toStateId
         ? refs.get(transition.toStateId) ?? transition.toStateId
         : null,
+      elseToStateClientId: transition.elseToStateId
+        ? refs.get(transition.elseToStateId) ?? transition.elseToStateId
+        : null,
       isGlobal: transition.isGlobal,
       excludedStateClientIds: (transition.excludedStateIds ?? []).map(
         (stateId) => refs.get(stateId) ?? stateId,
@@ -149,12 +203,17 @@ export function mapWorkflowToDraft(workflow: Workflow): WorkflowDraft {
       purpose: transition.purpose ?? TRANSITION_PURPOSES.STANDARD,
       effect: transition.effect ?? TRANSITION_EFFECTS.MOVE_STATE,
       isActive: transition.isActive,
+      autoTrigger: transition.autoTrigger ?? false,
+      priority: transition.priority ?? 0,
+      elseEffect: transition.elseEffect ?? null,
       conditions: transition.conditions ?? [],
-      actions: transition.actions ?? [],
+      actions: thenActions,
+      elseActions,
       sourceHandle: transition.sourceHandle,
       targetHandle: transition.targetHandle,
       isSystem: transition.purpose === TRANSITION_PURPOSES.CANCEL,
-    })),
+      };
+    }),
   };
 }
 
@@ -205,8 +264,20 @@ export function buildFullWorkflowRequest(draft: WorkflowDraft): SaveFullWorkflow
         sourceHandle: transition.isGlobal ? null : transition.sourceHandle,
         targetHandle: transition.isGlobal ? null : transition.targetHandle,
         isActive: transition.isActive,
+        autoTrigger: transition.autoTrigger,
+        priority: transition.priority,
         conditions: transition.conditions.map(normalizeCondition),
         actions: transition.actions.map((action, index) => ({
+          type: action.type,
+          config: action.config ?? {},
+          position: action.position ?? index,
+        })),
+        elseEffect: transition.elseEffect ?? null,
+        elseToStateRef:
+          transition.elseEffect === TRANSITION_EFFECTS.MOVE_STATE
+            ? transition.elseToStateClientId
+            : null,
+        elseActions: transition.elseActions.map((action, index) => ({
           type: action.type,
           config: action.config ?? {},
           position: action.position ?? index,
@@ -286,6 +357,51 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
     )
   ) {
     errors.push("Las acciones sin cambio de estado requieren al menos una accion.");
+  }
+  if (
+    draft.transitions.some(
+      (transition) => transition.autoTrigger && transition.conditions.length === 0,
+    )
+  ) {
+    errors.push("Las transiciones automaticas requieren al menos una condicion.");
+  }
+  const automaticSources = draft.transitions
+    .filter(
+      (transition) =>
+        transition.isActive &&
+        transition.autoTrigger &&
+        transition.fromStateClientId,
+    )
+    .map((transition) => transition.fromStateClientId);
+  if (new Set(automaticSources).size !== automaticSources.length) {
+    errors.push("Solo puede existir una transicion automatica por estado.");
+  }
+  if (
+    draft.transitions.some(
+      (transition) =>
+        !Number.isInteger(transition.priority) || transition.priority < 0,
+    )
+  ) {
+    errors.push("La prioridad debe ser un entero mayor o igual a cero.");
+  }
+  if (
+    draft.transitions.some(
+      (transition) =>
+        transition.elseEffect === TRANSITION_EFFECTS.MOVE_STATE &&
+        (!transition.elseToStateClientId ||
+          !stateRefs.has(transition.elseToStateClientId)),
+    )
+  ) {
+    errors.push("La rama SI NO que cambia estado requiere un destino valido.");
+  }
+  if (
+    draft.transitions.some(
+      (transition) =>
+        transition.elseEffect === TRANSITION_EFFECTS.RUN_ACTIONS &&
+        transition.elseActions.length === 0,
+    )
+  ) {
+    errors.push("La rama SI NO sin cambio de estado requiere al menos una accion.");
   }
   const cancelTransitions = draft.transitions.filter(
     (transition) =>
@@ -409,7 +525,9 @@ export function removeWorkflowElement(
           (!transition.toStateClientId ||
             !stateIdsToRemove.has(transition.toStateClientId)) &&
           (!transition.fromStateClientId ||
-            !stateIdsToRemove.has(transition.fromStateClientId)),
+            !stateIdsToRemove.has(transition.fromStateClientId)) &&
+          (!transition.elseToStateClientId ||
+            !stateIdsToRemove.has(transition.elseToStateClientId)),
       )
       .map((transition) => ({
         ...transition,
