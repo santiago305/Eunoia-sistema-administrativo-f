@@ -4,7 +4,13 @@ import {
   TRANSITION_EFFECTS,
   TRANSITION_PURPOSES,
 } from "@/features/workflows/types/workflow";
-import { buildFullWorkflowRequest, mapWorkflowToDraft, validateWorkflowDraft } from "./workflowDraft";
+import {
+  buildFullWorkflowRequest,
+  getAutoTriggerPatch,
+  hasAutomaticTransitionSibling,
+  mapWorkflowToDraft,
+  validateWorkflowDraft,
+} from "./workflowDraft";
 
 describe("mapWorkflowToDraft", () => {
   it("restores the system flags for the cancellation transition and its destination", () => {
@@ -69,6 +75,95 @@ describe("mapWorkflowToDraft", () => {
     ).toBe(true);
     expect(draft.transitions[0]?.isSystem).toBe(true);
   });
+
+  it("maps automatic transition branches into separate draft fields", () => {
+    const workflow = {
+      id: "workflow-1",
+      name: "Ventas",
+      description: null,
+      isActive: true,
+      states: [
+        {
+          id: "state-1",
+          workflowId: "workflow-1",
+          saleOrderStateId: "global-1",
+          name: "Programado",
+          code: "SCHEDULED",
+          color: null,
+          positionX: 0,
+          positionY: 0,
+          isInitial: true,
+          isFinal: false,
+          isActive: true,
+        },
+        {
+          id: "state-2",
+          workflowId: "workflow-1",
+          saleOrderStateId: "global-2",
+          name: "Preparacion",
+          code: "PREPARATION",
+          color: null,
+          positionX: 200,
+          positionY: 0,
+          isInitial: false,
+          isFinal: false,
+          isActive: true,
+        },
+        {
+          id: "state-3",
+          workflowId: "workflow-1",
+          saleOrderStateId: "global-3",
+          name: "Revision",
+          code: "REVIEW",
+          color: null,
+          positionX: 200,
+          positionY: 120,
+          isInitial: false,
+          isFinal: true,
+          isActive: true,
+        },
+      ],
+      transitions: [
+        {
+          id: "transition-1",
+          workflowId: "workflow-1",
+          fromStateId: "state-1",
+          toStateId: "state-2",
+          elseToStateId: "state-3",
+          isGlobal: false,
+          excludedStateIds: [],
+          effect: TRANSITION_EFFECTS.MOVE_STATE,
+          elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+          purpose: TRANSITION_PURPOSES.STANDARD,
+          name: "Validar entrega",
+          code: "DELIVERY_DECISION",
+          isActive: true,
+          autoTrigger: true,
+          priority: 2,
+          conditions: [],
+          actions: [
+            { type: "RESERVE_STOCK", config: {}, position: 0, branch: "THEN" },
+            { type: "REVERT_STOCK", config: {}, position: 0, branch: "ELSE" },
+          ],
+        },
+      ],
+    } satisfies Workflow;
+
+    const transition = mapWorkflowToDraft(workflow).transitions[0];
+
+    expect(transition).toMatchObject({
+      autoTrigger: true,
+      priority: 2,
+      elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+      elseToStateClientId: "state-state-3",
+    });
+    expect(transition.actions.map((action) => action.type)).toEqual([
+      "RESERVE_STOCK",
+    ]);
+    expect(transition.elseActions.map((action) => action.type)).toEqual([
+      "REVERT_STOCK",
+    ]);
+  });
 });
 
 describe("buildFullWorkflowRequest", () => {
@@ -131,6 +226,49 @@ describe("buildFullWorkflowRequest", () => {
       },
     ]);
   });
+
+  it("sends automatic THEN and ELSE branches without backend branch markers", () => {
+    const request = buildFullWorkflowRequest({
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [],
+      transitions: [
+        {
+          clientId: "transition-1",
+          name: "Validar entrega",
+          code: "DELIVERY_DECISION",
+          fromStateClientId: "state-1",
+          toStateClientId: "state-2",
+          elseToStateClientId: "state-3",
+          isGlobal: false,
+          excludedStateClientIds: [],
+          purpose: TRANSITION_PURPOSES.STANDARD,
+          effect: TRANSITION_EFFECTS.MOVE_STATE,
+          elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+          isActive: true,
+          autoTrigger: true,
+          priority: 1,
+          conditions: [],
+          actions: [
+            { type: "RESERVE_STOCK", config: {}, position: 0, branch: "THEN" },
+          ],
+          elseActions: [
+            { type: "REVERT_STOCK", config: {}, position: 0, branch: "ELSE" },
+          ],
+        },
+      ],
+    });
+
+    expect(request.transitions[0]).toMatchObject({
+      autoTrigger: true,
+      priority: 1,
+      elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+      elseToStateRef: "state-3",
+      actions: [{ type: "RESERVE_STOCK", config: {}, position: 0 }],
+      elseActions: [{ type: "REVERT_STOCK", config: {}, position: 0 }],
+    });
+  });
 });
 
 describe("validateWorkflowDraft", () => {
@@ -169,5 +307,104 @@ describe("validateWorkflowDraft", () => {
     });
 
     expect(validation.errors).toContain("Hay estados globales duplicados.");
+  });
+
+  it("validates automatic priority, conditions, and ELSE branch requirements", () => {
+    const validation = validateWorkflowDraft({
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [
+        {
+          clientId: "state-1",
+          saleOrderStateId: "global-1",
+          name: "Programado",
+          code: "SCHEDULED",
+          color: null,
+          positionX: 0,
+          positionY: 0,
+          isInitial: true,
+          isFinal: false,
+          isActive: true,
+        },
+        {
+          clientId: "state-2",
+          saleOrderStateId: "global-2",
+          name: "Final",
+          code: "FINAL",
+          color: null,
+          positionX: 200,
+          positionY: 0,
+          isInitial: false,
+          isFinal: true,
+          isActive: true,
+        },
+      ],
+      transitions: [
+        {
+          clientId: "transition-1",
+          name: "Automatic",
+          code: "AUTOMATIC",
+          fromStateClientId: "state-1",
+          toStateClientId: "state-2",
+          elseToStateClientId: null,
+          isGlobal: false,
+          excludedStateClientIds: [],
+          purpose: TRANSITION_PURPOSES.STANDARD,
+          effect: TRANSITION_EFFECTS.MOVE_STATE,
+          elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+          isActive: true,
+          autoTrigger: true,
+          priority: -1,
+          conditions: [],
+          actions: [],
+          elseActions: [],
+        },
+      ],
+    });
+
+    expect(validation.errors).toContain(
+      "Las transiciones automaticas requieren al menos una condicion.",
+    );
+    expect(validation.errors).toContain(
+      "La prioridad debe ser un entero mayor o igual a cero.",
+    );
+    expect(validation.errors).toContain(
+      "La rama SI NO que cambia estado requiere un destino valido.",
+    );
+  });
+
+  it("detects another automatic transition from the same source state", () => {
+    const current = {
+      clientId: "transition-2",
+      fromStateClientId: "state-1",
+      autoTrigger: false,
+      isActive: true,
+    };
+
+    expect(
+      hasAutomaticTransitionSibling(
+        [
+          {
+            clientId: "transition-1",
+            fromStateClientId: "state-1",
+            autoTrigger: true,
+            isActive: true,
+          },
+          current,
+        ],
+        current,
+      ),
+    ).toBe(true);
+  });
+
+  it("clears the ELSE branch when automatic execution is disabled", () => {
+    expect(getAutoTriggerPatch(false)).toEqual({
+      autoTrigger: false,
+      priority: 0,
+      elseEffect: null,
+      elseToStateClientId: null,
+      elseActions: [],
+    });
   });
 });

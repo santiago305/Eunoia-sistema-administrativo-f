@@ -1,28 +1,56 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SaleOrders from "@/features/sale-orders/SaleOrders";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import { ClientType, type SaleOrder } from "@/features/sale-orders/types/saleOrder";
 
 vi.mock("@/shared/hooks/useCompany", () => ({
   useCompany: () => ({ hasCompany: true, company: { companyId: "company-1" } }),
 }));
 
+const { authState, socketHandlers, createNotificationSocketMock } = vi.hoisted(() => ({
+  authState: { isAuthenticated: false, userId: null as string | null },
+  socketHandlers: new Map<string, (payload: unknown) => void>(),
+  createNotificationSocketMock: vi.fn(() => ({
+    on: vi.fn((event: string, handler: (payload: unknown) => void) => {
+      socketHandlers.set(event, handler);
+    }),
+    off: vi.fn((event: string) => {
+      socketHandlers.delete(event);
+    }),
+  })),
+}));
+
 vi.mock("@/shared/hooks/useAuth", () => ({
-  useAuth: () => ({ isAuthenticated: false, userId: null }),
+  useAuth: () => authState,
+}));
+
+vi.mock("@/shared/lib/socket", () => ({
+  createNotificationSocket: createNotificationSocketMock,
 }));
 
 vi.mock("@/shared/hooks/use-mobile", () => ({
   useIsMobile: () => false,
 }));
 
-const { getSaleOrderStatisticsMock } = vi.hoisted(() => ({
+const {
+  fetchSaleOrderByIdMock,
+  getAvailableSaleOrderTransitionsMock,
+  getSaleOrderSearchStateMock,
+  getSaleOrderStatisticsMock,
+  listSaleOrdersMock,
+} = vi.hoisted(() => ({
+  fetchSaleOrderByIdMock: vi.fn(),
+  getAvailableSaleOrderTransitionsMock: vi.fn(),
+  getSaleOrderSearchStateMock: vi.fn(),
   getSaleOrderStatisticsMock: vi.fn().mockResolvedValue({
     byWorkflow: [],
     byState: [],
     byClientType: [],
-    totals: { orders: 0, total: 0, collected: 0, pending: 0 },
+    totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
   }),
+  listSaleOrdersMock: vi.fn(),
 }));
 
 vi.mock("@/shared/services/saleOrderService", async () => {
@@ -32,30 +60,92 @@ vi.mock("@/shared/services/saleOrderService", async () => {
 
   return {
     ...actual,
-    listSaleOrders: vi.fn().mockResolvedValue({
+    fetchSaleOrderById: fetchSaleOrderByIdMock,
+    listSaleOrders: listSaleOrdersMock,
+    getSaleOrderSearchState: getSaleOrderSearchStateMock,
+    getSaleOrderStatistics: getSaleOrderStatisticsMock,
+    getAvailableSaleOrderTransitions: getAvailableSaleOrderTransitionsMock,
+  };
+});
+
+const buildSaleOrder = (stateName: string): SaleOrder => ({
+  id: "order-1",
+  serie: "SO",
+  correlative: 1,
+  client: {
+    id: "client-1",
+    type: ClientType.NEW,
+    fullName: "Cliente Prueba",
+    docNumber: "12345678",
+    mainPhone: "999999999",
+  },
+  warehouse: { id: "warehouse-1", name: "Principal" },
+  source: null,
+  createdBy: null,
+  scheduleDate: "2026-06-15",
+  deliveryDate: null,
+  workflowId: "workflow-1",
+  currentStateId: `state-${stateName}`,
+  workflow: { id: "workflow-1", name: "Flujo venta", description: null, isActive: true },
+  currentState: {
+    id: `state-${stateName}`,
+    name: stateName,
+    code: stateName.toUpperCase(),
+    color: "#64748b",
+    isInitial: false,
+    isFinal: false,
+    isActive: true,
+  },
+  invoiceSend: false,
+  subTotal: 100,
+  deliveryCost: 0,
+  total: 100,
+  note: null,
+  agencyDetail: null,
+  isActive: true,
+  createdAt: "2026-06-15T00:00:00.000Z",
+  updatedAt: null,
+  totalPaid: 0,
+  pendingAmount: 100,
+  paymentStatus: "PENDING",
+  payments: [],
+  items: [],
+});
+
+const emptySearchState = {
+  recent: [],
+  saved: [],
+  catalogs: {
+    clients: [],
+    warehouses: [],
+    paymentStatuses: [],
+    workflows: [],
+    states: [],
+  },
+};
+
+describe("SaleOrders", () => {
+  beforeEach(() => {
+    authState.isAuthenticated = false;
+    authState.userId = null;
+    socketHandlers.clear();
+    createNotificationSocketMock.mockClear();
+    fetchSaleOrderByIdMock.mockReset();
+    getAvailableSaleOrderTransitionsMock.mockReset();
+    listSaleOrdersMock.mockReset();
+    getSaleOrderSearchStateMock.mockReset();
+    getSaleOrderStatisticsMock.mockClear();
+    listSaleOrdersMock.mockResolvedValue({
       items: [],
       total: 0,
       page: 1,
       limit: 10,
-    }),
-    getSaleOrderSearchState: vi.fn().mockResolvedValue({
-      recent: [],
-      saved: [],
-      catalogs: {
-        clients: [],
-        warehouses: [],
-        paymentStatuses: [],
-        workflows: [],
-        states: [],
-      },
-    }),
-    getSaleOrderStatistics: getSaleOrderStatisticsMock,
-  };
-});
+    });
+    getSaleOrderSearchStateMock.mockResolvedValue(emptySearchState);
+    getAvailableSaleOrderTransitionsMock.mockResolvedValue([]);
+  });
 
-describe("SaleOrders", () => {
-  it("shows actions and reloads statistics when cancelled orders are included", async () => {
-    const user = userEvent.setup();
+  it("shows actions and loads statistics including cancelled orders", async () => {
     render(
       <TooltipProvider>
         <SaleOrders />
@@ -69,18 +159,41 @@ describe("SaleOrders", () => {
       expect(getSaleOrderStatisticsMock).toHaveBeenCalledWith({
         q: undefined,
         filters: [],
-        includeCancelled: false,
-      }),
-    );
-
-    await user.click(screen.getByText("Incluir cancelados"));
-
-    await waitFor(() =>
-      expect(getSaleOrderStatisticsMock).toHaveBeenLastCalledWith({
-        q: undefined,
-        filters: [],
         includeCancelled: true,
       }),
     );
+  });
+
+  it("refreshes the selected order detail when sale-orders.updated arrives without explicit ids", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    const refreshedOrder = buildSaleOrder("Confirmado");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchSaleOrderByIdMock
+      .mockResolvedValueOnce(initialOrder)
+      .mockResolvedValueOnce(refreshedOrder);
+
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.click(await screen.findByText("SO-1"));
+    await waitFor(() => expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0));
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({ updated: 1, saleOrderIds: [] });
+    });
+
+    await waitFor(() => expect(screen.getByText("Confirmado")).toBeTruthy());
+    expect(fetchSaleOrderByIdMock).toHaveBeenLastCalledWith("order-1");
   });
 });

@@ -93,6 +93,7 @@ export function SaleOrderDetailsPanel({
   const [selectedItem, setSelectedItem] = useState<SaleOrderItemInput | null>(null);
 
   const workflowId = order?.workflow?.id ?? order?.workflowId ?? null;
+  const currentStateId = order?.currentState?.id ?? order?.currentStateId ?? null;
 
   const loadTransitions = useCallback(async () => {
     if (!order?.id || !workflowId) {
@@ -108,7 +109,7 @@ export function SaleOrderDetailsPanel({
       setTransitions([]);
       setTransitionError(parseApiError(error, "No se pudieron cargar las transiciones."));
     }
-  }, [order?.id, workflowId]);
+  }, [currentStateId, order?.id, workflowId]);
 
   useEffect(() => {
     void loadTransitions();

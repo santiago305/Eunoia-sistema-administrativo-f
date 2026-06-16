@@ -4,6 +4,7 @@ export const CONDITIONS = {
   NOT_CANCELLED: "NOT_CANCELLED",
   DATE_AFTER: "DATE_AFTER",
   DATE_BEFORE: "DATE_BEFORE",
+  SCHEDULE_DELIVERY_WINDOW: "SCHEDULE_DELIVERY_WINDOW",
 } as const;
 
 export const ACTIONS = {
@@ -45,6 +46,7 @@ export type WorkflowAction = {
   type: WorkflowActionType;
   config: Record<string, unknown>;
   position?: number;
+  branch?: "THEN" | "ELSE";
 };
 
 export type WorkflowState = {
@@ -68,6 +70,7 @@ export type WorkflowTransition = {
   workflowId: string;
   fromStateId: string | null;
   toStateId: string | null;
+  elseToStateId?: string | null;
   isGlobal: boolean;
   excludedStateIds: string[];
   effect?: WorkflowTransitionEffect;
@@ -75,6 +78,9 @@ export type WorkflowTransition = {
   name: string;
   code: string;
   isActive: boolean;
+  autoTrigger?: boolean;
+  priority?: number;
+  elseEffect?: WorkflowTransitionEffect | null;
   conditions: WorkflowCondition[];
   actions: WorkflowAction[];
   sourceHandle?: string | null;
@@ -124,13 +130,18 @@ export type WorkflowDraftTransition = {
   code: string;
   fromStateClientId: string | null;
   toStateClientId: string | null;
+  elseToStateClientId: string | null;
   isGlobal: boolean;
   excludedStateClientIds: string[];
   effect?: WorkflowTransitionEffect;
   purpose: WorkflowTransitionPurpose;
   isActive: boolean;
+  autoTrigger: boolean;
+  priority: number;
+  elseEffect: WorkflowTransitionEffect | null;
   conditions: WorkflowCondition[];
   actions: WorkflowAction[];
+  elseActions: WorkflowAction[];
   sourceHandle?: string | null;
   targetHandle?: string | null;
   positionX?: number | null;
@@ -169,6 +180,7 @@ export type SaveFullWorkflowRequest = {
     name: string;
     fromStateRef: string | null;
     toStateRef?: string | null;
+    elseToStateRef?: string | null;
     isGlobal: boolean;
     excludedStateRefs: string[];
     effect?: WorkflowTransitionEffect;
@@ -176,12 +188,20 @@ export type SaveFullWorkflowRequest = {
     sourceHandle?: string | null;
     targetHandle?: string | null;
     isActive?: boolean;
+    autoTrigger?: boolean;
+    priority?: number;
+    elseEffect?: WorkflowTransitionEffect | null;
     conditions?: Array<{
       type: WorkflowConditionType;
       config?: Record<string, unknown>;
       position?: number;
     }>;
     actions?: Array<{
+      type: WorkflowActionType;
+      config?: Record<string, unknown>;
+      position?: number;
+    }>;
+    elseActions?: Array<{
       type: WorkflowActionType;
       config?: Record<string, unknown>;
       position?: number;

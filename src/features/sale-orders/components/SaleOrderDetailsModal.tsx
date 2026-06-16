@@ -120,6 +120,7 @@ export function SaleOrderDetailsModal({ open, order, onClose, onOrderChanged }: 
           <SaleOrderWorkflowPanel
             saleOrderId={order.id}
             workflowId={order.workflowId}
+            currentStateId={order.currentStateId}
             onOrderChanged={onOrderChanged}
           />
           

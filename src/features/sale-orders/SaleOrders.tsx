@@ -284,7 +284,12 @@ export default function SaleOrders() {
     void loadStatistics();
   }, [loadStatistics]);
 
-  type SaleOrdersUpdatedPayload = { date: string; updated: number; saleOrderIds: string[] };
+  type SaleOrdersUpdatedPayload = {
+    date?: string;
+    updated: number;
+    saleOrderIds: string[];
+    source?: string;
+  };
   const lastRealtimeRefreshRef = useRef(0);
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
@@ -295,16 +300,23 @@ export default function SaleOrders() {
       if (now - lastRealtimeRefreshRef.current < 800) return;
       lastRealtimeRefreshRef.current = now;
       void loadOrders();
+      void loadStatistics();
       const saleOrderIds = Array.isArray(payload?.saleOrderIds) ? payload.saleOrderIds : [];
-      if (!detailOpen || !selectedOrder?.id || saleOrderIds.length === 0) return;
-      if (!saleOrderIds.includes(selectedOrder.id)) return;
+      if (!selectedOrder?.id) return;
+      if (saleOrderIds.length > 0 && !saleOrderIds.includes(selectedOrder.id)) return;
       void fetchSaleOrderById(selectedOrder.id).then(setSelectedOrder).catch(() => undefined);
     };
     socket.on("sale-orders.updated", onSaleOrdersUpdated);
     return () => {
       socket.off("sale-orders.updated", onSaleOrdersUpdated);
     };
-  }, [detailOpen, isAuthenticated, loadOrders, selectedOrder?.id, userId]);
+  }, [
+    isAuthenticated,
+    loadOrders,
+    loadStatistics,
+    selectedOrder?.id,
+    userId,
+  ]);
 
   useEffect(() => {
     void loadSearchState();

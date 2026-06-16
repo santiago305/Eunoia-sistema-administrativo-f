@@ -23,6 +23,7 @@ import { CONDITION_LABELS } from "./WorkflowConditionEditor";
 type TransitionEdgeData = {
   transition: WorkflowDraftTransition;
   onSelect?: (clientId: string) => void;
+  branch?: "THEN" | "ELSE";
 };
 
 export function WorkflowTransitionEdge(props: EdgeProps) {
@@ -42,6 +43,7 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
 
   const transitionData = data as TransitionEdgeData | undefined;
   const transition = transitionData?.transition;
+  const branch = transitionData?.branch ?? "THEN";
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -69,7 +71,9 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
   const isRunActions = effect === TRANSITION_EFFECTS.RUN_ACTIONS;
 
   const firstCondition = transition.conditions[0];
-  const firstAction = transition.actions[0];
+  const branchActions =
+    branch === "ELSE" ? transition.elseActions : transition.actions;
+  const firstAction = branchActions[0];
 
   const conditionLabel = firstCondition
     ? CONDITION_LABELS[firstCondition.type] ?? firstCondition.type
@@ -80,7 +84,15 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
     : null;
 
   const stroke =
-    isCancel ? "#e11d48" : isGlobal ? "#7c3aed" : isRunActions ? "#f59e0b" : "#334155";
+    branch === "ELSE"
+      ? "#d97706"
+      : isCancel
+        ? "#e11d48"
+        : isGlobal
+          ? "#7c3aed"
+          : isRunActions
+            ? "#f59e0b"
+            : "#334155";
 
   return (
     <>
@@ -92,7 +104,12 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
           ...style,
           stroke,
           strokeWidth: selected ? 3 : 2,
-          strokeDasharray: isGlobal || isRunActions ? "7 5" : undefined,
+          strokeDasharray:
+            branch === "ELSE"
+              ? "5 5"
+              : isGlobal || isRunActions
+                ? "7 5"
+                : undefined,
         }}
       />
 
@@ -129,6 +146,23 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
           </div>
 
           <div className="mt-1 grid grid-cols-1 gap-1">
+            {!isGlobal ? (
+              <span
+                className={[
+                  "inline-flex w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                  branch === "ELSE"
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-emerald-100 text-emerald-800",
+                ].join(" ")}
+              >
+                {branch === "ELSE" ? "SI NO" : "SI"}
+              </span>
+            ) : null}
+            {transition.autoTrigger ? (
+              <span className="inline-flex w-fit rounded-full bg-sky-50 px-1.5 py-0.5 text-[9px] font-medium text-sky-700">
+                Automatico
+              </span>
+            ) : null}
             {isGlobal ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[9px] font-medium text-violet-700">
                 <Globe2 className="h-3 w-3" />
@@ -158,23 +192,23 @@ export function WorkflowTransitionEdge(props: EdgeProps) {
                 </span>
               </span>
             ) : null}
-            {transition.actions.length ? (
+            {branchActions.length ? (
               <span
                 className="inline-flex max-w-[110px] items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-700"
-                title={transition.actions
+                title={branchActions
                   .map((item) => ACTION_LABELS[item.type] ?? item.type)
                   .join(", ")}
               >
                 <Zap className="h-3 w-3 shrink-0" />
                 <span className="truncate">
-                  {transition.actions.length > 1
-                    ? `${transition.actions.length} acciones`
+                  {branchActions.length > 1
+                    ? `${branchActions.length} acciones`
                     : actionLabel}
                 </span>
               </span>
             ) : null}
 
-            {!transition.conditions.length && !transition.actions.length ? (
+            {!transition.conditions.length && !branchActions.length ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700">
                 <CheckCircle2 className="h-3 w-3" />
                 Sin reglas

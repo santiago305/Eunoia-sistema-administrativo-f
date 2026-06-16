@@ -34,6 +34,7 @@ const statistics: SaleOrderStatisticsResponse = {
     total: 1500,
     collected: 900,
     pending: 600,
+    deliveryCostSum: 0,
   },
 };
 
@@ -48,8 +49,8 @@ describe("SaleOrderStatisticsPanel", () => {
       />,
     );
 
-    expect(screen.getByText("10")).toBeTruthy();
     expect(screen.getByText(/S\/\s*1,500\.00/)).toBeTruthy();
+    expect(screen.getByText(/S\/\s*0\.00/)).toBeTruthy();
     expect(screen.getByText(/S\/\s*900\.00/)).toBeTruthy();
     expect(screen.getByText(/S\/\s*600\.00/)).toBeTruthy();
     expect(screen.getByText("Venta principal")).toBeTruthy();
@@ -100,7 +101,7 @@ describe("SaleOrderStatisticsPanel", () => {
           byWorkflow: [],
           byState: [],
           byClientType: [],
-          totals: { orders: 0, total: 0, collected: 0, pending: 0 },
+          totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
         }}
         loading={false}
         error={null}

@@ -166,8 +166,9 @@ export function SaleOrderStatisticsTotals({
   if (!statistics) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 mb-3">
-      <MetricCard label="Total vendido" value={formatMoney(statistics.totals.total)} compact={compact} />
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-4 mb-3">
+      <MetricCard label="Total" value={formatMoney(statistics.totals.total)} compact={compact} />
+      <MetricCard label="Total Tarifa" value={formatMoney(statistics.totals.deliveryCostSum)} compact={compact} />
       <MetricCard label="Total cobrado" value={formatMoney(statistics.totals.collected)} compact={compact} />
       <MetricCard label="Total pendiente" value={formatMoney(statistics.totals.pending)} compact={compact} />
     </div>
@@ -184,11 +185,12 @@ function MetricCard({
   compact: boolean;
 }) {
   return (
-    <div className={`rounded-sm bg-zinc-50 ring-1 ring-zinc-100 ${compact ? "p-2" : "p-3"}`}>
+    <div className={`rounded-sm bg-zinc-50 shadow-inner ${compact ? "p-2" : "p-3"}`}>
       <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">{label}</div>
       <div className={`font-semibold tabular-nums text-zinc-950 ${compact ? "mt-0.5 text-sm" : "mt-1 text-base"}`}>
         {value}
       </div>
+      
     </div>
   );
 }

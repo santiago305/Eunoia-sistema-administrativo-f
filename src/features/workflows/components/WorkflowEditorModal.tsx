@@ -29,6 +29,10 @@ import {
   removeWorkflowElement,
   validateWorkflowDraft,
 } from "@/features/workflows/utils/workflowDraft";
+import {
+  applyTransitionCardConnection,
+  getTransitionIdFromCard,
+} from "@/features/workflows/utils/workflowTransitionCard";
 import { getDestinationStateName } from "@/features/workflows/utils/workflowConnections";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowGlobalTransitions } from "./WorkflowGlobalTransitions";
@@ -159,11 +163,16 @@ const ensureDefaultCancelTransition = (draft: WorkflowDraft): WorkflowDraft => {
     purpose: TRANSITION_PURPOSES.CANCEL,
     fromStateClientId: null,
     toStateClientId: cancelStateId,
+    elseToStateClientId: null,
     sourceHandle: null,
     targetHandle: null,
     excludedStateClientIds: [cancelStateId],
     conditions: [],
     actions: [],
+    elseActions: [],
+    autoTrigger: false,
+    priority: 0,
+    elseEffect: null,
     positionX: -320,
     positionY: 0,
   };
@@ -622,8 +631,38 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                   ),
                 }))
               }
+              onMoveTransitionCard={(id, x, y) =>
+                setDraft((current) => ({
+                  ...current,
+                  transitions: current.transitions.map((transition) =>
+                    transition.clientId === id
+                      ? { ...transition, positionX: x, positionY: y }
+                      : transition,
+                  ),
+                }))
+              }
               onConnect={(from, to, sourceHandle, targetHandle) => {
                 setDraft((current) => {
+                  const cardTransitionId = getTransitionIdFromCard(from);
+                  if (cardTransitionId) {
+                    const transition = current.transitions.find(
+                      (item) => item.clientId === cardTransitionId,
+                    );
+                    if (!transition) return current;
+                    const updated = applyTransitionCardConnection(transition, {
+                      source: from,
+                      sourceHandle,
+                      target: to,
+                    });
+                    if (!updated) return current;
+                    setSelectedId(updated.clientId);
+                    return {
+                      ...current,
+                      transitions: current.transitions.map((item) =>
+                        item.clientId === updated.clientId ? updated : item,
+                      ),
+                    };
+                  }
                   const transition = {
                     ...createDraftTransition(
                       from,

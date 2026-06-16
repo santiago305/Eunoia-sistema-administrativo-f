@@ -36,11 +36,12 @@ function parseTransitionError(error: unknown) {
 type Props = {
   saleOrderId: string;
   workflowId: string | null;
+  currentStateId?: string | null;
   refreshKey?: number;
   onOrderChanged: () => void | Promise<void>;
 };
 
-export function SaleOrderWorkflowPanel({ saleOrderId, workflowId, refreshKey, onOrderChanged }: Props) {
+export function SaleOrderWorkflowPanel({ saleOrderId, workflowId, currentStateId, refreshKey, onOrderChanged }: Props) {
   const [transitions, setTransitions] = useState<AvailableTransition[]>([]);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export function SaleOrderWorkflowPanel({ saleOrderId, workflowId, refreshKey, on
     } catch (err) {
       setError(parseApiError(err));
     }
-  }, [saleOrderId, workflowId]);
+  }, [currentStateId, saleOrderId, workflowId]);
 
   useEffect(() => {
     void load();
