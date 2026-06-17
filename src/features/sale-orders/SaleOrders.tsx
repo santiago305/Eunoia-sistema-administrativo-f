@@ -193,6 +193,19 @@ export default function SaleOrders() {
     }
   }, []);
 
+  const updateUx = async () => {
+    await loadOrders();
+
+    if (selectedOrder?.id) {
+      const updated = await fetchSaleOrderById(selectedOrder.id);
+
+      console.log("antes", selectedOrder);
+      console.log("despues", updated);
+
+      setSelectedOrder(updated);
+    }
+  };
+
   const loadOrders = useCallback(async () => {
     clearFeedback();
     setLoading(true);
@@ -680,7 +693,7 @@ export default function SaleOrders() {
 
       </div>
 
-      <SaleOrderModal open={open} onClose={closeModal} orderId={editOrderId} onSaved={loadOrders} />
+      <SaleOrderModal open={open} onClose={closeModal} orderId={editOrderId} onSaved={updateUx} />
       <PdfViewerModal
         open={pdfOpen}
         title="PDF del pedido"

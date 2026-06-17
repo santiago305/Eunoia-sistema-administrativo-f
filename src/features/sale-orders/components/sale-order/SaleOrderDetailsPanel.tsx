@@ -109,7 +109,7 @@ export function SaleOrderDetailsPanel({
       setTransitions([]);
       setTransitionError(parseApiError(error, "No se pudieron cargar las transiciones."));
     }
-  }, [currentStateId, order?.id, workflowId]);
+  }, [currentStateId, order?.id, workflowId, order?.deliveryDate]);
 
   useEffect(() => {
     void loadTransitions();

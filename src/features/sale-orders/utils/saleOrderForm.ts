@@ -21,6 +21,7 @@ export const buildEmptySaleOrderForm = (): CreateSaleOrderDto => ({
   note: "",
   items: [],
   payments: [],
+  currentState: null,
 });
 export function getClientTypeBadge(
   type?: ClientType | null,

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleDot, Flag, Pencil, Plus, Save } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, CircleDot, Flag, Pencil, Plus, Save } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type {
   ActionCatalogItem,
   ConditionCatalogItem,
@@ -205,6 +206,16 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showValidationAlert, setShowValidationAlert] = useState(false);
+  const [showPanel, setShowPanel] = useState(true);
+  const [panelWidth, setPanelWidth] = useState(320);
+  const [isPanelResizing, setIsPanelResizing] = useState(false);
+
+  const panelResizeRef = useRef({
+    active: false,
+    startX: 0,
+    startWidth: 320,
+  });
+
   const [pendingRemoval, setPendingRemoval] = useState<{
     id: string;
     type: "state" | "transition";
@@ -236,6 +247,72 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     () => saleOrderStates.find((state) => state.id === saleOrderStateId),
     [saleOrderStateId, saleOrderStates],
   );
+
+  const startPanelResize = (
+  event: ReactPointerEvent<HTMLDivElement>,
+    ) => {
+      if (!showPanel) return;
+
+      event.preventDefault();
+
+      panelResizeRef.current = {
+        active: true,
+        startX: event.clientX,
+        startWidth: panelWidth,
+      };
+
+      setIsPanelResizing(true);
+
+      event.currentTarget.setPointerCapture(event.pointerId);
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    };
+
+    const resizePanel = (
+      event: ReactPointerEvent<HTMLDivElement>,
+    ) => {
+      if (!panelResizeRef.current.active) return;
+
+      /*
+      * Como el panel está a la derecha:
+      * mover el mouse hacia la izquierda aumenta el ancho.
+      */
+      const movement =
+        panelResizeRef.current.startX - event.clientX;
+
+      const newWidth =
+        panelResizeRef.current.startWidth + movement;
+
+      setPanelWidth(
+        Math.max(
+          260,
+          Math.min(520, newWidth),
+        ),
+      );
+    };
+
+    const stopPanelResize = (
+      event: ReactPointerEvent<HTMLDivElement>,
+    ) => {
+      if (!panelResizeRef.current.active) return;
+
+      panelResizeRef.current.active = false;
+      setIsPanelResizing(false);
+
+      if (
+        event.currentTarget.hasPointerCapture(
+          event.pointerId,
+        )
+      ) {
+        event.currentTarget.releasePointerCapture(
+          event.pointerId,
+        );
+      }
+
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
 
   useEffect(() => {
     if (!saleOrderStates.length) return;
@@ -437,8 +514,8 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
           </div>
         </header>
 
-        <div className="grid min-h-0 grid-cols-[240px_1fr_300px]">
-          <aside className="scroll-area overflow-auto border-r border-black/10 p-3">
+        <div className="relative flex min-h-0 overflow-hidden">          
+          <aside className="scroll-area w-[240px] shrink-0 overflow-auto border-r border-black/10 p-3">            
             <div className="grid grid-cols-[1fr_auto_auto] gap-1">
               <FloatingSelect
                 label="Estado"
@@ -605,7 +682,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
             ) : null}
           </aside>
 
-          <main className="min-h-0 bg-slate-50">
+          <main className="min-w-0 flex-1 bg-slate-50">            
             <WorkflowCanvas
               draft={draft}
               selectedId={selectedId}
@@ -689,21 +766,91 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
             />
           </main>
 
-          <aside className="scroll-area overflow-auto border-l border-black/10">
-            <WorkflowPropertiesPanel
-              draft={draft}
-              selectedId={selectedId}
-              conditionCatalog={conditions}
-              actionCatalog={actions}
-              onStateChange={replaceState}
-              onTransitionChange={replaceTransition}
-              onRemoveState={(id) =>
-                setPendingRemoval({ id, type: "state" })
-              }
-              onRemoveTransition={(id) =>
-                setPendingRemoval({ id, type: "transition" })
-              }
-            />
+          <aside
+            style={{
+              width: showPanel
+                ? `min(${panelWidth}px, calc(100vw - 1rem))`
+                : 44,
+            }}
+            className={`relative shrink-0 overflow-hidden border-l border-black/10 bg-white ${
+              isPanelResizing
+                ? ""
+                : "transition-[width] duration-200"
+            } max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-30 max-lg:shadow-xl`}
+          >
+            {showPanel ? (
+              <div
+                role="separator"
+                aria-label="Redimensionar panel de propiedades"
+                aria-orientation="vertical"
+                onPointerDown={startPanelResize}
+                onPointerMove={resizePanel}
+                onPointerUp={stopPanelResize}
+                onPointerCancel={stopPanelResize}
+                className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize touch-none hover:bg-primary/20"
+              />
+            ) : null}
+
+            <div className="flex h-full min-w-0 flex-col">
+              <div
+                className={`flex h-10 shrink-0 items-center border-b border-black/10 ${
+                  showPanel
+                    ? "justify-between px-2"
+                    : "justify-center"
+                }`}
+              >
+
+                <button
+                  type="button"
+                  aria-label={
+                    showPanel
+                      ? "Ocultar panel"
+                      : "Mostrar panel"
+                  }
+                  aria-expanded={showPanel}
+                  title={
+                    showPanel
+                      ? "Ocultar panel"
+                      : "Mostrar panel"
+                  }
+                  onClick={() =>
+                    setShowPanel((current) => !current)
+                  }
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-black/60 hover:bg-black/[0.05] hover:text-black"
+                  >
+                  {showPanel ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronLeft className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+
+              {showPanel ? (
+                <div className="scroll-area min-h-0 flex-1 overflow-auto">
+                  <WorkflowPropertiesPanel
+                    draft={draft}
+                    selectedId={selectedId}
+                    conditionCatalog={conditions}
+                    actionCatalog={actions}
+                    onStateChange={replaceState}
+                    onTransitionChange={replaceTransition}
+                    onRemoveState={(id) =>
+                      setPendingRemoval({
+                        id,
+                        type: "state",
+                      })
+                    }
+                    onRemoveTransition={(id) =>
+                      setPendingRemoval({
+                        id,
+                        type: "transition",
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
           </aside>
         </div>
       </div>

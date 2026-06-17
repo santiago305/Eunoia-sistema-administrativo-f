@@ -440,6 +440,16 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
   ) {
     errors.push("Las condiciones de fecha requieren una fecha valida.");
   }
+  if (
+    draft.transitions.some((transition) =>
+      transition.conditions.some((condition) => {
+        if (condition.type !== "SALE_ORDER_FIELD_REQUIRED") return false;
+        return typeof condition.config?.field !== "string" || !condition.config.field.trim();
+      }),
+    )
+  ) {
+    errors.push("La condicion de campo obligatorio requiere un campo seleccionado.");
+  }
   return { valid: errors.length === 0, errors };
 }
 

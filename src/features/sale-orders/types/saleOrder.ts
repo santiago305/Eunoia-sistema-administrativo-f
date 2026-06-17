@@ -54,6 +54,7 @@ export type CreateSaleOrderDto = {
   note?: string;
   items: SaleOrderItemInput[];
   payments: SaleOrderPaymentInput[];
+  currentState?:string | null;
 };
 
 export type CreateSaleOrderResponse = {

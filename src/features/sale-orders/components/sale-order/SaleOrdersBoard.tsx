@@ -66,6 +66,7 @@ export function SaleOrdersBoard({
           />
           {selectedOrder ? (
             <SaleOrderDetailsPanel
+              key={`${selectedOrder.id}-${selectedOrder.updatedAt ?? ""}`}
               order={selectedOrder}
               onEdit={onEditOrder}
               onOpenPdf={onOpenPdf}

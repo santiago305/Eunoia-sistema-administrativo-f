@@ -150,6 +150,13 @@ const isPaid = pendingAmount <= 0;
             <span className="mt-0.5 block truncate text-[12px] font-semibold tabular-nums text-emerald-700">
               {formatMoney(order.totalPaid ?? 0)}
             </span>
+            {order.totalPaid > order.total && (
+              <span className="mt-1 flex min-w-0 items-center gap-1 text-[11px] font-medium text-zinc-600">
+                <span className="truncate">
+                  exc: {formatMoney(order.totalPaid - order.total)}
+                </span>
+              </span>
+            )}
           </span>
           <span
             className={cn(
