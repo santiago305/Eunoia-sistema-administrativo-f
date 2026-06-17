@@ -407,4 +407,68 @@ describe("validateWorkflowDraft", () => {
       elseActions: [],
     });
   });
+
+  it("requires a selected sale order field for field-required conditions", () => {
+    const validation = validateWorkflowDraft({
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [
+        {
+          clientId: "state-1",
+          saleOrderStateId: "global-1",
+          name: "Creado",
+          code: "CREATED",
+          color: null,
+          positionX: 0,
+          positionY: 0,
+          isInitial: true,
+          isFinal: false,
+          isActive: true,
+        },
+        {
+          clientId: "state-2",
+          saleOrderStateId: "global-2",
+          name: "Listo",
+          code: "READY",
+          color: null,
+          positionX: 200,
+          positionY: 0,
+          isInitial: false,
+          isFinal: true,
+          isActive: true,
+        },
+      ],
+      transitions: [
+        {
+          clientId: "transition-1",
+          name: "Validar direccion",
+          code: "VALIDATE_ADDRESS",
+          fromStateClientId: "state-1",
+          toStateClientId: "state-2",
+          elseToStateClientId: null,
+          isGlobal: false,
+          excludedStateClientIds: [],
+          purpose: TRANSITION_PURPOSES.STANDARD,
+          effect: TRANSITION_EFFECTS.MOVE_STATE,
+          elseEffect: null,
+          isActive: true,
+          autoTrigger: false,
+          priority: 0,
+          conditions: [
+            {
+              type: "SALE_ORDER_FIELD_REQUIRED",
+              config: { field: "" },
+            },
+          ],
+          actions: [],
+          elseActions: [],
+        },
+      ],
+    });
+
+    expect(validation.errors).toContain(
+      "La condicion de campo obligatorio requiere un campo seleccionado.",
+    );
+  });
 });

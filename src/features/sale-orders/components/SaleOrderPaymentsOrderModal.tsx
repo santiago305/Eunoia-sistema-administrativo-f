@@ -111,12 +111,12 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
       showFeedback(errorResponse("Monto inválido."));
       return false;
     }
-    const pendingSafe = Math.max(0, Number(pending.toFixed(2)));
-    const amountSafe = Number(amount.toFixed(2));
-    if (amountSafe > pendingSafe) {
-      showFeedback(errorResponse(`El pago no puede exceder el pendiente: ${formatMoney(pendingSafe)}.`));
-      return false;
-    }
+    // const pendingSafe = Math.max(0, Number(pending.toFixed(2)));
+    // const amountSafe = Number(amount.toFixed(2));
+    // if (amountSafe > pendingSafe) {
+    //   showFeedback(errorResponse(`El pago no puede exceder el pendiente: ${formatMoney(pendingSafe)}.`));
+    //   return false;
+    // }
     if (!String(draft.method ?? "").trim()) {
       showFeedback(errorResponse("Método requerido."));
       return false;

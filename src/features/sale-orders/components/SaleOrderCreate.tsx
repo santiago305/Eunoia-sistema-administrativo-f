@@ -135,6 +135,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
             operationNumber: payment.operationNumber ?? "",
             note: payment.note ?? "",
           })),
+          currentState: order.currentState?.name,
         });
       } catch (err) {
         showFeedbackRef.current(errorResponse(parseApiError(err, "No se pudo cargar el pedido.")));
@@ -234,9 +235,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
       showFeedbackRef.current(errorResponse(validation.message));
       return false;
     }
-
     setLoading(true);
-
     try {
       const subTotal = (form.items ?? []).reduce((acc, item) => acc + (item.total ?? 0), 0);
       const total = subTotal + (form.deliveryCost ?? 0);
@@ -322,7 +321,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                   onChange={(value) => setForm((prev) => ({ ...prev, workflowId: value }))}
                   options={workflowOptions}
                   searchable
-                  disabled={isEdit && Boolean(form.workflowId)}
+                  disabled={Boolean(form.currentState)}
                   searchPlaceholder="Buscar flujo..."
                   emptyMessage="Sin flujos activos"
                 />

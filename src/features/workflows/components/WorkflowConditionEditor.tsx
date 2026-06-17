@@ -20,6 +20,7 @@ export enum ConditionType {
   DATE_AFTER = "DATE_AFTER",
   DATE_BEFORE = "DATE_BEFORE",
   SCHEDULE_DELIVERY_WINDOW = "SCHEDULE_DELIVERY_WINDOW",
+  SALE_ORDER_FIELD_REQUIRED = "SALE_ORDER_FIELD_REQUIRED",
 }
 
 export const CONDITION_LABELS: Record<string, string> = {
@@ -29,8 +30,41 @@ export const CONDITION_LABELS: Record<string, string> = {
   DATE_AFTER: "Fecha después de",
   DATE_BEFORE: "Fecha antes de",
   SCHEDULE_DELIVERY_WINDOW: "Validar fecha de entrega",
+  SALE_ORDER_FIELD_REQUIRED: "Campo obligatorio del pedido",
   INVOICE_SENT: "Comprobante enviado",
 };
+
+type SelectSchemaOption = {
+  label: string;
+  value: string;
+};
+
+function getSelectSchemaOptions(schema: unknown): SelectSchemaOption[] {
+  if (!schema || typeof schema !== "object" || !("options" in schema)) {
+    return [];
+  }
+
+  const options = (schema as { options?: unknown }).options;
+  if (!Array.isArray(options)) return [];
+
+  return options.filter((option): option is SelectSchemaOption => {
+    if (!option || typeof option !== "object") return false;
+    const candidate = option as Partial<SelectSchemaOption>;
+    return typeof candidate.label === "string" && typeof candidate.value === "string";
+  });
+}
+
+function getConditionFieldOptions(definition?: ConditionCatalogItem) {
+  const fieldSchema =
+    definition?.configSchema &&
+    typeof definition.configSchema === "object" &&
+    "field" in definition.configSchema
+      ? definition.configSchema.field
+      : undefined;
+
+  return getSelectSchemaOptions(fieldSchema);
+}
+
 export function WorkflowConditionEditor({ catalog, value, onChange }: Props) {
 
   const conditionOptions = catalog.map((item) => ({
@@ -51,6 +85,11 @@ export function WorkflowConditionEditor({ catalog, value, onChange }: Props) {
           JSON.stringify(definition?.configSchema ?? {}).includes("date");
         const isScheduleDeliveryWindow =
           condition.type === ConditionType.SCHEDULE_DELIVERY_WINDOW;
+        const isSaleOrderFieldRequired =
+          condition.type === ConditionType.SALE_ORDER_FIELD_REQUIRED;
+        const fieldOptions = isSaleOrderFieldRequired
+          ? getConditionFieldOptions(definition)
+          : [];
 
         return (
           <div
@@ -72,6 +111,13 @@ export function WorkflowConditionEditor({ catalog, value, onChange }: Props) {
                   config:
                     selected === ConditionType.SCHEDULE_DELIVERY_WINDOW
                       ? { minDaysBefore: 0, maxDaysBefore: 1 }
+                      : selected === ConditionType.SALE_ORDER_FIELD_REQUIRED
+                        ? {
+                            field:
+                              getConditionFieldOptions(
+                                catalog.find((item) => item.type === selected),
+                              )[0]?.value ?? "",
+                          }
                       : {},
                 };
 
@@ -152,6 +198,34 @@ export function WorkflowConditionEditor({ catalog, value, onChange }: Props) {
                   }}
                 />
               </div>
+            ) : null}
+
+            {isSaleOrderFieldRequired ? (
+              <FloatingSelect
+                label="Campo requerido"
+                name={`condition-field-${index}`}
+                value={
+                  typeof condition.config.field === "string"
+                    ? condition.config.field
+                    : ""
+                }
+                onChange={(selected) => {
+                  const next = [...value];
+                  next[index] = {
+                    ...condition,
+                    config: {
+                      ...condition.config,
+                      field: selected,
+                    },
+                  };
+                  onChange(next);
+                }}
+                options={fieldOptions}
+                searchable
+                searchPlaceholder="Buscar campo..."
+                emptyMessage="Sin campos"
+                className="mt-2 h-9 text-xs"
+              />
             ) : null}
 
             <SystemButton
