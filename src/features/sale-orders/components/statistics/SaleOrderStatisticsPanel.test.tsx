@@ -10,6 +10,7 @@ vi.mock("recharts", () => ({
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,
+  Legend: () => null,
   Bar: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   Cell: () => null,
   PieChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -28,6 +29,22 @@ const statistics: SaleOrderStatisticsResponse = {
   byClientType: [
     { type: "NEW", label: "Nuevo", count: 5 },
     { type: "REPURCHASE", label: "Recompra", count: 5 },
+  ],
+  byBankAccount: [
+    {
+      id: "account-1",
+      label: "CURIER-EVA",
+      number: "12323213232",
+      payments: 12,
+      collected: 1130.6,
+    },
+    {
+      id: null,
+      label: "Sin cuenta",
+      number: null,
+      payments: 3,
+      collected: 189.9,
+    },
   ],
   totals: {
     orders: 10,
@@ -59,6 +76,13 @@ describe("SaleOrderStatisticsPanel", () => {
     expect(screen.getByText("Sin estado")).toBeTruthy();
     expect(screen.getByText("Nuevo")).toBeTruthy();
     expect(screen.getByText("Recompra")).toBeTruthy();
+    expect(screen.getByText("Cobros por cuenta bancaria")).toBeTruthy();
+    expect(screen.getByText("CURIER-EVA")).toBeTruthy();
+    expect(screen.getByText("Sin cuenta")).toBeTruthy();
+    expect(screen.getByText("12 pagos")).toBeTruthy();
+    expect(screen.getByText("3 pagos")).toBeTruthy();
+    expect(screen.getByText(/S\/\s*1,130\.60/)).toBeTruthy();
+    expect(screen.getByText(/S\/\s*189\.90/)).toBeTruthy();
   });
 
   it("shows loading, updating, error, empty, and compact states", () => {
@@ -101,6 +125,7 @@ describe("SaleOrderStatisticsPanel", () => {
           byWorkflow: [],
           byState: [],
           byClientType: [],
+          byBankAccount: [],
           totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
         }}
         loading={false}
@@ -126,5 +151,6 @@ describe("SaleOrderStatisticsPanel", () => {
     expect(screen.getByText("Pedidos por flujo")).toBeTruthy();
     expect(screen.getByText("Pedidos por estado")).toBeTruthy();
     expect(screen.getByText("Pedidos por tipo de cliente")).toBeTruthy();
+    expect(screen.getByText("Cobros por cuenta bancaria")).toBeTruthy();
   });
 });

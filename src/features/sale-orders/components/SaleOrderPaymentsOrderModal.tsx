@@ -219,7 +219,7 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
         <div className="rounded-xl border border-black/10 overflow-hidden">
           <div className="flex items-center justify-between bg-black/[0.02] px-3 py-2 text-xs font-semibold text-black/70">
             <span>Pagos</span>
-            <span className="text-[11px] font-semibold text-black/60">
+            <span className="text-[13px] font-semibold text-black/60">
               Total: {formatMoney(total)} · Pagado: {formatMoney(totalPaid)} · Pendiente: {formatMoney(pending)}
             </span>
           </div>
@@ -235,6 +235,7 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
                   <tr className="border-b border-black/10 text-[11px] text-black/45">
                     <th className="px-3 py-2 text-left font-medium">Fecha</th>
                     <th className="px-3 py-2 text-left font-medium">Método</th>
+                    <th className="px-3 py-2 text-left font-medium">Cuenta</th>
                     <th className="px-3 py-2 text-right font-medium">Monto</th>
                     <th className="px-3 py-2 text-left font-medium">Operación</th>
                     <th className="px-3 py-2 text-left font-medium">Nota</th>
@@ -246,6 +247,7 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
                     <tr key={payment.id} className="border-b border-black/5 last:border-b-0">
                       <td className="px-3 py-2 tabular-nums">{formatDate(payment.date)}</td>
                       <td className="px-3 py-2">{payment.method ?? DASH}</td>
+                      <td className="px-3 py-2">{payment.bankAccount?.name ?? "Sin cuenta"}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{formatMoney(Number(payment.amount ?? 0))}</td>
                       <td className="px-3 py-2">{payment.operationNumber ?? DASH}</td>
                       <td className="px-3 py-2">{payment.note ?? DASH}</td>

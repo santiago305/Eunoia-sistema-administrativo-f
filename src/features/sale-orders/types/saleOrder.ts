@@ -218,7 +218,9 @@ export type SaleOrderSearchRule = {
     | "workflowId"
     | "saleOrderStateId"
     | "scheduleDate"
-    | "deliveryDate";
+    | "deliveryDate"
+    | "bankAccountId"
+    | "clientType";
   operator:
     | "in"
     | "contains"
@@ -266,6 +268,8 @@ export type SaleOrderSearchStateResponse = {
     paymentStatuses: SaleOrderSearchOption[];
     workflows: SaleOrderSearchOption[];
     states: SaleOrderSearchOption[];
+    bankAccounts: SaleOrderSearchOption[];
+    clientTypes: SaleOrderSearchOption[];
   };
 };
 
@@ -291,6 +295,13 @@ export type SaleOrderStatisticsResponse = {
     type: "NEW" | "LAGGING" | "REPURCHASE" | "UNDEFINED";
     label: string;
     count: number;
+  }>;
+  byBankAccount: Array<{
+    id: string | null;
+    label: string;
+    number: string | null;
+    payments: number;
+    collected: number;
   }>;
   totals: {
     orders: number;

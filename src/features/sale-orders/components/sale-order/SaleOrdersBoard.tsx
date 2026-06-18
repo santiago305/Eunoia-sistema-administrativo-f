@@ -32,7 +32,8 @@ export function SaleOrdersBoard({
   statisticsError,
 }: Props) {
   return (
-    <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-0 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[390px_minmax(0,1fr)]">
+    <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-0 
+    lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[400px_minmax(0,1fr)]">
       <aside className="h-full w-full border-b border-zinc-100 lg:min-h-0 lg:border-b-0 lg:border-r">
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex items-center justify-between gap-3 border-b border-zinc-100 py-3 pr-0 lg:pr-4">
