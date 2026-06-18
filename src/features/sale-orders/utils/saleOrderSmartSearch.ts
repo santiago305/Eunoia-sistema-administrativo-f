@@ -20,6 +20,8 @@ export const SaleOrderSearchFields = {
   SALE_ORDER_STATE_ID: "saleOrderStateId",
   SCHEDULE_DATE: "scheduleDate",
   DELIVERY_DATE: "deliveryDate",
+  BANK_ACCOUNT_ID: "bankAccountId",
+  CLIENT_TYPE: "clientType",
 } as const;
 
 export type SaleOrderSearchFilterKey = SaleOrderSearchField;
@@ -55,6 +57,8 @@ const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
   saleOrderStateId: "Estado",
   scheduleDate: "Fecha agenda",
   deliveryDate: "Fecha entrega",
+  bankAccountId: "Cuenta bancaria",
+  clientType: "Tipo de cliente",
 };
 
 const CATALOG_FIELDS = new Set<SaleOrderSearchField>([
@@ -63,6 +67,8 @@ const CATALOG_FIELDS = new Set<SaleOrderSearchField>([
   SaleOrderSearchFields.PAYMENT_STATUS,
   SaleOrderSearchFields.WORKFLOW_ID,
   SaleOrderSearchFields.SALE_ORDER_STATE_ID,
+  SaleOrderSearchFields.BANK_ACCOUNT_ID,
+  SaleOrderSearchFields.CLIENT_TYPE,
 ]);
 
 const DATE_FIELDS = new Set<SaleOrderSearchField>([
@@ -256,7 +262,11 @@ function getRuleLabel(rule: SaleOrderSearchRule, searchState?: SaleOrderSearchSt
               ? getCatalogLabel(values, searchState?.catalogs.workflows)
               : rule.field === SaleOrderSearchFields.SALE_ORDER_STATE_ID
                 ? getCatalogLabel(values, searchState?.catalogs.states)
-            : getCatalogLabel(values, undefined);
+                : rule.field === SaleOrderSearchFields.BANK_ACCOUNT_ID
+                  ? getCatalogLabel(values, searchState?.catalogs.bankAccounts)
+                  : rule.field === SaleOrderSearchFields.CLIENT_TYPE
+                    ? getCatalogLabel(values, searchState?.catalogs.clientTypes)
+                    : getCatalogLabel(values, undefined);
     if (!label) return null;
     const modePrefix = rule.mode === "exclude" ? "No" : "";
     return `${fieldLabel}: ${modePrefix ? `${modePrefix} ` : ""}${label}`.trim();
@@ -337,6 +347,8 @@ export function buildSaleOrderSmartSearchColumns(
   const warehouseOptions = normalizeSearchOptions(searchState?.catalogs.warehouses);
   const workflowOptions = normalizeSearchOptions(searchState?.catalogs.workflows);
   const stateOptions = normalizeSearchOptions(searchState?.catalogs.states);
+  const bankAccountOptions = normalizeSearchOptions(searchState?.catalogs.bankAccounts);
+  const clientTypeOptions = normalizeSearchOptions(searchState?.catalogs.clientTypes);
 
   return [
     {
@@ -394,6 +406,24 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: stateOptions,
+    },
+    {
+      id: SaleOrderSearchFields.BANK_ACCOUNT_ID,
+      label: "Cuenta bancaria",
+      kind: "catalog",
+      description: "Filtra por cuenta bancaria usada en pagos.",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguna de" }],
+      supportsExclude: true,
+      options: bankAccountOptions,
+    },
+    {
+      id: SaleOrderSearchFields.CLIENT_TYPE,
+      label: "Tipo de cliente",
+      kind: "catalog",
+      description: "Filtra por Nuevo, Rezagado o Recompra.",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: clientTypeOptions,
     },
     {
       id: SaleOrderSearchFields.SCHEDULE_DATE,

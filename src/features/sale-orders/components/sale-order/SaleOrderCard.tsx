@@ -90,7 +90,7 @@ const isPaid = pendingAmount <= 0;
           <span className="flex shrink-0 items-center gap-1.5">
             {order.workflow?.name && (
               <span className="max-w-[110px] truncate rounded-sm px-2 py-1 text-[10px] font-semibold 
-              text-zinc-700 bg-amber-200 shadow-[inset_0_1px_4px_rgba(245,158,11,0.25)]
+              bg-gray-50 text-gray-700 ring-gray-200 shadow-[inset_0_0_5px_rgba(14,165,233,0.22)]
               ">
                 {order.workflow.name}
               </span>
