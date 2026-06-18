@@ -57,9 +57,9 @@ function StateBadge({ state }: { state: WorkflowState }) {
           {state.name}
         </span>
       </div>
-      <div className="mt-1 truncate pl-[18px] text-[10px] text-zinc-500">
+      {/* <div className="mt-1 truncate pl-[18px] text-[10px] text-zinc-500">
         {state.code}
-      </div>
+      </div> */}
     </div>
   );
 }
@@ -112,14 +112,14 @@ function HistoryCard({
       </div>
 
       {isAction ? (
-        <div className="mt-4">
+        <div className="mt-3">
           <div className="mb-2 text-[11px] font-medium text-amber-700">
             No cambia de estado
           </div>
           <StateBadge state={event.currentState} />
         </div>
       ) : (
-        <div className="mt-4 grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <div className="mt-3 grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
           <StateBadge state={event.fromState} />
           <ArrowRight className="mx-auto h-4 w-4 rotate-90 text-zinc-400 sm:rotate-0" />
           <StateBadge state={event.toState} />
@@ -249,13 +249,15 @@ export function SaleOrderWorkflowHistoryModal({
         </div>
       ) : history.length === 0 ? (
         <div className="grid h-full place-items-center px-6 text-center text-sm text-zinc-500">
-          <div>
+          <div className="p-2">
             <History className="mx-auto mb-3 h-7 w-7 text-zinc-400" />
             Este pedido aun no registra cambios de estado.
           </div>
         </div>
       ) : (
-        <HistoryTimeline history={history} />
+        <div className="p-2">
+          <HistoryTimeline history={history} />
+        </div>
       )}
     </Modal>
   );

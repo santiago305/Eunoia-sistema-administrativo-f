@@ -1,3 +1,5 @@
+import { ClientDocType } from "@/features/clients/types/client";
+
 export type SaleOrderItemComponentInput = {
   id?: string;
   skuId?: string;
@@ -128,27 +130,33 @@ export type SaleOrder = {
   id: string;
   serie: string | null;
   correlative: number | null;
-  client: { id: string; type: ClientType; fullName: string; docNumber?: string | null; reference?: string | null, count?:number,
+  client: { 
+    id: string;
+    type: ClientType;
+    docType: ClientDocType;
+    fullName: string;
+    docNumber: string;
+    reference?: string,
+    count?:number,
     mainPhone?: string | null; 
-    departmentId?: string | null;
-    provinceId?: string | null;
-    districtId?: string | null;
+    departmentId: string;
+    provinceId: string;
+    districtId: string;
     department?: {
       id: string;
       name: string;
     } | null;
-
     province?: {
       id: string;
       name: string;
       departmentId: string;
     } | null;
-
     district?: {
       id: string;
       name: string;
       provinceId: string;
     } | null;
+    isActive:boolean;
    } | null;
   warehouse: { id: string; name: string } | null;
   source: { id: string; name: string; detail?: string | null } | null;
