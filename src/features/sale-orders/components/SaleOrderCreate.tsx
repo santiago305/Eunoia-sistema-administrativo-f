@@ -191,7 +191,29 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
       setClientLoading(true);
 
       try {
-        const created = await createClient(clientForm);
+        const created = await createClient({
+          type: clientForm.type,
+          fullName: clientForm.fullName.trim(),
+          docType: clientForm.docType,
+          docNumber: clientForm.docType === "NONE" ? "" : clientForm.docNumber.trim(),
+          reference:
+            clientForm.docType === "NONE"
+              ? clientForm.reference.trim()
+              : clientForm.reference.trim() || undefined,
+          address: clientForm.address.trim() || undefined,
+          departmentId: clientForm.departmentId,
+          provinceId: clientForm.provinceId,
+          districtId: clientForm.districtId,
+          isActive: clientForm.isActive,
+          telephonesReplace: clientForm.telephonesReplace?.length
+            ? clientForm.telephonesReplace
+                .filter((item) => !item.id && Boolean(item.number?.trim()))
+                .map((item) => ({
+                  number: item.number!.trim(),
+                  isMain: item.isMain,
+                }))
+            : undefined,
+        });
         const clientId = created?.id ?? "";
 
         if (clientId) {

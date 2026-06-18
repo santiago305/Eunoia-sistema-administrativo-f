@@ -50,7 +50,7 @@ export type CreateClientBody = {
   provinceId: string;
   districtId: string;
   isActive?: boolean;
-  telephonesPatch?: Array<{
+  telephonesReplace?: Array<{
     number: string;
     isMain?: boolean;
     isActive?: boolean;
@@ -67,7 +67,7 @@ export type UpdateClientBody = {
   departmentId?: string;
   provinceId?: string;
   districtId?: string;
-  telephonesPatch?: Array<{
+  telephonesReplace?: Array<{
     id?: string;
     number?: string;
     isMain?: boolean;

@@ -215,6 +215,10 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     startX: 0,
     startWidth: 320,
   });
+  const baseCatalogsLoadedRef = useRef(false);
+  const baseCatalogsLoadingRef = useRef(false);
+  const transitionCatalogsLoadedRef = useRef(false);
+  const transitionCatalogsLoadingRef = useRef(false);
 
   const [pendingRemoval, setPendingRemoval] = useState<{
     id: string;
@@ -337,26 +341,49 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   }, [saleOrderStates]);
 
   const loadCatalogs = useCallback(async () => {
+    if (baseCatalogsLoadedRef.current || baseCatalogsLoadingRef.current) return;
+
+    baseCatalogsLoadingRef.current = true;
     setLoading(true);
     setError("");
 
     try {
-      const [workflowItems, conditionItems, actionItems, stateItems] =
+      const [workflowItems, stateItems] =
         await Promise.all([
           listWorkflows(),
-          listWorkflowConditions(),
-          listWorkflowActions(),
           listSaleOrderStates(),
         ]);
 
       setWorkflows(workflowItems);
-      setConditions(conditionItems);
-      setActions(actionItems);
       setSaleOrderStates(stateItems);
+      baseCatalogsLoadedRef.current = true;
     } catch (err) {
       setError(parseApiError(err));
     } finally {
+      baseCatalogsLoadingRef.current = false;
       setLoading(false);
+    }
+  }, []);
+
+  const loadTransitionCatalogs = useCallback(async () => {
+    if (transitionCatalogsLoadedRef.current || transitionCatalogsLoadingRef.current) return;
+
+    transitionCatalogsLoadingRef.current = true;
+    setError("");
+
+    try {
+      const [conditionItems, actionItems] = await Promise.all([
+        listWorkflowConditions(),
+        listWorkflowActions(),
+      ]);
+
+      setConditions(conditionItems);
+      setActions(actionItems);
+      transitionCatalogsLoadedRef.current = true;
+    } catch (err) {
+      setError(parseApiError(err));
+    } finally {
+      transitionCatalogsLoadingRef.current = false;
     }
   }, []);
 
@@ -380,6 +407,16 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     setSelectedId(null);
     void loadCatalogs();
   }, [loadCatalogs, open]);
+
+  useEffect(() => {
+    if (!open || !showPanel || !selectedId) return;
+    const selectedTransition = draft.transitions.some(
+      (transition) => transition.clientId === selectedId,
+    );
+    if (!selectedTransition) return;
+
+    void loadTransitionCatalogs();
+  }, [draft.transitions, loadTransitionCatalogs, open, selectedId, showPanel]);
 
   const loadWorkflow = async (id: string) => {
     if (!id) {
@@ -423,7 +460,27 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
       setDraft(persisted);
       setSelectedId(null);
-      await loadCatalogs();
+      setWorkflows((current) => {
+        const savedWorkflow: Workflow = {
+          id: response.workflow.id,
+          name: response.workflow.name,
+          description: response.workflow.description,
+          isActive: response.workflow.isActive,
+          createdAt: response.workflow.createdAt,
+          updatedAt: response.workflow.updatedAt,
+          states: response.states,
+          transitions: [],
+        };
+
+        const exists = current.some((workflow) => workflow.id === savedWorkflow.id);
+        if (exists) {
+          return current.map((workflow) =>
+            workflow.id === savedWorkflow.id ? { ...workflow, ...savedWorkflow } : workflow,
+          );
+        }
+
+        return [...current, savedWorkflow];
+      });
     } catch (err) {
       setError(parseApiError(err));
     } finally {

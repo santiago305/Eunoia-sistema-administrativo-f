@@ -9,7 +9,7 @@ import {
   Pencil,
   Truck,
   UserRound,
-  Workflow,
+  Workflow
 } from "lucide-react";
 import type { SaleOrder, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
 import type { AvailableTransition } from "@/features/workflows/types/workflow";
@@ -22,6 +22,9 @@ import {
 } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { SaleOrderWorkflowHistoryModal } from "./SaleOrderWorkflowHistoryModal";
+import { getClientById, updateClient } from "@/shared/services/clientService";
+import type { Client, ClientForm } from "@/features/clients/types/client";
+import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
 
 type Props = {
   order: SaleOrder | null;
@@ -88,9 +91,13 @@ export function SaleOrderDetailsPanel({
   const [loadingTransitionId, setLoadingTransitionId] = useState<string | null>(null);
   const [transitionError, setTransitionError] = useState("");
   const [workflowHistoryOpen, setWorkflowHistoryOpen] = useState(false);
-
   const [openItemDetail, setOpenItemDetail] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SaleOrderItemInput | null>(null);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [clientLoading, setClientLoading] = useState(false);
+  const [clientSaving, setClientSaving] = useState(false);
+  const [clientEditError, setClientEditError] = useState("");
 
   const workflowId = order?.workflow?.id ?? order?.workflowId ?? null;
   const currentStateId = order?.currentState?.id ?? order?.currentStateId ?? null;
@@ -120,6 +127,11 @@ export function SaleOrderDetailsPanel({
     setSelectedItem(null);
     setWorkflowHistoryOpen(false);
     setTransitionError("");
+
+    setClientModalOpen(false);
+    setEditingClient(null);
+    setClientLoading(false);
+    setClientEditError("");
   }, [order?.id]);
 
   const executeTransition = useCallback(
@@ -204,7 +216,84 @@ export function SaleOrderDetailsPanel({
     transitions,
   ]);
 
+  const openClientEdit = useCallback(async () => {
+    if (!order?.client?.id) return;
+
+    setClientEditError("");
+    setEditingClient(null);
+    setClientModalOpen(true);
+    setClientLoading(true);
+
+    try {
+      const detail = await getClientById(order.client.id);
+
+      setEditingClient({
+        id: detail.id,
+        type: detail.type,
+        fullName: detail.fullName,
+        docType: detail.docType,
+        docNumber: detail.docNumber,
+        departmentId: detail.departmentId,
+        provinceId: detail.provinceId,
+        districtId: detail.districtId,
+        address: detail.address ?? null,
+        reference: detail.reference ?? null,
+        isActive: detail.isActive,
+      });
+    } catch (error) {
+      setClientEditError(parseApiError(error, "No se pudo cargar el cliente."));
+      setClientModalOpen(false);
+      setEditingClient(null);
+    } finally {
+      setClientLoading(false);
+    }
+  }, [order?.client?.id]);
+
+  const handleUpdateClient = useCallback(
+    async (form: ClientForm) => {
+      if (!order?.client?.id || !order.id) return;
+      setClientSaving(true);
+      setClientEditError("");
+      try {
+        await updateClient(order.client.id, {
+          type: form.type,
+          fullName: form.fullName.trim(),
+          docType: form.docType,
+          docNumber: form.docType === "NONE" ? "" : form.docNumber.trim(),
+          reference:
+            form.docType === "NONE"
+              ? form.reference.trim()
+              : form.reference.trim() || undefined,
+          address: form.address.trim() || undefined,
+          departmentId: form.departmentId,
+          provinceId: form.provinceId,
+          districtId: form.districtId,
+          telephonesReplace: form.telephonesReplace?.length
+            ? form.telephonesReplace
+                .map((item) => ({
+                  id: item.id,
+                  number: item.number?.trim() || undefined,
+                  isMain: item.isMain,
+                }))
+                .filter((item) => Boolean(item.id || item.number))
+            : undefined,
+        });
+        await onOrderChanged(order.id);
+        setClientModalOpen(false);
+        setEditingClient(null);
+      } catch (error) {
+        setClientEditError(
+          parseApiError(error, "No se pudo actualizar el cliente."),
+        );
+      } finally {
+        setClientSaving(false);
+      }
+    },
+    [onOrderChanged, order?.client?.id, order?.id],
+  );
+
   if (!order) return <EmptyState />;
+
 
   const code = `${order.serie ?? "-"}-${order.correlative ?? "-"}`;
   const stateName = order.currentState?.name ?? "Sin estado";
@@ -305,19 +394,29 @@ export function SaleOrderDetailsPanel({
         </div>
 
         <div className="grid gap-5 py-5">
-          <Section title="Cliente" icon={<UserRound className="h-4 w-4" />}>
+            <Section
+              title="Cliente"
+              icon={<UserRound className="h-4 w-4" />}
+              onEditClient={
+                order.client?.id
+                  ? () => {
+                      void openClientEdit();
+                    }
+                  : undefined
+              }
+            >
             <Info label="Nombre" value={order.client?.fullName} />
-            <Info label="Documento" value={order.client?.docNumber ?? order.client?.reference} />
-
+            <div className="grid grid-cols-2">
+              <Info label="Documento" value={order.client?.docNumber} />
+              <Info label="Telefono" value={order.client?.mainPhone} />
+            </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               <Info label="Departamento" value={order.client?.department?.name} />
               <Info label="Provincia" value={order.client?.province?.name} />
               <Info label="Distrito" value={order.client?.district?.name} />
             </div>
-
-            <Info label="Telefono" value={order.client?.mainPhone} />
+            <Info label="Referencia" value={order.client?.reference} />
           </Section>
-
           <Section title="Agenda y entrega" icon={<Truck className="h-4 w-4" />}>
             <Info
               label="Fecha agenda"
@@ -395,6 +494,27 @@ export function SaleOrderDetailsPanel({
         saleOrderLabel={code}
         onClose={() => setWorkflowHistoryOpen(false)}
       />
+      <ClientFormModal
+        open={clientModalOpen}
+        mode="edit"
+        client={editingClient}
+        loading={clientLoading || clientSaving}
+        onClose={() => {
+          if (clientLoading || clientSaving) return;
+
+          setClientModalOpen(false);
+          setEditingClient(null);
+          setClientEditError("");
+        }}
+        onSubmit={(form) => {
+          void handleUpdateClient(form);
+        }}
+      />
+      {clientEditError ? (
+        <div className="fixed bottom-4 right-4 z-50 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-700 shadow">
+          {clientEditError}
+        </div>
+      ) : null}
     </>
   );
 }
@@ -403,16 +523,29 @@ function Section({
   title,
   icon,
   children,
+  onEditClient,
 }: {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  onEditClient?: ()=> void;
 }) {
   return (
     <section className="border-b border-zinc-100 pb-5">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-950">
         {icon}
         {title}
+        {onEditClient && (
+          <div className="ml-auto">
+            <SystemButton
+              variant="ghost"
+              size="sm"
+              title="Editar cliente"
+              leftIcon={<Pencil className="w-4 h-4"/>}
+              onClick={onEditClient}
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-2 md:grid-cols-2">{children}</div>

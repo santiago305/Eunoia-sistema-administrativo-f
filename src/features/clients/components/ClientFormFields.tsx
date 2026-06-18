@@ -8,7 +8,6 @@ const docTypeOptions: Array<{ value: ClientForm["docType"]; label: string }> = [
   { value: "DNI", label: "DNI" },
   { value: "CE", label: "CE" },
   { value: "RUC", label: "RUC" },
-  { value: "NONE", label: "SIN DOCUMENTO" },
 ];
 
 type Props = {
@@ -85,28 +84,14 @@ export function ClientFormFields({
           disabled={disabled}
           className={inputClassName}
         />
-        {
-          form.docType === "NONE" && (
-            <FloatingInput
-              label="Referencia"
-              name="client-reference"
-              value={form.reference}
-              onChange={(e) => updateField("reference", e.target.value)}
-              {...sharedInputProps}
-            />
-          )
-        }
-        {
-          form.docType !== "NONE" && (
-            <FloatingInput
-              label="Número de documento"
-              name="client-doc-number"
-              value={form.docNumber}
-              onChange={(e) => updateField("docNumber", e.target.value)}
-              {...sharedInputProps}
-            />
-          )
-        }
+        <FloatingInput
+          label="Número de documento"
+          name="client-doc-number"
+          value={form.docNumber}
+          onChange={(e) => updateField("docNumber", e.target.value)}
+          {...sharedInputProps}
+        />
+
       </div>
       <div className={`grid grid-cols-1 gap-3 md:grid-cols-3 mt-2`}>
         <FloatingSelect
@@ -146,6 +131,13 @@ export function ClientFormFields({
           emptyMessage="Sin distritos"
         />
       </div>
+      <FloatingInput
+        label="Referencia"
+        name="client-reference"
+        value={form.reference}
+        onChange={(e) => updateField("reference", e.target.value)}
+        {...sharedInputProps}
+      />
       <FloatingInput
         label="Dirección"
         name="client-address"
