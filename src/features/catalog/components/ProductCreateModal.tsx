@@ -48,7 +48,7 @@ import { ProductWorkspaceTabs } from "./ComponentSetion";
 import { createEmptyRecipeDraft, RecipeDraft } from "./recipeFormFields.helpers";
 const DEFAULT_DRAFT: ProductCreateDraft = createEmptyProductCreateDraft();
 
-export function ProductCreateModal({ open, mode = "create", productId, productType, primaryColor = DEFAULT_PRIMARY, entityLabel, onClose, onSaved }: ProductCreateModalProps) {
+export function ProductCreateModal({ open, mode = "create", productId, productType, primaryColor = DEFAULT_PRIMARY, entityLabel, onClose, onSaved, permissions }: ProductCreateModalProps) {
     const { showFeedback, clearFeedback } = useFeedbackToast();
     const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("details");
     const [units, setUnits] = useState<ListUnitResponse>();
@@ -79,6 +79,16 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const label = entityLabel ?? (productType === ProductTypes.MATERIAL ? "materia prima" : "producto");
     const isMaterial = productType === ProductTypes.MATERIAL;
     const isEditMode = mode === "edit";
+    const effectivePermissions = permissions ?? {
+        create: true,
+        update: true,
+        createSku: true,
+        updateSku: true,
+        manageRecipes: true,
+        manageEquivalences: true,
+    };
+    const canPersistProduct = isEditMode ? effectivePermissions.update : effectivePermissions.create;
+    const canPersistSku = isEditMode ? effectivePermissions.updateSku : effectivePermissions.createSku;
     const activeProductId = isEditMode ? (productId ?? null) : createdProductId;
     const createFlowLocked = !isEditMode && Boolean(createdProductId);
 
@@ -370,14 +380,20 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         [units],
     );
 
-    const canSave = form.name.trim().length > 0 && !loadingUnits && !createFlowLocked && (!isEditMode || !loadingProduct);
+    const canSave = canPersistProduct && form.name.trim().length > 0 && !loadingUnits && !createFlowLocked && (!isEditMode || !loadingProduct);
     const isBusy = isEditMode && (loadingUnits || loadingProduct);
 
     const tabs = [
         { id: "details" as WorkspaceTab, label: "Producto", icon: PackageCheck },
-        { id: "equivalences" as WorkspaceTab, label: "Equivalencias", icon: Scale },
-        ...(!isMaterial ? [{ id: "recipes" as WorkspaceTab, label: "Recetas", icon: FlaskConical }] : []),
+        ...(effectivePermissions.manageEquivalences ? [{ id: "equivalences" as WorkspaceTab, label: "Equivalencias", icon: Scale }] : []),
+        ...(!isMaterial && effectivePermissions.manageRecipes ? [{ id: "recipes" as WorkspaceTab, label: "Recetas", icon: FlaskConical }] : []),
     ];
+
+    useEffect(() => {
+        if (!tabs.some((tab) => tab.id === workspaceTab)) {
+            setWorkspaceTab("details");
+        }
+    }, [tabs, workspaceTab]);
 
     const addSkuRow = () => {
         setSkuRows((prev) => [...prev, createEmptySkuRow()]);
@@ -948,6 +964,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const saveProductUpdates = async () => {
+        if (!effectivePermissions.update) return;
         if (!productId || saving) return;
         clearFeedback();
         setSaving(true);
@@ -1043,6 +1060,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const saveProductAndSkus = async () => {
+        if (!effectivePermissions.create) return;
         if ((!canSave && !createdProductId) || saving) return;
         clearFeedback();
         setSaving(true);
@@ -1097,6 +1115,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const deleteSelectedRecipeItem = async (itemId: string) => {
+        if (!effectivePermissions.manageRecipes) return;
         if (!selectedSkuId || savingRecipe) return;
         const parsed = parseEditRecipeSelectionKey(selectedSkuId);
         if (!parsed || parsed.kind !== "sku") return;
@@ -1147,6 +1166,8 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                                 onAddSkuRow={addSkuRow}
                                 onRemoveSkuRow={removeSkuRow}
                                 onChangeSkuRow={updateSkuRow}
+                                readOnly={!canPersistProduct}
+                                skuReadOnly={!canPersistSku}
                             />
                         )}
 
@@ -1163,6 +1184,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                                 onCreateEquivalence={activeProductId ? handleCreateEquivalence : handleCreateDraftEquivalence}
                                 onDeleteEquivalence={activeProductId ? handleDeleteEquivalence : handleDeleteDraftEquivalence}
                                 primaryColor={primaryColor}
+                                readOnly={!effectivePermissions.manageEquivalences}
                             />
                         )}
 

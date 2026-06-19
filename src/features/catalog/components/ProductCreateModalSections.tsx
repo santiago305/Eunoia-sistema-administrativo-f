@@ -26,6 +26,8 @@ export function ProductDetailsSection({
   onAddSkuRow,
   onRemoveSkuRow,
   onChangeSkuRow,
+  readOnly,
+  skuReadOnly,
 }: {
   form: ProductCreateForm;
   unitOptions: SelectOption[];
@@ -38,6 +40,8 @@ export function ProductDetailsSection({
   onAddSkuRow: () => void;
   onRemoveSkuRow: (id: string) => void;
   onChangeSkuRow: (id: string, field: keyof ProductSkuDraft, value: string | boolean) => void;
+  readOnly?: boolean;
+  skuReadOnly?: boolean;
 }) {
   const visibleRows = isEditMode ? skuRows : createFlowLocked ? pendingSkuRows : skuRows;
 
@@ -59,21 +63,21 @@ export function ProductDetailsSection({
             label="Nombre"
             name="product-name"
             value={form.name}
-            disabled={createFlowLocked}
+            disabled={createFlowLocked || readOnly}
             onChange={(event) => onChangeFormField("name", event.target.value)}
           />
           <FloatingInput
             label="Descripcion"
             name="product-description"
             value={form.description}
-            disabled={createFlowLocked}
+            disabled={createFlowLocked || readOnly}
             onChange={(event) => onChangeFormField("description", event.target.value)}
           />
           <FloatingInput
             label="Marca"
             name="product-brand"
             value={form.brand}
-            disabled={createFlowLocked}
+            disabled={createFlowLocked || readOnly}
             onChange={(event) => onChangeFormField("brand", event.target.value)}
           />
           <FloatingSelect
@@ -85,13 +89,13 @@ export function ProductDetailsSection({
             searchable
             searchPlaceholder="Buscar unidad..."
             emptyMessage="Sin unidades"
-            disabled={createFlowLocked}
+            disabled={createFlowLocked || readOnly}
           />
           <label className="flex min-h-10 items-center gap-2 rounded-xl bg-black/[0.03] px-3 text-sm text-black/70">
             <input
               type="checkbox"
               checked={form.isActive}
-              disabled={createFlowLocked}
+              disabled={createFlowLocked || readOnly}
               onChange={(event) => onChangeFormField("isActive", event.target.checked)}
             />
             Activo
@@ -117,7 +121,7 @@ export function ProductDetailsSection({
                 type="radio"
                 name="wantsVariants"
                 checked={form.wantsVariants === "no"}
-                disabled={createFlowLocked}
+                disabled={createFlowLocked || skuReadOnly}
                 onChange={() => onChangeFormField("wantsVariants", "no")}
               />
               No
@@ -127,7 +131,7 @@ export function ProductDetailsSection({
                 type="radio"
                 name="wantsVariants"
                 checked={form.wantsVariants === "yes"}
-                disabled={createFlowLocked}
+                disabled={createFlowLocked || skuReadOnly}
                 onChange={() => onChangeFormField("wantsVariants", "yes")}
               />
               Si
@@ -144,13 +148,13 @@ export function ProductDetailsSection({
 
           <ProductSkuTable
             rows={visibleRows}
-            canAddRows={!createFlowLocked && form.wantsVariants === "yes"}
+            canAddRows={!createFlowLocked && !skuReadOnly && form.wantsVariants === "yes"}
             onAddRow={onAddSkuRow}
             onRemoveRow={onRemoveSkuRow}
             onChangeRow={onChangeSkuRow}
-            readOnly={false}
+            readOnly={skuReadOnly}
             mode={isEditMode ? "edit" : "create"}
-            allowRemoveRows={!createFlowLocked}            
+            allowRemoveRows={!createFlowLocked && !skuReadOnly}            
             tableId={isEditMode ? `product-sku-edit-${productId ?? "draft"}` : "product-sku-create"}
           />
         </div>
@@ -171,6 +175,7 @@ export function ProductEquivalencesSection({
   onCreateEquivalence,
   onDeleteEquivalence,
   primaryColor,
+  readOnly,
 }: {
   activeProductId: string | null;
   equivalenceFailures: EquivalenceDraft[];
@@ -187,6 +192,7 @@ export function ProductEquivalencesSection({
   }) => Promise<void> | void;
   onDeleteEquivalence: (id: string) => Promise<void> | void;
   primaryColor: string;
+  readOnly?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -214,6 +220,7 @@ export function ProductEquivalencesSection({
             : "product-equivalences-draft"
         }
         PRIMARY={primaryColor}
+        readOnly={readOnly}
       />
     </div>
   );

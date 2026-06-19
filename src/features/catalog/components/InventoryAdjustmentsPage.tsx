@@ -60,6 +60,8 @@ import {
   saveInventoryDocumentsExportPreset,
 } from "@/shared/services/documentService";
 import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { getAdjustmentPermissions } from "@/features/catalog/utils/catalogPermissions";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -107,6 +109,8 @@ export function InventoryAdjustmentsPage({
   const { showFeedback } = useFeedbackToast();
   const [searchParams] = useSearchParams();
   const showFeedbackRef = useRef(showFeedback);
+  const { can } = usePermissions();
+  const permissions = useMemo(() => getAdjustmentPermissions(config.documentProductType, can), [can, config.documentProductType]);
 
   useEffect(() => {
     showFeedbackRef.current = showFeedback;
@@ -216,15 +220,21 @@ export function InventoryAdjustmentsPage({
   }, [config.documentProductType]);
 
   useEffect(() => {
+    if (!permissions.export) {
+      setExportColumns([]);
+      setExportPresets([]);
+      return;
+    }
     void loadExportColumns();
     void loadExportPresets();
-  }, [loadExportColumns, loadExportPresets]);
+  }, [loadExportColumns, loadExportPresets, permissions.export]);
 
   useEffect(() => {
     if (prefillHandledRef.current) return;
     const shouldOpen = searchParams.get("openAdjustmentModal") === "1";
     const skuId = searchParams.get("skuId")?.trim();
     if (!shouldOpen || !skuId) return;
+    if (!permissions.create) return;
 
     prefillHandledRef.current = true;
     setInitialAdjustmentSku({
@@ -234,7 +244,7 @@ export function InventoryAdjustmentsPage({
       customSku: searchParams.get("customSku")?.trim() || undefined,
     });
     setOpenAdjustmentModal(true);
-  }, [searchParams]);
+  }, [permissions.create, searchParams]);
 
   const smartSearchColumns = useMemo(
     () => buildInventoryDocumentsSmartSearchColumns(searchState, { docType: DocType.ADJUSTMENT }),
@@ -458,6 +468,7 @@ export function InventoryAdjustmentsPage({
   };
 
   const handleProcessDocument = useCallback(async (documentId: string) => {
+    if (!permissions.process) return;
     if (!documentId) return;
     setProcessingDocumentId(documentId);
     try {
@@ -473,7 +484,7 @@ export function InventoryAdjustmentsPage({
     } finally {
       setProcessingDocumentId(null);
     }
-  }, [loadDocuments, showFeedback]);
+  }, [loadDocuments, permissions.process, showFeedback]);
 
   const documentRows = useMemo<InventoryDocumentRow[]>(() => {
     return (documents ?? []).map((document) => ({
@@ -561,6 +572,7 @@ export function InventoryAdjustmentsPage({
             <ActionsPopover
               actions={[
                 ...(row.document.status === DocStatus.DRAFT
+                  && permissions.process
                   ? [{
                       id: "process",
                       label: "Procesar",
@@ -658,7 +670,7 @@ export function InventoryAdjustmentsPage({
   return (
     <PageShell className="bg-white">
       <PageActionsRow>
-          {exportColumns.length ? (
+          {permissions.export && exportColumns.length ? (
             <ExportPopover
               columns={exportColumns}
               presets={exportPresets}
@@ -676,8 +688,11 @@ export function InventoryAdjustmentsPage({
               borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
               boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
             }}
-            onClick={() => setOpenAdjustmentModal(true)}
-            disabled={companyActionDisabled}
+            onClick={() => {
+              if (!permissions.create) return;
+              setOpenAdjustmentModal(true);
+            }}
+            disabled={companyActionDisabled || !permissions.create}
             title={companyActionTitle}
           >
             Crear ajuste

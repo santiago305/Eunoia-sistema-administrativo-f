@@ -1,5 +1,6 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import { API_INVENTORY_GROUP } from "@/shared/services/APIs";
+import { API_INVENTORY_ALERT_SETTINGS_GROUP } from "@/shared/services/APIs";
 import type {
   GetStockQuery,
   GetStockResponse,
@@ -12,6 +13,11 @@ import type {
   InventorySearchStateResponse,
 } from "@/features/catalog/types/inventorySearch";
 import type { ProductCatalogProductType } from "@/features/catalog/types/product";
+import type {
+  InventoryAlertSetting,
+  ListInventoryAlertSettingsQuery,
+  UpdateInventoryAlertSettingPayload,
+} from "@/features/catalog/types/inventoryAlertSettings";
 
 export const getStock = async (params: GetStockQuery): Promise<GetStockResponse> => {
   const response = await axiosInstance.get(
@@ -143,6 +149,48 @@ export const deleteInventoryExportPreset = async (params: {
     },
   });
   return response.data;
+};
+
+const normalizeInventoryAlertSetting = (setting: any): InventoryAlertSetting => ({
+  id: setting?.id ?? null,
+  stockItemId: String(setting?.stockItemId ?? ""),
+  warehouseId: setting?.warehouseId ?? null,
+  minStockAlertQty:
+    setting?.minStockAlertQty === null || setting?.minStockAlertQty === undefined
+      ? null
+      : Number(setting.minStockAlertQty),
+  alertThresholdDays: Number(setting?.alertThresholdDays ?? 3),
+  alertEnabled: Boolean(setting?.alertEnabled ?? true),
+  isDefault: Boolean(setting?.isDefault ?? false),
+  createdAt: setting?.createdAt,
+  updatedAt: setting?.updatedAt,
+});
+
+export const listInventoryAlertSettings = async (
+  params: ListInventoryAlertSettingsQuery = {},
+): Promise<InventoryAlertSetting[]> => {
+  const response = await axiosInstance.get(API_INVENTORY_ALERT_SETTINGS_GROUP.list, { params });
+  return Array.isArray(response.data) ? response.data.map(normalizeInventoryAlertSetting) : [];
+};
+
+export const getInventoryAlertSetting = async (
+  stockItemId: string,
+  params: { warehouseId?: string | null } = {},
+): Promise<InventoryAlertSetting> => {
+  const response = await axiosInstance.get(API_INVENTORY_ALERT_SETTINGS_GROUP.byStockItem(stockItemId), {
+    params: {
+      ...(params.warehouseId !== undefined ? { warehouseId: params.warehouseId } : {}),
+    },
+  });
+  return normalizeInventoryAlertSetting(response.data);
+};
+
+export const updateInventoryAlertSetting = async (
+  stockItemId: string,
+  payload: UpdateInventoryAlertSettingPayload,
+): Promise<InventoryAlertSetting> => {
+  const response = await axiosInstance.patch(API_INVENTORY_ALERT_SETTINGS_GROUP.byStockItem(stockItemId), payload);
+  return normalizeInventoryAlertSetting(response.data);
 };
 
 export type AvailableStockQuery = {

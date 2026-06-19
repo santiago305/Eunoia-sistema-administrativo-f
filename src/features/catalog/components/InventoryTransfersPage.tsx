@@ -61,6 +61,8 @@ import {
   saveInventoryDocumentsExportPreset,
 } from "@/shared/services/documentService";
 import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { getTransferPermissions } from "@/features/catalog/utils/catalogPermissions";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -113,6 +115,8 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const [searchParams] = useSearchParams();
   const { hasCompany } = useCompany();
+  const { can } = usePermissions();
+  const permissions = useMemo(() => getTransferPermissions(config.productType, can), [can, config.productType]);
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -207,9 +211,14 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   }, [config.productType]);
 
   useEffect(() => {
+    if (!permissions.export) {
+      setExportColumns([]);
+      setExportPresets([]);
+      return;
+    }
     void loadExportColumns();
     void loadExportPresets();
-  }, [loadExportColumns, loadExportPresets]);
+  }, [loadExportColumns, loadExportPresets, permissions.export]);
 
   const [initialTransferSku, setInitialTransferSku] = useState<{
     skuId: string;
@@ -224,6 +233,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     const shouldOpen = searchParams.get("openTransferModal") === "1";
     const skuId = searchParams.get("skuId")?.trim();
     if (!shouldOpen || !skuId) return;
+    if (!permissions.create) return;
 
     prefillHandledRef.current = true;
     setInitialTransferSku({
@@ -233,7 +243,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       customSku: searchParams.get("customSku")?.trim() || undefined,
     });
     setOpenTransferModal(true);
-  }, [searchParams]);
+  }, [permissions.create, searchParams]);
 
   const smartSearchColumns = useMemo(
     () => buildInventoryDocumentsSmartSearchColumns(searchState, { docType: DocType.TRANSFER }),
@@ -454,6 +464,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   };
 
   const handleProcessDocument = useCallback(async (documentId: string) => {
+    if (!permissions.process) return;
     if (!documentId) return;
     setProcessingDocumentId(documentId);
     try {
@@ -469,7 +480,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     } finally {
       setProcessingDocumentId(null);
     }
-  }, [loadDocuments, showFeedback]);
+  }, [loadDocuments, permissions.process, showFeedback]);
 
   const documentRows = useMemo<InventoryDocumentRow[]>(
     () =>
@@ -578,6 +589,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
           <ActionsPopover
             actions={[
               ...(row.document.status === DocStatus.DRAFT
+                && permissions.process
                 ? [{
                     id: "process",
                     label: "Procesar",
@@ -675,7 +687,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     <PageShell>
         <PageTitle title={config.pageTitle} />
         <PageActionsRow>
-            {exportColumns.length ? (
+            {permissions.export && exportColumns.length ? (
               <ExportPopover
                 columns={exportColumns}
                 presets={exportPresets}
@@ -693,8 +705,11 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
                 borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
                 boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
               }}
-              onClick={() => setOpenTransferModal(true)}
-              disabled={companyActionDisabled}
+              onClick={() => {
+                if (!permissions.create) return;
+                setOpenTransferModal(true);
+              }}
+              disabled={companyActionDisabled || !permissions.create}
               title={companyActionTitle}
             >
               Crear transferencia

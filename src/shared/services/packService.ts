@@ -124,3 +124,63 @@ export const deletePackSearchMetric = async (
 
   return response.data;
 };
+
+export const getPackExportColumns = async (params: {
+  q?: string;
+  filters?: unknown[] | string;
+}): Promise<Array<{ key: string; label: string }>> => {
+  const response = await axiosInstance.get(packRoutes.exportColumns, {
+    params: {
+      ...params,
+      filters:
+        Array.isArray(params.filters) && params.filters.length
+          ? JSON.stringify(params.filters)
+          : typeof params.filters === "string"
+            ? params.filters
+            : undefined,
+    },
+  });
+  return response.data;
+};
+
+export const getPackExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+  const response = await axiosInstance.get(packRoutes.exportPresets);
+  return response.data;
+};
+
+export const savePackExportPreset = async (payload: {
+  name: string;
+  columns: Array<{ key: string; label: string }>;
+}) => {
+  const response = await axiosInstance.post(packRoutes.exportPresets, payload);
+  return response.data;
+};
+
+export const deletePackExportPreset = async (metricId: string) => {
+  const response = await axiosInstance.delete(packRoutes.deleteExportPreset(metricId));
+  return response.data;
+};
+
+export const exportPackExcel = async (payload: {
+  q?: string;
+  filters?: unknown[] | string;
+  columns: Array<{ key: string; label: string }>;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(
+    packRoutes.exportExcel,
+    {
+      ...payload,
+      filters:
+        Array.isArray(payload.filters) && payload.filters.length
+          ? payload.filters
+          : typeof payload.filters === "string"
+            ? payload.filters
+            : undefined,
+    },
+    { responseType: "blob" },
+  );
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `packs-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
+};

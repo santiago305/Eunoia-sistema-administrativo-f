@@ -144,6 +144,54 @@ export const deleteProductSearchMetric = async (
   return response.data;
 };
 
+export const getProductExportColumns = async (params: {
+  type?: string;
+  q?: string;
+  filters?: string;
+}): Promise<Array<{ key: string; label: string }>> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.exportColumns, { params });
+  return response.data;
+};
+
+export const getProductExportPresets = async (params: {
+  type?: string;
+}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.exportPresets, { params });
+  return response.data;
+};
+
+export const saveProductExportPreset = async (payload: {
+  name: string;
+  type?: string;
+  columns: Array<{ key: string; label: string }>;
+}) => {
+  const response = await axiosInstance.post(API_PRODUCTS_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteProductExportPreset = async (params: {
+  metricId: string;
+  type?: string;
+}) => {
+  const response = await axiosInstance.delete(API_PRODUCTS_GROUP.deleteExportPreset(params.metricId), {
+    params: params.type ? { type: params.type } : undefined,
+  });
+  return response.data;
+};
+
+export const exportProductExcel = async (payload: ListProductsQuery & {
+  columns: Array<{ key: string; label: string }>;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_PRODUCTS_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const prefix = payload.type === ProductTypes.MATERIAL ? "materia-prima" : "productos";
+  const filename = match?.[1] ?? `${prefix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
+};
+
 export const listCatalogMaterials = async (
   params: Omit<ListProductsQuery, "type">,
 ): Promise<ProductListResponse> => {

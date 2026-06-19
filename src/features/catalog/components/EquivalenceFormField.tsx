@@ -32,6 +32,7 @@ export function EquivalenceFormFields({
   onDeleteEquivalence,
   tableId,
   PRIMARY,
+  readOnly,
 }: {
   productId?: string;
   baseUnitId: string;
@@ -43,6 +44,7 @@ export function EquivalenceFormFields({
   onDeleteEquivalence?: (id: string) => Promise<void> | void;
   tableId?: string;
   PRIMARY: string;
+  readOnly?: boolean;
 }) {
   const [fromUnitId, setFromUnitId] = useState("");
   const [factor, setFactor] = useState("1");
@@ -116,8 +118,8 @@ export function EquivalenceFormFields({
     [equivalences, units],
   );
 
-  const columns = useMemo<DataTableColumn<EquivalenceRow>[]>(
-    () => [
+  const columns = useMemo<DataTableColumn<EquivalenceRow>[]>(() => {
+    const baseColumns: DataTableColumn<EquivalenceRow>[] = [
       {
         id: "unitName",
         header: "Unidad de medida",
@@ -132,7 +134,10 @@ export function EquivalenceFormFields({
         hideable: false,
         sortable: false,
       },
-      {
+    ];
+
+    if (!readOnly) {
+      baseColumns.push({
         id: "actions",
         header: "Acciones",
         cell: (row) => (
@@ -153,19 +158,21 @@ export function EquivalenceFormFields({
         headerClassName: "text-right",
         hideable: false,
         sortable: false,
-      },
-    ],
-    [deleteEquivalence],
-  );
+      });
+    }
+
+    return baseColumns;
+  }, [deleteEquivalence, readOnly]);
 
   const canPersist = Boolean(onCreateEquivalence || productId);
-  const canCreate = Boolean(baseUnitId && fromUnitId && factor && canPersist);
+  const canCreate = Boolean(baseUnitId && fromUnitId && factor && canPersist && !readOnly);
   const resolvedTableId = tableId ?? (productId ? `product-equivalences-${productId}` : "product-equivalences-draft");
 
   return (
     <div className="space-y-4">
       <SectionHeaderForm icon={Scale} title="Nueva equivalencia" />
 
+      {!readOnly ? (
       <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_100px] ">
         <FloatingInput label="Unidad origen" value={baseUnitLabel} name="origin" disabled />
 
@@ -202,6 +209,7 @@ export function EquivalenceFormFields({
           Agregar
         </SystemButton>
       </div>
+      ) : null}
 
       <div className="mt-3 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
         <DataTable

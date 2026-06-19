@@ -5,6 +5,7 @@ import { PageShell } from "@/shared/layouts/PageShell";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
@@ -31,10 +32,15 @@ import {
 } from "@/features/catalog/utils/packSmartSearch";
 import {
   createPack,
+  deletePackExportPreset,
   deletePackSearchMetric,
+  exportPackExcel,
+  getPackExportColumns,
+  getPackExportPresets,
   getPackById,
   getPackSearchState,
   listPacks,
+  savePackExportPreset,
   savePackSearchMetric,
   updatePack,
   updatePackActive,
@@ -42,6 +48,8 @@ import {
 import { PackFormModal } from "@/features/catalog/packs/components/PackFormModal";
 import { ModalDetailPack } from "@/features/catalog/packs/components/ModalDetailPack";
 import type { PackDetailResponse } from "@/features/catalog/types/pack";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { getPackPermissions } from "@/features/catalog/utils/catalogPermissions";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -94,6 +102,8 @@ export const buildSkuLabelFromDetailItem = (
 
 export default function CatalogPacks() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
+  const { can } = usePermissions();
+  const permissions = useMemo(() => getPackPermissions(can), [can]);
   const showFeedbackRef = useRef(showFeedback);
   useEffect(() => {
     showFeedbackRef.current = showFeedback;
@@ -124,6 +134,9 @@ export default function CatalogPacks() {
   const [searchFilters, setSearchFilters] = useState<PackSearchRule[]>(() => []);
   const [searchState, setSearchState] = useState<PackSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [exportColumns, setExportColumns] = useState<Array<{ key: string; label: string }>>([]);
+  const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>>([]);
+  const [exporting, setExporting] = useState(false);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -224,6 +237,33 @@ export default function CatalogPacks() {
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  const loadExportColumns = useCallback(async () => {
+    const response = await getPackExportColumns({
+      q: executedSnapshot.q,
+      filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
+    });
+    setExportColumns(response ?? []);
+  }, [executedSnapshot]);
+
+  const loadExportPresets = useCallback(async () => {
+    const response = await getPackExportPresets();
+    setExportPresets((response ?? []).map((item) => ({
+      metricId: item.metricId,
+      name: item.name,
+      columns: item.snapshot?.columns ?? [],
+    })));
+  }, []);
+
+  useEffect(() => {
+    if (!permissions.export) {
+      setExportColumns([]);
+      setExportPresets([]);
+      return;
+    }
+    void loadExportColumns();
+    void loadExportPresets();
+  }, [loadExportColumns, loadExportPresets, permissions.export]);
 
   useEffect(() => {
     if (!editPackId) {
@@ -353,8 +393,41 @@ export default function CatalogPacks() {
     [clearFeedback, loadSearchState, showFeedback],
   );
 
+  const handleExportExcel = useCallback(async (columns: Array<{ key: string; label: string }>) => {
+    if (!permissions.export) return;
+    setExporting(true);
+    try {
+      const file = await exportPackExcel({
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
+        columns,
+      });
+      const url = window.URL.createObjectURL(file.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error: unknown) {
+      showFeedback(errorResponse(extractErrorMessage(error, "No se pudo exportar packs.")));
+    } finally {
+      setExporting(false);
+    }
+  }, [executedSnapshot, permissions.export, showFeedback]);
+
+  const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
+    await savePackExportPreset(payload);
+    await loadExportPresets();
+  }, [loadExportPresets]);
+
+  const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+    await deletePackExportPreset(metricId);
+    await loadExportPresets();
+  }, [loadExportPresets]);
+
   const handleCreatePack = useCallback(
     async (payload: Parameters<typeof createPack>[0]) => {
+      if (!permissions.create) return;
       setCreating(true);
       clearFeedback();
       try {
@@ -368,11 +441,12 @@ export default function CatalogPacks() {
         setCreating(false);
       }
     },
-    [clearFeedback, loadPacks, showFeedback],
+    [clearFeedback, loadPacks, permissions.create, showFeedback],
   );
 
   const handleUpdatePack = useCallback(
     async (id: string, payload: Parameters<typeof updatePack>[1]) => {
+      if (!permissions.update) return;
       if (updating) return;
       setUpdating(true);
       clearFeedback();
@@ -387,7 +461,7 @@ export default function CatalogPacks() {
         setUpdating(false);
       }
     },
-    [clearFeedback, loadPacks, showFeedback, updating],
+    [clearFeedback, loadPacks, permissions.update, showFeedback, updating],
   );
 
   const packPendingToggle = useMemo(
@@ -397,6 +471,8 @@ export default function CatalogPacks() {
 
   const confirmToggleActive = useCallback(async () => {
     if (!togglePackId || togglingStatus) return;
+    if (packPendingToggle?.isActive && !permissions.delete) return;
+    if (!packPendingToggle?.isActive && !permissions.restore) return;
 
     clearFeedback();
     setTogglingStatus(true);
@@ -412,7 +488,7 @@ export default function CatalogPacks() {
     } finally {
       setTogglingStatus(false);
     }
-  }, [clearFeedback, loadPacks, packPendingToggle?.isActive, showFeedback, togglePackId, togglingStatus]);
+  }, [clearFeedback, loadPacks, packPendingToggle?.isActive, permissions.delete, permissions.restore, showFeedback, togglePackId, togglingStatus]);
 
   const handlePageChange = useCallback((nextPage: number) => {
     setPaginationState((prev) => ({ ...prev, pageIndex: Math.max(nextPage - 1, 0) }));
@@ -456,20 +532,20 @@ export default function CatalogPacks() {
         cell: (row) => (
           <ActionsPopover
             actions={[
-              {
+              ...(permissions.update ? [{
                 id: "edit",
                 label: "Editar",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
                 onClick: () => setEditPackId(row.packId),
-              },
-              {
+              }] : []),
+              ...((row.isActive ? permissions.delete : permissions.restore) ? [{
                 id: "toggle",
                 label: row.isActive ? "Eliminar" : "Restaurar",
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
                 className: row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50",
                 onClick: () => setTogglePackId(row.packId),
-              },
+              }] : []),
             ]}
             columns={1}
             compact
@@ -502,7 +578,7 @@ export default function CatalogPacks() {
         showInCards: false,
       }
     ],
-    [],
+    [permissions.delete, permissions.restore, permissions.update],
   );
 
   return (
@@ -511,18 +587,30 @@ export default function CatalogPacks() {
 
       <PageActionsRow>
         <div className="flex flex-wrap items-center gap-2">
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => setOpenCreate(true)}
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-          >
-            Crear pack
-          </SystemButton>
+          {permissions.export && exportColumns.length ? (
+            <ExportPopover
+              columns={exportColumns}
+              loading={exporting}
+              presets={exportPresets}
+              onExport={handleExportExcel}
+              onSavePreset={handleSaveExportPreset}
+              onDeletePreset={handleDeleteExportPreset}
+            />
+          ) : null}
+          {permissions.create ? (
+            <SystemButton
+              size="sm"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => setOpenCreate(true)}
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+              }}
+            >
+              Crear pack
+            </SystemButton>
+          ) : null}
         </div>
       </PageActionsRow>
 
@@ -543,7 +631,10 @@ export default function CatalogPacks() {
         selectableColumns
         hoverable={false}
         animated={false}
-        onRowClick={(row) => setDetailPackId(row.packId)}
+        onRowClick={(row) => {
+          if (!permissions.viewDetail) return;
+          setDetailPackId(row.packId);
+        }}
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}

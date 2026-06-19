@@ -16,8 +16,13 @@ import { useProducts } from "@/shared/hooks/useProducts";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
     deleteProductSearchMetric,
+    deleteProductExportPreset,
+    exportProductExcel,
+    getProductExportColumns,
+    getProductExportPresets,
     getProductSearchState,
     listCatalogProducts,
+    saveProductExportPreset,
     saveProductSearchMetric,
     updateProductActive,
 } from "@/shared/services/productService";
@@ -30,9 +35,12 @@ import { ProductDetailsModal } from "./ProductDetailsModal";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { AlertModal } from "@/shared/components/components/AlertModal";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { ProductSmartSearchPanel } from "./ProductSmartSearchPanel";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { getProductCatalogPermissions } from "../utils/catalogPermissions";
 import {
     buildProductSearchChips,
     buildProductSmartSearchColumns,
@@ -80,6 +88,8 @@ type ProductCatalogPageConfig = {
 export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfig }) {
     const { showFeedback, clearFeedback } = useFeedbackToast();
     const { hasCompany } = useCompany();
+    const { can } = usePermissions();
+    const permissions = useMemo(() => getProductCatalogPermissions(config.productType, can), [can, config.productType]);
     const companyActionDisabled = !hasCompany;
 
     const [openCreate, setOpenCreate] = useState(false);
@@ -95,6 +105,9 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const debouncedSearchText = useDebouncedValue(searchText.trim(), 400);
     const [searchState, setSearchState] = useState<ProductSearchStateResponse | null>(null);
     const [savingMetric, setSavingMetric] = useState(false);
+    const [exportColumns, setExportColumns] = useState<Array<{ key: string; label: string }>>([]);
+    const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>>([]);
+    const [exporting, setExporting] = useState(false);
 
     const queryParams = useMemo(
     () => ({
@@ -207,6 +220,34 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         void loadSearchState();
     }, [executedSnapshot, loading, loadSearchState]);
 
+    const loadExportColumns = useCallback(async () => {
+        const response = await getProductExportColumns({
+            type: config.productType,
+            q: executedSearchText || undefined,
+            filters: searchFilters.length ? JSON.stringify(searchFilters) : undefined,
+        });
+        setExportColumns(response ?? []);
+    }, [config.productType, executedSearchText, searchFilters]);
+
+    const loadExportPresets = useCallback(async () => {
+        const response = await getProductExportPresets({ type: config.productType });
+        setExportPresets((response ?? []).map((item) => ({
+            metricId: item.metricId,
+            name: item.name,
+            columns: item.snapshot?.columns ?? [],
+        })));
+    }, [config.productType]);
+
+    useEffect(() => {
+        if (!permissions.export) {
+            setExportColumns([]);
+            setExportPresets([]);
+            return;
+        }
+        void loadExportColumns();
+        void loadExportPresets();
+    }, [loadExportColumns, loadExportPresets, permissions.export]);
+
     const recentSearches = useMemo<DataTableRecentSearchItem<ProductSearchSnapshot>[]>(
         () =>
             (searchState?.recent ?? []).map((item) => ({
@@ -265,20 +306,60 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         }
     }, [config.productType, loadSearchState, showFeedback]);
 
+    const handleExportExcel = useCallback(async (columns: Array<{ key: string; label: string }>) => {
+        if (!permissions.export) return;
+        setExporting(true);
+        try {
+            const file = await exportProductExcel({
+                ...queryParams,
+                type: config.productType,
+                columns,
+            });
+            const url = window.URL.createObjectURL(file.blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = file.filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            showFeedback(errorResponse("No se pudo exportar el catalogo"));
+        } finally {
+            setExporting(false);
+        }
+    }, [config.productType, permissions.export, queryParams, showFeedback]);
+
+    const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
+        await saveProductExportPreset({
+            ...payload,
+            type: config.productType,
+        });
+        await loadExportPresets();
+    }, [config.productType, loadExportPresets]);
+
+    const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+        await deleteProductExportPreset({
+            metricId,
+            type: config.productType,
+        });
+        await loadExportPresets();
+    }, [config.productType, loadExportPresets]);
+
     const deletingProduct = useMemo(
         () => products.find((product) => product.id === deletingProductId) ?? null,
         [products, deletingProductId],
     );
 
     const startCreate = () => {
+        if (!permissions.create) return;
         setEditingProductId(null);
         setOpenCreate(true);
     };
 
     const openEdit = useCallback((product: Product) => {
+        if (!permissions.update) return;
         setOpenCreate(false);
         setEditingProductId(product.id);
-    }, []);
+    }, [permissions.update]);
 
     const columns = useMemo<DataTableColumn<Product>[]>(
         () => [
@@ -337,10 +418,16 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                             actions={getDropdownItemProducts(row, {
                                 openEdit,
                                 setDeletingProductId,
-                            }).map((action) => ({
-                                ...action,
-                                disabled: companyActionDisabled || action.disabled,
-                            }))}
+                            })
+                                .filter((action) => {
+                                    if (action.id === "edit") return permissions.update;
+                                    if (action.id === "toggle") return row.isActive ? permissions.delete : permissions.restore;
+                                    return true;
+                                })
+                                .map((action) => ({
+                                    ...action,
+                                    disabled: companyActionDisabled || action.disabled,
+                                }))}
                             columns={1}
                             compact
                             showLabels
@@ -367,7 +454,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 ),
             },
         ],
-        [companyActionDisabled, openEdit],
+        [companyActionDisabled, openEdit, permissions.delete, permissions.restore, permissions.update],
     );
 
     const confirmDelete = async () => {
@@ -375,6 +462,9 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         clearFeedback();
         try {
             const product = products.find((p) => p.id === deletingProductId);
+            if (!product) return;
+            if (product.isActive && !permissions.delete) return;
+            if (!product.isActive && !permissions.restore) return;
             if (product) {
             await updateProductActive(deletingProductId, {
                 isActive: !product.isActive,
@@ -392,15 +482,27 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         <PageShell>
             <PageTitle title={config.pageTitle} />
             <PageActionsRow>
-                    <SystemButton
-                        size="sm"
-                        onClick={startCreate}
-                        leftIcon={<Plus className="h-4 w-4" />}
-                        title={config.createTitle}
-                        disabled={companyActionDisabled}
-                    >
-                        {config.createLabel}
-                    </SystemButton>
+                    {permissions.export && exportColumns.length ? (
+                        <ExportPopover
+                            columns={exportColumns}
+                            loading={exporting}
+                            presets={exportPresets}
+                            onExport={handleExportExcel}
+                            onSavePreset={handleSaveExportPreset}
+                            onDeletePreset={handleDeleteExportPreset}
+                        />
+                    ) : null}
+                    {permissions.create ? (
+                        <SystemButton
+                            size="sm"
+                            onClick={startCreate}
+                            leftIcon={<Plus className="h-4 w-4" />}
+                            title={config.createTitle}
+                            disabled={companyActionDisabled}
+                        >
+                            {config.createLabel}
+                        </SystemButton>
+                    ) : null}
             </PageActionsRow>
 
             <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
@@ -449,6 +551,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 }}
                 selectableColumns
                 onRowClick={(row) => {
+                    if (!permissions.viewDetail) return;
                     setSelectedProductForDetails(row);
                     setOpenDetails(true);
                 }}
@@ -462,6 +565,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 entityLabel={config.entityLabel}
                 onClose={() => setOpenCreate(false)}
                 onSaved={refresh}
+                permissions={permissions}
             />
 
             <ProductDetailsModal
@@ -483,6 +587,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 entityLabel={config.entityLabel}
                 onClose={() => setEditingProductId(null)}
                 onSaved={refresh}
+                permissions={permissions}
             />
 
             <AlertModal

@@ -146,6 +146,14 @@ export type ProductCreateModalProps = {
   entityLabel?: string;
   onClose: () => void;
   onSaved?: () => void;
+  permissions?: {
+    create: boolean;
+    update: boolean;
+    createSku: boolean;
+    updateSku: boolean;
+    manageRecipes: boolean;
+    manageEquivalences: boolean;
+  };
 };
 
 export type WorkspaceTab = "details" | "equivalences" | "recipes";

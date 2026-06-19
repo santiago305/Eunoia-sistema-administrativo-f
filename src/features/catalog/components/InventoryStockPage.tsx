@@ -1,7 +1,7 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
-import { ArrowLeftRight, FileText, Menu, Wrench } from "lucide-react";
+import { ArrowLeftRight, FileText, Menu, Settings2, Wrench } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
@@ -40,6 +40,7 @@ import type { InventorySearchStateResponse } from "@/features/catalog/types/inve
 import { useCompany } from "@/shared/hooks/useCompany";
 import { InventorySmartSearchPanel } from "@/features/catalog/components/InventorySmartSearchPanel";
 import { InventoryForecastModal } from "@/features/catalog/components/InventoryForecastModal";
+import { InventoryAlertSettingsModal } from "@/features/catalog/components/InventoryAlertSettingsModal";
 import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
 import { listSkus } from "@/shared/services/skuService";
 import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
@@ -60,6 +61,8 @@ import {
   sanitizeInventorySearchSnapshot,
   upsertInventorySearchRule,
 } from "@/features/catalog/utils/inventorySmartSearch";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { getInventoryPermissions } from "@/features/catalog/utils/catalogPermissions";
 
 const DEFAULT_LIMIT = 25;
 
@@ -97,6 +100,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const shouldReduceMotion = useReducedMotion();
   const { showFeedback } = useFeedbackToast();
   const { hasCompany } = useCompany();
+  const { can } = usePermissions();
+  const permissions = useMemo(() => getInventoryPermissions(config.productType, can), [can, config.productType]);
   const navigate = useNavigate();
   const companyActionDisabled = !hasCompany;
 
@@ -122,6 +127,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [forecastModalOpen, setForecastModalOpen] = useState(false);
   const [selectedForecast, setSelectedForecast] = useState<SkuStockForecast | null>(null);
   const [forecastLoading, setForecastLoading] = useState(false);
+  const [alertSettingsOpen, setAlertSettingsOpen] = useState(false);
+  const [alertSettingsTarget, setAlertSettingsTarget] = useState<InventorySnapshotRow | null>(null);
   const forecastRequestRef = useRef(0);
   const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
   const realtimeRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -359,9 +366,14 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     void loadSkus();
   }, [loadSkus]);
   useEffect(() => {
+    if (!permissions.export) {
+      setExportColumns([]);
+      setExportPresets([]);
+      return;
+    }
     void loadExportColumns();
     void loadExportPresets();
-  }, [loadExportColumns, loadExportPresets]);
+  }, [loadExportColumns, loadExportPresets, permissions.export]);
 
   const loadForecast = async (skuId: string, warehouseId?: string) => {
     const requestId = (forecastRequestRef.current += 1);
@@ -448,7 +460,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       id: `kardex-${row.sku.sku.id}`,
       label: "Ver kardex",
       icon: <FileText className="h-4 w-4 text-black/60" />,
+      disabled: !permissions.viewMovements,
       onClick: () => {
+        if (!permissions.viewMovements) return;
         const q = row.sku.sku.name?.trim() || row.sku.sku.backendSku?.trim() || "";
         navigate(`${config.routes.kardex}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
       },
@@ -457,8 +471,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       id: `transfer-${row.sku.sku.id}`,
       label: "Transferir",
       icon: <ArrowLeftRight className="h-4 w-4 text-black/60" />,
-      disabled: companyActionDisabled,
+      disabled: companyActionDisabled || !permissions.createTransfer,
       onClick: () => {
+        if (!permissions.createTransfer) return;
         const params = new URLSearchParams();
         params.set("openTransferModal", "1");
         params.set("skuId", row.sku.sku.id);
@@ -472,8 +487,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       id: `adjust-${row.sku.sku.id}`,
       label: "Ajustar",
       icon: <Wrench className="h-4 w-4 text-black/60" />,
-      disabled: companyActionDisabled,
+      disabled: companyActionDisabled || !permissions.createAdjustment,
       onClick: () => {
+        if (!permissions.createAdjustment) return;
         const params = new URLSearchParams();
         params.set("openAdjustmentModal", "1");
         params.set("skuId", row.sku.sku.id);
@@ -483,7 +499,18 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         navigate(`${config.routes.adjustments}?${params.toString()}`);
       },
     },
-  ], [companyActionDisabled, config.routes.adjustments, config.routes.kardex, config.routes.transfer, navigate]);
+    {
+      id: `alert-settings-${row.sku.sku.id}`,
+      label: "Configurar alertas",
+      icon: <Settings2 className="h-4 w-4 text-black/60" />,
+      disabled: !permissions.alertSettings,
+      onClick: () => {
+        if (!permissions.alertSettings) return;
+        setAlertSettingsTarget(row);
+        setAlertSettingsOpen(true);
+      },
+    },
+  ], [companyActionDisabled, config.routes.adjustments, config.routes.kardex, config.routes.transfer, navigate, permissions.alertSettings, permissions.createAdjustment, permissions.createTransfer, permissions.viewMovements]);
 
   useEffect(() => {
     void loadWarehouses();
@@ -505,6 +532,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   }, [loadInventory]);
 
   useEffect(() => {
+    if (!permissions.realtime) return;
     const unsubscribe = subscribeInventoryStockUpdated((event) => {
       let updatedAnyRow = false;
 
@@ -540,7 +568,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         realtimeRefreshTimeoutRef.current = null;
       }
     };
-  }, [loadInventory, warehouseQuery.warehouseIdsIn]);
+  }, [loadInventory, permissions.realtime, warehouseQuery.warehouseIdsIn]);
 
   const handleSaveMetric = useCallback(async (name: string) => {
     if (!hasInventorySearchCriteria(executedSnapshot)) return false;
@@ -713,7 +741,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       <PageTitle title={config.pageTitle} />
       <div className="space-y-2">
         <PageActionsRow>
-          {exportColumns.length ? (
+          {permissions.export && exportColumns.length ? (
             <ExportPopover
               columns={exportColumns}
               presets={exportPresets}
@@ -778,6 +806,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
                 }}
                 onPageChange={(nextPage) => setPage(nextPage)}
                 onRowClick={(row) => {
+                  if (!permissions.forecast) return;
                   setSelectedSku(row.sku.sku.id);
                   setSelectedWarehouseId(row.warehouseId);
                   setForecastModalOpen(true);
@@ -802,6 +831,28 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
           }}
           loading={forecastLoading}
           forecast={selectedForecast}
+        />
+
+        <InventoryAlertSettingsModal
+          open={alertSettingsOpen}
+          onClose={() => {
+            setAlertSettingsOpen(false);
+            setAlertSettingsTarget(null);
+          }}
+          stockItemId={alertSettingsTarget?.stockItemId ?? null}
+          stockItemLabel={
+            alertSettingsTarget
+              ? buildSkuLabelFromItem({
+                  skuItem: alertSettingsTarget.sku,
+                  fallbackName: alertSettingsTarget.sku.sku.name ?? "",
+                  withCode: false,
+                })
+              : ""
+          }
+          warehouseId={alertSettingsTarget?.warehouseId ?? null}
+          warehouseLabel={alertSettingsTarget?.warehouseName ?? null}
+          onSaved={loadInventory}
+          canConfigure={permissions.alertSettings}
         />
       </div>
     </PageShell>

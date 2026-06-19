@@ -51,6 +51,8 @@ import {
 import { listSkus } from "@/shared/services/skuService";
 import type { DataTableSearchOption } from "@/shared/components/table/search";
 import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
+import { usePermissions } from "@/shared/hooks/usePermissions";
+import { getInventoryMovementPermissions } from "@/features/catalog/utils/catalogPermissions";
 
 function useDebouncedCallback<T extends (...args: any[]) => void>(callback: T, delay: number) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -100,6 +102,8 @@ type InventoryMovementsPageProps = {
 export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) {
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const [searchParams] = useSearchParams();
+  const { can } = usePermissions();
+  const permissions = useMemo(() => getInventoryMovementPermissions(config.productType, can), [can, config.productType]);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -194,9 +198,14 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   }, [config.productType]);
 
   useEffect(() => {
+    if (!permissions.export) {
+      setExportColumns([]);
+      setExportPresets([]);
+      return;
+    }
     void loadExportColumns();
     void loadExportPresets();
-  }, [loadExportColumns, loadExportPresets]);
+  }, [loadExportColumns, loadExportPresets, permissions.export]);
 
   useEffect(() => {
     const prefilledSkuId = searchParams.get("skuId")?.trim();
@@ -556,7 +565,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       <PageTitle title={config.pageTitle} />
 
       <PageActionsRow>
-        {exportColumns.length ? (
+        {permissions.export && exportColumns.length ? (
           <ExportPopover
             columns={exportColumns}
             presets={exportPresets}

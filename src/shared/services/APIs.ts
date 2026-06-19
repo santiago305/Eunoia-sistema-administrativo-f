@@ -72,6 +72,10 @@ export const packRoutes = {
   searchState: "/packs/search-state",
   searchMetrics: "/packs/search-metrics",
   searchMetricDetail: (metricId: string) => `/packs/search-metrics/${metricId}`,
+  exportColumns: "/packs/export-columns",
+  exportPresets: "/packs/export-presets",
+  deleteExportPreset: (metricId: string) => `/packs/export-presets/${metricId}`,
+  exportExcel: "/packs/export-excel",
 };
 
 export const API_BANK_ACCOUNTS_GROUP = {
@@ -212,6 +216,10 @@ export const API_PRODUCTS_GROUP = {
   searchState: "/products/search-state",
   saveSearchMetric: "/products/search-metrics",
   deleteSearchMetric: (metricId: string) => `/products/search-metrics/${metricId}`,
+  exportColumns: "/products/export-columns",
+  exportPresets: "/products/export-presets",
+  deleteExportPreset: (metricId: string) => `/products/export-presets/${metricId}`,
+  exportExcel: "/products/export-excel",
 };
 
 export const API_WAREHOUSES_GROUP = {
@@ -409,6 +417,11 @@ export const API_INVENTORY_GROUP = {
     });
     return `/skus/get-stock?${search.toString()}`;
   },
+};
+
+export const API_INVENTORY_ALERT_SETTINGS_GROUP = {
+  list: "/inventory-alert-settings",
+  byStockItem: (stockItemId: string) => `/inventory-alert-settings/${stockItemId}`,
 };
 
 
