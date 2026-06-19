@@ -87,7 +87,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         manageRecipes: true,
         manageEquivalences: true,
     };
-    const canPersistProduct = isEditMode ? effectivePermissions.update : effectivePermissions.create;
+    const canPersistProduct = isEditMode ? effectivePermissions.update : effectivePermissions.create && effectivePermissions.createSku;
     const canPersistSku = isEditMode ? effectivePermissions.updateSku : effectivePermissions.createSku;
     const activeProductId = isEditMode ? (productId ?? null) : createdProductId;
     const createFlowLocked = !isEditMode && Boolean(createdProductId);
@@ -638,6 +638,14 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const persistSkuDrafts = async ({ targetProductId, existingSkuIdsByDraftId }: { targetProductId: string; existingSkuIdsByDraftId: Record<string, string> }) => {
+        if (!effectivePermissions.createSku) {
+            return {
+                skuPayloads: [],
+                failedSkuDraftIds: [] as string[],
+                createdSkuIdsByDraftId: existingSkuIdsByDraftId,
+            };
+        }
+
         const skuPayloads = buildCreateSkuPayloads({
             skuRows,
             isMaterial,
@@ -669,6 +677,13 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const persistEditedSkus = async () => {
+        if (!effectivePermissions.updateSku) {
+            return {
+                changedSkuRows: [] as ProductSkuDraft[],
+                failedSkuIds: [] as string[],
+            };
+        }
+
         const changedSkuRows = skuRows.filter((row) => persistedSkuRowsById[row.id] && hasSkuDraftChanges(row, persistedSkuRowsById[row.id]));
         const failedSkuIds: string[] = [];
         const updatedSkuResponses: ProductSkuWithAttributes[] = [];
@@ -689,6 +704,12 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
 
     const persistEditModeDraftSkusAndRecipes = async () => {
         if (!productId) {
+            return {
+                failedSkuDraftIds: [] as string[],
+                failedRecipeDraftIds: [] as string[],
+            };
+        }
+        if (!effectivePermissions.createSku) {
             return {
                 failedSkuDraftIds: [] as string[],
                 failedRecipeDraftIds: [] as string[],

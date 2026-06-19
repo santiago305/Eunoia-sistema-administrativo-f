@@ -90,6 +90,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const { hasCompany } = useCompany();
     const { can } = usePermissions();
     const permissions = useMemo(() => getProductCatalogPermissions(config.productType, can), [can, config.productType]);
+    const canCreateProductWithSku = permissions.create && permissions.createSku;
     const companyActionDisabled = !hasCompany;
 
     const [openCreate, setOpenCreate] = useState(false);
@@ -350,7 +351,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     );
 
     const startCreate = () => {
-        if (!permissions.create) return;
+        if (!canCreateProductWithSku) return;
         setEditingProductId(null);
         setOpenCreate(true);
     };
@@ -492,7 +493,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                             onDeletePreset={handleDeleteExportPreset}
                         />
                     ) : null}
-                    {permissions.create ? (
+                    {canCreateProductWithSku ? (
                         <SystemButton
                             size="sm"
                             onClick={startCreate}

@@ -170,45 +170,47 @@ export function EquivalenceFormFields({
 
   return (
     <div className="space-y-4">
-      <SectionHeaderForm icon={Scale} title="Nueva equivalencia" />
-
       {!readOnly ? (
-      <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_100px] ">
-        <FloatingInput label="Unidad origen" value={baseUnitLabel} name="origin" disabled />
+        <>
+          <SectionHeaderForm icon={Scale} title="Nueva equivalencia" />
 
-        <FloatingInput
-          label="Factor"
-          type="number"
-          name="factor"
-          value={factor}
-          min={1}
-          onChange={(e) => setFactor(e.target.value)}
-        />
+          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_100px] ">
+            <FloatingInput label="Unidad origen" value={baseUnitLabel} name="origin" disabled />
 
-        <FloatingSelect
-          label="Unidad de destino"
-          name="destino"
-          value={fromUnitId}
-          onChange={(value) => setFromUnitId(value)}
-          options={unitOptions}
-          searchable
-          searchPlaceholder="Buscar unidad..."
-          emptyMessage="Sin unidades de medida"
-        />
+            <FloatingInput
+              label="Factor"
+              type="number"
+              name="factor"
+              value={factor}
+              min={1}
+              onChange={(e) => setFactor(e.target.value)}
+            />
 
-        <SystemButton
-          leftIcon={<Plus className="h-4 w-4" />}
-          className="h-10"
-          style={{
-            backgroundColor: PRIMARY,
-            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-          }}
-          onClick={() => void handleCreate()}
-          disabled={!canCreate}
-        >
-          Agregar
-        </SystemButton>
-      </div>
+            <FloatingSelect
+              label="Unidad de destino"
+              name="destino"
+              value={fromUnitId}
+              onChange={(value) => setFromUnitId(value)}
+              options={unitOptions}
+              searchable
+              searchPlaceholder="Buscar unidad..."
+              emptyMessage="Sin unidades de medida"
+            />
+
+            <SystemButton
+              leftIcon={<Plus className="h-4 w-4" />}
+              className="h-10"
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              }}
+              onClick={() => void handleCreate()}
+              disabled={!canCreate}
+            >
+              Agregar
+            </SystemButton>
+          </div>
+        </>
       ) : null}
 
       <div className="mt-3 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">

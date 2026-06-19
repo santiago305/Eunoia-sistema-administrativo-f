@@ -47,15 +47,15 @@ export const getProductCatalogPermissions = (
 
   return {
     viewDetail: canWithLegacy(can, `${prefix}.view_detail`, "catalog.read"),
-    create: canWithLegacy(can, `${prefix}.create`, "catalog.manage"),
-    update: canWithLegacy(can, `${prefix}.update`, "catalog.manage"),
-    delete: canWithLegacy(can, `${prefix}.delete`, "catalog.manage"),
-    restore: canWithLegacy(can, `${prefix}.restore`, "catalog.manage"),
-    export: canWithLegacy(can, `${prefix}.export`, "catalog.export"),
-    createSku: canWithLegacy(can, `${prefix}.skus.create`, "catalog.manage"),
-    updateSku: canWithLegacy(can, `${prefix}.skus.update`, "catalog.manage"),
-    manageRecipes: prefix === "products" && canWithLegacy(can, "products.recipes.manage", "catalog.manage"),
-    manageEquivalences: canWithLegacy(can, `${prefix}.equivalences.manage`, "catalog.manage"),
+    create: can(`${prefix}.create`),
+    update: can(`${prefix}.update`),
+    delete: can(`${prefix}.delete`),
+    restore: can(`${prefix}.restore`),
+    export: can(`${prefix}.export`),
+    createSku: can(`${prefix}.skus.create`),
+    updateSku: can(`${prefix}.skus.update`),
+    manageRecipes: prefix === "products" && can("products.recipes.manage"),
+    manageEquivalences: can(`${prefix}.equivalences.manage`),
   };
 };
 
@@ -66,11 +66,7 @@ export const getInventoryPermissions = (
   const isMaterial = isMaterialType(productType);
 
   return {
-    export: canWithLegacy(
-      can,
-      isMaterial ? "inventory.materials.export" : "inventory.products.export",
-      "catalog.export",
-    ),
+    export: can(isMaterial ? "inventory.materials.export" : "inventory.products.export"),
     forecast: canWithLegacy(can, "inventory.forecast.view", "catalog.read"),
     realtime: canWithLegacy(can, "inventory.realtime.view", "catalog.read"),
     viewMovements: canWithLegacy(
@@ -78,17 +74,9 @@ export const getInventoryPermissions = (
       isMaterial ? "inventory-ledger.materials.view" : "inventory-ledger.products.view",
       "catalog.read",
     ),
-    createTransfer: canWithLegacy(
-      can,
-      isMaterial ? "transfers.materials.create" : "transfers.products.create",
-      "catalog.manage",
-    ),
-    createAdjustment: canWithLegacy(
-      can,
-      isMaterial ? "adjustments.materials.create" : "adjustments.products.create",
-      "catalog.manage",
-    ),
-    alertSettings: canWithLegacy(can, "inventory-alerts.configure", "catalog.manage"),
+    createTransfer: can(isMaterial ? "transfers.materials.create" : "transfers.products.create"),
+    createAdjustment: can(isMaterial ? "adjustments.materials.create" : "adjustments.products.create"),
+    alertSettings: can("inventory-alerts.configure"),
   };
 };
 
@@ -96,11 +84,7 @@ export const getInventoryMovementPermissions = (
   productType: ProductCatalogProductType,
   can: PermissionChecker,
 ) => ({
-  export: canWithLegacy(
-    can,
-    isMaterialType(productType) ? "inventory-ledger.materials.export" : "inventory-ledger.products.export",
-    "catalog.export",
-  ),
+  export: can(isMaterialType(productType) ? "inventory-ledger.materials.export" : "inventory-ledger.products.export"),
 });
 
 export const getTransferPermissions = (
@@ -110,9 +94,9 @@ export const getTransferPermissions = (
   const prefix = isMaterialType(productType) ? "transfers.materials" : "transfers.products";
 
   return {
-    create: canWithLegacy(can, `${prefix}.create`, "catalog.manage"),
-    process: canWithLegacy(can, `${prefix}.process`, "catalog.manage"),
-    export: canWithLegacy(can, `${prefix}.export`, "catalog.export"),
+    create: can(`${prefix}.create`),
+    process: can(`${prefix}.process`),
+    export: can(`${prefix}.export`),
   };
 };
 
@@ -123,17 +107,17 @@ export const getAdjustmentPermissions = (
   const prefix = isMaterialType(productType) ? "adjustments.materials" : "adjustments.products";
 
   return {
-    create: canWithLegacy(can, `${prefix}.create`, "catalog.manage"),
-    process: canWithLegacy(can, `${prefix}.process`, "catalog.manage"),
-    export: canWithLegacy(can, `${prefix}.export`, "catalog.export"),
+    create: can(`${prefix}.create`),
+    process: can(`${prefix}.process`),
+    export: can(`${prefix}.export`),
   };
 };
 
 export const getPackPermissions = (can: PermissionChecker) => ({
   viewDetail: canWithLegacy(can, "packs.view_detail", "packs.read"),
-  create: canWithLegacy(can, "packs.create", "packs.manage"),
-  update: canWithLegacy(can, "packs.update", "packs.manage"),
-  delete: canWithLegacy(can, "packs.delete", "packs.manage"),
-  restore: canWithLegacy(can, "packs.restore", "packs.manage"),
-  export: canWithLegacy(can, "packs.export", "packs.manage"),
+  create: can("packs.create"),
+  update: can("packs.update"),
+  delete: can("packs.delete"),
+  restore: can("packs.restore"),
+  export: can("packs.export"),
 });
