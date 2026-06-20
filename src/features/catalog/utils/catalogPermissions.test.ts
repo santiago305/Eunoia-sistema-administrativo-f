@@ -33,6 +33,26 @@ describe("catalog permission matrix", () => {
     expect(legacyPermissions.createSku).toBe(false);
   });
 
+  it("uses product and material create/update permissions for SKU create/update", () => {
+    expect(
+      getProductCatalogPermissions(ProductTypes.PRODUCT, checker(["products.create", "products.update"])),
+    ).toMatchObject({
+      create: true,
+      update: true,
+      createSku: true,
+      updateSku: true,
+    });
+
+    expect(
+      getProductCatalogPermissions(ProductTypes.MATERIAL, checker(["materials.create", "materials.update"])),
+    ).toMatchObject({
+      create: true,
+      update: true,
+      createSku: true,
+      updateSku: true,
+    });
+  });
+
   it("keeps denied product and material actions disabled even when broad catalog permissions exist", () => {
     const broadPermissions = checker(["catalog.manage", "catalog.export", "products.recipes.manage"]);
 

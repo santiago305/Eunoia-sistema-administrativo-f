@@ -52,8 +52,8 @@ export const getProductCatalogPermissions = (
     delete: can(`${prefix}.delete`),
     restore: can(`${prefix}.restore`),
     export: can(`${prefix}.export`),
-    createSku: can(`${prefix}.skus.create`),
-    updateSku: can(`${prefix}.skus.update`),
+    createSku: can(`${prefix}.create`),
+    updateSku: can(`${prefix}.update`),
     manageRecipes: prefix === "products" && can("products.recipes.manage"),
     manageEquivalences: can(`${prefix}.equivalences.manage`),
   };

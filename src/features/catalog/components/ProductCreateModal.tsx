@@ -87,8 +87,8 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         manageRecipes: true,
         manageEquivalences: true,
     };
-    const canPersistProduct = isEditMode ? effectivePermissions.update : effectivePermissions.create && effectivePermissions.createSku;
-    const canPersistSku = isEditMode ? effectivePermissions.updateSku : effectivePermissions.createSku;
+    const canPersistProduct = isEditMode ? effectivePermissions.update : effectivePermissions.create;
+    const canPersistSku = isEditMode ? effectivePermissions.update : effectivePermissions.create;
     const activeProductId = isEditMode ? (productId ?? null) : createdProductId;
     const createFlowLocked = !isEditMode && Boolean(createdProductId);
 
@@ -638,7 +638,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const persistSkuDrafts = async ({ targetProductId, existingSkuIdsByDraftId }: { targetProductId: string; existingSkuIdsByDraftId: Record<string, string> }) => {
-        if (!effectivePermissions.createSku) {
+        if (!effectivePermissions.create) {
             return {
                 skuPayloads: [],
                 failedSkuDraftIds: [] as string[],
@@ -677,7 +677,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const persistEditedSkus = async () => {
-        if (!effectivePermissions.updateSku) {
+        if (!effectivePermissions.update) {
             return {
                 changedSkuRows: [] as ProductSkuDraft[],
                 failedSkuIds: [] as string[],
@@ -709,7 +709,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 failedRecipeDraftIds: [] as string[],
             };
         }
-        if (!effectivePermissions.createSku) {
+        if (!effectivePermissions.create) {
             return {
                 failedSkuDraftIds: [] as string[],
                 failedRecipeDraftIds: [] as string[],
