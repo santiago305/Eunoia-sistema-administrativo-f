@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { listActiveWarehouses } from "@/shared/services/warehouseServices";
-import { createClient, getClientById, listClients } from "@/shared/services/clientService";
+import { createClient, getClientById, listClients, updateClient } from "@/shared/services/clientService";
 import { listSubsidiaries } from "@/shared/services/agencyService";
 import { errorResponse } from "@/shared/common/utils/response";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -24,7 +24,7 @@ import { FloatingSuggestInput } from "@/shared/components/components/FloatingSug
 import { listSources } from "@/shared/services/sourceService";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
-import type { ClientForm } from "@/features/clients/types/client";
+import type { Client, ClientForm } from "@/features/clients/types/client";
 import { listWorkflows } from "@/shared/services/workflowService";
 
 type Props = {
@@ -55,6 +55,8 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
   const [clientLoading, setClientLoading] = useState(false);
   const [openPayments, setOpenPayments] = useState(false);
   const [openClientModal, setOpenClientModal] = useState(false);
+  const [clientModalMode, setClientModalMode] = useState<"create" | "edit">("create");
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [form, setForm] = useState<CreateSaleOrderDto>(() => buildEmptySaleOrderForm());
 
   const [warehouseOptions, setWarehouseOptions] = useState<Array<{ value: string; label: string }>>([]);
@@ -74,7 +76,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
     setClientOptions(
       (clients.items ?? []).map((c) => ({
         value: c.id,
-        label: `${c.fullName} ${c.docNumber ? `(${c.docNumber})` : c.reference ? `(${c.reference})` : ""}`.trim(),
+        label: `${c.fullName} ${c.docNumber ? `(${c.docNumber})` : ""}`.trim(),
       })),
     );
   }, []);
@@ -250,6 +252,64 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
     [loadClientsOptions],
   );
 
+  const openClientEdit = useCallback(async () => {
+    if (!form.clientId || clientLoading) return;
+
+    setClientLoading(true);
+    try {
+      const client = await getClientById(form.clientId);
+      setEditingClient(client);
+      setClientModalMode("edit");
+      setOpenClientModal(true);
+    } catch (err) {
+      showFeedbackRef.current(errorResponse(parseApiError(err, "No se pudo cargar el cliente.")));
+    } finally {
+      setClientLoading(false);
+    }
+  }, [clientLoading, form.clientId]);
+
+  const handleUpdateClient = useCallback(
+    async (clientForm: ClientForm) => {
+      if (!editingClient?.id) return;
+
+      setClientLoading(true);
+      try {
+        await updateClient(editingClient.id, {
+          type: clientForm.type,
+          fullName: clientForm.fullName.trim(),
+          docType: clientForm.docType,
+          docNumber: clientForm.docType === "NONE" ? "" : clientForm.docNumber.trim(),
+          reference:
+            clientForm.docType === "NONE"
+              ? clientForm.reference.trim()
+              : clientForm.reference.trim() || undefined,
+          address: clientForm.address.trim() || undefined,
+          departmentId: clientForm.departmentId,
+          provinceId: clientForm.provinceId,
+          districtId: clientForm.districtId,
+          telephonesReplace: clientForm.telephonesReplace?.length
+            ? clientForm.telephonesReplace
+                .map((item) => ({
+                  id: item.id,
+                  number: item.number?.trim() || undefined,
+                  isMain: item.isMain,
+                }))
+                .filter((item) => Boolean(item.id || item.number))
+            : undefined,
+        });
+        await loadClientsOptions();
+        setOpenClientModal(false);
+        setEditingClient(null);
+        showFeedbackRef.current({ type: "success", message: "Cliente actualizado correctamente." });
+      } catch (err) {
+        showFeedbackRef.current(errorResponse(parseApiError(err, "No se pudo actualizar el cliente.")));
+      } finally {
+        setClientLoading(false);
+      }
+    },
+    [editingClient?.id, loadClientsOptions],
+  );
+
   const save = useCallback(async (): Promise<boolean> => {
     const validation = validateSaleOrderForm(form);
 
@@ -309,8 +369,8 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
           <SaleOrderItemsSection form={form} setForm={setForm} />
 
           <aside className="overflow-hidden flex flex-col border-0 border-black/10 lg:border-l">
-            <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
-              <div className="grid grid-cols-[1fr_38px] gap-2">
+            <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5 scroll-area">
+              <div className="grid grid-cols-[1fr_38px_38px] gap-1">
                 <FloatingSelect
                   label="Cliente"
                   name="client"
@@ -328,10 +388,24 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                   type="button"
                   className="h-10 w-10"
                   title="Crear cliente"
-                  onClick={() => setOpenClientModal(true)}
+                  disabled={clientLoading}
+                  onClick={() => {
+                    setEditingClient(null);
+                    setClientModalMode("create");
+                    setOpenClientModal(true);
+                  }}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5" />
                 </SystemButton>
+                <SystemButton
+                  size="icon"
+                  type="button"
+                  className="h-10 w-10"
+                  title="Editar cliente"
+                  leftIcon={<Pencil className="h-5 w-5"/>}
+                  disabled={!form.clientId || clientLoading}
+                  onClick={() => void openClientEdit()}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -343,7 +417,6 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                   onChange={(value) => setForm((prev) => ({ ...prev, workflowId: value }))}
                   options={workflowOptions}
                   searchable
-                  disabled={Boolean(form.currentState)}
                   searchPlaceholder="Buscar flujo..."
                   emptyMessage="Sin flujos activos"
                 />
@@ -443,9 +516,17 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
 
       <ClientFormModal
         open={openClientModal}
-        mode="create"
-        onClose={() => setOpenClientModal(false)}
-        onSubmit={handleCreateClient}
+        mode={clientModalMode}
+        client={editingClient}
+        onClose={() => {
+          if (clientLoading) return;
+          setOpenClientModal(false);
+          setEditingClient(null);
+        }}
+        onSubmit={(clientForm) => {
+          if (clientModalMode === "edit") void handleUpdateClient(clientForm);
+          else void handleCreateClient(clientForm);
+        }}
         loading={clientLoading}
       />
 

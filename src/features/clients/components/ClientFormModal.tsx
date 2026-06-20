@@ -110,10 +110,10 @@ export function ClientFormModal({
     () =>
       Boolean(
         form.fullName.trim() &&
-          (form.docType === "NONE" ? form.reference.trim() : form.docNumber.trim()) &&
-          form.departmentId.trim() &&
-          form.provinceId.trim() &&
-          form.districtId.trim(),
+        (form.docType === "NONE" || form.docNumber.trim()) &&
+        form.departmentId.trim() &&
+        form.provinceId.trim() &&
+        form.districtId.trim(),
       ),
     [form.departmentId, form.districtId, form.docNumber, form.docType, form.fullName, form.provinceId, form.reference],
   );

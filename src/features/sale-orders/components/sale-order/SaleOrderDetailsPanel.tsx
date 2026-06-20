@@ -279,6 +279,7 @@ export function SaleOrderDetailsPanel({
             : undefined,
         });
         await onOrderChanged(order.id);
+        await loadTransitions();
         setClientModalOpen(false);
         setEditingClient(null);
       } catch (error) {

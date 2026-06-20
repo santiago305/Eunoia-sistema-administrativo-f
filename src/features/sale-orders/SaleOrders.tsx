@@ -48,25 +48,96 @@ import { WorkflowEditorModal } from "@/features/workflows/components/WorkflowEdi
 import { SaleOrdersBoard } from "./components/sale-order/SaleOrdersBoard";
 
 const saleOrderImportFields: ImportField[] = [
-  { key: "workflowName", label: "Workflow", aliases: ["workflow", "flujo", "nombre workflow", "workflow name"] },
-  { key: "productName", label: "Producto", aliases: ["producto", "product", "product name", "nombre producto"] },
-  { key: "orderDate", label: "Fecha de pedido", type: "date", aliases: ["fecha pedido", "order date", "fecha orden"] },
-  { key: "deliveryDate", label: "Fecha de entrega", type: "date", aliases: ["fecha entrega", "delivery date"] },
-  { key: "departmentName", label: "Departamento", required: true, aliases: ["departamento", "department"] },
-  { key: "provinceName", label: "Provincia", required: true, aliases: ["provincia", "province"] },
-  { key: "districtName", label: "Distrito", required: true, aliases: ["distrito", "district"] },
-  { key: "recipientName", label: "Destinatario", required: true, aliases: ["destinatario", "recipient", "recipient name", "cliente"] },
-  { key: "address", label: "Direccion", aliases: ["direccion", "dirección", "address"] },
-  { key: "deliveryNote", label: "Nota de entrega", aliases: ["nota entrega", "delivery note", "observacion", "observación"] },
-  { key: "phone", label: "Telefono", required: true, aliases: ["telefono", "teléfono", "phone", "celular"] },
-  { key: "couponCode", label: "Cupon", aliases: ["cupon", "cupón", "coupon", "coupon code"] },
-  { key: "productCodes", label: "Codigos de producto", required: true, aliases: ["codigos producto", "códigos producto", "product codes", "sku", "eva"] },
-  { key: "quantity", label: "Cantidad", type: "number", aliases: ["cantidad", "qty", "quantity"] },
-  { key: "total", label: "Total", required: true, type: "number", aliases: ["total", "importe"] },
-  { key: "advance", label: "Adelanto", type: "number", aliases: ["adelanto", "advance"] },
-  { key: "codAmount", label: "Contra entrega", type: "number", aliases: ["contra entrega", "cod", "cod amount"] },
-  { key: "internalNote", label: "Nota interna", aliases: ["nota interna", "internal note", "fuente", "source"] },
-  { key: "confirmedBy", label: "Confirmado por", aliases: ["confirmado por", "confirmed by"] },
+  { 
+    key: "workflowName", 
+    label: "Flujo", 
+    aliases: ["Etiqueta","etiqueta", "flujo", "Flujo"] },
+  { 
+    key: "orderDate", 
+    label: "Fecha de agenda", 
+    type: "date", 
+    aliases: ["Día de creación", "día de creación", "Dia de creacion", "dia de creacion",
+      "Fecha de agenda", "fecha de agenda"
+    ] },
+  { 
+    key: "deliveryDate", 
+    label: "Fecha de entrega", 
+    type: "date", 
+    aliases: ["fecha de entrega esperada", "Fecha de entrega esperada", "Fecha de entrega", 
+      "fecha de entrega"
+     ] },
+  { 
+    key: "departmentName", 
+    label: "Departamento", 
+    aliases: ["departamento", "Departmento", "Provincia/Ciudad", "provincia/ciudad"] },
+  { 
+    key: "provinceName", 
+    label: "Provincia", 
+    aliases: ["provincia", "Provincia", "Distrito", "distrito"] },
+  { 
+    key: "districtName", 
+    label: "-Distrito", 
+    aliases: ["-Distrito", "-districto", "Comuna/Pueblo", "comuna/pueblo"] },
+  { 
+    key: "recipientName", 
+    label: "Destinatario", 
+    required: true, 
+    aliases: ["destinatario", "Destinatario", "Nombre del destinario", 
+      "nombre del destinatario"] },
+  { 
+    key: "address", 
+    label: "Dirección detallada", 
+    aliases: ["dirección detallada", "direccion detallada",
+       "Dirección detallada", "Direccion detallada"] },
+  { 
+    key: "deliveryNote", 
+    label: "DNI/Referencia", 
+    aliases: ["DNI/Referencia", "dni/referencia", "Nota de envío", "nota de envío",
+      "Nota de envio", "nota de envio"
+    ] },
+  { 
+    key: "phone", 
+    label: "Telefono", 
+    required: true, 
+    aliases: ["telefono", "teléfono","Telefono","Teléfono",
+      "Número de teléfono", "número de teléfono", "Numero de telefono", "numero de telefono"] },
+  { 
+    key: "couponCode", 
+    label: "Pack", 
+    aliases: ["Pack", "pack", "Código promocional", "código promocional",
+      "Codigo promocional", "codigo promocional"
+    ] },
+  { 
+    key: "productCodes", 
+    label: "Códigos de producto", 
+    aliases: ["códigos de producto", "Códigos de producto", 
+      "codigos de producto", "Codigos de producto", "Incluye códigos de producto", 
+      "incluye códigos de producto","Incluye codigos de producto", 
+      "incluye codigos de producto" ] },
+  { 
+    key: "total", 
+    label: "Importe a pagar", 
+    required: true, 
+    type: "number", 
+    aliases: ["Importe a pagar", "importe a pagar"] },
+  { 
+    key: "advance", 
+    label: "Total del anticipo", 
+    type: "number", 
+    aliases: ["Total del anticipo", "total del anticipo"] },
+  { 
+    key: "deliveryCost", 
+    label: "Tarifa", 
+    type: "number", 
+    aliases: ["Tarifa", "tarifa"] },
+  { 
+    key: "internalNote", 
+    label: "Nota interna", 
+    aliases: ["nota interna", "Nota interna"] },
+  { 
+    key: "confirmedBy", 
+    label: "Confirmado por", 
+    aliases: ["confirmado por", "Confirmado por"] },
 ];
 
 const optionalSaleOrderImportFields = new Set<keyof SaleOrderJsonImportRow>([
@@ -354,7 +425,8 @@ export default function SaleOrders() {
       showFeedbackRef.current(
         response.failedRows > 0 ? errorResponse(errorDetails ? `${baseMessage} ${errorDetails}` : baseMessage) : successResponse(baseMessage),
       );
-      await loadOrders();
+      await updateUx();
+      await loadStatistics();
     } catch (error) {
       showFeedbackRef.current(errorResponse(parseApiError(error)));
     } finally {
