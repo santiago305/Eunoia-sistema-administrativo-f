@@ -71,8 +71,6 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.productionCreate, name: "productionCreate", isProtected: true, permissionsAllowed: ["page.production.view"] },
   { path: RoutesPaths.productionEdit, name: "productionEdit", isProtected: true, permissionsAllowed: ["page.production.view"] },
   
-  { path: RoutesPaths.outOrder, name: "outOrder", isProtected: true, permissionsAllowed: ["page.out-orders.view"] },
-  
   // Rutas de seguridad
   { path: RoutesPaths.security, name: "security", isProtected: true, permissionsAllowed: ["page.security.view"]},
   { path: RoutesPaths.ipsdetails, name: "ipsdetails", isProtected: true, permissionsAllowed: ["page.security.view"]},

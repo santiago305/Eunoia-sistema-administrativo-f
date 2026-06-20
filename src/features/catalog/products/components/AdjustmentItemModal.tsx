@@ -8,7 +8,7 @@ import { Modal } from "@/shared/components/modales/Modal";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
-import { Direction } from "@/features/out-orders/type/outOrder";
+import { InventoryMovementDirection } from "@/features/catalog/types/inventoryMovement";
 
 type AdjustmentItemModalValue = {
     quantity: number;
@@ -16,8 +16,8 @@ type AdjustmentItemModalValue = {
 };
 
 const ADJUSTMENT_TYPE_OPTIONS = [
-    { value: Direction.OUT, label: "Reducir" },
-    { value: Direction.IN, label: "Aumentar" },
+    { value: InventoryMovementDirection.OUT, label: "Reducir" },
+    { value: InventoryMovementDirection.IN, label: "Aumentar" },
 ];
 
 type AdjustmentItemModalMessages = {
@@ -81,7 +81,7 @@ export function AdjustmentItemModal({
             <div className="grid grid-cols-1 gap-3">
                 <SectionHeaderForm icon={Boxes} title={sectionTitle} />
 
-                {pendingItem.adjustmentType === Direction.OUT && (
+                {pendingItem.adjustmentType === InventoryMovementDirection.OUT && (
                     <FloatingInput
                         label="Cantidad"
                         name="adjustment-qty"
@@ -96,7 +96,7 @@ export function AdjustmentItemModal({
                     />
                 )}
 
-                {pendingItem.adjustmentType === Direction.IN && (
+                {pendingItem.adjustmentType === InventoryMovementDirection.IN && (
                     <FloatingInput
                         label="Cantidad"
                         name="adjustment-qty"

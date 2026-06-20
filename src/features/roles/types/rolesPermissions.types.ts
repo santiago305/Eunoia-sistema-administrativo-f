@@ -20,6 +20,14 @@ export type PermissionModuleGroup = {
   module: string;
   label: string;
   permissions: AccessPermissionItem[];
+  directPermissions?: AccessPermissionItem[];
+  subgroups?: PermissionSubgroup[];
+};
+
+export type PermissionSubgroup = {
+  key: string;
+  label: string;
+  permissions: AccessPermissionItem[];
 };
 
 export type ModuleLabelConfigMap = Record<string, string | null>;

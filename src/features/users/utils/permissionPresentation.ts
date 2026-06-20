@@ -38,7 +38,6 @@ const MODULE_LABELS: Record<string, string> = {
   payments: "Pagos",
   payment_methods: "Métodos de pago",
   production: "Producción",
-  out_orders: "Órdenes de salida",
   security: "Seguridad",
   notifications: "Correo y notificaciones",
   corporate: "Sistema",

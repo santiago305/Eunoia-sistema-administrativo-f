@@ -4,7 +4,6 @@ import {
     IconCompany,
     IconAccounts,
     IconHome,
-    IconOutOrder,
     IconProduction,
     IconPurchase, 
     IconRowMaterial, 
@@ -23,9 +22,14 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         icon: <IconHome className="text-sidebar-foreground" />,
     },
     {
-        label: "Orden de salida",
-        href: RoutesPaths.outOrder,
-        icon: <IconOutOrder className="text-sidebar-foreground" />,
+        label: "Pedidos",
+        icon: <IconSaleOrder className="text-sidebar-foreground" />,
+        href: RoutesPaths.saleOrders,
+    },
+    {
+        label: "Clientes",
+        icon: <IconUsers className="text-sidebar-foreground" />,
+        href: RoutesPaths.clients,
     },
     {
         label: "Compras",
@@ -42,11 +46,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Pagos",
         icon: <IconPurchase className="text-sidebar-foreground" />,
         href: RoutesPaths.payments,
-    },
-    {
-        label: "Pedidos",
-        icon: <IconSaleOrder className="text-sidebar-foreground" />,
-        href: RoutesPaths.saleOrders,
     },
     {
         label: "Catalogo",
@@ -118,11 +117,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Proveedores",
         icon: <IconUsers className="text-sidebar-foreground" />,
         href: RoutesPaths.providers
-    },
-    {
-        label: "Clientes",
-        icon: <IconUsers className="text-sidebar-foreground" />,
-        href: RoutesPaths.clients,
     },
     {
         label: "Cuentas",

@@ -17,7 +17,6 @@ import {
   Factory,
   Banknote,
   PencilRuler,
-  ClipboardList,
   Megaphone,
   Bell,
   Menu,
@@ -51,9 +50,6 @@ export const IconPurchase = ({ className }: { className?: string }) => (
 );
 export const IconSaleOrder = ({ className }: { className?: string }) => (
   <FileText className={className} size={20} />
-);
-export const IconOutOrder = ({ className }: { className?: string }) => (
-  <ClipboardList  className={className} size={20} />
 );
 export const IconRowMaterial = ({ className }: { className?: string }) => (
   <Pickaxe className={className} size={20} />

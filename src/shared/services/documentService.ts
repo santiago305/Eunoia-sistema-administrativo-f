@@ -1,4 +1,3 @@
-import type { CreateOutOrder, OutOrderResponse } from "@/features/out-orders/type/outOrder";
 import { API_DOCUMENT_INVENTORY_GROUP } from "./APIs";
 import axiosInstance from "@/shared/common/utils/axios";
 import type { AdjustmentResponse, CreateAdjustment } from "@/features/catalog/types/adjustment";
@@ -10,6 +9,7 @@ import type {
 } from "@/features/catalog/types/inventoryDocumentsSearch";
 import type { DocType } from "@/features/warehouse/types/warehouse";
 import type { InventoryDocumentProductType } from "@/features/catalog/types/documentInventory";
+import type { CreateInventoryMovement, InventoryMovementResponse } from "@/features/catalog/types/inventoryMovement";
 
 
 
@@ -112,8 +112,8 @@ export const getStockSku = async (
   return response.data;
 };
 
-export const createOutOrder = async (payload: CreateOutOrder): Promise<OutOrderResponse> => {
-  const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.outOrderCreated, payload);
+export const createInventoryMovement = async (payload: CreateInventoryMovement): Promise<InventoryMovementResponse> => {
+  const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.movementCreated, payload);
   return response.data;
 };
 

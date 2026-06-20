@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ChevronRight, Info } from "lucide-react";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
@@ -25,6 +26,67 @@ export function RolePermissionsMatrix({
   onTogglePermission,
   onToggleEveryPermissionInModule,
 }: RolePermissionsMatrixProps) {
+  const [openSubgroups, setOpenSubgroups] = useState<Set<string>>(new Set());
+
+  const toggleSubgroup = (key: string) => {
+    setOpenSubgroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const renderPermissionList = (permissions: AccessPermissionItem[], compact = false) => (
+    <div className={cn("grid gap-1.5 md:grid-cols-2 2xl:grid-cols-3", compact && "md:grid-cols-1 2xl:grid-cols-2")}>
+      {permissions.map((permission) => {
+        const checked = selectedCodes.has(permission.code);
+
+        return (
+          <label
+            key={permission.code}
+            className={cn(
+              "group flex cursor-pointer items-start gap-3 rounded-sm px-2.5 py-2.5 transition",
+              checked
+                ? "bg-gradient-to-r from-primary/10 via-white to-transparent text-zinc-950"
+                : "text-zinc-500 hover:bg-zinc-50/90 hover:text-zinc-900",
+              !canAssignRolePermissions && "cursor-not-allowed opacity-70",
+            )}
+          >
+            <Checkbox
+              checked={checked}
+              disabled={!canAssignRolePermissions}
+              onCheckedChange={() => onTogglePermission(permission.code)}
+              className="mt-0.5 rounded-sm border-zinc-300 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-white"
+            />
+
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium">{getPermissionLabel(permission)}</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info
+                      className={cn(
+                        "h-3.5 w-3.5 shrink-0 transition",
+                        checked ? "text-primary/60" : "text-zinc-400 group-hover:text-zinc-500",
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs rounded-sm text-xs">
+                    {permission.description || permission.code}
+                  </TooltipContent>
+                </Tooltip>
+              </span>
+              <span className="mt-0.5 block truncate font-mono text-[11px] text-zinc-400">
+                {permission.code}
+              </span>
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="divide-y divide-zinc-200/70">
       {groupedPermissions.map((group) => {
@@ -74,52 +136,61 @@ export function RolePermissionsMatrix({
             </div>
 
             {isOpen ? (
-              <div className="ml-0 mt-2 grid gap-1.5 pl-0 sm:ml-7 md:grid-cols-2 2xl:grid-cols-3">
-                {group.permissions.map((permission) => {
-                  const checked = selectedCodes.has(permission.code);
+              <div className="ml-0 mt-2 grid gap-3 pl-0 sm:ml-7">
+                {group.directPermissions?.length ? renderPermissionList(group.directPermissions) : null}
 
-                  return (
-                    <label
-                      key={permission.code}
-                      className={cn(
-                        "group flex cursor-pointer items-start gap-3 rounded-sm px-2.5 py-2.5 transition",
-                        checked
-                          ? "bg-gradient-to-r from-primary/10 via-white to-transparent text-zinc-950"
-                          : "text-zinc-500 hover:bg-zinc-50/90 hover:text-zinc-900",
-                        !canAssignRolePermissions && "cursor-not-allowed opacity-70",
-                      )}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        disabled={!canAssignRolePermissions}
-                        onCheckedChange={() => onTogglePermission(permission.code)}
-                        className="mt-0.5 rounded-sm border-zinc-300 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-white"
-                      />
+                {group.subgroups?.length ? (
+                  <div className="grid items-start gap-3 lg:grid-cols-2">
+                    {group.subgroups.map((subgroup) => {
+                      const subgroupOpenKey = `${group.module}:${subgroup.key}`;
+                      const isSubgroupOpen = openSubgroups.has(subgroupOpenKey);
+                      const selectedSubgroupCount = subgroup.permissions.filter((permission) =>
+                        selectedCodes.has(permission.code),
+                      ).length;
+                      const allSubgroupSelected =
+                        selectedSubgroupCount === subgroup.permissions.length && subgroup.permissions.length > 0;
 
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">{getPermissionLabel(permission)}</span>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info
+                      return (
+                        <section
+                          key={subgroup.key}
+                          className="self-start rounded-sm border border-zinc-200/80 bg-white/70 p-2.5"
+                        >
+                          <div className="mb-2 flex items-center gap-3 border-b border-zinc-100 pb-2">
+                            <Checkbox
+                              checked={allSubgroupSelected}
+                              disabled={!canAssignRolePermissions}
+                              onCheckedChange={() => onToggleEveryPermissionInModule(subgroup.permissions)}
+                              className="rounded-sm border-zinc-300 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleSubgroup(subgroupOpenKey)}
+                              className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 py-1 text-left transition hover:bg-zinc-50"
+                            >
+                              <ChevronRight
                                 className={cn(
-                                  "h-3.5 w-3.5 shrink-0 transition",
-                                  checked ? "text-primary/60" : "text-zinc-400 group-hover:text-zinc-500",
+                                  "h-4 w-4 shrink-0 text-zinc-400 transition",
+                                  isSubgroupOpen && "rotate-90",
                                 )}
                               />
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs rounded-sm text-xs">
-                              {permission.description || permission.code}
-                            </TooltipContent>
-                          </Tooltip>
-                        </span>
-                        <span className="mt-0.5 block truncate font-mono text-[11px] text-zinc-400">
-                          {permission.code}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-zinc-900">
+                                  {subgroup.label}
+                                </span>
+                                <span className="block text-xs text-zinc-500">
+                                  {selectedSubgroupCount} de {subgroup.permissions.length}
+                                </span>
+                              </span>
+                            </button>
+                          </div>
+                          {isSubgroupOpen ? renderPermissionList(subgroup.permissions, true) : null}
+                        </section>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  renderPermissionList(group.permissions)
+                )}
               </div>
             ) : null}
           </section>

@@ -11,7 +11,7 @@ import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
-import { createOutOrder, getStockSku } from "@/shared/services/documentService";
+import { createInventoryMovement, getStockSku } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
 import { findOwnUser } from "@/shared/services/userService";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -22,7 +22,7 @@ import { ProductType, ProductTypes } from "@/features/catalog/types/ProductTypes
 import type { ListSkusResponse, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { buildSkuLabelWithAttributes, buildStockSummary, emptyStockDetail, type StockDetailState } from "@/features/catalog/types/transfer";
-import { CreateOutOrder, Direction } from "@/features/out-orders/type/outOrder";
+import { CreateInventoryMovement, InventoryMovementDirection } from "@/features/catalog/types/inventoryMovement";
 
 export type AdjustmentFormProductsProps = {
   inModal?: boolean;
@@ -58,7 +58,7 @@ type AdjustmentItemRow = {
   quantity: number;
 };
 
-const buildEmptyForm = (): CreateOutOrder => ({
+const buildEmptyForm = (): CreateInventoryMovement => ({
   docType: DocType.ADJUSTMENT,
   serieId: "",
   warehouseId: "",
@@ -82,7 +82,7 @@ export default function AdjustmentFormProducts({
   const { userId } = useAuth();
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<CreateOutOrder>(() => buildEmptyForm());
+  const [form, setForm] = useState<CreateInventoryMovement>(() => buildEmptyForm());
   const [pendingItem, setPendingItem] = useState<PendingAdjustmentItem>(() => buildEmptyPendingItem());
   const [searchResults, setSearchResults] = useState<ListSkusResponse>();
   const [selectedSkus, setSelectedSkus] = useState<ProductSkuWithAttributes[]>([]);
@@ -368,11 +368,11 @@ export default function AdjustmentFormProducts({
         items: items.map(item => ({
           skuId: item.skuId,
           quantity: Math.abs(item.quantity),
-          direction: item.quantity < 0 ? Direction.OUT : Direction.IN,
+          direction: item.quantity < 0 ? InventoryMovementDirection.OUT : InventoryMovementDirection.IN,
         }))
       };
 
-      const res = await createOutOrder(payload);
+      const res = await createInventoryMovement(payload);
       const adjustmentId = res?.documentId ?? res.docId ?? "";
       showFeedback(successResponse("Ajuste registrado en borrador"));
 
