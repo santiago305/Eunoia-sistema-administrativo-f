@@ -528,7 +528,7 @@ export default function Clients() {
         cell: (row) => (
           row.docType === "NONE" ? (
             <span className="text-black/70">
-              S/D - {row.reference}
+              S/D 
             </span>
           ) : (
             <span className="text-black/70">

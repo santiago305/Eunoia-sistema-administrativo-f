@@ -1,6 +1,11 @@
 export type ClientType = "NEW" | "LAGGING" | "REPURCHASE" | "UNDEFINED";
 export type ClientDocType = "DNI" | "CE" | "RUC" | "NONE";
-
+export enum ClientDocTypeEnum {
+  DNI = "DNI",
+  CE = "CE",
+  RUC = "RUC",
+  NONE = "NONE",
+}
 export type Client = {
   id: string;
   type: ClientType;

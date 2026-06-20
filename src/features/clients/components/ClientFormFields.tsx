@@ -1,5 +1,5 @@
 import type { CSSProperties, Dispatch, SetStateAction } from "react";
-import type { ClientForm } from "@/features/clients/types/client";
+import { ClientDocTypeEnum, type ClientForm } from "@/features/clients/types/client";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { CLIENT_TYPE_OPTIONS } from "@/features/clients/constants/clientType";
@@ -8,6 +8,7 @@ const docTypeOptions: Array<{ value: ClientForm["docType"]; label: string }> = [
   { value: "DNI", label: "DNI" },
   { value: "CE", label: "CE" },
   { value: "RUC", label: "RUC" },
+  { value: "NONE", label: "SIN DEFINIR" },
 ];
 
 type Props = {
@@ -67,32 +68,57 @@ export function ClientFormFields({
           {...sharedInputProps}
         />
       </div>
-      <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 mt-2`}>
-        <FloatingSelect
-          label="Tipo de documento"
-          name="client-doc-type"
-          value={form.docType}
-          options={docTypeOptions}
-          onChange={(value) => {
-            const nextDocType = value as ClientForm["docType"];
-            setForm((prev) => ({
-              ...prev,
-              docType: nextDocType,
-              ...(nextDocType === "NONE" ? { docNumber: "" } : { reference: "" }),
-            }));
-          }}
-          disabled={disabled}
-          className={inputClassName}
-        />
-        <FloatingInput
-          label="Número de documento"
-          name="client-doc-number"
-          value={form.docNumber}
-          onChange={(e) => updateField("docNumber", e.target.value)}
-          {...sharedInputProps}
-        />
-
-      </div>
+      {
+        form.docType === ClientDocTypeEnum.NONE && (
+          <div className={`grid grid-cols-1 gap-3 md:grid-cols-1 mt-2`}>
+            <FloatingSelect
+              label="Tipo de documento"
+              name="client-doc-type"
+              value={form.docType}
+              options={docTypeOptions}
+              onChange={(value) => {
+                const nextDocType = value as ClientForm["docType"];
+                setForm((prev) => ({
+                  ...prev,
+                  docType: nextDocType,
+                  ...(nextDocType === "NONE" ? { docNumber: "" } : { reference: "" }),
+                }));
+              }}
+              disabled={disabled}
+              className={inputClassName}
+            />
+          </div>
+        )
+      }
+      {
+        form.docType != ClientDocTypeEnum.NONE && (
+          <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 mt-2`}>
+            <FloatingSelect
+              label="Tipo de documento"
+              name="client-doc-type"
+              value={form.docType}
+              options={docTypeOptions}
+              onChange={(value) => {
+                const nextDocType = value as ClientForm["docType"];
+                setForm((prev) => ({
+                  ...prev,
+                  docType: nextDocType,
+                  ...(nextDocType === "NONE" ? { docNumber: "" } : { reference: "" }),
+                }));
+              }}
+              disabled={disabled}
+              className={inputClassName}
+            />
+            <FloatingInput
+              label="Número de documento"
+              name="client-doc-number"
+              value={form.docNumber}
+              onChange={(e) => updateField("docNumber", e.target.value)}
+              {...sharedInputProps}
+            />
+          </div>
+        )
+      }
       <div className={`grid grid-cols-1 gap-3 md:grid-cols-3 mt-2`}>
         <FloatingSelect
           label="Departamento"
