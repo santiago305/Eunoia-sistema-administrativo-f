@@ -17,6 +17,9 @@ export const isTransitionCard = (transition: WorkflowDraftTransition) =>
   !transition.isGlobal &&
   transition.autoTrigger;
 
+export const shouldRenderDirectElseEdge = (transition: WorkflowDraftTransition) =>
+  !isTransitionCard(transition);
+
 export function getTransitionCardPosition(
   transition: WorkflowDraftTransition,
   positions: Record<string, { x: number; y: number }>,
@@ -54,3 +57,12 @@ export function applyTransitionCardConnection(
   }
   return null;
 }
+
+export const clearTransitionElseBranch = (
+  transition: WorkflowDraftTransition,
+): WorkflowDraftTransition => ({
+  ...transition,
+  elseEffect: null,
+  elseToStateClientId: null,
+  elseActions: [],
+});

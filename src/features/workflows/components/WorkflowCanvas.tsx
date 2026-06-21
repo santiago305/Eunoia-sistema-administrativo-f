@@ -4,7 +4,6 @@ import {
   ConnectionMode,
   Controls,
   MarkerType,
-  MiniMap,
   ReactFlow,
   type Connection,
   type Edge,
@@ -39,6 +38,7 @@ import {
   getTransitionCardId,
   getTransitionCardPosition,
   isTransitionCard,
+  shouldRenderDirectElseEdge,
 } from "../utils/workflowTransitionCard";
 import { CONDITION_LABELS } from "./WorkflowConditionEditor";
 import { ACTION_LABELS } from "./WorkflowActionEditor";
@@ -65,6 +65,8 @@ type Props = {
     sourceHandle?: string | null,
     targetHandle?: string | null,
   ) => void;
+  onDeleteElseBranch: (transitionId: string) => void;
+  onDeleteElement: (id: string, type: "state" | "transition") => void;
 };
 
 type GlobalTransitionNodeData = {
@@ -235,6 +237,8 @@ export function WorkflowCanvas({
   onMoveTransitionCard,
   onViewportCenterChange,
   onConnect,
+  onDeleteElseBranch,
+  onDeleteElement,
 }: Props) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const emitViewportCenter = useCallback(
@@ -417,6 +421,7 @@ export function WorkflowCanvas({
             },
           };
           const elseEdge: Edge | null =
+            shouldRenderDirectElseEdge(transition) &&
             transition.elseEffect === TRANSITION_EFFECTS.MOVE_STATE &&
             transition.elseToStateClientId &&
             visibleStateIds.has(transition.elseToStateClientId)
@@ -450,7 +455,7 @@ export function WorkflowCanvas({
       draft.transitions.filter(isTransitionCard).flatMap((transition) => {
         const cardId = getTransitionCardId(transition.clientId);
         const common = {
-          data: { transition, onSelect },
+          data: { transition, onSelect, branch: "ELSE" },
           selected: selectedId === transition.clientId,
           animated: transition.isActive,
         };
@@ -550,6 +555,27 @@ export function WorkflowCanvas({
           | undefined;
         onSelect(data?.transition?.clientId ?? edge.id);
       }}
+      onEdgesDelete={(deletedEdges) => {
+        deletedEdges.forEach((edge) => {
+          if (edge.id.endsWith(":else")) {
+            onDeleteElseBranch(edge.id.slice(0, -":else".length));
+          }
+        });
+      }}
+      onNodesDelete={(deletedNodes) => {
+        const node = deletedNodes[0];
+        if (!node) return;
+
+        if (node.type === "workflowState") {
+          onDeleteElement(node.id, "state");
+          return;
+        }
+
+        const data = node.data as unknown as GlobalTransitionNodeData;
+        if (data.transition?.clientId) {
+          onDeleteElement(data.transition.clientId, "transition");
+        }
+      }}
       onNodeDragStop={(_, node) => {
         if (node.type === "workflowState") {
           onMoveState(node.id, node.position.x, node.position.y);
@@ -596,7 +622,7 @@ export function WorkflowCanvas({
     >
       <Background />
       <Controls />
-      <MiniMap />
+      {/* <MiniMap /> */}
     </ReactFlow>
   </div>
 );

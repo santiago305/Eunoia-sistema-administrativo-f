@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   applyTransitionCardConnection,
+  clearTransitionElseBranch,
   getTransitionCardId,
   getTransitionCardPosition,
   isTransitionCard,
+  shouldRenderDirectElseEdge,
 } from "./workflowTransitionCard";
 import type { WorkflowDraftTransition } from "../types/workflow";
 
@@ -80,6 +82,26 @@ describe("workflow transition card", () => {
     ).toMatchObject({
       elseEffect: "MOVE_STATE",
       elseToStateClientId: "state-3",
+    });
+  });
+
+  it("does not render a duplicate direct ELSE edge for transition cards", () => {
+    expect(shouldRenderDirectElseEdge(transition)).toBe(false);
+    expect(shouldRenderDirectElseEdge({ ...transition, autoTrigger: false })).toBe(true);
+  });
+
+  it("clears only the ELSE branch when its edge is deleted", () => {
+    expect(
+      clearTransitionElseBranch({
+        ...transition,
+        elseToStateClientId: "state-3",
+        elseActions: [{ type: "REVERT_STOCK", config: {}, position: 0 }],
+      }),
+    ).toEqual({
+      ...transition,
+      elseEffect: null,
+      elseToStateClientId: null,
+      elseActions: [],
     });
   });
 });
