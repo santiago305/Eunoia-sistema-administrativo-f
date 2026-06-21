@@ -17,7 +17,7 @@ describe("permissions routing regression", () => {
   });
 
   it("resolves first protected route for authenticated users without role", () => {
-    const path = getFirstAccessibleProtectedPath(null, ["page.providers.view"]);
+    const path = getFirstAccessibleProtectedPath(null, ["page.suppliers.view"]);
     expect(path).toBe(RoutesPaths.profile);
   });
 
@@ -27,10 +27,11 @@ describe("permissions routing regression", () => {
     expect(canAccessRoute(meta, null, ["page.production.view"])).toBe(true);
   });
 
-  it("allows providers page only with page.providers.view", () => {
+  it("allows providers page only with page.suppliers.view", () => {
     const meta = getRouteMetaByPath(RoutesPaths.providers);
+    expect(meta?.permissionsAllowed).toEqual(["page.suppliers.view"]);
     expect(canAccessRoute(meta, null, [])).toBe(false);
-    expect(canAccessRoute(meta, null, ["page.providers.view"])).toBe(true);
+    expect(canAccessRoute(meta, null, ["page.suppliers.view"])).toBe(true);
   });
 
   it("allows profile and sessions with authentication only", () => {

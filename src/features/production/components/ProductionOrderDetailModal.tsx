@@ -11,7 +11,7 @@ type ProductionOrderDetailModalProps = {
   open: boolean;
   loading: boolean;
   order: ProductionOrder | null;
-  canAdminUploadMissingPhoto?: boolean;
+  canUploadExtraProductionImage?: boolean;
   onUploadedPhoto?: () => Promise<void> | void;
   onClose: () => void;
 };
@@ -34,7 +34,7 @@ export function ProductionOrderDetailModal({
   open,
   loading,
   order,
-  canAdminUploadMissingPhoto = false,
+  canUploadExtraProductionImage = false,
   onUploadedPhoto,
   onClose,
 }: ProductionOrderDetailModalProps) {
@@ -108,11 +108,11 @@ export function ProductionOrderDetailModal({
       imageTitle: "Foto de produccion",
       imageAltPrefix: "Imagen de produccion",
       imageEmptyMessage: "Esta produccion no tiene foto.",
-      canUploadImage: canAdminUploadMissingPhoto,
+      canUploadImage: canUploadExtraProductionImage,
       uploadingImage: uploadingPhoto,
       onUploadImage: handleUploadFromDetail,
     };
-  }, [order, loading, canAdminUploadMissingPhoto, uploadingPhoto, handleUploadFromDetail]);
+  }, [order, loading, canUploadExtraProductionImage, uploadingPhoto, handleUploadFromDetail]);
   return (
     <DocumentDetailsModal
       open={open}

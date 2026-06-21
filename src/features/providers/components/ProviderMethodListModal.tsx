@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { Modal } from "@/shared/components/modales/Modal";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -15,19 +15,20 @@ import {
   deleteSupplierMethod,
   getAllPaymentMethods,
   listSupplierMethodsBySupplier,
+  updateSupplierMethod,
 } from "@/shared/services/paymentMethodService";
 import type {
   PaymentMethod,
   SupplierMethodRelation,
 } from "@/features/payment-methods/types/paymentMethod";
 import { IconButton } from "@/shared/components/components/IconBoton";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 type ProviderMethodListModalProps = {
   title: string;
   close: () => void;
   className?: string;
   supplierId: string;
-  canManagePaymentMethods: boolean;
 };
 
 type SelectOption = {
@@ -44,9 +45,10 @@ export function ProviderMethodListModal({
   close,
   className,
   supplierId,
-  canManagePaymentMethods,
 }: ProviderMethodListModalProps) {
   const { showFeedback, clearFeedback } = useFeedbackToast();
+  const { can } = usePermissions();
+  const canManageGlobalPaymentMethods = can("payment-methods.manage");
 
   const [rows, setRows] = useState<SupplierMethodRelation[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
@@ -56,6 +58,10 @@ export function ProviderMethodListModal({
   const [number, setNumber] = useState("");
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
+  const [editingSupplierMethod, setEditingSupplierMethod] = useState<SupplierMethodRelation | null>(null);
+  const [editSelectedId, setEditSelectedId] = useState("");
+  const [editNumber, setEditNumber] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const [pendingRemoveMethod, setPendingRemoveMethod] = useState<SupplierMethodRelation | null>(null);
   const [removing, setRemoving] = useState(false);
 
@@ -118,7 +124,7 @@ export function ProviderMethodListModal({
   }, [selectedId, availableOptions]);
 
   const addMethod = useCallback(async () => {
-    if (!canManagePaymentMethods || !supplierId || !selectedId || adding) return;
+    if (!supplierId || !selectedId || adding) return;
 
     clearFeedback();
     setAdding(true);
@@ -139,11 +145,11 @@ export function ProviderMethodListModal({
     } finally {
       setAdding(false);
     }
-  }, [adding, canManagePaymentMethods, clearFeedback, loadSupplierMethods, number, selectedId, showFeedback, supplierId]);
+  }, [adding, clearFeedback, loadSupplierMethods, number, selectedId, showFeedback, supplierId]);
 
   const removeMethod = useCallback(
     async (supplierMethodId?: string | null) => {
-      if (!canManagePaymentMethods || !supplierMethodId) return;
+      if (!supplierMethodId) return;
 
       clearFeedback();
       setRemoving(true);
@@ -159,11 +165,41 @@ export function ProviderMethodListModal({
         setRemoving(false);
       }
     },
-    [canManagePaymentMethods, clearFeedback, loadSupplierMethods, showFeedback],
+    [clearFeedback, loadSupplierMethods, showFeedback],
   );
 
+  const openEditSupplierMethod = useCallback((row: SupplierMethodRelation) => {
+    setEditingSupplierMethod(row);
+    setEditSelectedId(row.methodId);
+    setEditNumber(row.number ?? "");
+  }, []);
+
+  const saveSupplierMethodEdit = useCallback(async () => {
+    if (!editingSupplierMethod || !editSelectedId || savingEdit) return;
+
+    clearFeedback();
+    setSavingEdit(true);
+
+    try {
+      await updateSupplierMethod(editingSupplierMethod.supplierMethodId, {
+        methodId: editSelectedId,
+        number: editNumber.trim() || undefined,
+      });
+      showFeedback(successResponse("Método actualizado"));
+      setEditingSupplierMethod(null);
+      setEditSelectedId("");
+      setEditNumber("");
+      await loadSupplierMethods(true);
+    } catch {
+      showFeedback(errorResponse("No se pudo actualizar el método"));
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [clearFeedback, editNumber, editSelectedId, editingSupplierMethod, loadSupplierMethods, savingEdit, showFeedback]);
+
   const columns = useMemo<DataTableColumn<SupplierMethodRelation>[]>(
-    () => [
+    () => {
+      const baseColumns: DataTableColumn<SupplierMethodRelation>[] = [
       {
         id: "method",
         header: "Método",
@@ -176,16 +212,27 @@ export function ProviderMethodListModal({
         cell: (row) => <span className="text-black/70">{row.number ?? "-"}</span>,
         className: "text-black/70",
       },
-      {
+      ];
+
+      return [
+        ...baseColumns,
+        {
         id: "actions",
         header: "Acciones",
         stopRowClick: true,
         cell: (row) => (
           <div className="flex justify-end">
             <IconButton
+              title="Editar"
+              onClick={() => openEditSupplierMethod(row)}
+              PRIMARY={primaryColor}
+              PRIMARY_HOVER={primaryHover}
+            >
+              <Pencil className="h-4 w-4" />
+            </IconButton>
+            <IconButton
               title="Eliminar"
               onClick={() => {
-                if (!canManagePaymentMethods) return;
                 setPendingRemoveMethod(row);
               }}
               tone="danger"
@@ -201,59 +248,54 @@ export function ProviderMethodListModal({
         hideable: false,
         sortable: false,
       },
-    ],
-    [canManagePaymentMethods],
+      ];
+    },
+    [openEditSupplierMethod],
   );
 
   return (
     <Modal open={true} onClose={close} title={title} className={className}>
       <div className="space-y-3">
         <div className="flex gap-3">
-          <div className="flex-1">
-            <PaymentMethodSelectComposed
-              label="Método de pago"
-              value={selectedId}
-              onChange={setSelectedId}
-              options={availableOptions}
-              onCreate={() => {
-                if (!canManagePaymentMethods) return;
-                setOpenCreateMethod(true);
-              }}
-              onEdit={(methodId) => {
-                if (!canManagePaymentMethods) return;
-                setEditingMethodId(methodId);
-              }}
-              className="h-10"
-              textSize="text-xs"
-              disabled={adding || !canManagePaymentMethods}
-              emptyLabel="Sin resultados"
-            />
-          </div>
+            <div className="flex-1">
+              <PaymentMethodSelectComposed
+                label="Método de pago"
+                value={selectedId}
+                onChange={setSelectedId}
+                options={availableOptions}
+                onCreate={canManageGlobalPaymentMethods ? () => setOpenCreateMethod(true) : undefined}
+                onEdit={canManageGlobalPaymentMethods ? (methodId) => setEditingMethodId(methodId) : undefined}
+                className="h-10"
+                textSize="text-xs"
+                disabled={adding}
+                emptyLabel="Sin resultados"
+              />
+            </div>
 
-          <div className="flex-1">
-            <FloatingInput
-              label="Número"
-              name="supplier-payment-number"
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              className="h-10 text-xs"
-              disabled={adding || !canManagePaymentMethods}
-            />
-          </div>
+            <div className="flex-1">
+              <FloatingInput
+                label="Número"
+                name="supplier-payment-number"
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                className="h-10 text-xs"
+                disabled={adding}
+              />
+            </div>
 
-          <SystemButton
-            size="sm"
-            className="sm:mb-1 h-10"
-            leftIcon={<Plus className="h-4 w-4" />}
-            disabled={!selectedId || adding || !canManagePaymentMethods}
-            onClick={addMethod}
-            style={{
-              backgroundColor: primaryColor,
-              borderColor: softBorder,
-            }}
-          >
-            {adding ? "Añadiendo..." : "Agregar"}
-          </SystemButton>
+            <SystemButton
+              size="sm"
+              className="sm:mb-1 h-10"
+              leftIcon={<Plus className="h-4 w-4" />}
+              disabled={!selectedId || adding}
+              onClick={addMethod}
+              style={{
+                backgroundColor: primaryColor,
+                borderColor: softBorder,
+              }}
+            >
+              {adding ? "Añadiendo..." : "Agregar"}
+            </SystemButton>
         </div>
 
 
@@ -270,10 +312,10 @@ export function ProviderMethodListModal({
       </div>
 
       <PaymentMethodFormModal
-        open={canManagePaymentMethods && (openCreateMethod || Boolean(editingMethodId))}
+        open={canManageGlobalPaymentMethods && (openCreateMethod || Boolean(editingMethodId))}
         mode={editingMethodId ? "edit" : "create"}
         paymentMethodId={editingMethodId}
-        canManage={canManagePaymentMethods}
+        canManage
         onClose={() => {
           setOpenCreateMethod(false);
           setEditingMethodId(null);
@@ -286,8 +328,64 @@ export function ProviderMethodListModal({
         entityLabel="método de pago"
       />
 
+      {editingSupplierMethod ? (
+        <Modal
+          open={Boolean(editingSupplierMethod)}
+          title="Editar método del proveedor"
+          onClose={() => {
+            if (savingEdit) return;
+            setEditingSupplierMethod(null);
+          }}
+          className="w-[420px] max-h-[360px]"
+        >
+          <div className="space-y-3">
+            <PaymentMethodSelectComposed
+              label="Método de pago"
+              value={editSelectedId}
+              onChange={setEditSelectedId}
+              options={availableOptions}
+              className="h-10"
+              textSize="text-xs"
+              disabled={savingEdit}
+              emptyLabel="Sin resultados"
+            />
+            <FloatingInput
+              label="Número"
+              name="supplier-payment-edit-number"
+              value={editNumber}
+              onChange={(event) => setEditNumber(event.target.value)}
+              className="h-10 text-xs"
+              disabled={savingEdit}
+            />
+          </div>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <SystemButton
+              variant="outline"
+              size="md"
+              onClick={() => setEditingSupplierMethod(null)}
+              disabled={savingEdit}
+            >
+              Cancelar
+            </SystemButton>
+            <SystemButton
+              size="md"
+              onClick={() => void saveSupplierMethodEdit()}
+              disabled={!editSelectedId || savingEdit}
+              loading={savingEdit}
+              style={{
+                backgroundColor: primaryColor,
+                borderColor: softBorder,
+              }}
+            >
+              Guardar cambios
+            </SystemButton>
+          </div>
+        </Modal>
+      ) : null}
+
       <AlertModal
-        open={canManagePaymentMethods && Boolean(pendingRemoveMethod)}
+        open={Boolean(pendingRemoveMethod)}
         type="warning"
         title="Desvincular método de pago"
         message={

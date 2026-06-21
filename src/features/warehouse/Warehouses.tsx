@@ -11,6 +11,7 @@ import {
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 import { WarehouseFormModal } from "@/features/warehouse/components/WarehouseFormModal";
 import { WarehouseLocationsModal } from "./components/LocationModal";
 import { WarehouseStockModal } from "./components/WarehouseStockModal";
@@ -76,8 +77,18 @@ export default function Warehouses() {
   const showFeedbackRef = useRef(showFeedback);
   useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
   const { hasCompany } = useCompany();
+  const { can } = usePermissions();
+  const canReadWarehouses = can("warehouses.read");
+  const canCreateWarehouses = can("warehouses.create") || can("warehouses.manage");
+  const canUpdateWarehouses = can("warehouses.update") || can("warehouses.manage");
+  const canDeleteWarehouses = can("warehouses.delete") || can("warehouses.manage");
+  const canManageWarehouseLocations = can("warehouses.locations.manage");
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
+  const manageActionDisabled = companyActionDisabled || !canCreateWarehouses;
+  const manageActionTitle = companyActionTitle ?? (
+    canCreateWarehouses ? undefined : "No tienes permiso para crear almacenes."
+  );
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -169,13 +180,15 @@ export default function Warehouses() {
   );
 
   const loadSearchState = useCallback(async () => {
+    if (!canReadWarehouses) return;
+
     try {
       const response = await getWarehouseSearchState();
       setSearchState(response);
     } catch {
       showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, []);
+  }, [canReadWarehouses]);
 
   const submitSearch = useCallback(() => {
     startTransition(() => {
@@ -194,6 +207,19 @@ export default function Warehouses() {
   }, []);
 
   const loadWarehouses = useCallback(async () => {
+    if (!canReadWarehouses) {
+      setWarehouses([]);
+      setServerPagination({
+        total: 0,
+        page: 1,
+        limit: paginationState.pageSize,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      });
+      return;
+    }
+
     clearFeedback();
     setLoading(true);
 
@@ -238,7 +264,7 @@ export default function Warehouses() {
     } finally {
       setLoading(false);
     }
-  }, [clearFeedback, executedSnapshot, loadSearchState, page, paginationState.pageSize]);
+  }, [canReadWarehouses, clearFeedback, executedSnapshot, loadSearchState, page, paginationState.pageSize]);
 
   useEffect(() => {
     void loadWarehouses();
@@ -358,14 +384,18 @@ export default function Warehouses() {
   );
 
   const startCreate = useCallback(() => {
+    if (!canCreateWarehouses) return;
+
     setEditingWarehouseId(null);
     setOpenCreate(true);
-  }, []);
+  }, [canCreateWarehouses]);
 
   const openLocationsModal = useCallback((warehouse: { warehouseId: string; name: string }) => {
+    if (!canReadWarehouses) return;
+
     setSelectedWarehouse(warehouse);
     setOpenLocationsWarehouseId(warehouse.warehouseId);
-  }, []);
+  }, [canReadWarehouses]);
 
   const closeLocationsModal = useCallback(() => {
     setOpenLocationsWarehouseId(null);
@@ -373,17 +403,21 @@ export default function Warehouses() {
   }, []);
 
   const openStockModal = useCallback((warehouse: { warehouseId: string; name: string }) => {
+    if (!canReadWarehouses) return;
+
     setStockWarehouse(warehouse);
-  }, []);
+  }, [canReadWarehouses]);
 
   const closeStockModal = useCallback(() => {
     setStockWarehouse(null);
   }, []);
 
   const startEdit = useCallback((warehouseId: string) => {
+    if (!canUpdateWarehouses) return;
+
     setOpenCreate(false);
     setEditingWarehouseId(warehouseId);
-  }, []);
+  }, [canUpdateWarehouses]);
 
   const closeFormModal = useCallback(() => {
     setOpenCreate(false);
@@ -391,6 +425,7 @@ export default function Warehouses() {
   }, []);
 
   const confirmDelete = useCallback(async () => {
+    if (!canDeleteWarehouses) return;
     if (!deletingWarehouseId) return;
 
     const warehouseToToggle = warehouses.find(
@@ -424,7 +459,7 @@ export default function Warehouses() {
     } finally {
       setDeletingWarehouseId(null);
     }
-  }, [deletingWarehouseId, warehouses, showFeedback]);
+  }, [canDeleteWarehouses, deletingWarehouseId, warehouses, showFeedback]);
 
   const warehousePendingToggle = useMemo(
     () =>
@@ -518,26 +553,38 @@ export default function Warehouses() {
                     warehouseId: row.warehouseId,
                     name: row.name,
                   }),
-                disabled: companyActionDisabled,
+                disabled: companyActionDisabled || !canReadWarehouses,
               },
-              {
-                id: "edit",
-                label: "Detalles",
-                icon: <Pencil className="h-4 w-4 text-black/60" />,
-                onClick: () => startEdit(row.warehouseId),
-                disabled: companyActionDisabled,
-              },
-              {
-                id: "toggle",
-                label: row.isActive ? "Desactivar" : "Restaurar",
-                icon: <Trash2 className="h-4 w-4" />,
-                danger: row.isActive,
-                className: row.isActive
-                  ? "text-rose-700 hover:bg-rose-50"
-                  : "text-cyan-700 hover:bg-cyan-50",
-                onClick: () => setDeletingWarehouseId(row.warehouseId),
-                disabled: companyActionDisabled,
-              },
+              ...(canUpdateWarehouses || canDeleteWarehouses
+                ? [
+                  ...(canUpdateWarehouses
+                    ? [
+                    {
+                      id: "edit",
+                      label: "Detalles",
+                      icon: <Pencil className="h-4 w-4 text-black/60" />,
+                      onClick: () => startEdit(row.warehouseId),
+                      disabled: companyActionDisabled,
+                    },
+                    ]
+                    : []),
+                  ...(canDeleteWarehouses
+                    ? [
+                    {
+                      id: "toggle",
+                      label: row.isActive ? "Desactivar" : "Restaurar",
+                      icon: <Trash2 className="h-4 w-4" />,
+                      danger: row.isActive,
+                      className: row.isActive
+                        ? "text-rose-700 hover:bg-rose-50"
+                        : "text-cyan-700 hover:bg-cyan-50",
+                      onClick: () => setDeletingWarehouseId(row.warehouseId),
+                      disabled: companyActionDisabled,
+                    },
+                    ]
+                    : []),
+                  ]
+                : []),
             ]}
             columns={1}
             compact
@@ -568,7 +615,7 @@ export default function Warehouses() {
         sortable: false,
       },
     ],
-    [companyActionDisabled, formatDate, openLocationsModal, startEdit],
+    [canDeleteWarehouses, canReadWarehouses, canUpdateWarehouses, companyActionDisabled, formatDate, openLocationsModal, startEdit],
   );
 
   const smartSearchColumns = useMemo(
@@ -736,8 +783,8 @@ export default function Warehouses() {
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
-          disabled={companyActionDisabled}
-          title={companyActionTitle}
+          disabled={manageActionDisabled}
+          title={manageActionTitle}
         >
           Crear almacen
         </SystemButton>
@@ -798,7 +845,7 @@ export default function Warehouses() {
       />
 
       <WarehouseFormModal
-        open={openCreate || Boolean(editingWarehouseId)}
+        open={(openCreate ? canCreateWarehouses : canUpdateWarehouses) && (openCreate || Boolean(editingWarehouseId))}
         mode={editingWarehouseId ? "edit" : "create"}
         warehouseId={editingWarehouseId}
         onClose={closeFormModal}
@@ -808,7 +855,7 @@ export default function Warehouses() {
       />
 
       <AlertModal
-        open={Boolean(deletingWarehouseId)}
+        open={canDeleteWarehouses && Boolean(deletingWarehouseId)}
         type={warehousePendingToggle?.isActive ? "warning" : "restore"}
         title={warehousePendingToggle?.isActive ? "Desactivar almacen" : "Restaurar almacen"}
         message={
@@ -829,6 +876,7 @@ export default function Warehouses() {
         onClose={closeLocationsModal}
         primaryColor={PRIMARY}
         primaryHover="#1aa392"
+        canManageLocations={canManageWarehouseLocations}
       />
 
       <WarehouseStockModal

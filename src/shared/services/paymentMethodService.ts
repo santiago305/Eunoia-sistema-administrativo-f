@@ -18,6 +18,7 @@ import type {
   SupplierMethod,
   SupplierMethodRelation,
   UpdatePaymentMethodDto,
+  UpdateSupplierMethodDto,
 } from "@/features/payment-methods/types/paymentMethod";
 
 type ApiEnvelope<T> = {
@@ -109,6 +110,17 @@ export const createSupplierMethod = async (
   payload: CreateSupplierMethodDto
 ): Promise<SupplierMethod> => {
   const response = await axiosInstance.post<ApiEnvelope<SupplierMethod>>(API_SUPPLIER_METHODS_GROUP.create, payload);
+  return unwrapApiData(response.data);
+};
+
+export const updateSupplierMethod = async (
+  supplierMethodId: string,
+  payload: UpdateSupplierMethodDto,
+): Promise<SupplierMethod> => {
+  const response = await axiosInstance.patch<ApiEnvelope<SupplierMethod>>(
+    API_SUPPLIER_METHODS_GROUP.byId(supplierMethodId),
+    payload,
+  );
   return unwrapApiData(response.data);
 };
 

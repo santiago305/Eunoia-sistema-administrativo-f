@@ -42,6 +42,7 @@ export type WarehouseLocationsModalProps = {
   onClose: () => void;
   primaryColor: string;
   primaryHover: string;
+  canManageLocations: boolean;
 };
 
 export function WarehouseLocationsModal({
@@ -50,6 +51,7 @@ export function WarehouseLocationsModal({
   onClose,
   primaryColor,
   primaryHover,
+  canManageLocations,
 }: WarehouseLocationsModalProps) {
   const shouldReduceMotion = useReducedMotion();
   const { showFeedback, clearFeedback } = useFeedbackToast();
@@ -131,6 +133,8 @@ export function WarehouseLocationsModal({
   }, [loadLocations, open]);
 
   const openEdit = useCallback(async (id: string) => {
+    if (!canManageLocations) return;
+
     try {
       const row = await getLocationById(id);
       setEditForm({
@@ -143,9 +147,10 @@ export function WarehouseLocationsModal({
     } catch {
       showFeedback(errorResponse("No se pudo cargar la ubicacion"));
     }
-  }, [showFeedback]);
+  }, [canManageLocations, showFeedback]);
 
   const saveCreate = async () => {
+    if (!canManageLocations) return;
     if (!createForm.warehouseId || !createForm.code.trim()) return;
 
     try {
@@ -164,6 +169,7 @@ export function WarehouseLocationsModal({
   };
 
   const saveEdit = async () => {
+    if (!canManageLocations) return;
     if (!editingLocationId) return;
 
     try {
@@ -183,6 +189,7 @@ export function WarehouseLocationsModal({
   };
 
   const confirmToggleActive = async () => {
+    if (!canManageLocations) return;
     if (!deletingLocationId) return;
 
     try {
@@ -198,20 +205,21 @@ export function WarehouseLocationsModal({
   };
 
   const columns = useMemo<DataTableColumn<Location>[]>(
-    () => [
-      {
+    () => {
+      const baseColumns: DataTableColumn<Location>[] = [
+        {
         id: "code",
         header: "Codigo",
         accessorKey: "code",
         className: "font-medium",
         cardTitle: true,
-      },
-      {
+        },
+        {
         id: "description",
         header: "Descripcion",
         cell: (row) => <span className="text-black/70">{row.description ?? "-"}</span>,
-      },
-      {
+        },
+        {
         id: "status",
         header: "Estado",
         cell: (row) => (
@@ -227,8 +235,14 @@ export function WarehouseLocationsModal({
         headerClassName: "text-center [&>div]:justify-center",
         className: "text-center",
         sortAccessor: (row) => Number(row.isActive),
-      },
-      {
+        },
+      ];
+
+      if (!canManageLocations) return baseColumns;
+
+      return [
+        ...baseColumns,
+        {
         id: "actions",
         header: "Acciones",
         stopRowClick: true,
@@ -260,9 +274,10 @@ export function WarehouseLocationsModal({
         headerClassName: "text-right [&>div]:justify-end",
         hideable: false,
         sortable: false,
-      },
-    ],
-    [openEdit],
+        },
+      ];
+    },
+    [canManageLocations, openEdit],
   );
 
   const safePage = Math.max(1, pagination.page || page);
@@ -278,52 +293,54 @@ export function WarehouseLocationsModal({
         onClose={onClose}
       >
         <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_120px]">
-            <FloatingInput
-              label="Codigo"
-              name="location-create-code"
-              value={createForm.code}
-              onChange={(e) =>
-                setCreateForm((prev) => ({
-                  ...prev,
-                  code: e.target.value,
-                }))
-              }
-            />
+          {canManageLocations ? (
+            <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_120px]">
+              <FloatingInput
+                label="Codigo"
+                name="location-create-code"
+                value={createForm.code}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    code: e.target.value,
+                  }))
+                }
+              />
 
-            <FloatingInput
-              label="Descripcion"
-              name="location-create-description"
-              value={createForm.description}
-              onChange={(e) =>
-                setCreateForm((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-            />
+              <FloatingInput
+                label="Descripcion"
+                name="location-create-description"
+                value={createForm.description}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+              />
 
-            <div className="flex items-end">
-              <SystemButton
-                size="sm"
-                className="h-10 w-full text-sm"
-                style={{
-                  backgroundColor: primaryColor,
-                  borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                }}
-                onClick={() => void saveCreate()}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryColor;
-                }}
-                disabled={!canCreate}
-              >
-                Crear
-              </SystemButton>
+              <div className="flex items-end">
+                <SystemButton
+                  size="sm"
+                  className="h-10 w-full text-sm"
+                  style={{
+                    backgroundColor: primaryColor,
+                    borderColor: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                  }}
+                  onClick={() => void saveCreate()}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = primaryColor;
+                  }}
+                  disabled={!canCreate}
+                >
+                  Crear
+                </SystemButton>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <DataTable
             tableId={`warehouse-locations-${warehouse.warehouseId}`}
@@ -346,7 +363,7 @@ export function WarehouseLocationsModal({
         </div>
       </Modal>
 
-      {editingLocationId ? (
+      {canManageLocations && editingLocationId ? (
         <Modal
           open={Boolean(editingLocationId)}
           title="Editar ubicacion"
@@ -379,7 +396,7 @@ export function WarehouseLocationsModal({
       ) : null}
 
       <AlertModal
-        open={Boolean(deletingLocationId)}
+        open={canManageLocations && Boolean(deletingLocationId)}
         type={nextActiveState ? "restore" : "warning"}
         title={nextActiveState ? "Restaurar ubicacion" : "Desactivar ubicacion"}
         message={

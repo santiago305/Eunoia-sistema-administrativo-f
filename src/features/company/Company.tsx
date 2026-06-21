@@ -31,6 +31,7 @@ import {
   uploadCompanyLogo,
 } from "@/shared/services/companyService";
 import { useCompany } from "@/shared/hooks/useCompany";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { BankAccountListModal } from "./components/BankAccountListModal";
 
@@ -44,6 +45,7 @@ export default function CompanyPage() {
     checked: companyChecked,
     loading: companyLoading,
   } = useCompany();
+  const { can } = usePermissions();
 
   const [savingLogo, setSavingLogo] = useState(false);
   const [savingIsotype, setSavingIsotype] = useState(false);
@@ -73,6 +75,10 @@ export default function CompanyPage() {
     [company?.certPath],
   );
   const displayName = useMemo(() => company?.name ?? "Empresa", [company?.name]);
+  const canManageCompany = can("company.manage");
+  const manageCompanyTitle = canManageCompany
+    ? undefined
+    : "Necesitas permiso company.manage";
 
   const ubigeoSelection = useMemo(
     () => ({
@@ -139,6 +145,11 @@ export default function CompanyPage() {
   const loading = companyLoading || !companyChecked;
 
   const onPickLogo = async (file: File) => {
+    if (!canManageCompany) {
+      showFeedback(errorResponse("No tienes permiso para actualizar el logo"));
+      return;
+    }
+
     clearFeedback();
     setSavingLogo(true);
 
@@ -156,6 +167,11 @@ export default function CompanyPage() {
   };
 
   const onPickCert = async (file: File) => {
+    if (!canManageCompany) {
+      showFeedback(errorResponse("No tienes permiso para actualizar el certificado"));
+      return;
+    }
+
     clearFeedback();
     setSavingCert(true);
 
@@ -173,6 +189,11 @@ export default function CompanyPage() {
   };
 
   const onPickIsotype = async (file: File) => {
+    if (!canManageCompany) {
+      showFeedback(errorResponse("No tienes permiso para actualizar el isotipo"));
+      return;
+    }
+
     clearFeedback();
     setSavingIsotype(true);
 
@@ -191,6 +212,12 @@ export default function CompanyPage() {
 
   const onSubmitCompany = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!canManageCompany) {
+      showFeedback(errorResponse("No tienes permiso para guardar la empresa"));
+      return;
+    }
+
     clearFeedback();
     setSavingCompany(true);
 
@@ -240,7 +267,7 @@ export default function CompanyPage() {
                 title="Logo"
                 subtitle="Se mostrará en documentos y pantallas."
               />
-              <div className="p-5 pt-0">
+              <div className="p-5 pt-0" title={manageCompanyTitle}>
                 <CompanyLogoBlock
                   loading={loading}
                   name={displayName}
@@ -251,9 +278,9 @@ export default function CompanyPage() {
                   onPickLogo={onPickLogo}
                   onPickIsotype={onPickIsotype}
                   onPickCert={onPickCert}
-                  disabled={savingLogo || !hasCompany}
-                  isotypeDisabled={savingIsotype || !hasCompany}
-                  certDisabled={savingCert || !hasCompany}
+                  disabled={savingLogo || !hasCompany || !canManageCompany}
+                  isotypeDisabled={savingIsotype || !hasCompany || !canManageCompany}
+                  certDisabled={savingCert || !hasCompany || !canManageCompany}
                   companyPrimary={COMPANY_PRIMARY}
                   certLabelMaxChars={20}
                 />
@@ -300,7 +327,7 @@ export default function CompanyPage() {
                   formErrors={formErrors}
                   ubigeoSelection={ubigeoSelection}
                   loading={loading}
-                  saving={savingCompany}
+                  saving={savingCompany || !canManageCompany}
                   onSubmit={onSubmitCompany}
                   onFieldChange={updateField}
                   onUbigeoChange={handleUbigeoChange}

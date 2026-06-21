@@ -60,11 +60,17 @@ export default function Providers() {
 
   const { hasCompany } = useCompany();
   const { can } = usePermissions();
-  const canManageSuppliers = can("suppliers.manage");
-  const canReadPaymentMethods = can("payment-methods.read");
-  const canManagePaymentMethods = can("payment-methods.manage");
+  const canReadSuppliers = can("suppliers.read");
+  const canCreateSuppliers = can("suppliers.create") || can("suppliers.manage");
+  const canUpdateSuppliers = can("suppliers.update") || can("suppliers.manage");
+  const canDeleteSuppliers = can("suppliers.delete") || can("suppliers.manage");
+  const canManageSupplierPaymentMethods = can("suppliers.payment_methods.manage");
   const companyActionDisabled = !hasCompany;
-  const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
+  const manageSupplierTitle = !hasCompany
+    ? "Primero registra la empresa."
+    : !canCreateSuppliers
+      ? "No tienes permiso para crear proveedores."
+      : undefined;
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,13 +123,15 @@ export default function Providers() {
   );
 
   const loadSearchState = useCallback(async () => {
+    if (!canReadSuppliers) return;
+
     try {
       const response = await getProviderSearchState();
       setSearchState(response);
     } catch {
       showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, []);
+  }, [canReadSuppliers]);
 
   const submitSearch = useCallback(() => {
     startTransition(() => {
@@ -147,6 +155,19 @@ export default function Providers() {
   }, []);
 
   const loadSuppliers = useCallback(async () => {
+    if (!canReadSuppliers) {
+      setSuppliers([]);
+      setServerPagination({
+        total: 0,
+        page: 1,
+        limit: paginationState.pageSize,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -190,7 +211,7 @@ export default function Providers() {
     } finally {
       setLoading(false);
     }
-  }, [executedSnapshot, loadSearchState, page, paginationState.pageSize]);
+  }, [canReadSuppliers, executedSnapshot, loadSearchState, page, paginationState.pageSize]);
 
   useEffect(() => {
     void loadSuppliers();
@@ -201,16 +222,16 @@ export default function Providers() {
   }, [loadSearchState]);
 
   const startCreate = useCallback(() => {
-    if (!canManageSuppliers) return;
+    if (!canCreateSuppliers) return;
     setEditingSupplierId(null);
     setOpenCreate(true);
-  }, [canManageSuppliers]);
+  }, [canCreateSuppliers]);
 
-  const openEdit = useCallback((supplierId: string) => {
-    if (!canManageSuppliers) return;
+  const openDetails = useCallback((supplierId: string) => {
+    if (!canReadSuppliers && !canUpdateSuppliers) return;
     setOpenCreate(false);
     setEditingSupplierId(supplierId);
-  }, [canManageSuppliers]);
+  }, [canReadSuppliers, canUpdateSuppliers]);
 
   const supplierPendingToggle = useMemo(
     () =>
@@ -222,6 +243,7 @@ export default function Providers() {
 
   const confirmToggleActive = useCallback(async () => {
     if (!supplierPendingToggle || togglingStatus) return;
+    if (!canDeleteSuppliers) return;
 
     const nextActiveState = !supplierPendingToggle.isActive;
 
@@ -245,7 +267,7 @@ export default function Providers() {
     } finally {
       setTogglingStatus(false);
     }
-  }, [showFeedback, supplierPendingToggle, togglingStatus]);
+  }, [canDeleteSuppliers, showFeedback, supplierPendingToggle, togglingStatus]);
 
   const handleCreateSaved = useCallback(() => {
     if (paginationState.pageIndex === 0) {
@@ -330,15 +352,15 @@ export default function Providers() {
                 id: "edit",
                 label: "Detalles",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
-                hidden: !canManageSuppliers,
-                onClick: () => openEdit(row.supplierId),
+                hidden: !canReadSuppliers && !canUpdateSuppliers,
+                onClick: () => openDetails(row.supplierId),
                 disabled: companyActionDisabled,
               },
               {
                 id: "methods",
                 label: "Metodos de pago",
                 icon: <IconPaymentMethod />,
-                hidden: !canReadPaymentMethods,
+                hidden: !canManageSupplierPaymentMethods,
                 onClick: () => setMethodSupplierId(row.supplierId),
                 disabled: companyActionDisabled,
               },
@@ -347,7 +369,7 @@ export default function Providers() {
                 label: row.isActive ? "Desactivar" : "Reactivar",
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: row.isActive,
-                hidden: !canManageSuppliers,
+                hidden: !canDeleteSuppliers,
                 className: row.isActive
                   ? "text-rose-700 hover:bg-rose-50"
                   : "text-cyan-700 hover:bg-cyan-50",
@@ -385,7 +407,15 @@ export default function Providers() {
         hideable: false,
       },
     ],
-    [canManageSuppliers, canReadPaymentMethods, companyActionDisabled, getSupplierDisplayName, openEdit],
+    [
+      canDeleteSuppliers,
+      canManageSupplierPaymentMethods,
+      canReadSuppliers,
+      canUpdateSuppliers,
+      companyActionDisabled,
+      getSupplierDisplayName,
+      openDetails,
+    ],
   );
 
   const smartSearchColumns = useMemo(
@@ -541,8 +571,8 @@ export default function Providers() {
             borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
             boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
           }}
-          disabled={companyActionDisabled || !canManageSuppliers}
-          title={companyActionTitle}
+          disabled={companyActionDisabled || !canCreateSuppliers}
+          title={manageSupplierTitle}
         >
           Crear proveedor
         </SystemButton>
@@ -598,7 +628,7 @@ export default function Providers() {
       />
 
         <SupplierFormModal
-        open={openCreate && canManageSuppliers}
+        open={openCreate && canCreateSuppliers}
         mode="create"
         onClose={() => setOpenCreate(false)}
         onSaved={handleCreateSaved}
@@ -606,16 +636,17 @@ export default function Providers() {
       />
 
       <SupplierFormModal
-        open={Boolean(editingSupplierId) && canManageSuppliers}
+        open={Boolean(editingSupplierId) && (canReadSuppliers || canUpdateSuppliers)}
         mode="edit"
         supplierId={editingSupplierId}
+        readonly={!canUpdateSuppliers}
         onClose={() => setEditingSupplierId(null)}
         onSaved={handleEditSaved}
         primaryColor={PRIMARY}
       />
 
       <AlertModal
-        open={Boolean(toggleSupplierId) && canManageSuppliers}
+        open={Boolean(toggleSupplierId) && canDeleteSuppliers}
         type={supplierPendingToggle?.isActive ? "warning" : "restore"}
         title={supplierPendingToggle?.isActive ? "Desactivar proveedor" : "Reactivar proveedor"}
         message={
@@ -631,11 +662,10 @@ export default function Providers() {
         }}
       />
 
-      {methodSupplierId && canReadPaymentMethods && (
+      {methodSupplierId && canManageSupplierPaymentMethods && (
         <ProviderMethodListModal
           title="Metodos de pago del proveedor"
           supplierId={methodSupplierId}
-          canManagePaymentMethods={canManagePaymentMethods}
           close={() => setMethodSupplierId(null)}
           className="w-[600px] max-h-[600px]"
         />

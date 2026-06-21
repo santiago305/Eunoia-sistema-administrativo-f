@@ -46,7 +46,6 @@ import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { ProductionOrderDetailModal } from "@/features/production/components/ProductionOrderDetailModal";
 import { ProductionOrderFormModal } from "@/features/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/shared/hooks/useCompany";
-import { useAuth } from "@/shared/hooks/useAuth";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { ProductionSmartSearchPanel } from "@/features/production/components/ProductionSmartSearchPanel";
 import { AlertModal } from "@/shared/components/components/AlertModal";
@@ -109,17 +108,20 @@ export default function Production() {
   const showFeedbackRef = useRef(showFeedback);
   useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
   const { hasCompany } = useCompany();
-  const { userRole } = useAuth();
   const { can } = usePermissions();
-  const canReadProduction = can("production.read");
+  const canViewProductionDetail = can("production.view_detail");
+  const canViewProductionCreatorInfo = can("production.view_creator_info");
   const canCreateProduction = can("production.create");
   const canUpdateProduction = can("production.update");
+  const canEditDraftProduction = can("production.edit_draft") || canUpdateProduction;
+  const canEditProcessedProduction = can("production.edit_processed") || canUpdateProduction;
   const canStartProduction = can("production.start");
   const canCloseProduction = can("production.close");
   const canCancelProduction = can("production.cancel");
   const canExtraTimeProduction = can("production.extra-time");
   const canExportProduction = can("production.export");
   const canUploadProductionImage = can("production.image.upload");
+  const canUploadExtraProductionImage = can("production.image.upload_extra");
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
@@ -352,13 +354,20 @@ export default function Production() {
     }
   };
 
-  const handleEdit = useCallback((id: string) => {
+  const canEditProductionOrder = useCallback((order?: ProductionOrder | null) => {
+    const status = order?.status ?? ProductionStatus.DRAFT;
+    if (status === ProductionStatus.DRAFT) return canEditDraftProduction;
+    return canEditProcessedProduction;
+  }, [canEditDraftProduction, canEditProcessedProduction]);
+
+  const handleEdit = useCallback((order: ProductionOrder) => {
+    const id = order.productionId ?? order.id;
     if (!id) return;
-    if (!canUpdateProduction) return;
+    if (!canEditProductionOrder(order)) return;
     setFormMode("edit");
     setEditingProductionId(id);
     setOpenFormModal(true);
-  }, [canUpdateProduction]);
+  }, [canEditProductionOrder]);
 
   const handleCreate = () => {
     if (!canCreateProduction) return;
@@ -382,6 +391,7 @@ export default function Production() {
   const handleOpenDetail = useCallback(async (order: ProductionOrder) => {
     const productionId = order.productionId ?? order.id;
     if (!productionId) return;
+    if (!canViewProductionDetail) return;
 
     clearFeedback();
     setOpenDetailModal(true);
@@ -405,7 +415,7 @@ export default function Production() {
     } finally {
       setDetailLoading(false);
     }
-  }, [clearFeedback, showFeedback]);
+  }, [canViewProductionDetail, clearFeedback, showFeedback]);
 
   const handleUploadCompletedPhoto = useCallback(async (file: File) => {
     const productionId = completedPhotoOrder?.productionId ?? completedPhotoOrder?.id;
@@ -473,7 +483,7 @@ export default function Production() {
       registro: formatDateTime(order.createdAt),
       serie: order.serie?.code ? `${order.serie.code} - ${order.correlative}` : "-",
       referencia: order.reference || "-",
-      usuario: order.createdByName ?? order.createdBy ?? "-",
+      usuario: canViewProductionCreatorInfo ? order.createdByName ?? order.createdBy ?? "-" : "-",
       almacenOrigen: order.fromWarehouse?.name ?? "-",
       almacenDestino: order.toWarehouse?.name ?? "-",
       estado: order.status ?? ProductionStatus.DRAFT,
@@ -481,7 +491,7 @@ export default function Production() {
       termino: formatDateTime(order.manufactureDate),
       original: order,
     }));
-  }, [orders]);
+  }, [canViewProductionCreatorInfo, orders]);
 
   const columns = useMemo<DataTableColumn<ProductionRow>[]>(() => {
     return [
@@ -503,12 +513,12 @@ export default function Production() {
         accessorKey: "referencia",
         sortable: false,
       },
-      {
+      ...(canViewProductionCreatorInfo ? [{
         id: "usuario",
         header: "Usuario",
         accessorKey: "usuario",
         sortable: false,
-      },
+      } satisfies DataTableColumn<ProductionRow>] : []),
       {
         id: "almacenOrigen",
         header: "Almacen origen",
@@ -588,7 +598,7 @@ export default function Production() {
           return (
             <div className="flex justify-center">
               <ActionsPopover
-                itemClassName="justify-start"
+                itemClassName="justify-start mr-4"
                 actions={[
                   {
                     id: "start",
@@ -620,15 +630,15 @@ export default function Production() {
                     id: "edit",
                     label: "Editar",
                     icon: <Pencil className="h-4 w-4 text-black/60" />,
-                    hidden: order.status !== ProductionStatus.DRAFT || !canUpdateProduction,
-                    onClick: () => handleEdit(order.productionId ?? ""),
+                    hidden: order.status !== ProductionStatus.DRAFT || !canEditProductionOrder(order),
+                    onClick: () => handleEdit(order),
                     disabled: companyActionDisabled,
                   },
                   {
                     id: "pdf",
                     label: "PDF",
                     icon: <FileText className="h-4 w-4 text-black/60" />,
-                    hidden: !canReadProduction,
+                    hidden: !canViewProductionDetail,
                     onClick: () => openProductionPdf(order.productionId ?? ""),
                   },
                   {
@@ -651,7 +661,7 @@ export default function Production() {
         },
       },
     ];
-  }, [canCancelProduction, canCloseProduction, canExtraTimeProduction, canReadProduction, canStartProduction, canUpdateProduction, companyActionDisabled, currentNowIso, handleClose, handleEdit, loadOrders, openProductionPdf]);
+  }, [canCancelProduction, canCloseProduction, canEditProductionOrder, canExtraTimeProduction, canStartProduction, canViewProductionCreatorInfo, canViewProductionDetail, companyActionDisabled, currentNowIso, handleClose, handleEdit, loadOrders, openProductionPdf]);
 
   const smartSearchColumns = useMemo(
     () => buildProductionSmartSearchColumns(searchState),
@@ -897,6 +907,7 @@ export default function Production() {
           }}
           onPageChange={setPage}
           onRowClick={(row) => {
+            if (!canViewProductionDetail) return;
             void handleOpenDetail(row.original);
           }}
         />
@@ -910,7 +921,7 @@ export default function Production() {
           }}
           loading={detailLoading}
           order={detailOrder}
-          canAdminUploadMissingPhoto={canUploadProductionImage || (userRole ?? "").toLowerCase() === "admin"}
+          canUploadExtraProductionImage={canUploadExtraProductionImage}
           onUploadedPhoto={async () => {
             const id = detailOrder?.productionId ?? detailOrder?.id;
             if (!id) return;
@@ -976,7 +987,7 @@ export default function Production() {
         />
 
         <ProductionOrderFormModal
-          open={openFormModal && (formMode === "create" ? canCreateProduction : canUpdateProduction)}
+          open={openFormModal && (formMode === "create" ? canCreateProduction : canEditDraftProduction)}
           mode={formMode}
           productionId={editingProductionId}
           onClose={handleCloseFormModal}
@@ -993,7 +1004,7 @@ export default function Production() {
           onConfirm={handleAddExtraTime}
         />
         <ProductionCompletionPhotoModal
-          open={Boolean(completedPhotoOrder)}
+          open={canUploadProductionImage && Boolean(completedPhotoOrder)}
           loading={completedPhotoLoading}
           onClose={() => setCompletedPhotoOrder(null)}
           onConfirm={handleUploadCompletedPhoto}

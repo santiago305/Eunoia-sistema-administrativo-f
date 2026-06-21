@@ -13,6 +13,7 @@ export type UpdatePaymentMethodDto = z.infer<typeof updatePaymentMethodSchema>;
 export type SetPaymentMethodActiveDto = z.infer<typeof setPaymentMethodActiveSchema>;
 export type CreateCompanyMethodDto = z.infer<typeof createCompanyMethodSchema>;
 export type CreateSupplierMethodDto = z.infer<typeof createSupplierMethodSchema>;
+export type UpdateSupplierMethodDto = Partial<CreateSupplierMethodDto>;
 export type ListPaymentMethodsQuery = z.infer<typeof listPaymentMethodsQuerySchema>;
 
 export type PaymentMethod = {

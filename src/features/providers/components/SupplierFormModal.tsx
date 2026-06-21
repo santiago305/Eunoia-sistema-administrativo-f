@@ -23,6 +23,7 @@ type SupplierFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   supplierId?: string | null;
+  readonly?: boolean;
   onClose: () => void;
   onSaved?: () => void;
   primaryColor?: string;
@@ -74,6 +75,7 @@ export function SupplierFormModal({
   open,
   mode,
   supplierId,
+  readonly = false,
   onClose,
   onSaved,
   primaryColor = "hsl(var(--primary))",
@@ -88,7 +90,7 @@ export function SupplierFormModal({
 
   const requestedSupplierIdRef = useRef<string | null>(null);
 
-  const canSave = Boolean(form.documentType.trim() && form.documentNumber.trim());
+  const canSave = !readonly && Boolean(form.documentType.trim() && form.documentNumber.trim());
 
   const fieldStyle: CSSProperties = {
     "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
@@ -155,7 +157,7 @@ export function SupplierFormModal({
   }, [open, mode, supplierId]);
 
   const lookupIdentity = async () => {
-    if (!canSave || lookupLoading) return;
+    if (readonly || !canSave || lookupLoading) return;
 
     setError(null);
     clearFeedback();
@@ -214,7 +216,7 @@ export function SupplierFormModal({
   };
 
   const saveSupplier = async () => {
-    if (!canSave || saving || loading) return;
+    if (readonly || !canSave || saving || loading) return;
 
     setError(null);
     setSaving(true);
@@ -257,8 +259,8 @@ export function SupplierFormModal({
         setForm={setForm}
         primaryColor={primaryColor}
         onLookupIdentity={lookupIdentity}
-        lookupDisabled={lookupLoading || !canSave}
-        disabled={saving || loading}
+        lookupDisabled={readonly || lookupLoading || !canSave}
+        disabled={readonly || saving || loading}
         fieldStyle={fieldStyle}
       />
 
@@ -266,18 +268,20 @@ export function SupplierFormModal({
 
       <div className="mt-2 flex justify-end gap-2">
         <SystemButton variant="outline" size="md" onClick={onClose} disabled={saving}>
-          Cancelar
+          {readonly ? "Cerrar" : "Cancelar"}
         </SystemButton>
 
-        <SystemButton
-          size="md"
-          onClick={saveSupplier}
-          disabled={!canSave || saving || loading}
-          loading={saving}
-          style={saveButtonStyle}
-        >
-          {saving ? "Guardando..." : mode === "edit" ? "Guardar cambios" : "Guardar"}
-        </SystemButton>
+        {!readonly && (
+          <SystemButton
+            size="md"
+            onClick={saveSupplier}
+            disabled={!canSave || saving || loading}
+            loading={saving}
+            style={saveButtonStyle}
+          >
+            {saving ? "Guardando..." : mode === "edit" ? "Guardar cambios" : "Guardar"}
+          </SystemButton>
+        )}
       </div>
     </Modal>
   );

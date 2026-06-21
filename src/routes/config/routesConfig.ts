@@ -55,7 +55,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.rowMaterialTransfer, name: "rowMaterialTransfer", isProtected: true, permissionsAllowed: ["page.material-transfers.view"] },
   { path: RoutesPaths.KardexPrima, name: "kardexPrima", isProtected: true, permissionsAllowed: ["page.material-movements.view"] },
 
-  { path: RoutesPaths.providers, name: "providers", isProtected: true, permissionsAllowed: ["page.providers.view"] },
+  { path: RoutesPaths.providers, name: "providers", isProtected: true, permissionsAllowed: ["page.suppliers.view"] },
   { path: RoutesPaths.clients, name: "clients", isProtected: true, permissionsAllowed: ["clients.read"] },
   { path: RoutesPaths.agencies, name: "agencies", isProtected: true, permissionsAllowed: ["agencies.read"] },
   { path: RoutesPaths.sources, name: "sources", isProtected: true, permissionsAllowed: ["sources.read"] },
