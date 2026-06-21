@@ -20,6 +20,7 @@ import {
   TRANSITION_PURPOSES,
 } from "@/features/workflows/types/workflow";
 import {
+  associateCancelSaleOrderState,
   buildFullWorkflowRequest,
   createGlobalRunActionTransition,
   createDraftState,
@@ -32,6 +33,7 @@ import {
 } from "@/features/workflows/utils/workflowDraft";
 import {
   applyTransitionCardConnection,
+  clearTransitionElseBranch,
   getTransitionIdFromCard,
 } from "@/features/workflows/utils/workflowTransitionCard";
 import { getDestinationStateName } from "@/features/workflows/utils/workflowConnections";
@@ -190,9 +192,11 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   const [conditions, setConditions] = useState<ConditionCatalogItem[]>([]);
   const [actions, setActions] = useState<ActionCatalogItem[]>([]);
   const [saleOrderStates, setSaleOrderStates] = useState<SaleOrderState[]>([]);
+  const saleOrderStatesRef = useRef<SaleOrderState[]>([]);
   const [draft, setDraft] = useState<WorkflowDraft>(() =>
     ensureDefaultCancelTransition(createEmptyWorkflowDraft()),
   );
+  const [canvasRevision, setCanvasRevision] = useState(0);
   const [viewportCenter, setViewportCenter] = useState({
     positionX: 0,
     positionY: 0,
@@ -324,20 +328,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     const cancelSaleOrderState = findCancelSaleOrderState(saleOrderStates);
     if (!cancelSaleOrderState?.id) return;
 
-    setDraft((current) => ({
-      ...current,
-      states: current.states.map((state) =>
-        isSystemCancelState(state)
-          ? {
-              ...state,
-              saleOrderStateId: cancelSaleOrderState.id ?? "",
-              name: cancelSaleOrderState.name,
-              code: cancelSaleOrderState.code ?? state.code,
-              color: cancelSaleOrderState.color,
-            }
-          : state,
-      ),
-    }));
+    setDraft((current) => associateCancelSaleOrderState(current, cancelSaleOrderState));
   }, [saleOrderStates]);
 
   const loadCatalogs = useCallback(async () => {
@@ -355,7 +346,12 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
         ]);
 
       setWorkflows(workflowItems);
+      saleOrderStatesRef.current = stateItems;
       setSaleOrderStates(stateItems);
+      const cancelSaleOrderState = findCancelSaleOrderState(stateItems);
+      if (cancelSaleOrderState) {
+        setDraft((current) => associateCancelSaleOrderState(current, cancelSaleOrderState));
+      }
       baseCatalogsLoadedRef.current = true;
     } catch (err) {
       setError(parseApiError(err));
@@ -391,6 +387,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     async (selectedStateId?: string | null) => {
       try {
         const stateItems = await listSaleOrderStates();
+        saleOrderStatesRef.current = stateItems;
         setSaleOrderStates(stateItems);
         if (selectedStateId) setSaleOrderStateId(selectedStateId);
       } catch (err) {
@@ -403,7 +400,14 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
 
-    setDraft(ensureDefaultCancelTransition(createEmptyWorkflowDraft()));
+    const emptyDraft = ensureDefaultCancelTransition(createEmptyWorkflowDraft());
+    const cancelSaleOrderState = findCancelSaleOrderState(saleOrderStatesRef.current);
+    setDraft(
+      cancelSaleOrderState
+        ? associateCancelSaleOrderState(emptyDraft, cancelSaleOrderState)
+        : emptyDraft,
+    );
+    setCanvasRevision((current) => current + 1);
     setSelectedId(null);
     void loadCatalogs();
   }, [loadCatalogs, open]);
@@ -420,7 +424,14 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
   const loadWorkflow = async (id: string) => {
     if (!id) {
-      setDraft(ensureDefaultCancelTransition(createEmptyWorkflowDraft()));
+      const emptyDraft = ensureDefaultCancelTransition(createEmptyWorkflowDraft());
+      const cancelSaleOrderState = findCancelSaleOrderState(saleOrderStates);
+      setDraft(
+        cancelSaleOrderState
+          ? associateCancelSaleOrderState(emptyDraft, cancelSaleOrderState)
+          : emptyDraft,
+      );
+      setCanvasRevision((current) => current + 1);
       setSelectedId(null);
       setError("");
       return;
@@ -432,6 +443,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     try {
       const response = await getWorkflow(id);
       setDraft(ensureDefaultCancelTransition(mapFullWorkflowResponseToDraft(response)));
+      setCanvasRevision((current) => current + 1);
       setSelectedId(null);
     } catch (err) {
       setError(parseApiError(err));
@@ -551,7 +563,14 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
               variant="outline"
               disabled={loading || saving}
               onClick={() => {
-                setDraft(ensureDefaultCancelTransition(createEmptyWorkflowDraft()));
+                const emptyDraft = ensureDefaultCancelTransition(createEmptyWorkflowDraft());
+                const cancelSaleOrderState = findCancelSaleOrderState(saleOrderStates);
+                setDraft(
+                  cancelSaleOrderState
+                    ? associateCancelSaleOrderState(emptyDraft, cancelSaleOrderState)
+                    : emptyDraft,
+                );
+                setCanvasRevision((current) => current + 1);
                 setSelectedId(null);
                 setError("");
               }}
@@ -741,6 +760,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
           <main className="min-w-0 flex-1 bg-slate-50">            
             <WorkflowCanvas
+              key={canvasRevision}
               draft={draft}
               selectedId={selectedId}
               onSelect={setSelectedId}
@@ -820,6 +840,17 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                   };
                 });
               }}
+              onDeleteElseBranch={(transitionId) =>
+                setDraft((current) => ({
+                  ...current,
+                  transitions: current.transitions.map((transition) =>
+                    transition.clientId === transitionId
+                      ? clearTransitionElseBranch(transition)
+                      : transition,
+                  ),
+                }))
+              }
+              onDeleteElement={(id, type) => setPendingRemoval({ id, type })}
             />
           </main>
 
