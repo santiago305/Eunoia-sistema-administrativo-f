@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus } from "lucide-react";
+import { Timer, OctagonAlert, FileText, Pencil, Play, Ban, PackageCheck, Plus, History, Send, CheckCircle, XCircle } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -23,6 +23,12 @@ import {
   getProductionExportPresets,
   getProductionSearchState,
   listProductionOrders,
+  approveCloseProductionOrder,
+  approveStartProductionOrder,
+  rejectCloseProductionOrder,
+  rejectStartProductionOrder,
+  requestCloseProductionOrder,
+  requestStartProductionOrder,
   saveProductionExportPreset,
   saveProductionSearchMetric,
   startProductionOrder,
@@ -51,6 +57,7 @@ import { ProductionSmartSearchPanel } from "@/features/production/components/Pro
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { ExtraTimeModal } from "@/features/production/components/ExtraTimeModal";
 import { ProductionCompletionPhotoModal } from "@/features/production/components/ProductionCompletionPhotoModal";
+import { ProductionHistoryModal } from "@/features/production/components/ProductionHistoryModal";
 import { addProductionExtraTime, uploadProductionImageProdution } from "@/features/production/utils/productionActions";
 import {
   buildProductionSearchChips,
@@ -66,6 +73,22 @@ import {
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
 const PHOTO_MODAL_SKIP_KEY = "production-photo-modal-skipped";
+
+type ProductionApprovalUiAction =
+  | "request-start"
+  | "approve-start"
+  | "reject-start"
+  | "request-close"
+  | "approve-close"
+  | "reject-close";
+
+type PendingApprovalAction = {
+  order: ProductionOrder;
+  action: ProductionApprovalUiAction;
+  title: string;
+  message: string;
+  confirmText: string;
+};
 
 const statusLabels: Record<ProductionStatus, string> = {
   [ProductionStatus.DRAFT]: "Borrador",
@@ -110,14 +133,21 @@ export default function Production() {
   const { hasCompany } = useCompany();
   const { can } = usePermissions();
   const canViewProductionDetail = can("production.view_detail");
+  const canViewProductionHistory = can("production.view_history");
   const canViewProductionCreatorInfo = can("production.view_creator_info");
   const canCreateProduction = can("production.create");
   const canUpdateProduction = can("production.update");
   const canEditDraftProduction = can("production.edit_draft") || canUpdateProduction;
   const canEditProcessedProduction = can("production.edit_processed") || canUpdateProduction;
   const canStartProduction = can("production.start");
+  const canRequestStartProduction = can("production.start.request") && !canStartProduction;
+  const canApproveStartProduction = can("production.approve_start");
   const canCloseProduction = can("production.close");
+  const canRequestCloseProduction = can("production.close.request") && !canCloseProduction;
+  const canApproveCloseProduction = can("production.approve_close");
   const canCancelProduction = can("production.cancel");
+  const canCancelDraftProduction = canCancelProduction && can("production.cancel_draft");
+  const canCancelInProgressProduction = canCancelProduction && can("production.cancel_in_progress");
   const canExtraTimeProduction = can("production.extra-time");
   const canExportProduction = can("production.export");
   const canUploadProductionImage = can("production.image.upload");
@@ -143,7 +173,8 @@ export default function Production() {
   const [editingProductionId, setEditingProductionId] = useState<string | undefined>(undefined);
   const [pendingStartOrder, setPendingStartOrder] = useState<ProductionOrder | null>(null);
   const [pendingCancelOrder, setPendingCancelOrder] = useState<ProductionOrder | null>(null);
-  const [submittingAction, setSubmittingAction] = useState<"start" | "cancel" | null>(null);
+  const [pendingApprovalAction, setPendingApprovalAction] = useState<PendingApprovalAction | null>(null);
+  const [submittingAction, setSubmittingAction] = useState<"start" | "cancel" | ProductionApprovalUiAction | null>(null);
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [detailOrder, setDetailOrder] = useState<ProductionOrder | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -151,6 +182,7 @@ export default function Production() {
   const [extraTimeLoading, setExtraTimeLoading] = useState(false);
   const [completedPhotoOrder, setCompletedPhotoOrder] = useState<ProductionOrder | null>(null);
   const [completedPhotoLoading, setCompletedPhotoLoading] = useState(false);
+  const [historyOrder, setHistoryOrder] = useState<ProductionOrder | null>(null);
   const skippedPhotoRef = useRef<Set<string>>(new Set());
 
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
@@ -354,11 +386,103 @@ export default function Production() {
     }
   };
 
+  const handleProductionApprovalAction = async (pending: PendingApprovalAction) => {
+    const productionId = pending.order.productionId ?? pending.order.id;
+    if (!productionId) return;
+    clearFeedback();
+    setSubmittingAction(pending.action);
+    try {
+      const response =
+        pending.action === "request-start"
+          ? await requestStartProductionOrder(productionId, "Solicitud de procesamiento")
+          : pending.action === "approve-start"
+            ? await approveStartProductionOrder(productionId)
+            : pending.action === "reject-start"
+              ? await rejectStartProductionOrder(productionId, "Solicitud rechazada")
+              : pending.action === "request-close"
+                ? await requestCloseProductionOrder(productionId, "Solicitud de ingreso a almacen")
+                : pending.action === "approve-close"
+                  ? await approveCloseProductionOrder(productionId)
+                  : await rejectCloseProductionOrder(productionId, "Solicitud rechazada");
+
+      showFeedback(successResponse(response.message ?? "Accion registrada"));
+      setPendingApprovalAction(null);
+      await loadOrders();
+    } catch (error) {
+      showFeedback(errorResponse(getApiErrorMessage(error, "No se pudo completar la accion")));
+    } finally {
+      setSubmittingAction(null);
+    }
+  };
+
+  const openProductionApprovalAction = useCallback((
+    order: ProductionOrder,
+    action: ProductionApprovalUiAction,
+  ) => {
+    const copy: Record<ProductionApprovalUiAction, Omit<PendingApprovalAction, "order" | "action">> = {
+      "request-start": {
+        title: "Solicitar procesamiento",
+        message: "Se enviara una solicitud para procesar esta orden de produccion.",
+        confirmText: "Solicitar",
+      },
+      "approve-start": {
+        title: "Aprobar procesamiento",
+        message: "La orden pasara a produccion y se reservaran sus materiales.",
+        confirmText: "Aprobar",
+      },
+      "reject-start": {
+        title: "Rechazar procesamiento",
+        message: "La solicitud pendiente de procesamiento sera rechazada.",
+        confirmText: "Rechazar",
+      },
+      "request-close": {
+        title: "Solicitar ingreso a almacen",
+        message: "Se enviara una solicitud para cerrar la orden e ingresar el stock al almacen.",
+        confirmText: "Solicitar",
+      },
+      "approve-close": {
+        title: "Aprobar ingreso a almacen",
+        message: "La orden se cerrara y se registrara el ingreso al almacen.",
+        confirmText: "Aprobar",
+      },
+      "reject-close": {
+        title: "Rechazar ingreso a almacen",
+        message: "La solicitud pendiente de ingreso a almacen sera rechazada.",
+        confirmText: "Rechazar",
+      },
+    };
+    setPendingApprovalAction({ order, action, ...copy[action] });
+  }, []);
+
   const canEditProductionOrder = useCallback((order?: ProductionOrder | null) => {
     const status = order?.status ?? ProductionStatus.DRAFT;
     if (status === ProductionStatus.DRAFT) return canEditDraftProduction;
     return canEditProcessedProduction;
   }, [canEditDraftProduction, canEditProcessedProduction]);
+
+  const getCancelActionConfig = useCallback((order?: ProductionOrder | null) => {
+    switch (order?.status) {
+      case ProductionStatus.DRAFT:
+        return canCancelDraftProduction
+          ? {
+              label: "Cancelar borrador",
+              title: "Cancelar borrador de producción",
+              confirmText: "Cancelar borrador",
+            }
+          : null;
+      case ProductionStatus.IN_PROGRESS:
+      case ProductionStatus.PARTIAL:
+        return canCancelInProgressProduction
+          ? {
+              label: "Cancelar en proceso",
+              title: "Cancelar producción en proceso",
+              confirmText: "Cancelar en proceso",
+            }
+          : null;
+      default:
+        return null;
+    }
+  }, [canCancelDraftProduction, canCancelInProgressProduction]);
 
   const handleEdit = useCallback((order: ProductionOrder) => {
     const id = order.productionId ?? order.id;
@@ -609,6 +733,30 @@ export default function Production() {
                     disabled: companyActionDisabled,
                   },
                   {
+                    id: "request-start",
+                    label: "Solicitar procesamiento",
+                    icon: <Send className="h-4 w-4 text-black/60" />,
+                    hidden: order.status !== ProductionStatus.DRAFT || !canRequestStartProduction || Boolean(order.pendingApproval),
+                    onClick: () => openProductionApprovalAction(order, "request-start"),
+                    disabled: companyActionDisabled,
+                  },
+                  {
+                    id: "approve-start",
+                    label: "Aprobar procesamiento",
+                    icon: <CheckCircle className="h-4 w-4 text-black/60" />,
+                    hidden: order.pendingApproval?.action !== "PRODUCTION_START" || !canApproveStartProduction,
+                    onClick: () => openProductionApprovalAction(order, "approve-start"),
+                    disabled: companyActionDisabled,
+                  },
+                  {
+                    id: "reject-start",
+                    label: "Rechazar procesamiento",
+                    icon: <XCircle className="h-4 w-4 text-black/60" />,
+                    hidden: order.pendingApproval?.action !== "PRODUCTION_START" || !canApproveStartProduction,
+                    onClick: () => openProductionApprovalAction(order, "reject-start"),
+                    disabled: companyActionDisabled,
+                  },
+                  {
                     id: "close",
                     label: "Ingresar Almacen",
                     icon: <PackageCheck className="h-4 w-4 text-black/60" />,
@@ -616,6 +764,33 @@ export default function Production() {
                       order.status !== ProductionStatus.IN_PROGRESS &&
                       order.status !== ProductionStatus.PARTIAL || !canCloseProduction,
                     onClick: () => handleClose(order.productionId ?? ""),
+                    disabled: companyActionDisabled,
+                  },
+                  {
+                    id: "request-close",
+                    label: "Solicitar ingreso a almacen",
+                    icon: <Send className="h-4 w-4 text-black/60" />,
+                    hidden:
+                      (order.status !== ProductionStatus.IN_PROGRESS && order.status !== ProductionStatus.PARTIAL) ||
+                      !canRequestCloseProduction ||
+                      Boolean(order.pendingApproval),
+                    onClick: () => openProductionApprovalAction(order, "request-close"),
+                    disabled: companyActionDisabled,
+                  },
+                  {
+                    id: "approve-close",
+                    label: "Aprobar ingreso",
+                    icon: <CheckCircle className="h-4 w-4 text-black/60" />,
+                    hidden: order.pendingApproval?.action !== "PRODUCTION_CLOSE" || !canApproveCloseProduction,
+                    onClick: () => openProductionApprovalAction(order, "approve-close"),
+                    disabled: companyActionDisabled,
+                  },
+                  {
+                    id: "reject-close",
+                    label: "Rechazar ingreso",
+                    icon: <XCircle className="h-4 w-4 text-black/60" />,
+                    hidden: order.pendingApproval?.action !== "PRODUCTION_CLOSE" || !canApproveCloseProduction,
+                    onClick: () => openProductionApprovalAction(order, "reject-close"),
                     disabled: companyActionDisabled,
                   },
                   {
@@ -642,12 +817,17 @@ export default function Production() {
                     onClick: () => openProductionPdf(order.productionId ?? ""),
                   },
                   {
+                    id: "history",
+                    label: "Historial",
+                    icon: <History className="h-4 w-4 text-black/60" />,
+                    hidden: !canViewProductionHistory,
+                    onClick: () => setHistoryOrder(order),
+                  },
+                  {
                     id: "cancel",
-                    label: "Cancelar",
+                    label: getCancelActionConfig(order)?.label ?? "Cancelar",
                     icon: <Ban className="h-4 w-4 text-black/60" />,
-                    hidden:
-                      order.status === ProductionStatus.CANCELLED ||
-                      order.status === ProductionStatus.COMPLETED || !canCancelProduction,
+                    hidden: !getCancelActionConfig(order),
                     onClick: () => setPendingCancelOrder(order),
                     disabled: companyActionDisabled,
                   },
@@ -661,7 +841,7 @@ export default function Production() {
         },
       },
     ];
-  }, [canCancelProduction, canCloseProduction, canEditProductionOrder, canExtraTimeProduction, canStartProduction, canViewProductionCreatorInfo, canViewProductionDetail, companyActionDisabled, currentNowIso, handleClose, handleEdit, loadOrders, openProductionPdf]);
+  }, [canApproveCloseProduction, canApproveStartProduction, canCloseProduction, canEditProductionOrder, canExtraTimeProduction, canRequestCloseProduction, canRequestStartProduction, canStartProduction, canViewProductionCreatorInfo, canViewProductionDetail, canViewProductionHistory, companyActionDisabled, currentNowIso, getCancelActionConfig, handleClose, handleEdit, loadOrders, openProductionApprovalAction, openProductionPdf]);
 
   const smartSearchColumns = useMemo(
     () => buildProductionSmartSearchColumns(searchState),
@@ -831,20 +1011,22 @@ export default function Production() {
               onExport={handleExport}
             />
           ) : null}
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-            onClick={handleCreate}
-            disabled={companyActionDisabled || !canCreateProduction}
-            title={companyActionTitle}
-          >
-            Nueva orden
-          </SystemButton>
+          {canCreateProduction ? (
+            <SystemButton
+              size="sm"
+              leftIcon={<Plus className="h-4 w-4" />}
+              style={{
+                backgroundColor: PRIMARY,
+                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+              }}
+              onClick={handleCreate}
+              disabled={companyActionDisabled}
+              title={companyActionTitle}
+            >
+              Nueva orden
+            </SystemButton>
+          ) : null}
         </PageActionsRow>
 
         <DataTableSearchChips
@@ -966,15 +1148,15 @@ export default function Production() {
         />
 
         <AlertModal
-          open={canCancelProduction && Boolean(pendingCancelOrder)}
+          open={Boolean(pendingCancelOrder && getCancelActionConfig(pendingCancelOrder))}
           type="warning"
-          title="Cancelar orden de producción"
+          title={getCancelActionConfig(pendingCancelOrder)?.title ?? "Cancelar orden de producción"}
           message={
             pendingCancelOrder
               ? `Estas seguro de cancelar esta orden de produccion${pendingCancelOrder.serie?.code ? ` ${pendingCancelOrder.serie.code}-${pendingCancelOrder.correlative ?? ""}` : ""}?`
               : ""
           }
-          confirmText="Cancelar orden"
+          confirmText={getCancelActionConfig(pendingCancelOrder)?.confirmText ?? "Cancelar orden"}
           loading={submittingAction === "cancel"}
           onClose={() => {
             if (submittingAction === "cancel") return;
@@ -983,6 +1165,23 @@ export default function Production() {
           onConfirm={() => {
             if (!pendingCancelOrder?.productionId) return;
             void handleCancel(pendingCancelOrder.productionId);
+          }}
+        />
+
+        <AlertModal
+          open={Boolean(pendingApprovalAction)}
+          type={pendingApprovalAction?.action.includes("reject") ? "deleted" : "warning"}
+          title={pendingApprovalAction?.title ?? "Confirmar accion"}
+          message={pendingApprovalAction?.message ?? ""}
+          confirmText={pendingApprovalAction?.confirmText ?? "Confirmar"}
+          loading={Boolean(pendingApprovalAction && submittingAction === pendingApprovalAction.action)}
+          onClose={() => {
+            if (pendingApprovalAction && submittingAction === pendingApprovalAction.action) return;
+            setPendingApprovalAction(null);
+          }}
+          onConfirm={() => {
+            if (!pendingApprovalAction) return;
+            void handleProductionApprovalAction(pendingApprovalAction);
           }}
         />
 
@@ -1009,6 +1208,11 @@ export default function Production() {
           onClose={() => setCompletedPhotoOrder(null)}
           onConfirm={handleUploadCompletedPhoto}
           onCancelWithoutPhoto={handleSkipCompletedPhoto}
+        />
+        <ProductionHistoryModal
+          open={canViewProductionHistory && Boolean(historyOrder)}
+          order={historyOrder}
+          onClose={() => setHistoryOrder(null)}
         />
       </div>
     </PageShell>

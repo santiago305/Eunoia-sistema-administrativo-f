@@ -184,6 +184,43 @@ export type ProductionOrder = {
   fromWarehouse?: ProductionOrderWarehouse | null;
   toWarehouse?: ProductionOrderWarehouse | null;
   serie?: ProductionOrderSerie | null;
+  history?: ProductionHistorySummary;
+  pendingApproval?: ProductionApprovalRequest | null;
+};
+
+export type ProductionApprovalAction = "PRODUCTION_START" | "PRODUCTION_CLOSE";
+
+export type ProductionApprovalRequest = {
+  id: string;
+  action: ProductionApprovalAction;
+  requestedByUserId?: string | null;
+  reason?: string | null;
+  createdAt?: string;
+};
+
+export type ProductionHistorySummary = {
+  eventsCount: number;
+  lastEventAt: string | null;
+};
+
+export type ProductionHistoryEvent = {
+  id?: string;
+  productionId?: string;
+  eventType?: string;
+  description?: string;
+  oldValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  performedByUserId?: string | null;
+  performedByUserName?: string | null;
+  targetUserId?: string | null;
+  targetUserName?: string | null;
+  createdAt?: string;
+};
+
+export type ProductionTimelineResponse = {
+  productionId: string;
+  events: ProductionHistoryEvent[];
 };
 
 export type ProductionOrderWarehouse = {

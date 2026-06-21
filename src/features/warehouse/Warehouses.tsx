@@ -85,10 +85,8 @@ export default function Warehouses() {
   const canManageWarehouseLocations = can("warehouses.locations.manage");
   const companyActionDisabled = !hasCompany;
   const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
-  const manageActionDisabled = companyActionDisabled || !canCreateWarehouses;
-  const manageActionTitle = companyActionTitle ?? (
-    canCreateWarehouses ? undefined : "No tienes permiso para crear almacenes."
-  );
+  const manageActionDisabled = companyActionDisabled;
+  const manageActionTitle = companyActionTitle;
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -774,20 +772,22 @@ export default function Warehouses() {
   return (
     <PageShell>
       <PageActionsRow>
-        <SystemButton
-          size="sm"
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={startCreate}
-          style={{
-            backgroundColor: PRIMARY,
-            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-          }}
-          disabled={manageActionDisabled}
-          title={manageActionTitle}
-        >
-          Crear almacen
-        </SystemButton>
+        {canCreateWarehouses ? (
+          <SystemButton
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={startCreate}
+            style={{
+              backgroundColor: PRIMARY,
+              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+            }}
+            disabled={manageActionDisabled}
+            title={manageActionTitle}
+          >
+            Crear almacen
+          </SystemButton>
+        ) : null}
       </PageActionsRow>
 
       <DataTableSearchChips

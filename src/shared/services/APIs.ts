@@ -320,7 +320,15 @@ export const API_PRODUCTION_ORDERS_GROUP = {
   update: (id: string) => `/production-orders/${id}`,
   start: (id: string) => `/production-orders/${id}/start`,
   close: (id: string) => `/production-orders/${id}/close`,
+  requestStart: (id: string) => `/production-orders/${id}/request-start`,
+  approveStart: (id: string) => `/production-orders/${id}/approve-start`,
+  rejectStart: (id: string) => `/production-orders/${id}/reject-start`,
+  requestClose: (id: string) => `/production-orders/${id}/request-close`,
+  approveClose: (id: string) => `/production-orders/${id}/approve-close`,
+  rejectClose: (id: string) => `/production-orders/${id}/reject-close`,
   cancel: (id: string) => `/production-orders/${id}/cancel`,
+  history: "/production-orders/history",
+  productionHistory: (id: string) => `/production-orders/${id}/history`,
 };
 
 export const API_PAYMENT_GROUP = {

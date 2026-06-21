@@ -6,6 +6,7 @@ import type {
   ProductionOrder,
   ProductionSearchOption,
   ProductionOrderListResponse,
+  ProductionTimelineResponse,
   ProductionSearchSnapshot,
   ProductionSearchStateResponse,
   ProductionExportColumn,
@@ -177,8 +178,107 @@ export const closeProductionOrder = async (id: string): Promise<ProductionAction
   return response.data;
 };
 
+export const requestStartProductionOrder = async (
+  id: string,
+  reason?: string,
+): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(
+    API_PRODUCTION_ORDERS_GROUP.requestStart(id),
+    { reason },
+  );
+  return response.data;
+};
+
+export const approveStartProductionOrder = async (
+  id: string,
+  comment?: string,
+): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(
+    API_PRODUCTION_ORDERS_GROUP.approveStart(id),
+    { comment },
+  );
+  return response.data;
+};
+
+export const rejectStartProductionOrder = async (
+  id: string,
+  reason?: string,
+): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(
+    API_PRODUCTION_ORDERS_GROUP.rejectStart(id),
+    { reason },
+  );
+  return response.data;
+};
+
+export const requestCloseProductionOrder = async (
+  id: string,
+  reason?: string,
+): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(
+    API_PRODUCTION_ORDERS_GROUP.requestClose(id),
+    { reason },
+  );
+  return response.data;
+};
+
+export const approveCloseProductionOrder = async (
+  id: string,
+  comment?: string,
+): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(
+    API_PRODUCTION_ORDERS_GROUP.approveClose(id),
+    { comment },
+  );
+  return response.data;
+};
+
+export const rejectCloseProductionOrder = async (
+  id: string,
+  reason?: string,
+): Promise<ProductionActionResponse> => {
+  const response = await axiosInstance.post<ProductionActionResponse>(
+    API_PRODUCTION_ORDERS_GROUP.rejectClose(id),
+    { reason },
+  );
+  return response.data;
+};
+
 export const cancelProductionOrder = async (id: string): Promise<ProductionActionResponse> => {
   const response = await axiosInstance.post<ProductionActionResponse>(API_PRODUCTION_ORDERS_GROUP.cancel(id));
   return response.data;
 };
 
+export const listProductionHistory = async (
+  params: ListProductionOrdersQuery & {
+    eventType?: string;
+    eventFrom?: string;
+    eventTo?: string;
+    performedByUserId?: string;
+  },
+): Promise<ProductionOrderListResponse> => {
+  const requestParams = {
+    ...params,
+    filters:
+      Array.isArray(params.filters) && params.filters.length
+        ? JSON.stringify(params.filters)
+        : typeof params.filters === "string"
+          ? params.filters
+          : undefined,
+  };
+  const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.history, { params: requestParams });
+  return response.data;
+};
+
+export const getProductionTimeline = async (
+  productionId: string,
+  params?: {
+    eventType?: string;
+    performedByUserId?: string;
+    from?: string;
+    to?: string;
+  },
+): Promise<ProductionTimelineResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.productionHistory(productionId), { params });
+  return response.data;
+};

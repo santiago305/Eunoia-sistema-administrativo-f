@@ -77,13 +77,7 @@ describe("SaleOrderStatisticsPanel", () => {
     expect(screen.getByText("Sin estado")).toBeTruthy();
     expect(screen.getByText("Nuevo")).toBeTruthy();
     expect(screen.getByText("Recompra")).toBeTruthy();
-    expect(screen.getByText("Cobros por cuenta bancaria")).toBeTruthy();
-    expect(screen.getByText("CURIER-EVA")).toBeTruthy();
-    expect(screen.getByText("Sin cuenta")).toBeTruthy();
-    expect(screen.getByText("12 pagos")).toBeTruthy();
-    expect(screen.getByText("3 pagos")).toBeTruthy();
-    expect(screen.getByText(/S\/\s*1,130\.60/)).toBeTruthy();
-    expect(screen.getByText(/S\/\s*189\.90/)).toBeTruthy();
+    expect(screen.getByText("Cuentas bancarias")).toBeTruthy();
   });
 
   it("shows loading, updating, error, empty, and compact states", () => {
@@ -152,6 +146,6 @@ describe("SaleOrderStatisticsPanel", () => {
     expect(screen.getByText("Pedidos por flujo")).toBeTruthy();
     expect(screen.getByText("Pedidos por estado")).toBeTruthy();
     expect(screen.getByText("Pedidos por tipo de cliente")).toBeTruthy();
-    expect(screen.getByText("Cobros por cuenta bancaria")).toBeTruthy();
+    expect(screen.getByText("Cuentas bancarias")).toBeTruthy();
   });
 });

@@ -66,11 +66,7 @@ export default function Providers() {
   const canDeleteSuppliers = can("suppliers.delete") || can("suppliers.manage");
   const canManageSupplierPaymentMethods = can("suppliers.payment_methods.manage");
   const companyActionDisabled = !hasCompany;
-  const manageSupplierTitle = !hasCompany
-    ? "Primero registra la empresa."
-    : !canCreateSuppliers
-      ? "No tienes permiso para crear proveedores."
-      : undefined;
+  const manageSupplierTitle = !hasCompany ? "Primero registra la empresa." : undefined;
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
@@ -562,20 +558,22 @@ export default function Providers() {
   return (
     <PageShell>
       <PageActionsRow>
-        <SystemButton
-          size="sm"
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={startCreate}
-          style={{
-            backgroundColor: PRIMARY,
-            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-          }}
-          disabled={companyActionDisabled || !canCreateSuppliers}
-          title={manageSupplierTitle}
-        >
-          Crear proveedor
-        </SystemButton>
+        {canCreateSuppliers ? (
+          <SystemButton
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={startCreate}
+            style={{
+              backgroundColor: PRIMARY,
+              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
+            }}
+            disabled={companyActionDisabled}
+            title={manageSupplierTitle}
+          >
+            Crear proveedor
+          </SystemButton>
+        ) : null}
       </PageActionsRow>
 
       <DataTableSearchChips
