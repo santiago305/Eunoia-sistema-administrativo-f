@@ -3,12 +3,24 @@ import { PageShell } from "@/shared/layouts/PageShell";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { Trash2 } from "lucide-react";
+import { Check, Trash2, X } from "lucide-react";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { listPayments, removePayment, type ListPaymentsResponse } from "@/shared/services/paymentService";
+import {
+  approvePayment,
+  listPayments,
+  rejectPayment,
+  removePayment,
+  type ListPaymentsResponse,
+} from "@/shared/services/paymentService";
 import type { Payment } from "@/features/purchases/types/purchase";
+import {
+  canShowPaymentApprovalActions,
+  canShowPaymentDeleteAction,
+  getPaymentStatusView,
+  type PaymentStatus,
+} from "./paymentView";
 
 const DEFAULT_LIMIT = 20;
 
@@ -30,11 +42,14 @@ export default function Payments() {
   const { can } = usePermissions();
   const { showFeedback } = useFeedbackToast();
   const canManagePayments = can("payments.manage");
+  const canApprovePayment = can("purchases.approve_payment");
 
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [poIdFilter, setPoIdFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PaymentStatus | "">("");
   const [pagination, setPagination] = useState<Pick<ListPaymentsResponse, "total" | "page" | "limit">>({
     total: 0,
     page: 1,
@@ -48,6 +63,7 @@ export default function Payments() {
         page: pagination.page,
         limit: pagination.limit,
         poId: poIdFilter.trim() || undefined,
+        status: statusFilter || undefined,
       });
       setPayments(Array.isArray(data?.items) ? data.items : []);
       setPagination({
@@ -61,7 +77,7 @@ export default function Payments() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.limit, pagination.page, poIdFilter, showFeedback]);
+  }, [pagination.limit, pagination.page, poIdFilter, showFeedback, statusFilter]);
 
   useEffect(() => {
     void loadPayments();
@@ -84,8 +100,64 @@ export default function Payments() {
     [canManagePayments, deletingId, loadPayments, showFeedback],
   );
 
+  const handleApprove = useCallback(
+    async (payDocId?: string) => {
+      if (!canApprovePayment || !payDocId || reviewingId) return;
+      setReviewingId(payDocId);
+      try {
+        const res = await approvePayment(payDocId);
+        if (res.type === "success") {
+          showFeedback(successResponse(res.message));
+          await loadPayments();
+          return;
+        }
+        showFeedback(errorResponse(res.message));
+      } catch {
+        showFeedback(errorResponse("No se pudo aprobar el pago."));
+      } finally {
+        setReviewingId(null);
+      }
+    },
+    [canApprovePayment, loadPayments, reviewingId, showFeedback],
+  );
+
+  const handleReject = useCallback(
+    async (payDocId?: string) => {
+      if (!canApprovePayment || !payDocId || reviewingId) return;
+      const reason = window.prompt("Motivo del rechazo")?.trim();
+      setReviewingId(payDocId);
+      try {
+        const res = await rejectPayment(payDocId, reason || undefined);
+        if (res.type === "success") {
+          showFeedback(successResponse(res.message));
+          await loadPayments();
+          return;
+        }
+        showFeedback(errorResponse(res.message));
+      } catch {
+        showFeedback(errorResponse("No se pudo rechazar el pago."));
+      } finally {
+        setReviewingId(null);
+      }
+    },
+    [canApprovePayment, loadPayments, reviewingId, showFeedback],
+  );
+
   const columns = useMemo<DataTableColumn<Payment>[]>(
     () => [
+      {
+        id: "status",
+        header: "Estado",
+        cell: (row) => {
+          const status = getPaymentStatusView(row.status);
+          return (
+            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
+              {status.label}
+            </span>
+          );
+        },
+        hideable: false,
+      },
       {
         id: "payDocId",
         header: "ID",
@@ -96,6 +168,12 @@ export default function Payments() {
         id: "poId",
         header: "Orden Compra",
         cell: (row) => <span className="text-xs text-black/70">{row.poId ?? "-"}</span>,
+        className: "text-black/70",
+      },
+      {
+        id: "quotaId",
+        header: "Cuota",
+        cell: (row) => <span className="text-xs text-black/70">{row.quotaId ?? "-"}</span>,
         className: "text-black/70",
       },
       {
@@ -119,14 +197,60 @@ export default function Payments() {
         cell: (row) => <span className="text-black/70">{formatDate(row.date)}</span>,
       },
       {
+        id: "requestedByUserId",
+        header: "Solicitante",
+        cell: (row) => <span className="text-xs text-black/70">{row.requestedByUserId ?? "-"}</span>,
+      },
+      {
+        id: "approvedByUserId",
+        header: "Aprobador",
+        cell: (row) => <span className="text-xs text-black/70">{row.approvedByUserId ?? "-"}</span>,
+      },
+      {
+        id: "approvedAt",
+        header: "Aprobado",
+        cell: (row) => <span className="text-black/70">{formatDate(row.approvedAt)}</span>,
+      },
+      {
+        id: "rejectedAt",
+        header: "Rechazado",
+        cell: (row) => <span className="text-black/70">{formatDate(row.rejectedAt)}</span>,
+      },
+      {
+        id: "rejectionReason",
+        header: "Motivo",
+        cell: (row) => <span className="text-black/70">{row.rejectionReason ?? "-"}</span>,
+      },
+      {
         id: "actions",
         header: "Acciones",
         stopRowClick: true,
         hideable: false,
         sortable: false,
         cell: (row) => (
-          <div className="flex justify-end">
-            {canManagePayments ? (
+          <div className="flex justify-end gap-2">
+            {canShowPaymentApprovalActions(row.status, canApprovePayment) ? (
+              <>
+                <SystemButton
+                  size="sm"
+                  disabled={!row.payDocId || reviewingId === row.payDocId}
+                  onClick={() => void handleApprove(row.payDocId)}
+                  leftIcon={<Check className="h-4 w-4" />}
+                >
+                  Aprobar
+                </SystemButton>
+                <SystemButton
+                  size="sm"
+                  variant="danger"
+                  disabled={!row.payDocId || reviewingId === row.payDocId}
+                  onClick={() => void handleReject(row.payDocId)}
+                  leftIcon={<X className="h-4 w-4" />}
+                >
+                  Rechazar
+                </SystemButton>
+              </>
+            ) : null}
+            {canShowPaymentDeleteAction(canManagePayments) ? (
               <SystemButton
                 size="sm"
                 variant="ghost"
@@ -143,7 +267,7 @@ export default function Payments() {
         headerClassName: "text-right [&>div]:justify-end",
       },
     ],
-    [canManagePayments, deletingId, handleDelete],
+    [canApprovePayment, canManagePayments, deletingId, handleApprove, handleDelete, handleReject, reviewingId],
   );
 
   return (
@@ -156,6 +280,17 @@ export default function Payments() {
             placeholder="Filtrar por poId"
             className="h-9 rounded-lg border border-black/15 bg-white px-3 text-xs outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
           />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | "")}
+            className="h-9 rounded-lg border border-black/15 bg-white px-3 text-xs outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+            aria-label="Filtrar por estado"
+          >
+            <option value="">Todos los estados</option>
+            <option value="PENDING_APPROVAL">Pendiente</option>
+            <option value="APPROVED">Aprobado</option>
+            <option value="REJECTED">Rechazado</option>
+          </select>
           <SystemButton size="sm" onClick={() => void loadPayments()}>
             Buscar
           </SystemButton>

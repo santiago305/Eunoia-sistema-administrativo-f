@@ -25,6 +25,14 @@ export const paymentMethodLabels: Record<PaymentType, string> = {
   YAPE: "Yape",
 };
 
+const formatPaymentMethod = (method?: string | null) => {
+  if (!method) return "-";
+  if (method in paymentMethodLabels) {
+    return paymentMethodLabels[method as PaymentType];
+  }
+  return method;
+};
+
 export const statusToneByStatus: Record<PurchaseOrderStatus, string> = {
   DRAFT: "bg-slate-100 text-slate-700",
   SENT: "bg-amber-50 text-amber-700",
@@ -164,7 +172,7 @@ export function buildPurchaseExtendedDetailsConfig({
 
   const detailPayments: DetailPayment[] = payments.map((payment, index) => ({
     id: payment.payDocId ?? `${payment.method}-${payment.date}-${index}`,
-    method: paymentMethodLabels[payment.method] ?? payment.method,
+    method: formatPaymentMethod(payment.method),
     date: payment.date,
     operationNumber: payment.operationNumber ?? undefined,
     note: payment.note ?? undefined,

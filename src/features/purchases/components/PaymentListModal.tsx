@@ -12,6 +12,11 @@ import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import {
+  canShowPaymentApprovalActions,
+  canShowPaymentDeleteAction,
+  getPaymentStatusView,
+} from "@/features/payments/paymentView";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -48,6 +53,7 @@ export function PaymentListModal({
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canApprovePayment = can("purchases.approve_payment");
+  const canManagePayments = can("payments.manage");
 
   const reloadPayments = useCallback(async (options?: { silent?: boolean }) => {
     if (!poId) return;
@@ -179,13 +185,8 @@ export function PaymentListModal({
         header: "Estado",
         cell: (row) => {
           const status = row.status ?? "APPROVED";
-          if (status === "PENDING_APPROVAL") {
-            return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Por confirmar</span>;
-          }
-          if (status === "REJECTED") {
-            return <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700">Rechazado</span>;
-          }
-          return <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Aprobado</span>;
+          const view = getPaymentStatusView(status);
+          return <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${view.className}`}>{view.label}</span>;
         },
       },
       {
@@ -193,7 +194,7 @@ export function PaymentListModal({
         header: "Acciones",
         cell: (row) => (
           <div className="flex justify-end gap-2">
-            {canApprovePayment && row.status === "PENDING_APPROVAL" ? (
+            {canShowPaymentApprovalActions(row.status, canApprovePayment) ? (
               <>
                 <SystemButton
                   size="sm"
@@ -230,15 +231,17 @@ export function PaymentListModal({
                 </SystemButton>
               </>
             ) : null}
-            <SystemButton
-              variant="danger"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handleRemove(row.payDocId)}
-              title="Eliminar pago"
-            >
-              <Trash2 className="h-4 w-4" />
-            </SystemButton>
+            {canShowPaymentDeleteAction(canManagePayments) ? (
+              <SystemButton
+                variant="danger"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleRemove(row.payDocId)}
+                title="Eliminar pago"
+              >
+                <Trash2 className="h-4 w-4" />
+              </SystemButton>
+            ) : null}
           </div>
         ),
         className: "text-right",
@@ -246,7 +249,7 @@ export function PaymentListModal({
         hideable: false,
       },
     ],
-    [canApprovePayment, handleRemove, loadPurchases, reloadPayments, showFeedback],
+    [canApprovePayment, canManagePayments, handleRemove, loadPurchases, reloadPayments, showFeedback],
   );
 
   return (

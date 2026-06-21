@@ -20,9 +20,12 @@ import {
   parseDecimalInput,
 } from "@/shared/utils/functionPurchases";
 import { createPayment } from "@/shared/services/paymentService";
+import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
+import { getPaymentMethodOptions } from "@/features/payments/paymentView";
+import type { PaymentMethod } from "@/features/payment-methods/types/paymentMethod";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -68,6 +71,7 @@ export function PaymentModal({
 
   const previousOpenRef = useRef(open);
   const [saving, setSaving] = useState(false);
+  const [paymentMethodRecords, setPaymentMethodRecords] = useState<PaymentMethod[] | null>(null);
   const { showFeedback, clearFeedback } = useFeedbackToast();
 
   useEffect(() => {
@@ -89,10 +93,24 @@ export function PaymentModal({
     }));
   }, [open, poId, quotaId, totalToPay]);
 
-  const paymentMethodOptions = Object.values(PaymentTypes).map((method) => ({
-    value: method,
-    label: method,
-  }));
+  useEffect(() => {
+    if (!open) return;
+
+    let alive = true;
+    getAllPaymentMethods()
+      .then((records) => {
+        if (alive) setPaymentMethodRecords(records);
+      })
+      .catch(() => {
+        if (alive) setPaymentMethodRecords(null);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [open]);
+
+  const paymentMethodOptions = getPaymentMethodOptions(paymentMethodRecords);
 
   const currencyOptions = [
     { value: CurrencyTypes.PEN, label: "PEN (S/)" },

@@ -185,7 +185,7 @@ export type PurchaseOrder = {
 
 export type Payment = {
   payDocId?: string;
-  method: PaymentType;
+  method: PaymentType | string;
   date: string;
   operationNumber?: string | null;
   currency: CurrencyType;
