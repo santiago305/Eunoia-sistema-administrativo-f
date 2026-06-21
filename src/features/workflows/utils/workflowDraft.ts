@@ -1,6 +1,7 @@
 import type {
   SaveFullWorkflowRequest,
   SaveFullWorkflowResponse,
+  SaleOrderState,
   Workflow,
   WorkflowAction,
   WorkflowCondition,
@@ -306,12 +307,15 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
   if (duplicateValues(draft.transitions.map((transition) => transition.clientId)).length) {
     errors.push("Hay clientId de transicion duplicados.");
   }
-  if (
-    draft.states
-      .filter((state) => state.isActive)
-      .some((state) => !state.saleOrderStateId?.trim())
-  ) {
-    errors.push("Todos los estados activos deben tener un estado global seleccionado.");
+  const statesWithoutGlobalState = draft.states.filter(
+    (state) => state.isActive && !state.saleOrderStateId?.trim(),
+  );
+  if (statesWithoutGlobalState.length) {
+    errors.push(
+      `Los estados activos sin estado global son: ${statesWithoutGlobalState
+        .map((state) => state.name)
+        .join(", ")}.`,
+    );
   }
   if (
     duplicateValues(
@@ -453,6 +457,28 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
   return { valid: errors.length === 0, errors };
 }
 
+export function associateCancelSaleOrderState(
+  draft: WorkflowDraft,
+  cancelSaleOrderState: SaleOrderState,
+): WorkflowDraft {
+  if (!cancelSaleOrderState.id) return draft;
+
+  return {
+    ...draft,
+    states: draft.states.map((state) =>
+      state.isSystem && state.name.trim().toLowerCase() === "cancelado"
+        ? {
+            ...state,
+            saleOrderStateId: cancelSaleOrderState.id ?? "",
+            name: cancelSaleOrderState.name,
+            code: cancelSaleOrderState.code ?? state.code,
+            color: cancelSaleOrderState.color,
+          }
+        : state,
+    ),
+  };
+}
+
 export function createGlobalTransitionPair(
   draft: WorkflowDraft,
   purpose: WorkflowTransitionPurpose = TRANSITION_PURPOSES.CANCEL,
@@ -532,19 +558,31 @@ export function removeWorkflowElement(
       .filter(
         (transition) =>
           !transitionIdsToRemove.has(transition.clientId) &&
-          (!transition.toStateClientId ||
-            !stateIdsToRemove.has(transition.toStateClientId)) &&
           (!transition.fromStateClientId ||
-            !stateIdsToRemove.has(transition.fromStateClientId)) &&
-          (!transition.elseToStateClientId ||
-            !stateIdsToRemove.has(transition.elseToStateClientId)),
+            !stateIdsToRemove.has(transition.fromStateClientId)),
       )
-      .map((transition) => ({
-        ...transition,
-        excludedStateClientIds: transition.excludedStateClientIds.filter(
-          (stateId) => !stateIdsToRemove.has(stateId),
-        ),
-      })),
+      .map((transition) => {
+        const removesMainDestination = Boolean(
+          transition.toStateClientId && stateIdsToRemove.has(transition.toStateClientId),
+        );
+        const removesElseDestination = Boolean(
+          transition.elseToStateClientId &&
+            stateIdsToRemove.has(transition.elseToStateClientId),
+        );
+
+        return {
+          ...transition,
+          toStateClientId: removesMainDestination ? null : transition.toStateClientId,
+          elseEffect: removesElseDestination ? null : transition.elseEffect,
+          elseToStateClientId: removesElseDestination
+            ? null
+            : transition.elseToStateClientId,
+          elseActions: removesElseDestination ? [] : transition.elseActions,
+          excludedStateClientIds: transition.excludedStateClientIds.filter(
+            (stateId) => !stateIdsToRemove.has(stateId),
+          ),
+        };
+      }),
   };
 }
 

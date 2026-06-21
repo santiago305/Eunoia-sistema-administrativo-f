@@ -6,9 +6,11 @@ import {
 } from "@/features/workflows/types/workflow";
 import {
   buildFullWorkflowRequest,
+  associateCancelSaleOrderState,
   getAutoTriggerPatch,
   hasAutomaticTransitionSibling,
   mapWorkflowToDraft,
+  removeWorkflowElement,
   validateWorkflowDraft,
 } from "./workflowDraft";
 
@@ -272,6 +274,33 @@ describe("buildFullWorkflowRequest", () => {
 });
 
 describe("validateWorkflowDraft", () => {
+  it("identifies active states without a global state by name", () => {
+    const validation = validateWorkflowDraft({
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [
+        {
+          clientId: "state-1",
+          saleOrderStateId: "",
+          name: "Preparacion",
+          code: "PREPARATION",
+          color: null,
+          positionX: 0,
+          positionY: 0,
+          isInitial: true,
+          isFinal: true,
+          isActive: true,
+        },
+      ],
+      transitions: [],
+    });
+
+    expect(validation.errors).toContain(
+      "Los estados activos sin estado global son: Preparacion.",
+    );
+  });
+
   it("rejects duplicate active global sale order states in the same workflow", () => {
     const validation = validateWorkflowDraft({
       name: "Ventas",
@@ -470,5 +499,79 @@ describe("validateWorkflowDraft", () => {
     expect(validation.errors).toContain(
       "La condicion de campo obligatorio requiere un campo seleccionado.",
     );
+  });
+});
+
+describe("associateCancelSaleOrderState", () => {
+  it("associates the system cancellation node with the global cancellation state", () => {
+    const draft = {
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [
+        {
+          clientId: "state-cancel",
+          saleOrderStateId: "",
+          name: "Cancelado",
+          code: "CANCELADO",
+          color: "#ef4444",
+          positionX: -9999,
+          positionY: -9999,
+          isInitial: false,
+          isFinal: false,
+          isActive: true,
+          isSystem: true,
+        },
+      ],
+      transitions: [],
+    };
+
+    const associated = associateCancelSaleOrderState(draft, {
+      id: "global-cancelled",
+      code: "CANCELLED",
+      name: "Cancelado",
+      color: "#dc2626",
+    });
+
+    expect(associated.states[0]).toMatchObject({
+      saleOrderStateId: "global-cancelled",
+      name: "Cancelado",
+      code: "CANCELLED",
+      color: "#dc2626",
+    });
+  });
+});
+
+describe("removeWorkflowElement", () => {
+  it("removes an ELSE destination state and clears only the ELSE branch", () => {
+    const draft = {
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [
+        { clientId: "state-1", saleOrderStateId: "global-1", name: "Inicio", code: "START", color: null, positionX: 0, positionY: 0, isInitial: true, isFinal: false, isActive: true },
+        { clientId: "state-2", saleOrderStateId: "global-2", name: "Si", code: "YES", color: null, positionX: 200, positionY: 0, isInitial: false, isFinal: true, isActive: true },
+        { clientId: "state-3", saleOrderStateId: "global-3", name: "No", code: "NO", color: null, positionX: 200, positionY: 150, isInitial: false, isFinal: true, isActive: true },
+      ],
+      transitions: [{
+        clientId: "transition-1", name: "Decision", code: "DECISION",
+        fromStateClientId: "state-1", toStateClientId: "state-2",
+        elseToStateClientId: "state-3", isGlobal: false,
+        excludedStateClientIds: [], purpose: TRANSITION_PURPOSES.STANDARD,
+        effect: TRANSITION_EFFECTS.MOVE_STATE, elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+        isActive: true, autoTrigger: true, priority: 1, conditions: [], actions: [],
+        elseActions: [{ type: "REVERT_STOCK" as const, config: {}, position: 0 }],
+      }],
+    };
+
+    const result = removeWorkflowElement(draft, "state-3");
+
+    expect(result.states.map((state) => state.clientId)).toEqual(["state-1", "state-2"]);
+    expect(result.transitions).toHaveLength(1);
+    expect(result.transitions[0]).toMatchObject({
+      elseEffect: null,
+      elseToStateClientId: null,
+      elseActions: [],
+    });
   });
 });
