@@ -132,6 +132,7 @@ export default function Production() {
   useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
   const { hasCompany } = useCompany();
   const { can } = usePermissions();
+  const canReadProduction = can("production.read");
   const canViewProductionDetail = can("production.view_detail");
   const canViewProductionHistory = can("production.view_history");
   const canViewProductionCreatorInfo = can("production.view_creator_info");
@@ -243,13 +244,15 @@ export default function Production() {
   );
 
   const loadSearchState = useCallback(async () => {
+    if (!canReadProduction) return;
+
     try {
       const response = await getProductionSearchState();
       setSearchState(response);
     } catch {
       showFeedbackRef.current(errorResponse("Error al cargar el estado del buscador inteligente"));
     }
-  }, []);
+  }, [canReadProduction]);
 
   const loadExportColumns = useCallback(async () => {
     try {
@@ -279,6 +282,19 @@ export default function Production() {
   }, [searchText]);
 
   const loadOrders = useCallback(async () => {
+    if (!canReadProduction) {
+      setOrders([]);
+      setPagination({
+        total: 0,
+        page: 1,
+        limit,
+        totalPages: 1,
+        hasPrev: false,
+        hasNext: false,
+      });
+      return;
+    }
+
     clearFeedback();
     setLoading(true);
 
@@ -324,7 +340,7 @@ export default function Production() {
     } finally {
       setLoading(false);
     }
-  }, [executedSnapshot, fromDate, limit, loadSearchState, page, toDate]);
+  }, [canReadProduction, clearFeedback, executedSnapshot, fromDate, limit, loadSearchState, page, toDate]);
 
   const handleStart = async (id: string) => {
     clearFeedback();
