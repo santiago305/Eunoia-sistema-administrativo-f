@@ -7,6 +7,12 @@ import {
   PaymentTypes,
   AfectType,
 } from "@/features/purchases/types/purchaseEnums";
+import {
+  PurchaseItemTypes,
+  PurchasePaymentStatuses,
+  PurchaseTypes,
+  ReceptionStatuses,
+} from "@/features/purchases/types/purchase-classification.types";
 
 const uuidSchema = z.string().uuid();
 
@@ -16,6 +22,10 @@ const purchaseStatusEnum = z.enum(Object.values(PurchaseOrderStatuses) as [strin
 const voucherDocEnum = z.enum(Object.values(VoucherDocTypes) as [string, ...string[]]);
 const paymentTypeEnum = z.enum(Object.values(PaymentTypes) as [string, ...string[]]);
 const afectTypeEnum = z.enum(Object.values(AfectType) as [string, ...string[]]);
+const purchaseTypeEnum = z.enum(Object.values(PurchaseTypes) as [string, ...string[]]);
+const purchaseItemTypeEnum = z.enum(Object.values(PurchaseItemTypes) as [string, ...string[]]);
+const receptionStatusEnum = z.enum(Object.values(ReceptionStatuses) as [string, ...string[]]);
+const purchasePaymentStatusEnum = z.enum(Object.values(PurchasePaymentStatuses) as [string, ...string[]]);
 const purchaseSearchFieldEnum = z.enum([
   "supplierId",
   "warehouseId",
@@ -60,7 +70,18 @@ const purchaseSearchRuleSchema = z.object({
 });
 
 export const addPurchaseOrderItemSchema = z.object({
-  skuId: uuidSchema,
+  skuId: uuidSchema.optional(),
+  stockItemId: uuidSchema.optional(),
+  itemType: purchaseItemTypeEnum.optional(),
+  internalMaterialId: uuidSchema.optional(),
+  assetCategoryId: uuidSchema.optional(),
+  serviceName: z.string().min(1).optional(),
+  description: z.string().optional(),
+  warehouseId: uuidSchema.optional(),
+  affectsStock: z.boolean().optional(),
+  generatesAsset: z.boolean().optional(),
+  isService: z.boolean().optional(),
+  isSubscription: z.boolean().optional(),
   unitBase: z.string().min(1).optional(),
   equivalence: z.string().min(1).optional(),
   factor: z.number().min(0).optional(),
@@ -72,6 +93,16 @@ export const addPurchaseOrderItemSchema = z.object({
   unitValue:z.number().min(0),
   unitPrice: z.number().min(0),
   purchaseValue: z.number().min(0)
+}).superRefine((item, ctx) => {
+  const itemType = item.itemType ?? PurchaseItemTypes.PRODUCT;
+  const affectsStock = item.affectsStock ?? ![PurchaseItemTypes.SERVICE, PurchaseItemTypes.SUBSCRIPTION].includes(itemType);
+  if (affectsStock && !item.skuId && !item.stockItemId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["skuId"],
+      message: "Debe seleccionar SKU o stockItem en items que afectan stock",
+    });
+  }
 });
 
 export const createCreditQuotaSchema = z.object({
@@ -96,7 +127,7 @@ export const createPaymentSchema = z.object({
 
 export const createPurchaseOrderSchema = z.object({
   supplierId: uuidSchema,
-  warehouseId: uuidSchema,
+  warehouseId: uuidSchema.optional(),
   documentType: voucherDocEnum,
   serie: z.string().min(1),
   correlative: z.number().int(),
@@ -111,6 +142,14 @@ export const createPurchaseOrderSchema = z.object({
   total: z.number().min(0),
   note: z.string().optional(),
   status: purchaseStatusEnum,
+  purchaseType: purchaseTypeEnum.optional(),
+  receptionStatus: receptionStatusEnum.optional(),
+  paymentStatus: purchasePaymentStatusEnum.optional(),
+  isRecurringSource: z.boolean().optional(),
+  recurringTemplateId: uuidSchema.optional(),
+  requiresReceipt: z.boolean().optional(),
+  requiresStockEntry: z.boolean().optional(),
+  requiresAssetCreation: z.boolean().optional(),
   expectedAt: z.string().min(1).optional(),
   dateIssue: z.string().min(1).optional(),
   dateExpiration: z.string().min(1).optional(),

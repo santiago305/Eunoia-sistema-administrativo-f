@@ -27,6 +27,7 @@ import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import { EquivalenceModal } from "./components/EquivalenceModal";
 import { PurchaseItemsSection } from "./components/PurchaseItemsSection";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
+import { PurchaseTypeSelect } from "./components/PurchaseTypeSelect";
 import { ModalNavegate } from "./components/ModalNavegate";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
@@ -56,6 +57,13 @@ import {
 } from "./utils/purchaseSkus";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { sileo } from "sileo";
+import {
+  PurchaseItemTypes,
+  PurchaseTypes,
+  purchaseItemTypeLabels,
+  purchaseTypesWithoutStock,
+  type PurchaseType,
+} from "./types/purchase-classification.types";
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
@@ -133,6 +141,7 @@ type PurchaseItemRow = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  itemType: string;
 };
 
 type PurchaseCreateLocalProps = {
@@ -178,6 +187,7 @@ export default function PurchaseCreateLocal({
   const { poId: routePoId } = useParams<{ poId: string }>();
   const effectivePoId = poIdOverride ?? routePoId;
   const isEdit = Boolean(effectivePoId);
+  const requiresWarehouse = !purchaseTypesWithoutStock.includes((form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType);
 
   const ringStyle = {
     "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
@@ -336,6 +346,7 @@ export default function PurchaseCreateLocal({
         quantity: normalizeQuantity(item.quantity ?? 0),
         unitPrice: normalizePrice(item.unitPrice ?? 0),
         totalPrice: getItemTotalWithIgv(item),
+        itemType: purchaseItemTypeLabels[item.itemType ?? PurchaseItemTypes.PRODUCT],
       };
     });
   }, [form.items, products]);
@@ -346,7 +357,7 @@ export default function PurchaseCreateLocal({
   };
 
   const savePurchase = async () => {
-    if (!form.items?.length || !form.serie.trim() || !form.supplierId || !form.warehouseId) return;
+    if (!form.items?.length || !form.serie.trim() || !form.supplierId || (requiresWarehouse && !form.warehouseId)) return;
     if (documentNumberError) {
       sileo.error({ title: "Número de orden ya registrado" });
       return;
@@ -354,7 +365,7 @@ export default function PurchaseCreateLocal({
 
     const payload: CreatePurchaseOrderDto = {
       supplierId: form.supplierId,
-      warehouseId: form.warehouseId,
+      warehouseId: form.warehouseId || undefined,
       documentType: form.documentType,
       serie: form.serie,
       correlative: Number(form.correlative ?? 0),
@@ -369,6 +380,14 @@ export default function PurchaseCreateLocal({
       total: normalizeMoney(form.total),
       note: form.note?.trim() || undefined,
       status: form.status,
+      purchaseType: form.purchaseType,
+      receptionStatus: form.receptionStatus,
+      paymentStatus: form.paymentStatus,
+      isRecurringSource: form.isRecurringSource ?? false,
+      recurringTemplateId: form.recurringTemplateId ?? undefined,
+      requiresReceipt: form.requiresReceipt,
+      requiresStockEntry: form.requiresStockEntry,
+      requiresAssetCreation: form.requiresAssetCreation,
       expectedAt: form.expectedAt?.trim() ? form.expectedAt : undefined,
       dateIssue: form.dateIssue?.trim() ? form.dateIssue : undefined,
       dateExpiration: form.dateExpiration?.trim() ? form.dateExpiration : undefined,
@@ -378,6 +397,16 @@ export default function PurchaseCreateLocal({
 
         return {
           skuId: calculatedItem.skuId,
+          itemType: calculatedItem.itemType ?? PurchaseItemTypes.PRODUCT,
+          internalMaterialId: calculatedItem.internalMaterialId ?? undefined,
+          assetCategoryId: calculatedItem.assetCategoryId ?? undefined,
+          serviceName: calculatedItem.serviceName ?? undefined,
+          description: calculatedItem.description ?? undefined,
+          warehouseId: calculatedItem.warehouseId ?? (form.warehouseId || undefined),
+          affectsStock: calculatedItem.affectsStock ?? true,
+          generatesAsset: calculatedItem.generatesAsset ?? false,
+          isService: calculatedItem.isService ?? false,
+          isSubscription: calculatedItem.isSubscription ?? false,
           unitBase: calculatedItem.unitBase,
           equivalence: calculatedItem.equivalence,
           factor: Number.isFinite(resolvedFactor) && resolvedFactor > 0 ? resolvedFactor : 1,
@@ -567,6 +596,14 @@ export default function PurchaseCreateLocal({
         sortable: false,
       },
       {
+        id: "itemType",
+        header: "Tipo",
+        accessorKey: "itemType",
+        className: "text-black/70",
+        headerClassName: "text-left",
+        sortable: false,
+      },
+      {
         id: "unit",
         header: "Unidad",
         cell: (row) => (
@@ -706,6 +743,21 @@ export default function PurchaseCreateLocal({
           <aside className="overflow-hidden flex flex-col border-0 border-black/10 lg:border-l">
 
             <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
+              <PurchaseTypeSelect
+                value={(form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType}
+                onChange={(purchaseType) => {
+                  const noStock = purchaseTypesWithoutStock.includes(purchaseType);
+                  setForm((prev) => ({
+                    ...prev,
+                    purchaseType,
+                    warehouseId: noStock ? "" : prev.warehouseId,
+                    requiresReceipt: !noStock,
+                    requiresStockEntry: !noStock,
+                    requiresAssetCreation: purchaseType === PurchaseTypes.FIXED_ASSET,
+                  }));
+                }}
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <FloatingSelect
                   label="Tipo"
@@ -775,6 +827,7 @@ export default function PurchaseCreateLocal({
                     searchable
                     searchPlaceholder="Buscar almacén..."
                     emptyMessage="Sin almacenes"
+                    disabled={!requiresWarehouse}
                   />
 
                   <SystemButton
@@ -786,7 +839,7 @@ export default function PurchaseCreateLocal({
                     }}
                     title="Agregar almacén"
                     onClick={() => setOpenCreateWarehouse(true)}
-                    disabled={companyActionDisabled}
+                    disabled={companyActionDisabled || !requiresWarehouse}
                   >
                     <Plus className="h-4 w-4" />
                   </SystemButton>
@@ -906,7 +959,7 @@ export default function PurchaseCreateLocal({
                     Boolean(documentNumberError) ||
                     !form.supplierId ||
                     !form.correlative ||
-                    !form.warehouseId ||
+                    (requiresWarehouse && !form.warehouseId) ||
                     totals.totalPrice === 0                   
                   }
                   onClick={() => {
@@ -972,9 +1025,10 @@ export default function PurchaseCreateLocal({
         documentType={form.documentType}
         primaryColor={PRIMARY}
         igv={IGV}
-        setForm={setForm}
-        setItemId={setItemId}
-        onClose={handleCloseEquivalence}
+          setForm={setForm}
+          setItemId={setItemId}
+          purchaseType={(form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType}
+          onClose={handleCloseEquivalence}
       />
 
       {openPaymentModal && (
@@ -989,7 +1043,7 @@ export default function PurchaseCreateLocal({
           currency={currency}
           formatMoney={money}
           onSave={savePurchase}
-          saveDisabled={companyActionDisabled || !form.items?.length || !form.serie.trim() || !form.supplierId}
+          saveDisabled={companyActionDisabled || !form.items?.length || !form.serie.trim() || !form.supplierId || (requiresWarehouse && !form.warehouseId)}
           isEdit={isEdit}
         />
       )}

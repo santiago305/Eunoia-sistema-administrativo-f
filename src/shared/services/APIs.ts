@@ -341,6 +341,11 @@ export const API_PAYMENT_GROUP = {
   remove: (id: string) => `/payments/${id}`,
 }
 
+export const API_ACCOUNTS_PAYABLE_GROUP = {
+  list: "/accounts-payable",
+  markOverdue: "/accounts-payable/mark-overdue",
+};
+
 export const API_PDF_GENERATED_GROUP = {
   invoice: "/pdf-generated/invoice",
   purchaseOrderPdf: (id: string) => `/pdf-generated/purchase/${id}/pdf`,

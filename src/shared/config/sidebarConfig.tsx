@@ -45,7 +45,16 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     {
         label: "Pagos",
         icon: <IconPurchase className="text-sidebar-foreground" />,
-        href: RoutesPaths.payments,
+        children: [
+            {
+                label: "Pagos",
+                href: RoutesPaths.payments,
+            },
+            {
+                label: "Cuentas por pagar",
+                href: RoutesPaths.accountsPayable,
+            },
+        ],
     },
     {
         label: "Catalogo",

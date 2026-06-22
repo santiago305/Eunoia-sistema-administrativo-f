@@ -1,6 +1,12 @@
 import type { ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import type { CreditQuota, Payment } from "@/features/purchases/types/purchase";
 import type { AfectTypeType, CurrencyType, PaymentFormType, PurchaseOrderStatus, VoucherDocType } from "@/features/purchases/types/purchaseEnums";
+import type {
+  PurchaseItemType,
+  PurchasePaymentStatus,
+  PurchaseType,
+  ReceptionStatus,
+} from "@/features/purchases/types/purchase-classification.types";
 
 export type PurchaseOrderItemEditOutput = {
   poItemId?: string;
@@ -24,6 +30,13 @@ export type PurchaseOrderItemEditOutput = {
   // Some backends also include a flat skuId/name; treat as optional.
   skuId?: string;
   name?: string;
+  itemType?: PurchaseItemType;
+  serviceName?: string | null;
+  description?: string | null;
+  affectsStock?: boolean;
+  generatesAsset?: boolean;
+  isService?: boolean;
+  isSubscription?: boolean;
 
   // Allow extra fields without breaking the consumer.
   [key: string]: unknown;
@@ -32,7 +45,7 @@ export type PurchaseOrderItemEditOutput = {
 export type PurchaseOrderDetailOutput = {
   poId?: string;
   supplierId: string;
-  warehouseId: string;
+  warehouseId?: string;
   documentType: VoucherDocType;
   serie: string;
   correlative?: number;
@@ -49,6 +62,14 @@ export type PurchaseOrderDetailOutput = {
   totalToPay?: number;
   note?: string | null;
   status: PurchaseOrderStatus;
+  purchaseType?: PurchaseType;
+  receptionStatus?: ReceptionStatus;
+  paymentStatus?: PurchasePaymentStatus;
+  isRecurringSource?: boolean;
+  recurringTemplateId?: string | null;
+  requiresReceipt?: boolean;
+  requiresStockEntry?: boolean;
+  requiresAssetCreation?: boolean;
   expectedAt?: string | null;
   dateIssue?: string | null;
   dateExpiration?: string | null;

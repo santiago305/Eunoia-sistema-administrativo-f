@@ -73,6 +73,7 @@ import { approvePayment as approvePaymentById } from "@/shared/services/paymentS
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { sileo } from "sileo";
+import { purchaseTypeLabels } from "./types/purchase-classification.types";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -104,6 +105,7 @@ type PurchaseRow = {
     supplierLabel: string;
     supplierDoc: string;
     warehouseLabel: string;
+    purchaseTypeLabel: string;
     statusLabel: string;
     docLabel: string;
     date: string;
@@ -571,6 +573,7 @@ export default function Purchases() {
                     supplierLabel: purchase.supplierName ?? "-",
                     supplierDoc: purchase.supplierDocumentNumber ?? "",
                     warehouseLabel: purchase.warehouseName ?? "-",
+                    purchaseTypeLabel: purchase.purchaseType ? (purchaseTypeLabels[purchase.purchaseType] ?? purchase.purchaseType) : "Stock comercial",
                     statusLabel: `${statusLabel}${approvalStatusLabel}${processingStatusLabel}`,
                     docLabel,
                     date,
@@ -677,6 +680,15 @@ export default function Purchases() {
                     <div>{row.supplierLabel}</div>
                 </div>
             ),
+            headerClassName: "text-left",
+            className: "text-black/70",
+            hideable: true,
+            sortable: false,
+        },
+        {
+            id: "purchaseType",
+            header: "Tipo",
+            accessorKey: "purchaseTypeLabel",
             headerClassName: "text-left",
             className: "text-black/70",
             hideable: true,

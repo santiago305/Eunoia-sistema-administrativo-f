@@ -9,6 +9,11 @@ import {
   PaymentFormTypes,
   PurchaseOrderStatuses,
 } from "@/features/purchases/types/purchaseEnums";
+import {
+  PurchasePaymentStatuses,
+  PurchaseTypes,
+  ReceptionStatuses,
+} from "@/features/purchases/types/purchase-classification.types";
 
 const IGV_FACTOR = new Big("1.18");
 
@@ -265,6 +270,14 @@ export const buildEmptyForm = (): PurchaseOrder => ({
   total: 0,
   note: "",
   status: PurchaseOrderStatuses.DRAFT,
+  purchaseType: PurchaseTypes.INVENTORY,
+  receptionStatus: ReceptionStatuses.PENDING,
+  paymentStatus: PurchasePaymentStatuses.PENDING,
+  isRecurringSource: false,
+  recurringTemplateId: null,
+  requiresReceipt: true,
+  requiresStockEntry: true,
+  requiresAssetCreation: false,
   expectedAt: "",
   dateIssue: todayIso(),
   dateExpiration: "",

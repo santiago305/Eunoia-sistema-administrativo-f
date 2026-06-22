@@ -61,6 +61,7 @@ export const RoutesPaths = {
   purchasesHistory: "/compras/historial",
   purchaseEdit: "/compra/:poId",
   payments: "/pagos",
+  accountsPayable: "/cuentas-por-pagar",
 
   // sale orders
   saleOrders: "/pedidos",

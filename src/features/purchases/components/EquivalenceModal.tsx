@@ -18,6 +18,14 @@ import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 import { buildPurchaseSkuLabel, type PurchaseSkuInfo } from "../utils/purchaseSkus";
+import { PurchaseItemTypeSelect } from "./PurchaseItemTypeSelect";
+import {
+  PurchaseItemTypes,
+  PurchaseTypes,
+  purchaseItemTypesWithoutStock,
+  type PurchaseItemType,
+  type PurchaseType,
+} from "../types/purchase-classification.types";
 
 type EquivalenceModalProps = {
   open: boolean;
@@ -28,6 +36,7 @@ type EquivalenceModalProps = {
   igv: number;
   setForm: Dispatch<SetStateAction<PurchaseOrder>>;
   setItemId: Dispatch<SetStateAction<string>>;
+  purchaseType: PurchaseType;
   onClose: () => void;
 };
 
@@ -51,6 +60,7 @@ export function EquivalenceModal({
   igv,
   setForm,
   setItemId,
+  purchaseType,
   onClose,
 }: EquivalenceModalProps) {
   const { showFeedback, clearFeedback } = useFeedbackToast();
@@ -60,6 +70,7 @@ export function EquivalenceModal({
   const [pendingItemAfectType, setPendingItemAfectType] = useState<AfectTypeType>(AfectType.TAXED);
   const [pendingItemQuantity, setPendingItemQuantity] = useState<number>(1);
   const [pendingItemUnitPrice, setPendingItemUnitPrice] = useState<number>(0);
+  const [pendingItemType, setPendingItemType] = useState<PurchaseItemType>(PurchaseItemTypes.PRODUCT);
   const [pendingFactor, setPendingFactor] = useState<number>(0);
   const [pendingStockUnit, setPendingStockUnit] = useState<string | null>(null);
   const [pendingPurchaseUnit, setPendingPurchaseUnit] = useState<string | null>(null);
@@ -68,6 +79,7 @@ export function EquivalenceModal({
     setPendingItemAfectType(AfectType.TAXED);
     setPendingItemQuantity(1);
     setPendingItemUnitPrice(0);
+    setPendingItemType(PurchaseItemTypes.PRODUCT);
     setPendingFactor(0);
     setPendingStockUnit("");
     setPendingPurchaseUnit("");
@@ -144,6 +156,7 @@ export function EquivalenceModal({
       factor?: number;
       unitBase?: string | null;
       name?:string;
+      itemType?: PurchaseItemType;
     },
   ) => {
     const finalItemId = selectedItemId ?? itemId;
@@ -157,6 +170,8 @@ export function EquivalenceModal({
     const nextFactor = Number(opts?.factor ?? 1);
     const factor = Number.isFinite(nextFactor) && nextFactor > 0 ? nextFactor : 1;
     const unitBase = opts?.unitBase ?? "";
+    const itemType = opts?.itemType ?? PurchaseItemTypes.PRODUCT;
+    const affectsStock = !purchaseItemTypesWithoutStock.includes(itemType);
 
     setForm((prev) => {
       const items = prev.items ?? [];
@@ -173,6 +188,11 @@ export function EquivalenceModal({
                 equivalence,
                 factor,
                 unitBase,
+                itemType,
+                affectsStock,
+                generatesAsset: itemType === PurchaseItemTypes.FIXED_ASSET,
+                isService: itemType === PurchaseItemTypes.SERVICE,
+                isSubscription: itemType === PurchaseItemTypes.SUBSCRIPTION,
               })
             : item,
         );
@@ -193,6 +213,11 @@ export function EquivalenceModal({
         unitPrice,
         purchaseValue: 0,
         name: opts?.name,
+        itemType,
+        affectsStock,
+        generatesAsset: itemType === PurchaseItemTypes.FIXED_ASSET,
+        isService: itemType === PurchaseItemTypes.SERVICE,
+        isSubscription: itemType === PurchaseItemTypes.SUBSCRIPTION,
       });
 
       return { ...prev, items: [...items, newItem] };
@@ -234,6 +259,19 @@ export function EquivalenceModal({
       setPendingItemAfectType(AfectType.TAXED);
       setPendingItemQuantity(1);
       setPendingItemUnitPrice(0);
+      setPendingItemType(
+        purchaseType === PurchaseTypes.RAW_MATERIAL
+          ? PurchaseItemTypes.RAW_MATERIAL
+          : purchaseType === PurchaseTypes.INTERNAL_MATERIAL
+            ? PurchaseItemTypes.INTERNAL_MATERIAL
+            : purchaseType === PurchaseTypes.FIXED_ASSET
+              ? PurchaseItemTypes.FIXED_ASSET
+              : purchaseType === PurchaseTypes.SERVICE
+                ? PurchaseItemTypes.SERVICE
+                : purchaseType === PurchaseTypes.SUBSCRIPTION
+                  ? PurchaseItemTypes.SUBSCRIPTION
+                  : PurchaseItemTypes.PRODUCT,
+      );
       setPendingFactor(0);
       setPendingStockUnit(null);
       setPendingPurchaseUnit(null);
@@ -356,6 +394,11 @@ export function EquivalenceModal({
 
           <div className="mt-4 mb-3 grid grid-cols-1 gap-3 md:grid-cols-1">
             <div className="mb-0 mt-1 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <PurchaseItemTypeSelect
+                value={pendingItemType}
+                onChange={setPendingItemType}
+              />
+
               <FloatingInput
                 label="Cantidad"
                 name="quantity"
@@ -438,6 +481,7 @@ export function EquivalenceModal({
                 factor: pendingFactor,
                 unitBase: pendingPurchaseUnit,
                 name: buildProductLabel(products.find((p) => p.skuId === itemId)),
+                itemType: pendingItemType,
               });
 
               handleClose();

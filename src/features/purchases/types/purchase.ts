@@ -19,6 +19,12 @@ import type {
   PurchaseOrderStatus,
   VoucherDocType,
 } from "@/features/purchases/types/purchaseEnums";
+import type {
+  PurchaseItemType,
+  PurchasePaymentStatus,
+  PurchaseType,
+  ReceptionStatus,
+} from "@/features/purchases/types/purchase-classification.types";
 
 export type AddPurchaseOrderItemDto = z.infer<typeof addPurchaseOrderItemSchema>;
 export type CreateCreditQuotaDto = z.infer<typeof createCreditQuotaSchema>;
@@ -143,6 +149,16 @@ export type PurchaseOrderItem = {
   unitPrice: number,
   purchaseValue: number,
   name?:string;
+  itemType?: PurchaseItemType;
+  internalMaterialId?: string | null;
+  assetCategoryId?: string | null;
+  serviceName?: string | null;
+  description?: string | null;
+  warehouseId?: string | null;
+  affectsStock?: boolean;
+  generatesAsset?: boolean;
+  isService?: boolean;
+  isSubscription?: boolean;
 };
 
 export type PurchaseOrder = {
@@ -168,6 +184,14 @@ export type PurchaseOrder = {
   totalToPay?: number;
   note?: string | null;
   status: PurchaseOrderStatus;
+  purchaseType?: PurchaseType;
+  receptionStatus?: ReceptionStatus;
+  paymentStatus?: PurchasePaymentStatus;
+  isRecurringSource?: boolean;
+  recurringTemplateId?: string | null;
+  requiresReceipt?: boolean;
+  requiresStockEntry?: boolean;
+  requiresAssetCreation?: boolean;
   expectedAt?: string | null;
   dateIssue?: string | null;
   dateExpiration?: string | null;
@@ -193,6 +217,7 @@ export type Payment = {
   note?: string | null;
   quotaId?: string | null;
   poId?: string | null;
+  accountPayableId?: string | null;
   status?: "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
   requestedByUserId?: string | null;
   approvedByUserId?: string | null;
