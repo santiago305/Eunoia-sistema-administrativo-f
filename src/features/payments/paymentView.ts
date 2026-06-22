@@ -12,6 +12,13 @@ export const getPaymentStatusView = (status: Payment["status"]) => {
     };
   }
 
+  if (status === "SCHEDULED") {
+    return {
+      label: "Programado",
+      className: "bg-sky-100 text-sky-700 border-sky-200",
+    };
+  }
+
   if (status === "REJECTED") {
     return {
       label: "Rechazado",
@@ -28,7 +35,7 @@ export const getPaymentStatusView = (status: Payment["status"]) => {
 export const canShowPaymentApprovalActions = (
   status: Payment["status"],
   canApprovePayment: boolean,
-) => canApprovePayment && status === "PENDING_APPROVAL";
+) => canApprovePayment && (status === "PENDING_APPROVAL" || status === "SCHEDULED");
 
 export const canShowPaymentDeleteAction = (canManagePayments: boolean) => canManagePayments;
 

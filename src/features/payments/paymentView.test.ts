@@ -16,6 +16,7 @@ describe("paymentView", () => {
 
   it("only shows approval actions for pending payments when user can approve", () => {
     expect(canShowPaymentApprovalActions("PENDING_APPROVAL", true)).toBe(true);
+    expect(canShowPaymentApprovalActions("SCHEDULED", true)).toBe(true);
     expect(canShowPaymentApprovalActions("APPROVED", true)).toBe(false);
     expect(canShowPaymentApprovalActions("PENDING_APPROVAL", false)).toBe(false);
   });

@@ -358,6 +358,13 @@ export const API_ACCOUNTS_PAYABLE_GROUP = {
   markOverdue: "/accounts-payable/mark-overdue",
 };
 
+export const API_COMPANY_PAYMENT_ACCOUNTS_GROUP = {
+  create: "/company-payment-accounts",
+  byCompany: (companyId: string) => `/company-payment-accounts/by-company/${companyId}`,
+  update: (id: string) => `/company-payment-accounts/${id}`,
+  setActive: (id: string) => `/company-payment-accounts/${id}/active`,
+};
+
 export const API_PDF_GENERATED_GROUP = {
   invoice: "/pdf-generated/invoice",
   purchaseOrderPdf: (id: string) => `/pdf-generated/purchase/${id}/pdf`,

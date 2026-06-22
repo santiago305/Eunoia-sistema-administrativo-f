@@ -182,6 +182,15 @@ export default function Payments() {
         cell: (row) => <span className="text-black/80">{row.method}</span>,
       },
       {
+        id: "companyPaymentAccount",
+        header: "Cuenta",
+        cell: (row) => (
+          <span className="text-black/70">
+            {row.companyPaymentAccountMaskedLabel ?? row.companyPaymentAccountId ?? "-"}
+          </span>
+        ),
+      },
+      {
         id: "currency",
         header: "Moneda",
         cell: (row) => <span className="text-black/80">{row.currency}</span>,
@@ -195,6 +204,11 @@ export default function Payments() {
         id: "date",
         header: "Fecha",
         cell: (row) => <span className="text-black/70">{formatDate(row.date)}</span>,
+      },
+      {
+        id: "scheduledAt",
+        header: "Programado",
+        cell: (row) => <span className="text-black/70">{formatDate(row.scheduledAt)}</span>,
       },
       {
         id: "requestedByUserId",
@@ -287,6 +301,7 @@ export default function Payments() {
             aria-label="Filtrar por estado"
           >
             <option value="">Todos los estados</option>
+            <option value="SCHEDULED">Programado</option>
             <option value="PENDING_APPROVAL">Pendiente</option>
             <option value="APPROVED">Aprobado</option>
             <option value="REJECTED">Rechazado</option>

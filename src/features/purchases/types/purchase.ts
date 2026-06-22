@@ -218,13 +218,25 @@ export type Payment = {
   quotaId?: string | null;
   poId?: string | null;
   accountPayableId?: string | null;
-  status?: "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+  status?: "SCHEDULED" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
   requestedByUserId?: string | null;
   approvedByUserId?: string | null;
   rejectedByUserId?: string | null;
   approvedAt?: string | null;
   rejectedAt?: string | null;
   rejectionReason?: string | null;
+  companyPaymentAccountId?: string | null;
+  paymentMethodId?: string | null;
+  paidByUserId?: string | null;
+  scheduledByUserId?: string | null;
+  scheduledAt?: string | null;
+  paidAt?: string | null;
+  paymentEvidenceFileId?: string | null;
+  bankName?: string | null;
+  cardLastFour?: string | null;
+  operationCode?: string | null;
+  isPartial?: boolean;
+  companyPaymentAccountMaskedLabel?: string | null;
 };
 
 export type CreditQuota = {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Banknote, Paperclip, Wallet } from "lucide-react";
+import { Banknote, CalendarClock, Paperclip, Wallet } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
@@ -30,6 +30,10 @@ import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentSe
 import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { useCompany } from "@/shared/hooks/useCompany";
+import { CompanyPaymentAccountSelect } from "@/features/payments/components/CompanyPaymentAccountSelect";
+import { SchedulePaymentModal } from "@/features/payments/components/SchedulePaymentModal";
+import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -77,8 +81,11 @@ export function PaymentModal({
   const [saving, setSaving] = useState(false);
   const [paymentMethodRecords, setPaymentMethodRecords] = useState<PaymentMethod[] | null>(null);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [selectedPaymentAccount, setSelectedPaymentAccount] = useState<CompanyPaymentAccount | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
+  const { company } = useCompany();
   const canUploadPaymentEvidence = can("purchases.attachments.upload");
 
   useEffect(() => {
@@ -99,6 +106,7 @@ export function PaymentModal({
         poId,
       }));
     setEvidenceFile(null);
+    setSelectedPaymentAccount(null);
   }, [open, poId, quotaId, totalToPay]);
 
   useEffect(() => {
@@ -143,6 +151,11 @@ export function PaymentModal({
         amount: amountNumber,
         quotaId: quotaId ?? null,
         poId,
+        companyPaymentAccountId: selectedPaymentAccount?.id ?? null,
+        bankName: selectedPaymentAccount?.bankName ?? null,
+        cardLastFour: selectedPaymentAccount?.cardLastFour ?? selectedPaymentAccount?.accountLastFour ?? null,
+        operationCode: form.operationNumber ?? null,
+        isPartial: amountNumber < normalizeMoney(totalToPay),
       });
 
       if (res.type === "success") {
@@ -256,6 +269,15 @@ export function PaymentModal({
                 searchable={false}
               />
 
+              <div className="sm:col-span-2">
+                <CompanyPaymentAccountSelect
+                  companyId={company?.companyId}
+                  value={selectedPaymentAccount?.id ?? ""}
+                  disabled={saving}
+                  onChange={setSelectedPaymentAccount}
+                />
+              </div>
+
               <FloatingSelect
                 label="Moneda"
                 name="payment-currency"
@@ -296,6 +318,20 @@ export function PaymentModal({
                   }
                   />
               </div>
+              <div className="sm:col-span-2 flex min-h-11 flex-col gap-2 rounded-md border border-black/10 bg-slate-50 px-3 py-2 text-xs text-black/65 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  {form.scheduledAt ? `Programado para ${form.scheduledAt}` : "Registrar como pago inmediato"}
+                </span>
+                <SystemButton
+                  size="sm"
+                  variant="ghost"
+                  leftIcon={<CalendarClock className="h-4 w-4" />}
+                  disabled={saving}
+                  onClick={() => setScheduleOpen(true)}
+                >
+                  Programar
+                </SystemButton>
+              </div>
               {canUploadPaymentEvidence ? (
                 <label className="sm:col-span-2 flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-dashed border-black/20 bg-slate-50 px-3 text-xs text-black/60">
                   <Paperclip className="h-4 w-4 shrink-0" />
@@ -329,6 +365,14 @@ export function PaymentModal({
           </div>
         </div>
       </div>
+      <SchedulePaymentModal
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        onSchedule={(scheduledAt) => {
+          setForm((prev) => ({ ...prev, scheduledAt }));
+          setScheduleOpen(false);
+        }}
+      />
     </Modal>
   );
 }

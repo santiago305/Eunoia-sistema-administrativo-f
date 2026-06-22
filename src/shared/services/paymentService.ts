@@ -7,7 +7,7 @@ import type {
 export type ListPaymentsQuery = {
   poId?: string;
   quotaId?: string;
-  status?: "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+  status?: "SCHEDULED" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
   page?: number;
   limit?: number;
 };
