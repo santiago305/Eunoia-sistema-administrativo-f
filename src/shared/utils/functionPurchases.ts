@@ -270,7 +270,7 @@ export const buildEmptyForm = (): PurchaseOrder => ({
   total: 0,
   note: "",
   status: PurchaseOrderStatuses.DRAFT,
-  purchaseType: PurchaseTypes.INVENTORY,
+  purchaseType: PurchaseTypes.RAW_MATERIAL,
   receptionStatus: ReceptionStatuses.PENDING,
   paymentStatus: PurchasePaymentStatuses.PENDING,
   isRecurringSource: false,

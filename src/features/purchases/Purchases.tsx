@@ -46,7 +46,7 @@ import type {
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "./types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/shared/components/components/TimerToEnd";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
-import { Calendar, CreditCard, FileText, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
+import { AlertCircle, Calendar, CreditCard, FileText, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/shared/services/pdfServices";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { PageShell } from "@/shared/layouts/PageShell";
@@ -74,6 +74,7 @@ import { RoutesPaths } from "@/routes/config/routesPaths";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
 import { sileo } from "sileo";
 import { purchaseTypeLabels } from "./types/purchase-classification.types";
+import { PurchaseTypesInfoModal } from "./components/PurchaseTypesInfoModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -165,6 +166,7 @@ export default function Purchases() {
     const [exportColumns, setExportColumns] = useState<PurchaseExportColumn[]>([]);
     const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: PurchaseExportColumn[] }>>([]);
     const [exporting, setExporting] = useState(false);
+    const [openPurchaseTypesInfo, setOpenPurchaseTypesInfo] = useState(false);
     const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
     const [savingMetric, setSavingMetric] = useState(false);
     const [modalPayment, setModalPayment] = useState(false);
@@ -1216,6 +1218,14 @@ export default function Purchases() {
         <PageShell className="bg-white">
             <div className="space-y-4">
                 <PageActionsRow>
+                    <SystemButton
+                        className="w-9"
+                        size="sm"
+                        variant="outline"
+                        leftIcon={<AlertCircle className="h-4 w-4" />}
+                        onClick={() => setOpenPurchaseTypesInfo(true)}
+                        aria-label="Ver tipos de compra"
+                    />
                     {exportColumns.length ? (
                         <ExportPopover
                             columns={exportColumns}
@@ -1404,6 +1414,10 @@ export default function Purchases() {
                 onClose={() => setCompletedPhotoPo(null)}
                 onConfirm={uploadCompletedPhoto}
                 onCancelWithoutPhoto={skipCompletedPhoto}
+            />
+            <PurchaseTypesInfoModal
+                open={openPurchaseTypesInfo}
+                onClose={() => setOpenPurchaseTypesInfo(false)}
             />
         </PageShell>
     );
