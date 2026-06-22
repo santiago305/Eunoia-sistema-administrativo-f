@@ -305,6 +305,18 @@ export const API_PURCHASE_GROUP = {
   listQuotas: (id: string) => `/payments/credit-quotas/get-by-po/${id}`,
 };
 
+export const API_PURCHASE_RECEPTIONS_GROUP = {
+  list: "/purchase-receptions",
+  create: "/purchase-receptions",
+  confirm: (id: string) => `/purchase-receptions/${id}/confirm`,
+};
+
+export const API_PURCHASE_ATTACHMENTS_GROUP = {
+  list: "/purchase-attachments",
+  create: "/purchase-attachments",
+  remove: (id: string) => `/purchase-attachments/${id}`,
+};
+
 export const API_PRODUCTION_ORDERS_GROUP = {
   base: "/production-orders",
   create: "/production-orders",

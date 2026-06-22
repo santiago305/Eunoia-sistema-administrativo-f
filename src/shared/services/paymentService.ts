@@ -21,7 +21,7 @@ export type ListPaymentsResponse = {
 
 export const createPayment = async (
   payload: Payment
-): Promise<{type:string, message:string}> => {
+): Promise<{type:string, message:string, paymentId?: string}> => {
   const response = await axiosInstance.post(API_PAYMENT_GROUP.create, payload);
   return response.data;
 };

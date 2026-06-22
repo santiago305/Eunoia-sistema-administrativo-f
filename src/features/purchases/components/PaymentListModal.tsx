@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -17,6 +17,8 @@ import {
   canShowPaymentDeleteAction,
   getPaymentStatusView,
 } from "@/features/payments/paymentView";
+import { listPurchaseAttachments } from "@/shared/services/purchaseAttachmentService";
+import type { PurchaseAttachment } from "@/features/purchases/types/purchase-attachment.types";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -50,6 +52,7 @@ export function PaymentListModal({
   const [rows, setRows] = useState<Payment[]>(payments ?? []);
   const [loading, setLoading] = useState(false);
   const [modalPayment, setModalPayment] = useState(false);
+  const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canApprovePayment = can("purchases.approve_payment");
@@ -72,6 +75,16 @@ export function PaymentListModal({
       setLoading(false);
     }
   }, [clearFeedback, poId, showFeedback]);
+
+  const reloadAttachments = useCallback(async () => {
+    if (!poId || !can("purchases.attachments.view")) return;
+    try {
+      const data = await listPurchaseAttachments({ purchaseId: poId });
+      setAttachments(data);
+    } catch {
+      setAttachments([]);
+    }
+  }, [can, poId]);
 
   useEffect(() => {
     let alive = true;
@@ -96,11 +109,12 @@ export function PaymentListModal({
     };
 
     void load();
+    void reloadAttachments();
 
     return () => {
       alive = false;
     };
-  }, [clearFeedback, poId, payments, open, showFeedback]);
+  }, [clearFeedback, poId, payments, open, reloadAttachments, showFeedback]);
 
   useEffect(() => {
     if (payments) setRows(payments);
@@ -122,6 +136,15 @@ export function PaymentListModal({
       })),
     [visibleRows, poId],
   );
+
+  const attachmentCountByPayment = useMemo(() => {
+    const map = new Map<string, number>();
+    attachments.forEach((attachment) => {
+      if (!attachment.paymentId) return;
+      map.set(attachment.paymentId, (map.get(attachment.paymentId) ?? 0) + 1);
+    });
+    return map;
+  }, [attachments]);
 
   const handleRemove = useCallback(async (paymentId?: string | null) => {
     if (!paymentId) return;
@@ -190,6 +213,19 @@ export function PaymentListModal({
         },
       },
       {
+        id: "attachments",
+        header: "Evidencia",
+        cell: (row) => {
+          const count = row.payDocId ? attachmentCountByPayment.get(row.payDocId) ?? 0 : 0;
+          return (
+            <span className="inline-flex items-center gap-1 rounded-full border border-black/10 px-2 py-0.5 text-[10px] font-medium text-black/55">
+              <FileText className="h-3 w-3" />
+              {count}
+            </span>
+          );
+        },
+      },
+      {
         id: "actions",
         header: "Acciones",
         cell: (row) => (
@@ -249,7 +285,7 @@ export function PaymentListModal({
         hideable: false,
       },
     ],
-    [canApprovePayment, canManagePayments, handleRemove, loadPurchases, reloadPayments, showFeedback],
+    [attachmentCountByPayment, canApprovePayment, canManagePayments, handleRemove, loadPurchases, reloadPayments, showFeedback],
   );
 
   return (
@@ -315,7 +351,10 @@ export function PaymentListModal({
         totalPaid={totalPaid}
         totalToPay={totalToPay}
         poId={poId}
-        onSaved={() => reloadPayments({ silent: true })}
+        onSaved={async () => {
+          await reloadPayments({ silent: true });
+          await reloadAttachments();
+        }}
         loadPurchases={loadPurchases}
       />
     </Modal>

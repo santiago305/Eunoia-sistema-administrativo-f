@@ -10,6 +10,7 @@ import { DocType, DocStatus } from "@/features/warehouse/types/warehouse";
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
 import type { PurchaseDetailsModalProps } from "@/features/purchases/types/purchaseDetails";
 import { buildPurchaseExtendedDetailsConfig } from "@/features/purchases/utils/purchaseDetailsMapper";
+import { PurchaseDocumentsTab } from "@/features/purchases/components/documents/PurchaseDocumentsTab";
 
 export function PurchaseDetailsModal({ open, poId, purchase, onClose }: PurchaseDetailsModalProps) {
   const [detail, setDetail] = useState<PurchaseOrderDetailOutput | null>(null);
@@ -88,6 +89,13 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
           uploadingPhoto,
           onUploadImage: handleUploadFromDetail,
         }),
+        documentsSection: poId ? (
+          <PurchaseDocumentsTab
+            purchaseId={poId}
+            payments={detail?.payments ?? purchase.payments ?? []}
+            legacyImages={images}
+          />
+        ) : null,
         loading,
         error,
       }

@@ -43,6 +43,7 @@ const Agencies = lazy(() => import("@/features/agencies/Agencies"));
 const Sources = lazy(() => import("@/features/sources/Sources"));
 const Purchase = lazy(() => import("@/features/purchases/Purchase"));
 const Purchases = lazy(() => import("@/features/purchases/Purchases"));
+const PurchaseReceptionPage = lazy(() => import("@/features/purchases/pages/PurchaseReceptionPage"));
 const PurchaseHistory = lazy(() => import("@/features/purchases/PurchaseHistory"));
 const Payments = lazy(() => import("@/features/payments/Payments"));
 const AccountsPayablePage = lazy(() => import("@/features/payments/pages/AccountsPayablePage"));
@@ -186,6 +187,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.purchases,
                 element: withRouteGuard(RoutesPaths.purchases, <Purchases />),
+            },
+            {
+                path: RoutesPaths.purchaseReception,
+                element: withCompanyRouteGuard(RoutesPaths.purchaseReception, <PurchaseReceptionPage />),
             },
             {
                 path: RoutesPaths.purchasesHistory,

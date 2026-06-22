@@ -104,6 +104,7 @@ export type ExtendedDetailsConfig = {
   uploadingImage?: boolean;
   onUploadImage?: (file?: File | null) => Promise<void> | void;
   imageAltPrefix?: string;
+  documentsSection?: ReactNode;
 };
 
 export type DocumentDetailsModalProps = {

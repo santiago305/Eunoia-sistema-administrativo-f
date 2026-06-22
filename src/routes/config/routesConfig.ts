@@ -62,6 +62,7 @@ export const routesConfig: RouteMetadata[] = [
 
   { path: RoutesPaths.purchase, name: "purchase", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
   { path: RoutesPaths.purchases, name: "purchases", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
+  { path: RoutesPaths.purchaseReception, name: "purchaseReception", isProtected: true, permissionsAllowed: ["page.purchase-receptions.view", "purchases.receive"] },
   { path: RoutesPaths.purchasesHistory, name: "purchasesHistory", isProtected: true, permissionsAllowed: ["purchases.view_history"] },
   { path: RoutesPaths.purchaseEdit, name: "purchases", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
   { path: RoutesPaths.payments, name: "payments", isProtected: true, permissionsAllowed: ["page.payments.view"] },

@@ -132,6 +132,7 @@ export default function Purchases() {
     const [searchParams, setSearchParams] = useSearchParams();
     const canCreatePurchase = can("purchases.create");
     const canApproveProcessing = can("purchases.approve_processing");
+    const canReceivePurchase = can("purchases.receive");
     const canApproveCreationWithPayment = canAny([
         "purchases.approve_creation_with_payment",
         "purchases.approve_payment",
@@ -858,6 +859,18 @@ export default function Purchases() {
                                 onClick: () => EnterToWarehouse(row.purchase.poId ?? ""),
                                 disabled: companyActionDisabled,
                             },
+                            row.purchase.status !== PurchaseOrderStatuses.CANCELLED &&
+                            row.purchase.status !== PurchaseOrderStatuses.RECEIVED && {
+                                id: "advanced-reception",
+                                label: "Recepción avanzada",
+                                icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                                onClick: () => {
+                                    const nextPoId = row.purchase.poId ?? "";
+                                    if (!nextPoId) return;
+                                    navigate(RoutesPaths.purchaseReception.replace(":poId", nextPoId));
+                                },
+                                disabled: companyActionDisabled || !canReceivePurchase,
+                            },
                             row.purchase.status === PurchaseOrderStatuses.PENDING_RECEIPT_CONFIRMATION && {
                                 id: "confirm-reception",
                                 label: "Confirmar ingreso",
@@ -1014,6 +1027,7 @@ export default function Purchases() {
         canApproveCreationWithPayment,
         canApproveProcessing,
         canDeleteProcessedPurchase,
+        canReceivePurchase,
         can,
         cancelOrder,
         companyActionDisabled,

@@ -37,6 +37,10 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.purchases,
         children: [
             {
+                label: "Compras",
+                href: RoutesPaths.purchases,
+            },
+            {
                 label: "Historial de compras",
                 href: RoutesPaths.purchasesHistory,
             },

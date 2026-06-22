@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Banknote, Wallet } from "lucide-react";
+import { Banknote, Paperclip, Wallet } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
@@ -26,6 +26,10 @@ import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
 import { getPaymentMethodOptions } from "@/features/payments/paymentView";
 import type { PaymentMethod } from "@/features/payment-methods/types/paymentMethod";
+import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
+import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
+import { parseApiError } from "@/shared/common/utils/handleApiError";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -72,7 +76,10 @@ export function PaymentModal({
   const previousOpenRef = useRef(open);
   const [saving, setSaving] = useState(false);
   const [paymentMethodRecords, setPaymentMethodRecords] = useState<PaymentMethod[] | null>(null);
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const { showFeedback, clearFeedback } = useFeedbackToast();
+  const { can } = usePermissions();
+  const canUploadPaymentEvidence = can("purchases.attachments.upload");
 
   useEffect(() => {
     const wasOpen = previousOpenRef.current;
@@ -82,15 +89,16 @@ export function PaymentModal({
 
     setForm((prev) => ({
       ...prev,
-      method: PaymentTypes.EFECTIVO,
+        method: PaymentTypes.EFECTIVO,
       date: new Date().toISOString(),
       operationNumber: "",
       currency: CurrencyTypes.PEN,
       amount: String(normalizeMoney(totalToPay)),
       note: "",
       quotaId: quotaId ?? null,
-      poId,
-    }));
+        poId,
+      }));
+    setEvidenceFile(null);
   }, [open, poId, quotaId, totalToPay]);
 
   useEffect(() => {
@@ -138,6 +146,15 @@ export function PaymentModal({
       });
 
       if (res.type === "success") {
+        if (evidenceFile && res.paymentId) {
+          await uploadPurchaseAttachment({
+            purchaseId: poId,
+            paymentId: res.paymentId,
+            type: PurchaseAttachmentTypes.PAYMENT_PROOF,
+            file: evidenceFile,
+            note: "Evidencia cargada al registrar el pago.",
+          });
+        }
         showFeedback(successResponse("Pago guardado con exito"));
 
         if (loadPurchases) {
@@ -153,8 +170,8 @@ export function PaymentModal({
       }
 
       close();
-    } catch {
-      showFeedback(errorResponse("Error al guardar pago"));
+    } catch (error) {
+      showFeedback(errorResponse(parseApiError(error, "Error al guardar pago")));
     } finally {
       setSaving(false);
     }
@@ -277,8 +294,23 @@ export function PaymentModal({
                       note: e.target.value,
                     }))
                   }
-                />
+                  />
               </div>
+              {canUploadPaymentEvidence ? (
+                <label className="sm:col-span-2 flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-dashed border-black/20 bg-slate-50 px-3 text-xs text-black/60">
+                  <Paperclip className="h-4 w-4 shrink-0" />
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.txt"
+                    onChange={(event) => setEvidenceFile(event.target.files?.[0] ?? null)}
+                    disabled={saving}
+                  />
+                  <span className="truncate">
+                    {evidenceFile ? evidenceFile.name : "Adjuntar voucher o evidencia de pago"}
+                  </span>
+                </label>
+              ) : null}
               <div className="sm:col-span-2">
                 <SystemButton
                   leftIcon={<Banknote className="h-5 w-5" />}

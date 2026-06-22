@@ -95,7 +95,8 @@ export const addPurchaseOrderItemSchema = z.object({
   purchaseValue: z.number().min(0)
 }).superRefine((item, ctx) => {
   const itemType = item.itemType ?? PurchaseItemTypes.PRODUCT;
-  const affectsStock = item.affectsStock ?? ![PurchaseItemTypes.SERVICE, PurchaseItemTypes.SUBSCRIPTION].includes(itemType);
+  const noStockItemTypes: string[] = [PurchaseItemTypes.SERVICE, PurchaseItemTypes.SUBSCRIPTION];
+  const affectsStock = item.affectsStock ?? !noStockItemTypes.includes(itemType);
   if (affectsStock && !item.skuId && !item.stockItemId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
