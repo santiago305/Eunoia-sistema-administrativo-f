@@ -2,6 +2,7 @@ import { FileText, Trash2 } from "lucide-react";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import {
   purchaseAttachmentTypeLabels,
+  PurchaseAttachmentTypes,
   type PurchaseAttachment,
   type PurchaseAttachmentType,
 } from "@/features/purchases/types/purchase-attachment.types";
@@ -32,6 +33,37 @@ type Props = {
   onDelete?: (attachmentId: string) => Promise<void> | void;
 };
 
+const documentGroups: Array<{
+  key: string;
+  label: string;
+  types: PurchaseAttachmentType[];
+}> = [
+  {
+    key: "fiscal",
+    label: "Comprobantes fiscales",
+    types: [PurchaseAttachmentTypes.INVOICE, PurchaseAttachmentTypes.RECEIPT],
+  },
+  {
+    key: "payments",
+    label: "Pagos",
+    types: [PurchaseAttachmentTypes.PAYMENT_PROOF],
+  },
+  {
+    key: "reception",
+    label: "Recepcion",
+    types: [
+      PurchaseAttachmentTypes.DELIVERY_NOTE,
+      PurchaseAttachmentTypes.PRODUCT_PHOTO,
+      PurchaseAttachmentTypes.SERVICE_EVIDENCE,
+    ],
+  },
+  {
+    key: "other",
+    label: "Otros",
+    types: [PurchaseAttachmentTypes.QUOTATION, PurchaseAttachmentTypes.CONTRACT, PurchaseAttachmentTypes.OTHER],
+  },
+];
+
 export function PurchaseAttachmentViewer({ attachments, canDelete = false, deletingId, onDelete }: Props) {
   if (!attachments.length) {
     return (
@@ -41,24 +73,25 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
     );
   }
 
-  const grouped = attachments.reduce<Record<string, PurchaseAttachment[]>>((acc, attachment) => {
-    const key = attachment.type;
-    acc[key] = [...(acc[key] ?? []), attachment];
-    return acc;
-  }, {});
+  const grouped = documentGroups
+    .map((group) => ({
+      ...group,
+      rows: attachments.filter((attachment) => group.types.includes(attachment.type)),
+    }))
+    .filter((group) => group.rows.length > 0);
 
   return (
     <div className="space-y-3">
-      {Object.entries(grouped).map(([type, rows]) => (
-        <div key={type} className="overflow-hidden rounded-md border border-black/5">
+      {grouped.map((group) => (
+        <div key={group.key} className="overflow-hidden rounded-md border border-black/5">
           <div className="flex items-center justify-between border-b border-black/5 bg-slate-50 px-3 py-2">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-black/55">
-              {purchaseAttachmentTypeLabels[type as PurchaseAttachmentType] ?? type}
+              {group.label}
             </p>
-            <span className="text-[10px] text-black/40">{rows.length} archivo{rows.length === 1 ? "" : "s"}</span>
+            <span className="text-[10px] text-black/40">{group.rows.length} archivo{group.rows.length === 1 ? "" : "s"}</span>
           </div>
 
-          {rows.map((attachment) => (
+          {group.rows.map((attachment) => (
             <div
               key={attachment.attachmentId}
               className="flex items-center justify-between gap-3 border-b border-black/5 px-3 py-2 last:border-b-0 hover:bg-slate-50/80"
@@ -77,7 +110,7 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
                     {attachment.originalName || attachment.filename}
                   </a>
                   <p className="mt-0.5 truncate text-[10px] text-black/40">
-                    {formatSize(attachment.sizeBytes)} · {formatDate(attachment.createdAt)}
+                    {purchaseAttachmentTypeLabels[attachment.type]} · {formatSize(attachment.sizeBytes)} · {formatDate(attachment.createdAt)}
                     {attachment.paymentId ? " · pago asociado" : ""}
                   </p>
                   {attachment.note ? (
@@ -105,4 +138,3 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
     </div>
   );
 }
-

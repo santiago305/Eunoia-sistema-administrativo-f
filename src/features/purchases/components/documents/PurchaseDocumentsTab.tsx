@@ -131,8 +131,42 @@ export function PurchaseDocumentsTab({ purchaseId, payments = [], legacyImages =
           deletingId={deletingId}
           onDelete={handleDelete}
         />
+        {legacyImages.length ? (
+          <div className="overflow-hidden rounded-md border border-amber-200 bg-amber-50/60">
+            <div className="flex items-center justify-between border-b border-amber-200 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                Evidencia legacy
+              </p>
+              <span className="text-[10px] text-amber-700">
+                Solo lectura
+              </span>
+            </div>
+            <div className="grid gap-2 p-3 sm:grid-cols-2">
+              {legacyImages.map((url, index) => (
+                <a
+                  key={`${url}-${index}`}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block overflow-hidden rounded-md border border-amber-200 bg-white text-xs text-amber-900 hover:border-amber-300"
+                >
+                  <div className="aspect-video bg-amber-100">
+                    <img
+                      src={url}
+                      alt={`Evidencia legacy ${index + 1}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="truncate px-2 py-1.5">
+                    image_prodution #{index + 1}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
-

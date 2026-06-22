@@ -15,6 +15,7 @@ type PurchaseItemRow = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  itemType: string;
 };
 
 type SelectOption = {
