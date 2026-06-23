@@ -32,6 +32,7 @@ type Props = {
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
   onOrderChanged: (orderId: string) => void | Promise<void>;
+  showActions?: boolean;
 };
 
 function formatMoney(value?: number | null) {
@@ -86,6 +87,7 @@ export function SaleOrderDetailsPanel({
   onOpenPdf,
   onOpenPayments,
   onOrderChanged,
+  showActions = true,
 }: Props) {
   const [transitions, setTransitions] = useState<AvailableTransition[]>([]);
   const [loadingTransitionId, setLoadingTransitionId] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export function SaleOrderDetailsPanel({
   const currentStateId = order?.currentState?.id ?? order?.currentStateId ?? null;
 
   const loadTransitions = useCallback(async () => {
-    if (!order?.id || !workflowId) {
+    if (!showActions || !order?.id || !workflowId) {
       setTransitions([]);
       return;
     }
@@ -116,11 +118,11 @@ export function SaleOrderDetailsPanel({
       setTransitions([]);
       setTransitionError(parseApiError(error, "No se pudieron cargar las transiciones."));
     }
-  }, [currentStateId, order?.id, workflowId, order?.deliveryDate]);
+  }, [currentStateId, order?.id, workflowId, order?.deliveryDate, showActions]);
 
   useEffect(() => {
-    void loadTransitions();
-  }, [loadTransitions]);
+    if (showActions) void loadTransitions();
+  }, [loadTransitions, showActions]);
 
   useEffect(() => {
     setOpenItemDetail(false);
@@ -303,17 +305,16 @@ export function SaleOrderDetailsPanel({
   return (
     <>
       <div className="flex min-h-full w-full flex-col">
-        <div className="sticky top-0 z-10 border-b border-zinc-100 bg-white/95 py-4 backdrop-blur">
+        <div className="sticky top-0 z-10 border-b border-zinc-100 bg-white/95 pb-2 backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-lg font-semibold text-zinc-950">{code}</div>
-              <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+              <div className="mt-1 flex items-center gap-2 text-md text-zinc-500">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stateColor }} />
                 {stateName}
               </div>
             </div>
 
-            <ActionsPopover
+            {showActions ? <ActionsPopover
               actions={actions}
               columns={1}
               compact
@@ -384,7 +385,7 @@ export function SaleOrderDetailsPanel({
                   </button>
                 );
               }}
-            />
+            /> : null}
           </div>
 
           {transitionError ? (
