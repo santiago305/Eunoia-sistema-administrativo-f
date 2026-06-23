@@ -137,6 +137,23 @@ describe("SaleOrderDetailsPanel", () => {
     getAvailableSaleOrderTransitionsMock.mockResolvedValue([]);
   });
 
+  it("does not load action transitions in modal detail mode", async () => {
+    render(
+      <SaleOrderDetailsPanel
+        order={buildOrder()}
+        showActions={false}
+        onEdit={vi.fn()}
+        onOpenPdf={vi.fn()}
+        onOpenPayments={vi.fn()}
+        onOrderChanged={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Pendiente")).toBeInTheDocument();
+    expect(getAvailableSaleOrderTransitionsMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Acciones del pedido" })).not.toBeInTheDocument();
+  });
+
   it("loads the complete client before opening the edit modal", async () => {
     getClientByIdMock.mockResolvedValue({
       id: "client-1",

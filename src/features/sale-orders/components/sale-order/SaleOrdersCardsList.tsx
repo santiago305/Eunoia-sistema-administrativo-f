@@ -6,6 +6,10 @@ type Props = {
   selectedId?: string | null;
   loading?: boolean;
   onSelect: (order: SaleOrder) => void;
+  onEditOrder: (order: SaleOrder) => void;
+  onOpenPdf: (order: SaleOrder) => void;
+  onOpenPayments: (order: SaleOrder) => void;
+  onOrderChanged: (orderId: string) => void | Promise<void>;
 };
 
 export function SaleOrdersCardsList({
@@ -13,6 +17,10 @@ export function SaleOrdersCardsList({
   selectedId,
   loading,
   onSelect,
+  onEditOrder,
+  onOpenPdf,
+  onOpenPayments,
+  onOrderChanged,
 }: Props) {
   if (loading) {
     return (
@@ -51,6 +59,10 @@ export function SaleOrdersCardsList({
           order={order}
           selected={selectedId === order.id}
           onClick={() => onSelect(order)}
+          onEdit={onEditOrder}
+          onOpenPdf={onOpenPdf}
+          onOpenPayments={onOpenPayments}
+          onOrderChanged={onOrderChanged}
         />
       ))}
     </div>

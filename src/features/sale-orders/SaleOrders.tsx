@@ -352,6 +352,7 @@ export default function SaleOrders() {
 
   const selectOrder = useCallback(async (order: SaleOrder) => {
     setSelectedOrder(order);
+    setDetailOpen(true);
     try {
       const detail = await fetchSaleOrderById(order.id);
       setSelectedOrder((current) => current?.id === order.id ? detail : current);
@@ -707,7 +708,7 @@ export default function SaleOrders() {
             </div>
           </div>
 
-          <div className="mt-3 flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mt-0 flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
               <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
             </div>
@@ -737,34 +738,36 @@ export default function SaleOrders() {
           statisticsError={statisticsError}
         />
         <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 sm:justify-start">
-              <span>
-                Pagina <span className="font-medium text-zinc-800">{serverPagination.page}</span> de{" "}
-                <span className="font-medium text-zinc-800">{serverPagination.totalPages}</span>
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={!serverPagination.hasPrev || loading}
-                  onClick={() => handlePageChange(serverPagination.page - 1)}
-                  className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
-                  aria-label="Pagina anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={!serverPagination.hasNext || loading}
-                  onClick={() => handlePageChange(serverPagination.page + 1)}
-                  className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
-                  aria-label="Pagina siguiente"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
+          <span>
+            Pagina <span className="font-medium text-zinc-800">{serverPagination.page}</span> de{" "}
+            <span className="font-medium text-zinc-800">{serverPagination.totalPages}</span>
+            
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={!serverPagination.hasPrev || loading}
+              onClick={() => handlePageChange(serverPagination.page - 1)}
+              className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
+              aria-label="Pagina anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled={!serverPagination.hasNext || loading}
+              onClick={() => handlePageChange(serverPagination.page + 1)}
+              className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
+              aria-label="Pagina siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="mt-0.5 text-md text-zinc-500">
+            {loading ? "Cargando..." : `${orders.length} resultados`}
+          </p>
+        </div>
       </div>
-
       <SaleOrderModal open={open} onClose={closeModal} orderId={editOrderId} onSaved={updateUx} />
       <PdfViewerModal
         open={pdfOpen}
