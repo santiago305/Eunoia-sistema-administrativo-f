@@ -9,10 +9,10 @@ vi.mock("@/shared/hooks/useCompany", () => ({
   useCompany: () => ({ hasCompany: true, company: { companyId: "company-1" } }),
 }));
 
-const { authState, socketHandlers, createNotificationSocketMock } = vi.hoisted(() => ({
+const { authState, socketHandlers, createSaleOrdersSocketMock } = vi.hoisted(() => ({
   authState: { isAuthenticated: false, userId: null as string | null },
   socketHandlers: new Map<string, (payload: unknown) => void>(),
-  createNotificationSocketMock: vi.fn(() => ({
+  createSaleOrdersSocketMock: vi.fn(() => ({
     on: vi.fn((event: string, handler: (payload: unknown) => void) => {
       socketHandlers.set(event, handler);
     }),
@@ -27,7 +27,7 @@ vi.mock("@/shared/hooks/useAuth", () => ({
 }));
 
 vi.mock("@/shared/lib/socket", () => ({
-  createNotificationSocket: createNotificationSocketMock,
+  createSaleOrdersSocket: createSaleOrdersSocketMock,
 }));
 
 vi.mock("@/shared/hooks/use-mobile", () => ({
@@ -39,6 +39,7 @@ const {
   getAvailableSaleOrderTransitionsMock,
   getSaleOrderSearchStateMock,
   getSaleOrderStatisticsMock,
+  listSaleOrderPaymentsMock,
   listSaleOrdersMock,
 } = vi.hoisted(() => ({
   fetchSaleOrderByIdMock: vi.fn(),
@@ -50,6 +51,7 @@ const {
     byClientType: [],
     totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
   }),
+  listSaleOrderPaymentsMock: vi.fn(),
   listSaleOrdersMock: vi.fn(),
 }));
 
@@ -65,6 +67,7 @@ vi.mock("@/shared/services/saleOrderService", async () => {
     getSaleOrderSearchState: getSaleOrderSearchStateMock,
     getSaleOrderStatistics: getSaleOrderStatisticsMock,
     getAvailableSaleOrderTransitions: getAvailableSaleOrderTransitionsMock,
+    listSaleOrderPayments: listSaleOrderPaymentsMock,
   };
 });
 
@@ -126,6 +129,8 @@ const emptySearchState = {
     paymentStatuses: [],
     workflows: [],
     states: [],
+    bankAccounts: [],
+    clientTypes: [],
   },
 };
 
@@ -134,18 +139,20 @@ describe("SaleOrders", () => {
     authState.isAuthenticated = false;
     authState.userId = null;
     socketHandlers.clear();
-    createNotificationSocketMock.mockClear();
+    createSaleOrdersSocketMock.mockClear();
     fetchSaleOrderByIdMock.mockReset();
     getAvailableSaleOrderTransitionsMock.mockReset();
     listSaleOrdersMock.mockReset();
     getSaleOrderSearchStateMock.mockReset();
     getSaleOrderStatisticsMock.mockClear();
+    listSaleOrderPaymentsMock.mockReset();
     listSaleOrdersMock.mockResolvedValue({
       items: [],
       total: 0,
       page: 1,
       limit: 10,
     });
+    listSaleOrderPaymentsMock.mockResolvedValue([]);
     getSaleOrderSearchStateMock.mockResolvedValue(emptySearchState);
     getAvailableSaleOrderTransitionsMock.mockResolvedValue([]);
   });
@@ -200,5 +207,34 @@ describe("SaleOrders", () => {
 
     await waitFor(() => expect(screen.getByText("Confirmado")).toBeTruthy());
     expect(fetchSaleOrderByIdMock).toHaveBeenLastCalledWith("order-1");
+  });
+
+  it("opens payments using the listed order totals without fetching order detail", async () => {
+    const order = buildSaleOrder("Pendiente");
+    order.total = 150;
+    order.totalPaid = 50;
+    order.pendingAmount = 100;
+    listSaleOrdersMock.mockResolvedValue({
+      items: [order],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /acciones/i }));
+    await user.click(await screen.findByText("Pagos"));
+
+    await waitFor(() => expect(listSaleOrderPaymentsMock).toHaveBeenCalledWith("order-1"));
+    expect(fetchSaleOrderByIdMock).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Total: S\/\s*150\.00/)).toBeTruthy();
+    expect(screen.getByText(/Pagado: S\/\s*50\.00/)).toBeTruthy();
+    expect(screen.getByText(/Pendiente: S\/\s*100\.00/)).toBeTruthy();
   });
 });

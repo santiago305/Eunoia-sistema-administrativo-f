@@ -8,6 +8,7 @@ const resolveSocketBaseUrl = () => {
 };
 
 let notificationSocket: Socket | null = null;
+let saleOrdersSocket: Socket | null = null;
 
 export const createNotificationSocket = (userId: string) => {
   if (!userId) return null;
@@ -28,4 +29,25 @@ export const closeNotificationSocket = () => {
   if (!notificationSocket) return;
   notificationSocket.disconnect();
   notificationSocket = null;
+};
+
+export const createSaleOrdersSocket = (userId: string) => {
+  if (!userId) return null;
+  if (saleOrdersSocket) return saleOrdersSocket;
+
+  saleOrdersSocket = io(`${resolveSocketBaseUrl()}/sale-orders`, {
+    withCredentials: true,
+    transports: ['websocket'],
+    auth: { userId },
+  });
+
+  return saleOrdersSocket;
+};
+
+export const getSaleOrdersSocket = () => saleOrdersSocket;
+
+export const closeSaleOrdersSocket = () => {
+  if (!saleOrdersSocket) return;
+  saleOrdersSocket.disconnect();
+  saleOrdersSocket = null;
 };
