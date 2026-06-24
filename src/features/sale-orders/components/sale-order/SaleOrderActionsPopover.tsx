@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Banknote, FileText, History, Menu, Pencil, Workflow } from "lucide-react";
+import { Banknote, Eye, FileText, History, Menu, Pencil, Workflow } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import type { AvailableTransition } from "@/features/workflows/types/workflow";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
@@ -9,6 +9,7 @@ import { SaleOrderWorkflowHistoryModal } from "./SaleOrderWorkflowHistoryModal";
 
 type Props = {
   order: SaleOrder;
+  onOpenDetail: (order: SaleOrder) => void;
   onEdit: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
@@ -23,7 +24,7 @@ function parseTransitionError(error: unknown) {
   return reasons.length ? reasons.join(". ") : response.data.message ?? parseApiError(error);
 }
 
-export function SaleOrderActionsPopover({ order, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
+export function SaleOrderActionsPopover({ order, onOpenDetail, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
   const [transitions, setTransitions] = useState<AvailableTransition[]>([]);
   const [loadingTransitionId, setLoadingTransitionId] = useState<string | null>(null);
   const [transitionError, setTransitionError] = useState("");
@@ -77,13 +78,14 @@ export function SaleOrderActionsPopover({ order, onEdit, onOpenPdf, onOpenPaymen
   const actions = useMemo<ActionItem[]>(() => {
     const hideEdit = Boolean(order.currentState?.isFinal) || order.currentState?.code?.toUpperCase() === "CANCELLED";
     return [
+      { id: "detail", label: "Detalle", icon: <Eye className="h-4 w-4" />, onClick: () => onOpenDetail(order) },
       { id: "edit", label: "Editar", icon: <Pencil className="h-4 w-4" />, hidden: hideEdit, onClick: () => onEdit(order) },
       { id: "pdf", label: "PDF", icon: <FileText className="h-4 w-4" />, onClick: () => onOpenPdf(order) },
       { id: "payments", label: "Pagos", icon: <Banknote className="h-4 w-4" />, onClick: () => onOpenPayments(order) },
       { id: "workflow-history", label: "Historial del flujo", icon: <History className="h-4 w-4" />, onClick: () => setHistoryOpen(true) },
       ...transitions.map((transition): ActionItem => ({ id: `transition:${transition.id}`, label: transition.name, icon: <Workflow className="h-4 w-4" />, disabled: !transition.available || loadingTransitionId !== null, danger: transition.code?.toUpperCase() === "CANCEL", onClick: () => void executeTransition(transition) })),
     ];
-  }, [executeTransition, loadingTransitionId, onEdit, onOpenPayments, onOpenPdf, order, transitions]);
+  }, [executeTransition, loadingTransitionId, onEdit, onOpenDetail, onOpenPayments, onOpenPdf, order, transitions]);
 
   return <>
     <ActionsPopover actions={actions} onOpenChange={(open) => { if (open) void loadTransitionsWhenNeeded(); }} columns={1} compact showLabels triggerIcon={<Menu className="h-5 w-5 text-black text-bold" />} triggerVariant="ghost" triggerLabel="Acciones del pedido" popoverClassName="min-w-[260px]" popoverBodyClassName="p-2" renderAction={(action, helpers) => {

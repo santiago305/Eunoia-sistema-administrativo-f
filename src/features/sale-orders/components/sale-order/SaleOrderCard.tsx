@@ -7,7 +7,8 @@ import { SaleOrderActionsPopover } from "./SaleOrderActionsPopover";
 type Props = {
   order: SaleOrder;
   selected: boolean;
-  onClick: () => void;
+  onSelect: (order: SaleOrder) => void;
+  onOpenDetail: (order: SaleOrder) => void;
   onEdit: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
@@ -21,7 +22,7 @@ function formatMoney(value?: number | null) {
   }).format(Number(value ?? 0));
 }
 
-export function SaleOrderCard({ order, selected, onClick, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
+export function SaleOrderCard({ order, selected, onSelect, onOpenDetail, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
   const code = `${order.serie ?? "-"}-${order.correlative ?? "-"}`;
   const stateName = order.currentState?.name ?? "Sin estado";
   const stateColor = order.currentState?.color ?? "#64748b";
@@ -39,11 +40,11 @@ const isPaid = pendingAmount <= 0;
     <div
       role="button"
       tabIndex={0}
-      onClick={onClick}
+      onClick={() => onSelect(order)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onClick();
+          onSelect(order);
         }
       }}
       className={cn(
@@ -87,6 +88,7 @@ const isPaid = pendingAmount <= 0;
             <span onClick={(event) => event.stopPropagation()}>
               <SaleOrderActionsPopover
                 order={order}
+                onOpenDetail={onOpenDetail}
                 onEdit={onEdit}
                 onOpenPdf={onOpenPdf}
                 onOpenPayments={onOpenPayments}

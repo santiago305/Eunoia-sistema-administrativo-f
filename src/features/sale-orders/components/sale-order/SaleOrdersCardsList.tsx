@@ -6,6 +6,7 @@ type Props = {
   selectedId?: string | null;
   loading?: boolean;
   onSelect: (order: SaleOrder) => void;
+  onOpenDetail: (order: SaleOrder) => void;
   onEditOrder: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
@@ -17,6 +18,7 @@ export function SaleOrdersCardsList({
   selectedId,
   loading,
   onSelect,
+  onOpenDetail,
   onEditOrder,
   onOpenPdf,
   onOpenPayments,
@@ -58,7 +60,8 @@ export function SaleOrdersCardsList({
           key={order.id}
           order={order}
           selected={selectedId === order.id}
-          onClick={() => onSelect(order)}
+          onSelect={onSelect}
+          onOpenDetail={onOpenDetail}
           onEdit={onEditOrder}
           onOpenPdf={onOpenPdf}
           onOpenPayments={onOpenPayments}
