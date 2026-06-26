@@ -30,6 +30,11 @@ type Props = {
   onResume: (item: RecurringPurchase) => void;
   onCancel: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
+  permissions?: {
+    canPause: boolean;
+    canCancel: boolean;
+    canGenerate: boolean;
+  };
 };
 
 export function RecurringPurchaseTable({
@@ -43,6 +48,7 @@ export function RecurringPurchaseTable({
   onResume,
   onCancel,
   onGenerate,
+  permissions = { canPause: true, canCancel: true, canGenerate: true },
 }: Props) {
   const totalPages = Math.max(Math.ceil(total / limit), 1);
 
@@ -90,20 +96,22 @@ export function RecurringPurchaseTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <SystemButton size="sm" variant="outline" title="Generar cuenta" onClick={() => onGenerate(item)}>
-                        <RefreshCw className="h-4 w-4" />
-                      </SystemButton>
-                      {item.status === "ACTIVE" ? (
+                      {permissions.canGenerate ? (
+                        <SystemButton size="sm" variant="outline" title="Generar cuenta" onClick={() => onGenerate(item)}>
+                          <RefreshCw className="h-4 w-4" />
+                        </SystemButton>
+                      ) : null}
+                      {permissions.canPause && item.status === "ACTIVE" ? (
                         <SystemButton size="sm" variant="outline" title="Pausar" onClick={() => onPause(item)}>
                           <Pause className="h-4 w-4" />
                         </SystemButton>
                       ) : null}
-                      {item.status === "PAUSED" ? (
+                      {permissions.canPause && item.status === "PAUSED" ? (
                         <SystemButton size="sm" variant="outline" title="Reanudar" onClick={() => onResume(item)}>
                           <Play className="h-4 w-4" />
                         </SystemButton>
                       ) : null}
-                      {item.status !== "CANCELLED" ? (
+                      {permissions.canCancel && item.status !== "CANCELLED" ? (
                         <SystemButton size="sm" variant="outline" title="Cancelar" onClick={() => onCancel(item)}>
                           <XCircle className="h-4 w-4" />
                         </SystemButton>

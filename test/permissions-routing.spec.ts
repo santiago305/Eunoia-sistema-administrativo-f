@@ -10,9 +10,9 @@ describe("permissions routing regression", () => {
     expect(canAccess).toBe(false);
   });
 
-  it("allows /pagos when page.payments.view is present", () => {
+  it("allows /pagos when page and read payment permissions are present", () => {
     const meta = getRouteMetaByPath(RoutesPaths.payments);
-    const canAccess = canAccessRoute(meta, "adviser", ["page.payments.view"]);
+    const canAccess = canAccessRoute(meta, "adviser", ["page.payments.view", "payments.read"]);
     expect(canAccess).toBe(true);
   });
 

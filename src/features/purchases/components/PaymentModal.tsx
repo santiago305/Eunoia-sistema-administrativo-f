@@ -86,7 +86,7 @@ export function PaymentModal({
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const { company } = useCompany();
-  const canUploadPaymentEvidence = can("purchases.attachments.upload");
+  const canUploadPaymentEvidence = can("payments.attach_evidence");
 
   useEffect(() => {
     const wasOpen = previousOpenRef.current;

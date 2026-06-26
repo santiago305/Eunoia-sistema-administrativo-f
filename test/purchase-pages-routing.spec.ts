@@ -18,21 +18,21 @@ describe("purchase pages routing", () => {
     expect(RoutesPaths.paymentMethods).toBe("/metodos-pago");
   });
 
-  it("keeps purchase page metadata protected with purchase permissions", () => {
-    const protectedPurchasePaths = [
-      RoutesPaths.purchaseDashboard,
-      RoutesPaths.purchaseCreate,
-      RoutesPaths.purchaseDetail,
-      RoutesPaths.purchaseEditPage,
-      RoutesPaths.purchasePayments,
-      RoutesPaths.purchaseDocuments,
-      RoutesPaths.recurringPurchases,
-    ];
+  it("keeps purchase page metadata protected with final purchase permissions", () => {
+    const expectations = [
+      [RoutesPaths.purchaseDashboard, ["purchases_dashboard.view"]],
+      [RoutesPaths.purchaseCreate, ["page.purchases.view", "purchases.create"]],
+      [RoutesPaths.purchaseDetail, ["page.purchases.view", "purchases.view_detail"]],
+      [RoutesPaths.purchaseEditPage, ["page.purchases.view"]],
+      [RoutesPaths.purchasePayments, ["page.payments.view", "payments.read"]],
+      [RoutesPaths.purchaseDocuments, ["page.purchases.view", "purchases.attach_documents"]],
+      [RoutesPaths.recurringPurchases, ["page.purchases.view", "page.recurring-purchases.view", "recurring_purchases.view"]],
+    ] as const;
 
-    protectedPurchasePaths.forEach((path) => {
+    expectations.forEach(([path, permissions]) => {
       const meta = getRouteMetaByPath(path);
       expect(meta?.isProtected).toBe(true);
-      expect(meta?.permissionsAllowed).toContain("page.purchases.view");
+      expect(meta?.permissionsAllowed).toEqual(permissions);
     });
   });
 

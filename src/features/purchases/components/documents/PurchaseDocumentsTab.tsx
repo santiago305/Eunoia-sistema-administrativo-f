@@ -31,9 +31,9 @@ export function PurchaseDocumentsTab({ purchaseId, payments = [], legacyImages =
   const { showFeedback } = useFeedbackToast();
   const { can } = usePermissions();
 
-  const canView = can("purchases.attachments.view");
-  const canUpload = can("purchases.attachments.upload");
-  const canDelete = can("purchases.attachments.delete");
+  const canView = can("purchases.view_detail");
+  const canUpload = can("purchases.attach_documents");
+  const canDelete = can("purchases.delete_documents");
 
   const loadAttachments = useCallback(async () => {
     if (!purchaseId || !canView) return;

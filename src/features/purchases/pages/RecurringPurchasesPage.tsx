@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
   cancelRecurringPurchase,
@@ -25,6 +26,7 @@ const DEFAULT_LIMIT = 20;
 
 export default function RecurringPurchasesPage() {
   const { showFeedback } = useFeedbackToast();
+  const { can } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [status, setStatus] = useState<RecurringStatus | "">("");
@@ -112,10 +114,12 @@ export default function RecurringPurchasesPage() {
               Membresias, servicios y suscripciones que generan cuentas por pagar por periodo.
             </p>
           </div>
-          <SystemButton onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Nueva recurrente
-          </SystemButton>
+          {can("recurring_purchases.create") ? (
+            <SystemButton onClick={() => setModalOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nueva recurrente
+            </SystemButton>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -155,6 +159,11 @@ export default function RecurringPurchasesPage() {
             void runAction(item, cancelRecurringPurchase, "Recurrencia cancelada.", "No se pudo cancelar.")
           }
           onGenerate={(item) => void generatePayable(item)}
+          permissions={{
+            canPause: can("recurring_purchases.pause"),
+            canCancel: can("recurring_purchases.cancel"),
+            canGenerate: can("recurring_purchases.pay"),
+          }}
         />
       </div>
 

@@ -41,8 +41,9 @@ const formatDate = (value?: string | null) => {
 export default function Payments() {
   const { can } = usePermissions();
   const { showFeedback } = useFeedbackToast();
-  const canManagePayments = can("payments.manage");
-  const canApprovePayment = can("purchases.approve_payment");
+  const canDeletePayments = can("payments.delete");
+  const canApprovePayment = can("payments.approve");
+  const canRejectPayment = can("payments.reject");
 
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -85,7 +86,7 @@ export default function Payments() {
 
   const handleDelete = useCallback(
     async (payDocId?: string) => {
-      if (!canManagePayments || !payDocId || deletingId) return;
+      if (!canDeletePayments || !payDocId || deletingId) return;
       setDeletingId(payDocId);
       try {
         await removePayment(payDocId);
@@ -97,7 +98,7 @@ export default function Payments() {
         setDeletingId(null);
       }
     },
-    [canManagePayments, deletingId, loadPayments, showFeedback],
+    [canDeletePayments, deletingId, loadPayments, showFeedback],
   );
 
   const handleApprove = useCallback(
@@ -243,28 +244,32 @@ export default function Payments() {
         sortable: false,
         cell: (row) => (
           <div className="flex justify-end gap-2">
-            {canShowPaymentApprovalActions(row.status, canApprovePayment) ? (
+            {canShowPaymentApprovalActions(row.status, canApprovePayment || canRejectPayment) ? (
               <>
-                <SystemButton
-                  size="sm"
-                  disabled={!row.payDocId || reviewingId === row.payDocId}
-                  onClick={() => void handleApprove(row.payDocId)}
-                  leftIcon={<Check className="h-4 w-4" />}
-                >
-                  Aprobar
-                </SystemButton>
-                <SystemButton
-                  size="sm"
-                  variant="danger"
-                  disabled={!row.payDocId || reviewingId === row.payDocId}
-                  onClick={() => void handleReject(row.payDocId)}
-                  leftIcon={<X className="h-4 w-4" />}
-                >
-                  Rechazar
-                </SystemButton>
+                {canApprovePayment ? (
+                  <SystemButton
+                    size="sm"
+                    disabled={!row.payDocId || reviewingId === row.payDocId}
+                    onClick={() => void handleApprove(row.payDocId)}
+                    leftIcon={<Check className="h-4 w-4" />}
+                  >
+                    Aprobar
+                  </SystemButton>
+                ) : null}
+                {canRejectPayment ? (
+                  <SystemButton
+                    size="sm"
+                    variant="danger"
+                    disabled={!row.payDocId || reviewingId === row.payDocId}
+                    onClick={() => void handleReject(row.payDocId)}
+                    leftIcon={<X className="h-4 w-4" />}
+                  >
+                    Rechazar
+                  </SystemButton>
+                ) : null}
               </>
             ) : null}
-            {canShowPaymentDeleteAction(canManagePayments) ? (
+            {canShowPaymentDeleteAction(canDeletePayments) ? (
               <SystemButton
                 size="sm"
                 variant="ghost"
@@ -281,7 +286,7 @@ export default function Payments() {
         headerClassName: "text-right [&>div]:justify-end",
       },
     ],
-    [canApprovePayment, canManagePayments, deletingId, handleApprove, handleDelete, handleReject, reviewingId],
+    [canApprovePayment, canDeletePayments, canRejectPayment, deletingId, handleApprove, handleDelete, handleReject, reviewingId],
   );
 
   return (

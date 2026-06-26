@@ -55,8 +55,9 @@ export function PaymentListModal({
   const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
-  const canApprovePayment = can("purchases.approve_payment");
-  const canManagePayments = can("payments.manage");
+  const canApprovePayment = can("payments.approve");
+  const canRejectPayment = can("payments.reject");
+  const canDeletePayments = can("payments.delete");
 
   const reloadPayments = useCallback(async (options?: { silent?: boolean }) => {
     if (!poId) return;
@@ -77,7 +78,7 @@ export function PaymentListModal({
   }, [clearFeedback, poId, showFeedback]);
 
   const reloadAttachments = useCallback(async () => {
-    if (!poId || !can("purchases.attachments.view")) return;
+    if (!poId || !can("payments.view_evidence")) return;
     try {
       const data = await listPurchaseAttachments({ purchaseId: poId });
       setAttachments(data);
@@ -248,26 +249,28 @@ export function PaymentListModal({
                 >
                   Aprobar
                 </SystemButton>
-                <SystemButton
-                  size="sm"
-                  variant="danger"
-                  onClick={async () => {
-                    if (!row.payDocId) return;
-                    const res = await rejectPayment(row.payDocId);
-                    if (res.type === "success") {
-                      showFeedback(successResponse(res.message));
-                      await reloadPayments({ silent: true });
-                      loadPurchases();
-                    } else {
-                      showFeedback(errorResponse(res.message));
-                    }
-                  }}
-                >
-                  Rechazar
-                </SystemButton>
+                {canRejectPayment ? (
+                  <SystemButton
+                    size="sm"
+                    variant="danger"
+                    onClick={async () => {
+                      if (!row.payDocId) return;
+                      const res = await rejectPayment(row.payDocId);
+                      if (res.type === "success") {
+                        showFeedback(successResponse(res.message));
+                        await reloadPayments({ silent: true });
+                        loadPurchases();
+                      } else {
+                        showFeedback(errorResponse(res.message));
+                      }
+                    }}
+                  >
+                    Rechazar
+                  </SystemButton>
+                ) : null}
               </>
             ) : null}
-            {canShowPaymentDeleteAction(canManagePayments) ? (
+            {canShowPaymentDeleteAction(canDeletePayments) ? (
               <SystemButton
                 variant="danger"
                 size="icon"
@@ -285,7 +288,7 @@ export function PaymentListModal({
         hideable: false,
       },
     ],
-    [attachmentCountByPayment, canApprovePayment, canManagePayments, handleRemove, loadPurchases, reloadPayments, showFeedback],
+    [attachmentCountByPayment, canApprovePayment, canDeletePayments, canRejectPayment, handleRemove, loadPurchases, reloadPayments, showFeedback],
   );
 
   return (

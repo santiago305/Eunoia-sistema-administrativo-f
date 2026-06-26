@@ -132,11 +132,10 @@ export default function Purchases() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const canCreatePurchase = can("purchases.create");
-    const canApproveProcessing = can("purchases.approve_processing");
+    const canApproveProcessing = can("purchases.approve");
     const canReceivePurchase = can("purchases.receive");
     const canApproveCreationWithPayment = canAny([
-        "purchases.approve_creation_with_payment",
-        "purchases.approve_payment",
+        "payments.approve",
         "purchases.approve",
     ]);
     const canDeleteProcessedPurchase = can("purchases.delete_processed_purchase");
