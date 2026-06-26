@@ -50,6 +50,15 @@ export const API_COMPANY_GROUP = {
   uploadIsotype: "/company/isotype",
   uploadCert: "/company/cert",
 };
+
+export const API_DASHBOARD_GROUP = {
+  saleOrdersUbigeoDepartments: "/dashboard/sale-orders/ubigeo/departments",
+  saleOrdersUbigeoProvinces: (departmentId: string) =>
+    `/dashboard/sale-orders/ubigeo/departments/${departmentId}/provinces`,
+  saleOrdersUbigeoDistricts: (provinceId: string) =>
+    `/dashboard/sale-orders/ubigeo/provinces/${provinceId}/districts`,
+};
+
 export const clientRoutes = {
   list: "/clients",
   create: "/clients",

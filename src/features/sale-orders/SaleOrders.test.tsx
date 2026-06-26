@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SaleOrders from "@/features/sale-orders/SaleOrders";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
-import { ClientType, type SaleOrder } from "@/features/sale-orders/types/saleOrder";
+import { ClientType, type SaleOrder, type SaleOrderStatisticsResponse } from "@/features/sale-orders/types/saleOrder";
 
 vi.mock("@/shared/hooks/useCompany", () => ({
   useCompany: () => ({ hasCompany: true, company: { companyId: "company-1" } }),
@@ -120,6 +120,20 @@ const buildSaleOrder = (stateName: string): SaleOrder => ({
   items: [],
 });
 
+const buildStatistics = (orders: number, total = orders * 100): SaleOrderStatisticsResponse => ({
+  byWorkflow: [{ id: "workflow-1", label: "Flujo venta", count: orders }],
+  byState: [{ id: "global-state-1", label: "Pendiente", color: "#64748b", count: orders }],
+  byClientType: [{ type: ClientType.NEW, label: "Nuevo", count: orders }],
+  byBankAccount: [],
+  totals: {
+    orders,
+    total,
+    collected: 0,
+    pending: total,
+    deliveryCostSum: 0,
+  },
+});
+
 const emptySearchState = {
   recent: [],
   saved: [],
@@ -144,7 +158,7 @@ describe("SaleOrders", () => {
     getAvailableSaleOrderTransitionsMock.mockReset();
     listSaleOrdersMock.mockReset();
     getSaleOrderSearchStateMock.mockReset();
-    getSaleOrderStatisticsMock.mockClear();
+    getSaleOrderStatisticsMock.mockReset();
     listSaleOrderPaymentsMock.mockReset();
     listSaleOrdersMock.mockResolvedValue({
       items: [],
@@ -155,6 +169,7 @@ describe("SaleOrders", () => {
     listSaleOrderPaymentsMock.mockResolvedValue([]);
     getSaleOrderSearchStateMock.mockResolvedValue(emptySearchState);
     getAvailableSaleOrderTransitionsMock.mockResolvedValue([]);
+    getSaleOrderStatisticsMock.mockResolvedValue(buildStatistics(0, 0));
   });
 
   it("shows actions and loads statistics including cancelled orders", async () => {
@@ -174,6 +189,24 @@ describe("SaleOrders", () => {
         includeCancelled: true,
       }),
     );
+  });
+
+  it("keeps pagination inside the order list panel", async () => {
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    const pagination = await screen.findByRole("navigation", {
+      name: "Paginación de pedidos",
+    });
+    const listPanel = screen.getByRole("complementary", {
+      name: "Listado de pedidos",
+    });
+
+    expect(listPanel).toContainElement(pagination);
+    expect(pagination.parentElement).toHaveClass("shrink-0");
   });
 
   it("refreshes the selected order detail when sale-orders.updated arrives without explicit ids", async () => {
@@ -207,6 +240,270 @@ describe("SaleOrders", () => {
 
     await waitFor(() => expect(screen.getByText("Confirmado")).toBeTruthy());
     expect(fetchSaleOrderByIdMock).toHaveBeenLastCalledWith("order-1");
+  });
+
+  it("uses the saleOrders payload from the websocket to update the selected order without refetching", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    const updatedOrder = buildSaleOrder("Confirmado");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchSaleOrderByIdMock.mockResolvedValue(initialOrder);
+
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.click(await screen.findByText("SO-1"));
+    await waitFor(() => expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0));
+
+    const initialCallCount = fetchSaleOrderByIdMock.mock.calls.length;
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({ updated: 1, saleOrderIds: ["order-1"], saleOrders: [updatedOrder] });
+    });
+
+    await waitFor(() => expect(screen.getByText("Confirmado")).toBeTruthy());
+    expect(fetchSaleOrderByIdMock).toHaveBeenCalledTimes(initialCallCount);
+  });
+
+  it("processes consecutive saleOrders realtime payloads without dropping the latest one", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    const firstUpdate = buildSaleOrder("Confirmado");
+    const secondUpdate = buildSaleOrder("Entregado");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchSaleOrderByIdMock.mockResolvedValue(initialOrder);
+
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.click(await screen.findByText("SO-1"));
+    await waitFor(() => expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0));
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({
+        updated: 1,
+        saleOrderIds: ["order-1"],
+        source: "workflow-state-changed",
+        saleOrders: [firstUpdate],
+      });
+      socketHandlers.get("sale-orders.updated")?.({
+        updated: 1,
+        saleOrderIds: ["order-1"],
+        source: "automatic-workflow",
+        trigger: "payment-created",
+        saleOrders: [secondUpdate],
+      });
+    });
+
+    await waitFor(() => expect(screen.getByText("Entregado")).toBeTruthy());
+  });
+
+  it("uses realtime statistics directly when there are no active filters", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchSaleOrderByIdMock.mockResolvedValue(initialOrder);
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("SO-1");
+    await waitFor(() => expect(getSaleOrderStatisticsMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({
+        updated: 1,
+        saleOrderIds: ["order-1"],
+        source: "payment-created",
+        saleOrders: [],
+        statistics: buildStatistics(3, 450),
+      });
+    });
+
+    await waitFor(() => expect(screen.getAllByText("S/ 450.00").length).toBeGreaterThan(0));
+    expect(getSaleOrderStatisticsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses realtime statistics directly even when filters are active", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.type(await screen.findByLabelText("Buscar pedido..."), "SO");
+    await user.click(screen.getByRole("button", { name: "Buscar" }));
+
+    await waitFor(() =>
+      expect(getSaleOrderStatisticsMock).toHaveBeenLastCalledWith({
+        q: "SO",
+        filters: [],
+        includeCancelled: true,
+      }),
+    );
+    const callsBeforeRealtime = getSaleOrderStatisticsMock.mock.calls.length;
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({
+        updated: 1,
+        saleOrderIds: ["order-1"],
+        source: "payment-created",
+        saleOrders: [],
+        statistics: buildStatistics(99, 9900),
+      });
+    });
+
+    await waitFor(() => expect(screen.getAllByText("S/ 9,900.00").length).toBeGreaterThan(0));
+    expect(getSaleOrderStatisticsMock).toHaveBeenCalledTimes(callsBeforeRealtime);
+  });
+
+  it("uses imported saleOrders payloads without reloading orders", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    const updatedOrder = buildSaleOrder("Confirmado");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("SO-1");
+    await waitFor(() => expect(listSaleOrdersMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({
+        updated: 1,
+        saleOrderIds: ["order-1"],
+        source: "sale-order-imported",
+        saleOrders: [updatedOrder],
+      });
+    });
+
+    await waitFor(() => expect(screen.getByText("Confirmado")).toBeTruthy());
+    expect(listSaleOrdersMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("inserts new saleOrders from automatic workflow payloads without reloading orders", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    const createdOrder = {
+      ...buildSaleOrder("Confirmado"),
+      id: "order-2",
+      correlative: 2,
+      currentStateId: "state-Confirmado",
+    };
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("SO-1");
+    await waitFor(() => expect(listSaleOrdersMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({
+        updated: 1,
+        saleOrderIds: ["order-2"],
+        source: "automatic-workflow",
+        trigger: "sale-order-created",
+        saleOrders: [createdOrder],
+      });
+    });
+
+    await waitFor(() => expect(screen.getByText("SO-2")).toBeTruthy());
+    expect(listSaleOrdersMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores legacy singular saleOrder realtime payloads", async () => {
+    authState.isAuthenticated = true;
+    authState.userId = "user-1";
+    const initialOrder = buildSaleOrder("Pendiente");
+    const updatedOrder = buildSaleOrder("Listo para entrega");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [initialOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchSaleOrderByIdMock.mockResolvedValue(initialOrder);
+
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.click(await screen.findByText("SO-1"));
+    await waitFor(() => expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0));
+
+    await act(async () => {
+      socketHandlers.get("sale-orders.updated")?.({
+        updated: 1,
+        saleOrderIds: ["order-1"],
+        source: "payment-created",
+        saleOrder: updatedOrder,
+      });
+    });
+
+    expect(screen.queryByText("Listo para entrega")).toBeNull();
   });
 
   it("opens payments using the listed order totals without fetching order detail", async () => {

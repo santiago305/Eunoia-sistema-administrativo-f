@@ -77,6 +77,7 @@ export default function SaleOrders() {
   const [editOrderId, setEditOrderId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
+  const selectedOrderRef = useRef<SaleOrder | null>(null);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [paymentsOrder, setPaymentsOrder] = useState<SaleOrder | null>(null);
   const [workflowEditorOpen, setWorkflowEditorOpen] = useState(false);
@@ -113,6 +114,10 @@ export default function SaleOrders() {
   const executedSnapshot = useMemo(
     () => sanitizeSaleOrderSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
     [appliedSearchText, searchFilters],
+  );
+  const hasExecutedSearchCriteria = useMemo(
+    () => hasSaleOrderSearchCriteria(executedSnapshot),
+    [executedSnapshot],
   );
   const smartSearchColumns = useMemo(() => buildSaleOrderSmartSearchColumns(searchState), [searchState]);
   const recentSearches = useMemo<DataTableRecentSearchItem<SaleOrderSearchSnapshot>[]>(() => (searchState?.recent ?? []).map((item) => ({
@@ -155,16 +160,20 @@ export default function SaleOrders() {
     }
   }, []);
 
+  const updateSelectedOrder = useCallback((updater: React.SetStateAction<SaleOrder | null>) => {
+    setSelectedOrder((current) => {
+      const next = typeof updater === "function" ? (updater as (value: SaleOrder | null) => SaleOrder | null)(current) : updater;
+      selectedOrderRef.current = next;
+      return next;
+    });
+  }, []);
+
   const updateUx = async () => {
     await loadOrders();
 
     if (selectedOrder?.id) {
       const updated = await fetchSaleOrderById(selectedOrder.id);
-
-      console.log("antes", selectedOrder);
-      console.log("despues", updated);
-
-      setSelectedOrder(updated);
+      syncRealtimeSaleOrder(updated);
     }
   };
 
@@ -192,7 +201,7 @@ export default function SaleOrders() {
         hasPrev: nextPage > 1,
         hasNext: nextPage < nextTotalPages,
       });
-      if (hasSaleOrderSearchCriteria(executedSnapshot)) void loadSearchState();
+      if (hasExecutedSearchCriteria) void loadSearchState();
     } catch {
       setOrders([]);
       setServerPagination({
@@ -207,7 +216,7 @@ export default function SaleOrders() {
     } finally {
       setLoading(false);
     }
-  }, [clearFeedback, executedSnapshot, loadSearchState, page, paginationState.pageSize]);
+  }, [clearFeedback, executedSnapshot, hasExecutedSearchCriteria, loadSearchState, page, paginationState.pageSize]);
 
   const loadStatistics = useCallback(async () => {
     const requestId = statisticsRequestRef.current + 1;
@@ -235,26 +244,74 @@ export default function SaleOrders() {
     }
   }, [executedSnapshot]);
 
+  const syncRealtimeSaleOrder = useCallback((updatedOrder: SaleOrder | null | undefined) => {
+    if (!updatedOrder?.id) return;
+
+    const mergeOrder = (currentOrder: SaleOrder | null | undefined) => {
+      if (!currentOrder) return updatedOrder;
+
+      return {
+        ...currentOrder,
+        ...updatedOrder,
+        currentStateId: updatedOrder.currentStateId !== undefined ? updatedOrder.currentStateId : currentOrder.currentStateId,
+        currentState: updatedOrder.currentState !== undefined ? updatedOrder.currentState : currentOrder.currentState,
+        client: updatedOrder.client !== undefined ? updatedOrder.client : currentOrder.client,
+        warehouse: updatedOrder.warehouse !== undefined ? updatedOrder.warehouse : currentOrder.warehouse,
+        workflow: updatedOrder.workflow !== undefined ? updatedOrder.workflow : currentOrder.workflow,
+        source: updatedOrder.source !== undefined ? updatedOrder.source : currentOrder.source,
+        createdBy: updatedOrder.createdBy !== undefined ? updatedOrder.createdBy : currentOrder.createdBy,
+        payments: updatedOrder.payments !== undefined ? updatedOrder.payments : currentOrder.payments,
+        items: updatedOrder.items !== undefined ? updatedOrder.items : currentOrder.items,
+      };
+    };
+
+    setOrders((currentOrders) => {
+      const currentOrder = currentOrders.find((order) => order.id === updatedOrder.id);
+      if (!currentOrder) return [updatedOrder, ...currentOrders];
+      return currentOrders.map((order) => (order.id === updatedOrder.id ? mergeOrder(order) : order));
+    });
+    updateSelectedOrder((current) => (current?.id === updatedOrder.id ? mergeOrder(current) : current));
+    setPaymentsOrder((current) => (current?.id === updatedOrder.id ? mergeOrder(current) : current));
+  }, [updateSelectedOrder]);
+
   const refreshSelectedOrder = useCallback(async (saleOrderId: string) => {
     const updated = await fetchSaleOrderById(saleOrderId);
-    setSelectedOrder(updated);
+    syncRealtimeSaleOrder(updated);
     await loadOrders();
-  }, [loadOrders]);
+  }, [loadOrders, syncRealtimeSaleOrder]);
+
+  useEffect(() => {
+    selectedOrderRef.current = selectedOrder;
+  }, [selectedOrder]);
+
+  const refreshSelectedOrderDetail = useCallback(async (saleOrderId: string) => {
+    const currentSelectedOrder = selectedOrderRef.current;
+    const firstRefresh = await fetchSaleOrderById(saleOrderId);
+    if (
+      currentSelectedOrder?.id === saleOrderId
+      && currentSelectedOrder?.currentStateId === firstRefresh?.currentStateId
+    ) {
+      const secondRefresh = await fetchSaleOrderById(saleOrderId);
+      syncRealtimeSaleOrder(secondRefresh);
+      return;
+    }
+    syncRealtimeSaleOrder(firstRefresh);
+  }, [syncRealtimeSaleOrder]);
 
   const selectOrder = useCallback((order: SaleOrder) => {
-    setSelectedOrder(order);
-  }, []);
+    updateSelectedOrder(order);
+  }, [updateSelectedOrder]);
 
   const openOrderDetail = useCallback(async (order: SaleOrder) => {
-    setSelectedOrder(order);
+    updateSelectedOrder(order);
     setDetailOpen(true);
     try {
       const detail = await fetchSaleOrderById(order.id);
-      setSelectedOrder((current) => current?.id === order.id ? detail : current);
+      updateSelectedOrder((current) => current?.id === order.id && current?.currentStateId === order.currentStateId ? detail : current);
     } catch (error) {
       showFeedbackRef.current(errorResponse(parseApiError(error, "No se pudo cargar el detalle del pedido.")));
     }
-  }, []);
+  }, [updateSelectedOrder]);
 
   useEffect(() => {
     void loadOrders();
@@ -264,21 +321,42 @@ export default function SaleOrders() {
     void loadStatistics();
   }, [loadStatistics]);
 
-  const lastRealtimeRefreshRef = useRef(0);
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
     const socket = createSaleOrdersSocket(userId);
     if (!socket) return;
     const onSaleOrdersUpdated = (payload: SaleOrdersUpdatedPayload) => {
-      const now = Date.now();
-      if (now - lastRealtimeRefreshRef.current < 800) return;
-      lastRealtimeRefreshRef.current = now;
-      void loadOrders();
-      void loadStatistics();
       const saleOrderIds = Array.isArray(payload?.saleOrderIds) ? payload.saleOrderIds : [];
-      if (!selectedOrder?.id) return;
-      if (saleOrderIds.length > 0 && !saleOrderIds.includes(selectedOrder.id)) return;
-      void fetchSaleOrderById(selectedOrder.id).then(setSelectedOrder).catch(() => undefined);
+      const hasSaleOrdersPayload = Array.isArray(payload?.saleOrders);
+      const updatedOrders = hasSaleOrdersPayload ? payload.saleOrders ?? [] : [];
+      const updatedOrdersById = new Map(updatedOrders.filter((order) => order?.id).map((order) => [order.id, order]));
+      const currentSelectedOrder = selectedOrderRef.current;
+      const selectedOrderWasUpdated = Boolean(
+        currentSelectedOrder?.id
+        && (saleOrderIds.length === 0 || saleOrderIds.includes(currentSelectedOrder.id)),
+      );
+
+      updatedOrders.forEach((order) => {
+        if (saleOrderIds.length > 0 && !saleOrderIds.includes(order.id)) return;
+        syncRealtimeSaleOrder(order);
+      });
+
+      if (selectedOrderWasUpdated && currentSelectedOrder?.id && !updatedOrdersById.has(currentSelectedOrder.id)) {
+        void refreshSelectedOrderDetail(currentSelectedOrder.id).catch(() => undefined);
+      }
+
+      if (payload?.statistics) {
+        statisticsRequestRef.current += 1;
+        setStatistics(payload.statistics);
+        setStatisticsError(null);
+        setStatisticsLoading(false);
+      } else {
+        void loadStatistics();
+      }
+
+      if (!hasSaleOrdersPayload) {
+        void loadOrders();
+      }
     };
     socket.on("sale-orders.updated", onSaleOrdersUpdated);
     return () => {
@@ -286,9 +364,11 @@ export default function SaleOrders() {
     };
   }, [
     isAuthenticated,
+    hasExecutedSearchCriteria,
     loadOrders,
     loadStatistics,
-    selectedOrder?.id,
+    refreshSelectedOrderDetail,
+    syncRealtimeSaleOrder,
     userId,
   ]);
 
@@ -425,7 +505,7 @@ export default function SaleOrders() {
                   onSubmitSearch={submitSearch}
                   searchLabel="Buscar pedido..."
                   searchName="sale-order-smart-search"
-                  canSaveMetric={hasSaleOrderSearchCriteria(executedSnapshot)}
+                  canSaveMetric={hasExecutedSearchCriteria}
                   saveLoading={savingMetric}
                   onSaveMetric={handleSaveMetric}
                 >
@@ -506,37 +586,41 @@ export default function SaleOrders() {
           statistics={statistics}
           statisticsLoading={statisticsLoading}
           statisticsError={statisticsError}
+          listFooter={
+            <nav
+              aria-label="Paginación de pedidos"
+              className="flex items-center justify-between gap-2 bg-white py-2 text-xs text-zinc-500 sm:justify-start"
+            >
+              <span>
+                Pagina <span className="font-medium text-zinc-800">{serverPagination.page}</span> de{" "}
+                <span className="font-medium text-zinc-800">{serverPagination.totalPages}</span>
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={!serverPagination.hasPrev || loading}
+                  onClick={() => handlePageChange(serverPagination.page - 1)}
+                  className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
+                  aria-label="Pagina anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!serverPagination.hasNext || loading}
+                  onClick={() => handlePageChange(serverPagination.page + 1)}
+                  className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
+                  aria-label="Pagina siguiente"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mt-0.5 text-md text-zinc-500">
+                {loading ? "Cargando..." : `${orders.length} resultados`}
+              </p>
+            </nav>
+          }
         />
-        <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 sm:justify-start">
-          <span>
-            Pagina <span className="font-medium text-zinc-800">{serverPagination.page}</span> de{" "}
-            <span className="font-medium text-zinc-800">{serverPagination.totalPages}</span>
-            
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={!serverPagination.hasPrev || loading}
-              onClick={() => handlePageChange(serverPagination.page - 1)}
-              className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
-              aria-label="Pagina anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              disabled={!serverPagination.hasNext || loading}
-              onClick={() => handlePageChange(serverPagination.page + 1)}
-              className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
-              aria-label="Pagina siguiente"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="mt-0.5 text-md text-zinc-500">
-            {loading ? "Cargando..." : `${orders.length} resultados`}
-          </p>
-        </div>
       </div>
       <SaleOrderModal open={open} onClose={closeModal} orderId={editOrderId} onSaved={updateUx} />
       <PdfViewerModal

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { SaleOrdersCardsList } from "./SaleOrdersCardsList";
 import type { SaleOrderStatisticsResponse } from "@/features/sale-orders/types/saleOrder";
@@ -16,6 +17,7 @@ type Props = {
   statistics: SaleOrderStatisticsResponse | null;
   statisticsLoading: boolean;
   statisticsError: string | null;
+  listFooter?: ReactNode;
 };
 
 export function SaleOrdersBoard({
@@ -31,11 +33,15 @@ export function SaleOrdersBoard({
   statistics,
   statisticsLoading,
   statisticsError,
+  listFooter,
 }: Props) {
   return (
     <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-0 
     lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[440px_minmax(0,1fr)]">
-      <aside className="h-full w-full border-b border-zinc-100 lg:min-h-0 lg:border-b-0 lg:border-r">
+      <aside
+        aria-label="Listado de pedidos"
+        className="h-full w-full border-b border-zinc-100 lg:min-h-0 lg:border-b-0 lg:border-r"
+      >
         <div className="flex h-full min-h-0 flex-col">
           <div className="min-h-0 flex-1 overflow-auto pr-0 lg:pr-4 scroll-area">
             <SaleOrdersCardsList
@@ -50,6 +56,7 @@ export function SaleOrdersBoard({
               onOrderChanged={onOrderChanged}
             />
           </div>
+          {listFooter ? <div className="shrink-0">{listFooter}</div> : null}
         </div>
       </aside>
 
