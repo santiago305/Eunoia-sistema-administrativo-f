@@ -305,6 +305,19 @@ export const API_PURCHASE_GROUP = {
   listQuotas: (id: string) => `/payments/credit-quotas/get-by-po/${id}`,
 };
 
+export const API_PURCHASE_DASHBOARD_GROUP = {
+  summary: "/purchases/dashboard/summary",
+  byType: "/purchases/dashboard/by-type",
+  byStatus: "/purchases/dashboard/by-status",
+  topItems: "/purchases/dashboard/top-items",
+  topSuppliers: "/purchases/dashboard/top-suppliers",
+  monthlySpending: "/purchases/dashboard/monthly-spending",
+  upcomingPayments: "/purchases/dashboard/upcoming-payments",
+  overduePayments: "/purchases/dashboard/overdue-payments",
+  paymentMethodUsage: "/purchases/dashboard/payment-method-usage",
+  internalVsInventory: "/purchases/dashboard/internal-vs-inventory",
+};
+
 export const API_PURCHASE_RECEPTIONS_GROUP = {
   list: "/purchase-receptions",
   create: "/purchase-receptions",
