@@ -358,6 +358,15 @@ export const API_ACCOUNTS_PAYABLE_GROUP = {
   markOverdue: "/accounts-payable/mark-overdue",
 };
 
+export const API_RECURRING_PURCHASES_GROUP = {
+  list: "/recurring-purchases",
+  create: "/recurring-purchases",
+  pause: (id: string) => `/recurring-purchases/${id}/pause`,
+  resume: (id: string) => `/recurring-purchases/${id}/resume`,
+  cancel: (id: string) => `/recurring-purchases/${id}/cancel`,
+  generateCurrentPayable: (id: string) => `/recurring-purchases/${id}/generate-current-payable`,
+};
+
 export const API_COMPANY_PAYMENT_ACCOUNTS_GROUP = {
   create: "/company-payment-accounts",
   byCompany: (companyId: string) => `/company-payment-accounts/by-company/${companyId}`,
