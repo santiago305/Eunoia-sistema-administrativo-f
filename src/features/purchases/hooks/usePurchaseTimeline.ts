@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getPurchaseTimeline } from "@/shared/services/purchaseService";
-
-type PurchaseTimelineEvent = Record<string, unknown>;
+import type { PurchaseTimelineEvent } from "@/features/purchases/components/timeline/PurchaseTimeline";
 
 export function usePurchaseTimeline(purchaseId?: string) {
   const [events, setEvents] = useState<PurchaseTimelineEvent[]>([]);
@@ -14,7 +13,7 @@ export function usePurchaseTimeline(purchaseId?: string) {
     setError(null);
     try {
       const response = await getPurchaseTimeline(purchaseId);
-      setEvents(response.events ?? []);
+      setEvents((response.events ?? []) as PurchaseTimelineEvent[]);
     } catch (requestError) {
       setEvents([]);
       setError(requestError);

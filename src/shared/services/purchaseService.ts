@@ -133,8 +133,19 @@ export const getPurchaseTimeline = async (
     performedByUserId?: string;
     from?: string;
     to?: string;
+    page?: number;
+    limit?: number;
   },
-): Promise<{ purchaseId: string; events: Array<Record<string, unknown>> }> => {
+): Promise<{
+  purchaseId: string;
+  events: Array<Record<string, unknown>>;
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+}> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.purchaseHistory(poId), { params });
   return response.data;
 };

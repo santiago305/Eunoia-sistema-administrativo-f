@@ -7,6 +7,13 @@ import type { PurchaseOrder } from "@/features/purchases/types/purchase";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { Modal } from "@/shared/components/modales/Modal";
+import { DataTablePagination } from "@/shared/components/table/DataTablePagination";
+import { listUsers, type UserApiListItem } from "@/shared/services/userService";
+import { PurchaseTimeline, type PurchaseTimelineEvent } from "@/features/purchases/components/timeline/PurchaseTimeline";
+import {
+  PurchaseTimelineFilters,
+  type PurchaseTimelineFilterState,
+} from "@/features/purchases/components/timeline/PurchaseTimelineFilters";
 
 type HistoryPurchase = PurchaseOrder & {
   history?: {
@@ -18,56 +25,70 @@ type HistoryPurchase = PurchaseOrder & {
 export default function PurchaseHistory() {
   const { showFeedback } = useFeedbackToast();
   const [items, setItems] = useState<HistoryPurchase[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(15);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<HistoryPurchase | null>(null);
-  const [timeline, setTimeline] = useState<Array<Record<string, unknown>>>([]);
+  const [timeline, setTimeline] = useState<PurchaseTimelineEvent[]>([]);
+  const [timelineTotal, setTimelineTotal] = useState(0);
+  const [timelinePage, setTimelinePage] = useState(1);
+  const [timelineLimit] = useState(10);
   const [timelineLoading, setTimelineLoading] = useState(false);
-  const [eventTypeFilter, setEventTypeFilter] = useState("");
-  const [performedByFilter, setPerformedByFilter] = useState("");
-  const [fromFilter, setFromFilter] = useState("");
-  const [toFilter, setToFilter] = useState("");
-
-  const EVENT_LABELS: Record<string, string> = {
-    PROCESSING_REQUESTED: "Procesamiento solicitado",
-    PROCESSING_APPROVED: "Procesamiento aprobado",
-    PROCESSING_REJECTED: "Procesamiento rechazado",
-    PURCHASE_CREATED_WITH_PAYMENT_PENDING_APPROVAL: "Compra enviada con pago",
-    PURCHASE_CREATION_APPROVED: "Aprobación de compra con pago",
-    PURCHASE_CREATION_REJECTED: "Rechazo de compra con pago",
-  };
-
-  const EVENT_BADGE_CLASS: Record<string, string> = {
-    PROCESSING_REQUESTED: "bg-amber-100 text-amber-800 border-amber-200",
-    PROCESSING_APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    PROCESSING_REJECTED: "bg-rose-100 text-rose-800 border-rose-200",
-    PURCHASE_CREATED_WITH_PAYMENT_PENDING_APPROVAL: "bg-cyan-100 text-cyan-800 border-cyan-200",
-    PURCHASE_CREATION_APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    PURCHASE_CREATION_REJECTED: "bg-rose-100 text-rose-800 border-rose-200",
-  };
+  const [users, setUsers] = useState<UserApiListItem[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [filters, setFilters] = useState<PurchaseTimelineFilterState>({
+    eventType: "",
+    performedByUserId: "",
+    from: "",
+    to: "",
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await listPurchaseHistory({
-        page: 1,
-        limit: 30,
-        eventType: eventTypeFilter || undefined,
-        eventFrom: fromFilter || undefined,
-        eventTo: toFilter || undefined,
-        performedByUserId: performedByFilter || undefined,
+        page,
+        limit,
+        eventType: filters.eventType || undefined,
+        eventFrom: filters.from || undefined,
+        eventTo: filters.to || undefined,
+        performedByUserId: filters.performedByUserId || undefined,
       });
       setItems((res.items ?? []) as HistoryPurchase[]);
+      setTotal(res.total ?? 0);
     } catch {
       setItems([]);
+      setTotal(0);
       showFeedback(errorResponse("No se pudo cargar el historial de compras."));
     } finally {
       setLoading(false);
     }
-  }, [eventTypeFilter, fromFilter, performedByFilter, showFeedback, toFilter]);
+  }, [filters.eventType, filters.from, filters.performedByUserId, filters.to, limit, page, showFeedback]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadUsers = async () => {
+      setUsersLoading(true);
+      try {
+        const response = await listUsers({ status: "active", page: 1, q: "" });
+        if (!cancelled) setUsers(response.items ?? []);
+      } catch {
+        if (!cancelled) setUsers([]);
+      } finally {
+        if (!cancelled) setUsersLoading(false);
+      }
+    };
+
+    void loadUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const columns = useMemo<DataTableColumn<HistoryPurchase>[]>(() => [
     {
@@ -97,27 +118,53 @@ export default function PurchaseHistory() {
     },
   ], []);
 
-  const openTimeline = useCallback(async (row: HistoryPurchase) => {
+  const openTimeline = useCallback(async (row: HistoryPurchase, nextPage = 1) => {
     setSelected(row);
     setTimelineLoading(true);
     try {
       const res = await getPurchaseTimeline(row.poId ?? "", {
-        eventType: eventTypeFilter || undefined,
-        performedByUserId: performedByFilter || undefined,
-        from: fromFilter || undefined,
-        to: toFilter || undefined,
+        eventType: filters.eventType || undefined,
+        performedByUserId: filters.performedByUserId || undefined,
+        from: filters.from || undefined,
+        to: filters.to || undefined,
+        page: nextPage,
+        limit: timelineLimit,
       });
-      setTimeline(res.events ?? []);
+      setTimeline((res.events ?? []) as PurchaseTimelineEvent[]);
+      setTimelineTotal(res.total ?? 0);
+      setTimelinePage(res.page ?? nextPage);
     } catch {
       setTimeline([]);
+      setTimelineTotal(0);
       showFeedback(errorResponse("No se pudo cargar la línea de tiempo de la compra."));
     } finally {
       setTimelineLoading(false);
     }
-  }, [eventTypeFilter, fromFilter, performedByFilter, showFeedback, toFilter]);
+  }, [filters.eventType, filters.from, filters.performedByUserId, filters.to, showFeedback, timelineLimit]);
+
+  const applyFilters = useCallback(() => {
+    setPage(1);
+    setTimelinePage(1);
+    void load();
+    if (selected) void openTimeline(selected, 1);
+  }, [load, openTimeline, selected]);
+
+  const resetFilters = useCallback(() => {
+    setFilters({ eventType: "", performedByUserId: "", from: "", to: "" });
+    setPage(1);
+    setTimelinePage(1);
+  }, []);
 
   return (
     <PageShell className="bg-white">
+      <PurchaseTimelineFilters
+        value={filters}
+        users={users}
+        loadingUsers={usersLoading}
+        onChange={setFilters}
+        onApply={applyFilters}
+        onReset={resetFilters}
+      />
       <DataTable
         tableId="purchase-history"
         data={items}
@@ -125,8 +172,10 @@ export default function PurchaseHistory() {
         rowKey="poId"
         loading={loading}
         emptyMessage="No hay compras en historial."
+        pagination={{ page, limit, total }}
+        onPageChange={setPage}
         onRowClick={(row) => {
-          void openTimeline(row);
+          void openTimeline(row, 1);
         }}
       />
       <div className="mt-3 flex flex-wrap gap-2">
@@ -146,100 +195,31 @@ export default function PurchaseHistory() {
         onClose={() => {
           setSelected(null);
           setTimeline([]);
+          setTimelineTotal(0);
+          setTimelinePage(1);
         }}
         title="Línea de tiempo de compra"
         className="w-[900px]"
       >
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={`rounded-full border px-3 py-1 text-xs ${eventTypeFilter === "" ? "bg-zinc-900 text-white border-zinc-900" : "bg-white text-zinc-700 border-zinc-300"}`}
-              onClick={() => setEventTypeFilter("")}
-            >
-              Todos
-            </button>
-            <button
-              type="button"
-              className={`rounded-full border px-3 py-1 text-xs ${eventTypeFilter === "PROCESSING_REQUESTED" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-zinc-700 border-zinc-300"}`}
-              onClick={() => setEventTypeFilter("PROCESSING_REQUESTED")}
-            >
-              Procesamiento solicitado
-            </button>
-            <button
-              type="button"
-              className={`rounded-full border px-3 py-1 text-xs ${eventTypeFilter === "PROCESSING_APPROVED" ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-zinc-700 border-zinc-300"}`}
-              onClick={() => setEventTypeFilter("PROCESSING_APPROVED")}
-            >
-              Procesamiento aprobado
-            </button>
-            <button
-              type="button"
-              className={`rounded-full border px-3 py-1 text-xs ${eventTypeFilter === "PROCESSING_REJECTED" ? "bg-rose-600 text-white border-rose-700" : "bg-white text-zinc-700 border-zinc-300"}`}
-              onClick={() => setEventTypeFilter("PROCESSING_REJECTED")}
-            >
-              Procesamiento rechazado
-            </button>
-          </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-            <input
-              value={eventTypeFilter}
-              onChange={(e) => setEventTypeFilter(e.target.value)}
-              placeholder="Tipo evento"
-              className="rounded border border-zinc-300 px-2 py-1 text-xs"
-            />
-            <input
-              value={performedByFilter}
-              onChange={(e) => setPerformedByFilter(e.target.value)}
-              placeholder="Usuario (UUID)"
-              className="rounded border border-zinc-300 px-2 py-1 text-xs"
-            />
-            <input
-              type="date"
-              value={fromFilter}
-              onChange={(e) => setFromFilter(e.target.value)}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs"
-            />
-            <input
-              type="date"
-              value={toFilter}
-              onChange={(e) => setToFilter(e.target.value)}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs"
-            />
-          </div>
-          <div>
-            <button
-              type="button"
-              className="rounded bg-zinc-900 px-3 py-1 text-xs text-white"
-              onClick={() => {
-                if (selected) {
-                  void openTimeline(selected);
-                }
+        <div className="space-y-3">
+          <PurchaseTimelineFilters
+            value={filters}
+            users={users}
+            loadingUsers={usersLoading}
+            onChange={setFilters}
+            onApply={() => selected && void openTimeline(selected, 1)}
+            onReset={resetFilters}
+          />
+          <PurchaseTimeline events={timeline} loading={timelineLoading} />
+          {timelineTotal > timelineLimit ? (
+            <DataTablePagination
+              page={timelinePage}
+              limit={timelineLimit}
+              total={timelineTotal}
+              onPageChange={(nextPage) => {
+                if (selected) void openTimeline(selected, nextPage);
               }}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-          {timelineLoading ? <p className="text-sm text-zinc-500">Cargando eventos...</p> : null}
-          {!timelineLoading && timeline.length === 0 ? <p className="text-sm text-zinc-500">Sin eventos registrados.</p> : null}
-          {!timelineLoading && timeline.length > 0 ? (
-            <div className="space-y-2">
-              {timeline.map((event, index) => (
-                <div key={`${String(event.id ?? index)}`} className="rounded-lg border border-zinc-200 p-3">
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${EVENT_BADGE_CLASS[String(event.eventType ?? "")] ?? "bg-zinc-100 text-zinc-700 border-zinc-200"}`}>
-                    {EVENT_LABELS[String(event.eventType ?? "")] ?? String(event.eventType ?? "-")}
-                  </span>
-                  <p className="text-sm text-zinc-900">{String(event.description ?? "-")}</p>
-                  <p className="text-xs text-zinc-600">
-                    Solicitado por: {String(event.performedByUserName ?? event.performedByUserId ?? "-")}
-                  </p>
-                  <p className="text-xs text-zinc-600">
-                    Afecta a: {String(event.targetUserName ?? event.targetUserId ?? "-")}
-                  </p>
-                  <p className="text-xs text-zinc-500">{event.createdAt ? new Date(String(event.createdAt)).toLocaleString() : "-"}</p>
-                </div>
-              ))}
-            </div>
+            />
           ) : null}
         </div>
       </Modal>
