@@ -58,12 +58,20 @@ export const RoutesPaths = {
   //purchase
   purchase: '/compra',
   purchases: '/compras',
+  purchaseDashboard: "/compras/dashboard",
+  purchaseCreate: "/compras/nueva",
+  purchaseDetail: "/compras/:id",
+  purchaseEditPage: "/compras/:id/editar",
   purchaseReception: "/compras/:poId/recepcion",
+  purchasePayments: "/compras/:id/pagos",
+  purchaseDocuments: "/compras/:id/documentos",
   purchasesHistory: "/compras/historial",
+  recurringPurchases: "/compras/recurrentes",
   purchaseEdit: "/compra/:poId",
   payments: "/pagos",
   accountsPayable: "/cuentas-por-pagar",
   paymentAccounts: "/cuentas-pago",
+  paymentMethods: "/metodos-pago",
 
   // sale orders
   saleOrders: "/pedidos",
@@ -85,6 +93,7 @@ export const RoutesPaths = {
  * Valid route keys.
  */
 export type RouteName = keyof typeof RoutesPaths;
+
 
 
 

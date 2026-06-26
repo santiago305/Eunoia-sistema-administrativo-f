@@ -43,11 +43,17 @@ const Agencies = lazy(() => import("@/features/agencies/Agencies"));
 const Sources = lazy(() => import("@/features/sources/Sources"));
 const Purchase = lazy(() => import("@/features/purchases/Purchase"));
 const Purchases = lazy(() => import("@/features/purchases/Purchases"));
+const PurchaseDashboardPage = lazy(() => import("@/features/purchases/pages/PurchaseDashboardPage"));
+const PurchaseCreatePage = lazy(() => import("@/features/purchases/pages/PurchaseCreatePage"));
+const PurchaseEditPage = lazy(() => import("@/features/purchases/pages/PurchaseEditPage"));
+const PurchaseDetailPage = lazy(() => import("@/features/purchases/pages/PurchaseDetailPage"));
+const RecurringPurchasesPage = lazy(() => import("@/features/purchases/pages/RecurringPurchasesPage"));
 const PurchaseReceptionPage = lazy(() => import("@/features/purchases/pages/PurchaseReceptionPage"));
 const PurchaseHistory = lazy(() => import("@/features/purchases/PurchaseHistory"));
 const Payments = lazy(() => import("@/features/payments/Payments"));
 const AccountsPayablePage = lazy(() => import("@/features/payments/pages/AccountsPayablePage"));
 const PaymentAccountsPage = lazy(() => import("@/features/payments/pages/PaymentAccountsPage"));
+const PaymentMethodsPage = lazy(() => import("@/features/payment-methods/PaymentMethodsPage"));
 const SaleOrders = lazy(() => import("@/features/sale-orders/SaleOrders"));
 const Company = lazy(() => import("@/features/company/Company"));
 const Production = lazy(() => import("@/features/production/Productions"));
@@ -186,6 +192,22 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withCompanyRouteGuard(RoutesPaths.purchase, <Purchase />),
             },
             {
+                path: RoutesPaths.purchaseDashboard,
+                element: withRouteGuard(RoutesPaths.purchaseDashboard, <PurchaseDashboardPage />),
+            },
+            {
+                path: RoutesPaths.purchaseCreate,
+                element: withCompanyRouteGuard(RoutesPaths.purchaseCreate, <PurchaseCreatePage />),
+            },
+            {
+                path: RoutesPaths.purchasesHistory,
+                element: withRouteGuard(RoutesPaths.purchasesHistory, <PurchaseHistory />),
+            },
+            {
+                path: RoutesPaths.recurringPurchases,
+                element: withRouteGuard(RoutesPaths.recurringPurchases, <RecurringPurchasesPage />),
+            },
+            {
                 path: RoutesPaths.purchases,
                 element: withRouteGuard(RoutesPaths.purchases, <Purchases />),
             },
@@ -194,8 +216,20 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withCompanyRouteGuard(RoutesPaths.purchaseReception, <PurchaseReceptionPage />),
             },
             {
-                path: RoutesPaths.purchasesHistory,
-                element: withRouteGuard(RoutesPaths.purchasesHistory, <PurchaseHistory />),
+                path: RoutesPaths.purchaseEditPage,
+                element: withCompanyRouteGuard(RoutesPaths.purchaseEditPage, <PurchaseEditPage />),
+            },
+            {
+                path: RoutesPaths.purchasePayments,
+                element: withCompanyRouteGuard(RoutesPaths.purchasePayments, <PurchaseDetailPage />),
+            },
+            {
+                path: RoutesPaths.purchaseDocuments,
+                element: withCompanyRouteGuard(RoutesPaths.purchaseDocuments, <PurchaseDetailPage />),
+            },
+            {
+                path: RoutesPaths.purchaseDetail,
+                element: withCompanyRouteGuard(RoutesPaths.purchaseDetail, <PurchaseDetailPage />),
             },
             {
                 path: RoutesPaths.purchaseEdit,
@@ -212,6 +246,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.paymentAccounts,
                 element: withRouteGuard(RoutesPaths.paymentAccounts, <PaymentAccountsPage />),
+            },
+            {
+                path: RoutesPaths.paymentMethods,
+                element: withRouteGuard(RoutesPaths.paymentMethods, <PaymentMethodsPage />),
             },
             {
                 path: RoutesPaths.saleOrders,
@@ -252,4 +290,6 @@ export const dashboardRoutes: RouteObject[] = [
         ],
     },
 ];
+
+
 

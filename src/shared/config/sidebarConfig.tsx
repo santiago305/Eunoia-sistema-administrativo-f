@@ -37,12 +37,24 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.purchases,
         children: [
             {
+                label: "Dashboard",
+                href: RoutesPaths.purchaseDashboard,
+            },
+            {
                 label: "Compras",
                 href: RoutesPaths.purchases,
             },
             {
+                label: "Nueva compra",
+                href: RoutesPaths.purchaseCreate,
+            },
+            {
                 label: "Historial de compras",
                 href: RoutesPaths.purchasesHistory,
+            },
+            {
+                label: "Recurrentes",
+                href: RoutesPaths.recurringPurchases,
             },
         ],
     },
@@ -61,6 +73,10 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
             {
                 label: "Cuentas de pago",
                 href: RoutesPaths.paymentAccounts,
+            },
+            {
+                label: "Métodos de pago",
+                href: RoutesPaths.paymentMethods,
             },
         ],
     },

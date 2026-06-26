@@ -1,4 +1,4 @@
-import { AlertCircle, Box, BriefcaseBusiness, Hammer, Layers3, Package, PackageOpen, Repeat } from "lucide-react";
+import { Box, BriefcaseBusiness, Hammer, Layers3, Package, PackageOpen, Repeat } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import {
   PurchaseTypes,
