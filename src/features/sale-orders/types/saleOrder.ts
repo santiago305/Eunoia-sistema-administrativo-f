@@ -10,13 +10,55 @@ export enum SaleOrderAutomaticWorkflowTriggerEnum {
   DELIVERY_CONFIRMED = "delivery-confirmed",
   PAYMENT_CREATED = "payment-created",
   PAYMENT_DELETED = "payment-deleted",
+  CLIENT_UPDATED = "client-updated",
+  INVENTORY_UPDATED = "inventory-updated",
 }
+
+export enum SaleOrderRealtimeSourceEnum {
+  SALE_ORDER_CREATED = "sale-order-created",
+  SALE_ORDER_IMPORTED = "sale-order-imported",
+  SALE_ORDER_UPDATED = "sale-order-updated",
+  WORKFLOW_STATE_CHANGED = "workflow-state-changed",
+  WORKFLOW_ASSIGNED = "workflow-assigned",
+  SALE_ORDER_CANCELLED = "sale-order-cancelled",
+  DELIVERY_CONFIRMED = "delivery-confirmed",
+  PAYMENT_CREATED = "payment-created",
+  PAYMENT_DELETED = "payment-deleted",
+  AUTOMATIC_WORKFLOW = "automatic-workflow",
+}
+
+export type SaleOrderRealtimeSource =
+  | "sale-order-created"
+  | "sale-order-imported"
+  | "sale-order-updated"
+  | "workflow-state-changed"
+  | "workflow-assigned"
+  | "sale-order-cancelled"
+  | "delivery-confirmed"
+  | "payment-created"
+  | "payment-deleted"
+  | "automatic-workflow";
+
+export type SaleOrderAutomaticWorkflowTrigger =
+  | "sale-order-created"
+  | "sale-order-imported"
+  | "sale-order-updated"
+  | "workflow-state-changed"
+  | "workflow-assigned"
+  | "sale-order-cancelled"
+  | "delivery-confirmed"
+  | "payment-created"
+  | "payment-deleted"
+  | "client-updated"
+  | "inventory-updated";
 
 export type SaleOrdersUpdatedPayload = {
   updated: number;
   saleOrderIds: string[];
-  source?: "automatic-workflow";
-  trigger?: SaleOrderAutomaticWorkflowTriggerEnum;
+  source: SaleOrderRealtimeSource;
+  trigger?: SaleOrderAutomaticWorkflowTrigger;
+  saleOrders?: SaleOrder[];
+  statistics?: SaleOrderStatisticsResponse;
 };
 
 export type SaleOrderItemComponentInput = {

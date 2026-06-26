@@ -17,7 +17,7 @@ import { getMailSidebarItems } from "./mailSidebarConfig";
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
     {
-        label: "Home",
+        label: "Dashboard",
         href: RoutesPaths.dashboard,
         icon: <IconHome className="text-sidebar-foreground" />,
     },
