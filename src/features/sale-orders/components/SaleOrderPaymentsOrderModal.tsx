@@ -8,7 +8,6 @@ import { useSaleOrderPaymentOptions } from "@/features/sale-orders/components/us
 import {
   createSaleOrderPayment,
   deleteSaleOrderPayment,
-  fetchSaleOrderById,
   listSaleOrderPayments,
 } from "@/shared/services/saleOrderService";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
@@ -18,8 +17,7 @@ import { toLocalDateKey } from "@/shared/utils/functionPurchases";
 
 type Props = {
   open: boolean;
-  saleOrderId: string;
-  saleOrderLabel?: string;
+  saleOrder: SaleOrder;
   onClose: () => void;
   onUpdated?: () => void;
 };
@@ -41,7 +39,7 @@ const formatDate = (value?: string | null) => {
   return value.length >= 10 ? value.slice(0, 10) : value;
 };
 
-export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel, onClose, onUpdated }: Props) {
+export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdated }: Props) {
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { methodOptions, bankAccountOptions } = useSaleOrderPaymentOptions();
 
@@ -49,7 +47,6 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
   const [creating, setCreating] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [payments, setPayments] = useState<SaleOrderPayment[]>([]);
-  const [order, setOrder] = useState<SaleOrder | null>(null);
 
   const [draft, setDraft] = useState<SaleOrderPaymentInput>(() => ({
     method: "",
@@ -73,38 +70,33 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
   }, [open]);
 
   const title = useMemo(() => {
-    if (!saleOrderLabel?.trim()) return "Pagos";
+    const saleOrderLabel = `${saleOrder.serie ?? "-"}-${saleOrder.correlative ?? "-"}`;
     return `Pagos (${saleOrderLabel})`;
-  }, [saleOrderLabel]);
+  }, [saleOrder.correlative, saleOrder.serie]);
 
   const loadAll = useCallback(async () => {
-    if (!saleOrderId) return;
+    if (!saleOrder.id) return;
     clearFeedback();
     setLoading(true);
     try {
-      const [nextPayments, nextOrder] = await Promise.all([
-        listSaleOrderPayments(saleOrderId),
-        fetchSaleOrderById(saleOrderId),
-      ]);
+      const nextPayments = await listSaleOrderPayments(saleOrder.id);
       setPayments(nextPayments ?? []);
-      setOrder(nextOrder ?? null);
     } catch (err) {
       showFeedback(errorResponse(parseApiError(err, "No se pudieron cargar los pagos.")));
       setPayments([]);
-      setOrder(null);
     } finally {
       setLoading(false);
     }
-  }, [clearFeedback, saleOrderId, showFeedback]);
+  }, [clearFeedback, saleOrder.id, showFeedback]);
 
   useEffect(() => {
     if (!open) return;
     void loadAll();
   }, [loadAll, open]);
 
-  const total = Number(order?.total ?? 0);
-  const totalPaid = Number(order?.totalPaid ?? 0);
-  const pending = Number(order?.pendingAmount ?? Math.max(0, total - totalPaid));
+  const total = Number(saleOrder.total ?? 0);
+  const totalPaid = Number(saleOrder.totalPaid ?? 0);
+  const pending = Number(saleOrder.pendingAmount ?? Math.max(0, total - totalPaid));
   const validateDraft = useCallback(() => {
     const amount = Number(draft.amount ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -144,7 +136,7 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
 
     setCreating(true);
     try {
-      await createSaleOrderPayment(saleOrderId, {
+      await createSaleOrderPayment(saleOrder.id, {
         bankAccountId: String(draft.bankAccountId ?? "").trim(),
         method: String(draft.method ?? "").trim(),
         amount: Number(draft.amount ?? 0),
@@ -169,14 +161,14 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
     } finally {
       setCreating(false);
     }
-  }, [creating, draft, loadAll, onUpdated, saleOrderId, showFeedback, validateDraft]);
+  }, [creating, draft, loadAll, onUpdated, saleOrder.id, showFeedback, validateDraft]);
 
   const handleDelete = useCallback(
     async (paymentId: string) => {
       if (!paymentId || deletingPaymentId) return;
       setDeletingPaymentId(paymentId);
       try {
-        await deleteSaleOrderPayment(saleOrderId, paymentId);
+        await deleteSaleOrderPayment(saleOrder.id, paymentId);
         showFeedback(successResponse("Pago eliminado."));
         await loadAll();
         onUpdated?.();
@@ -186,7 +178,7 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrderId, saleOrderLabel,
         setDeletingPaymentId(null);
       }
     },
-    [deletingPaymentId, loadAll, onUpdated, saleOrderId, showFeedback],
+    [deletingPaymentId, loadAll, onUpdated, saleOrder.id, showFeedback],
   );
 
   return (

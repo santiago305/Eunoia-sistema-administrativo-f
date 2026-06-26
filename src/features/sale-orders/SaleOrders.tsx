@@ -1,15 +1,14 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { BanknoteArrowUp, ChevronLeft, ChevronRight, FileText, Menu, Pencil, Plus, Sheet, Workflow } from "lucide-react";
-import type { DataTableColumn } from "@/shared/components/table/types";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {  ChevronLeft, ChevronRight, Plus, Sheet, Workflow } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SaleOrderModal } from "@/features/sale-orders/components/SaleOrderModal";
 import {
-  ClientType,
   type SaleOrder,
   type SaleOrderJsonImportRow,
   type SaleOrderSearchSnapshot,
   type SaleOrderSearchStateResponse,
   type SaleOrderStatisticsResponse,
+  type SaleOrdersUpdatedPayload,
 } from "@/features/sale-orders/types/saleOrder";
 import {
   deleteSaleOrderSearchMetric,
@@ -37,123 +36,16 @@ import {
 import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
 import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
 import { useCompany } from "@/shared/hooks/useCompany";
-import { ActionsPopover, ActionItem } from "@/shared/components/components/ActionsPopover";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
-import { createNotificationSocket } from "@/shared/lib/socket";
+import { createSaleOrdersSocket } from "@/shared/lib/socket";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { SaleOrderPaymentsOrderModal } from "@/features/sale-orders/components/SaleOrderPaymentsOrderModal";
-import { ExcelImportModal, type ImportField } from "@/shared/components/importer";
+import { ExcelImportModal } from "@/shared/components/importer";
 import { WorkflowEditorModal } from "@/features/workflows/components/WorkflowEditorModal";
 import { SaleOrdersBoard } from "./components/sale-order/SaleOrdersBoard";
+import { optionalSaleOrderImportFields, saleOrderImportFields } from "./types/saleImporter";
 
-const saleOrderImportFields: ImportField[] = [
-  { 
-    key: "workflowName", 
-    label: "Flujo", 
-    aliases: ["Etiqueta","etiqueta", "flujo", "Flujo"] },
-  { 
-    key: "orderDate", 
-    label: "Fecha de agenda", 
-    type: "date", 
-    aliases: ["Día de creación", "día de creación", "Dia de creacion", "dia de creacion",
-      "Fecha de agenda", "fecha de agenda"
-    ] },
-  { 
-    key: "deliveryDate", 
-    label: "Fecha de entrega", 
-    type: "date", 
-    aliases: ["fecha de entrega esperada", "Fecha de entrega esperada", "Fecha de entrega", 
-      "fecha de entrega"
-     ] },
-  { 
-    key: "departmentName", 
-    label: "Departamento", 
-    aliases: ["departamento", "Departmento", "Provincia/Ciudad", "provincia/ciudad"] },
-  { 
-    key: "provinceName", 
-    label: "Provincia", 
-    aliases: ["provincia", "Provincia", "Distrito", "distrito"] },
-  { 
-    key: "districtName", 
-    label: "-Distrito", 
-    aliases: ["-Distrito", "-districto", "Comuna/Pueblo", "comuna/pueblo"] },
-  { 
-    key: "recipientName", 
-    label: "Destinatario", 
-    required: true, 
-    aliases: ["destinatario", "Destinatario", "Nombre del destinario", 
-      "nombre del destinatario"] },
-  { 
-    key: "address", 
-    label: "Dirección detallada", 
-    aliases: ["dirección detallada", "direccion detallada",
-       "Dirección detallada", "Direccion detallada"] },
-  { 
-    key: "deliveryNote", 
-    label: "DNI/Referencia", 
-    aliases: ["DNI/Referencia", "dni/referencia", "Nota de envío", "nota de envío",
-      "Nota de envio", "nota de envio"
-    ] },
-  { 
-    key: "phone", 
-    label: "Telefono", 
-    required: true, 
-    aliases: ["telefono", "teléfono","Telefono","Teléfono",
-      "Número de teléfono", "número de teléfono", "Numero de telefono", "numero de telefono"] },
-  { 
-    key: "couponCode", 
-    label: "Pack", 
-    aliases: ["Pack", "pack", "Código promocional", "código promocional",
-      "Codigo promocional", "codigo promocional"
-    ] },
-  { 
-    key: "productCodes", 
-    label: "Códigos de producto", 
-    aliases: ["códigos de producto", "Códigos de producto", 
-      "codigos de producto", "Codigos de producto", "Incluye códigos de producto", 
-      "incluye códigos de producto","Incluye codigos de producto", 
-      "incluye codigos de producto" ] },
-  { 
-    key: "total", 
-    label: "Importe a pagar", 
-    required: true, 
-    type: "number", 
-    aliases: ["Importe a pagar", "importe a pagar"] },
-  { 
-    key: "advance", 
-    label: "Total del anticipo", 
-    type: "number", 
-    aliases: ["Total del anticipo", "total del anticipo"] },
-  { 
-    key: "deliveryCost", 
-    label: "Tarifa", 
-    type: "number", 
-    aliases: ["Tarifa", "tarifa"] },
-  { 
-    key: "internalNote", 
-    label: "Nota interna", 
-    aliases: ["nota interna", "Nota interna"] },
-  { 
-    key: "confirmedBy", 
-    label: "Confirmado por", 
-    aliases: ["confirmado por", "Confirmado por"] },
-];
-
-const optionalSaleOrderImportFields = new Set<keyof SaleOrderJsonImportRow>([
-  "productName",
-  "orderDate",
-  "deliveryDate",
-  "address",
-  "deliveryNote",
-  "couponCode",
-  "quantity",
-  "advance",
-  "codAmount",
-  "internalNote",
-  "confirmedBy",
-  "workflowName",
-]);
 
 const sanitizeSaleOrderImportRows = (rows: SaleOrderJsonImportRow[]): SaleOrderJsonImportRow[] =>
   rows.map((row) => {
@@ -186,8 +78,7 @@ export default function SaleOrders() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
-  const [paymentsOrderId, setPaymentsOrderId] = useState<string | null>(null);
-  const [paymentsOrderLabel, setPaymentsOrderLabel] = useState<string | null>(null);
+  const [paymentsOrder, setPaymentsOrder] = useState<SaleOrder | null>(null);
   const [workflowEditorOpen, setWorkflowEditorOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfOrderId, setPdfOrderId] = useState<string | null>(null);
@@ -350,8 +241,13 @@ export default function SaleOrders() {
     await loadOrders();
   }, [loadOrders]);
 
-  const selectOrder = useCallback(async (order: SaleOrder) => {
+  const selectOrder = useCallback((order: SaleOrder) => {
     setSelectedOrder(order);
+  }, []);
+
+  const openOrderDetail = useCallback(async (order: SaleOrder) => {
+    setSelectedOrder(order);
+    setDetailOpen(true);
     try {
       const detail = await fetchSaleOrderById(order.id);
       setSelectedOrder((current) => current?.id === order.id ? detail : current);
@@ -368,16 +264,10 @@ export default function SaleOrders() {
     void loadStatistics();
   }, [loadStatistics]);
 
-  type SaleOrdersUpdatedPayload = {
-    date?: string;
-    updated: number;
-    saleOrderIds: string[];
-    source?: string;
-  };
   const lastRealtimeRefreshRef = useRef(0);
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
-    const socket = createNotificationSocket(userId);
+    const socket = createSaleOrdersSocket(userId);
     if (!socket) return;
     const onSaleOrdersUpdated = (payload: SaleOrdersUpdatedPayload) => {
       const now = Date.now();
@@ -521,125 +411,6 @@ export default function SaleOrders() {
     [loadSearchState, showFeedback],
   );
 
-  const columns = useMemo<DataTableColumn<SaleOrder>[]>(() => {
-    const formatClientLabel = (client: SaleOrder["client"]) => {
-      if (!client) return "-";
-      const docValue = (client.docNumber ?? client.reference ?? "").trim();
-      const docOrRef = docValue ? `(${docValue})` : "";
-      return (
-        <span className="block min-w-0">
-          <span className="block truncate">
-            {client.fullName} {docOrRef}
-          </span>
-          <span className="mt-0.5 block truncate text-[9px] text-black/40">{clientTypeBadge(client.type, client.count)}</span>
-        </span>
-      );
-    };
-
-    const formatMoney = (value: number) => {
-      try {
-        return new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(value);
-      } catch {
-        return `S/ ${(Number(value) || 0).toFixed(2)}`;
-      }
-    };
-    const statusBadge = (label: string, className: string) => (
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold ring-1 ring-inset ${className}`}>{label}</span>
-    );
-    const clientTypeBadge = (type?: ClientType | null, count?: number) => {
-      if (type === ClientType.NEW) return statusBadge(`Nuevo${count ? ` (${count})` : ""}`, "bg-sky-50 text-sky-700 ring-sky-200");
-      if (type === ClientType.LAGGING) return statusBadge(`Rezagado${count ? ` (${count})` : ""}`, "bg-amber-50 text-amber-700 ring-amber-200");
-      if (type === ClientType.REPURCHASE) return statusBadge(`Recompra${count ? ` (${count})` : ""}`, "bg-emerald-50 text-emerald-700 ring-emerald-200");
-      if (type === ClientType.UNDEFINED) return statusBadge(`Sin definir${count ? ` (${count})` : ""}`, "bg-slate-50 text-slate-500 ring-slate-200");
-      return statusBadge("-", "bg-slate-50 text-slate-500 ring-slate-200");
-    };
-    return [
-      { id: "numero", header: "Pedido", className: "text-black/70", cell: (row) => <span className="font-semibold tabular-nums">{(row.serie ?? "-")}-{row.correlative ?? "-"}</span> },
-      { id: "scheduleDate", header: "Agenda", className: "text-black/100", cell: (row) => <span className="tabular-nums text-[9px]">{row.scheduleDate ?? "-"}</span> },
-      { id: "deliveryDate", header: "Entrega", className: "text-black/100", cell: (row) => <span className="tabular-nums text-[9px]">{row.deliveryDate ?? "-"}</span> },
-      { id: "createdBy", header: "Usuario", className: "text-black/70", cell: (row) => <span className="truncate">{row.createdBy ? `${row.createdBy.email}` : "-"}</span> },
-      { id: "clientId", header: "Cliente", className: "text-black/70", cell: (row) => <span className="truncate">{formatClientLabel(row.client)}</span> },
-      { id: "warehouseId", header: "Almacen", className: "text-black/70", cell: (row) => <span className="truncate">{row.warehouse?.name ?? "-"}</span> },
-      { id: "source", header: "Enganche", className: "text-black/70", cell: (row) => <span className="truncate">{row.source?.name ?? "-"}</span> },
-      { id: "total", header: "Total", className: "text-black/70", cell: (row) => <span className="tabular-nums">{formatMoney(row.total ?? 0)}</span> },
-      { id: "totalPaid", header: "Pagado", className: "text-black/70", cell: (row) => <span className="tabular-nums">{formatMoney(row.totalPaid ?? 0)}</span> },
-      { id: "pending", header: "Pend.", className: "text-black/70", cell: (row) => <span className="tabular-nums">{formatMoney(row.pendingAmount ?? 0)}</span> },
-      {
-        id: "workflowState",
-        header: "Estado",
-        className: "text-black/70",
-        cell: (row) => row.workflowId && row.currentState
-          ? (
-              <span
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold"
-                style={{
-                  color: row.currentState.color,
-                  backgroundColor: `${row.currentState.color}18`,
-                  boxShadow: `inset 0 0 0 1px ${row.currentState.color}40`,
-                }}
-              >
-                {row.currentState.name}
-              </span>
-            )
-          : statusBadge("Sin workflow", "bg-amber-50 text-amber-700 ring-amber-200"),
-      },
-      {
-        id: "invoiceSend",
-        header: "Factura",
-        className: "text-black/70",
-        cell: (row) =>
-          row.invoiceSend
-            ? statusBadge("Enviada", "bg-emerald-50 text-emerald-700 ring-emerald-200")
-            : statusBadge("Pendiente", "bg-slate-50 text-slate-600 ring-slate-200"),
-      },
-      {
-        id: "actions",
-        header: "Acciones",
-        headerClassName: "text-center [&>div]:justify-center",
-        stopRowClick: true,
-        cell: (row) => (
-          <div className="flex justify-center">
-            <ActionsPopover
-              actions={[
-                { id: "edit", label: "Editar", icon: <Pencil className="h-4 w-4 text-black/60" />, onClick: () => { setEditOrderId(row.id); setOpen(true); } },
-                { id: "pdf", label: "Abrir pdf", icon: <FileText className="h-4 w-4 text-black/60" />, onClick: () => { setPdfOpen(true); setPdfOrderId(row.id); } },
-                { id: "payments", label: "Pagos", icon: <BanknoteArrowUp className="h-4 w-4 text-black/60" />, onClick: () => {
-                  setPaymentsOrderId(row.id);
-                  setPaymentsOrderLabel(`${row.serie ?? "-"}-${row.correlative ?? "-"}`);
-                  setPaymentsOpen(true);
-                } },
-              ].filter(Boolean) as ActionItem[]}
-              columns={1}
-              compact
-              showLabels
-              triggerIcon={<Menu className="h-4 w-4" />}
-              popoverClassName="min-w-35"
-              popoverBodyClassName="p-2"
-              renderAction={(action, helpers) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    helpers.onAction(action);
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] disabled:pointer-events-none disabled:opacity-50 ${action.className ?? ""}`}
-                  disabled={action.disabled}
-                >
-                  {action.icon}
-                  <span className="whitespace-nowrap">{action.label}</span>
-                </button>
-              )}
-            />
-          </div>
-        ),
-        className: "text-left",
-        hideable: true,
-        sortable: false,
-      },
-    ];
-  }, []);
-  void columns;
 
   return (
     <PageShell scrollArea={false} contentClassName="h-full max-w-none gap-0 p-4 scroll-area">
@@ -707,7 +478,7 @@ export default function SaleOrders() {
             </div>
           </div>
 
-          <div className="mt-3 flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mt-0 flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
               <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
             </div>
@@ -717,7 +488,8 @@ export default function SaleOrders() {
           orders={orders}
           loading={loading}
           selectedOrder={selectedOrder}
-          onSelectOrder={(order) => void selectOrder(order)}
+          onSelectOrder={selectOrder}
+          onOpenDetail={(order) => void openOrderDetail(order)}
           onEditOrder={(order) => {
             setEditOrderId(order.id);
             setOpen(true);
@@ -727,8 +499,7 @@ export default function SaleOrders() {
             setPdfOpen(true);
           }}
           onOpenPayments={(order) => {
-            setPaymentsOrderId(order.id);
-            setPaymentsOrderLabel(`${order.serie ?? "-"}-${order.correlative ?? "-"}`);
+            setPaymentsOrder(order);
             setPaymentsOpen(true);
           }}
           onOrderChanged={refreshSelectedOrder}
@@ -737,34 +508,36 @@ export default function SaleOrders() {
           statisticsError={statisticsError}
         />
         <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 sm:justify-start">
-              <span>
-                Pagina <span className="font-medium text-zinc-800">{serverPagination.page}</span> de{" "}
-                <span className="font-medium text-zinc-800">{serverPagination.totalPages}</span>
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={!serverPagination.hasPrev || loading}
-                  onClick={() => handlePageChange(serverPagination.page - 1)}
-                  className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
-                  aria-label="Pagina anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={!serverPagination.hasNext || loading}
-                  onClick={() => handlePageChange(serverPagination.page + 1)}
-                  className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
-                  aria-label="Pagina siguiente"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
+          <span>
+            Pagina <span className="font-medium text-zinc-800">{serverPagination.page}</span> de{" "}
+            <span className="font-medium text-zinc-800">{serverPagination.totalPages}</span>
+            
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={!serverPagination.hasPrev || loading}
+              onClick={() => handlePageChange(serverPagination.page - 1)}
+              className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
+              aria-label="Pagina anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled={!serverPagination.hasNext || loading}
+              onClick={() => handlePageChange(serverPagination.page + 1)}
+              className="grid h-8 w-8 place-items-center rounded-sm text-zinc-600 ring-1 ring-zinc-100 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
+              aria-label="Pagina siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="mt-0.5 text-md text-zinc-500">
+            {loading ? "Cargando..." : `${orders.length} resultados`}
+          </p>
+        </div>
       </div>
-
       <SaleOrderModal open={open} onClose={closeModal} orderId={editOrderId} onSaved={updateUx} />
       <PdfViewerModal
         open={pdfOpen}
@@ -791,20 +564,18 @@ export default function SaleOrders() {
           await loadOrders();
         }}
       />
-      {paymentsOpen && paymentsOrderId ? (
+      {paymentsOpen && paymentsOrder ? (
         <SaleOrderPaymentsOrderModal
           open={paymentsOpen}
-          saleOrderId={paymentsOrderId}
-          saleOrderLabel={paymentsOrderLabel ?? undefined}
+          saleOrder={paymentsOrder}
           onClose={() => {
             setPaymentsOpen(false);
-            setPaymentsOrderId(null);
-            setPaymentsOrderLabel(null);
+            setPaymentsOrder(null);
           }}
           onUpdated={() => {
             void loadOrders();
-            if (detailOpen && selectedOrder?.id === paymentsOrderId) {
-              void fetchSaleOrderById(paymentsOrderId).then(setSelectedOrder).catch(() => undefined);
+            if (detailOpen && selectedOrder?.id === paymentsOrder.id) {
+              void fetchSaleOrderById(paymentsOrder.id).then(setSelectedOrder).catch(() => undefined);
             }
           }}
         />

@@ -1,5 +1,24 @@
 import { ClientDocType } from "@/features/clients/types/client";
 
+export enum SaleOrderAutomaticWorkflowTriggerEnum {
+  SALE_ORDER_CREATED = "sale-order-created",
+  SALE_ORDER_IMPORTED = "sale-order-imported",
+  SALE_ORDER_UPDATED = "sale-order-updated",
+  WORKFLOW_STATE_CHANGED = "workflow-state-changed",
+  WORKFLOW_ASSIGNED = "workflow-assigned",
+  SALE_ORDER_CANCELLED = "sale-order-cancelled",
+  DELIVERY_CONFIRMED = "delivery-confirmed",
+  PAYMENT_CREATED = "payment-created",
+  PAYMENT_DELETED = "payment-deleted",
+}
+
+export type SaleOrdersUpdatedPayload = {
+  updated: number;
+  saleOrderIds: string[];
+  source?: "automatic-workflow";
+  trigger?: SaleOrderAutomaticWorkflowTriggerEnum;
+};
+
 export type SaleOrderItemComponentInput = {
   id?: string;
   skuId?: string;

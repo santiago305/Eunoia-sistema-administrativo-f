@@ -2,11 +2,17 @@ import { CalendarDays, Phone, Truck } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { cn } from "@/shared/lib/utils";
 import { getClientTypeBadge } from "../../utils/saleOrderForm";
+import { SaleOrderActionsPopover } from "./SaleOrderActionsPopover";
 
 type Props = {
   order: SaleOrder;
   selected: boolean;
-  onClick: () => void;
+  onSelect: (order: SaleOrder) => void;
+  onOpenDetail: (order: SaleOrder) => void;
+  onEdit: (order: SaleOrder) => void;
+  onOpenPdf: (order: SaleOrder) => void;
+  onOpenPayments: (order: SaleOrder) => void;
+  onOrderChanged: (orderId: string) => void | Promise<void>;
 };
 
 function formatMoney(value?: number | null) {
@@ -16,7 +22,7 @@ function formatMoney(value?: number | null) {
   }).format(Number(value ?? 0));
 }
 
-export function SaleOrderCard({ order, selected, onClick }: Props) {
+export function SaleOrderCard({ order, selected, onSelect, onOpenDetail, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
   const code = `${order.serie ?? "-"}-${order.correlative ?? "-"}`;
   const stateName = order.currentState?.name ?? "Sin estado";
   const stateColor = order.currentState?.color ?? "#64748b";
@@ -31,17 +37,24 @@ const isPaid = pendingAmount <= 0;
 
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(order)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(order);
+        }
+      }}
       className={cn(
-        "group relative flex w-full min-w-0 items-start gap-3 px-3 py-3 text-left transition-colors duration-150 focus:outline-none focus-visible:bg-zinc-50",
+        "group relative flex w-full min-w-0 items-start gap-3 px-3 py-2 text-left transition-colors duration-150 focus:outline-none focus-visible:bg-zinc-50",
         selected ? "bg-primary/[0.02]" : "bg-white hover:bg-zinc-20",
       )}
     >
       {selected ? <span className="absolute left-0 top-3 h-[calc(100%-1.5rem)] w-1 rounded-sm bg-primary" /> : null}
 
-      <span className="min-w-0 flex-1 space-y-3">
+      <span className="min-w-0 flex-1 space-y-1">
         <span className="flex w-full items-start justify-between gap-3">
           <span className="block min-w-0 flex-1 truncate pt-0.5 text-sm font-medium text-zinc-900">
             {code}
@@ -49,14 +62,14 @@ const isPaid = pendingAmount <= 0;
 
           <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
             <span
-              className="max-w-[118px] shrink-0 truncate rounded-sm px-2 py-0.5 text-[11px] font-medium text-white ring-1 ring-black/5"
+              className="max-w-[118px] shrink-0 truncate rounded-sm px-2 py-0.5 text-[10px] font-medium text-white ring-1 ring-black/5"
               style={{ backgroundColor: stateColor }}
             >
               {stateName}
             </span>
 
             <span
-              className="max-w-[118px] shrink-0 truncate rounded-sm px-2 py-0.5 text-[11px] font-medium text-white ring-1 ring-black/5"
+              className="max-w-[118px] shrink-0 truncate rounded-sm px-2 py-0.5 text-[10px] font-medium text-white ring-1 ring-black/5"
               style={{
                 backgroundColor: order.invoiceSend ? "#16a34a" : "#FCB70A",
               }}
@@ -65,12 +78,22 @@ const isPaid = pendingAmount <= 0;
             </span>
 
             <span
-              className="max-w-[118px] shrink-0 truncate rounded-sm px-2 py-0.5 text-[11px] font-medium text-white ring-1 ring-black/5"
+              className="max-w-[118px] shrink-0 truncate rounded-sm px-2 py-0.5 text-[10px] font-medium text-white ring-1 ring-black/5"
               style={{
                 backgroundColor: isPaid ? "#16a34a" : "#DB1616",
               }}
             >
               {isPaid ? "Pagado" : "Debe"}
+            </span>
+            <span onClick={(event) => event.stopPropagation()}>
+              <SaleOrderActionsPopover
+                order={order}
+                onOpenDetail={onOpenDetail}
+                onEdit={onEdit}
+                onOpenPdf={onOpenPdf}
+                onOpenPayments={onOpenPayments}
+                onOrderChanged={onOrderChanged}
+              />
             </span>
           </span>
         </span>
@@ -78,13 +101,13 @@ const isPaid = pendingAmount <= 0;
           <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-xs font-medium text-zinc-700">
-              {order.client?.fullName ?? "Sin cliente"}
+              {order.client?.fullName ?? "Sin cliente"}  
             </span>
-            <span className="mt-0.5 block truncate text-[11px] text-zinc-400">
-              DNI/RUC: {order.client?.docNumber ?? "-"}
+            <span className="mt-0.5 block truncate text-[10px] text-zinc-400">
+             
             </span>
-            <span className="mt-0.5 block truncate text-[11px] font-medium text-zinc-600">
-              {order.client?.mainPhone ?? "Sin teléfono"}
+            <span className="mt-0.5 block truncate text-[10px] font-medium text-zinc-600">
+              {order.client?.mainPhone ?? "Sin teléfono"} - DNI/RUC: {order.client?.docNumber ?? "-"}
             </span>
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
@@ -97,7 +120,7 @@ const isPaid = pendingAmount <= 0;
             )}
             <span
               className={cn(
-                "shrink-0 rounded-sm px-2 py-1 text-[11px] font-semibold",
+                "shrink-0 rounded-sm px-2 py-1 text-[10px] font-semibold",
                 clientTypeBadge.className,
               )}
             >
@@ -105,7 +128,7 @@ const isPaid = pendingAmount <= 0;
             </span>
           </span>
         </span>
-        <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-zinc-500">
+        <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-zinc-500">
           <span className="flex items-center gap-1.5">
             <CalendarDays className="h-4 w-4 shrink-0" />
             <span>
@@ -131,11 +154,11 @@ const isPaid = pendingAmount <= 0;
             <span className="block truncate text-[10px] font-medium text-zinc-400">
               Total
             </span>
-            <span className="mt-0.5 block truncate text-[12px] font-semibold tabular-nums text-zinc-800">
+            <span className="mt-0.5 block truncate text-[10px] font-semibold tabular-nums text-zinc-800">
               {formatMoney(order.total ?? 0)}
             </span>
             {deliveryCost > 0 && (
-              <span className="mt-1 flex min-w-0 items-center gap-1 text-[11px] font-medium text-purple-600">
+              <span className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-medium text-purple-600">
                 <Truck className="h-4 w-4 shrink-0" />
                 <span className="truncate">
                   {formatMoney(deliveryCost)}
@@ -147,11 +170,11 @@ const isPaid = pendingAmount <= 0;
             <span className="block truncate text-[10px] font-medium text-emerald-600">
               Pagado
             </span>
-            <span className="mt-0.5 block truncate text-[12px] font-semibold tabular-nums text-emerald-700">
+            <span className="mt-0.5 block truncate text-[10px] font-semibold tabular-nums text-emerald-700">
               {formatMoney(order.totalPaid ?? 0)}
             </span>
             {order.totalPaid > order.total && (
-              <span className="mt-1 flex min-w-0 items-center gap-1 text-[11px] font-medium text-zinc-600">
+              <span className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-medium text-zinc-600">
                 <span className="truncate">
                   exc: {formatMoney(order.totalPaid - order.total)}
                 </span>
@@ -177,7 +200,7 @@ const isPaid = pendingAmount <= 0;
 
             <span
               className={cn(
-                "mt-0.5 block truncate text-[12px] font-semibold tabular-nums",
+                "mt-0.5 block truncate text-[10px] font-semibold tabular-nums",
                 isPaid ? "text-green-700" : "text-red-600",
               )}
             >
@@ -186,6 +209,6 @@ const isPaid = pendingAmount <= 0;
           </span>
         </span>
       </span>
-    </button>
+    </div>
   );
 }
