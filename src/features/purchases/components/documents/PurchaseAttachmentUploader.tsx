@@ -12,6 +12,7 @@ type Props = {
   payments?: Payment[];
   loading?: boolean;
   canUpload?: boolean;
+  allowedTypes?: PurchaseAttachmentType[];
   onUpload: (params: {
     type: PurchaseAttachmentType;
     file: File;
@@ -20,8 +21,9 @@ type Props = {
   }) => Promise<void> | void;
 };
 
-export function PurchaseAttachmentUploader({ payments = [], loading = false, canUpload = true, onUpload }: Props) {
-  const [type, setType] = useState<PurchaseAttachmentType>(PurchaseAttachmentTypes.INVOICE);
+export function PurchaseAttachmentUploader({ payments = [], loading = false, canUpload = true, allowedTypes, onUpload }: Props) {
+  const typeOptions = allowedTypes?.length ? allowedTypes : Object.keys(purchaseAttachmentTypeLabels) as PurchaseAttachmentType[];
+  const [type, setType] = useState<PurchaseAttachmentType>(typeOptions[0] ?? PurchaseAttachmentTypes.INVOICE);
   const [paymentId, setPaymentId] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -50,9 +52,9 @@ export function PurchaseAttachmentUploader({ payments = [], loading = false, can
             disabled={!canUpload || loading}
             className="h-9 w-full rounded-md border border-black/10 bg-white px-2 text-xs text-black/75 outline-none focus:border-primary"
           >
-            {Object.entries(purchaseAttachmentTypeLabels).map(([value, label]) => (
+            {typeOptions.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {purchaseAttachmentTypeLabels[value]}
               </option>
             ))}
           </select>

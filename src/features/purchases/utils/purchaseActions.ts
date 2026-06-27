@@ -18,7 +18,7 @@ export const uploadPurchaseImageProdution = async (
   formData.append("purchaseId", poId);
   formData.append("type", PurchaseAttachmentTypes.PRODUCT_PHOTO);
   formData.append("file", file);
-  formData.append("note", "Migrado desde flujo legacy image_prodution.");
+  formData.append("note", "Foto de compra registrada desde cierre de recepcion.");
   const response = await axiosInstance.post(API_PURCHASE_ATTACHMENTS_GROUP.create, formData);
   return {
     type: response.data?.type,

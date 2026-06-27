@@ -76,6 +76,7 @@ import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-event
 import { sileo } from "sileo";
 import { purchaseTypeLabels } from "@/features/purchases/types/purchase-classification.types";
 import { PurchaseTypesInfoModal } from "@/features/purchases/components/PurchaseTypesInfoModal";
+import { PurchaseFiscalDocumentsModal } from "@/features/purchases/components/documents/PurchaseFiscalDocumentsModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -187,6 +188,7 @@ export default function Purchases() {
     const [extraTimeLoading, setExtraTimeLoading] = useState(false);
     const [completedPhotoPo, setCompletedPhotoPo] = useState<PurchaseOrder | null>(null);
     const [completedPhotoLoading, setCompletedPhotoLoading] = useState(false);
+    const [fiscalDocumentsPoId, setFiscalDocumentsPoId] = useState<string | null>(null);
     const skippedPhotoRef = useRef<Set<string>>(new Set());
     const handledDeepLinkRef = useRef<string | null>(null);
     const isPhotoPromptSkipped = useCallback((poId?: string) => {
@@ -961,6 +963,16 @@ export default function Purchases() {
                                     openPurchasePdf(row.purchase.poId ?? "");
                                 },
                             },
+                            row.purchase.status === PurchaseOrderStatuses.RECEIVED && {
+                                id: "fiscal-documents",
+                                label: "Comprobantes fiscales",
+                                icon: <FileText className="h-4 w-4 text-black/60" />,
+                                onClick: () => {
+                                    const nextPoId = row.purchase.poId ?? "";
+                                    if (!nextPoId) return;
+                                    setFiscalDocumentsPoId(nextPoId);
+                                },
+                            },
                             row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
                                 id: "list-payments",
                                 label: "Listar pagos",
@@ -1419,6 +1431,11 @@ export default function Purchases() {
             <PurchaseTypesInfoModal
                 open={openPurchaseTypesInfo}
                 onClose={() => setOpenPurchaseTypesInfo(false)}
+            />
+            <PurchaseFiscalDocumentsModal
+                open={Boolean(fiscalDocumentsPoId)}
+                purchaseId={fiscalDocumentsPoId}
+                onClose={() => setFiscalDocumentsPoId(null)}
             />
         </PageShell>
     );

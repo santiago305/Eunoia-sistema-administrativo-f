@@ -67,6 +67,11 @@ vi.mock("@/shared/components/components/PageTitle", () => ({
 vi.mock("@/shared/components/table/DataTable", () => ({
     DataTable: (props: {
         tableId: string;
+        data?: Array<Record<string, unknown>>;
+        columns?: Array<{
+            id: string;
+            cell?: (row: Record<string, unknown>) => React.ReactNode;
+        }>;
         selectableColumns?: boolean;
         toolbarSearchContent?: React.ReactNode;
         rangeDates?: unknown;
@@ -81,7 +86,26 @@ vi.mock("@/shared/components/table/DataTable", () => ({
                 </span>
             ) : null}
             {props.toolbarSearchContent}
+            {(props.data ?? []).map((row, rowIndex) => (
+                <div key={String(row.id ?? rowIndex)}>
+                    {(props.columns ?? []).map((column) => (
+                        <div key={column.id}>{column.cell?.(row)}</div>
+                    ))}
+                </div>
+            ))}
         </section>
+    ),
+}));
+
+vi.mock("@/shared/components/components/ActionsPopover", () => ({
+    ActionsPopover: ({ actions }: { actions: Array<{ id: string; label: string; hidden?: boolean }> }) => (
+        <div data-testid="actions-popover">
+            {actions.filter((action) => !action.hidden).map((action) => (
+                <button key={action.id} type="button">
+                    {action.label}
+                </button>
+            ))}
+        </div>
     ),
 }));
 
@@ -191,5 +215,57 @@ describe("PurchaseListPage", () => {
                 to: undefined,
             });
         });
+    });
+
+    it("shows fiscal documents action only for received purchases", async () => {
+        listPurchaseOrdersMock.mockResolvedValueOnce({
+            items: [
+                {
+                    poId: "po-received",
+                    serie: "F001",
+                    correlative: "1",
+                    supplierName: "Proveedor recibido",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "RECEIVED",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    total: 100,
+                    totalPaid: 100,
+                    totalToPay: 0,
+                    paymentForm: "CONTADO",
+                },
+                {
+                    poId: "po-draft",
+                    serie: "F001",
+                    correlative: "2",
+                    supplierName: "Proveedor borrador",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    total: 100,
+                    totalPaid: 0,
+                    totalToPay: 100,
+                    paymentForm: "CONTADO",
+                },
+            ],
+            total: 2,
+            page: 1,
+            limit: 25,
+        });
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        expect(await screen.findByText("Comprobantes fiscales")).toBeInTheDocument();
+        expect(screen.getAllByTestId("actions-popover")).toHaveLength(2);
+        expect(screen.getAllByText("Comprobantes fiscales")).toHaveLength(1);
     });
 });

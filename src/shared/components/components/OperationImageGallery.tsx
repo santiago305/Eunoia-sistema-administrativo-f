@@ -55,7 +55,7 @@ export function OperationImageGallery({
         </div>
         {canUpload ? (
           <label className="block text-xs text-black/60">
-            <span className="mb-1 block">Subir foto (solo admin)</span>
+            <span className="mb-1 block">Subir foto</span>
             <input
               type="file"
               accept="image/*"

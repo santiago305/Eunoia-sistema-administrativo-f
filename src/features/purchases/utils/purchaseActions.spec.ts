@@ -12,7 +12,7 @@ vi.mock("@/shared/common/utils/axios", () => ({
 describe("purchaseActions", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("uploads legacy completion photos through purchase attachments as PRODUCT_PHOTO", async () => {
+  it("uploads purchase completion photos through purchase attachments as PRODUCT_PHOTO", async () => {
     vi.mocked(axiosInstance.post).mockResolvedValue({
       data: {
         type: "success",
@@ -30,7 +30,7 @@ describe("purchaseActions", () => {
     expect(formData.get("purchaseId")).toBe("purchase-1");
     expect(formData.get("type")).toBe("PRODUCT_PHOTO");
     expect(formData.get("file")).toBe(file);
-    expect(formData.get("note")).toBe("Migrado desde flujo legacy image_prodution.");
+    expect(formData.get("note")).toBe("Foto de compra registrada desde cierre de recepcion.");
     expect(result.imageProdution).toEqual(["purchase-attachments/purchase-1/product.webp"]);
   });
 });

@@ -16,14 +16,27 @@ import {
 } from "@/shared/services/purchaseAttachmentService";
 import { PurchaseAttachmentUploader } from "./PurchaseAttachmentUploader";
 import { PurchaseAttachmentViewer } from "./PurchaseAttachmentViewer";
+import { OperationImageGallery } from "@/shared/components/components/OperationImageGallery";
 
 type Props = {
   purchaseId: string;
   payments?: Payment[];
   legacyImages?: string[];
+  allowedTypes?: PurchaseAttachmentType[];
+  title?: string;
+  showUploader?: boolean;
+  showLegacyImages?: boolean;
 };
 
-export function PurchaseDocumentsTab({ purchaseId, payments = [], legacyImages = [] }: Props) {
+export function PurchaseDocumentsTab({
+  purchaseId,
+  payments = [],
+  legacyImages = [],
+  allowedTypes,
+  title = "Documentos",
+  showUploader = true,
+  showLegacyImages = true,
+}: Props) {
   const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -98,9 +111,24 @@ export function PurchaseDocumentsTab({ purchaseId, payments = [], legacyImages =
     }
   };
 
-  const legacyCountLabel = useMemo(
-    () => legacyImages.length ? `${legacyImages.length} imagen${legacyImages.length === 1 ? "" : "es"} legacy` : "Sin imagen legacy",
-    [legacyImages.length],
+  const visibleAttachments = useMemo(
+    () => allowedTypes?.length
+      ? attachments.filter((attachment) => allowedTypes.includes(attachment.type))
+      : attachments,
+    [allowedTypes, attachments],
+  );
+
+  const totalCountLabel = useMemo(
+    () => {
+      const documentCount = visibleAttachments.length;
+      const photoCount = showLegacyImages ? legacyImages.length : 0;
+      const parts = [
+        `${documentCount} documento${documentCount === 1 ? "" : "s"}`,
+        photoCount ? `${photoCount} foto${photoCount === 1 ? "" : "s"} de compra` : null,
+      ].filter(Boolean);
+      return loading ? "Cargando..." : parts.join(" · ");
+    },
+    [legacyImages.length, loading, showLegacyImages, visibleAttachments.length],
   );
 
   if (!canView) {
@@ -113,56 +141,46 @@ export function PurchaseDocumentsTab({ purchaseId, payments = [], legacyImages =
         <div className="flex items-center gap-1.5 text-black/60">
           <FileText className="h-3.5 w-3.5" />
           <h4 className="text-[11px] font-medium uppercase tracking-[0.14em] text-black/55">
-            Documentos
+            {title}
           </h4>
         </div>
         <span className="text-[11px] text-black/40">
-          {loading ? "Cargando..." : `${attachments.length} formales · ${legacyCountLabel}`}
+          {totalCountLabel}
         </span>
       </div>
 
       <div className="space-y-3">
-        {canUpload ? (
-          <PurchaseAttachmentUploader payments={payments} loading={uploading} canUpload={canUpload} onUpload={handleUpload} />
+        {showUploader && canUpload ? (
+          <PurchaseAttachmentUploader
+            payments={payments}
+            loading={uploading}
+            canUpload={canUpload}
+            allowedTypes={allowedTypes}
+            onUpload={handleUpload}
+          />
         ) : null}
         <PurchaseAttachmentViewer
-          attachments={attachments}
+          attachments={visibleAttachments}
           canDelete={canDelete}
           deletingId={deletingId}
           onDelete={handleDelete}
         />
-        {legacyImages.length ? (
-          <div className="overflow-hidden rounded-md border border-amber-200 bg-amber-50/60">
-            <div className="flex items-center justify-between border-b border-amber-200 px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
-                Evidencia legacy
+        {showLegacyImages && legacyImages.length ? (
+          <div className="overflow-hidden rounded-md border border-black/5">
+            <div className="flex items-center justify-between border-b border-black/5 bg-slate-50 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-black/55">
+                Fotos de compra
               </p>
-              <span className="text-[10px] text-amber-700">
-                Solo lectura
+              <span className="text-[10px] text-black/40">
+                {legacyImages.length} foto{legacyImages.length === 1 ? "" : "s"}
               </span>
             </div>
-            <div className="grid gap-2 p-3 sm:grid-cols-2">
-              {legacyImages.map((url, index) => (
-                <a
-                  key={`${url}-${index}`}
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block overflow-hidden rounded-md border border-amber-200 bg-white text-xs text-amber-900 hover:border-amber-300"
-                >
-                  <div className="aspect-video bg-amber-100">
-                    <img
-                      src={url}
-                      alt={`Evidencia legacy ${index + 1}`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="truncate px-2 py-1.5">
-                    image_prodution #{index + 1}
-                  </div>
-                </a>
-              ))}
+            <div className="p-3">
+              <OperationImageGallery
+                images={legacyImages}
+                altPrefix="Foto de compra"
+                emptyMessage="Esta compra no tiene foto."
+              />
             </div>
           </div>
         ) : null}
