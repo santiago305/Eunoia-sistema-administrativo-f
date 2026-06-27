@@ -13,10 +13,7 @@ describe("purchase permissions routing", () => {
   });
 
   it("protects purchase subpages with final action permissions", () => {
-    expect(permissionsFor(RoutesPaths.purchaseCreate)).toEqual([
-      "page.purchases.view",
-      "purchases.create",
-    ]);
+    expect(permissionsFor("/compras/nueva")).toEqual([]);
     expect(permissionsFor(RoutesPaths.purchaseReception)).toEqual([
       "page.purchase-receptions.view",
       "purchases.receive",

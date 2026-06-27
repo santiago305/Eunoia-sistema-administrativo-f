@@ -59,7 +59,6 @@ export const RoutesPaths = {
   purchase: '/compra',
   purchases: '/compras',
   purchaseDashboard: "/compras/dashboard",
-  purchaseCreate: "/compras/nueva",
   purchaseDetail: "/compras/:id",
   purchaseEditPage: "/compras/:id/editar",
   purchaseReception: "/compras/:poId/recepcion",

@@ -69,6 +69,7 @@ import { PurchaseCompletionPhotoModal } from "@/features/purchases/components/Pu
 import { addPurchaseExtraTime, uploadPurchaseImageProdution } from "@/features/purchases/utils/purchaseActions";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
+import { PageTitle } from "@/shared/components/components/PageTitle";
 import { approvePayment as approvePaymentById } from "@/shared/services/paymentService";
 import { RoutesPaths } from "@/routes/config/routesPaths";
 import { NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
@@ -1215,6 +1216,7 @@ export default function Purchases() {
 
     return (
         <PageShell className="bg-white">
+            <PageTitle title="Compras" />
             <div className="space-y-4">
                 <PageActionsRow>
                     <SystemButton
