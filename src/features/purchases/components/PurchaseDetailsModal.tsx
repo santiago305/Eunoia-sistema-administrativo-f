@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getById } from "@/shared/services/purchaseService";
+import { PurchaseOrderStatuses } from "@/features/purchases/types/purchaseEnums";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { uploadPurchaseImageProdution } from "../utils/purchaseActions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
@@ -60,7 +61,11 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
   );
 
   const isAdmin = (userRole ?? "").toLowerCase() === "admin";
-  const canUploadMissingPhoto = (isAdmin || can("purchases.attach_documents")) && images.length === 0 && Boolean(poId);
+  const canUploadMissingPhoto =
+    purchase?.status === PurchaseOrderStatuses.RECEIVED &&
+    (isAdmin || can("purchases.attach_documents")) &&
+    images.length === 0 &&
+    Boolean(poId);
 
   const handleUploadFromDetail = async (file?: File | null) => {
     if (!poId || !file) return;

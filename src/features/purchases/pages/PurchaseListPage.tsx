@@ -30,7 +30,6 @@ import {
 } from "@/shared/services/purchaseService";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { money, parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
-import { PaymentModal } from "@/features/purchases/components/PaymentModal";
 import { PaymentListModal } from "@/features/purchases/components/PaymentListModal";
 import { QuotaListModal } from "@/features/purchases/components/QuotaListModal";
 import { PurchaseModal } from "@/features/purchases/components/PurchaseModal";
@@ -170,14 +169,11 @@ export default function Purchases() {
     const [openPurchaseTypesInfo, setOpenPurchaseTypesInfo] = useState(false);
     const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
     const [savingMetric, setSavingMetric] = useState(false);
-    const [modalPayment, setModalPayment] = useState(false);
     const [modalPaymentList, setModalPaymentList] = useState(false);
     const [modalQuotaList, setModalQuotaList] = useState(false);
     const [openPurchaseModal, setOpenPurchaseModal] = useState(false);
     const [editPoId, setEditPoId] = useState<string | undefined>(undefined);
 
-    const [totalPaid, setTotalPaid] = useState(0);
-    const [totalToPay, setTotalToPay] = useState(0);
     const [totalPo, setTotalPo] = useState(0);
     const [poId, setPoId] = useState("");
     const [paymentForm, setPaymentForm] = useState("");
@@ -933,13 +929,13 @@ export default function Purchases() {
                             row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
                             row.purchase.totalPaid != row.purchase.total && {
                                 id: "payment",
-                                label: "Pago",
+                                label: "Pagos",
                                 icon: <CreditCard className="h-4 w-4 text-black/60" />,
                                 onClick: () => {
-                                    setModalPayment(true);
-                                    setTotalPaid(row.purchase.totalPaid ?? 0);
-                                    setTotalToPay(row.purchase.totalToPay ?? 0);
+                                    setModalPaymentList(true);
                                     setPoId(row.purchase.poId ?? "");
+                                    setTotalPo(row.purchase.total);
+                                    setPaymentForm(row.purchase.paymentForm);
                                 },
                                 disabled:
                                     companyActionDisabled ||
@@ -1369,18 +1365,6 @@ export default function Purchases() {
                 onClose={() => {
                     setSelectedPurchaseRow(null);
                 }}
-            />
-            <PaymentModal
-                title="Formulario de Pago"
-                close={() => {
-                    setModalPayment(false);
-                }}
-                open={modalPayment}
-                className="w-[800px]"
-                totalPaid={totalPaid}
-                totalToPay={totalToPay}
-                poId={poId}
-                loadPurchases={loadPurchases}
             />
             <PaymentListModal
                 title="Pagos"

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Banknote, CalendarClock, Paperclip, Wallet } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Banknote, CalendarClock, FileText, ImageIcon, Paperclip, UploadCloud, Wallet, X } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
@@ -36,6 +36,14 @@ import { SchedulePaymentModal } from "@/features/payments/components/SchedulePay
 import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
 
 const PRIMARY = "hsl(var(--primary))";
+
+const isCashMethod = (method?: string | null) => (method ?? "").trim().toUpperCase() === PaymentTypes.EFECTIVO;
+const isImageFile = (file?: File | null) => Boolean(file?.type.startsWith("image/"));
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export type PaymentProps = {
   title: string;
@@ -81,12 +89,23 @@ export function PaymentModal({
   const [saving, setSaving] = useState(false);
   const [paymentMethodRecords, setPaymentMethodRecords] = useState<PaymentMethod[] | null>(null);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [evidencePreviewUrl, setEvidencePreviewUrl] = useState<string | null>(null);
   const [selectedPaymentAccount, setSelectedPaymentAccount] = useState<CompanyPaymentAccount | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const { company } = useCompany();
   const canUploadPaymentEvidence = can("payments.attach_evidence");
+  const showEvidenceUploader = canUploadPaymentEvidence && !isCashMethod(form.method);
+
+  const evidenceMeta = useMemo(() => {
+    if (!evidenceFile) return null;
+    return `${evidenceFile.type || "Archivo"} · ${formatFileSize(evidenceFile.size)}`;
+  }, [evidenceFile]);
+
+  const setNextEvidenceFile = (file?: File | null) => {
+    setEvidenceFile(file ?? null);
+  };
 
   useEffect(() => {
     const wasOpen = previousOpenRef.current;
@@ -106,8 +125,25 @@ export function PaymentModal({
         poId,
       }));
     setEvidenceFile(null);
+    setEvidencePreviewUrl(null);
     setSelectedPaymentAccount(null);
   }, [open, poId, quotaId, totalToPay]);
+
+  useEffect(() => {
+    if (!evidenceFile || !isImageFile(evidenceFile)) {
+      setEvidencePreviewUrl(null);
+      return;
+    }
+
+    const nextUrl = URL.createObjectURL(evidenceFile);
+    setEvidencePreviewUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [evidenceFile]);
+
+  useEffect(() => {
+    if (showEvidenceUploader) return;
+    setEvidenceFile(null);
+  }, [showEvidenceUploader]);
 
   useEffect(() => {
     if (!open) return;
@@ -332,20 +368,66 @@ export function PaymentModal({
                   Programar
                 </SystemButton>
               </div>
-              {canUploadPaymentEvidence ? (
-                <label className="sm:col-span-2 flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-dashed border-black/20 bg-slate-50 px-3 text-xs text-black/60">
-                  <Paperclip className="h-4 w-4 shrink-0" />
-                  <input
-                    type="file"
-                    className="sr-only"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.txt"
-                    onChange={(event) => setEvidenceFile(event.target.files?.[0] ?? null)}
-                    disabled={saving}
-                  />
-                  <span className="truncate">
-                    {evidenceFile ? evidenceFile.name : "Adjuntar voucher o evidencia de pago"}
-                  </span>
-                </label>
+              {showEvidenceUploader ? (
+                <div className="sm:col-span-2 space-y-2">
+                  <label
+                    className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-black/20 bg-slate-50 px-3 py-4 text-center text-xs text-black/60 transition hover:border-primary/40 hover:bg-primary/5"
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      if (saving) return;
+                      setNextEvidenceFile(event.dataTransfer.files?.[0]);
+                    }}
+                  >
+                    <input
+                      aria-label="Foto/comprobante de pago"
+                      type="file"
+                      className="sr-only"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.txt"
+                      onChange={(event) => setNextEvidenceFile(event.target.files?.[0])}
+                      disabled={saving}
+                    />
+                    <UploadCloud className="h-5 w-5 text-black/45" />
+                    <span className="font-semibold text-black/70">Foto/comprobante de pago</span>
+                    <span className="text-black/45">Arrastra el voucher o haz click para seleccionar</span>
+                  </label>
+
+                  {evidenceFile ? (
+                    <div className="flex gap-3 rounded-md border border-black/10 bg-white p-2">
+                      <div className="flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-black/10 bg-black/[0.03]">
+                        {evidencePreviewUrl ? (
+                          <img
+                            src={evidencePreviewUrl}
+                            alt="Previsualizacion del comprobante de pago"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <FileText className="h-6 w-6 text-black/45" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1 py-1">
+                        <div className="flex items-center gap-1 text-xs font-semibold text-black/75">
+                          {evidencePreviewUrl ? <ImageIcon className="h-3.5 w-3.5" /> : <Paperclip className="h-3.5 w-3.5" />}
+                          <span className="truncate">{evidenceFile.name}</span>
+                        </div>
+                        {evidenceMeta ? <p className="mt-1 text-[11px] text-black/45">{evidenceMeta}</p> : null}
+                      </div>
+                      <SystemButton
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => setNextEvidenceFile(null)}
+                        title="Quitar comprobante"
+                        disabled={saving}
+                      >
+                        <X className="h-4 w-4" />
+                      </SystemButton>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
               <div className="sm:col-span-2">
                 <SystemButton

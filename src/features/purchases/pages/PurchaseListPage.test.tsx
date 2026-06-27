@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Purchases from "./PurchaseListPage";
@@ -98,10 +98,10 @@ vi.mock("@/shared/components/table/DataTable", () => ({
 }));
 
 vi.mock("@/shared/components/components/ActionsPopover", () => ({
-    ActionsPopover: ({ actions }: { actions: Array<{ id: string; label: string; hidden?: boolean }> }) => (
+    ActionsPopover: ({ actions }: { actions: Array<{ id: string; label: string; hidden?: boolean; onClick?: () => void }> }) => (
         <div data-testid="actions-popover">
             {actions.filter((action) => !action.hidden).map((action) => (
-                <button key={action.id} type="button">
+                <button key={action.id} type="button" onClick={action.onClick}>
                     {action.label}
                 </button>
             ))}
@@ -125,11 +125,13 @@ vi.mock("@/features/purchases/components/PaymentModal", () => ({
 }));
 
 vi.mock("@/features/purchases/components/PaymentListModal", () => ({
-    PaymentListModal: () => null,
+    PaymentListModal: ({ open, credit }: { open: boolean; credit?: boolean }) =>
+        open ? <div data-testid="payment-list-modal" data-credit={String(Boolean(credit))} /> : null,
 }));
 
 vi.mock("@/features/purchases/components/QuotaListModal", () => ({
-    QuotaListModal: () => null,
+    QuotaListModal: ({ open }: { open: boolean }) =>
+        open ? <div data-testid="quota-list-modal" /> : null,
 }));
 
 vi.mock("@/features/purchases/components/PurchaseModal", () => ({
@@ -267,5 +269,59 @@ describe("PurchaseListPage", () => {
         expect(await screen.findByText("Comprobantes fiscales")).toBeInTheDocument();
         expect(screen.getAllByTestId("actions-popover")).toHaveLength(2);
         expect(screen.getAllByText("Comprobantes fiscales")).toHaveLength(1);
+    });
+
+    it("opens the payment list for cash purchases and the quota flow for credit purchases", async () => {
+        listPurchaseOrdersMock.mockResolvedValueOnce({
+            items: [
+                {
+                    poId: "po-cash",
+                    serie: "F001",
+                    correlative: "1",
+                    supplierName: "Proveedor contado",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    total: 100,
+                    totalPaid: 0,
+                    totalToPay: 100,
+                    paymentForm: "CONTADO",
+                },
+                {
+                    poId: "po-credit",
+                    serie: "F001",
+                    correlative: "2",
+                    supplierName: "Proveedor credito",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    total: 200,
+                    totalPaid: 0,
+                    totalToPay: 200,
+                    paymentForm: "CREDITO",
+                },
+            ],
+            total: 2,
+            page: 1,
+            limit: 25,
+        });
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        fireEvent.click(await screen.findByRole("button", { name: "Pagos" }));
+        expect(screen.getByTestId("payment-list-modal")).toHaveAttribute("data-credit", "false");
+
+        fireEvent.click(screen.getByRole("button", { name: "Ver cuotas" }));
+        expect(screen.getByTestId("quota-list-modal")).toBeInTheDocument();
     });
 });

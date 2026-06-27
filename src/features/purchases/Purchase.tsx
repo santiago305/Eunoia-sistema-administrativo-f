@@ -331,6 +331,16 @@ export default function PurchaseCreateLocal({
     );
   }, [form.items]);
 
+  const saveDisabled =
+    companyActionDisabled ||
+    !form.items?.length ||
+    !form.serie.trim() ||
+    Boolean(documentNumberError) ||
+    !form.supplierId ||
+    !form.correlative ||
+    (requiresWarehouse && !form.warehouseId) ||
+    totals.totalPrice === 0;
+
   const itemRows = useMemo<PurchaseItemRow[]>(() => {
     return (form.items ?? []).map((item) => {
       const product = products.find((p) => p.skuId === item.skuId);
@@ -949,19 +959,18 @@ export default function PurchaseCreateLocal({
             </div>
 
             <div className="p-3">
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <SystemButton
-                  className="flex-1"
-                  disabled={
-                    companyActionDisabled ||
-                    !form.items?.length ||
-                    !form.serie.trim() ||
-                    Boolean(documentNumberError) ||
-                    !form.supplierId ||
-                    !form.correlative ||
-                    (requiresWarehouse && !form.warehouseId) ||
-                    totals.totalPrice === 0                   
-                  }
+                  className="w-full"
+                  disabled={saveDisabled}
+                  onClick={savePurchase}
+                >
+                  {isEdit ? "Actualizar compra" : "Crear compra"}
+                </SystemButton>
+                <SystemButton
+                  className="w-full"
+                  variant="outline"
+                  disabled={saveDisabled}
                   onClick={() => {
                     setForm((prev) => {
                       const shouldInit = !isEdit;
@@ -1043,7 +1052,7 @@ export default function PurchaseCreateLocal({
           currency={currency}
           formatMoney={money}
           onSave={savePurchase}
-          saveDisabled={companyActionDisabled || !form.items?.length || !form.serie.trim() || !form.supplierId || (requiresWarehouse && !form.warehouseId)}
+          saveDisabled={saveDisabled}
           isEdit={isEdit}
         />
       )}

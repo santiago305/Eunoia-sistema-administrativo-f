@@ -93,4 +93,48 @@ describe("PurchaseDetailsModal", () => {
     await waitFor(() => expect(getByIdMock).toHaveBeenCalledWith("purchase-1"));
     expect(screen.getByRole("button", { name: "Subir foto" })).toBeInTheDocument();
   });
+
+  it("does not allow uploading a purchase photo before the purchase is received", async () => {
+    render(
+      <PurchaseDetailsModal
+        open
+        poId="purchase-1"
+        purchase={{
+          poId: "purchase-1",
+          supplierId: "supplier-1",
+          warehouseId: "warehouse-1",
+          documentType: VoucherDocTypes.FACTURA,
+          serie: "F001",
+          correlative: 1,
+          dateIssue: "2026-06-27T10:00:00.000Z",
+          dateExpiration: "2026-06-30T10:00:00.000Z",
+          expectedAt: "2026-06-27T10:00:00.000Z",
+          currency: "PEN",
+          status: PurchaseOrderStatuses.DRAFT,
+          purchaseType: "INVENTORY",
+          paymentForm: "CONTADO",
+          totalTaxed: 100,
+          totalExempted: 0,
+          totalIgv: 18,
+          purchaseValue: 100,
+          total: 100,
+          totalPaid: 0,
+          totalToPay: 100,
+          imageProdution: [],
+          supplierLabel: "Proveedor",
+          supplierDoc: "20123456789",
+          warehouseLabel: "Almacen",
+          statusLabel: "Borrador",
+          docLabel: "Factura",
+          numero: "F001-1",
+          date: "27/06/2026",
+          dateEnter: "27/06/2026",
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(getByIdMock).toHaveBeenCalledWith("purchase-1"));
+    expect(screen.queryByRole("button", { name: "Subir foto" })).not.toBeInTheDocument();
+  });
 });
