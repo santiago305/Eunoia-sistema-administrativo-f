@@ -1,4 +1,6 @@
 import axiosInstance from "@/shared/common/utils/axios";
+import { API_PURCHASE_ATTACHMENTS_GROUP } from "@/shared/services/APIs";
+import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
 
 export const addPurchaseExtraTime = async (
   poId: string,
@@ -13,7 +15,14 @@ export const uploadPurchaseImageProdution = async (
   file: File,
 ): Promise<{ type: string; message: string; imageProdution?: string[] }> => {
   const formData = new FormData();
+  formData.append("purchaseId", poId);
+  formData.append("type", PurchaseAttachmentTypes.PRODUCT_PHOTO);
   formData.append("file", file);
-  const response = await axiosInstance.patch(`/purchases/orders/${poId}/image-prodution`, formData);
-  return response.data;
+  formData.append("note", "Migrado desde flujo legacy image_prodution.");
+  const response = await axiosInstance.post(API_PURCHASE_ATTACHMENTS_GROUP.create, formData);
+  return {
+    type: response.data?.type,
+    message: response.data?.message,
+    imageProdution: response.data?.attachment?.url ? [response.data.attachment.url] : [],
+  };
 };
