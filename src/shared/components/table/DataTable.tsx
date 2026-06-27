@@ -92,6 +92,7 @@ export function DataTable<T extends Record<string, unknown>>({
   maxHeight,
   useRangeDatesForExternalExport = false,
   onExternalExportRangeStateChange,
+  refreshAction,
 }: DataTableProps<T>) {
   const preferenceStorageKey = `data-table-preferences:${tableId}`;
   const controlledSearch = typeof searchValue === "string";
@@ -417,6 +418,7 @@ export function DataTable<T extends Record<string, unknown>>({
         }}
         filtersConfig={filtersConfig}
         rangeDates={resolvedRangeDates}
+        refreshAction={refreshAction}
         selectionInfo={
           selectableRows ? (
             <div className="inline-flex items-center gap-2 rounded-sm border border-border/70 bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">

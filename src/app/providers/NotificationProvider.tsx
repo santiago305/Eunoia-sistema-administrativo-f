@@ -12,10 +12,38 @@ type NotificationContextValue = {
   hasUnreadMail: boolean;
 };
 
+type SystemNotificationCreatedPayload = {
+  recipientId?: string;
+  message?: { id?: string; subject?: string; preview?: string };
+  notification?: {
+    title?: string;
+    message?: string;
+    priority?: NotificationPriority;
+    actionUrl?: string;
+    actionLabel?: string;
+    showAsToast?: boolean;
+    metadata?: Record<string, unknown>;
+    sourceEntityType?: string;
+    sourceEntityId?: string;
+  };
+};
+
 export const NotificationContext = createContext<NotificationContextValue>({
   connected: false,
   hasUnreadMail: false,
 });
+
+function isPurchaseNotification(payload: SystemNotificationCreatedPayload) {
+  const notification = payload.notification;
+  const metadata = notification?.metadata ?? {};
+
+  return (
+    metadata.sourceEntityType === "purchase_order" ||
+    notification?.sourceEntityType === "purchase_order" ||
+    typeof metadata.poId === "string" ||
+    typeof notification?.sourceEntityId === "string"
+  );
+}
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, userId } = useAuth();
@@ -55,19 +83,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
 
-    const onCreated = (payload: {
-      recipientId?: string;
-      message?: { id?: string; subject?: string; preview?: string };
-      notification?: {
-        title?: string;
-        message?: string;
-        priority?: NotificationPriority;
-        actionUrl?: string;
-        actionLabel?: string;
-        showAsToast?: boolean;
-        metadata?: Record<string, unknown>;
-      };
-    }) => {
+    const onCreated = (payload: SystemNotificationCreatedPayload) => {
       const metadataMessageId =
         typeof payload?.notification?.metadata?.messageId === 'string'
           ? payload.notification.metadata.messageId
@@ -89,7 +105,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       }
       setHasUnreadMail(true);
-      window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated));
+      window.dispatchEvent(
+        new CustomEvent<SystemNotificationCreatedPayload>(NOTIFICATION_WINDOW_EVENTS.systemNotificationCreated, {
+          detail: payload,
+        }),
+      );
+      if (isPurchaseNotification(payload)) {
+        window.dispatchEvent(
+          new CustomEvent<SystemNotificationCreatedPayload>(NOTIFICATION_WINDOW_EVENTS.purchaseHistoryUpdated, {
+            detail: payload,
+          }),
+        );
+      }
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));
     };
 

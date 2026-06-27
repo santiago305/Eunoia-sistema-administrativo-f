@@ -9,6 +9,7 @@ export const NOTIFICATION_WINDOW_EVENTS = {
   mailMessageCreated: 'mail:message-created',
   mailActionUpdated: 'mail:action-updated',
   systemNotificationCreated: 'system-notification:created',
+  purchaseHistoryUpdated: 'purchases:history-updated',
   mailUnreadSync: 'notifications:mail-unread-sync',
   mailUnreadStateChanged: 'notifications:mail-unread-state-changed',
 } as const;

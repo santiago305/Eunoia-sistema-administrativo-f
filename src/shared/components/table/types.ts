@@ -80,6 +80,14 @@ export type DataTableExternalExportRangeState = {
     endDate: Date | null;
 };
 
+export type DataTableRefreshAction = {
+    visible?: boolean;
+    onRefresh: () => void;
+    loading?: boolean;
+    disabled?: boolean;
+    label?: string;
+};
+
 export type DataTableProps<T> = {
     data: T[];
     columns: DataTableColumn<T>[];
@@ -121,6 +129,7 @@ export type DataTableProps<T> = {
     maxHeight?: string;
     useRangeDatesForExternalExport?: boolean;
     onExternalExportRangeStateChange?: (state: DataTableExternalExportRangeState) => void;
+    refreshAction?: DataTableRefreshAction;
 };
 
 export type DataTableColumnPreference = {

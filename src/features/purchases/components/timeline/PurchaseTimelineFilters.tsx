@@ -1,7 +1,10 @@
 import { Filter, RotateCcw, Search } from "lucide-react";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { FloatingDateRangePicker } from "@/shared/components/components/date-picker/FloatingDateRangePicker";
+import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { UserApiListItem } from "@/shared/services/userService";
 import { purchaseEventFilterOptions } from "@/features/purchases/utils/purchase-event-labels";
+import { parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 
 export type PurchaseTimelineFilterState = {
   eventType: string;
@@ -43,7 +46,7 @@ export function PurchaseTimelineFilters({
         <Filter className="h-4 w-4" aria-hidden="true" />
         Filtros
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         <FloatingSelect
           label="Evento"
           name="purchase-history-event-type"
@@ -65,42 +68,28 @@ export function PurchaseTimelineFilters({
           disabled={loadingUsers}
           panelWidthMode="min-trigger"
         />
-        <label className="flex flex-col gap-1 text-xs font-medium text-black/65">
-          Desde
-          <input
-            type="date"
-            value={value.from}
-            onChange={(event) => onChange({ ...value, from: event.target.value })}
-            className="min-h-10 rounded-sm border border-black/10 bg-white px-3 text-sm text-black outline-none focus:border-black"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-black/65">
-          Hasta
-          <input
-            type="date"
-            value={value.to}
-            onChange={(event) => onChange({ ...value, to: event.target.value })}
-            className="min-h-10 rounded-sm border border-black/10 bg-white px-3 text-sm text-black outline-none focus:border-black"
-          />
-        </label>
+        <FloatingDateRangePicker
+          label="Rango de eventos"
+          name="purchase-history-timeline-range"
+          startDate={parseDateInputValue(value.from)}
+          endDate={parseDateInputValue(value.to)}
+          onChange={({ startDate, endDate }) =>
+            onChange({
+              ...value,
+              from: startDate ? toLocalDateKey(startDate) : "",
+              to: endDate ? toLocalDateKey(endDate) : "",
+            })
+          }
+          placeholder="Todos"
+        />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="inline-flex min-h-10 items-center gap-2 rounded-sm bg-black px-3 text-sm font-medium text-white hover:bg-black/85"
-          onClick={onApply}
-        >
-          <Search className="h-4 w-4" aria-hidden="true" />
+        <SystemButton type="button" variant="secondary" size="sm" leftIcon={<Search className="h-4 w-4" />} onClick={onApply}>
           Aplicar
-        </button>
-        <button
-          type="button"
-          className="inline-flex min-h-10 items-center gap-2 rounded-sm border border-black/10 px-3 text-sm font-medium text-black hover:bg-black/[0.03]"
-          onClick={onReset}
-        >
-          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+        </SystemButton>
+        <SystemButton type="button" variant="outline" size="sm" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={onReset}>
           Limpiar
-        </button>
+        </SystemButton>
       </div>
     </section>
   );

@@ -126,6 +126,8 @@ export type PurchaseSearchStateResponse = {
     statuses: PurchaseSearchOption[];
     documentTypes: PurchaseSearchOption[];
     paymentForms: PurchaseSearchOption[];
+    events?: PurchaseSearchOption[];
+    users?: PurchaseSearchOption[];
   };
 };
 

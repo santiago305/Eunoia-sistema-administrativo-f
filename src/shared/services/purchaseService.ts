@@ -37,6 +37,10 @@ export const getPurchaseSearchState = async (): Promise<PurchaseSearchStateRespo
   return response.data;
 };
 
+export const getPurchaseHistorySearchState = async (): Promise<PurchaseSearchStateResponse> => {
+  return getPurchaseSearchState();
+};
+
 export const getPurchaseExportColumns = async (): Promise<PurchaseExportColumn[]> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.exportColumns);
   return response.data;

@@ -5,11 +5,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
-import {   ListFilter, Search, X } from "lucide-react";
+import { ListFilter, RefreshCw, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import type { DataTableFiltersConfig, DataTableRangeDates } from "./types";
+import type { DataTableFiltersConfig, DataTableRangeDates, DataTableRefreshAction } from "./types";
 import { FloatingInput } from "../components/FloatingInput";
 import { AnimatedDateRangePicker } from "../components/date-picker/AnimatedDateRangePicker";
+import { SystemButton } from "../components/SystemButton";
 
 type Props = {
   showSearch?: boolean;
@@ -19,6 +20,7 @@ type Props = {
   onSearchChange: (value: string) => void;
   filtersConfig?: DataTableFiltersConfig;
   rangeDates?: DataTableRangeDates;
+  refreshAction?: DataTableRefreshAction;
   rightContent?: ReactNode;
   selectionInfo?: ReactNode;
 };
@@ -31,6 +33,7 @@ export function DataTableToolbar({
   onSearchChange,
   filtersConfig,
   rangeDates,
+  refreshAction,
   rightContent,
   selectionInfo,
 }: Props) {
@@ -42,6 +45,7 @@ export function DataTableToolbar({
     !showSearch &&
     !filtersConfig &&
     !rangeDates &&
+    !refreshAction?.visible &&
     !rightContent &&
     !selectionInfo
   ) {
@@ -86,8 +90,26 @@ export function DataTableToolbar({
         {selectionInfo}
       </div>
 
-      {rightContent || filtersConfig || rangeDates ? (
+      {rightContent || filtersConfig || rangeDates || refreshAction?.visible ? (
         <div className="flex w-full gap-3 sm:w-auto sm:flex-row sm:items-center justify-end">
+          {refreshAction?.visible ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <SystemButton
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-11 w-11 px-0"
+                  aria-label={refreshAction.label ?? "Recargar"}
+                  onClick={refreshAction.onRefresh}
+                  disabled={refreshAction.disabled || refreshAction.loading}
+                  leftIcon={<RefreshCw className={`h-4 w-4 ${refreshAction.loading ? "animate-spin" : ""}`} />}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{refreshAction.label ?? "Recargar"}</TooltipContent>
+            </Tooltip>
+          ) : null}
+
           {rangeDates ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
