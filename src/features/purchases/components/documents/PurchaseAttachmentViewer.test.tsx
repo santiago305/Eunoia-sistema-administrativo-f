@@ -51,7 +51,27 @@ describe("PurchaseAttachmentViewer", () => {
     await user.click(screen.getByRole("button", { name: /ver factura\.png/i }));
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByAltText("Factura.png")).toBeInTheDocument();
+    expect(screen.getByAltText("Comprobante fiscal 1")).toHaveAttribute(
+      "src",
+      "https://api.test/purchase-attachments/factura.png",
+    );
+    expect(screen.getByRole("button", { name: /cerrar imagen/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /descargar imagen/i })).toHaveAttribute(
+      "download",
+      "Factura.png",
+    );
+  });
+
+  it("does not open the generic document modal for image attachments", async () => {
+    const user = userEvent.setup();
+
+    render(<PurchaseAttachmentViewer attachments={[baseAttachment]} />);
+
+    await user.click(screen.getByRole("button", { name: /ver factura\.png/i }));
+
+    expect(screen.getByAltText("Comprobante fiscal 1")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Factura.png" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /cerrar modal/i })).not.toBeInTheDocument();
   });
 
   it("previews pdf attachments inside the same modal", async () => {

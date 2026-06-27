@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
 import { env } from "@/env";
+import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import {
   purchaseAttachmentTypeLabels,
   PurchaseAttachmentTypes,
@@ -102,12 +103,28 @@ const documentGroups: Array<{
 ];
 
 export function PurchaseAttachmentViewer({ attachments, canDelete = false, deletingId, onDelete }: Props) {
-  const [previewAttachment, setPreviewAttachment] = useState<PurchaseAttachment | null>(null);
+  const [documentPreviewAttachment, setDocumentPreviewAttachment] = useState<PurchaseAttachment | null>(null);
+  const [imagePreviewAttachment, setImagePreviewAttachment] = useState<PurchaseAttachment | null>(null);
 
-  const previewUrl = useMemo(
-    () => resolveAttachmentUrl(previewAttachment?.url),
-    [previewAttachment],
+  const documentPreviewUrl = useMemo(
+    () => resolveAttachmentUrl(documentPreviewAttachment?.url),
+    [documentPreviewAttachment],
   );
+  const imagePreviewUrl = useMemo(
+    () => resolveAttachmentUrl(imagePreviewAttachment?.url),
+    [imagePreviewAttachment],
+  );
+  const isDocumentPreviewPdf = Boolean(documentPreviewAttachment && isPdfAttachment(documentPreviewAttachment));
+  const documentPreviewName = documentPreviewAttachment ? getAttachmentName(documentPreviewAttachment) : "Documento";
+  const imagePreviewName = imagePreviewAttachment ? getAttachmentName(imagePreviewAttachment) : "Documento";
+
+  const openAttachmentPreview = (attachment: PurchaseAttachment) => {
+    if (isImageAttachment(attachment)) {
+      setImagePreviewAttachment(attachment);
+      return;
+    }
+    setDocumentPreviewAttachment(attachment);
+  };
 
   if (!attachments.length) {
     return (
@@ -151,7 +168,7 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
                   <div className="min-w-0">
                     <button
                       type="button"
-                      onClick={() => setPreviewAttachment(attachment)}
+                      onClick={() => openAttachmentPreview(attachment)}
                       className="block max-w-full truncate text-left text-xs font-semibold text-black/80 hover:text-primary"
                       aria-label={`Ver ${getAttachmentName(attachment)}`}
                     >
@@ -192,26 +209,18 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
       ))}
 
       <Modal
-        open={Boolean(previewAttachment)}
-        onClose={() => setPreviewAttachment(null)}
-        title={previewAttachment ? getAttachmentName(previewAttachment) : "Documento"}
+        open={Boolean(documentPreviewAttachment)}
+        onClose={() => setDocumentPreviewAttachment(null)}
+        title={documentPreviewName}
         className="w-[900px]"
         bodyClassName="p-0"
       >
-        {previewAttachment && previewUrl ? (
+        {documentPreviewAttachment && documentPreviewUrl ? (
           <div className="bg-white">
-            {isImageAttachment(previewAttachment) ? (
-              <div className="flex max-h-[75vh] items-center justify-center bg-slate-950 p-3">
-                <img
-                  src={previewUrl}
-                  alt={getAttachmentName(previewAttachment)}
-                  className="max-h-[72vh] max-w-full rounded-md object-contain"
-                />
-              </div>
-            ) : isPdfAttachment(previewAttachment) ? (
+            {isDocumentPreviewPdf ? (
               <iframe
-                title={getAttachmentName(previewAttachment)}
-                src={previewUrl}
+                title={documentPreviewName}
+                src={documentPreviewUrl}
                 className="h-[75vh] w-full bg-white"
               />
             ) : (
@@ -219,8 +228,8 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
                 <FileText className="h-10 w-10 text-black/35" />
                 <p className="text-sm font-medium text-black/70">Vista previa no disponible para este archivo.</p>
                 <a
-                  href={previewUrl}
-                  download={getAttachmentName(previewAttachment)}
+                  href={documentPreviewUrl}
+                  download={documentPreviewName}
                   className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-black/10 px-3 text-xs font-medium text-black/75 hover:bg-black/[0.03]"
                 >
                   <Download className="h-4 w-4" />
@@ -231,6 +240,15 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
           </div>
         ) : null}
       </Modal>
+      <ImagePreviewModal
+        open={Boolean(imagePreviewAttachment && imagePreviewUrl)}
+        images={imagePreviewUrl ? [imagePreviewUrl] : []}
+        currentIndex={0}
+        onClose={() => setImagePreviewAttachment(null)}
+        altPrefix="Comprobante fiscal"
+        downloadUrls={imagePreviewUrl ? [imagePreviewUrl] : []}
+        fileNames={[imagePreviewName]}
+      />
     </div>
   );
 }

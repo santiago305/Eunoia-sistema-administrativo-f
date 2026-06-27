@@ -74,8 +74,20 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
       const response = await uploadPurchaseImageProdution(poId, file);
       if (response.type === "success") {
         showFeedback(successResponse(response.message));
+        const uploadedImages = response.imageProdution ?? [];
+        if (uploadedImages.length) {
+          setDetail((current) => ({
+            ...(current ?? ({} as PurchaseOrderDetailOutput)),
+            imageProdution: uploadedImages,
+          }));
+        }
         const refreshed = await getById(poId);
-        setDetail(refreshed);
+        setDetail((current) => ({
+          ...refreshed,
+          imageProdution: refreshed.imageProdution?.length
+            ? refreshed.imageProdution
+            : current?.imageProdution ?? [],
+        }));
       } else {
         showFeedback(errorResponse(response.message));
       }
