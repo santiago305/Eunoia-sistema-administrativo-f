@@ -133,7 +133,7 @@ export const createPurchaseOrderSchema = z.object({
   serie: z.string().min(1),
   correlative: z.number().int(),
   currency: currencyEnum,
-  paymentForm: paymentFormEnum,
+  paymentForm: paymentFormEnum.optional(),
   creditDays: z.number().int().min(0).optional(),
   numQuotas: z.number().int().min(0).optional(),
   totalTaxed: z.number().min(0),

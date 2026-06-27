@@ -248,7 +248,7 @@ export function PurchasePaymentModal({
         <FloatingSelect
           label="Forma de pago"
           name="payment-form"
-          value={form.paymentForm}
+          value={form.paymentForm ?? ""}
           onChange={(value) => {
             const next = value as PurchaseOrder["paymentForm"];
             setForm((prev) => {

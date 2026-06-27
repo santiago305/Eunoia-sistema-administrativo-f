@@ -5,11 +5,13 @@ import Purchases from "./PurchaseListPage";
 
 const {
     listPurchaseOrdersMock,
+    updatePurchaseOrderMock,
     getPurchaseSearchStateMock,
     getPurchaseExportColumnsMock,
     getPurchaseExportPresetsMock,
 } = vi.hoisted(() => ({
     listPurchaseOrdersMock: vi.fn(),
+    updatePurchaseOrderMock: vi.fn(),
     getPurchaseSearchStateMock: vi.fn(),
     getPurchaseExportColumnsMock: vi.fn(),
     getPurchaseExportPresetsMock: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock("@/shared/services/purchaseService", () => ({
     savePurchaseSearchMetric: vi.fn(),
     setCancelPurchase: vi.fn(),
     setSentPurchase: vi.fn(),
+    updatePurchaseOrder: updatePurchaseOrderMock,
 }));
 
 vi.mock("@/shared/services/paymentService", () => ({
@@ -138,6 +141,46 @@ vi.mock("@/features/purchases/components/PurchaseModal", () => ({
     PurchaseModal: () => null,
 }));
 
+vi.mock("@/features/purchases/components/PurchasePaymentModal", () => ({
+    PurchasePaymentModal: ({
+        form,
+        setForm,
+        onSave,
+    }: {
+        form: { paymentForm?: string };
+        setForm: React.Dispatch<React.SetStateAction<any>>;
+        onSave: () => void;
+    }) => (
+        <div data-testid="purchase-payment-setup-modal" data-payment-form={form.paymentForm ?? ""}>
+            <button
+                type="button"
+                onClick={() =>
+                    setForm((prev: any) => ({
+                        ...prev,
+                        paymentForm: "CREDITO",
+                        creditDays: 30,
+                        numQuotas: 1,
+                        payments: [],
+                        quotas: [
+                            {
+                                number: 1,
+                                expirationDate: "2026-07-27",
+                                totalToPay: 100,
+                                totalPaid: 0,
+                            },
+                        ],
+                    }))
+                }
+            >
+                Elegir credito
+            </button>
+            <button type="button" onClick={onSave}>
+                Guardar forma de pago
+            </button>
+        </div>
+    ),
+}));
+
 vi.mock("@/features/purchases/components/PurchaseDetailsModal", () => ({
     PurchaseDetailsModal: () => null,
 }));
@@ -189,6 +232,7 @@ describe("PurchaseListPage", () => {
         });
         getPurchaseExportColumnsMock.mockResolvedValue([]);
         getPurchaseExportPresetsMock.mockResolvedValue([]);
+        updatePurchaseOrderMock.mockResolvedValue({ type: "success", message: "Compra actualizada." });
     });
 
     it("renders the central purchase page with shared table, smart search, chips and date range", async () => {
@@ -322,6 +366,76 @@ describe("PurchaseListPage", () => {
         expect(screen.getByTestId("payment-list-modal")).toHaveAttribute("data-credit", "false");
 
         fireEvent.click(screen.getByRole("button", { name: "Ver cuotas" }));
+        expect(screen.getByTestId("quota-list-modal")).toBeInTheDocument();
+    });
+
+    it("asks for the payment form before opening payments when the purchase has no payment form", async () => {
+        listPurchaseOrdersMock.mockResolvedValueOnce({
+            items: [
+                {
+                    poId: "po-without-payment-form",
+                    serie: "F001",
+                    correlative: "3",
+                    supplierId: "supplier-1",
+                    supplierName: "Proveedor sin forma",
+                    warehouseId: "warehouse-1",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    currency: "PEN",
+                    totalTaxed: 100,
+                    totalExempted: 0,
+                    totalIgv: 18,
+                    purchaseValue: 100,
+                    total: 100,
+                    totalPaid: 0,
+                    totalToPay: 100,
+                    paymentForm: "",
+                },
+            ],
+            total: 1,
+            page: 1,
+            limit: 25,
+        });
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        fireEvent.click(await screen.findByRole("button", { name: "Pagos" }));
+
+        expect(screen.getByTestId("purchase-payment-setup-modal")).toBeInTheDocument();
+        expect(screen.queryByTestId("payment-list-modal")).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Elegir credito" }));
+        await waitFor(() => {
+            expect(screen.getByTestId("purchase-payment-setup-modal")).toHaveAttribute("data-payment-form", "CREDITO");
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: "Guardar forma de pago" }));
+
+        await waitFor(() => {
+            expect(updatePurchaseOrderMock).toHaveBeenCalledWith(
+                "po-without-payment-form",
+                expect.objectContaining({
+                    paymentForm: "CREDITO",
+                    creditDays: 30,
+                    numQuotas: 1,
+                    payments: [],
+                    quotas: [
+                        expect.objectContaining({
+                            number: 1,
+                            totalToPay: 100,
+                        }),
+                    ],
+                }),
+            );
+        });
         expect(screen.getByTestId("quota-list-modal")).toBeInTheDocument();
     });
 });

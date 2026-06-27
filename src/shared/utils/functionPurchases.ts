@@ -6,7 +6,6 @@ import {
   AfectType,
   VoucherDocTypes,
   CurrencyTypes,
-  PaymentFormTypes,
   PurchaseOrderStatuses,
 } from "@/features/purchases/types/purchaseEnums";
 import {
@@ -260,7 +259,6 @@ export const buildEmptyForm = (): PurchaseOrder => ({
   serie: "",
   correlative: 0,
   currency: CurrencyTypes.PEN,
-  paymentForm: PaymentFormTypes.CONTADO,
   creditDays: 0,
   numQuotas: 0,
   totalTaxed: 0,

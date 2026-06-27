@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type SetStateAction } from "react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import {
     DataTableSearchBar,
@@ -27,11 +27,13 @@ import {
     setCancelPurchase,
     setSentPurchase,
     deletePurchaseExportPreset,
+    updatePurchaseOrder,
 } from "@/shared/services/purchaseService";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { money, parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { PaymentListModal } from "@/features/purchases/components/PaymentListModal";
 import { QuotaListModal } from "@/features/purchases/components/QuotaListModal";
+import { PurchasePaymentModal } from "@/features/purchases/components/PurchasePaymentModal";
 import { PurchaseModal } from "@/features/purchases/components/PurchaseModal";
 import { PurchaseDetailsModal } from "@/features/purchases/components/PurchaseDetailsModal";
 import type {
@@ -99,6 +101,10 @@ const paymentFormLabels: Record<string, string> = {
     [PaymentFormTypes.CONTADO]: "Contado",
     [PaymentFormTypes.CREDITO]: "Credito",
 };
+
+const hasPaymentForm = (purchase: PurchaseOrder) =>
+    purchase.paymentForm === PaymentFormTypes.CONTADO ||
+    purchase.paymentForm === PaymentFormTypes.CREDITO;
 
 type PurchaseRow = {
     id: string;
@@ -177,6 +183,8 @@ export default function Purchases() {
     const [totalPo, setTotalPo] = useState(0);
     const [poId, setPoId] = useState("");
     const [paymentForm, setPaymentForm] = useState("");
+    const [paymentSetupForm, setPaymentSetupForm] = useState<PurchaseOrder | null>(null);
+    const [paymentSetupSaving, setPaymentSetupSaving] = useState(false);
     const [openPdfModal, setOpenPdfModal] = useState(false);
     const [selectedProductionId, setSelectedProductionId] = useState<string | null>(null);
     const [selectedPurchaseRow, setSelectedPurchaseRow] = useState<PurchaseRow | null>(null);
@@ -365,6 +373,107 @@ export default function Purchases() {
         setSelectedProductionId(id);
         setOpenPdfModal(true);
     }, [clearFeedback]);
+
+    const openPaymentFlow = useCallback((purchase: PurchaseOrder) => {
+        const nextPoId = purchase.poId ?? "";
+        if (!nextPoId) return;
+
+        setPoId(nextPoId);
+        setTotalPo(purchase.total);
+        setPaymentForm(purchase.paymentForm ?? "");
+
+        if (!hasPaymentForm(purchase)) {
+            setPaymentSetupForm({
+                ...purchase,
+                paymentForm: "" as PurchaseOrder["paymentForm"],
+                payments: purchase.payments ?? [],
+                quotas: purchase.quotas ?? [],
+            });
+            return;
+        }
+
+        if (purchase.paymentForm === PaymentFormTypes.CREDITO) {
+            setModalQuotaList(true);
+            return;
+        }
+
+        setModalPaymentList(true);
+    }, []);
+
+    const savePaymentSetup = useCallback(async () => {
+        if (!paymentSetupForm?.poId) return;
+        if (!hasPaymentForm(paymentSetupForm)) {
+            showFeedback({ type: "error", message: "Selecciona si la compra sera al contado o a credito." });
+            return;
+        }
+
+        clearFeedback();
+        setPaymentSetupSaving(true);
+        try {
+            const isCredit = paymentSetupForm.paymentForm === PaymentFormTypes.CREDITO;
+            const payments = (paymentSetupForm.payments ?? [])
+                .filter((payment) => (payment.amount ?? 0) > 0)
+                .map((payment) => ({
+                    method: payment.method,
+                    date: payment.date,
+                    currency: payment.currency,
+                    amount: payment.amount ?? 0,
+                    operationNumber: payment.operationNumber ?? undefined,
+                    note: payment.note ?? undefined,
+                    quotaId: payment.quotaId ?? undefined,
+                    poId: payment.poId ?? undefined,
+                }));
+            const quotas = (paymentSetupForm.quotas ?? []).map((quota) => ({
+                number: quota.number,
+                expirationDate: quota.expirationDate,
+                paymentDate: quota.paymentDate ?? undefined,
+                totalToPay: quota.totalToPay,
+                totalPaid: quota.totalPaid ?? undefined,
+                poId: quota.poId ?? undefined,
+            }));
+            const res = await updatePurchaseOrder(paymentSetupForm.poId, {
+                paymentForm: paymentSetupForm.paymentForm,
+                creditDays: paymentSetupForm.creditDays ?? 0,
+                numQuotas: paymentSetupForm.numQuotas ?? 0,
+                payments: isCredit ? [] : payments,
+                quotas: isCredit ? quotas : [],
+            });
+
+            showFeedback({ type: res.type === "success" ? "success" : "error", message: res.message });
+            if (res.type !== "success") return;
+
+            setPoId(paymentSetupForm.poId);
+            setTotalPo(paymentSetupForm.total);
+            setPaymentForm(paymentSetupForm.paymentForm ?? "");
+            setPaymentSetupForm(null);
+            await loadPurchases();
+
+            if (isCredit) {
+                setModalQuotaList(true);
+                return;
+            }
+            setModalPaymentList(true);
+        } catch (err) {
+            showFeedback({ type: "error", message: parseApiError(err) });
+        } finally {
+            setPaymentSetupSaving(false);
+        }
+    }, [clearFeedback, loadPurchases, paymentSetupForm, showFeedback]);
+
+    const paymentSetupSaveDisabled = useMemo(() => {
+        if (!paymentSetupForm || paymentSetupSaving || !hasPaymentForm(paymentSetupForm)) return true;
+        if (paymentSetupForm.paymentForm === PaymentFormTypes.CREDITO) {
+            return !(paymentSetupForm.quotas ?? []).length;
+        }
+        return !(paymentSetupForm.payments ?? []).some((payment) => (payment.amount ?? 0) > 0);
+    }, [paymentSetupForm, paymentSetupSaving]);
+
+    const setPaymentSetupDraft = useCallback((next: SetStateAction<PurchaseOrder>) => {
+        setPaymentSetupForm((prev) => {
+            if (!prev) return prev;
+            return typeof next === "function" ? next(prev) : next;
+        });
+    }, []);
 
     const EnterToWarehouse = useCallback(async (id: string) => {
         clearFeedback();
@@ -622,7 +731,7 @@ export default function Purchases() {
             if (modal === "payments") {
                 setPoId(purchaseId);
                 setTotalPo(target.purchase.total);
-                setPaymentForm(target.purchase.paymentForm);
+                setPaymentForm(target.purchase.paymentForm ?? "");
                 setModalPaymentList(true);
             } else {
                 setSelectedPurchaseRow(target);
@@ -931,12 +1040,7 @@ export default function Purchases() {
                                 id: "payment",
                                 label: "Pagos",
                                 icon: <CreditCard className="h-4 w-4 text-black/60" />,
-                                onClick: () => {
-                                    setModalPaymentList(true);
-                                    setPoId(row.purchase.poId ?? "");
-                                    setTotalPo(row.purchase.total);
-                                    setPaymentForm(row.purchase.paymentForm);
-                                },
+                                onClick: () => openPaymentFlow(row.purchase),
                                 disabled:
                                     companyActionDisabled ||
                                     isApprovalBlocked,
@@ -977,7 +1081,7 @@ export default function Purchases() {
                                     setModalPaymentList(true);
                                     setPoId(row.purchase.poId ?? "");
                                     setTotalPo(row.purchase.total);
-                                    setPaymentForm(row.purchase.paymentForm);
+                                    setPaymentForm(row.purchase.paymentForm ?? "");
                                 },
                             },
                             row.purchase.status === PurchaseOrderStatuses.DRAFT && {
@@ -1388,6 +1492,22 @@ export default function Purchases() {
                 className="w-[800px]"
                 loadPurchases={loadPurchases}
             />
+            {paymentSetupForm && (
+                <PurchasePaymentModal
+                    open={Boolean(paymentSetupForm)}
+                    onClose={() => setPaymentSetupForm(null)}
+                    form={paymentSetupForm}
+                    setForm={setPaymentSetupDraft}
+                    totalPrice={paymentSetupForm.total}
+                    primaryColor={PRIMARY}
+                    currency={paymentSetupForm.currency}
+                    formatMoney={money}
+                    onSave={savePaymentSetup}
+                    saveDisabled={paymentSetupSaveDisabled}
+                    title="Definir forma de pago"
+                    className="max-w-[800px]"
+                />
+            )}
             <PdfViewerModal
                 open={openPdfModal}
                 onClose={() => {

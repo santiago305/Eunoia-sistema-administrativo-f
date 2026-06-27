@@ -174,7 +174,7 @@ export type PurchaseOrder = {
   serie: string;
   correlative?: number;
   currency: CurrencyType;
-  paymentForm: PaymentFormType;
+  paymentForm?: PaymentFormType;
   creditDays?: number | null;
   numQuotas?: number | null;
   totalTaxed: number;
