@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   loginUser,
   logoutUser,
@@ -60,6 +60,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const checkAuthPromiseRef = useRef<Promise<AuthResponse> | null>(null);
 
   const extractRole = (data: UserInfoAuthResponse | null | undefined) => {
     const raw = data?.rol;
@@ -137,21 +138,34 @@ export const AuthProvider = ({ children }: PropsUrl) => {
   }, [fetchAuthenticatedUser, resetAuthState]);
 
   const checkAuth = useCallback(async (): Promise<AuthResponse> => {
-    setLoading(true);
-    try {
-      return await fetchAuthenticatedUser();
-    } catch (error: unknown) {
-      const err = error as AxiosError;
+    if (checkAuthPromiseRef.current) {
+      return checkAuthPromiseRef.current;
+    }
 
-      if (err?.response?.status === 401) {
-        return await resolveUnauthorizedAuth();
+    const checkPromise = (async (): Promise<AuthResponse> => {
+      setLoading(true);
+      try {
+        return await fetchAuthenticatedUser();
+      } catch (error: unknown) {
+        const err = error as AxiosError;
+
+        if (err?.response?.status === 401) {
+          return await resolveUnauthorizedAuth();
+        }
+
+        resetAuthState(true);
+        const message = getApiErrorMessage(error, "Error inesperado en autenticacion");
+        return { success: false, message };
+      } finally {
+        setLoading(false);
       }
+    })();
 
-      resetAuthState(true);
-      const message = getApiErrorMessage(error, "Error inesperado en autenticacion");
-      return { success: false, message };
+    checkAuthPromiseRef.current = checkPromise;
+    try {
+      return await checkPromise;
     } finally {
-      setLoading(false);
+      checkAuthPromiseRef.current = null;
     }
   }, [fetchAuthenticatedUser, resetAuthState, resolveUnauthorizedAuth]);
 

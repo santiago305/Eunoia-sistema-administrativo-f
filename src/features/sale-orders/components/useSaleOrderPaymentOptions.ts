@@ -3,9 +3,10 @@ import { useCompany } from "@/shared/hooks/useCompany";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { getPaymentMethodsByCompany } from "@/shared/services/paymentMethodService";
-import { listBankAccountsByCompany } from "@/shared/services/bankAccountService";
+import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPaymentAccountService";
 import type { PaymentMethodPivot } from "@/features/payment-methods/types/paymentMethod";
 import { PaymentTypes } from "@/features/purchases/types/purchaseEnums";
+import { getCompanyPaymentAccountDisplay } from "@/features/payments/paymentAccountView";
 
 export function useSaleOrderPaymentOptions() {
   const { company } = useCompany();
@@ -45,15 +46,17 @@ export function useSaleOrderPaymentOptions() {
     async (id: string) => {
       clearFeedback();
       try {
-        const accounts = await listBankAccountsByCompany(id);
+        const accounts = await listCompanyPaymentAccountsByCompany(id);
         setBankAccountOptions(
-          (accounts ?? []).map((b) => ({
-            value: b.id,
-            label: `${b.name}${b.number ? ` (${b.number})` : ""}`.trim(),
-          })),
+          (accounts ?? [])
+            .filter((account) => account.isActive)
+            .map((account) => ({
+              value: account.id,
+              label: getCompanyPaymentAccountDisplay(account),
+            })),
         );
       } catch {
-        showFeedback(errorResponse("No se pudieron cargar las cuentas bancarias."));
+        showFeedback(errorResponse("No se pudieron cargar las cuentas de pago."));
         setBankAccountOptions([]);
       }
     },

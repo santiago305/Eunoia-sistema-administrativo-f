@@ -298,7 +298,7 @@ export default function CompanyPage() {
                     setOpenBankAccounts(true);
                   }}
                 >
-                  Ver cuentas bancarias
+                  Ver cuentas de pago
                 </SystemButton>
                 <SystemButton
                   fullWidth
@@ -347,7 +347,7 @@ export default function CompanyPage() {
       )}
       {openBankAccounts && company?.companyId && (
         <BankAccountListModal
-          title="Cuentas bancarias"
+          title="Cuentas de pago"
           close={() => setOpenBankAccounts(false)}
           companyId={company.companyId}
         />

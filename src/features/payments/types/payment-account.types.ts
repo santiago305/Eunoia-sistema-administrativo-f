@@ -8,6 +8,7 @@ export type CompanyPaymentAccount = {
   type: CompanyPaymentAccountType;
   name: string;
   bankName?: string | null;
+  accountNumber?: string | null;
   accountLastFour?: string | null;
   cardLastFour?: string | null;
   walletName?: string | null;

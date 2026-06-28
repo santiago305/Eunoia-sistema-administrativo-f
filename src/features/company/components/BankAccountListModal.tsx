@@ -8,12 +8,13 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import {
-  createBankAccount,
-  listBankAccountsByCompany,
-  updateBankAccount,
-  updateBankAccountActive,
-} from "@/shared/services/bankAccountService";
-import { BankAccount } from "../types/bankAccounts";
+  createCompanyPaymentAccount,
+  listCompanyPaymentAccountsByCompany,
+  setCompanyPaymentAccountActive,
+  updateCompanyPaymentAccount,
+} from "@/shared/services/companyPaymentAccountService";
+import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
+import { CurrencyTypes } from "@/features/purchases/types/purchaseEnums";
 
 type BankAccountListModalProps = {
   title: string;
@@ -42,7 +43,7 @@ export function BankAccountListModal({
 }: BankAccountListModalProps) {
   const { showFeedback, clearFeedback } = useFeedbackToast();
 
-  const [rows, setRows] = useState<BankAccount[]>([]);
+  const [rows, setRows] = useState<CompanyPaymentAccount[]>([]);
   const [form, setForm] = useState<BankAccountForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,12 +64,12 @@ export function BankAccountListModal({
       setLoading(true);
 
       try {
-        const data = await listBankAccountsByCompany(companyId);
+        const data = await listCompanyPaymentAccountsByCompany(companyId);
         setRows(data ?? []);
       } catch {
         setRows([]);
         if (!options?.silent) {
-          showFeedback(errorResponse("No se pudieron cargar las cuentas bancarias."));
+          showFeedback(errorResponse("No se pudieron cargar las cuentas de pago."));
         }
       } finally {
         setLoading(false);
@@ -97,27 +98,31 @@ export function BankAccountListModal({
 
     try {
       if (editingId) {
-        await updateBankAccount(editingId, {
+        await updateCompanyPaymentAccount(editingId, {
           name,
-          number,
+          bankName: name,
+          accountNumber: number || undefined,
         });
 
-        showFeedback(successResponse("Cuenta bancaria actualizada"));
+        showFeedback(successResponse("Cuenta de pago actualizada"));
       } else {
-        await createBankAccount({
+        await createCompanyPaymentAccount({
           companyId,
+          type: "BANK_ACCOUNT",
           name,
-          number,
+          bankName: name,
+          accountNumber: number || null,
+          currency: CurrencyTypes.PEN,
           isActive: true,
         });
 
-        showFeedback(successResponse("Cuenta bancaria agregada"));
+        showFeedback(successResponse("Cuenta de pago agregada"));
       }
 
       resetForm();
       await loadBankAccounts({ silent: true });
     } catch {
-      showFeedback(errorResponse("No se pudo guardar la cuenta bancaria."));
+      showFeedback(errorResponse("No se pudo guardar la cuenta de pago."));
     } finally {
       setSaving(false);
     }
@@ -133,36 +138,34 @@ export function BankAccountListModal({
     showFeedback,
   ]);
 
-  const startEdit = useCallback((row: BankAccount) => {
+  const startEdit = useCallback((row: CompanyPaymentAccount) => {
     setEditingId(row.id);
     setForm({
       name: row.name ?? "",
-      number: row.number ?? "",
+      number: row.accountNumber ?? "",
     });
   }, []);
 
   const toggleActive = useCallback(
-    async (row: BankAccount) => {
+    async (row: CompanyPaymentAccount) => {
       clearFeedback();
 
       try {
-        await updateBankAccountActive(row.id, {
-          isActive: !row.isActive,
-        });
+        await setCompanyPaymentAccountActive(row.id, !row.isActive);
 
         showFeedback(
-          successResponse(row.isActive ? "Cuenta bancaria desactivada" : "Cuenta bancaria activada"),
+          successResponse(row.isActive ? "Cuenta de pago desactivada" : "Cuenta de pago activada"),
         );
 
         await loadBankAccounts({ silent: true });
       } catch {
-        showFeedback(errorResponse("No se pudo actualizar el estado de la cuenta bancaria."));
+        showFeedback(errorResponse("No se pudo actualizar el estado de la cuenta de pago."));
       }
     },
     [clearFeedback, loadBankAccounts, showFeedback],
   );
 
-  const columns = useMemo<DataTableColumn<BankAccount>[]>(
+  const columns = useMemo<DataTableColumn<CompanyPaymentAccount>[]>(
     () => [
       {
         id: "name",
@@ -173,7 +176,7 @@ export function BankAccountListModal({
       {
         id: "number",
         header: "Número",
-        cell: (row) => <span className="text-black/70">{row.number ?? "-"}</span>,
+        cell: (row) => <span className="text-black/70">{row.accountNumber ?? row.accountLastFour ?? "-"}</span>,
         className: "text-black/70",
       },
       {
