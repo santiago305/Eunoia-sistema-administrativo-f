@@ -31,6 +31,7 @@ export function CompanyPaymentAccountFormModal({ open, companyId, onClose, onSav
     cardLastFour: "",
     walletName: "",
     currency: CurrencyTypes.PEN as CurrencyType,
+    isDefault: false,
   });
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function CompanyPaymentAccountFormModal({ open, companyId, onClose, onSav
       cardLastFour: "",
       walletName: "",
       currency: CurrencyTypes.PEN,
+      isDefault: false,
     });
   }, [open]);
 
@@ -59,6 +61,7 @@ export function CompanyPaymentAccountFormModal({ open, companyId, onClose, onSav
         cardLastFour: form.cardLastFour || null,
         walletName: form.walletName || null,
         currency: form.currency,
+        isDefault: form.isDefault,
       });
       await onSaved();
       onClose();
@@ -108,6 +111,15 @@ export function CompanyPaymentAccountFormModal({ open, companyId, onClose, onSav
           value={form.walletName}
           onChange={(event) => setForm((prev) => ({ ...prev, walletName: event.target.value }))}
         />
+        <label className="sm:col-span-2 flex items-center gap-2 rounded-md border border-black/10 bg-black/[0.02] px-3 py-2 text-sm text-black/70">
+          <input
+            type="checkbox"
+            checked={form.isDefault}
+            onChange={(event) => setForm((prev) => ({ ...prev, isDefault: event.target.checked }))}
+            className="h-4 w-4 accent-primary"
+          />
+          Usar como cuenta predeterminada para pagos
+        </label>
         <div className="sm:col-span-2 flex justify-end">
           <SystemButton disabled={saving || !form.name.trim()} onClick={() => void save()}>
             {saving ? "Guardando..." : "Guardar cuenta"}

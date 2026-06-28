@@ -56,11 +56,13 @@ export function ProviderMethodListModal({
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [number, setNumber] = useState("");
+  const [isDefault, setIsDefault] = useState(false);
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
   const [editingSupplierMethod, setEditingSupplierMethod] = useState<SupplierMethodRelation | null>(null);
   const [editSelectedId, setEditSelectedId] = useState("");
   const [editNumber, setEditNumber] = useState("");
+  const [editIsDefault, setEditIsDefault] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [pendingRemoveMethod, setPendingRemoveMethod] = useState<SupplierMethodRelation | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -134,18 +136,20 @@ export function ProviderMethodListModal({
         supplierId,
         methodId: selectedId,
         number: number.trim() || undefined,
+        isDefault,
       });
 
       showFeedback(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
+      setIsDefault(false);
       await loadSupplierMethods(true);
     } catch {
       showFeedback(errorResponse("No se pudo agregar el método"));
     } finally {
       setAdding(false);
     }
-  }, [adding, clearFeedback, loadSupplierMethods, number, selectedId, showFeedback, supplierId]);
+  }, [adding, clearFeedback, isDefault, loadSupplierMethods, number, selectedId, showFeedback, supplierId]);
 
   const removeMethod = useCallback(
     async (supplierMethodId?: string | null) => {
@@ -172,6 +176,7 @@ export function ProviderMethodListModal({
     setEditingSupplierMethod(row);
     setEditSelectedId(row.methodId);
     setEditNumber(row.number ?? "");
+    setEditIsDefault(Boolean(row.isDefault));
   }, []);
 
   const saveSupplierMethodEdit = useCallback(async () => {
@@ -184,18 +189,20 @@ export function ProviderMethodListModal({
       await updateSupplierMethod(editingSupplierMethod.supplierMethodId, {
         methodId: editSelectedId,
         number: editNumber.trim() || undefined,
+        isDefault: editIsDefault,
       });
       showFeedback(successResponse("Método actualizado"));
       setEditingSupplierMethod(null);
       setEditSelectedId("");
       setEditNumber("");
+      setEditIsDefault(false);
       await loadSupplierMethods(true);
     } catch {
       showFeedback(errorResponse("No se pudo actualizar el método"));
     } finally {
       setSavingEdit(false);
     }
-  }, [clearFeedback, editNumber, editSelectedId, editingSupplierMethod, loadSupplierMethods, savingEdit, showFeedback]);
+  }, [clearFeedback, editIsDefault, editNumber, editSelectedId, editingSupplierMethod, loadSupplierMethods, savingEdit, showFeedback]);
 
   const columns = useMemo<DataTableColumn<SupplierMethodRelation>[]>(
     () => {
@@ -211,6 +218,13 @@ export function ProviderMethodListModal({
         header: "Número",
         cell: (row) => <span className="text-black/70">{row.number ?? "-"}</span>,
         className: "text-black/70",
+      },
+      {
+        id: "isDefault",
+        header: "Predeterminada",
+        cell: (row) => row.isDefault ? (
+          <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Default</span>
+        ) : <span className="text-black/45">-</span>,
       },
       ];
 
@@ -282,6 +296,17 @@ export function ProviderMethodListModal({
                 disabled={adding}
               />
             </div>
+
+            <label className="flex h-10 items-center gap-2 rounded-md border border-black/10 px-3 text-xs text-black/70">
+              <input
+                type="checkbox"
+                checked={isDefault}
+                onChange={(event) => setIsDefault(event.target.checked)}
+                className="h-4 w-4 accent-primary"
+                disabled={adding}
+              />
+              Predeterminada
+            </label>
 
             <SystemButton
               size="sm"
@@ -357,6 +382,16 @@ export function ProviderMethodListModal({
               className="h-10 text-xs"
               disabled={savingEdit}
             />
+            <label className="flex h-10 items-center gap-2 rounded-md border border-black/10 px-3 text-xs text-black/70">
+              <input
+                type="checkbox"
+                checked={editIsDefault}
+                onChange={(event) => setEditIsDefault(event.target.checked)}
+                className="h-4 w-4 accent-primary"
+                disabled={savingEdit}
+              />
+              Predeterminada
+            </label>
           </div>
 
           <div className="mt-4 flex justify-end gap-2">

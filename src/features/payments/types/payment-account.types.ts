@@ -13,6 +13,7 @@ export type CompanyPaymentAccount = {
   walletName?: string | null;
   currency: CurrencyType;
   isActive: boolean;
+  isDefault?: boolean;
   maskedLabel: string;
 };
 
@@ -26,6 +27,7 @@ export type CreateCompanyPaymentAccountDto = {
   walletName?: string | null;
   currency: CurrencyType;
   isActive?: boolean;
+  isDefault?: boolean;
 };
 
 export type UpdateCompanyPaymentAccountDto = Partial<Omit<CreateCompanyPaymentAccountDto, "companyId">>;

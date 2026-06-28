@@ -422,6 +422,13 @@ export default function Purchases() {
                     note: payment.note ?? undefined,
                     quotaId: payment.quotaId ?? undefined,
                     poId: payment.poId ?? undefined,
+                    accountPayableId: payment.accountPayableId ?? undefined,
+                    companyPaymentAccountId: payment.companyPaymentAccountId ?? undefined,
+                    paymentMethodId: payment.paymentMethodId ?? undefined,
+                    bankName: payment.bankName ?? undefined,
+                    cardLastFour: payment.cardLastFour ?? undefined,
+                    operationCode: payment.operationCode ?? undefined,
+                    isPartial: payment.isPartial ?? undefined,
                 }));
             const quotas = (paymentSetupForm.quotas ?? []).map((quota) => ({
                 number: quota.number,

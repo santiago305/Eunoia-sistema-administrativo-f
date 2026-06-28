@@ -96,7 +96,8 @@ export function PaymentModal({
   const { can } = usePermissions();
   const { company } = useCompany();
   const canUploadPaymentEvidence = can("payments.attach_evidence");
-  const showEvidenceUploader = canUploadPaymentEvidence && !isCashMethod(form.method);
+  const showAccountSelect = !isCashMethod(form.method);
+  const showEvidenceUploader = canUploadPaymentEvidence && showAccountSelect;
 
   const evidenceMeta = useMemo(() => {
     if (!evidenceFile) return null;
@@ -139,6 +140,11 @@ export function PaymentModal({
     setEvidencePreviewUrl(nextUrl);
     return () => URL.revokeObjectURL(nextUrl);
   }, [evidenceFile]);
+
+  useEffect(() => {
+    if (showAccountSelect) return;
+    setSelectedPaymentAccount(null);
+  }, [showAccountSelect]);
 
   useEffect(() => {
     if (showEvidenceUploader) return;
@@ -187,9 +193,9 @@ export function PaymentModal({
         amount: amountNumber,
         quotaId: quotaId ?? null,
         poId,
-        companyPaymentAccountId: selectedPaymentAccount?.id ?? null,
-        bankName: selectedPaymentAccount?.bankName ?? null,
-        cardLastFour: selectedPaymentAccount?.cardLastFour ?? selectedPaymentAccount?.accountLastFour ?? null,
+        companyPaymentAccountId: showAccountSelect ? selectedPaymentAccount?.id ?? null : null,
+        bankName: showAccountSelect ? selectedPaymentAccount?.bankName ?? null : null,
+        cardLastFour: showAccountSelect ? selectedPaymentAccount?.cardLastFour ?? selectedPaymentAccount?.accountLastFour ?? null : null,
         operationCode: form.operationNumber ?? null,
         isPartial: amountNumber < normalizeMoney(totalToPay),
       });
@@ -305,14 +311,16 @@ export function PaymentModal({
                 searchable={false}
               />
 
-              <div className="sm:col-span-2">
-                <CompanyPaymentAccountSelect
-                  companyId={company?.companyId}
-                  value={selectedPaymentAccount?.id ?? ""}
-                  disabled={saving}
-                  onChange={setSelectedPaymentAccount}
-                />
-              </div>
+              {showAccountSelect ? (
+                <div className="sm:col-span-2">
+                  <CompanyPaymentAccountSelect
+                    companyId={company?.companyId}
+                    value={selectedPaymentAccount?.id ?? ""}
+                    disabled={saving}
+                    onChange={setSelectedPaymentAccount}
+                  />
+                </div>
+              ) : null}
 
               <FloatingSelect
                 label="Moneda"

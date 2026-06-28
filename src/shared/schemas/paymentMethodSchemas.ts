@@ -17,12 +17,14 @@ export const createCompanyMethodSchema = z.object({
   companyId: z.string().uuid(),
   methodId: z.string().uuid(),
   number: z.string().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 export const createSupplierMethodSchema = z.object({
   supplierId: z.string().uuid(),
   methodId: z.string().uuid(),
   number: z.string().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 export const listPaymentMethodsQuerySchema = z.object({

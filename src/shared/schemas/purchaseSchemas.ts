@@ -4,7 +4,6 @@ import {
   PaymentFormTypes,
   PurchaseOrderStatuses,
   VoucherDocTypes,
-  PaymentTypes,
   AfectType,
 } from "@/features/purchases/types/purchaseEnums";
 import {
@@ -20,7 +19,6 @@ const currencyEnum = z.enum(Object.values(CurrencyTypes) as [string, ...string[]
 const paymentFormEnum = z.enum(Object.values(PaymentFormTypes) as [string, ...string[]]);
 const purchaseStatusEnum = z.enum(Object.values(PurchaseOrderStatuses) as [string, ...string[]]);
 const voucherDocEnum = z.enum(Object.values(VoucherDocTypes) as [string, ...string[]]);
-const paymentTypeEnum = z.enum(Object.values(PaymentTypes) as [string, ...string[]]);
 const afectTypeEnum = z.enum(Object.values(AfectType) as [string, ...string[]]);
 const purchaseTypeEnum = z.enum(Object.values(PurchaseTypes) as [string, ...string[]]);
 const purchaseItemTypeEnum = z.enum(Object.values(PurchaseItemTypes) as [string, ...string[]]);
@@ -116,7 +114,7 @@ export const createCreditQuotaSchema = z.object({
 });
 
 export const createPaymentSchema = z.object({
-  method: paymentTypeEnum,
+  method: z.string().min(1),
   date: z.string().min(1),
   operationNumber: z.string().min(1).optional(),
   currency: currencyEnum,
@@ -124,6 +122,13 @@ export const createPaymentSchema = z.object({
   note: z.string().optional(),
   quotaId: uuidSchema.optional(),
   poId: uuidSchema.optional(),
+  accountPayableId: uuidSchema.optional(),
+  companyPaymentAccountId: uuidSchema.nullable().optional(),
+  paymentMethodId: uuidSchema.nullable().optional(),
+  bankName: z.string().nullable().optional(),
+  cardLastFour: z.string().nullable().optional(),
+  operationCode: z.string().nullable().optional(),
+  isPartial: z.boolean().optional(),
 });
 
 export const createPurchaseOrderSchema = z.object({

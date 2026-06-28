@@ -439,6 +439,13 @@ export default function PurchaseCreateLocal({
         poId: p.poId ?? undefined,
         note: p.note ?? undefined,
         operationNumber: p.operationNumber ?? undefined,
+        accountPayableId: p.accountPayableId ?? undefined,
+        companyPaymentAccountId: p.companyPaymentAccountId ?? undefined,
+        paymentMethodId: p.paymentMethodId ?? undefined,
+        bankName: p.bankName ?? undefined,
+        cardLastFour: p.cardLastFour ?? undefined,
+        operationCode: p.operationCode ?? undefined,
+        isPartial: p.isPartial ?? undefined,
       })),
       quotas: (form.quotas ?? []).map((q) => ({
         number: q.number,

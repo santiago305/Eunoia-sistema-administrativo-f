@@ -2,9 +2,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PaymentModal } from "./PaymentModal";
 
-const { createPaymentMock, getAllPaymentMethodsMock, uploadPurchaseAttachmentMock } = vi.hoisted(() => ({
+const {
+  createPaymentMock,
+  getAllPaymentMethodsMock,
+  listCompanyPaymentAccountsByCompanyMock,
+  uploadPurchaseAttachmentMock,
+} = vi.hoisted(() => ({
   createPaymentMock: vi.fn(),
   getAllPaymentMethodsMock: vi.fn(),
+  listCompanyPaymentAccountsByCompanyMock: vi.fn(),
   uploadPurchaseAttachmentMock: vi.fn(),
 }));
 
@@ -14,6 +20,10 @@ vi.mock("@/shared/services/paymentService", () => ({
 
 vi.mock("@/shared/services/paymentMethodService", () => ({
   getAllPaymentMethods: getAllPaymentMethodsMock,
+}));
+
+vi.mock("@/shared/services/companyPaymentAccountService", () => ({
+  listCompanyPaymentAccountsByCompany: listCompanyPaymentAccountsByCompanyMock,
 }));
 
 vi.mock("@/shared/services/purchaseAttachmentService", () => ({
@@ -30,10 +40,6 @@ vi.mock("@/shared/hooks/usePermissions", () => ({
 
 vi.mock("@/shared/hooks/useCompany", () => ({
   useCompany: () => ({ company: { companyId: "company-1" } }),
-}));
-
-vi.mock("@/features/payments/components/CompanyPaymentAccountSelect", () => ({
-  CompanyPaymentAccountSelect: () => <div data-testid="payment-account-select" />,
 }));
 
 vi.mock("@/features/payments/components/SchedulePaymentModal", () => ({
@@ -57,6 +63,22 @@ describe("PaymentModal", () => {
     getAllPaymentMethodsMock.mockResolvedValue([
       { name: "EFECTIVO" },
       { name: "TRANSFERENCIA" },
+    ]);
+    listCompanyPaymentAccountsByCompanyMock.mockResolvedValue([
+      {
+        id: "account-1",
+        companyId: "company-1",
+        type: "BANK_ACCOUNT",
+        name: "BCP Soles",
+        bankName: "BCP",
+        accountLastFour: "1234",
+        cardLastFour: null,
+        walletName: null,
+        currency: "PEN",
+        isActive: true,
+        isDefault: true,
+        maskedLabel: "BCP Soles ****1234",
+      },
     ]);
     uploadPurchaseAttachmentMock.mockResolvedValue({ type: "success", message: "uploaded" });
     Object.defineProperty(URL, "createObjectURL", {
@@ -84,9 +106,10 @@ describe("PaymentModal", () => {
 
     await waitFor(() => expect(screen.getByText("Formulario de Pago")).toBeInTheDocument());
     expect(screen.queryByText("Foto/comprobante de pago")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cuenta/tarjeta de empresa")).not.toBeInTheDocument();
   });
 
-  it("shows an optional voucher drop zone with image preview for non-cash payments", async () => {
+  it("shows origin account and optional voucher drop zone for non-cash payments", async () => {
     render(
       <PaymentModal
         title="Formulario de Pago"
@@ -99,6 +122,9 @@ describe("PaymentModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Metodo: EFECTIVO" }));
     fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA" }));
+
+    expect(await screen.findByText("Cuenta/tarjeta de empresa")).toBeInTheDocument();
+    expect(await screen.findByText("BCP Soles ****1234 · PEN")).toBeInTheDocument();
 
     const input = await screen.findByLabelText("Foto/comprobante de pago");
     const image = new File(["image"], "voucher.png", { type: "image/png" });

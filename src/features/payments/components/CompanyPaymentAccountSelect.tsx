@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPaymentAccountService";
 import type { CompanyPaymentAccount } from "../types/payment-account.types";
 import { getCompanyPaymentAccountDisplay } from "../paymentAccountView";
@@ -8,15 +9,28 @@ type Props = {
   value?: string | null;
   onChange: (account: CompanyPaymentAccount | null) => void;
   disabled?: boolean;
+  label?: string;
+  name?: string;
+  className?: string;
 };
 
-export function CompanyPaymentAccountSelect({ companyId, value, onChange, disabled }: Props) {
+export function CompanyPaymentAccountSelect({
+  companyId,
+  value,
+  onChange,
+  disabled,
+  label = "Cuenta/tarjeta de empresa",
+  name = "company-payment-account",
+  className,
+}: Props) {
   const [accounts, setAccounts] = useState<CompanyPaymentAccount[]>([]);
   const [loading, setLoading] = useState(false);
+  const [internalValue, setInternalValue] = useState("");
 
   useEffect(() => {
     if (!companyId) {
       setAccounts([]);
+      setInternalValue("");
       return;
     }
 
@@ -24,7 +38,8 @@ export function CompanyPaymentAccountSelect({ companyId, value, onChange, disabl
     setLoading(true);
     listCompanyPaymentAccountsByCompany(companyId)
       .then((items) => {
-        if (alive) setAccounts(items.filter((item) => item.isActive));
+        if (!alive) return;
+        setAccounts(items.filter((item) => item.isActive));
       })
       .catch(() => {
         if (alive) setAccounts([]);
@@ -38,30 +53,43 @@ export function CompanyPaymentAccountSelect({ companyId, value, onChange, disabl
     };
   }, [companyId]);
 
+  const effectiveValue = value || internalValue;
+
   const selected = useMemo(
-    () => accounts.find((account) => account.id === value) ?? null,
-    [accounts, value],
+    () => accounts.find((account) => account.id === effectiveValue) ?? null,
+    [accounts, effectiveValue],
+  );
+
+  useEffect(() => {
+    if (loading || selected || effectiveValue || accounts.length === 0) return;
+    const defaultAccount = accounts.find((account) => account.isDefault) ?? accounts[0] ?? null;
+    setInternalValue(defaultAccount?.id ?? "");
+    onChange(defaultAccount);
+  }, [accounts, effectiveValue, loading, onChange, selected]);
+
+  const options = useMemo(
+    () => accounts.map((account) => ({
+      value: account.id,
+      label: getCompanyPaymentAccountDisplay(account),
+    })),
+    [accounts],
   );
 
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium text-black/70">
-      Cuenta/tarjeta de empresa
-      <select
-        className="h-11 rounded-md border border-black/15 bg-white px-3 text-sm font-normal text-black/80 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 disabled:bg-black/5"
-        value={selected?.id ?? ""}
-        disabled={disabled || loading || !companyId}
-        onChange={(event) => {
-          const account = accounts.find((item) => item.id === event.target.value) ?? null;
-          onChange(account);
-        }}
-      >
-        <option value="">{loading ? "Cargando cuentas..." : "Sin cuenta seleccionada"}</option>
-        {accounts.map((account) => (
-          <option key={account.id} value={account.id}>
-            {getCompanyPaymentAccountDisplay(account)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <FloatingSelect
+      label={label}
+      name={name}
+      value={selected?.id ?? internalValue}
+      onChange={(nextValue) => {
+        setInternalValue(nextValue);
+        const account = accounts.find((item) => item.id === nextValue) ?? null;
+        onChange(account);
+      }}
+      options={options}
+      placeholder={loading ? "Cargando cuentas..." : "Sin cuenta seleccionada"}
+      disabled={disabled || loading || !companyId}
+      searchable={false}
+      className={className}
+    />
   );
 }

@@ -29,13 +29,26 @@ export const createCompanyPaymentAccount = async (
   return unwrapApiData(response.data);
 };
 
+type CompanyPaymentAccountListResponse =
+  | CompanyPaymentAccount[]
+  | { items?: CompanyPaymentAccount[] }
+  | ApiEnvelope<CompanyPaymentAccount[] | { items?: CompanyPaymentAccount[] }>;
+
+const unwrapCompanyPaymentAccountList = (payload: CompanyPaymentAccountListResponse): CompanyPaymentAccount[] => {
+  const data = unwrapApiData(payload);
+
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object" && "items" in data) return data.items ?? [];
+  return [];
+};
+
 export const listCompanyPaymentAccountsByCompany = async (
   companyId: string,
 ): Promise<CompanyPaymentAccount[]> => {
-  const response = await axiosInstance.get<{ items: CompanyPaymentAccount[] }>(
+  const response = await axiosInstance.get<CompanyPaymentAccountListResponse>(
     API_COMPANY_PAYMENT_ACCOUNTS_GROUP.byCompany(companyId),
   );
-  return response.data.items ?? [];
+  return unwrapCompanyPaymentAccountList(response.data);
 };
 
 export const updateCompanyPaymentAccount = async (

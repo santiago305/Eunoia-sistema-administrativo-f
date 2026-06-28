@@ -30,6 +30,7 @@ export type PaymentMethodPivot = {
   name: string;
   number?: string;
   isActive: boolean;
+  isDefault?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -41,6 +42,7 @@ export type SupplierMethodRelation = {
   methodName: string;
   number?: string | null;
   isActive: boolean;
+  isDefault?: boolean;
 };
 
 export type PaymentMethodListResponse = {
@@ -70,4 +72,5 @@ export type SupplierMethod = {
   methodName?: string;
   number?: string | null;
   isActive?: boolean;
+  isDefault?: boolean;
 };

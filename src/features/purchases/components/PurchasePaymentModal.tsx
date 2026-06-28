@@ -14,9 +14,20 @@ import { todayIso, toDateInputValue, parseDateInputValue, toLocalDateKey, clampQ
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
 import { getPaymentMethodsBySupplier } from "@/shared/services/paymentMethodService";
+import { CompanyPaymentAccountSelect } from "@/features/payments/components/CompanyPaymentAccountSelect";
+import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
+import { useCompany } from "@/shared/hooks/useCompany";
 import { PaymentMethodPivot } from "@/features/payment-methods/types/paymentMethod";
 
 const DEFAULT_PRIMARY = "hsl(var(--primary))";
+
+type SupplierPaymentMethodOption = PaymentMethodPivot & {
+  supplierMethodId?: string;
+  methodName?: string;
+  isDefault?: boolean;
+};
+
+const isCashMethod = (method?: string | null) => (method ?? "").trim().toUpperCase() === PaymentTypes.EFECTIVO;
 
 export type PurchasePaymentModalProps = {
   open: boolean;
@@ -55,8 +66,9 @@ export function PurchasePaymentModal({
   const showCredit = form.paymentForm === PaymentFormTypes.CREDITO;
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
   const pendingAmount = Math.max(0, totalPrice - totalPaid);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodPivot[]>([]);;
+  const [paymentMethods, setPaymentMethods] = useState<SupplierPaymentMethodOption[]>([]);
   const { showFeedback, clearFeedback } = useFeedbackToast();
+  const { company } = useCompany();
 
 
   const addPayment = (amount?: number) => {
@@ -65,7 +77,7 @@ export function PurchasePaymentModal({
       payments: [
         ...(prev.payments ?? []),
         {
-          method: PaymentTypes.EFECTIVO,
+          method: "" as Payment["method"],
           date: todayIso(),
           operationNumber: "",
           currency: prev.currency,
@@ -80,9 +92,9 @@ export function PurchasePaymentModal({
     clearFeedback();
     try {
       const data = await getPaymentMethodsBySupplier(id);
-      const normalized = (data ?? []).map((m) => ({
+      const normalized = (data ?? []).map((m: SupplierPaymentMethodOption) => ({
         ...m,
-        name: (m.name ?? "").trim().toUpperCase(),
+        name: (m.name ?? m.methodName ?? "").trim().toUpperCase(),
       }));
 
       normalized.sort((a, b) => {
@@ -103,12 +115,20 @@ export function PurchasePaymentModal({
     void loadSupplierMethods(form.supplierId);
   }, [form.supplierId, loadSupplierMethods]);
 
-  const updatePayment = (index: number, patch: Partial<Payment>) => {
+  const updatePayment = useCallback((index: number, patch: Partial<Payment>) => {
     setForm((prev) => ({
       ...prev,
       payments: (prev.payments ?? []).map((payment, i) => (i === index ? { ...payment, ...patch } : payment)),
     }));
-  };
+  }, [setForm]);
+
+  const updateCompanyPaymentAccount = useCallback((index: number, account: CompanyPaymentAccount | null) => {
+    updatePayment(index, {
+      companyPaymentAccountId: account?.id ?? null,
+      bankName: account?.bankName ?? null,
+      cardLastFour: account?.cardLastFour ?? account?.accountLastFour ?? null,
+    });
+  }, [updatePayment]);
 
   const removePayment = (index: number) => {
     setForm((prev) => ({
@@ -168,6 +188,41 @@ export function PurchasePaymentModal({
       }),
     [paymentMethods],
   );
+
+  const methodByLabel = useMemo(() => {
+    const entries = (paymentMethods ?? []).map((m) => {
+      const label = `${m.name} ${m.number ? `- ${m.number}` : ""}`.trim();
+      return [label, m] as const;
+    });
+    return new Map(entries);
+  }, [paymentMethods]);
+
+  const selectPaymentMethod = useCallback((index: number, label: string) => {
+    const selected = methodByLabel.get(label);
+    const cash = isCashMethod(label);
+    updatePayment(index, {
+      method: label as Payment["method"],
+      paymentMethodId: cash ? null : selected?.methodId ?? null,
+      companyPaymentAccountId: cash ? null : form.payments?.[index]?.companyPaymentAccountId ?? null,
+      bankName: cash ? null : form.payments?.[index]?.bankName ?? null,
+      cardLastFour: cash ? null : form.payments?.[index]?.cardLastFour ?? null,
+    });
+  }, [form.payments, methodByLabel, updatePayment]);
+
+  const hasValidPaymentMethod = useCallback((payment: Payment) => {
+    const method = (payment.method ?? "").trim();
+    if (!method) return false;
+    if (isCashMethod(method)) return true;
+    const selected = methodByLabel.get(method);
+    return Boolean(selected?.methodId && payment.paymentMethodId);
+  }, [methodByLabel]);
+
+  const hasInvalidPayment = useMemo(() => {
+    if (showCredit) return false;
+    return (form.payments ?? [])
+      .filter((payment) => (payment.amount ?? 0) > 0)
+      .some((payment) => !hasValidPaymentMethod(payment));
+  }, [form.payments, hasValidPaymentMethod, showCredit]);
 
   type QuotaRow = CreditQuota & {
     id: string;
@@ -351,7 +406,7 @@ export function PurchasePaymentModal({
                       label="Metodo"
                       name={`payment-method-${index}`}
                       value={payment.method}
-                      onChange={(value) => updatePayment(index, { method: value as Payment["method"] })}
+                      onChange={(value) => selectPaymentMethod(index, value)}
                       options={methodOptions}
                       searchable={false}
                       className="h-9 text-xs"
@@ -399,6 +454,18 @@ export function PurchasePaymentModal({
                       </SystemButton>
                     </div>
                   </div>
+                  {payment.method && !isCashMethod(payment.method) ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      <CompanyPaymentAccountSelect
+                        label="Desde cuenta de empresa"
+                        name={`company-payment-account-${index}`}
+                        companyId={company?.companyId}
+                        value={payment.companyPaymentAccountId ?? ""}
+                        onChange={(account) => updateCompanyPaymentAccount(index, account)}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  ) : null}
                   <div className="grid grid-cols-2 gap-2">
                     <FloatingInput
                       label="Numero de operacion"
@@ -455,7 +522,7 @@ export function PurchasePaymentModal({
           </SystemButton>
           <SystemButton
             style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
-            disabled={saveDisabled}
+            disabled={saveDisabled || hasInvalidPayment}
             onClick={onSave}
           >
             {isEdit ? "Actualizar Comprobante" : "Generar Comprobante"}
