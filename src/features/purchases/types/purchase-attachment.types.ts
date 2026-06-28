@@ -1,5 +1,8 @@
+import type { VoucherDocType } from "@/features/purchases/types/purchaseEnums";
+
 export const PurchaseAttachmentTypes = {
   PAYMENT_PROOF: "PAYMENT_PROOF",
+  FISCAL_DOCUMENT: "FISCAL_DOCUMENT",
   INVOICE: "INVOICE",
   RECEIPT: "RECEIPT",
   QUOTATION: "QUOTATION",
@@ -15,6 +18,7 @@ export type PurchaseAttachmentType =
 
 export const purchaseAttachmentTypeLabels: Record<PurchaseAttachmentType, string> = {
   PAYMENT_PROOF: "Comprobante de pago",
+  FISCAL_DOCUMENT: "Comprobante fiscal",
   INVOICE: "Factura",
   RECEIPT: "Recibo",
   QUOTATION: "Cotización",
@@ -30,6 +34,7 @@ export type PurchaseAttachment = {
   purchaseId: string;
   paymentId: string | null;
   receptionId: string | null;
+  fiscalDocumentType?: VoucherDocType | null;
   type: PurchaseAttachmentType;
   filename: string;
   originalName: string;
@@ -44,6 +49,7 @@ export type PurchaseAttachment = {
 export type UploadPurchaseAttachmentPayload = {
   purchaseId: string;
   type: PurchaseAttachmentType;
+  fiscalDocumentType?: VoucherDocType | null;
   file: File;
   paymentId?: string | null;
   receptionId?: string | null;

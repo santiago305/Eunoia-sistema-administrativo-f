@@ -1,5 +1,5 @@
 import { Modal } from "@/shared/components/modales/Modal";
-import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
+import { usePurchasePayments } from "@/features/purchases/hooks/usePurchasePayments";
 import { PurchaseDocumentsTab } from "./PurchaseDocumentsTab";
 
 type Props = {
@@ -9,6 +9,8 @@ type Props = {
 };
 
 export function PurchaseFiscalDocumentsModal({ open, purchaseId, onClose }: Props) {
+  const { payments } = usePurchasePayments(open && purchaseId ? purchaseId : undefined);
+
   return (
     <Modal
       open={open}
@@ -21,7 +23,8 @@ export function PurchaseFiscalDocumentsModal({ open, purchaseId, onClose }: Prop
       {purchaseId ? (
         <PurchaseDocumentsTab
           purchaseId={purchaseId}
-          allowedTypes={[PurchaseAttachmentTypes.INVOICE, PurchaseAttachmentTypes.RECEIPT]}
+          payments={payments}
+          fiscalOnly
           title="Comprobantes fiscales"
           showUploader
           showLegacyImages={false}

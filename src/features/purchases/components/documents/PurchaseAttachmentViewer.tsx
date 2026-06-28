@@ -10,6 +10,7 @@ import {
   type PurchaseAttachment,
   type PurchaseAttachmentType,
 } from "@/features/purchases/types/purchase-attachment.types";
+import { VoucherDocTypes, type VoucherDocType } from "@/features/purchases/types/purchaseEnums";
 
 const formatSize = (sizeBytes: number) => {
   if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) return "-";
@@ -51,6 +52,19 @@ const resolveAttachmentUrl = (rawUrl?: string | null) => {
 const getAttachmentName = (attachment: PurchaseAttachment) =>
   attachment.originalName || attachment.filename || "Documento";
 
+const fiscalDocumentTypeLabels: Record<VoucherDocType, string> = {
+  [VoucherDocTypes.FACTURA]: "Factura",
+  [VoucherDocTypes.BOLETA]: "Boleta",
+  [VoucherDocTypes.NOTA_VENTA]: "Nota de venta",
+};
+
+const getAttachmentTypeLabel = (attachment: PurchaseAttachment) => {
+  if (attachment.type === PurchaseAttachmentTypes.FISCAL_DOCUMENT && attachment.fiscalDocumentType) {
+    return fiscalDocumentTypeLabels[attachment.fiscalDocumentType] ?? "Comprobante fiscal";
+  }
+  return purchaseAttachmentTypeLabels[attachment.type];
+};
+
 const isImageAttachment = (attachment: PurchaseAttachment) =>
   attachment.mimeType?.startsWith("image/") ||
   /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(attachment.url);
@@ -73,7 +87,7 @@ const documentGroups: Array<{
   {
     key: "fiscal",
     label: "Comprobantes fiscales",
-    types: [PurchaseAttachmentTypes.INVOICE, PurchaseAttachmentTypes.RECEIPT],
+    types: [PurchaseAttachmentTypes.FISCAL_DOCUMENT, PurchaseAttachmentTypes.INVOICE, PurchaseAttachmentTypes.RECEIPT],
   },
   {
     key: "payments",
@@ -175,7 +189,7 @@ export function PurchaseAttachmentViewer({ attachments, canDelete = false, delet
                       {getAttachmentName(attachment)}
                     </button>
                     <p className="mt-1 text-[10px] leading-4 text-black/45">
-                      {purchaseAttachmentTypeLabels[attachment.type]} · {formatSize(attachment.sizeBytes)}
+                      {getAttachmentTypeLabel(attachment)} · {formatSize(attachment.sizeBytes)}
                     </p>
                     <p className="text-[10px] leading-4 text-black/40">
                       {formatDate(attachment.createdAt)}

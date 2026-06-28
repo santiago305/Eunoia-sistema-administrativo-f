@@ -23,6 +23,7 @@ export const uploadPurchaseAttachment = async (
   formData.append("purchaseId", payload.purchaseId);
   formData.append("type", payload.type);
   formData.append("file", payload.file);
+  if (payload.fiscalDocumentType) formData.append("fiscalDocumentType", payload.fiscalDocumentType);
   if (payload.paymentId) formData.append("paymentId", payload.paymentId);
   if (payload.receptionId) formData.append("receptionId", payload.receptionId);
   if (payload.note) formData.append("note", payload.note);

@@ -10,6 +10,9 @@ import type {
   PurchaseAttachmentType,
 } from "@/features/purchases/types/purchase-attachment.types";
 import {
+  PurchaseAttachmentTypes,
+} from "@/features/purchases/types/purchase-attachment.types";
+import {
   deletePurchaseAttachment,
   listPurchaseAttachments,
   uploadPurchaseAttachment,
@@ -18,11 +21,20 @@ import { PurchaseAttachmentUploader } from "./PurchaseAttachmentUploader";
 import { PurchaseAttachmentViewer } from "./PurchaseAttachmentViewer";
 import { OperationImageGallery } from "@/shared/components/components/OperationImageGallery";
 
+const fiscalAttachmentTypes = new Set<PurchaseAttachmentType>([
+  PurchaseAttachmentTypes.FISCAL_DOCUMENT,
+  PurchaseAttachmentTypes.INVOICE,
+  PurchaseAttachmentTypes.RECEIPT,
+]);
+
+const isFiscalAttachment = (attachment: PurchaseAttachment) => fiscalAttachmentTypes.has(attachment.type);
+
 type Props = {
   purchaseId: string;
   payments?: Payment[];
   legacyImages?: string[];
   allowedTypes?: PurchaseAttachmentType[];
+  fiscalOnly?: boolean;
   title?: string;
   showUploader?: boolean;
   showLegacyImages?: boolean;
@@ -33,6 +45,7 @@ export function PurchaseDocumentsTab({
   payments = [],
   legacyImages = [],
   allowedTypes,
+  fiscalOnly = false,
   title = "Documentos",
   showUploader = true,
   showLegacyImages = true,
@@ -68,6 +81,7 @@ export function PurchaseDocumentsTab({
 
   const handleUpload = async (params: {
     type: PurchaseAttachmentType;
+    fiscalDocumentType?: import("@/features/purchases/types/purchaseEnums").VoucherDocType | null;
     file: File;
     paymentId?: string | null;
     note?: string | null;
@@ -77,6 +91,7 @@ export function PurchaseDocumentsTab({
       const response = await uploadPurchaseAttachment({
         purchaseId,
         type: params.type,
+        fiscalDocumentType: params.fiscalDocumentType ?? null,
         file: params.file,
         paymentId: params.paymentId ?? null,
         note: params.note ?? null,
@@ -112,11 +127,18 @@ export function PurchaseDocumentsTab({
   };
 
   const visibleAttachments = useMemo(
-    () => allowedTypes?.length
-      ? attachments.filter((attachment) => allowedTypes.includes(attachment.type))
-      : attachments,
-    [allowedTypes, attachments],
+    () => {
+      if (fiscalOnly) {
+        return attachments.filter((attachment) => isFiscalAttachment(attachment));
+      }
+      return allowedTypes?.length
+        ? attachments.filter((attachment) => allowedTypes.includes(attachment.type))
+        : attachments;
+    },
+    [allowedTypes, attachments, fiscalOnly],
   );
+
+  const fiscalAttachmentExists = fiscalOnly && visibleAttachments.length > 0;
 
   const totalCountLabel = useMemo(
     () => {
@@ -150,14 +172,20 @@ export function PurchaseDocumentsTab({
       </div>
 
       <div className="space-y-3">
-        {showUploader && canUpload ? (
+        {showUploader && canUpload && !fiscalAttachmentExists ? (
           <PurchaseAttachmentUploader
             payments={payments}
             loading={uploading}
             canUpload={canUpload}
             allowedTypes={allowedTypes}
+            fiscalMode={fiscalOnly}
             onUpload={handleUpload}
           />
+        ) : null}
+        {fiscalAttachmentExists ? (
+          <div className="rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+            El comprobante fiscal ya fue registrado para esta compra.
+          </div>
         ) : null}
         <PurchaseAttachmentViewer
           attachments={visibleAttachments}
