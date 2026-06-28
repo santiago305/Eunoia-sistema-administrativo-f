@@ -20,6 +20,7 @@ export type PaymentMethod = {
   methodId: string;
   name: string;
   isActive: boolean;
+  requiresVoucher?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -31,6 +32,7 @@ export type PaymentMethodPivot = {
   number?: string;
   isActive: boolean;
   isDefault?: boolean;
+  requiresVoucher?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -43,6 +45,7 @@ export type SupplierMethodRelation = {
   number?: string | null;
   isActive: boolean;
   isDefault?: boolean;
+  requiresVoucher?: boolean;
 };
 
 export type PaymentMethodListResponse = {
@@ -63,6 +66,7 @@ export type CompanyMethod = {
   companyId: string;
   methodId: string;
   number: string;
+  requiresVoucher?: boolean;
 };
 
 export type SupplierMethod = {
@@ -73,4 +77,5 @@ export type SupplierMethod = {
   number?: string | null;
   isActive?: boolean;
   isDefault?: boolean;
+  requiresVoucher?: boolean;
 };

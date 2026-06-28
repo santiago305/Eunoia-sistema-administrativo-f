@@ -39,6 +39,8 @@ type SelectOption = {
 const primaryColor = "hsl(var(--primary))";
 const primaryHover = "#1aa392";
 const softBorder = `color-mix(in srgb, ${primaryColor} 20%, transparent)`;
+const defaultRequiresVoucher = (methodName?: string | null) =>
+  (methodName ?? "").trim().toUpperCase() !== "EFECTIVO";
 
 export function ProviderMethodListModal({
   title,
@@ -57,12 +59,14 @@ export function ProviderMethodListModal({
   const [selectedId, setSelectedId] = useState("");
   const [number, setNumber] = useState("");
   const [isDefault, setIsDefault] = useState(false);
+  const [requiresVoucher, setRequiresVoucher] = useState(true);
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
   const [editingSupplierMethod, setEditingSupplierMethod] = useState<SupplierMethodRelation | null>(null);
   const [editSelectedId, setEditSelectedId] = useState("");
   const [editNumber, setEditNumber] = useState("");
   const [editIsDefault, setEditIsDefault] = useState(false);
+  const [editRequiresVoucher, setEditRequiresVoucher] = useState(true);
   const [savingEdit, setSavingEdit] = useState(false);
   const [pendingRemoveMethod, setPendingRemoveMethod] = useState<SupplierMethodRelation | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -125,6 +129,11 @@ export function ProviderMethodListModal({
     }
   }, [selectedId, availableOptions]);
 
+  useEffect(() => {
+    const methodName = allMethods.find((method) => method.methodId === selectedId)?.name;
+    setRequiresVoucher(defaultRequiresVoucher(methodName));
+  }, [allMethods, selectedId]);
+
   const addMethod = useCallback(async () => {
     if (!supplierId || !selectedId || adding) return;
 
@@ -137,19 +146,21 @@ export function ProviderMethodListModal({
         methodId: selectedId,
         number: number.trim() || undefined,
         isDefault,
+        requiresVoucher,
       });
 
       showFeedback(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
       setIsDefault(false);
+      setRequiresVoucher(true);
       await loadSupplierMethods(true);
     } catch {
       showFeedback(errorResponse("No se pudo agregar el método"));
     } finally {
       setAdding(false);
     }
-  }, [adding, clearFeedback, isDefault, loadSupplierMethods, number, selectedId, showFeedback, supplierId]);
+  }, [adding, clearFeedback, isDefault, loadSupplierMethods, number, requiresVoucher, selectedId, showFeedback, supplierId]);
 
   const removeMethod = useCallback(
     async (supplierMethodId?: string | null) => {
@@ -177,6 +188,7 @@ export function ProviderMethodListModal({
     setEditSelectedId(row.methodId);
     setEditNumber(row.number ?? "");
     setEditIsDefault(Boolean(row.isDefault));
+    setEditRequiresVoucher(row.requiresVoucher ?? defaultRequiresVoucher(row.methodName));
   }, []);
 
   const saveSupplierMethodEdit = useCallback(async () => {
@@ -190,19 +202,21 @@ export function ProviderMethodListModal({
         methodId: editSelectedId,
         number: editNumber.trim() || undefined,
         isDefault: editIsDefault,
+        requiresVoucher: editRequiresVoucher,
       });
       showFeedback(successResponse("Método actualizado"));
       setEditingSupplierMethod(null);
       setEditSelectedId("");
       setEditNumber("");
       setEditIsDefault(false);
+      setEditRequiresVoucher(true);
       await loadSupplierMethods(true);
     } catch {
       showFeedback(errorResponse("No se pudo actualizar el método"));
     } finally {
       setSavingEdit(false);
     }
-  }, [clearFeedback, editIsDefault, editNumber, editSelectedId, editingSupplierMethod, loadSupplierMethods, savingEdit, showFeedback]);
+  }, [clearFeedback, editIsDefault, editNumber, editRequiresVoucher, editSelectedId, editingSupplierMethod, loadSupplierMethods, savingEdit, showFeedback]);
 
   const columns = useMemo<DataTableColumn<SupplierMethodRelation>[]>(
     () => {
@@ -218,6 +232,13 @@ export function ProviderMethodListModal({
         header: "Número",
         cell: (row) => <span className="text-black/70">{row.number ?? "-"}</span>,
         className: "text-black/70",
+      },
+      {
+        id: "requiresVoucher",
+        header: "Voucher",
+        cell: (row) => row.requiresVoucher ? (
+          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Obligatorio</span>
+        ) : <span className="text-black/45">No</span>,
       },
       {
         id: "isDefault",
@@ -308,6 +329,17 @@ export function ProviderMethodListModal({
               Predeterminada
             </label>
 
+            <label className="flex h-10 items-center gap-2 rounded-md border border-black/10 px-3 text-xs text-black/70">
+              <input
+                type="checkbox"
+                checked={requiresVoucher}
+                onChange={(event) => setRequiresVoucher(event.target.checked)}
+                className="h-4 w-4 accent-primary"
+                disabled={adding}
+              />
+              Voucher obligatorio
+            </label>
+
             <SystemButton
               size="sm"
               className="sm:mb-1 h-10"
@@ -391,6 +423,16 @@ export function ProviderMethodListModal({
                 disabled={savingEdit}
               />
               Predeterminada
+            </label>
+            <label className="flex h-10 items-center gap-2 rounded-md border border-black/10 px-3 text-xs text-black/70">
+              <input
+                type="checkbox"
+                checked={editRequiresVoucher}
+                onChange={(event) => setEditRequiresVoucher(event.target.checked)}
+                className="h-4 w-4 accent-primary"
+                disabled={savingEdit}
+              />
+              Voucher obligatorio
             </label>
           </div>
 

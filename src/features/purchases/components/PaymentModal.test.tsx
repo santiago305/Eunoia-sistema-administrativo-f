@@ -133,4 +133,27 @@ describe("PaymentModal", () => {
     expect(await screen.findByAltText("Previsualizacion del comprobante de pago")).toHaveAttribute("src", "blob:preview");
     expect(screen.getByText("voucher.png")).toBeInTheDocument();
   });
+
+  it("requires a voucher before saving when the selected method requires evidence", async () => {
+    getAllPaymentMethodsMock.mockResolvedValue([
+      { name: "EFECTIVO", requiresVoucher: false },
+      { name: "TRANSFERENCIA", requiresVoucher: true },
+    ]);
+
+    render(
+      <PaymentModal
+        title="Formulario de Pago"
+        close={vi.fn()}
+        open
+        poId="purchase-1"
+        totalToPay={100}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Metodo: EFECTIVO" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Agregar pago" }));
+
+    await waitFor(() => expect(createPaymentMock).not.toHaveBeenCalled());
+  });
 });

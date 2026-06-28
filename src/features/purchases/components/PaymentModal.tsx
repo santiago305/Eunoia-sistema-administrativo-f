@@ -97,7 +97,12 @@ export function PaymentModal({
   const { company } = useCompany();
   const canUploadPaymentEvidence = can("payments.attach_evidence");
   const showAccountSelect = !isCashMethod(form.method);
-  const showEvidenceUploader = canUploadPaymentEvidence && showAccountSelect;
+  const selectedPaymentMethod = useMemo(
+    () => paymentMethodRecords?.find((method) => method.name === form.method) ?? null,
+    [form.method, paymentMethodRecords],
+  );
+  const selectedMethodRequiresVoucher = showAccountSelect && (selectedPaymentMethod?.requiresVoucher ?? true);
+  const showEvidenceUploader = showAccountSelect && (canUploadPaymentEvidence || selectedMethodRequiresVoucher);
 
   const evidenceMeta = useMemo(() => {
     if (!evidenceFile) return null;
@@ -181,6 +186,11 @@ export function PaymentModal({
     const amountNumber = normalizeMoney(parseDecimalInput(form.amount));
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
       showFeedback(errorResponse("Ingresa un monto válido"));
+      return;
+    }
+
+    if (selectedMethodRequiresVoucher && !evidenceFile) {
+      showFeedback(errorResponse("Adjunta la foto del voucher para este método de pago"));
       return;
     }
 
@@ -398,7 +408,9 @@ export function PaymentModal({
                       disabled={saving}
                     />
                     <UploadCloud className="h-5 w-5 text-black/45" />
-                    <span className="font-semibold text-black/70">Foto/comprobante de pago</span>
+                    <span className="font-semibold text-black/70">
+                      Foto/comprobante de pago{selectedMethodRequiresVoucher ? " *" : ""}
+                    </span>
                     <span className="text-black/45">Arrastra el voucher o haz click para seleccionar</span>
                   </label>
 

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import Purchase from "./Purchase";
@@ -41,6 +41,22 @@ vi.mock("@/shared/components/table/DataTable", () => ({
   DataTable: () => <div data-testid="purchase-items-table" />,
 }));
 
+vi.mock("@/shared/components/components/SystemButton", () => ({
+  SystemButton: ({
+    children,
+    onClick,
+    title,
+  }: {
+    children?: React.ReactNode;
+    onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    title?: string;
+  }) => (
+    <button type="button" title={title} onClick={onClick}>
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock("@/shared/components/components/FloatingInput", () => ({
   FloatingInput: ({ label, name, value, onChange }: { label: string; name: string; value?: string | number; onChange?: React.ChangeEventHandler<HTMLInputElement> }) => (
     <label>
@@ -74,7 +90,13 @@ vi.mock("./components/PurchaseItemsSection", () => ({
 }));
 
 vi.mock("./components/PurchasePaymentModal", () => ({
-  PurchasePaymentModal: () => null,
+  PurchasePaymentModal: ({ form, onClose }: { form: { payments?: unknown[] }; onClose: () => void }) => (
+    <section data-testid="purchase-payment-modal" data-payments-count={form.payments?.length ?? 0}>
+      <button type="button" onClick={onClose}>
+        Cerrar
+      </button>
+    </section>
+  ),
 }));
 
 vi.mock("../providers/components/SupplierFormModal", () => ({
@@ -103,5 +125,21 @@ describe("Purchase form", () => {
 
     expect(screen.getByRole("button", { name: "Crear compra" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Agregar Pago" })).toBeInTheDocument();
+  });
+
+  it("does not persist a default payment when opening and closing the payment setup modal", () => {
+    render(
+      <MemoryRouter>
+        <Purchase inModal />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Agregar Pago" }));
+
+    expect(screen.getByTestId("purchase-payment-modal")).toHaveAttribute("data-payments-count", "0");
+
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    expect(screen.queryByTestId("purchase-payment-modal")).not.toBeInTheDocument();
   });
 });

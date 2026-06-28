@@ -19,8 +19,26 @@ import {
 } from "@/features/payments/paymentView";
 import { listPurchaseAttachments } from "@/shared/services/purchaseAttachmentService";
 import type { PurchaseAttachment } from "@/features/purchases/types/purchase-attachment.types";
+import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
+import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
+import { env } from "@/env";
 
 const PRIMARY = "hsl(var(--primary))";
+
+const resolveAttachmentUrl = (rawUrl?: string | null) => {
+  const raw = rawUrl?.trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  try {
+    return new URL(raw, env.apiBaseUrl).toString();
+  } catch {
+    return raw;
+  }
+};
+
+const isImageAttachment = (attachment: PurchaseAttachment) =>
+  attachment.mimeType?.startsWith("image/") ||
+  /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(attachment.url);
 
 export type PaymentListModalProps = {
   title: string;
@@ -53,6 +71,7 @@ export function PaymentListModal({
   const [loading, setLoading] = useState(false);
   const [modalPayment, setModalPayment] = useState(false);
   const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
+  const [previewPaymentId, setPreviewPaymentId] = useState<string | null>(null);
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canApprovePayment = can("payments.approve");
@@ -80,7 +99,7 @@ export function PaymentListModal({
   const reloadAttachments = useCallback(async () => {
     if (!poId || !can("payments.view_evidence")) return;
     try {
-      const data = await listPurchaseAttachments({ purchaseId: poId });
+      const data = await listPurchaseAttachments({ purchaseId: poId, type: PurchaseAttachmentTypes.PAYMENT_PROOF });
       setAttachments(data);
     } catch {
       setAttachments([]);
@@ -146,6 +165,27 @@ export function PaymentListModal({
     });
     return map;
   }, [attachments]);
+
+  const previewAttachments = useMemo(
+    () =>
+      attachments.filter(
+        (attachment) =>
+          attachment.paymentId === previewPaymentId &&
+          attachment.type === PurchaseAttachmentTypes.PAYMENT_PROOF &&
+          isImageAttachment(attachment),
+      ),
+    [attachments, previewPaymentId],
+  );
+
+  const previewUrls = useMemo(
+    () => previewAttachments.map((attachment) => resolveAttachmentUrl(attachment.url)).filter(Boolean),
+    [previewAttachments],
+  );
+
+  const previewNames = useMemo(
+    () => previewAttachments.map((attachment) => attachment.originalName || attachment.filename || "Voucher"),
+    [previewAttachments],
+  );
 
   const handleRemove = useCallback(async (paymentId?: string | null) => {
     if (!paymentId) return;
@@ -219,10 +259,16 @@ export function PaymentListModal({
         cell: (row) => {
           const count = row.payDocId ? attachmentCountByPayment.get(row.payDocId) ?? 0 : 0;
           return (
-            <span className="inline-flex items-center gap-1 rounded-full border border-black/10 px-2 py-0.5 text-[10px] font-medium text-black/55">
+            <button
+              type="button"
+              disabled={!count}
+              onClick={() => row.payDocId && setPreviewPaymentId(row.payDocId)}
+              className="inline-flex items-center gap-1 rounded-full border border-black/10 px-2 py-0.5 text-[10px] font-medium text-black/55 transition enabled:hover:border-primary/30 enabled:hover:text-primary disabled:cursor-default"
+              title={count ? "Ver voucher" : "Sin voucher"}
+            >
               <FileText className="h-3 w-3" />
               {count}
-            </span>
+            </button>
           );
         },
       },
@@ -359,6 +405,15 @@ export function PaymentListModal({
           await reloadAttachments();
         }}
         loadPurchases={loadPurchases}
+      />
+      <ImagePreviewModal
+        open={previewUrls.length > 0}
+        images={previewUrls}
+        currentIndex={0}
+        onClose={() => setPreviewPaymentId(null)}
+        altPrefix="Voucher de pago"
+        downloadUrls={previewUrls}
+        fileNames={previewNames}
       />
     </Modal>
   );

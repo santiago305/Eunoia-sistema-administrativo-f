@@ -19,6 +19,7 @@ type PaymentMethodFormModalProps = {
 const DEFAULT_FORM: PaymentMethodFormState = {
     name: "",
     isActive: true,
+    requiresVoucher: true,
 };
 
 export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage = true, onClose, onSaved, primaryColor, entityLabel = "metodo de pago" }: PaymentMethodFormModalProps) {
@@ -48,6 +49,7 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
                 setForm({
                     name: method.name ?? "",
                     isActive: method.isActive ?? true,
+                    requiresVoucher: method.requiresVoucher ?? true,
                 });
             } catch (e: any) {
                 if (!cancelled) {
@@ -79,12 +81,14 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
                 if (!paymentMethodId) return;
                 await updatePaymentMethod(paymentMethodId, {
                     name: form.name.trim() || undefined,
+                    requiresVoucher: form.requiresVoucher,
                 });
                 await setPaymentMethodActive(paymentMethodId, { isActive: form.isActive });
             } else {
                 await createPaymentMethod({
                     name: form.name.trim(),
                     isActive: form.isActive,
+                    requiresVoucher: form.requiresVoucher,
                 });
             }
 

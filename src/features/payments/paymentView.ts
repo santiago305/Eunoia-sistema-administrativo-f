@@ -46,6 +46,7 @@ export const getPaymentMethodOptions = (records?: PaymentMethod[] | null) => {
     return activeRecords.map((method) => ({
       value: method.name,
       label: method.name,
+      requiresVoucher: method.requiresVoucher,
     }));
   }
 

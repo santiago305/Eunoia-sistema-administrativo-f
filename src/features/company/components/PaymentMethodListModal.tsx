@@ -26,6 +26,8 @@ type PaymentMethodListModalProps = {
 };
 
 const PRIMARY = "hsl(var(--primary))";
+const defaultRequiresVoucher = (methodName?: string | null) =>
+  (methodName ?? "").trim().toUpperCase() !== "EFECTIVO";
 
 export function PaymentMethodListModal({
   title,
@@ -40,6 +42,7 @@ export function PaymentMethodListModal({
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [number, setNumber] = useState("");
+  const [requiresVoucher, setRequiresVoucher] = useState(true);
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
 
@@ -103,6 +106,11 @@ export function PaymentMethodListModal({
     }
   }, [availableOptions, selectedId]);
 
+  useEffect(() => {
+    const methodName = allMethods.find((method) => method.methodId === selectedId)?.name;
+    setRequiresVoucher(defaultRequiresVoucher(methodName));
+  }, [allMethods, selectedId]);
+
   const addMethod = useCallback(async () => {
     if (!companyId || !selectedId || adding) return;
 
@@ -114,18 +122,20 @@ export function PaymentMethodListModal({
         companyId,
         methodId: selectedId,
         number,
+        requiresVoucher,
       });
 
       showFeedback(successResponse("Método agregado"));
       setSelectedId("");
       setNumber("");
+      setRequiresVoucher(true);
       await loadCompanyMethods({ silent: true });
     } catch {
       showFeedback(errorResponse("No se pudo agregar el método"));
     } finally {
       setAdding(false);
     }
-  }, [adding, clearFeedback, companyId, loadCompanyMethods, number, selectedId, showFeedback]);
+  }, [adding, clearFeedback, companyId, loadCompanyMethods, number, requiresVoucher, selectedId, showFeedback]);
 
   const removeMethod = useCallback(
     async (companyMethodId?: string | null) => {
@@ -158,6 +168,13 @@ export function PaymentMethodListModal({
         className: "text-black/70",
       },
       {
+        id: "requiresVoucher",
+        header: "Voucher",
+        cell: (row) => row.requiresVoucher ? (
+          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Obligatorio</span>
+        ) : <span className="text-black/45">No</span>,
+      },
+      {
         id: "actions",
         header: "",
         cell: (row) => (
@@ -187,7 +204,7 @@ export function PaymentMethodListModal({
     <Modal onClose={close} title={title} className={modalClassName}>
       <div className="space-y-3">
         <div className="mb-3 flex flex-col gap-3 text-xs text-black/60">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(220px,1fr)_auto] lg:items-end">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(220px,1fr)_auto_auto] lg:items-end">
             <div className="min-w-0">
               <PaymentMethodSelectComposed
                 label="Método de pago"
@@ -213,6 +230,17 @@ export function PaymentMethodListModal({
                 className="h-10 text-xs"
               />
             </div>
+
+            <label className="flex h-10 items-center gap-2 rounded-md border border-black/10 px-3 text-xs text-black/70">
+              <input
+                type="checkbox"
+                checked={requiresVoucher}
+                onChange={(event) => setRequiresVoucher(event.target.checked)}
+                className="h-4 w-4 accent-primary"
+                disabled={adding}
+              />
+              Voucher obligatorio
+            </label>
 
             <SystemButton
               size="sm"

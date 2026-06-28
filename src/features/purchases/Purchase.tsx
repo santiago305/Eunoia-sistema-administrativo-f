@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -6,7 +6,6 @@ import {
   CurrencyType,
   CurrencyTypes,
   PaymentFormTypes,
-  PaymentTypes,
   VoucherDocTypes,
 } from "@/features/purchases/types/purchaseEnums";
 import { listSuppliers } from "@/shared/services/supplierService";
@@ -37,7 +36,6 @@ import {
   clampQuotas,
   addDaysToIsoDateFrom,
   buildQuotas,
-  todayIso,
   normalizeMoney,
   normalizePrice,
   normalizeQuantity,
@@ -177,6 +175,7 @@ export default function PurchaseCreateLocal({
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedPoId, setLastSavedPoId] = useState("");
+  const [paymentDraftForm, setPaymentDraftForm] = useState<PurchaseOrder | null>(null);
 
   const [productQuery, setProductQuery] = useState("");
   const [supplierQuery, setSupplierQuery] = useState("");
@@ -226,6 +225,7 @@ export default function PurchaseCreateLocal({
 
   
     const handleClosePayment = useCallback(()=>{
+        setPaymentDraftForm(null);
         setOpenPaymentModal(false)
     },[])
 
@@ -366,42 +366,54 @@ export default function PurchaseCreateLocal({
     setItemId("");
   };
 
-  const savePurchase = async () => {
-    if (!form.items?.length || !form.serie.trim() || !form.supplierId || (requiresWarehouse && !form.warehouseId)) return;
+  const setPaymentDraftFormValue: Dispatch<SetStateAction<PurchaseOrder>> = useCallback(
+    (value) => {
+      setPaymentDraftForm((current) => {
+        const base = current ?? form;
+        return typeof value === "function" ? value(base) : value;
+      });
+    },
+    [form],
+  );
+
+  const savePurchase = async (overrideForm?: PurchaseOrder) => {
+    const currentForm = overrideForm ?? form;
+    const currentRequiresWarehouse = !purchaseTypesWithoutStock.includes((currentForm.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType);
+    if (!currentForm.items?.length || !currentForm.serie.trim() || !currentForm.supplierId || (currentRequiresWarehouse && !currentForm.warehouseId)) return;
     if (documentNumberError) {
       sileo.error({ title: "Número de orden ya registrado" });
       return;
     }
 
     const payload: CreatePurchaseOrderDto = {
-      supplierId: form.supplierId,
-      warehouseId: form.warehouseId || undefined,
-      documentType: form.documentType,
-      serie: form.serie,
-      correlative: Number(form.correlative ?? 0),
-      currency: form.currency,
-      paymentForm: form.paymentForm,
-      creditDays: form.creditDays ?? 0,
-      numQuotas: form.numQuotas ?? 0,
-      totalTaxed: normalizeMoney(form.totalTaxed),
-      totalExempted: normalizeMoney(form.totalExempted),
-      totalIgv: normalizeMoney(form.totalIgv),
-      purchaseValue: normalizeMoney(form.purchaseValue),
-      total: normalizeMoney(form.total),
-      note: form.note?.trim() || undefined,
-      status: form.status,
-      purchaseType: form.purchaseType,
-      receptionStatus: form.receptionStatus,
-      paymentStatus: form.paymentStatus,
-      isRecurringSource: form.isRecurringSource ?? false,
-      recurringTemplateId: form.recurringTemplateId ?? undefined,
-      requiresReceipt: form.requiresReceipt,
-      requiresStockEntry: form.requiresStockEntry,
-      requiresAssetCreation: form.requiresAssetCreation,
-      expectedAt: form.expectedAt?.trim() ? form.expectedAt : undefined,
-      dateIssue: form.dateIssue?.trim() ? form.dateIssue : undefined,
-      dateExpiration: form.dateExpiration?.trim() ? form.dateExpiration : undefined,
-      items: (form.items ?? []).map((item) => {
+      supplierId: currentForm.supplierId,
+      warehouseId: currentForm.warehouseId || undefined,
+      documentType: currentForm.documentType,
+      serie: currentForm.serie,
+      correlative: Number(currentForm.correlative ?? 0),
+      currency: currentForm.currency,
+      paymentForm: currentForm.paymentForm,
+      creditDays: currentForm.creditDays ?? 0,
+      numQuotas: currentForm.numQuotas ?? 0,
+      totalTaxed: normalizeMoney(currentForm.totalTaxed),
+      totalExempted: normalizeMoney(currentForm.totalExempted),
+      totalIgv: normalizeMoney(currentForm.totalIgv),
+      purchaseValue: normalizeMoney(currentForm.purchaseValue),
+      total: normalizeMoney(currentForm.total),
+      note: currentForm.note?.trim() || undefined,
+      status: currentForm.status,
+      purchaseType: currentForm.purchaseType,
+      receptionStatus: currentForm.receptionStatus,
+      paymentStatus: currentForm.paymentStatus,
+      isRecurringSource: currentForm.isRecurringSource ?? false,
+      recurringTemplateId: currentForm.recurringTemplateId ?? undefined,
+      requiresReceipt: currentForm.requiresReceipt,
+      requiresStockEntry: currentForm.requiresStockEntry,
+      requiresAssetCreation: currentForm.requiresAssetCreation,
+      expectedAt: currentForm.expectedAt?.trim() ? currentForm.expectedAt : undefined,
+      dateIssue: currentForm.dateIssue?.trim() ? currentForm.dateIssue : undefined,
+      dateExpiration: currentForm.dateExpiration?.trim() ? currentForm.dateExpiration : undefined,
+      items: (currentForm.items ?? []).map((item) => {
         const calculatedItem = recalcItem(item);
         const resolvedFactor = Number(calculatedItem.factor ?? 1);
 
@@ -412,7 +424,7 @@ export default function PurchaseCreateLocal({
           assetCategoryId: calculatedItem.assetCategoryId ?? undefined,
           serviceName: calculatedItem.serviceName ?? undefined,
           description: calculatedItem.description ?? undefined,
-          warehouseId: calculatedItem.warehouseId ?? (form.warehouseId || undefined),
+          warehouseId: calculatedItem.warehouseId ?? (currentForm.warehouseId || undefined),
           affectsStock: calculatedItem.affectsStock ?? true,
           generatesAsset: calculatedItem.generatesAsset ?? false,
           isService: calculatedItem.isService ?? false,
@@ -430,7 +442,7 @@ export default function PurchaseCreateLocal({
           purchaseValue: normalizeMoney(calculatedItem.purchaseValue),
         };
       }),
-      payments: (form.payments ?? []).map((p) => ({
+      payments: (currentForm.payments ?? []).map((p) => ({
         currency: p.currency,
         date: p.date,
         method: p.method,
@@ -447,7 +459,7 @@ export default function PurchaseCreateLocal({
         operationCode: p.operationCode ?? undefined,
         isPartial: p.isPartial ?? undefined,
       })),
-      quotas: (form.quotas ?? []).map((q) => ({
+      quotas: (currentForm.quotas ?? []).map((q) => ({
         number: q.number,
         expirationDate: q.expirationDate,
         paymentDate: q.paymentDate ?? undefined,
@@ -461,9 +473,11 @@ export default function PurchaseCreateLocal({
       const res = effectivePoId ? await updatePurchaseOrder(effectivePoId, payload) : await createPurchaseOrder(payload);
       if (res.type === "success") {
         sileo.success({ title: "Compra creada" });
+        if (overrideForm) setForm(overrideForm);
         const nextPoId = res.order?.poId ?? effectivePoId ?? "";
         if (nextPoId) setLastSavedPoId(nextPoId);
         setOpenPaymentModal(false);
+        setPaymentDraftForm(null);
         if (nextPoId) {
           await onSaved?.(nextPoId);
         }
@@ -970,7 +984,7 @@ export default function PurchaseCreateLocal({
                 <SystemButton
                   className="w-full"
                   disabled={saveDisabled}
-                  onClick={savePurchase}
+                  onClick={() => void savePurchase()}
                 >
                   {isEdit ? "Actualizar compra" : "Crear compra"}
                 </SystemButton>
@@ -979,27 +993,15 @@ export default function PurchaseCreateLocal({
                   variant="outline"
                   disabled={saveDisabled}
                   onClick={() => {
-                    setForm((prev) => {
+                    setPaymentDraftForm(() => {
                       const shouldInit = !isEdit;
                       return {
-                        ...prev,
-                        paymentForm: shouldInit ? PaymentFormTypes.CONTADO : prev.paymentForm,
-                        creditDays: shouldInit ? 0 : prev.creditDays,
-                        numQuotas: shouldInit ? 0 : prev.numQuotas,
-                        quotas: shouldInit ? [] : prev.quotas,
-                        payments:
-                          (prev.payments ?? []).length > 0
-                            ? prev.payments
-                            : [
-                                {
-                                  method: PaymentTypes.EFECTIVO,
-                                  date: todayIso(),
-                                  operationNumber: "",
-                                  currency: prev.currency,
-                                  amount: normalizeMoney(totals.totalPrice),
-                                  note: "",
-                                },
-                              ],
+                        ...form,
+                        paymentForm: shouldInit ? PaymentFormTypes.CONTADO : form.paymentForm,
+                        creditDays: shouldInit ? 0 : form.creditDays,
+                        numQuotas: shouldInit ? 0 : form.numQuotas,
+                        quotas: shouldInit ? [] : form.quotas,
+                        payments: form.payments ?? [],
                       };
                     });
                     setOpenPaymentModal(true);
@@ -1051,14 +1053,17 @@ export default function PurchaseCreateLocal({
         <PurchasePaymentModal
           open={openPaymentModal}
           onClose={handleClosePayment}
-          form={form}
-          setForm={setForm}
+          form={paymentDraftForm ?? form}
+          setForm={setPaymentDraftFormValue}
           totalPrice={totals.totalPrice}
           ringStyle={ringStyle}
           primaryColor={PRIMARY}
           currency={currency}
           formatMoney={money}
-          onSave={savePurchase}
+          onSave={() => {
+            const nextForm = paymentDraftForm ?? form;
+            void savePurchase(nextForm);
+          }}
           saveDisabled={saveDisabled}
           isEdit={isEdit}
         />

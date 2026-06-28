@@ -3,10 +3,12 @@ import { z } from "zod";
 export const createPaymentMethodSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
   isActive: z.boolean().optional(),
+  requiresVoucher: z.boolean().optional(),
 });
 
 export const updatePaymentMethodSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio").optional(),
+  requiresVoucher: z.boolean().optional(),
 });
 
 export const setPaymentMethodActiveSchema = z.object({
@@ -18,6 +20,7 @@ export const createCompanyMethodSchema = z.object({
   methodId: z.string().uuid(),
   number: z.string().optional(),
   isDefault: z.boolean().optional(),
+  requiresVoucher: z.boolean().optional(),
 });
 
 export const createSupplierMethodSchema = z.object({
@@ -25,6 +28,7 @@ export const createSupplierMethodSchema = z.object({
   methodId: z.string().uuid(),
   number: z.string().optional(),
   isDefault: z.boolean().optional(),
+  requiresVoucher: z.boolean().optional(),
 });
 
 export const listPaymentMethodsQuerySchema = z.object({
