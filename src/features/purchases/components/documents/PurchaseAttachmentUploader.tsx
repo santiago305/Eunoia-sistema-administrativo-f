@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileUp, ReceiptText, Upload } from "lucide-react";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import type { Payment } from "@/features/purchases/types/purchase";
 import {
   PurchaseAttachmentTypes,
@@ -40,6 +41,18 @@ const paymentOptionLabel = (payment: Payment, index: number) => {
 
 export function PurchaseAttachmentUploader({ payments = [], loading = false, canUpload = true, allowedTypes, fiscalMode = false, onUpload }: Props) {
   const typeOptions = allowedTypes?.length ? allowedTypes : Object.keys(purchaseAttachmentTypeLabels) as PurchaseAttachmentType[];
+  const attachmentTypeOptions = typeOptions.map((value) => ({
+    value,
+    label: purchaseAttachmentTypeLabels[value],
+  }));
+  const paymentOptions = [
+    ...(payments.length === 0 ? [{ value: "", label: "Sin pagos registrados" }] : []),
+    ...(payments.length > 1 ? [{ value: "", label: "Seleccionar pago" }] : []),
+    ...payments.map((payment, index) => ({
+      value: payment.payDocId ?? "",
+      label: paymentOptionLabel(payment, index),
+    })),
+  ];
   const [type, setType] = useState<PurchaseAttachmentType>(typeOptions[0] ?? PurchaseAttachmentTypes.INVOICE);
   const [fiscalDocumentType, setFiscalDocumentType] = useState<VoucherDocType>(VoucherDocTypes.FACTURA);
   const [paymentId, setPaymentId] = useState("");
@@ -85,39 +98,23 @@ export function PurchaseAttachmentUploader({ payments = [], loading = false, can
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-black/50">Tipo de documento</span>
-            <select
-              value={fiscalDocumentType}
-              onChange={(event) => setFiscalDocumentType(event.target.value as VoucherDocType)}
-              disabled={!canUpload || loading}
-              className="h-11 w-full rounded-md border border-black/10 bg-white px-3 text-sm text-black/80 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-            >
-              {fiscalDocumentOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FloatingSelect
+            label="Tipo de documento"
+            name="fiscal-document-type"
+            value={fiscalDocumentType}
+            onChange={(value) => setFiscalDocumentType(value as VoucherDocType)}
+            options={fiscalDocumentOptions}
+            disabled={!canUpload || loading}
+          />
 
-          <label className="space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-black/50">Asociar pago</span>
-            <select
-              value={payments.length === 1 ? payments[0]?.payDocId ?? "" : paymentId}
-              onChange={(event) => setPaymentId(event.target.value)}
-              disabled={!canUpload || loading || payments.length <= 1}
-              className="h-11 w-full rounded-md border border-black/10 bg-white px-3 text-sm text-black/80 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:bg-slate-50 disabled:text-black/45"
-            >
-              {payments.length === 0 ? <option value="">Sin pagos registrados</option> : null}
-              {payments.length > 1 ? <option value="">Seleccionar pago</option> : null}
-              {payments.map((payment, index) => (
-                <option key={payment.payDocId ?? index} value={payment.payDocId ?? ""}>
-                  {paymentOptionLabel(payment, index)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FloatingSelect
+            label="Asociar pago"
+            name="fiscal-payment"
+            value={payments.length === 1 ? payments[0]?.payDocId ?? "" : paymentId}
+            onChange={setPaymentId}
+            options={paymentOptions}
+            disabled={!canUpload || loading || payments.length <= 1}
+          />
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -153,38 +150,29 @@ export function PurchaseAttachmentUploader({ payments = [], loading = false, can
   return (
     <div className="rounded-md border border-black/10 bg-slate-50/70 p-3">
       <div className="grid gap-2 sm:grid-cols-[1fr_1fr]">
-        <label className="space-y-1">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-black/45">Tipo</span>
-          <select
-            value={type}
-            onChange={(event) => setType(event.target.value as PurchaseAttachmentType)}
-            disabled={!canUpload || loading}
-            className="h-9 w-full rounded-md border border-black/10 bg-white px-2 text-xs text-black/75 outline-none focus:border-primary"
-          >
-            {typeOptions.map((value) => (
-              <option key={value} value={value}>
-                {purchaseAttachmentTypeLabels[value]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FloatingSelect
+          label="Tipo"
+          name="attachment-type"
+          value={type}
+          onChange={(value) => setType(value as PurchaseAttachmentType)}
+          options={attachmentTypeOptions}
+          disabled={!canUpload || loading}
+        />
 
-        <label className="space-y-1">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-black/45">Pago asociado</span>
-          <select
-            value={paymentId}
-            onChange={(event) => setPaymentId(event.target.value)}
-            disabled={!canUpload || loading || payments.length === 0}
-            className="h-9 w-full rounded-md border border-black/10 bg-white px-2 text-xs text-black/75 outline-none focus:border-primary"
-          >
-            <option value="">Sin asociar a pago</option>
-            {payments.map((payment, index) => (
-              <option key={payment.payDocId ?? index} value={payment.payDocId ?? ""}>
-                {payment.method} · {payment.operationNumber || payment.date}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FloatingSelect
+          label="Pago asociado"
+          name="attachment-payment"
+          value={paymentId}
+          onChange={setPaymentId}
+          options={[
+            { value: "", label: "Sin asociar a pago" },
+            ...payments.map((payment, index) => ({
+              value: payment.payDocId ?? "",
+              label: paymentOptionLabel(payment, index),
+            })),
+          ]}
+          disabled={!canUpload || loading || payments.length === 0}
+        />
       </div>
 
       <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">

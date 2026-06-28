@@ -17,7 +17,7 @@ export function PurchaseFiscalDocumentsModal({ open, purchaseId, onClose }: Prop
       onClose={onClose}
       title="Comprobantes fiscales"
       description="Documentos fiscales registrados para esta compra."
-      className="w-auto min-w-[min(92vw,520px)] max-w-[min(96vw,1120px)]"
+      className="w-auto max-w-[min(92vw,720px)]"
       bodyClassName="max-h-[78vh]"
     >
       {purchaseId ? (

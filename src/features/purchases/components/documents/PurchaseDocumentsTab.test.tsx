@@ -63,7 +63,12 @@ describe("PurchaseDocumentsTab", () => {
     });
 
     expect(screen.getByText("Comprobantes fiscales")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Factura" })).toBeInTheDocument();
+    const documentTypeSelect = screen.getByRole("button", { name: "Tipo de documento: Factura" });
+    expect(documentTypeSelect).toBeInTheDocument();
+
+    fireEvent.click(documentTypeSelect);
+
+    expect(await screen.findByRole("option", { name: /Factura/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Boleta" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Nota de venta" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Comprobante de pago" })).not.toBeInTheDocument();
