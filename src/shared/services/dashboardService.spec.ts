@@ -63,6 +63,38 @@ describe("dashboardService", () => {
     );
   });
 
+  it("serializes smart date filters for dashboard charts", async () => {
+    vi.mocked(axiosInstance.get).mockResolvedValueOnce(emptyResponse);
+
+    await getDashboardSaleOrdersByDepartment({
+      filters: [
+        {
+          field: "scheduleDate",
+          operator: "inWeek",
+          value: "2026-06-29",
+        },
+      ],
+      cancelBool: true,
+    });
+
+    expect(axiosInstance.get).toHaveBeenCalledWith(
+      "/dashboard/sale-orders/ubigeo/departments",
+      {
+        params: {
+          month: undefined,
+          filters: JSON.stringify([
+            {
+              field: "scheduleDate",
+              operator: "inWeek",
+              value: "2026-06-29",
+            },
+          ]),
+          cancelBool: true,
+        },
+      },
+    );
+  });
+
   it("requests provinces for the selected department", async () => {
     vi.mocked(axiosInstance.get).mockResolvedValueOnce(emptyResponse);
 

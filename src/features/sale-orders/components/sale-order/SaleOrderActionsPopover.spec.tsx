@@ -29,7 +29,7 @@ describe("SaleOrderActionsPopover", () => {
   it("loads available transitions only when the menu is first opened", async () => {
     getTransitions.mockReset();
     getTransitions.mockResolvedValue([]);
-    render(<SaleOrderActionsPopover order={order} onOpenDetail={vi.fn()} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onOrderChanged={vi.fn()} />);
+    render(<SaleOrderActionsPopover order={order} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onOrderChanged={vi.fn()} />);
 
     expect(getTransitions).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));

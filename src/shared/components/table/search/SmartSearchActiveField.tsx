@@ -7,6 +7,8 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
 import { FloatingDateRangePicker } from "@/shared/components/components/date-picker/FloatingDateRangePicker";
 import { FloatingDateTimePicker } from "@/shared/components/components/date-picker/FloatingDateTimePicker";
+import { FloatingMonthPicker } from "@/shared/components/components/date-picker/FloatingMonthPicker";
+import { FloatingWeekPicker } from "@/shared/components/components/date-picker/FloatingWeekPicker";
 import {
   parseStoredDate,
   resolveInputMode,
@@ -240,6 +242,28 @@ export function SmartSearchActiveField<
                 onChange={(date) =>
                   setDraftValue(date ? toLocalDateTimeString(date) : "")
                 }
+                className="h-10 rounded-sm text-xs"
+                placeholder={placeholder}
+              />
+            ) : null}
+
+            {inputMode === "month" ? (
+              <FloatingMonthPicker
+                label="Mes"
+                name={`smart-search-month-${field.id}`}
+                value={draftValue}
+                onChange={setDraftValue}
+                className="h-10 rounded-sm text-xs"
+                placeholder={placeholder}
+              />
+            ) : null}
+
+            {inputMode === "week" ? (
+              <FloatingWeekPicker
+                label="Semana"
+                name={`smart-search-week-${field.id}`}
+                value={draftValue}
+                onChange={setDraftValue}
                 className="h-10 rounded-sm text-xs"
                 placeholder={placeholder}
               />

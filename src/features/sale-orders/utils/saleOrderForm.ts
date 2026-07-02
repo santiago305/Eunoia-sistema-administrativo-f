@@ -19,6 +19,8 @@ export const buildEmptySaleOrderForm = (): CreateSaleOrderDto => ({
   scheduleDate: toLocalDateKey(new Date()),
   deliveryDate: undefined,
   note: "",
+  advertisingCode: null,
+  observation: null,
   items: [],
   payments: [],
   currentState: null,

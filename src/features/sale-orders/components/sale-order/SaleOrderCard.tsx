@@ -8,7 +8,6 @@ type Props = {
   order: SaleOrder;
   selected: boolean;
   onSelect: (order: SaleOrder) => void;
-  onOpenDetail: (order: SaleOrder) => void;
   onEdit: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
@@ -22,7 +21,7 @@ function formatMoney(value?: number | null) {
   }).format(Number(value ?? 0));
 }
 
-export function SaleOrderCard({ order, selected, onSelect, onOpenDetail, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
+export function SaleOrderCard({ order, selected, onSelect, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
   const code = `${order.serie ?? "-"}-${order.correlative ?? "-"}`;
   const stateName = order.currentState?.name ?? "Sin estado";
   const stateColor = order.currentState?.color ?? "#64748b";
@@ -88,7 +87,6 @@ const isPaid = pendingAmount <= 0;
             <span onClick={(event) => event.stopPropagation()}>
               <SaleOrderActionsPopover
                 order={order}
-                onOpenDetail={onOpenDetail}
                 onEdit={onEdit}
                 onOpenPdf={onOpenPdf}
                 onOpenPayments={onOpenPayments}

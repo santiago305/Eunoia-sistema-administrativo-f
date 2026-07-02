@@ -48,26 +48,31 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdate
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [payments, setPayments] = useState<SaleOrderPayment[]>([]);
 
-  const [draft, setDraft] = useState<SaleOrderPaymentInput>(() => ({
-    method: "",
-    amount: 0,
-    bankAccountId: "",
-    date: toLocalDateKey(new Date()),
-    operationNumber: "",
-    note: "",
-  }));
+  const total = Number(saleOrder.total ?? 0);
+  const totalPaid = useMemo(
+    () => payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
+    [payments],
+  );
+  const pending = Math.max(0, total - totalPaid);
 
-  useEffect(() => {
-    if (!open) return;
-    setDraft({
+  const buildDraft = useCallback(
+    (): SaleOrderPaymentInput => ({
       method: "",
-      amount: 0,
+      amount: pending,
       bankAccountId: "",
       date: toLocalDateKey(new Date()),
       operationNumber: "",
       note: "",
-    });
-  }, [open]);
+    }),
+    [pending],
+  );
+
+  const [draft, setDraft] = useState<SaleOrderPaymentInput>(() => buildDraft());
+
+  useEffect(() => {
+    if (!open) return;
+    setDraft(buildDraft());
+  }, [buildDraft, open]);
 
   const title = useMemo(() => {
     const saleOrderLabel = `${saleOrder.serie ?? "-"}-${saleOrder.correlative ?? "-"}`;
@@ -94,21 +99,12 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdate
     void loadAll();
   }, [loadAll, open]);
 
-  const total = Number(saleOrder.total ?? 0);
-  const totalPaid = Number(saleOrder.totalPaid ?? 0);
-  const pending = Number(saleOrder.pendingAmount ?? Math.max(0, total - totalPaid));
   const validateDraft = useCallback(() => {
     const amount = Number(draft.amount ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) {
       showFeedback(errorResponse("Monto inválido."));
       return false;
     }
-    // const pendingSafe = Math.max(0, Number(pending.toFixed(2)));
-    // const amountSafe = Number(amount.toFixed(2));
-    // if (amountSafe > pendingSafe) {
-    //   showFeedback(errorResponse(`El pago no puede exceder el pendiente: ${formatMoney(pendingSafe)}.`));
-    //   return false;
-    // }
     if (!String(draft.method ?? "").trim()) {
       showFeedback(errorResponse("Método requerido."));
       return false;
@@ -121,14 +117,13 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdate
     const date = String(draft.date ?? "").trim();
     if (date) {
       const parsed = Date.parse(date);
-
       if (Number.isNaN(parsed)) {
         showFeedback(errorResponse("Fecha de pago inválida."));
         return false;
       }
     }
     return true;
-  }, [draft.amount, draft.bankAccountId, draft.date, draft.method, pending, showFeedback]);
+  }, [draft.amount, draft.bankAccountId, draft.date, draft.method, showFeedback]);
 
   const handleCreate = useCallback(async () => {
     if (creating) return;
@@ -148,20 +143,13 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdate
       showFeedback(successResponse("Pago registrado."));
       await loadAll();
       onUpdated?.();
-      setDraft({
-        method: "",
-        amount: 0,
-        bankAccountId: draft.bankAccountId,
-        date: toLocalDateKey(new Date()),
-        operationNumber: "",
-        note: "",
-      });
+      setDraft((prev) => ({ ...buildDraft(), method: prev.method, bankAccountId: prev.bankAccountId }));
     } catch (err) {
       showFeedback(errorResponse(parseApiError(err)));
     } finally {
       setCreating(false);
     }
-  }, [creating, draft, loadAll, onUpdated, saleOrder.id, showFeedback, validateDraft]);
+  }, [buildDraft, creating, draft, loadAll, onUpdated, saleOrder.id, showFeedback, validateDraft]);
 
   const handleDelete = useCallback(
     async (paymentId: string) => {
@@ -172,13 +160,14 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdate
         showFeedback(successResponse("Pago eliminado."));
         await loadAll();
         onUpdated?.();
+        setDraft((prev) => ({ ...buildDraft(), method: prev.method, bankAccountId: prev.bankAccountId }));
       } catch (err) {
         showFeedback(errorResponse(parseApiError(err)));
       } finally {
         setDeletingPaymentId(null);
       }
     },
-    [deletingPaymentId, loadAll, onUpdated, saleOrder.id, showFeedback],
+    [buildDraft, deletingPaymentId, loadAll, onUpdated, saleOrder.id, showFeedback],
   );
 
   return (
@@ -251,8 +240,7 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdate
                           loading={deletingPaymentId === payment.id}
                           disabled={Boolean(deletingPaymentId)}
                           onClick={() => handleDelete(payment.id)}
-                        >
-                        </SystemButton>
+                        />
                       </td>
                     </tr>
                   ))}

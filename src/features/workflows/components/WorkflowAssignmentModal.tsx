@@ -46,10 +46,10 @@ export function WorkflowAssignmentModal({ open, saleOrderId, onClose, onAssigned
   };
 
   return (
-    <Modal open={open} onClose={onClose} preventClose={loading} title="Asignar flujo" className="w-[420px]">
+    <Modal open={open} onClose={onClose} preventClose={loading} title="Asignar tipo" className="w-[420px]">
       <div className="space-y-3">
         <FloatingSelect
-          label="Flujo"
+          label="Tipo"
           name="workflow-assignment"
           value={workflowId}
           onChange={setWorkflowId}

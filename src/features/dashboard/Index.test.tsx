@@ -7,6 +7,7 @@ import {
   getDashboardSaleOrdersByDistrict,
   getDashboardSaleOrdersByProvince,
 } from "@/shared/services/dashboardService";
+import { getSaleOrderStatistics } from "@/shared/services/saleOrderService";
 
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
@@ -28,6 +29,39 @@ vi.mock("@/shared/services/dashboardService", () => ({
   getDashboardSaleOrdersByDepartment: vi.fn(),
   getDashboardSaleOrdersByProvince: vi.fn(),
   getDashboardSaleOrdersByDistrict: vi.fn(),
+}));
+
+vi.mock("@/shared/services/saleOrderService", () => ({
+  getSaleOrderStatistics: vi.fn(),
+}));
+
+vi.mock("@/features/sale-orders/components/statistics/SaleOrderStatisticsPanel", () => ({
+  SaleOrderStatisticsPanel: ({ statistics }: { statistics: { totals?: { orders?: number } } | null }) => (
+    <section aria-label="Estadísticas de pedidos">
+      Pedidos estadísticos: {statistics?.totals?.orders ?? 0}
+    </section>
+  ),
+}));
+
+vi.mock("./components/DashboardSaleOrderSmartFilter", () => ({
+  DashboardSaleOrderSmartFilter: ({
+    onApplyRule,
+  }: {
+    onApplyRule: (rule: { field: "scheduleDate"; operator: "inWeek"; value: string }) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onApplyRule({
+          field: "scheduleDate",
+          operator: "inWeek",
+          value: "2026-06-29",
+        })
+      }
+    >
+      Filtros del dashboard
+    </button>
+  ),
 }));
 
 const departmentsResponse = {
@@ -96,6 +130,7 @@ const districtsResponse = {
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.mocked(getDashboardSaleOrdersByDepartment).mockResolvedValue(
       departmentsResponse,
     );
@@ -105,6 +140,19 @@ describe("Dashboard", () => {
     vi.mocked(getDashboardSaleOrdersByDistrict).mockResolvedValue(
       districtsResponse,
     );
+    vi.mocked(getSaleOrderStatistics).mockResolvedValue({
+      byWorkflow: [],
+      byState: [],
+      byClientType: [],
+      byBankAccount: [],
+      totals: {
+        orders: 10,
+        total: 1200.5,
+        deliveryCostSum: 80,
+        collected: 900,
+        pending: 300.5,
+      },
+    });
   });
 
   it("loads departments on mount and renders backend totals", async () => {
@@ -117,9 +165,14 @@ describe("Dashboard", () => {
     ).toBeInTheDocument();
 
     expect(getDashboardSaleOrdersByDepartment).toHaveBeenCalledWith({
-      month: undefined,
+      filters: [],
       cancelBool: false,
     });
+    expect(getSaleOrderStatistics).toHaveBeenCalledWith({
+      filters: [],
+      includeCancelled: false,
+    });
+    expect(screen.getByRole("region", { name: /estadísticas de pedidos/i })).toBeInTheDocument();
 
     expect(
       await screen.findByRole("button", { name: /ver provincias de lima/i }),
@@ -144,9 +197,7 @@ describe("Dashboard", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText("Total Tarifa")).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/mes del dashboard/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/mes del dashboard/i)).not.toBeInTheDocument();
   });
 
   it("loads provinces and districts from chart group selection", async () => {
@@ -159,7 +210,7 @@ describe("Dashboard", () => {
 
     await waitFor(() => {
       expect(getDashboardSaleOrdersByProvince).toHaveBeenCalledWith("15", {
-        month: undefined,
+        filters: [],
         cancelBool: false,
       });
     });
@@ -176,7 +227,7 @@ describe("Dashboard", () => {
 
     await waitFor(() => {
       expect(getDashboardSaleOrdersByDistrict).toHaveBeenCalledWith("1501", {
-        month: undefined,
+        filters: [],
         cancelBool: false,
       });
     });
@@ -187,7 +238,7 @@ describe("Dashboard", () => {
 
     await waitFor(() => {
       expect(getDashboardSaleOrdersByProvince).toHaveBeenLastCalledWith("15", {
-        month: undefined,
+        filters: [],
         cancelBool: false,
       });
     });
@@ -198,19 +249,30 @@ describe("Dashboard", () => {
     render(<Dashboard />);
 
     await screen.findByRole("button", { name: /ver provincias de lima/i });
-    await user.click(
-      screen.getByRole("button", { name: /mes del dashboard/i }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: /junio/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /filtros del dashboard/i }));
     await user.click(screen.getByLabelText(/incluir cancelados: no/i));
     await user.click(await screen.findByRole("option", { name: "Sí" }));
 
     await waitFor(() => {
       expect(getDashboardSaleOrdersByDepartment).toHaveBeenLastCalledWith({
-        month: "2026-06",
+        filters: [
+          {
+            field: "scheduleDate",
+            operator: "inWeek",
+            value: "2026-06-29",
+          },
+        ],
         cancelBool: true,
+      });
+      expect(getSaleOrderStatistics).toHaveBeenLastCalledWith({
+        filters: [
+          {
+            field: "scheduleDate",
+            operator: "inWeek",
+            value: "2026-06-29",
+          },
+        ],
+        includeCancelled: true,
       });
     });
   });
@@ -236,18 +298,24 @@ describe("Dashboard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps dashboard filters inside the chart panel", async () => {
+  it("persists include cancelled and keeps global controls above the charts", async () => {
+    localStorage.setItem("dashboard-sale-orders-include-cancelled", "true");
+    const user = userEvent.setup();
     render(<Dashboard />);
 
-    const chartPanel = await screen.findByRole("region", {
-      name: /distribuci.n por departamentos/i,
+    await waitFor(() => {
+      expect(getSaleOrderStatistics).toHaveBeenCalledWith({
+        filters: [],
+        includeCancelled: true,
+      });
     });
 
-    expect(
-      within(chartPanel).getByLabelText(/mes del dashboard/i),
-    ).toBeInTheDocument();
-    expect(
-      within(chartPanel).getByLabelText(/incluir cancelados: no/i),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /filtros del dashboard/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/incluir cancelados: sí/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/mes del dashboard/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText(/incluir cancelados: sí/i));
+    await user.click(await screen.findByRole("option", { name: "No" }));
+    expect(localStorage.getItem("dashboard-sale-orders-include-cancelled")).toBe("false");
   });
 });

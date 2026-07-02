@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SaleOrders from "@/features/sale-orders/SaleOrders";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
-import { ClientType, type SaleOrder, type SaleOrderStatisticsResponse } from "@/features/sale-orders/types/saleOrder";
+import { ClientType, type SaleOrder } from "@/features/sale-orders/types/saleOrder";
 
 vi.mock("@/shared/hooks/useCompany", () => ({
   useCompany: () => ({ hasCompany: true, company: { companyId: "company-1" } }),
@@ -120,20 +120,6 @@ const buildSaleOrder = (stateName: string): SaleOrder => ({
   items: [],
 });
 
-const buildStatistics = (orders: number, total = orders * 100): SaleOrderStatisticsResponse => ({
-  byWorkflow: [{ id: "workflow-1", label: "Flujo venta", count: orders }],
-  byState: [{ id: "global-state-1", label: "Pendiente", color: "#64748b", count: orders }],
-  byClientType: [{ type: ClientType.NEW, label: "Nuevo", count: orders }],
-  byBankAccount: [],
-  totals: {
-    orders,
-    total,
-    collected: 0,
-    pending: total,
-    deliveryCostSum: 0,
-  },
-});
-
 const emptySearchState = {
   recent: [],
   saved: [],
@@ -169,10 +155,22 @@ describe("SaleOrders", () => {
     listSaleOrderPaymentsMock.mockResolvedValue([]);
     getSaleOrderSearchStateMock.mockResolvedValue(emptySearchState);
     getAvailableSaleOrderTransitionsMock.mockResolvedValue([]);
-    getSaleOrderStatisticsMock.mockResolvedValue(buildStatistics(0, 0));
+    getSaleOrderStatisticsMock.mockResolvedValue({
+      byWorkflow: [],
+      byState: [],
+      byClientType: [],
+      byBankAccount: [],
+      totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
+    });
   });
 
-  it("shows actions and loads statistics including cancelled orders", async () => {
+  it("renders sale orders in a table without loading statistics", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [buildSaleOrder("Pendiente")],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
     render(
       <TooltipProvider>
         <SaleOrders />
@@ -180,33 +178,36 @@ describe("SaleOrders", () => {
     );
 
     expect(screen.getByRole("button", { name: /nuevo pedido/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /flujos/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /tipos/i })).toBeTruthy();
 
-    await waitFor(() =>
-      expect(getSaleOrderStatisticsMock).toHaveBeenCalledWith({
-        q: undefined,
-        filters: [],
-        includeCancelled: true,
-      }),
-    );
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.getByText("SO-1")).toBeInTheDocument();
+    expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
   });
 
-  it("keeps pagination inside the order list panel", async () => {
+  it("opens detail from the row and removes detail from the actions popover", async () => {
+    const order = buildSaleOrder("Pendiente");
+    listSaleOrdersMock.mockResolvedValue({
+      items: [order],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchSaleOrderByIdMock.mockResolvedValue(order);
+    const user = userEvent.setup();
+
     render(
       <TooltipProvider>
         <SaleOrders />
       </TooltipProvider>,
     );
 
-    const pagination = await screen.findByRole("navigation", {
-      name: "Paginación de pedidos",
-    });
-    const listPanel = screen.getByRole("complementary", {
-      name: "Listado de pedidos",
-    });
+    await user.click(await screen.findByText("SO-1"));
+    await waitFor(() => expect(fetchSaleOrderByIdMock).toHaveBeenCalledWith("order-1"));
 
-    expect(listPanel).toContainElement(pagination);
-    expect(pagination.parentElement).toHaveClass("shrink-0");
+    await user.click(screen.getByRole("button", { name: /acciones del pedido/i }));
+    expect(screen.queryByRole("button", { name: "Detalle" })).not.toBeInTheDocument();
+    expect(screen.getByText("Pagos")).toBeInTheDocument();
   });
 
   it("refreshes the selected order detail when sale-orders.updated arrives without explicit ids", async () => {
@@ -238,7 +239,7 @@ describe("SaleOrders", () => {
       socketHandlers.get("sale-orders.updated")?.({ updated: 1, saleOrderIds: [] });
     });
 
-    await waitFor(() => expect(screen.getByText("Confirmado")).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText("Confirmado").length).toBeGreaterThan(0));
     expect(fetchSaleOrderByIdMock).toHaveBeenLastCalledWith("order-1");
   });
 
@@ -271,7 +272,7 @@ describe("SaleOrders", () => {
       socketHandlers.get("sale-orders.updated")?.({ updated: 1, saleOrderIds: ["order-1"], saleOrders: [updatedOrder] });
     });
 
-    await waitFor(() => expect(screen.getByText("Confirmado")).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText("Confirmado").length).toBeGreaterThan(0));
     expect(fetchSaleOrderByIdMock).toHaveBeenCalledTimes(initialCallCount);
   });
 
@@ -315,86 +316,7 @@ describe("SaleOrders", () => {
       });
     });
 
-    await waitFor(() => expect(screen.getByText("Entregado")).toBeTruthy());
-  });
-
-  it("uses realtime statistics directly when there are no active filters", async () => {
-    authState.isAuthenticated = true;
-    authState.userId = "user-1";
-    const initialOrder = buildSaleOrder("Pendiente");
-    listSaleOrdersMock.mockResolvedValue({
-      items: [initialOrder],
-      total: 1,
-      page: 1,
-      limit: 10,
-    });
-    fetchSaleOrderByIdMock.mockResolvedValue(initialOrder);
-
-    render(
-      <TooltipProvider>
-        <SaleOrders />
-      </TooltipProvider>,
-    );
-
-    await screen.findByText("SO-1");
-    await waitFor(() => expect(getSaleOrderStatisticsMock).toHaveBeenCalledTimes(1));
-
-    await act(async () => {
-      socketHandlers.get("sale-orders.updated")?.({
-        updated: 1,
-        saleOrderIds: ["order-1"],
-        source: "payment-created",
-        saleOrders: [],
-        statistics: buildStatistics(3, 450),
-      });
-    });
-
-    await waitFor(() => expect(screen.getAllByText("S/ 450.00").length).toBeGreaterThan(0));
-    expect(getSaleOrderStatisticsMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("uses realtime statistics directly even when filters are active", async () => {
-    authState.isAuthenticated = true;
-    authState.userId = "user-1";
-    const initialOrder = buildSaleOrder("Pendiente");
-    listSaleOrdersMock.mockResolvedValue({
-      items: [initialOrder],
-      total: 1,
-      page: 1,
-      limit: 10,
-    });
-
-    const user = userEvent.setup();
-    render(
-      <TooltipProvider>
-        <SaleOrders />
-      </TooltipProvider>,
-    );
-
-    await user.type(await screen.findByLabelText("Buscar pedido..."), "SO");
-    await user.click(screen.getByRole("button", { name: "Buscar" }));
-
-    await waitFor(() =>
-      expect(getSaleOrderStatisticsMock).toHaveBeenLastCalledWith({
-        q: "SO",
-        filters: [],
-        includeCancelled: true,
-      }),
-    );
-    const callsBeforeRealtime = getSaleOrderStatisticsMock.mock.calls.length;
-
-    await act(async () => {
-      socketHandlers.get("sale-orders.updated")?.({
-        updated: 1,
-        saleOrderIds: ["order-1"],
-        source: "payment-created",
-        saleOrders: [],
-        statistics: buildStatistics(99, 9900),
-      });
-    });
-
-    await waitFor(() => expect(screen.getAllByText("S/ 9,900.00").length).toBeGreaterThan(0));
-    expect(getSaleOrderStatisticsMock).toHaveBeenCalledTimes(callsBeforeRealtime);
+    await waitFor(() => expect(screen.getAllByText("Entregado").length).toBeGreaterThan(0));
   });
 
   it("uses imported saleOrders payloads without reloading orders", async () => {

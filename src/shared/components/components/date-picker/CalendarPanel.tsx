@@ -6,20 +6,23 @@ import {
   WEEKDAY_LABELS,
   addMonths,
   buildTimeOptions,
+  endOfCalendarWeek,
   formatDate,
   getHours,
   getMinutes,
   getMonthGrid,
   getMonthLabel,
   getMonthTitle,
+  isAfterDay,
   isBeforeDay,
   isDateDisabled,
   isSameDay,
   isWithinInclusiveRange,
   setTimeParts,
+  startOfCalendarWeek,
 } from "./dateUtils";
 
-type CalendarMode = "single" | "range" | "datetime";
+type CalendarMode = "single" | "range" | "datetime" | "week";
 type CalendarView = "day" | "month" | "year";
 
 type CalendarPanelProps = {
@@ -225,12 +228,40 @@ export function CalendarPanel({
 
             <div className="grid grid-cols-7 gap-1">
               {days.map((day) => {
-                const disabled = isDateDisabled(day.date, {
+                const selectedWeekStart =
+                  mode === "week" && rangeStart
+                    ? startOfCalendarWeek(rangeStart)
+                    : undefined;
+                const selectedWeekEnd =
+                  selectedWeekStart
+                    ? endOfCalendarWeek(selectedWeekStart)
+                    : undefined;
+                const dayWeekStart =
+                  mode === "week"
+                    ? startOfCalendarWeek(day.date)
+                    : undefined;
+                const dayWeekEnd =
+                  dayWeekStart
+                    ? endOfCalendarWeek(dayWeekStart)
+                    : undefined;
+                const weekOutsideBounds =
+                  mode === "week" &&
+                  Boolean(
+                    (minDate &&
+                      dayWeekStart &&
+                      isBeforeDay(dayWeekStart, minDate)) ||
+                      (maxDate &&
+                        dayWeekEnd &&
+                        isAfterDay(dayWeekEnd, maxDate)),
+                  );
+                const disabled =
+                  weekOutsideBounds ||
+                  isDateDisabled(day.date, {
                   minDate,
                   maxDate,
                   disablePast,
                   disableFuture,
-                });
+                  });
 
                 const isSelectedSingle =
                   mode !== "range" && isSameDay(day.date, selectedDate);
@@ -248,7 +279,18 @@ export function CalendarPanel({
                     ? isWithinInclusiveRange(day.date, rangeStart, rangeEnd)
                     : false;
 
-                const isInRange = isRangeInRange || isPreviewInRange;
+                const isInSelectedWeek =
+                  mode === "week" &&
+                  isWithinInclusiveRange(
+                    day.date,
+                    selectedWeekStart,
+                    selectedWeekEnd,
+                  );
+                const isInRange =
+                  isRangeInRange || isPreviewInRange || isInSelectedWeek;
+                const calendarDayLabel = `${day.dayNumber} ${getMonthLabel(
+                  day.date.getMonth(),
+                ).toLowerCase()} ${day.date.getFullYear()}`;
 
                 return (
                   <button
@@ -281,7 +323,12 @@ export function CalendarPanel({
                       isRangeStart && "rounded-l-lg",
                       isRangeEnd && "rounded-r-lg",
                     )}
-                    aria-pressed={isSelectedSingle || isRangeStart || isRangeEnd}
+                    aria-pressed={
+                      mode === "week"
+                        ? isInSelectedWeek
+                        : isSelectedSingle || isRangeStart || isRangeEnd
+                    }
+                    aria-label={calendarDayLabel}
                   >
                     {day.dayNumber}
                   </button>

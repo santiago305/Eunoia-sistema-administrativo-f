@@ -10,6 +10,9 @@ function buildDashboardUbigeoParams(
 ) {
   return {
     month: params?.month || undefined,
+    ...(params?.filters?.length
+      ? { filters: JSON.stringify(params.filters) }
+      : {}),
     cancelBool:
       typeof params?.cancelBool === "boolean"
         ? params.cancelBool

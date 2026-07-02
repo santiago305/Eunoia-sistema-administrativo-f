@@ -11,6 +11,7 @@ import { useFloatingDatePanel } from "./useFloatingDatePanel";
 
 type FloatingMonthPickerProps = {
   label: string;
+  ariaLabel?: string;
   name: string;
   value: string;
   onChange: (value: string) => void;
@@ -81,6 +82,7 @@ function formatMonth(value: string) {
 
 export function FloatingMonthPicker({
   label,
+  ariaLabel,
   name,
   value,
   onChange,
@@ -178,7 +180,7 @@ export function FloatingMonthPicker({
               "cursor-default bg-muted/40 text-foreground",
             className,
           )}
-          aria-label={`${label} del dashboard`}
+          aria-label={ariaLabel ?? label}
           aria-expanded={open}
           aria-haspopup="dialog"
           aria-controls={open ? panelId : undefined}

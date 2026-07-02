@@ -44,7 +44,7 @@ export function buildSaleOrderWorkflowHistoryTimeline(
       return {
         id: item.id,
         kind,
-        transitionName: item.transition.name?.trim() || "Evento del workflow",
+        transitionName: item.transition.name?.trim() || "Evento del tipo",
         transitionCode: item.transition.code,
         executedAt: item.executedAt,
         executorEmail: item.executedByUser?.email ?? null,
