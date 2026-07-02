@@ -4,7 +4,7 @@ import { SaleOrderJsonImportRow } from "./saleOrder";
 export const saleOrderImportFields: ImportField[] = [
   { 
     key: "workflowName", 
-    label: "Flujo", 
+    label: "Tipo",
     aliases: ["Etiqueta","etiqueta", "flujo", "Flujo"] },
   { 
     key: "orderDate", 

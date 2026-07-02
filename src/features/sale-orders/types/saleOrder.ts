@@ -115,6 +115,8 @@ export type CreateSaleOrderDto = {
   subTotal?: number;
   total?: number;
   note?: string;
+  advertisingCode?: string | null;
+  observation?: string | null;
   items: SaleOrderItemInput[];
   payments: SaleOrderPaymentInput[];
   currentState?:string | null;
@@ -241,7 +243,9 @@ export type SaleOrder = {
   deliveryCost: number;
   total: number;
   note: string | null;
-  agencyDetail: string | null;
+  advertisingCode?: string | null;
+  observation?: string | null;
+  agencyDetail?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string | null;
@@ -280,8 +284,18 @@ export type SaleOrderSearchRule = {
     | "saleOrderStateId"
     | "scheduleDate"
     | "deliveryDate"
+    | "createdAt"
+    | "advertisingCode"
+    | "observation"
     | "bankAccountId"
-    | "clientType";
+    | "clientType"
+    | "clientDepartmentId"
+    | "clientProvinceId"
+    | "clientDistrictId"
+    | "clientPhone"
+    | "agencyDetail"
+    | "sourceId"
+    | "invoiceStatus";
   operator:
     | "in"
     | "contains"
@@ -291,7 +305,9 @@ export type SaleOrderSearchRule = {
     | "after"
     | "between"
     | "onOrBefore"
-    | "onOrAfter";
+    | "onOrAfter"
+    | "inMonth"
+    | "inWeek";
   mode?: SaleOrderSearchRuleMode;
   value?: string;
   values?: string[];
@@ -331,6 +347,11 @@ export type SaleOrderSearchStateResponse = {
     states: SaleOrderSearchOption[];
     bankAccounts: SaleOrderSearchOption[];
     clientTypes: SaleOrderSearchOption[];
+    departments?: SaleOrderSearchOption[];
+    provinces?: SaleOrderSearchOption[];
+    districts?: SaleOrderSearchOption[];
+    sources?: SaleOrderSearchOption[];
+    invoiceStatuses?: SaleOrderSearchOption[];
   };
 };
 

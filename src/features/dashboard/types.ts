@@ -1,5 +1,8 @@
+import type { SaleOrderSearchRule } from "@/features/sale-orders/types/saleOrder";
+
 export type DashboardSaleOrdersUbigeoQuery = {
   month?: string;
+  filters?: SaleOrderSearchRule[];
   cancelBool?: boolean;
 };
 

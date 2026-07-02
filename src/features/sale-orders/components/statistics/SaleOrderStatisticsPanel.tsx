@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -13,6 +14,42 @@ import {
   YAxis,
 } from "recharts";
 import type { SaleOrderStatisticsResponse } from "../../types/saleOrder";
+import { SystemButton } from "@/shared/components/components/SystemButton";
+
+export type LocationDistributionLevel =
+  | "department"
+  | "province"
+  | "district";
+
+export type LocationDistributionGroup = {
+  id: string;
+  label: string;
+  orders: number;
+  total: number;
+  deliveryCostSum: number;
+  collected: number;
+  pending: number;
+};
+
+export type LocationDistributionData = {
+  groups: LocationDistributionGroup[];
+  totals: {
+    orders: number;
+    total: number;
+    deliveryCostSum: number;
+    collected: number;
+    pending: number;
+  };
+};
+
+type LocationDistributionProps = {
+  data: LocationDistributionData | null;
+  loading: boolean;
+  error: string | null;
+  level: LocationDistributionLevel;
+  onGroupClick: (group: LocationDistributionGroup) => void;
+  onBack: () => void;
+};
 
 type Props = {
   statistics: SaleOrderStatisticsResponse | null;
@@ -21,6 +58,7 @@ type Props = {
   compact: boolean;
   showTotals?: boolean;
   showCharts?: boolean;
+  locationDistribution?: LocationDistributionProps;
 };
 
 type BankAccountChartItem = {
@@ -75,6 +113,7 @@ export function SaleOrderStatisticsPanel({
   compact,
   showTotals = true,
   showCharts = true,
+  locationDistribution,
 }: Props) {
   if (loading && !statistics) {
     return (
@@ -92,7 +131,10 @@ export function SaleOrderStatisticsPanel({
     ) : null;
   }
 
-  if (isEmpty(statistics)) {
+  const hasLocationData =
+    (locationDistribution?.data?.groups.length ?? 0) > 0;
+
+  if (isEmpty(statistics) && !hasLocationData) {
     return (
       <div className="grid min-h-[240px] place-items-center rounded-sm border border-zinc-100 text-sm text-zinc-500">
         No hay estadísticas para los filtros actuales.
@@ -130,10 +172,11 @@ export function SaleOrderStatisticsPanel({
       ) : null}
 
       {showCharts ? (
-        <div className="grid gap-3 xl:grid-cols-3">
+        <div className="grid gap-3 xl:grid-cols-6">
           <ChartCard
-            title="Pedidos por flujo"
+            title="Pedidos por tipo"
             compact={compact}
+            className="xl:col-span-2"
           >
             <BarDistribution
               data={statistics.byWorkflow}
@@ -150,6 +193,7 @@ export function SaleOrderStatisticsPanel({
           <ChartCard
             title="Pedidos por estado"
             compact={compact}
+            className="xl:col-span-2"
           >
             <BarDistribution
               data={statistics.byState}
@@ -170,6 +214,7 @@ export function SaleOrderStatisticsPanel({
           <ChartCard
             title="Pedidos por tipo de cliente"
             compact={compact}
+            className="xl:col-span-2"
           >
             <div
               style={{ height: chartHeight }}
@@ -185,8 +230,8 @@ export function SaleOrderStatisticsPanel({
                     nameKey="label"
                     cx="50%"
                     cy="50%"
-                    innerRadius="50%"
-                    outerRadius="90%"
+                    innerRadius="40%"
+                    outerRadius="100%"
                     paddingAngle={2}
                   >
                     {statistics.byClientType.map((item) => (
@@ -220,9 +265,16 @@ export function SaleOrderStatisticsPanel({
           >
             <BankAccountBarChart
               data={statistics.byBankAccount}
-              height={150}
+              height={220}
             />
           </ChartCard>
+
+          {locationDistribution ? (
+            <LocationDistributionCard
+              distribution={locationDistribution}
+              compact={compact}
+            />
+          ) : null}
         </div>
       ) : null}
     </section>
@@ -239,7 +291,13 @@ export function SaleOrderStatisticsTotals({
   if (!statistics) return null;
 
   return (
-    <div className="mb-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="mb-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <MetricCard
+        label="Total pedidos"
+        value={String(statistics.totals.orders)}
+        compact={compact}
+      />
+
       <MetricCard
         label="Total"
         value={formatMoney(statistics.totals.total)}
@@ -304,11 +362,13 @@ function ChartCard({
   compact,
   children,
   className = "",
+  headerAction,
 }: {
-  title: string;
+  title: ReactNode;
   compact: boolean;
   children: ReactNode;
   className?: string;
+  headerAction?: ReactNode;
 }) {
   return (
     <article
@@ -316,9 +376,13 @@ function ChartCard({
         compact ? "p-2" : "p-3"
       } ${className}`}
     >
-      <h3 className="text-xs font-semibold text-zinc-800">
-        {title}
-      </h3>
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <h3 className="min-w-0 truncate text-xs font-semibold text-zinc-800">
+          {title}
+        </h3>
+
+        {headerAction}
+      </div>
 
       {children}
     </article>
@@ -388,6 +452,253 @@ function BarDistribution({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+
+const LOCATION_LEVEL_LABEL: Record<
+  LocationDistributionLevel,
+  string
+> = {
+  department: "departamentos",
+  province: "provincias",
+  district: "distritos",
+};
+
+function LocationDistributionCard({
+  distribution,
+  compact,
+}: {
+  distribution: LocationDistributionProps;
+  compact: boolean;
+}) {
+  const {
+    data,
+    loading,
+    error,
+    level,
+    onGroupClick,
+    onBack,
+  } = distribution;
+
+  const chartHeight = compact ? 200 : 240;
+  const chartWidth = Math.max(
+    460,
+    (data?.groups.length ?? 0) * 62,
+  );
+
+  return (
+    <ChartCard
+      title={`Distribución por ${LOCATION_LEVEL_LABEL[level]}`}
+      compact={compact}
+      className="xl:col-span-3"
+      headerAction={
+        level !== "department" ? (
+          <SystemButton
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            aria-label={
+              level === "district"
+                ? "Volver a provincias"
+                : "Volver a departamentos"
+            }
+            className="h-7 w-7 shrink-0 rounded-sm text-zinc-600"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </SystemButton>
+        ) : null
+      }
+    >
+      {loading ? (
+        <span className="mt-1 block text-[11px] text-zinc-400">
+          Actualizando...
+        </span>
+      ) : null}
+
+      {error ? (
+        <div className="mt-2 rounded-sm bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          {error}
+        </div>
+      ) : null}
+
+      {loading && !data ? (
+        <div
+          style={{ height: chartHeight }}
+          className="grid place-items-center text-xs text-zinc-500"
+        >
+          Cargando métricas...
+        </div>
+      ) : data && data.groups.length > 0 ? (
+        <div className="mt-1 overflow-x-auto overflow-y-hidden scroll-area">
+          <div
+            style={{
+              width: chartWidth,
+              height: chartHeight,
+            }}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data.groups}
+                margin={{
+                  top: 24,
+                  right: 8,
+                  left: -24,
+                  bottom: 54,
+                }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e4e4e7"
+                />
+
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 9 }}
+                  angle={-35}
+                  textAnchor="end"
+                  interval={0}
+                  height={65}
+                />
+
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 9 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+
+                <Tooltip
+                  content={<LocationChartTooltip />}
+                  cursor={{
+                    fill: "#f4f4f5",
+                    opacity: 0.6,
+                  }}
+                />
+
+                <Bar
+                  dataKey="orders"
+                  name="Pedidos"
+                  radius={[6, 6, 0, 0]}
+                  cursor={
+                    level === "district"
+                      ? "default"
+                      : "pointer"
+                  }
+                >
+                  {data.groups.map((group, index) => (
+                    <Cell
+                      key={
+                        group.id ??
+                        `${group.label}-${index}`
+                      }
+                      fill={
+                        CHART_COLORS[
+                          index % CHART_COLORS.length
+                        ]
+                      }
+                      onClick={() => {
+                        if (
+                          level !== "district" &&
+                          group.id
+                        ) {
+                          onGroupClick(group);
+                        }
+                      }}
+                    />
+                  ))}
+
+                  <LabelList
+                    dataKey="orders"
+                    position="top"
+                    formatter={(value: unknown) =>
+                      String(Number(value) || 0)
+                    }
+                    style={{
+                      fill: "#3f3f46",
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : !error ? (
+        <div
+          style={{ height: chartHeight }}
+          className="grid place-items-center text-center text-xs text-zinc-500"
+        >
+          No hay métricas para los filtros actuales.
+        </div>
+      ) : null}
+    </ChartCard>
+  );
+}
+
+function LocationChartTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{
+    payload?: LocationDistributionGroup;
+  }>;
+}) {
+  const group = payload?.[0]?.payload;
+
+  if (!active || !group) return null;
+
+  return (
+    <div className="min-w-[170px] rounded-sm border border-zinc-200 bg-white p-2.5 shadow-lg">
+      <div className="text-xs font-semibold text-zinc-900">
+        {group.label}
+      </div>
+
+      <div className="mt-2 space-y-1 text-[10px]">
+        <div className="flex justify-between gap-4">
+          <span className="text-zinc-500">Pedidos</span>
+          <span className="font-semibold tabular-nums text-zinc-900">
+            {group.orders}
+          </span>
+        </div>
+
+        <div className="flex justify-between gap-4">
+          <span className="text-zinc-500">Total</span>
+          <span className="font-semibold tabular-nums text-zinc-900">
+            {formatMoney(group.total)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChartSummaryLegend({
+  orders,
+  total,
+}: {
+  orders: number;
+  total: number;
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[10px] text-zinc-500">
+      <span>
+        Pedidos:{" "}
+        <strong className="tabular-nums text-zinc-800">
+          {orders}
+        </strong>
+      </span>
+
+      <span>
+        Total:{" "}
+        <strong className="tabular-nums text-zinc-800">
+          {formatMoney(total)}
+        </strong>
+      </span>
     </div>
   );
 }

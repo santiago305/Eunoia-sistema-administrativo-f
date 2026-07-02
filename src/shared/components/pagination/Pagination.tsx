@@ -4,6 +4,7 @@ type Props = {
   page: number;
   limit: number;
   total: number;
+  padding?: string;
   onPageChange: (page: number) => void;
 };
 
@@ -25,7 +26,7 @@ function buildVisiblePages(currentPage: number, totalPages: number) {
     .sort((a, b) => a - b);
 }
 
-export function Pagination({ page, limit, total, onPageChange }: Props) {
+export function Pagination({ page, limit, total, onPageChange, padding="py-3" }: Props) {
   const totalPages = Math.ceil(total / limit);
 
   if (total <= limit) return null;
@@ -35,7 +36,7 @@ export function Pagination({ page, limit, total, onPageChange }: Props) {
   const pages = buildVisiblePages(page, totalPages);
 
   return (
-    <div className="flex flex-col gap-3 rounded-sm border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className={`flex flex-col gap-3 rounded-sm border border-border bg-background px-4 ${padding} sm:flex-row sm:items-center sm:justify-between `}>
       <div className="text-sm text-muted-foreground text-center sm:text-left">
         Mostrando <span className="font-medium text-foreground">{from}</span> a{" "}
         <span className="font-medium text-foreground">{to}</span> de{" "}

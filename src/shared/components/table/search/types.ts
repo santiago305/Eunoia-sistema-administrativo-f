@@ -42,6 +42,8 @@ export type SmartSearchInputMode =
   | "number"
   | "date"
   | "datetime"
+  | "month"
+  | "week"
   | "date-range"
   | "datetime-range";
 

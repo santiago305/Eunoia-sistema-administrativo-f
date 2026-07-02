@@ -92,6 +92,8 @@ export type DataTableProps<T> = {
     data: T[];
     columns: DataTableColumn<T>[];
     tableId: string;
+    paddingPaginated?:string;
+    paddingTablePaginated?:string;
     loading?: boolean;
     emptyMessage?: string;
     rowKey?: keyof T | ((row: T, index: number) => string);
@@ -125,6 +127,7 @@ export type DataTableProps<T> = {
     controlledSort?: DataTableSortState;
     onSortChange?: (sort: DataTableSortState) => void;
     toolbarSearchContent?: ReactNode;
+    toolbarActions?: ReactNode;
     animateRowsThreshold?: number;
     maxHeight?: string;
     useRangeDatesForExternalExport?: boolean;

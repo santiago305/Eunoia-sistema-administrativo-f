@@ -290,7 +290,7 @@ export function buildFullWorkflowRequest(draft: WorkflowDraft): SaveFullWorkflow
 
 export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValidation {
   const errors: string[] = [];
-  if (!draft.name.trim()) errors.push("El nombre del flujo es obligatorio.");
+  if (!draft.name.trim()) errors.push("El nombre del tipo es obligatorio.");
   if (!draft.states.length) errors.push("Agrega al menos un estado.");
   if (draft.states.filter((state) => state.isActive && state.isInitial).length !== 1) {
     errors.push("Debe existir exactamente un estado inicial activo.");
@@ -414,7 +414,7 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
       transition.purpose === TRANSITION_PURPOSES.CANCEL,
   );
   if (cancelTransitions.length > 1) {
-    errors.push("Solo puede existir una transicion de cancelacion por flujo.");
+    errors.push("Solo puede existir una transicion de cancelacion por tipo.");
   }
   if (
     cancelTransitions.some(

@@ -5,7 +5,7 @@ export type SaleOrderValidationResult = { ok: true } | { ok: false; message: str
 const isValidIsoDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 export function validateSaleOrderForm(form: CreateSaleOrderDto): SaleOrderValidationResult {
-  if (!form.workflowId) return { ok: false, message: "Selecciona un workflow." };
+  if (!form.workflowId) return { ok: false, message: "Selecciona un tipo." };
   if (!form.warehouseId) return { ok: false, message: "Selecciona un almacén." };
   if (!form.clientId) return { ok: false, message: "Selecciona un cliente." };
   if (!form.scheduleDate || !isValidIsoDateOnly(form.scheduleDate)) {

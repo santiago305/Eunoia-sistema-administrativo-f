@@ -221,7 +221,7 @@ export function SaleOrderWorkflowHistoryModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={`Historial del flujo${saleOrderLabel ? ` · ${saleOrderLabel}` : ""}`}
+      title={`Historial del tipo${saleOrderLabel ? ` · ${saleOrderLabel}` : ""}`}
       className="max-w-[96vw]"
       bodyClassName="h-[80vh] w-[70vh] p-0"
     >
