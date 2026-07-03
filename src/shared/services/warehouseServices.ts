@@ -83,6 +83,21 @@ export const listActiveWarehouses = async (
   return response.data;
 };
 
+export const listAllActiveWarehouses = async () => {
+  const limit = 100;
+  const firstPage = await listActiveWarehouses({ page: 1, limit });
+  const items = [...(firstPage.items ?? [])];
+  const pageSize = Number(firstPage.limit ?? limit);
+  const totalPages = Math.ceil(Number(firstPage.total ?? items.length) / pageSize);
+
+  for (let page = 2; page <= totalPages; page += 1) {
+    const response = await listActiveWarehouses({ page, limit });
+    items.push(...(response.items ?? []));
+  }
+
+  return items;
+};
+
 export const listActive = async (): Promise<Warehouse[]> => {
   const response = await listActiveWarehouses({ page: 1, limit: 20 });
   return response.items ?? [];

@@ -12,6 +12,7 @@ type ExcelPreviewTableProps = {
   fields: ImportField[];
   rows: ExcelRow[];
   errors: ExcelRowError[];
+  validRowIndexes: ReadonlySet<number>;
   selectedRowIndexes: ReadonlySet<number>;
   ubigeoConfig?: ImportUbigeoConfig;
   onToggleRow: (rowIndex: number, checked: boolean) => void;
@@ -29,6 +30,7 @@ export function ExcelPreviewTable({
   fields,
   rows,
   errors,
+  validRowIndexes,
   selectedRowIndexes,
   ubigeoConfig,
   onToggleRow,
@@ -48,7 +50,24 @@ export function ExcelPreviewTable({
   });
 
   const selectedCount = selectedRowIndexes.size;
-  const allRowsSelected = rows.length > 0 && selectedCount === rows.length;
+  const validRowsCount = validRowIndexes.size;
+  const invalidRowsCount = rows.length - validRowsCount;
+  const selectedErrors = errors.filter((item) =>
+    selectedRowIndexes.has(item.rowIndex),
+  );
+  const allValidRowsSelected =
+    validRowsCount > 0 &&
+    Array.from(validRowIndexes).every((index) =>
+      selectedRowIndexes.has(index),
+    );
+  const someValidRowsSelected = Array.from(validRowIndexes).some((index) =>
+    selectedRowIndexes.has(index),
+  );
+  const selectAllChecked = allValidRowsSelected
+    ? true
+    : someValidRowsSelected
+      ? "indeterminate"
+      : false;
 
   const gridTemplateColumns = `72px 60px repeat(${fields.length}, minmax(140px, 1fr))`;
 
@@ -72,9 +91,11 @@ export function ExcelPreviewTable({
         >
           <div className="sticky top-0 z-10 flex items-center gap-2 bg-muted px-2 py-2 font-semibold text-foreground">
             <Checkbox
-              checked={allRowsSelected}
+              checked={selectAllChecked}
+              disabled={validRowsCount === 0}
               onCheckedChange={(checked) => onToggleAllRows(checked === true)}
-              aria-label="Seleccionar todas las filas"
+              aria-label="Seleccionar todas las filas válidas"
+              title="Seleccionar únicamente las filas que cumplen la validación"
             />
           </div>
           <div className="sticky top-0 z-10 flex items-center bg-muted px-2 py-2 font-semibold text-foreground">
@@ -123,16 +144,17 @@ export function ExcelPreviewTable({
       <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {rows.length > 0 ? (
           <p className="text-xs text-muted-foreground">
-            Mostrando {rows.length} fila(s).
+            Mostrando {rows.length} fila(s): {validRowsCount} válida(s) y{" "}
+            {invalidRowsCount} observada(s).
           </p>
         ) : (
           <span />
         )}
 
-        {errors.length > 0 ? (
+        {selectedErrors.length > 0 ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            Se encontraron {errors.length} error(es) en filas marcadas. Corrige
-            los campos o desmarca los registros que no vas a importar.
+            Se encontraron {selectedErrors.length} error(es) en filas marcadas.
+            Corrige los campos o desmarca los registros que no vas a importar.
           </div>
         ) : selectedCount === 0 ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
@@ -177,8 +199,8 @@ function RowFragment({
 }: RowFragmentProps) {
   const rowClassName = cn(
     "border-t border-border px-2 py-2",
-    selected && rowHasError ? "bg-red-50/60" : "bg-background",
-    !selected ? "bg-muted/30 opacity-70" : undefined,
+    rowHasError ? "bg-red-50/60" : "bg-background",
+    !selected ? "opacity-70" : undefined,
   );
 
   return (
@@ -220,22 +242,14 @@ function RowFragment({
               ubigeoConfig={ubigeoConfig}
               value={row[field.key]}
               disabled={!selected}
-              error={
-                selected
-                  ? errorsByCell.get(getCellKey(rowIndex, field.key))
-                  : undefined
-              }
+              error={errorsByCell.get(getCellKey(rowIndex, field.key))}
               onChange={onChangeCell}
             />
           ) : (
             <PreviewCellText
               field={field}
               value={row[field.key]}
-              error={
-                selected
-                  ? errorsByCell.get(getCellKey(rowIndex, field.key))
-                  : undefined
-              }
+              error={errorsByCell.get(getCellKey(rowIndex, field.key))}
             />
           )}
         </div>

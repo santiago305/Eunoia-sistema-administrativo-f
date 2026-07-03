@@ -521,8 +521,8 @@ export default function SaleOrders() {
                     const clientType = Object.values(ClientType).includes(rawClientType as ClientType) ? (rawClientType as ClientType) : ClientType.UNDEFINED;
                     const typeConfig = CLIENT_TYPE_CONFIG[clientType];
                     return (
-                        <div className="min-w-[80px] space-y-1 leading-tight">
-                            <p className="whitespace-nowrap text-[12px] font-semibold text-zinc-900">
+                        <div className="min-w-[50px] space-y-1 leading-tight">
+                            <p className="whitespace-nowrap text-[11px] font-semibold text-zinc-900">
                                 {order.serie ?? "-"}-{order.correlative ?? "-"}
                             </p>
 
@@ -566,7 +566,7 @@ export default function SaleOrders() {
                 header: "Cliente",
                 cell: (order) => {
                     return (
-                        <div className="max-w-[150px] space-y-0.5 leading-tight">
+                        <div className="max-w-[120px] space-y-0.5 leading-tight">
                             <div className="flex min-w-0 items-center gap-1">
                                 <p className="min-w-0 flex-1 truncate font-medium text-zinc-800" title={order.client?.fullName ?? "Sin cliente"}>
                                     {order.client?.fullName ?? "Sin cliente"}
@@ -612,6 +612,18 @@ export default function SaleOrders() {
                 sortable: false,
             },
             {
+                id: "warehouse",
+                header: "Almacén",
+                cell: (order) => (
+                    <div className="max-w-[120px] leading-tight">
+                        <p className="line-clamp-2 text-zinc-700" title={order.warehouse?.name ?? "Sin información"}>
+                            {order.warehouse?.name ?? "-"}
+                        </p>
+                    </div>
+                ),
+                sortable: false,
+            },
+            {
                 id: "source",
                 header: "Enganche",
                 cell: (order) => (
@@ -631,12 +643,12 @@ export default function SaleOrders() {
                 header: "Tipo",
                 cell: (order) => (
                     <div className="max-w-[140px] space-y-1 leading-tight">
-                        <p className="truncate text-zinc-700" title={order.workflow?.name ?? "Sin tipo"}>
+                        <p className="truncate text-zinc-700 text-[10px]" title={order.workflow?.name ?? "Sin tipo"}>
                             {order.workflow?.name ?? "Sin tipo"}
                         </p>
                         <span
                             className="inline-flex max-w-full truncate rounded-sm px-1.5 py-1 
-            text-[9px] font-semibold text-white"
+                            text-[9px] font-semibold text-white"
                             style={{
                                 backgroundColor: order.currentState?.color ?? "#64748b",
                             }}

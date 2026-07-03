@@ -10,6 +10,7 @@ import type {
 import { TRANSITION_PURPOSES } from "@/features/workflows/types/workflow";
 import { WorkflowAssignmentModal } from "@/features/workflows/components/WorkflowAssignmentModal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
+import { showTransitionWarnings } from "@/features/sale-orders/utils/showTransitionWarnings";
 
 function parseTransitionError(error: unknown) {
   if (typeof error !== "object" || error === null) return parseApiError(error);
@@ -91,9 +92,10 @@ export function SaleOrderWorkflowPanel({ saleOrderId, workflowId, currentStateId
     setLoadingId(transition.id);
     setError("");
     try {
-      await changeSaleOrderState(saleOrderId, transition.id, { source: "sale-order-details" });
+      const result = await changeSaleOrderState(saleOrderId, transition.id, { source: "sale-order-details" });
       await onOrderChanged();
       await load();
+      showTransitionWarnings(result.warnings);
     } catch (err) {
       setError(parseTransitionError(err));
     } finally {

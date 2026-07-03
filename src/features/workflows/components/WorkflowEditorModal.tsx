@@ -840,6 +840,41 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                   };
                 });
               }}
+              onReconnect={(
+                transitionId,
+                branch,
+                from,
+                to,
+                sourceHandle,
+                targetHandle,
+              ) => {
+                setDraft((current) => ({
+                  ...current,
+                  transitions: current.transitions.map((transition) => {
+                    if (transition.clientId !== transitionId) {
+                      return transition;
+                    }
+
+                    if (branch === "ELSE") {
+                      return {
+                        ...transition,
+                        elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+                        elseToStateClientId: to,
+                      };
+                    }
+
+                    return {
+                      ...transition,
+                      fromStateClientId: from,
+                      toStateClientId: to,
+                      sourceHandle,
+                      targetHandle,
+                    };
+                  }),
+                }));
+
+                setSelectedId(transitionId);
+              }}
               onDeleteElseBranch={(transitionId) =>
                 setDraft((current) => ({
                   ...current,

@@ -55,10 +55,34 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mappedRows = useMemo(() => applyMapping(rows, mapping, fields), [fields, mapping, rows]);
+  const mappedRows = useMemo(
+    () => applyMapping(rows, mapping, fields),
+    [fields, mapping, rows],
+  );
   const rowsForPreview = step === "preview" ? previewRows : mappedRows;
-  const selectedRows = useMemo(() => getSelectableRows(rowsForPreview, selectedRowIndexes), [rowsForPreview, selectedRowIndexes]);
-  const validation = useMemo(() => validateRows(rowsForPreview, fields, selectedRowIndexes), [fields, rowsForPreview, selectedRowIndexes]);
+  const selectedRows = useMemo(
+    () => getSelectableRows(rowsForPreview, selectedRowIndexes),
+    [rowsForPreview, selectedRowIndexes],
+  );
+  const allRowsValidation = useMemo(
+    () => validateRows(rowsForPreview, fields),
+    [fields, rowsForPreview],
+  );
+  const validRowIndexes = useMemo(() => {
+    const invalidRowIndexes = new Set(
+      allRowsValidation.errors.map((item) => item.rowIndex),
+    );
+
+    return new Set(
+      rowsForPreview
+        .map((_, index) => index)
+        .filter((index) => !invalidRowIndexes.has(index)),
+    );
+  }, [allRowsValidation.errors, rowsForPreview]);
+  const validation = useMemo(
+    () => validateRows(rowsForPreview, fields, selectedRowIndexes),
+    [fields, rowsForPreview, selectedRowIndexes],
+  );
   const missingRequiredMappings = useMemo(
     () => fields.filter((field) => field.required && !mapping[field.key]),
     [fields, mapping],
@@ -159,9 +183,9 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
 
     setError(null);
     setPreviewRows(mappedRows);
-    setSelectedRowIndexes(new Set(mappedRows.map((_, index) => index)));
+    setSelectedRowIndexes(new Set(validRowIndexes));
     setStep("preview");
-  }, [mappedRows, missingRequiredMappings]);
+  }, [mappedRows, missingRequiredMappings, validRowIndexes]);
 
   const handleToggleRow = useCallback((rowIndex: number, checked: boolean) => {
     setSelectedRowIndexes((current) => {
@@ -175,9 +199,12 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
     });
   }, []);
 
-  const handleToggleAllRows = useCallback((checked: boolean) => {
-    setSelectedRowIndexes(checked ? new Set(rowsForPreview.map((_, index) => index)) : new Set());
-  }, [rowsForPreview]);
+  const handleToggleAllRows = useCallback(
+    (checked: boolean) => {
+      setSelectedRowIndexes(checked ? new Set(validRowIndexes) : new Set());
+    },
+    [validRowIndexes],
+  );
 
   const handleUpdatePreviewCell = useCallback((rowIndex: number, fieldKey: string, value: unknown) => {
     const field = fields.find((item) => item.key === fieldKey);
@@ -273,7 +300,8 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
         <ExcelPreviewTable
           fields={fields}
           rows={rowsForPreview}
-          errors={validation.errors}
+          errors={allRowsValidation.errors}
+          validRowIndexes={validRowIndexes}
           selectedRowIndexes={selectedRowIndexes}
           ubigeoConfig={previewUbigeoConfig}
           onToggleRow={handleToggleRow}
