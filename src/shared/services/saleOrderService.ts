@@ -27,6 +27,13 @@ export type CreateSaleOrderPaymentDto = {
   note?: string;
 };
 
+export type ChangeSaleOrderStateResponse = {
+  type: "success";
+  message: string;
+  data: SaleOrder;
+  warnings: string[];
+};
+
 export type SaleOrderItemComponentOutput = {
   id: string;
   saleOrderItemId: string;
@@ -132,8 +139,8 @@ export const changeSaleOrderState = async (
   saleOrderId: string,
   transitionId: string,
   metadata: Record<string, unknown> = {},
-) => {
-  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.changeState(saleOrderId), {
+): Promise<ChangeSaleOrderStateResponse> => {
+  const response = await axiosInstance.post<ChangeSaleOrderStateResponse>(API_SALE_ORDERS_GROUP.changeState(saleOrderId), {
     transitionId,
     metadata,
   });

@@ -26,7 +26,7 @@ const order = {
 } as SaleOrder;
 
 describe("SaleOrderActionsPopover", () => {
-  it("loads available transitions only when the menu is first opened", async () => {
+  it("loads available transitions every time the menu is opened", async () => {
     getTransitions.mockReset();
     getTransitions.mockResolvedValue([]);
     render(<SaleOrderActionsPopover order={order} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onOrderChanged={vi.fn()} />);
@@ -35,6 +35,6 @@ describe("SaleOrderActionsPopover", () => {
     await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
     await waitFor(() => expect(getTransitions).toHaveBeenCalledOnce());
     await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
-    expect(getTransitions).toHaveBeenCalledOnce();
+    await waitFor(() => expect(getTransitions).toHaveBeenCalledTimes(2));
   });
 });

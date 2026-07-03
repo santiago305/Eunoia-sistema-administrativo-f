@@ -11,6 +11,7 @@ import { SaleOrderWorkflowHistoryModal } from "./SaleOrderWorkflowHistoryModal";
 import { getClientById, updateClient } from "@/shared/services/clientService";
 import type { Client, ClientForm } from "@/features/clients/types/client";
 import { ClientFormModal } from "@/features/clients/components/ClientFormModal";
+import { showTransitionWarnings } from "@/features/sale-orders/utils/showTransitionWarnings";
 
 type Props = {
     order: SaleOrder | null;
@@ -119,12 +120,13 @@ export function SaleOrderDetailsPanel({ order, onEdit, onOpenPdf, onOpenPayments
             setTransitionError("");
 
             try {
-                await changeSaleOrderState(order.id, transition.id, {
+                const result = await changeSaleOrderState(order.id, transition.id, {
                     source: "sale-order-details-actions",
                 });
 
                 await onOrderChanged(order.id);
                 await loadTransitions();
+                showTransitionWarnings(result.warnings);
             } catch (error) {
                 setTransitionError(parseTransitionError(error));
             } finally {

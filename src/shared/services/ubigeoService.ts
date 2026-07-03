@@ -12,6 +12,12 @@ type ApiSuccessResponse<T> = {
   data: T;
 };
 
+type UbigeoCatalogResponse = {
+  departments: UbigeoDepartment[];
+  provinces: UbigeoProvince[];
+  districts: UbigeoDistrict[];
+};
+
 type ListUbigeoProvincesParams = {
   departmentId?: string;
   departmentIds?: string[];
@@ -70,6 +76,21 @@ export const listUbigeoProvinces = async (
 
   const provinces = response.data.data ?? [];
   provinceCache.set(cacheKey, provinces);
+  return provinces;
+};
+
+export const listAllUbigeoProvinces = async (): Promise<UbigeoProvince[]> => {
+  const cached = provinceCache.get("__all__");
+  if (cached) {
+    return cached;
+  }
+
+  const response = await axiosInstance.get<ApiSuccessResponse<UbigeoCatalogResponse>>(
+    API_UBIGEO_GROUP.ubigueo,
+  );
+
+  const provinces = response.data.data?.provinces ?? [];
+  provinceCache.set("__all__", provinces);
   return provinces;
 };
 

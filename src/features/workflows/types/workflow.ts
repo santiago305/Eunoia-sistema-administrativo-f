@@ -13,6 +13,7 @@ export const ACTIONS = {
   CONSUME_STOCK: "CONSUME_STOCK",
   REVERT_STOCK: "REVERT_STOCK",
   MARK_INVOICE_SENT: "MARK_INVOICE_SENT",
+  ASSIGN_WAREHOUSE_BY_PROVINCE: "ASSIGN_WAREHOUSE_BY_PROVINCE",
 } as const;
 
 export const TRANSITION_PURPOSES = {
@@ -27,6 +28,11 @@ export const TRANSITION_EFFECTS = {
 
 export type WorkflowConditionType = (typeof CONDITIONS)[keyof typeof CONDITIONS];
 export type WorkflowActionType = (typeof ACTIONS)[keyof typeof ACTIONS];
+export type AssignWarehouseByProvinceConfig = {
+  mode: "INCLUDE" | "EXCLUDE";
+  provinceIds: string[];
+  warehouseId: string;
+};
 export type WorkflowTransitionPurpose =
   (typeof TRANSITION_PURPOSES)[keyof typeof TRANSITION_PURPOSES];
 export type WorkflowTransitionEffect =
