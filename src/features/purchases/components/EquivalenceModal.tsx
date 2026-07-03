@@ -108,6 +108,7 @@ export function EquivalenceModal({
   const loadEquivalences = useCallback(async (
     productId: string,
     unitList: ListUnitResponse,
+    fallbackUnitCode: string | undefined,
     canUpdate: () => boolean,
   ) => {
     if (canUpdate()) setLoading(true);
@@ -132,8 +133,9 @@ export function EquivalenceModal({
         const nextFactor = Number(best.factor ?? 1);
         setPendingFactor(Number.isFinite(nextFactor) && nextFactor > 0 ? nextFactor : 1);
       } else {
-        setPendingPurchaseUnit("NIU");
-        setPendingStockUnit("NIU");
+        const baseUnitCode = fallbackUnitCode?.trim() || "NIU";
+        setPendingPurchaseUnit(baseUnitCode);
+        setPendingStockUnit(baseUnitCode);
         setPendingFactor(1);
       }
     } catch {
@@ -279,7 +281,7 @@ export function EquivalenceModal({
       const unitList = await loadUnits(canUpdate);
       if (!active) return;
 
-      await loadEquivalences(selectedProduct.productId, unitList, canUpdate);
+      await loadEquivalences(selectedProduct.productId, unitList, selectedProduct.unitCode, canUpdate);
     };
 
     void run();

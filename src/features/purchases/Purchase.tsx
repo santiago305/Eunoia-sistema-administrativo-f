@@ -55,6 +55,7 @@ import {
 } from "./utils/purchaseSkus";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { sileo } from "sileo";
+import { parseApiError } from "@/shared/common/utils/handleApiError";
 import {
   PurchaseItemTypes,
   PurchaseTypes,
@@ -62,6 +63,7 @@ import {
   purchaseTypesWithoutStock,
   type PurchaseType,
 } from "./types/purchase-classification.types";
+import { getPurchaseCreateErrorMessage } from "./utils/purchaseCreateFeedback";
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
@@ -491,10 +493,10 @@ export default function PurchaseCreateLocal({
       }
 
       if (res.type === "error") {
-        sileo.error({ title: "Registro fallido" });
+        sileo.error({ title: getPurchaseCreateErrorMessage(res) });
       }
-    } catch {
-      sileo.error({ title: "Error al registrar la compra" });
+    } catch (error) {
+      sileo.error({ title: parseApiError(error, "Error al registrar la compra") });
     }
   };
 
