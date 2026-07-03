@@ -104,6 +104,26 @@ export function getDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+export function parseDateOnly(value?: string | null) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
 export function getMonthLabel(month: number) {
   return MONTH_LABELS[month] ?? "";
 }
@@ -115,6 +135,56 @@ export function getMonthTitle(date: Date) {
 export function getWeekStartOffset(date: Date) {
   const jsDay = date.getDay(); // 0 sunday
   return jsDay === 0 ? 6 : jsDay - 1; // monday first
+}
+
+export function startOfCalendarWeek(date: Date) {
+  return addDays(startOfDay(date), -getWeekStartOffset(date));
+}
+
+export function endOfCalendarWeek(date: Date) {
+  return addDays(startOfCalendarWeek(date), 6);
+}
+
+export function normalizeCalendarWeekValue(value?: string | null) {
+  const parsed = parseDateOnly(value);
+  return parsed ? getDateKey(startOfCalendarWeek(parsed)) : "";
+}
+
+export function normalizeCalendarMonthValue(value?: string | null) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value ?? "");
+  if (!match) return "";
+
+  const month = Number(match[2]);
+  return month >= 1 && month <= 12 ? `${match[1]}-${match[2]}` : "";
+}
+
+export function formatCalendarMonth(value?: string | null) {
+  const normalized = normalizeCalendarMonthValue(value);
+  if (!normalized) return "";
+
+  const [year, month] = normalized.split("-").map(Number);
+  return `${getMonthLabel(month - 1).toLowerCase()} ${year}`;
+}
+
+function formatShortCalendarDate(date: Date, includeYear: boolean) {
+  const formatter = new Intl.DateTimeFormat("es-PE", {
+    day: "numeric",
+    month: "short",
+    ...(includeYear ? { year: "numeric" } : {}),
+  });
+
+  return formatter.format(date).replace(/\./g, "");
+}
+
+export function formatCalendarWeek(value?: string | null) {
+  const normalized = normalizeCalendarWeekValue(value);
+  const start = parseDateOnly(normalized);
+  if (!start) return "";
+
+  const end = endOfCalendarWeek(start);
+  const crossesYear = start.getFullYear() !== end.getFullYear();
+
+  return `${formatShortCalendarDate(start, crossesYear)} - ${formatShortCalendarDate(end, true)}`;
 }
 
 export function getMonthGrid(date: Date): CalendarDay[] {

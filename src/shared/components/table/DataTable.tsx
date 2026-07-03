@@ -53,6 +53,8 @@ function compareValues(a: unknown, b: unknown) {
 
 export function DataTable<T extends Record<string, unknown>>({
   data,
+  paddingPaginated,
+  paddingTablePaginated = "py-3",
   columns,
   tableId,
   loading = false,
@@ -88,6 +90,7 @@ export function DataTable<T extends Record<string, unknown>>({
   controlledSort,
   onSortChange,
   toolbarSearchContent,
+  toolbarActions,
   animateRowsThreshold = 12,
   maxHeight,
   useRangeDatesForExternalExport = false,
@@ -428,21 +431,30 @@ export function DataTable<T extends Record<string, unknown>>({
           ) : null
         }
         rightContent={
-          canManageColumns ? (
-            <DataTableColumnManager
-              columns={orderedColumns.map((column) => ({
-                id: column.id,
-                header: column.header,
-                hideable: column.hideable,
-                pinned: column.pinned,
-                lockPosition: column.lockPosition,
-              }))}
-              visibleColumnIds={columnPreferences.visibleColumnIds}
-              orderedColumnIds={columnPreferences.orderedColumnIds}
-              onToggle={toggleColumn}
-              onMove={moveColumn}
-              onReset={resetColumns}
-            />
+          toolbarActions || canManageColumns ? (
+            <div
+              role="group"
+              aria-label="Acciones de tabla"
+              className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto"
+            >
+              {toolbarActions}
+              {canManageColumns ? (
+                <DataTableColumnManager
+                  columns={orderedColumns.map((column) => ({
+                    id: column.id,
+                    header: column.header,
+                    hideable: column.hideable,
+                    pinned: column.pinned,
+                    lockPosition: column.lockPosition,
+                  }))}
+                  visibleColumnIds={columnPreferences.visibleColumnIds}
+                  orderedColumnIds={columnPreferences.orderedColumnIds}
+                  onToggle={toggleColumn}
+                  onMove={moveColumn}
+                  onReset={resetColumns}
+                />
+              ) : null}
+            </div>
           ) : null
         }
       />
@@ -680,12 +692,13 @@ export function DataTable<T extends Record<string, unknown>>({
       ) : null}
 
       {pagination && onPageChange && pagination.total > pagination.limit ? (
-        <div className="flex flex-col gap-3 py-3 sm:items-end sm:justify-between">
+        <div className={`flex flex-col gap-3 ${paddingTablePaginated} sm:items-end sm:justify-between`}>
           <DataTablePagination
             page={pagination.page}
             limit={pagination.limit}
             total={pagination.total}
             onPageChange={onPageChange}
+            padding={paddingPaginated}
           />
         </div>
       ) : null}

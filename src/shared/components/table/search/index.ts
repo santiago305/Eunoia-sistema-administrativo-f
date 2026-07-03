@@ -7,6 +7,7 @@ export { SmartSearchFieldsSection } from "./SmartSearchFieldsSection";
 export { SmartSearchPanel } from "./SmartSearchPanel";
 export { SmartSearchRecentSection } from "./SmartSearchRecentSection";
 export { SmartSearchSavedMetricsSection } from "./SmartSearchSavedMetricsSection";
+export { SmartSearchDatePeriodOperators } from "./datePeriodOperators";
 export type {
   DataTableRecentSearchItem,
   DataTableSavedSearchItem,

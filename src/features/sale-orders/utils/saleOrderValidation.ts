@@ -2,15 +2,15 @@ import type { CreateSaleOrderDto } from "@/features/sale-orders/types/saleOrder"
 
 export type SaleOrderValidationResult = { ok: true } | { ok: false; message: string };
 
-const isValidIsoDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+// const isValidIsoDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 export function validateSaleOrderForm(form: CreateSaleOrderDto): SaleOrderValidationResult {
-  if (!form.workflowId) return { ok: false, message: "Selecciona un workflow." };
-  if (!form.warehouseId) return { ok: false, message: "Selecciona un almacén." };
+  if (!form.workflowId) return { ok: false, message: "Selecciona un tipo." };
+  // if (!form.warehouseId) return { ok: false, message: "Selecciona un almacén." };
   if (!form.clientId) return { ok: false, message: "Selecciona un cliente." };
-  if (!form.scheduleDate || !isValidIsoDateOnly(form.scheduleDate)) {
-    return { ok: false, message: "ScheduleDate es obligatorio (YYYY-MM-DD)." };
-  }
+  // if (!form.scheduleDate || !isValidIsoDateOnly(form.scheduleDate)) {
+  //   return { ok: false, message: "ScheduleDate es obligatorio (YYYY-MM-DD)." };
+  // }
   if (!form.items?.length) return { ok: false, message: "Agrega al menos un item." };
 
   for (const [index, item] of form.items.entries()) {

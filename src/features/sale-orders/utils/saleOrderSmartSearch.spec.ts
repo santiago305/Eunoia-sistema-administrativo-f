@@ -21,11 +21,25 @@ const searchState: SaleOrderSearchStateResponse = {
 };
 
 describe("sale order workflow and state smart filters", () => {
+  it("keeps client phone and agency detail text filters", () => {
+    const snapshot = sanitizeSaleOrderSearchSnapshot({
+      filters: [
+        { field: "clientPhone", operator: "contains", value: "987" },
+        { field: "agencyDetail", operator: "eq", value: "Olva Miraflores" },
+      ],
+    });
+
+    expect(snapshot.filters).toEqual([
+      { field: "clientPhone", operator: "contains", value: "987" },
+      { field: "agencyDetail", operator: "eq", value: "Olva Miraflores" },
+    ]);
+  });
+
   it("builds workflow and state catalog fields", () => {
     const columns = buildSaleOrderSmartSearchColumns(searchState);
 
     expect(columns.find((column) => column.id === "workflowId")).toMatchObject({
-      label: "Flujo",
+      label: "Tipo",
       kind: "catalog",
       supportsExclude: true,
       options: searchState.catalogs.workflows,
@@ -84,7 +98,7 @@ describe("sale order workflow and state smart filters", () => {
     expect(buildSaleOrderSearchChips(snapshot, searchState)).toEqual([
       {
         id: "workflowId",
-        label: "Flujo: Venta principal",
+        label: "Tipo: Venta principal",
         removeKey: "workflowId",
       },
       {
@@ -101,6 +115,108 @@ describe("sale order workflow and state smart filters", () => {
         id: "clientType",
         label: "Tipo de cliente: Nuevo",
         removeKey: "clientType",
+      },
+    ]);
+  });
+});
+
+describe("sale order calendar period smart filters", () => {
+  it("exposes reusable month and week inputs on both date fields", () => {
+    const columns = buildSaleOrderSmartSearchColumns(searchState);
+
+    for (const field of ["scheduleDate", "deliveryDate"]) {
+      const column = columns.find((item) => item.id === field);
+
+      expect(column?.operators).toEqual(
+        expect.arrayContaining([
+          {
+            id: "inMonth",
+            label: "En el mes",
+            inputMode: "month",
+          },
+          {
+            id: "inWeek",
+            label: "En la semana",
+            inputMode: "week",
+          },
+        ]),
+      );
+    }
+  });
+
+  it("sanitizes month values and normalizes weeks to Monday", () => {
+    expect(
+      sanitizeSaleOrderSearchSnapshot({
+        filters: [
+          {
+            field: "scheduleDate",
+            operator: "inMonth",
+            value: "2028-02",
+          },
+          {
+            field: "deliveryDate",
+            operator: "inWeek",
+            value: "2027-01-01",
+          },
+        ],
+      }).filters,
+    ).toEqual([
+      {
+        field: "scheduleDate",
+        operator: "inMonth",
+        value: "2028-02",
+      },
+      {
+        field: "deliveryDate",
+        operator: "inWeek",
+        value: "2026-12-28",
+      },
+    ]);
+
+    expect(
+      sanitizeSaleOrderSearchSnapshot({
+        filters: [
+          {
+            field: "scheduleDate",
+            operator: "inMonth",
+            value: "2026-13",
+          },
+          {
+            field: "deliveryDate",
+            operator: "inWeek",
+            value: "2026-02-30",
+          },
+        ],
+      }).filters,
+    ).toEqual([]);
+  });
+
+  it("keeps semantic month and week labels in chips", () => {
+    const snapshot = sanitizeSaleOrderSearchSnapshot({
+      filters: [
+        {
+          field: "scheduleDate",
+          operator: "inMonth",
+          value: "2028-02",
+        },
+        {
+          field: "deliveryDate",
+          operator: "inWeek",
+          value: "2027-01-01",
+        },
+      ],
+    });
+
+    expect(buildSaleOrderSearchChips(snapshot, searchState)).toEqual([
+      {
+        id: "scheduleDate",
+        label: "Fecha agenda en febrero 2028",
+        removeKey: "scheduleDate",
+      },
+      {
+        id: "deliveryDate",
+        label: "Fecha entrega en la semana 28 dic 2026 - 3 ene 2027",
+        removeKey: "deliveryDate",
       },
     ]);
   });

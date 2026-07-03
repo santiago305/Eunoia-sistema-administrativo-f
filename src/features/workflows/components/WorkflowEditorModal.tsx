@@ -522,7 +522,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Diseñador de flujos"
+      title="Diseñador de tipos"
       closeOnOverlayClick={false}
       preventClose={saving}
       className="h-[calc(95vh-1rem)] w-[calc(100vw-1rem)] max-h-none max-w-none"
@@ -533,19 +533,19 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
           <div className="flex flex-wrap items-end gap-3">
             <div className="grid min-w-[500px] flex-1 grid-cols-[260px_1fr] gap-2">
               <FloatingSelect
-                label="Flujos"
+                label="Tipos"
                 name="workflow"
                 value={draft.id ?? ""}
                 disabled={loading || saving}
                 onChange={(value) => void loadWorkflow(value)}
                 options={workflowOptions}
                 searchable
-                emptyMessage="Sin flujos"
+                emptyMessage="Sin tipos"
                 className="h-9 text-xs"
               />
 
               <FloatingInput
-                label="Nombre del flujo"
+                label="Nombre del tipo"
                 name="workflow-name"
                 value={draft.name}
                 disabled={loading || saving}
@@ -839,6 +839,41 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                     transitions: [...current.transitions, transition],
                   };
                 });
+              }}
+              onReconnect={(
+                transitionId,
+                branch,
+                from,
+                to,
+                sourceHandle,
+                targetHandle,
+              ) => {
+                setDraft((current) => ({
+                  ...current,
+                  transitions: current.transitions.map((transition) => {
+                    if (transition.clientId !== transitionId) {
+                      return transition;
+                    }
+
+                    if (branch === "ELSE") {
+                      return {
+                        ...transition,
+                        elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+                        elseToStateClientId: to,
+                      };
+                    }
+
+                    return {
+                      ...transition,
+                      fromStateClientId: from,
+                      toStateClientId: to,
+                      sourceHandle,
+                      targetHandle,
+                    };
+                  }),
+                }));
+
+                setSelectedId(transitionId);
               }}
               onDeleteElseBranch={(transitionId) =>
                 setDraft((current) => ({

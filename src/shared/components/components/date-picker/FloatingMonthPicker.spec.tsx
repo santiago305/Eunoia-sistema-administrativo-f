@@ -18,7 +18,7 @@ describe("FloatingMonthPicker", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /mes del dashboard/i }),
+      screen.getByRole("button", { name: /^mes$/i }),
     );
 
     expect(
@@ -49,7 +49,7 @@ describe("FloatingMonthPicker", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /mes del dashboard/i }),
+      screen.getByRole("button", { name: /^mes$/i }),
     );
 
     await screen.findByRole("dialog", { name: /seleccionar mes/i });
@@ -84,7 +84,7 @@ describe("FloatingMonthPicker", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /mes del dashboard/i }),
+      screen.getByRole("button", { name: /^mes$/i }),
     );
     await screen.findByRole("dialog", { name: /seleccionar mes/i });
     await user.click(
@@ -108,7 +108,7 @@ describe("FloatingMonthPicker", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /mes del dashboard/i }),
+      screen.getByRole("button", { name: /^mes$/i }),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
@@ -123,7 +123,7 @@ describe("FloatingMonthPicker", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /mes del dashboard/i }),
+      screen.getByRole("button", { name: /^mes$/i }),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
@@ -144,7 +144,7 @@ describe("FloatingMonthPicker", () => {
     );
 
     const trigger = screen.getByRole("button", {
-      name: /mes del dashboard/i,
+      name: /^mes$/i,
     });
     const error = screen.getByText("Selecciona un mes válido");
 
@@ -171,7 +171,7 @@ describe("FloatingMonthPicker", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /mes del dashboard/i }),
+      screen.getByRole("button", { name: /^mes$/i }),
     );
     await screen.findByRole("dialog", { name: /seleccionar mes/i });
     await user.keyboard("{Escape}");

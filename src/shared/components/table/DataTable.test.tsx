@@ -54,3 +54,30 @@ describe("DataTable refresh action", () => {
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("DataTable toolbar actions", () => {
+  const columns = [{ id: "name", header: "Nombre", accessorKey: "name" as const }];
+  const data = [{ id: "1", name: "Pedido demo" }];
+
+  it("renders page actions beside the column manager", () => {
+    render(
+      <TooltipProvider>
+        <DataTable
+          tableId="toolbar-actions-test"
+          data={data}
+          columns={columns}
+          rowKey="id"
+          selectableColumns
+          toolbarActions={<button type="button">Importar</button>}
+        />
+      </TooltipProvider>,
+    );
+
+    const importButton = screen.getByRole("button", { name: "Importar" });
+    const columnsButton = screen.getByRole("button", { name: "Columnas" });
+    const toolbarActions = screen.getByRole("group", { name: "Acciones de tabla" });
+
+    expect(toolbarActions).toContainElement(importButton);
+    expect(toolbarActions).toContainElement(columnsButton);
+  });
+});

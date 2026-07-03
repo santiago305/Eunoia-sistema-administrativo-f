@@ -65,6 +65,14 @@ type Props = {
     sourceHandle?: string | null,
     targetHandle?: string | null,
   ) => void;
+  onReconnect: (
+    transitionId: string,
+    branch: "THEN" | "ELSE",
+    from: string,
+    to: string,
+    sourceHandle?: string | null,
+    targetHandle?: string | null,
+  ) => void;
   onDeleteElseBranch: (transitionId: string) => void;
   onDeleteElement: (id: string, type: "state" | "transition") => void;
 };
@@ -237,6 +245,7 @@ export function WorkflowCanvas({
   onMoveTransitionCard,
   onViewportCenterChange,
   onConnect,
+  onReconnect,
   onDeleteElseBranch,
   onDeleteElement,
 }: Props) {
@@ -411,6 +420,7 @@ export function WorkflowCanvas({
             data: { transition, onSelect, branch: "THEN" },
             selected: selectedId === transition.clientId,
             animated: transition.isActive,
+            reconnectable: "target",
             markerEnd: {
               type: MarkerType.ArrowClosed,
               color: isCancel ? "#e11d48" : "#334155",
@@ -434,6 +444,7 @@ export function WorkflowCanvas({
                   data: { transition, onSelect, branch: "ELSE" },
                   selected: selectedId === transition.clientId,
                   animated: transition.isActive,
+                  reconnectable: "target",
                   markerEnd: {
                     type: MarkerType.ArrowClosed,
                     color: "#d97706",
@@ -458,6 +469,7 @@ export function WorkflowCanvas({
           data: { transition, onSelect, branch: "ELSE" },
           selected: selectedId === transition.clientId,
           animated: transition.isActive,
+          reconnectable: "target" as const,
         };
         const edges: Edge[] = [];
         if (transition.elseToStateClientId && visibleStateIds.has(transition.elseToStateClientId)) {
@@ -502,6 +514,7 @@ export function WorkflowCanvas({
             data: { transition, onSelect },
             selected: selectedId === transition.clientId,
             animated: transition.isActive,
+            reconnectable: false,
             markerEnd: {
               type: MarkerType.ArrowClosed,
               color,
@@ -530,6 +543,8 @@ export function WorkflowCanvas({
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       connectionMode={ConnectionMode.Loose}
+      edgesReconnectable
+      reconnectRadius={24}
       fitView
       fitViewOptions={{ padding: 0.35, maxZoom: 0.8 }}
       onInit={(instance) => emitViewportCenter(instance.getViewport())}
@@ -600,6 +615,35 @@ export function WorkflowCanvas({
             node.position.y,
           );
         }
+      }}
+      onReconnect={(oldEdge, connection) => {
+        if (!connection.source || !connection.target) return;
+
+        const data = oldEdge.data as
+          | {
+              transition?: WorkflowDraftTransition;
+              branch?: "THEN" | "ELSE";
+            }
+          | undefined;
+
+        const transition = data?.transition;
+        if (!transition || transition.isGlobal) return;
+
+        const branch = data?.branch ?? "THEN";
+        const isTransitionCardSource = connection.source.startsWith(
+          "transition-card-",
+        );
+
+        onReconnect(
+          transition.clientId,
+          branch,
+          connection.source,
+          connection.target,
+          isTransitionCardSource
+            ? connection.sourceHandle
+            : normalizeWorkflowHandleId(connection.sourceHandle),
+          normalizeWorkflowHandleId(connection.targetHandle),
+        );
       }}
       onConnect={(connection: Connection) => {
         if (!connection.source || !connection.target) return;
