@@ -49,7 +49,7 @@ import type {
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "@/features/purchases/types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/shared/components/components/TimerToEnd";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
-import { AlertCircle, Calendar, CreditCard, FileText, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
+import { AlertCircle, Calendar, Clock3, CreditCard, FileText, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/shared/services/pdfServices";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { PageShell } from "@/shared/layouts/PageShell";
@@ -81,6 +81,7 @@ import { purchaseTypeLabels } from "@/features/purchases/types/purchase-classifi
 import { PurchaseTypesInfoModal } from "@/features/purchases/components/PurchaseTypesInfoModal";
 import { PurchaseFiscalDocumentsModal } from "@/features/purchases/components/documents/PurchaseFiscalDocumentsModal";
 import { uploadPaymentEvidenceFiles } from "@/features/purchases/utils/purchasePaymentEvidence";
+import { PurchaseHistoryTimelineModal } from "@/features/purchases/components/timeline/PurchaseHistoryTimelineModal";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -196,6 +197,7 @@ export default function Purchases() {
     const [completedPhotoPo, setCompletedPhotoPo] = useState<PurchaseOrder | null>(null);
     const [completedPhotoLoading, setCompletedPhotoLoading] = useState(false);
     const [fiscalDocumentsPoId, setFiscalDocumentsPoId] = useState<string | null>(null);
+    const [historyPurchase, setHistoryPurchase] = useState<PurchaseOrder | null>(null);
     const skippedPhotoRef = useRef<Set<string>>(new Set());
     const handledDeepLinkRef = useRef<string | null>(null);
     const isPhotoPromptSkipped = useCallback((poId?: string) => {
@@ -779,6 +781,16 @@ export default function Purchases() {
         showFeedback,
     ]);
 
+    const createHistoryAction = useCallback((purchase: PurchaseOrder): ActionItem | false => {
+        if (!can("purchases.view_history")) return false;
+        return {
+            id: "history",
+            label: "Historial",
+            icon: <Clock3 className="h-4 w-4 text-black/60" />,
+            onClick: () => setHistoryPurchase(purchase),
+        };
+    }, [can]);
+
     const columns = useMemo<DataTableColumn<PurchaseRow>[]>(() => [
         {
             id: "dateIssue",
@@ -974,6 +986,7 @@ export default function Purchases() {
                                     icon: <FileText className="h-4 w-4 text-black/60" />,
                                     onClick: () => setSelectedPurchaseRow(row),
                                 },
+                                createHistoryAction(row.purchase),
                             ].filter(Boolean) as ActionItem[]}
                             columns={1}
                             compact
@@ -1087,6 +1100,7 @@ export default function Purchases() {
                                     openPurchasePdf(row.purchase.poId ?? "");
                                 },
                             },
+                            createHistoryAction(row.purchase),
                             row.purchase.status === PurchaseOrderStatuses.RECEIVED && {
                                 id: "fiscal-documents",
                                 label: "Comprobantes fiscales",
@@ -1166,13 +1180,14 @@ export default function Purchases() {
         canApproveProcessing,
         canDeleteProcessedPurchase,
         canReceivePurchase,
-        can,
         cancelOrder,
         companyActionDisabled,
+        createHistoryAction,
         loadPurchases,
         navigate,
         now,
         openPurchasePdf,
+        openPaymentFlow,
         requestProcessing,
         setSent,
         showFeedback,
@@ -1564,6 +1579,11 @@ export default function Purchases() {
                 open={Boolean(fiscalDocumentsPoId)}
                 purchaseId={fiscalDocumentsPoId}
                 onClose={() => setFiscalDocumentsPoId(null)}
+            />
+            <PurchaseHistoryTimelineModal
+                open={Boolean(historyPurchase)}
+                purchase={historyPurchase}
+                onClose={() => setHistoryPurchase(null)}
             />
         </PageShell>
     );

@@ -150,6 +150,14 @@ vi.mock("@/features/purchases/components/PurchaseModal", () => ({
     PurchaseModal: () => null,
 }));
 
+type MockPurchasePaymentForm = {
+    paymentForm?: string;
+    creditDays?: number;
+    numQuotas?: number;
+    payments?: Array<Record<string, unknown>>;
+    quotas?: Array<Record<string, unknown>>;
+};
+
 vi.mock("@/features/purchases/components/PurchasePaymentModal", () => ({
     PurchasePaymentModal: ({
         form,
@@ -157,14 +165,14 @@ vi.mock("@/features/purchases/components/PurchasePaymentModal", () => ({
         onSave,
     }: {
         form: { paymentForm?: string };
-        setForm: React.Dispatch<React.SetStateAction<any>>;
+        setForm: React.Dispatch<React.SetStateAction<MockPurchasePaymentForm>>;
         onSave: () => void;
     }) => (
         <div data-testid="purchase-payment-setup-modal" data-payment-form={form.paymentForm ?? ""}>
             <button
                 type="button"
                 onClick={() =>
-                    setForm((prev: any) => ({
+                    setForm((prev) => ({
                         ...prev,
                         paymentForm: "CREDITO",
                         creditDays: 30,
@@ -186,7 +194,7 @@ vi.mock("@/features/purchases/components/PurchasePaymentModal", () => ({
             <button
                 type="button"
                 onClick={() =>
-                    setForm((prev: any) => ({
+                    setForm((prev) => ({
                         ...prev,
                         paymentForm: "CONTADO",
                         payments: [
@@ -214,6 +222,11 @@ vi.mock("@/features/purchases/components/PurchasePaymentModal", () => ({
 
 vi.mock("@/features/purchases/components/PurchaseDetailsModal", () => ({
     PurchaseDetailsModal: () => null,
+}));
+
+vi.mock("@/features/purchases/components/timeline/PurchaseHistoryTimelineModal", () => ({
+    PurchaseHistoryTimelineModal: ({ open, purchase }: { open: boolean; purchase: { poId?: string } | null }) =>
+        open ? <div data-testid="purchase-history-modal" data-purchase-id={purchase?.poId ?? ""} /> : null,
 }));
 
 vi.mock("@/features/purchases/components/ExtraTimeModal", () => ({
@@ -346,6 +359,42 @@ describe("PurchaseListPage", () => {
         expect(await screen.findByText("Comprobantes fiscales")).toBeInTheDocument();
         expect(screen.getAllByTestId("actions-popover")).toHaveLength(2);
         expect(screen.getAllByText("Comprobantes fiscales")).toHaveLength(1);
+    });
+
+    it("opens purchase history from the row action popover", async () => {
+        listPurchaseOrdersMock.mockResolvedValueOnce({
+            items: [
+                {
+                    poId: "po-history",
+                    serie: "F001",
+                    correlative: "9",
+                    supplierName: "Proveedor historial",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    total: 100,
+                    totalPaid: 0,
+                    totalToPay: 100,
+                    paymentForm: "CONTADO",
+                },
+            ],
+            total: 1,
+            page: 1,
+            limit: 25,
+        });
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        fireEvent.click(await screen.findByRole("button", { name: "Historial" }));
+
+        expect(screen.getByTestId("purchase-history-modal")).toHaveAttribute("data-purchase-id", "po-history");
     });
 
     it("opens the payment list for cash purchases and the quota flow for credit purchases", async () => {
