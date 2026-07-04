@@ -6,12 +6,16 @@ import Purchases from "./PurchaseListPage";
 const {
     listPurchaseOrdersMock,
     updatePurchaseOrderMock,
+    listPaymentsMock,
+    uploadPurchaseAttachmentMock,
     getPurchaseSearchStateMock,
     getPurchaseExportColumnsMock,
     getPurchaseExportPresetsMock,
 } = vi.hoisted(() => ({
     listPurchaseOrdersMock: vi.fn(),
     updatePurchaseOrderMock: vi.fn(),
+    listPaymentsMock: vi.fn(),
+    uploadPurchaseAttachmentMock: vi.fn(),
     getPurchaseSearchStateMock: vi.fn(),
     getPurchaseExportColumnsMock: vi.fn(),
     getPurchaseExportPresetsMock: vi.fn(),
@@ -28,6 +32,7 @@ vi.mock("@/shared/services/purchaseService", () => ({
     getPurchaseExportColumns: getPurchaseExportColumnsMock,
     getPurchaseExportPresets: getPurchaseExportPresetsMock,
     getPurchaseSearchState: getPurchaseSearchStateMock,
+    listPayments: listPaymentsMock,
     listPurchaseOrders: listPurchaseOrdersMock,
     rejectCreationWithPayment: vi.fn(),
     rejectProcessingPurchaseOrder: vi.fn(),
@@ -37,6 +42,10 @@ vi.mock("@/shared/services/purchaseService", () => ({
     setCancelPurchase: vi.fn(),
     setSentPurchase: vi.fn(),
     updatePurchaseOrder: updatePurchaseOrderMock,
+}));
+
+vi.mock("@/shared/services/purchaseAttachmentService", () => ({
+    uploadPurchaseAttachment: uploadPurchaseAttachmentMock,
 }));
 
 vi.mock("@/shared/services/paymentService", () => ({
@@ -174,6 +183,28 @@ vi.mock("@/features/purchases/components/PurchasePaymentModal", () => ({
             >
                 Elegir credito
             </button>
+            <button
+                type="button"
+                onClick={() =>
+                    setForm((prev: any) => ({
+                        ...prev,
+                        paymentForm: "CONTADO",
+                        payments: [
+                            {
+                                method: "BCP",
+                                date: "2026-07-04",
+                                currency: "PEN",
+                                amount: 100,
+                                operationNumber: "OP-1",
+                                paymentEvidenceFile: new File(["voucher"], "voucher.png", { type: "image/png" }),
+                            },
+                        ],
+                        quotas: [],
+                    }))
+                }
+            >
+                Elegir contado con voucher
+            </button>
             <button type="button" onClick={onSave}>
                 Guardar forma de pago
             </button>
@@ -233,6 +264,8 @@ describe("PurchaseListPage", () => {
         getPurchaseExportColumnsMock.mockResolvedValue([]);
         getPurchaseExportPresetsMock.mockResolvedValue([]);
         updatePurchaseOrderMock.mockResolvedValue({ type: "success", message: "Compra actualizada." });
+        listPaymentsMock.mockResolvedValue([]);
+        uploadPurchaseAttachmentMock.mockResolvedValue({ type: "success", message: "Comprobante subido." });
     });
 
     it("renders the central purchase page with shared table, smart search, chips and date range", async () => {
@@ -437,5 +470,75 @@ describe("PurchaseListPage", () => {
             );
         });
         expect(screen.getByTestId("quota-list-modal")).toBeInTheDocument();
+    });
+
+    it("uploads payment evidence when saving a cash payment setup from the list", async () => {
+        updatePurchaseOrderMock.mockResolvedValueOnce({
+            type: "success",
+            message: "Compra actualizada.",
+            order: {
+                poId: "po-without-payment-form",
+                payments: [
+                    {
+                        payDocId: "payment-1",
+                        method: "BCP",
+                        date: "2026-07-04",
+                        currency: "PEN",
+                        amount: 100,
+                        operationNumber: "OP-1",
+                    },
+                ],
+            },
+        });
+        listPurchaseOrdersMock.mockResolvedValueOnce({
+            items: [
+                {
+                    poId: "po-without-payment-form",
+                    serie: "F001",
+                    correlative: "3",
+                    supplierId: "supplier-1",
+                    supplierName: "Proveedor sin forma",
+                    warehouseId: "warehouse-1",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    currency: "PEN",
+                    totalTaxed: 100,
+                    totalExempted: 0,
+                    totalIgv: 18,
+                    purchaseValue: 100,
+                    total: 100,
+                    totalPaid: 0,
+                    totalToPay: 100,
+                    paymentForm: "",
+                },
+            ],
+            total: 1,
+            page: 1,
+            limit: 25,
+        });
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        fireEvent.click(await screen.findByRole("button", { name: "Pagos" }));
+        fireEvent.click(screen.getByRole("button", { name: "Elegir contado con voucher" }));
+        fireEvent.click(screen.getByRole("button", { name: "Guardar forma de pago" }));
+
+        await waitFor(() => {
+            expect(uploadPurchaseAttachmentMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    purchaseId: "po-without-payment-form",
+                    paymentId: "payment-1",
+                    type: "PAYMENT_PROOF",
+                }),
+            );
+        });
     });
 });

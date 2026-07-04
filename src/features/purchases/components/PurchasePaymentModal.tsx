@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
-import { Calendar, Plus, Trash2, Wallet } from "lucide-react";
+import { Calendar, FileUp, Plus, Trash2, Wallet } from "lucide-react";
 import { Modal } from "@/shared/components/settings/modal";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
@@ -18,6 +18,7 @@ import { CompanyPaymentAccountSelect } from "@/features/payments/components/Comp
 import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { PaymentMethodPivot } from "@/features/payment-methods/types/paymentMethod";
+import { paymentRequiresEvidence } from "@/features/purchases/utils/purchasePaymentEvidence";
 
 const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
@@ -83,6 +84,7 @@ export function PurchasePaymentModal({
           currency: prev.currency,
           amount: Math.max(0, amount ?? 0),
           note: "",
+          paymentEvidenceFile: null,
         },
       ],
     }));
@@ -223,6 +225,13 @@ export function PurchasePaymentModal({
       .filter((payment) => (payment.amount ?? 0) > 0)
       .some((payment) => !hasValidPaymentMethod(payment));
   }, [form.payments, hasValidPaymentMethod, showCredit]);
+
+  const hasMissingRequiredEvidence = useMemo(() => {
+    if (showCredit) return false;
+    return (form.payments ?? [])
+      .filter((payment) => (payment.amount ?? 0) > 0)
+      .some((payment) => paymentRequiresEvidence(payment) && !payment.paymentEvidenceFile);
+  }, [form.payments, showCredit]);
 
   type QuotaRow = CreditQuota & {
     id: string;
@@ -464,6 +473,24 @@ export function PurchasePaymentModal({
                         onChange={(account) => updateCompanyPaymentAccount(index, account)}
                         className="h-9 text-xs"
                       />
+                      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-dashed border-black/20 bg-slate-50 px-3 text-xs text-black/65 hover:border-primary/40 hover:bg-primary/5">
+                        <FileUp className="h-4 w-4 shrink-0 text-black/45" />
+                        <input
+                          aria-label={`Comprobante de pago ${index + 1}`}
+                          type="file"
+                          className="sr-only"
+                          accept=".pdf,.jpg,.jpeg,.png,.webp,image/*,application/pdf"
+                          onChange={(event) =>
+                            updatePayment(index, { paymentEvidenceFile: event.target.files?.[0] ?? null })
+                          }
+                        />
+                        <span className="min-w-0 truncate">
+                          {payment.paymentEvidenceFile ? payment.paymentEvidenceFile.name : "Seleccionar comprobante"}
+                        </span>
+                      </label>
+                      <p className="text-[11px] font-medium text-amber-700">
+                        Comprobante requerido para este metodo de pago.
+                      </p>
                     </div>
                   ) : null}
                   <div className="grid grid-cols-2 gap-2">
@@ -522,7 +549,7 @@ export function PurchasePaymentModal({
           </SystemButton>
           <SystemButton
             style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
-            disabled={saveDisabled || hasInvalidPayment}
+            disabled={saveDisabled || hasInvalidPayment || hasMissingRequiredEvidence}
             onClick={onSave}
           >
             {isEdit ? "Actualizar Comprobante" : "Generar Comprobante"}

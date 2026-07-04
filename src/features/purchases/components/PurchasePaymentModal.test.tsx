@@ -171,4 +171,30 @@ describe("PurchasePaymentModal", () => {
 
     expect(await screen.findByRole("button", { name: "Generar Comprobante" })).toBeDisabled();
   });
+
+  it("requires an evidence file for non-cash payments", async () => {
+    render(<StatefulPurchasePaymentModal />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Metodo: EFECTIVO" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA - 001-222" }));
+
+    expect(await screen.findByText("Comprobante requerido para este metodo de pago.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generar Comprobante" })).toBeDisabled();
+  });
+
+  it("allows saving a non-cash payment after selecting evidence", async () => {
+    render(<StatefulPurchasePaymentModal />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Metodo: EFECTIVO" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA - 001-222" }));
+
+    const file = new File(["voucher"], "voucher.png", { type: "image/png" });
+    fireEvent.change(await screen.findByLabelText("Comprobante de pago 1"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Generar Comprobante" })).not.toBeDisabled();
+    });
+  });
 });

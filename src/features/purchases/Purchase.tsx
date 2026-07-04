@@ -21,7 +21,13 @@ import type {
 } from "@/features/purchases/types/purchase";
 import { SupplierFormModal } from "../providers/components/SupplierFormModal";
 import { WarehouseFormModal } from "../warehouse/components/WarehouseFormModal";
-import { createPurchaseOrder, updatePurchaseOrder, validatePurchaseOrderNumber } from "@/shared/services/purchaseService";
+import {
+  createPurchaseOrder,
+  listPayments as listPurchasePayments,
+  updatePurchaseOrder,
+  validatePurchaseOrderNumber,
+} from "@/shared/services/purchaseService";
+import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
 import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import { EquivalenceModal } from "./components/EquivalenceModal";
 import { PurchaseItemsSection } from "./components/PurchaseItemsSection";
@@ -64,6 +70,10 @@ import {
   type PurchaseType,
 } from "./types/purchase-classification.types";
 import { getPurchaseCreateErrorMessage } from "./utils/purchaseCreateFeedback";
+import {
+  stripPaymentEvidenceFile,
+  uploadPaymentEvidenceFiles,
+} from "./utils/purchasePaymentEvidence";
 
 const PRIMARY = "hsl(var(--primary))";
 const IGV = 0.18;
@@ -444,7 +454,9 @@ export default function PurchaseCreateLocal({
           purchaseValue: normalizeMoney(calculatedItem.purchaseValue),
         };
       }),
-      payments: (currentForm.payments ?? []).map((p) => ({
+      payments: (currentForm.payments ?? []).map((payment) => {
+        const p = stripPaymentEvidenceFile(payment);
+        return {
         currency: p.currency,
         date: p.date,
         method: p.method,
@@ -460,7 +472,8 @@ export default function PurchaseCreateLocal({
         cardLastFour: p.cardLastFour ?? undefined,
         operationCode: p.operationCode ?? undefined,
         isPartial: p.isPartial ?? undefined,
-      })),
+        };
+      }),
       quotas: (currentForm.quotas ?? []).map((q) => ({
         number: q.number,
         expirationDate: q.expirationDate,
@@ -478,6 +491,24 @@ export default function PurchaseCreateLocal({
         if (overrideForm) setForm(overrideForm);
         const nextPoId = res.order?.poId ?? effectivePoId ?? "";
         if (nextPoId) setLastSavedPoId(nextPoId);
+        const paymentsWithEvidence = (currentForm.payments ?? []).filter((payment) => payment.paymentEvidenceFile);
+        if (nextPoId && paymentsWithEvidence.length > 0) {
+          try {
+            const persistedPayments = res.order?.payments?.length
+              ? res.order.payments
+              : await listPurchasePayments(nextPoId);
+            await uploadPaymentEvidenceFiles({
+              purchaseId: nextPoId,
+              draftPayments: currentForm.payments ?? [],
+              persistedPayments,
+              upload: uploadPurchaseAttachment,
+            });
+          } catch {
+            sileo.error({
+              title: "Compra registrada, pero no se pudo subir el comprobante. Puedes subirlo desde documentos de la compra.",
+            });
+          }
+        }
         setOpenPaymentModal(false);
         setPaymentDraftForm(null);
         if (nextPoId) {

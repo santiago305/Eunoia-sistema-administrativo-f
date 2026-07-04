@@ -27,8 +27,10 @@ import {
     setCancelPurchase,
     setSentPurchase,
     deletePurchaseExportPreset,
+    listPayments as listPurchasePayments,
     updatePurchaseOrder,
 } from "@/shared/services/purchaseService";
+import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { money, parseDateInputValue, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { PaymentListModal } from "@/features/purchases/components/PaymentListModal";
@@ -78,6 +80,7 @@ import { sileo } from "sileo";
 import { purchaseTypeLabels } from "@/features/purchases/types/purchase-classification.types";
 import { PurchaseTypesInfoModal } from "@/features/purchases/components/PurchaseTypesInfoModal";
 import { PurchaseFiscalDocumentsModal } from "@/features/purchases/components/documents/PurchaseFiscalDocumentsModal";
+import { uploadPaymentEvidenceFiles } from "@/features/purchases/utils/purchasePaymentEvidence";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -448,6 +451,26 @@ export default function Purchases() {
 
             showFeedback({ type: res.type === "success" ? "success" : "error", message: res.message });
             if (res.type !== "success") return;
+
+            const paymentsWithEvidence = (paymentSetupForm.payments ?? []).filter((payment) => payment.paymentEvidenceFile);
+            if (!isCredit && paymentsWithEvidence.length > 0) {
+                try {
+                    const persistedPayments = res.order?.payments?.length
+                        ? res.order.payments
+                        : await listPurchasePayments(paymentSetupForm.poId);
+                    await uploadPaymentEvidenceFiles({
+                        purchaseId: paymentSetupForm.poId,
+                        draftPayments: paymentSetupForm.payments ?? [],
+                        persistedPayments,
+                        upload: uploadPurchaseAttachment,
+                    });
+                } catch {
+                    showFeedback({
+                        type: "error",
+                        message: "Pago registrado, pero no se pudo subir el comprobante. Puedes subirlo desde documentos de la compra.",
+                    });
+                }
+            }
 
             setPoId(paymentSetupForm.poId);
             setTotalPo(paymentSetupForm.total);

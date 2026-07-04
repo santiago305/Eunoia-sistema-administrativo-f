@@ -239,6 +239,7 @@ export type Payment = {
   operationCode?: string | null;
   isPartial?: boolean;
   companyPaymentAccountMaskedLabel?: string | null;
+  paymentEvidenceFile?: File | null;
 };
 
 export type CreditQuota = {

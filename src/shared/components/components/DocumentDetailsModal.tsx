@@ -9,6 +9,7 @@ import {
   ReceiptText,
   Wallet,
   CreditCard,
+  FileText,
   Wrench,
 } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
@@ -16,6 +17,7 @@ import { parseApiError } from "@/shared/common/utils/handleApiError";
 import type { InventoryDocument } from "@/features/catalog/types/documentInventory";
 import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 import { OperationImageGallery } from "@/shared/components/components/OperationImageGallery";
+import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import type {
   DocumentDetailsModalProps,
   InventoryDocumentDetail,
@@ -219,12 +221,14 @@ export function DocumentDetailsModal({
   const [detail, setDetail] = useState<InventoryDocumentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewPaymentId, setPreviewPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setDetail(null);
       setError(null);
       setLoading(false);
+      setPreviewPaymentId(null);
       return;
     }
 
@@ -316,6 +320,11 @@ export function DocumentDetailsModal({
     const xItems = x.items ?? [];
     const xPayments = x.payments ?? [];
     const xQuotas = x.quotas ?? [];
+    const previewPayment = xPayments.find((payment) => payment.id === previewPaymentId);
+    const previewPaymentImages = previewPayment?.evidenceImages ?? [];
+    const previewPaymentDownloadUrls = previewPayment?.evidenceDownloadUrls ?? previewPaymentImages;
+    const previewPaymentFileNames = previewPayment?.evidenceFileNames ?? [];
+    const showPayments = x.showPayments !== false;
 
     return (
       <Modal
@@ -469,7 +478,7 @@ export function DocumentDetailsModal({
                   )}
                 </section>
 
-                {xPayments.length || x.paymentsMeta ? (
+                {showPayments && (xPayments.length || x.paymentsMeta) ? (
                   <section>
                     <SectionHeader
                       icon={<Wallet className="h-3.5 w-3.5" />}
@@ -479,9 +488,13 @@ export function DocumentDetailsModal({
                     {xPayments.length ? (
                       <div className="overflow-hidden rounded-md border border-black/5">
                         {xPayments.map((payment) => (
-                          <div
+                          <button
+                            type="button"
                             key={payment.id}
-                            className="flex items-center justify-between gap-3 border-b border-black/5 px-3 py-2 last:border-b-0 hover:bg-slate-50/80"
+                            disabled={!payment.evidenceImages?.length}
+                            onClick={() => setPreviewPaymentId(payment.id)}
+                            className="flex w-full items-center justify-between gap-3 border-b border-black/5 px-3 py-2 text-left transition last:border-b-0 enabled:cursor-pointer enabled:hover:bg-slate-50/80 disabled:cursor-default disabled:bg-white"
+                            title={payment.evidenceImages?.length ? "Ver comprobante" : undefined}
                           >
                             <div className="min-w-0">
                               <p className="truncate text-xs font-medium text-black/80">
@@ -498,6 +511,12 @@ export function DocumentDetailsModal({
                                   {payment.note}
                                 </p>
                               ) : null}
+                              {typeof payment.evidenceCount === "number" ? (
+                                <p className="mt-1 inline-flex items-center gap-1 text-[10px] text-black/45">
+                                  <FileText className="h-3 w-3" />
+                                  {payment.evidenceCount} evidencia{payment.evidenceCount === 1 ? "" : "s"}
+                                </p>
+                              ) : null}
                             </div>
                             <div className="shrink-0 text-right">
                               <p className="text-[9px] uppercase tracking-wide text-black/35">
@@ -507,7 +526,7 @@ export function DocumentDetailsModal({
                                 {payment.amount}
                               </p>
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     ) : (
@@ -623,6 +642,15 @@ export function DocumentDetailsModal({
                     onUpload={x.onUploadImage}
                   />
                 </section>
+                <ImagePreviewModal
+                  open={previewPaymentImages.length > 0}
+                  images={previewPaymentImages}
+                  currentIndex={0}
+                  onClose={() => setPreviewPaymentId(null)}
+                  altPrefix="Voucher de pago"
+                  downloadUrls={previewPaymentDownloadUrls}
+                  fileNames={previewPaymentFileNames}
+                />
               </div>
             )}
           </div>

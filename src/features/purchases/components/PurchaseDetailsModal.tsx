@@ -12,15 +12,22 @@ import { DocType, DocStatus } from "@/features/warehouse/types/warehouse";
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
 import type { PurchaseDetailsModalProps } from "@/features/purchases/types/purchaseDetails";
 import { buildPurchaseExtendedDetailsConfig } from "@/features/purchases/utils/purchaseDetailsMapper";
+import { listPurchaseAttachments } from "@/shared/services/purchaseAttachmentService";
+import {
+  PurchaseAttachmentTypes,
+  type PurchaseAttachment,
+} from "@/features/purchases/types/purchase-attachment.types";
 
 export function PurchaseDetailsModal({ open, poId, purchase, onClose }: PurchaseDetailsModalProps) {
   const [detail, setDetail] = useState<PurchaseOrderDetailOutput | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [paymentProofAttachments, setPaymentProofAttachments] = useState<PurchaseAttachment[]>([]);
   const { userRole } = useAuth();
   const { can } = usePermissions();
   const { showFeedback } = useFeedbackToast();
+  const canViewPaymentEvidence = can("payments.view_evidence");
 
   useEffect(() => {
     if (!open || !poId) {
@@ -54,6 +61,33 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
       cancelled = true;
     };
   }, [open, poId]);
+
+  useEffect(() => {
+    if (!open || !poId || !canViewPaymentEvidence) {
+      setPaymentProofAttachments([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPaymentProofs = async () => {
+      try {
+        const attachments = await listPurchaseAttachments({
+          purchaseId: poId,
+          type: PurchaseAttachmentTypes.PAYMENT_PROOF,
+        });
+        if (!cancelled) setPaymentProofAttachments(attachments ?? []);
+      } catch {
+        if (!cancelled) setPaymentProofAttachments([]);
+      }
+    };
+
+    void loadPaymentProofs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canViewPaymentEvidence, open, poId]);
 
   const images = useMemo(
     () => detail?.imageProdution ?? purchase?.imageProdution ?? [],
@@ -103,6 +137,8 @@ export function PurchaseDetailsModal({ open, poId, purchase, onClose }: Purchase
         ...buildPurchaseExtendedDetailsConfig({
           purchase,
           detail,
+          canViewPayments: canViewPaymentEvidence,
+          paymentProofAttachments,
           canAdminUploadMissingPhoto: canUploadMissingPhoto,
           uploadingPhoto,
           onUploadImage: handleUploadFromDetail,

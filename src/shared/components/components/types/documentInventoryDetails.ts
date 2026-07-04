@@ -53,6 +53,10 @@ export type DetailPayment = {
   operationNumber?: string;
   note?: string;
   amount: string;
+  evidenceCount?: number;
+  evidenceImages?: string[];
+  evidenceDownloadUrls?: string[];
+  evidenceFileNames?: string[];
 };
 
 export type DetailQuota = {
@@ -89,6 +93,7 @@ export type ExtendedDetailsConfig = {
   itemsMeta?: string;
   items?: DetailListItem[];
   itemsEmptyMessage?: string;
+  showPayments?: boolean;
   payments?: DetailPayment[];
   paymentsMeta?: string;
   paymentsEmptyMessage?: string;

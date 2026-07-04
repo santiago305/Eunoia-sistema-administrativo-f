@@ -1,7 +1,9 @@
 import { ReceiptText } from "lucide-react";
+import { env } from "@/env";
 import { money } from "@/shared/utils/functionPurchases";
 import type { PurchaseOrderDetailOutput, PurchaseOrderItemEditOutput } from "@/features/purchases/types/itemPurchaseEdit";
 import type { CreditQuota, Payment } from "@/features/purchases/types/purchase";
+import type { PurchaseAttachment } from "@/features/purchases/types/purchase-attachment.types";
 import type { PaymentFormType, PaymentType, PurchaseOrderStatus } from "@/features/purchases/types/purchaseEnums";
 import type { SummaryPurchase } from "@/features/purchases/types/purchaseDetails";
 import type {
@@ -66,6 +68,21 @@ const formatDateOnly = (value?: string | null) => {
   });
 };
 
+const resolveAttachmentUrl = (rawUrl?: string | null) => {
+  const raw = rawUrl?.trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  try {
+    return new URL(raw, env.apiBaseUrl).toString();
+  } catch {
+    return raw;
+  }
+};
+
+const isImageAttachment = (attachment: PurchaseAttachment) =>
+  attachment.mimeType?.startsWith("image/") ||
+  /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(attachment.url);
+
 const getItemLabel = (item: PurchaseOrderItemEditOutput) => {
   return (
     item.name ??
@@ -89,6 +106,8 @@ const getItemCode = (item: PurchaseOrderItemEditOutput) => {
 type MapperParams = {
   purchase: SummaryPurchase;
   detail: PurchaseOrderDetailOutput | null;
+  canViewPayments: boolean;
+  paymentProofAttachments: PurchaseAttachment[];
   canAdminUploadMissingPhoto: boolean;
   uploadingPhoto: boolean;
   onUploadImage: (file?: File | null) => Promise<void> | void;
@@ -97,6 +116,8 @@ type MapperParams = {
 export function buildPurchaseExtendedDetailsConfig({
   purchase,
   detail,
+  canViewPayments,
+  paymentProofAttachments,
   canAdminUploadMissingPhoto,
   uploadingPhoto,
   onUploadImage,
@@ -118,7 +139,7 @@ export function buildPurchaseExtendedDetailsConfig({
   const itemCountLabel = `${items.length} item${items.length === 1 ? "" : "s"}`;
   const paymentCountLabel = `${payments.length} pago${payments.length === 1 ? "" : "s"}`;
   const quotaCountLabel = `${quotas.length} cuota${quotas.length === 1 ? "" : "s"}`;
-  const metaResumen = `${itemCountLabel} - ${paymentCountLabel}${paymentForm === "CREDITO" ? ` - ${quotaCountLabel}` : ""}`;
+  const metaResumen = `${itemCountLabel}${canViewPayments ? ` - ${paymentCountLabel}` : ""}${paymentForm === "CREDITO" ? ` - ${quotaCountLabel}` : ""}`;
 
   const statusTone = purchase.status
     ? statusToneByStatus[purchase.status] ?? "bg-slate-100 text-slate-700"
@@ -170,14 +191,26 @@ export function buildPurchaseExtendedDetailsConfig({
     };
   });
 
-  const detailPayments: DetailPayment[] = payments.map((payment, index) => ({
-    id: payment.payDocId ?? `${payment.method}-${payment.date}-${index}`,
-    method: formatPaymentMethod(payment.method),
-    date: payment.date,
-    operationNumber: payment.operationNumber ?? undefined,
-    note: payment.note ?? undefined,
-    amount: money(payment.amount ?? 0, payment.currency),
-  }));
+  const detailPayments: DetailPayment[] = payments.map((payment, index) => {
+    const paymentId = payment.payDocId ?? `${payment.method}-${payment.date}-${index}`;
+    const attachments = payment.payDocId
+      ? paymentProofAttachments.filter((attachment) => attachment.paymentId === payment.payDocId)
+      : [];
+    const imageAttachments = attachments.filter(isImageAttachment);
+
+    return {
+      id: paymentId,
+      method: formatPaymentMethod(payment.method),
+      date: payment.date,
+      operationNumber: payment.operationNumber ?? undefined,
+      note: payment.note ?? undefined,
+      amount: money(payment.amount ?? 0, payment.currency),
+      evidenceCount: attachments.length,
+      evidenceImages: imageAttachments.map((attachment) => resolveAttachmentUrl(attachment.url)).filter(Boolean),
+      evidenceDownloadUrls: imageAttachments.map((attachment) => resolveAttachmentUrl(attachment.url)).filter(Boolean),
+      evidenceFileNames: imageAttachments.map((attachment) => attachment.originalName || attachment.filename || "Voucher"),
+    };
+  });
 
   const detailQuotas: DetailQuota[] =
     paymentForm === "CREDITO"
@@ -220,7 +253,8 @@ export function buildPurchaseExtendedDetailsConfig({
     itemsMeta: itemCountLabel,
     items: detailItems,
     itemsEmptyMessage: "No hay items registrados para esta compra.",
-    payments: detailPayments,
+    showPayments: canViewPayments,
+    payments: canViewPayments ? detailPayments : [],
     paymentsMeta: paymentCountLabel,
     paymentsEmptyMessage: "No hay pagos registrados para esta compra.",
     quotas: detailQuotas,
