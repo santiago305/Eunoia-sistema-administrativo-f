@@ -974,12 +974,6 @@ export default function Purchases() {
                                     icon: <FileText className="h-4 w-4 text-black/60" />,
                                     onClick: () => setSelectedPurchaseRow(row),
                                 },
-                                can("purchases.view_history") && {
-                                    id: "view-history",
-                                    label: "Ver historial",
-                                    icon: <List className="h-4 w-4 text-black/60" />,
-                                    onClick: () => navigate(`${RoutesPaths.purchasesHistory}?purchaseId=${row.purchase.poId ?? ""}`),
-                                },
                             ].filter(Boolean) as ActionItem[]}
                             columns={1}
                             compact

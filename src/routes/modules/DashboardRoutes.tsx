@@ -48,7 +48,6 @@ const PurchaseEditPage = lazy(() => import("@/features/purchases/pages/PurchaseE
 const PurchaseDetailPage = lazy(() => import("@/features/purchases/pages/PurchaseDetailPage"));
 const RecurringPurchasesPage = lazy(() => import("@/features/purchases/pages/RecurringPurchasesPage"));
 const PurchaseReceptionPage = lazy(() => import("@/features/purchases/pages/PurchaseReceptionPage"));
-const PurchaseHistory = lazy(() => import("@/features/purchases/PurchaseHistory"));
 const Payments = lazy(() => import("@/features/payments/Payments"));
 const AccountsPayablePage = lazy(() => import("@/features/payments/pages/AccountsPayablePage"));
 const PaymentAccountsPage = lazy(() => import("@/features/payments/pages/PaymentAccountsPage"));
@@ -193,10 +192,6 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.purchaseDashboard,
                 element: withRouteGuard(RoutesPaths.purchaseDashboard, <PurchaseDashboardPage />),
-            },
-            {
-                path: RoutesPaths.purchasesHistory,
-                element: withRouteGuard(RoutesPaths.purchasesHistory, <PurchaseHistory />),
             },
             {
                 path: RoutesPaths.recurringPurchases,

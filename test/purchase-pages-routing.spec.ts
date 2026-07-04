@@ -9,7 +9,6 @@ describe("purchase pages routing", () => {
     expect(RoutesPaths.purchaseEdit).toBe("/compra/:poId");
     expect(RoutesPaths.purchases).toBe("/compras");
     expect(RoutesPaths.purchaseDashboard).toBe("/compras/dashboard");
-    expect(RoutesPaths.purchaseCreate).toBe("/compras/nueva");
     expect(RoutesPaths.purchaseDetail).toBe("/compras/:id");
     expect(RoutesPaths.purchaseEditPage).toBe("/compras/:id/editar");
     expect(RoutesPaths.purchasePayments).toBe("/compras/:id/pagos");
@@ -21,7 +20,6 @@ describe("purchase pages routing", () => {
   it("keeps purchase page metadata protected with final purchase permissions", () => {
     const expectations = [
       [RoutesPaths.purchaseDashboard, ["purchases_dashboard.view"]],
-      [RoutesPaths.purchaseCreate, ["page.purchases.view", "purchases.create"]],
       [RoutesPaths.purchaseDetail, ["page.purchases.view", "purchases.view_detail"]],
       [RoutesPaths.purchaseEditPage, ["page.purchases.view"]],
       [RoutesPaths.purchasePayments, ["page.payments.view", "payments.read"]],
@@ -50,8 +48,8 @@ describe("purchase pages routing", () => {
 
     expect(purchaseHrefs).toContain(RoutesPaths.purchaseDashboard);
     expect(purchaseHrefs).toContain(RoutesPaths.purchases);
-    expect(purchaseHrefs).toContain(RoutesPaths.purchaseCreate);
-    expect(purchaseHrefs).toContain(RoutesPaths.purchasesHistory);
+    expect(purchaseHrefs).not.toContain("/compras/nueva");
+    expect(purchaseHrefs).not.toContain("/compras/historial");
     expect(purchaseHrefs).toContain(RoutesPaths.recurringPurchases);
   });
 

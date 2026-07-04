@@ -45,10 +45,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 href: RoutesPaths.purchases,
             },
             {
-                label: "Historial de compras",
-                href: RoutesPaths.purchasesHistory,
-            },
-            {
                 label: "Recurrentes",
                 href: RoutesPaths.recurringPurchases,
             },
