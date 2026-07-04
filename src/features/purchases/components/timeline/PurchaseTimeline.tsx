@@ -70,10 +70,10 @@ export function PurchaseTimeline({
         const target = event.targetUserName ?? event.targetUserId;
 
         return (
-          <article key={event.id ?? `${event.eventType}-${index}`} className="relative pl-8">
-            <span className="absolute left-[7px] top-0 h-full w-px bg-black/10" aria-hidden="true" />
-            <span className="absolute left-0 top-2 h-3.5 w-3.5 rounded-full border-2 border-white bg-black shadow-sm" aria-hidden="true" />
-            <div className="mb-3 rounded-sm border border-black/10 bg-white p-4 shadow-sm">
+          <article key={event.id ?? `${event.eventType}-${index}`} className="relative pl-9">
+            <span className="absolute left-[8px] top-3 h-full w-px bg-black/10" aria-hidden="true" />
+            <span className="absolute left-0 top-3 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-black shadow-sm" aria-hidden="true" />
+            <div className="mb-3 rounded-sm border border-black/10 bg-white p-4 shadow-sm transition-colors hover:border-black/20">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <span className="inline-flex rounded-full border border-black/10 bg-black/[0.03] px-2.5 py-1 text-[11px] font-semibold uppercase text-black/65">
