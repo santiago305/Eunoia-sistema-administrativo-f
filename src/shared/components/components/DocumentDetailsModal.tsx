@@ -506,17 +506,27 @@ export function DocumentDetailsModal({
                                   ? ` · Op. ${payment.operationNumber}`
                                   : ""}
                               </p>
-                              {payment.note ? (
-                                <p className="mt-0.5 truncate text-[10px] text-black/40">
-                                  {payment.note}
-                                </p>
-                              ) : null}
-                              {typeof payment.evidenceCount === "number" ? (
-                                <p className="mt-1 inline-flex items-center gap-1 text-[10px] text-black/45">
-                                  <FileText className="h-3 w-3" />
-                                  {payment.evidenceCount} evidencia{payment.evidenceCount === 1 ? "" : "s"}
-                                </p>
-                              ) : null}
+                              <div className="flex gap-1 items-center">
+                                {payment.note ? (
+                                  <p className="mt-0.5 truncate text-[10px] text-black/40">
+                                    {payment.note}
+                                  </p>
+                                ) : null}
+                                {typeof payment.evidenceCount === "number" ? (
+                                  <p
+                                    className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                      payment.evidenceCount > 0
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : "bg-rose-50 text-rose-700"
+                                    }`}
+                                  >
+                                    <FileText className="h-3 w-3" />
+                                    {payment.evidenceCount > 0
+                                      ? "Comprobante"
+                                      : "No comprobante"}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
                             <div className="shrink-0 text-right">
                               <p className="text-[9px] uppercase tracking-wide text-black/35">

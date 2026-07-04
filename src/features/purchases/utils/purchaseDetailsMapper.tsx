@@ -81,7 +81,14 @@ const resolveAttachmentUrl = (rawUrl?: string | null) => {
 
 const isImageAttachment = (attachment: PurchaseAttachment) =>
   attachment.mimeType?.startsWith("image/") ||
-  /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(attachment.url);
+  /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(attachment.url) ||
+  (
+    Boolean(attachment.url?.trim()) &&
+    !/(^application\/(pdf|msword|vnd\.)|^text\/)/i.test(attachment.mimeType ?? "") &&
+    !/\.(pdf|docx?|xlsx?|csv|txt)$/i.test(
+      `${attachment.url} ${attachment.filename} ${attachment.originalName}`,
+    )
+  );
 
 const getItemLabel = (item: PurchaseOrderItemEditOutput) => {
   return (
