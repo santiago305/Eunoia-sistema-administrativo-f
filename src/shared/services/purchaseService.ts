@@ -37,10 +37,6 @@ export const getPurchaseSearchState = async (): Promise<PurchaseSearchStateRespo
   return response.data;
 };
 
-export const getPurchaseHistorySearchState = async (): Promise<PurchaseSearchStateResponse> => {
-  return getPurchaseSearchState();
-};
-
 export const getPurchaseExportColumns = async (): Promise<PurchaseExportColumn[]> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.exportColumns);
   return response.data;
@@ -111,22 +107,6 @@ export const setCancelPurchase = async (id:string): Promise<{type:string, messag
 
 export const enterPurchaseOrder = async (id:string): Promise<{type:string, message:string}> => {
   const response = await axiosInstance.post(API_PURCHASE_GROUP.enterPurchase(id));
-  return response.data;
-};
-
-export const listPurchaseHistory = async (
-  params: ListPurchaseOrdersQuery & {
-    eventType?: string;
-    eventFrom?: string;
-    eventTo?: string;
-    performedByUserId?: string;
-  }
-): Promise<PurchaseOrderListResponse & { items: Array<PurchaseOrder & { history?: { eventsCount: number; lastEventAt: string | null } }> }> => {
-  const requestParams = {
-    ...params,
-    filters: params.filters?.length ? JSON.stringify(params.filters) : undefined,
-  };
-  const response = await axiosInstance.get(API_PURCHASE_GROUP.history, { params: requestParams });
   return response.data;
 };
 
