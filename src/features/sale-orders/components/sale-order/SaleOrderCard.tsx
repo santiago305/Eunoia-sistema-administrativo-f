@@ -11,7 +11,7 @@ type Props = {
   onEdit: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
-  onOrderChanged: (orderId: string) => void | Promise<void>;
+  onDelete: (order: SaleOrder) => void;
 };
 
 function formatMoney(value?: number | null) {
@@ -21,7 +21,7 @@ function formatMoney(value?: number | null) {
   }).format(Number(value ?? 0));
 }
 
-export function SaleOrderCard({ order, selected, onSelect, onEdit, onOpenPdf, onOpenPayments, onOrderChanged }: Props) {
+export function SaleOrderCard({ order, selected, onSelect, onEdit, onOpenPdf, onOpenPayments, onDelete }: Props) {
   const code = `${order.serie ?? "-"}-${order.correlative ?? "-"}`;
   const stateName = order.currentState?.name ?? "Sin estado";
   const stateColor = order.currentState?.color ?? "#64748b";
@@ -90,7 +90,7 @@ const isPaid = pendingAmount <= 0;
                 onEdit={onEdit}
                 onOpenPdf={onOpenPdf}
                 onOpenPayments={onOpenPayments}
-                onOrderChanged={onOrderChanged}
+                onDelete={onDelete}
               />
             </span>
           </span>

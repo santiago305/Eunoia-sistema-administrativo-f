@@ -1,9 +1,12 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import { API_SALE_ORDERS_GROUP } from "@/shared/services/APIs";
 import type {
-  CreateSaleOrderDto,
+  CreateSaleOrderCommandDto,
   CreateSaleOrderResponse,
   SaleOrder,
+  SaleOrderSkuAttribute,
+  SaleOrderSkuSnapshot,
+  SaleOrderSkuUnit,
   SaleOrderJsonImportPreviewResponse,
   SaleOrderJsonImportRow,
   SaleOrderListResponse,
@@ -12,7 +15,10 @@ import type {
   SaleOrderSearchStateResponse,
   SaleOrderStatisticsParams,
   SaleOrderStatisticsResponse,
+  SaveSaleOrderWithClientDto,
+  SaveSaleOrderWithClientFiles,
 } from "@/features/sale-orders/types/saleOrder";
+import { buildSaleOrderUnifiedRequest } from "@/features/sale-orders/utils/saleOrderUnifiedRequest";
 import type {
   AvailableTransition,
   SaleOrderWorkflowHistoryItem,
@@ -37,19 +43,10 @@ export type ChangeSaleOrderStateResponse = {
 export type SaleOrderItemComponentOutput = {
   id: string;
   saleOrderItemId: string;
-  sku: {
-    id: string;
-    name: string;
-    backendSku: string;
-    customSku: string | null;
-    barcode: string | null;
-    image: string | null;
-    attributes: Array<{
-      code: string;
-      name: string;
-      value: string;
-    }>;
-  };
+  sku: SaleOrderSkuSnapshot;
+  unit: SaleOrderSkuUnit | null;
+  attributes: SaleOrderSkuAttribute[];
+  stockItemId: string | null;
   referencePackItemId: string | null;
   quantity: number;
   unitPrice: number;
@@ -74,7 +71,7 @@ export const getSaleOrderItemComponents = async (
   return response.data;
 };
 
-export const createSaleOrder = async (payload: CreateSaleOrderDto): Promise<CreateSaleOrderResponse> => {
+export const createSaleOrder = async (payload: CreateSaleOrderCommandDto): Promise<CreateSaleOrderResponse> => {
   const response = await axiosInstance.post<CreateSaleOrderResponse>(API_SALE_ORDERS_GROUP.create, payload);
   return response.data;
 };
@@ -116,8 +113,29 @@ export const fetchSaleOrderById = async (id: string): Promise<SaleOrder> => {
   return response.data;
 };
 
-export const updateSaleOrder = async (id: string, payload: CreateSaleOrderDto): Promise<CreateSaleOrderResponse> => {
+export const updateSaleOrder = async (id: string, payload: CreateSaleOrderCommandDto): Promise<CreateSaleOrderResponse> => {
   const response = await axiosInstance.patch<CreateSaleOrderResponse>(API_SALE_ORDERS_GROUP.update(id), payload);
+  return response.data;
+};
+
+export const deleteSaleOrder = async (id: string): Promise<{ type?: string; message?: string }> => {
+  const response = await axiosInstance.delete<{ type?: string; message?: string }>(API_SALE_ORDERS_GROUP.detail(id));
+  return response.data;
+};
+
+export const saveSaleOrderWithClient = async (
+  payload: SaveSaleOrderWithClientDto,
+  files: SaveSaleOrderWithClientFiles = {},
+  saleOrderId?: string | null,
+): Promise<CreateSaleOrderResponse & { clientId: string }> => {
+  const body = buildSaleOrderUnifiedRequest({ data: payload, ...files });
+  const response = saleOrderId
+    ? await axiosInstance.patch<
+        CreateSaleOrderResponse & { clientId: string }
+      >(API_SALE_ORDERS_GROUP.updateWithClient(saleOrderId), body)
+    : await axiosInstance.post<
+        CreateSaleOrderResponse & { clientId: string }
+      >(API_SALE_ORDERS_GROUP.createWithClient, body);
   return response.data;
 };
 

@@ -7,6 +7,7 @@ import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { getSku } from "@/shared/services/skuService";
 import { getSaleOrderItemComponents } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
+import { normalizeSaleOrderItemComponent } from "@/features/sale-orders/utils/saleOrderItemComponents";
 
 type Props = {
   open: boolean;
@@ -161,14 +162,9 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
         const response = await getSaleOrderItemComponents(itemId);
         const found = response.items.find((row) => row.saleOrderItemId === itemId);
 
-        const nextComponents: SaleOrderItemComponentInput[] = (found?.components ?? []).map((component) => ({
-          skuId: component.sku.id,
-          skuLabel: buildComponentSkuLabel(component.sku),
-          quantity: Number(component.quantity ?? 0),
-          unitPrice: Number(component.unitPrice ?? 0),
-          total: Number(component.total ?? 0),
-          referencePackItemId: component.referencePackItemId ?? undefined,
-        }));
+        const nextComponents: SaleOrderItemComponentInput[] = (found?.components ?? []).map((component) =>
+          normalizeSaleOrderItemComponent(component),
+        );
 
         if (!cancelled) setLoadedComponents(nextComponents);
       } catch (err) {
@@ -323,8 +319,9 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
                     const sku = skuId ? skuById[skuId] ?? null : null;
                     const stock = skuId ? stocksBySkuId[skuId] ?? null : null;
 
-                    const label = buildSkuLabel(sku, component.skuLabel || "Cargando SKU...");
-                    const image = getSkuImage(sku) ?? component.skuImage ?? null;
+                    const componentLabel = component.sku ? buildComponentSkuLabel(component.sku) : "";
+                    const label = buildSkuLabel(sku, componentLabel || component.skuLabel || "Cargando SKU...");
+                    const image = getSkuImage(sku) ?? component.sku?.image ?? component.skuImage ?? null;
 
                     const stockValue = (value?: number | null) => {
                       if (!shouldShowStock) return null;

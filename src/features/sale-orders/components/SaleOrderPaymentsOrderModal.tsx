@@ -50,8 +50,14 @@ export function SaleOrderPaymentsOrderModal({ open, saleOrder, onClose, onUpdate
 
   const total = Number(saleOrder.total ?? 0);
   const totalPaid = useMemo(
-    () => payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
-    [payments],
+    () =>
+      payments.length
+        ? payments.reduce(
+            (sum, payment) => sum + Number(payment.amount ?? 0),
+            0,
+          )
+        : Number(saleOrder.totalPaid ?? 0),
+    [payments, saleOrder.totalPaid],
   );
   const pending = Math.max(0, total - totalPaid);
 
