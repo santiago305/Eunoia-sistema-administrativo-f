@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
-import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { FloatingSuggestInput } from "@/shared/components/components/FloatingSuggestInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { listPacks, getPackById } from "@/shared/services/packService";
 import type { PackDetailResponse, PackItemSku } from "@/features/catalog/types/pack";
@@ -10,6 +10,7 @@ import type { SaleOrderItemComponentInput, SaleOrderItemInput } from "@/features
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { buildSkuLabelFromDetailItem } from "@/features/catalog/packs/Packs";
 import { SaleOrderAddSkuModal } from "@/features/sale-orders/components/modal-create/SaleOrderAddSkuModal";
+import { deriveSkuPresentation } from "@/features/sale-orders/utils/skuPresentation";
 
 type Props = {
     open: boolean;
@@ -54,26 +55,32 @@ const getSkuImage = (sku: PackItemSku | null | undefined) => {
     return sku?.image ?? null;
 };
 
+const getComponentSkuId = (component: SaleOrderItemComponentInput) => {
+    return component.skuId ?? component.sku?.id ?? "";
+};
+
+const getComponentMatchKey = (component: SaleOrderItemComponentInput) => {
+    return getComponentSkuId(component) || component.referencePackItemId || component.id || "";
+};
+
 const upsertComponent = (components: SaleOrderItemComponentInput[] = [], next: SaleOrderItemComponentInput) => {
-    const index = components.findIndex((c) => c.skuId === next.skuId);
+    const nextKey = getComponentMatchKey(next);
+    const index = nextKey ? components.findIndex((component) => getComponentMatchKey(component) === nextKey) : -1;
     if (index === -1) return [...components, next];
 
     return components.map((component, i) => (i === index ? { ...component, ...next } : component));
 };
 
 const distributeTotalToComponents = (components: SaleOrderItemComponentInput[] = [], newTotal: number) => {
-    const currentTotal = sumComponentsTotal(components);
+    if (components.length === 0) return components;
 
-    if (currentTotal <= 0 || components.length === 0) return components;
-
-    let accumulated = 0;
+    const targetCents = Math.round((Number(newTotal) || 0) * 100);
+    const baseCents = Math.trunc(targetCents / components.length);
+    const remainderCents = targetCents - baseCents * components.length;
 
     return components.map((item, index) => {
-        const isLast = index === components.length - 1;
-        const ratio = (Number(item.total) || 0) / currentTotal;
-        const total = isLast ? roundMoney(newTotal - accumulated) : roundMoney(newTotal * ratio);
-
-        accumulated += total;
+        const lineCents = baseCents + (index === components.length - 1 ? remainderCents : 0);
+        const total = roundMoney(lineCents / 100);
 
         return {
             ...item,
@@ -91,7 +98,6 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     const [openAddSku, setOpenAddSku] = useState(false);
     const [skuMetaById, setSkuMetaById] = useState<Record<string, { label: string; price?: number }>>({});
 
-    const hasPack = Boolean(value.referencePackId);
     const isEditing = Boolean(value.components?.length);
 
     useEffect(() => {
@@ -184,30 +190,36 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                 const resolvedSkuId = component.skuId ?? component.sku?.id ?? "";
                 const cached = resolvedSkuId ? skuMetaById[resolvedSkuId] : undefined;
                 const packItem = packItems.find((item) => item.id === component.referencePackItemId || item.skuId === resolvedSkuId);
+                const skuPresentation = component.sku
+                    ? deriveSkuPresentation({ ...component.sku, attributes: component.attributes }, resolvedSkuId)
+                    : null;
 
                 const fallbackLabel = packItem ? buildSkuLabelFromDetailItem(packItem) : (cached?.label ?? resolvedSkuId);
-                const label = component.skuLabel ?? fallbackLabel;
+                const label = skuPresentation?.skuLabel ?? component.skuLabel ?? fallbackLabel;
+                const componentQuantity = Number(component.quantity) || 0;
+                const parentQuantity = Number(value.quantity) || 0;
+                const packQuantity = Number(packItem?.quantity) || (parentQuantity > 0 ? roundMoney(componentQuantity / parentQuantity) : componentQuantity);
 
                 return {
                     id: component.referencePackItemId ?? resolvedSkuId,
                     skuId: resolvedSkuId,
                     label,
-                    packQuantity: Number(packItem?.quantity) || Number(component.quantity) || 0,
+                    packQuantity,
                     packPrice: Number(packItem?.price ?? packItem?.sku?.price ?? component.unitPrice ?? 0),
                     referencePackItemId: component.referencePackItemId ?? packItem?.id,
                     component: {
                         ...component,
                         skuId: resolvedSkuId,
                         skuLabel: label,
-                        skuCode: component.skuCode ?? (packItem ? getSkuCode(packItem.sku, resolvedSkuId) : resolvedSkuId),
-                        skuImage: component.skuImage ?? (packItem ? getSkuImage(packItem.sku) : null),
+                        skuCode: skuPresentation?.skuCode ?? component.skuCode ?? (packItem ? getSkuCode(packItem.sku, resolvedSkuId) : resolvedSkuId),
+                        skuImage: skuPresentation?.skuImage ?? component.skuImage ?? (packItem ? getSkuImage(packItem.sku) : null),
                     },
                 };
             });
         }
 
         return visiblePackItems.map((row) => {
-            const existingComponent = (value.components ?? []).find((c) => c.skuId === row.skuId);
+            const existingComponent = (value.components ?? []).find((component) => getComponentSkuId(component) === row.skuId);
             const baseQty = roundMoney((Number(row.quantity) || 0) * (Number(value.quantity) || 0));
             const unitPrice = existingComponent?.unitPrice ?? Number(row.price ?? row.sku?.price ?? 0);
             const quantity = existingComponent?.quantity ?? baseQty;
@@ -235,25 +247,39 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
         });
     }, [isEditing, packItems, skuMetaById, value.components, value.quantity, visiblePackItems]);
 
-    const buildComponentsFromQuantity = (quantity: number) => {
-        return componentRows.map((row) => {
-            const componentQuantity = isEditing ? row.component.quantity : roundMoney((Number(row.packQuantity) || 0) * quantity);
-
-            const componentUnitPrice = Number(row.component.unitPrice) || row.packPrice;
-            const componentTotal = calcTotal(componentQuantity, componentUnitPrice);
-
+    const buildComponentsFromQuantity = (quantity: number, total: number) => {
+        const components = componentRows.map((row) => {
             return {
                 ...row.component,
                 skuId: row.skuId,
                 skuLabel: row.component.skuLabel ?? row.label,
                 skuCode: row.component.skuCode,
                 skuImage: row.component.skuImage ?? null,
-                quantity: componentQuantity,
-                unitPrice: componentUnitPrice,
-                total: componentTotal,
+                quantity: roundMoney(quantity),
+                unitPrice: 0,
+                total: 0,
                 referencePackItemId: row.referencePackItemId,
             };
         });
+
+        return distributeTotalToComponents(components, total);
+    };
+
+    const buildComponentFromRow = (row: ComponentRow): SaleOrderItemComponentInput => ({
+        ...row.component,
+        skuId: row.skuId,
+        skuLabel: row.component.skuLabel ?? row.label,
+        skuCode: row.component.skuCode,
+        skuImage: row.component.skuImage ?? row.component.sku?.image ?? null,
+        quantity: Number(row.component.quantity) || 0,
+        unitPrice: Number(row.component.unitPrice) || 0,
+        total: Number(row.component.total) || 0,
+        referencePackItemId: row.referencePackItemId,
+    });
+
+    const buildComponentsFromTotal = (total: number) => {
+        const components = componentRows.length > 0 ? componentRows.map(buildComponentFromRow) : (value.components ?? []);
+        return distributeTotalToComponents(components, total);
     };
 
     const recalcParentFromComponents = (nextValue: SaleOrderItemInput, components: SaleOrderItemComponentInput[]): SaleOrderItemInput => {
@@ -276,7 +302,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                 setExcludedSkuIds((prev) => (prev.includes(skuId) ? prev : [...prev, skuId]));
             }
 
-            const components = (value.components ?? []).filter((component) => component.skuId !== skuId);
+            const components = (value.components ?? []).filter((component) => getComponentSkuId(component) !== skuId);
 
             onChange(recalcParentFromComponents(value, components));
         },
@@ -286,7 +312,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     return (
         <Modal open={open} onClose={onClose} title={title} className="max-w-4xl max-h-160" bodyClassName="p-4">
             <div className="space-y-4">
-                <div className="grid grid-cols-1">
+                {/* <div className="grid grid-cols-1">
                     <FloatingSelect
                         label="Seleccionar Pack"
                         name="pack"
@@ -307,112 +333,127 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                         emptyMessage="Sin packs"
                         onSearchChange={setPackQuery}
                     />
-                </div>
+                </div> */}
 
-                <div className="bg-gray-100/80 p-5 rounded-xl space-y-5">
-                    <FloatingInput label="Descripción" name="item-description" value={value.description} onChange={(e) => onChange({ ...value, description: e.target.value })} />
+                    <div className="bg-gray-100/80 p-5 rounded-xl space-y-5">
+                        <FloatingSuggestInput
+                            label="Descripción"
+                            name="item-description"
+                            value={value.description}
+                            onChange={(text) =>
+                                onChange({
+                                    ...value,
+                                    description: text,
+                                    referencePackId: undefined,
+                                })
+                            }
+                            onOptionSelect={(option) => {
+                                setExcludedSkuIds([]);
+                                onChange({
+                                    ...value,
+                                    description: option.label,
+                                    referencePackId: option.value || undefined,
+                                    components: [],
+                                    unitPrice: 0,
+                                    total: 0,
+                                });
+                            }}
+                            options={packOptions}
+                            searchPlaceholder="Selecciona un pack o escribe una descripción"
+                            emptyMessage="Sin packs"
+                            panelWidthMode="min-trigger"
+                        />
 
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <FloatingInput
-                            label="Cantidad"
-                            name="item-qty"
-                            type="number"
-                            min={0}
-                            step="0.001"
-                            value={String(value.quantity)}
-                            onChange={(e) => {
-                                const quantity = parseDecimalInput(e.target.value);
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <FloatingInput
+                                label="Cantidad"
+                                name="item-qty"
+                                type="number"
+                                min={0}
+                                step="0.001"
+                                value={String(value.quantity)}
+                                onChange={(e) => {
+                                    const quantity = parseDecimalInput(e.target.value);
+                                    const total = calcTotal(quantity, value.unitPrice);
+                                    if (componentRows.length > 0) {
+                                        const components = buildComponentsFromQuantity(quantity, total);
+                                        onChange({
+                                            ...value,
+                                            quantity,
+                                            total,
+                                            components,
+                                        });
 
-                                if (hasPack && componentRows.length > 0) {
-                                    const components = buildComponentsFromQuantity(quantity);
-                                    const total = sumComponentsTotal(components);
-                                    const unitPrice = calcUnitPrice(quantity, total);
-
+                                        return;
+                                    }
                                     onChange({
                                         ...value,
                                         quantity,
-                                        unitPrice,
                                         total,
-                                        components,
                                     });
+                                }}
+                            />
 
-                                    return;
-                                }
-
-                                const total = calcTotal(quantity, value.unitPrice);
-
-                                onChange({
-                                    ...value,
-                                    quantity,
-                                    total,
-                                });
-                            }}
-                        />
-
-                        <FloatingInput
-                            label="Precio unit."
-                            name="item-unit-price"
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={String(value.unitPrice)}
-                            onChange={(e) => {
-                                const unitPrice = parseDecimalInput(e.target.value);
-                                const total = calcTotal(value.quantity, unitPrice);
-
-                                if (hasPack) {
-                                    const components = distributeTotalToComponents(value.components ?? [], total);
-
+                            <FloatingInput
+                                label="Precio unit."
+                                name="item-unit-price"
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={String(value.unitPrice)}
+                                onChange={(e) => {
+                                    const unitPrice = parseDecimalInput(e.target.value);
+                                    const total = calcTotal(value.quantity, unitPrice);
+                                    if (componentRows.length > 0) {
+                                        const components = buildComponentsFromTotal(total);
+                                        onChange({
+                                            ...value,
+                                            unitPrice,
+                                            total,
+                                            components,
+                                        });
+                                        return;
+                                    }
                                     onChange({
                                         ...value,
                                         unitPrice,
                                         total,
-                                        components,
                                     });
+                                }}
+                            />
 
-                                    return;
-                                }
+                            <FloatingInput
+                                label="Total"
+                                name="item-total"
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={String(value.total)}
+                                onChange={(e) => {
+                                    const total = parseDecimalInput(e.target.value);
+                                    const unitPrice = calcUnitPrice(value.quantity, total);
 
-                                onChange({
-                                    ...value,
-                                    unitPrice,
-                                    total,
-                                });
-                            }}
-                        />
+                                    if (componentRows.length > 0) {
+                                        const components = buildComponentsFromTotal(total);
 
-                        <FloatingInput
-                            label="Total"
-                            name="item-total"
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={String(value.total)}
-                            onChange={(e) => {
-                                const total = parseDecimalInput(e.target.value);
-                                const unitPrice = calcUnitPrice(value.quantity, total);
+                                        onChange({
+                                            ...value,
+                                            total,
+                                            unitPrice,
+                                            components,
+                                        });
 
-                                if (hasPack) {
-                                    const components = distributeTotalToComponents(value.components ?? [], total);
+                                        return;
+                                    }
 
                                     onChange({
                                         ...value,
                                         total,
                                         unitPrice,
-                                        components,
                                     });
-
-                                    return;
-                                }
-
-                                onChange({
-                                    ...value,
-                                    total,
-                                    unitPrice,
-                                });
-                            }}
-                        />
-                    </div>
+                                }}
+                            />
+                        </div>
 
                     <div className="rounded-xl bg-white p-3 text-sm shadow-inherit">
                         <div className="flex">
@@ -447,7 +488,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                                     skuId: row.skuId,
                                                     skuLabel: row.component.skuLabel ?? row.label,
                                                     skuCode: row.component.skuCode,
-                                                    skuImage: row.component.skuImage ?? null,
+                                                    skuImage: row.component.skuImage ?? row.component.sku?.image ?? null,
                                                     quantity,
                                                     unitPrice: currentUnitPrice,
                                                     total,
@@ -476,7 +517,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                                     skuId: row.skuId,
                                                     skuLabel: row.component.skuLabel ?? row.label,
                                                     skuCode: row.component.skuCode,
-                                                    skuImage: row.component.skuImage ?? null,
+                                                    skuImage: row.component.skuImage ?? row.component.sku?.image ?? null,
                                                     quantity: currentQty,
                                                     unitPrice,
                                                     total,
@@ -505,7 +546,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                                     skuId: row.skuId,
                                                     skuLabel: row.component.skuLabel ?? row.label,
                                                     skuCode: row.component.skuCode,
-                                                    skuImage: row.component.skuImage ?? null,
+                                                    skuImage: row.component.skuImage ?? row.component.sku?.image ?? null,
                                                     quantity: currentQty,
                                                     unitPrice,
                                                     total,
@@ -540,7 +581,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                 <SaleOrderAddSkuModal
                     open={openAddSku}
                     onClose={() => setOpenAddSku(false)}
-                    onAdd={({ skuId, label, quantity, unitPrice }) => {
+                    onAdd={({ skuId, label, quantity, unitPrice, skuImage }) => {
                         setSkuMetaById((prev) => ({ ...prev, [skuId]: { label, price: unitPrice } }));
                         setExcludedSkuIds((prev) => prev.filter((id) => id !== skuId));
 
@@ -550,7 +591,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                             skuId,
                             skuLabel: label,
                             skuCode: skuId,
-                            skuImage: null,
+                            skuImage: skuImage ?? null,
                             quantity,
                             unitPrice,
                             total,
@@ -567,7 +608,6 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                     <SystemButton variant="outline" onClick={onClose}>
                         Cancelar
                     </SystemButton>
-
                     <SystemButton
                         onClick={() => {
                             onConfirm();

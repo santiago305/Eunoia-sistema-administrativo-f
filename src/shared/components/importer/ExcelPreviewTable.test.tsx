@@ -31,6 +31,7 @@ describe("ExcelPreviewTable", () => {
         ]}
         errors={[]}
         selectedRowIndexes={new Set([0])}
+        validRowIndexes={new Set([0])}
         onToggleRow={vi.fn()}
         onToggleAllRows={vi.fn()}
         onChangeCell={vi.fn()}
@@ -88,6 +89,7 @@ describe("ExcelPreviewTable", () => {
         ]}
         errors={[]}
         selectedRowIndexes={new Set([0])}
+        validRowIndexes={new Set([0])}
         ubigeoConfig={ubigeoConfig}
         onToggleRow={vi.fn()}
         onToggleAllRows={vi.fn()}

@@ -18,6 +18,7 @@ import { toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { createSaleOrder, fetchSaleOrderById, getSaleOrderPdf, updateSaleOrder } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { validateSaleOrderForm } from "@/features/sale-orders/utils/saleOrderValidation";
+import { toSaleOrderItemCommands } from "@/features/sale-orders/utils/saleOrderItemComponents";
 import { SaleOrderItemsSection } from "@/features/sale-orders/components/modal-create/SaleOrderItemsSection";
 import { SaleOrderPaymentsModal } from "@/features/sale-orders/components/modal-create/SaleOrderPaymentsModal";
 import { FloatingSuggestInput } from "@/shared/components/components/FloatingSuggestInput";
@@ -313,7 +314,12 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
         try {
             const subTotal = (form.items ?? []).reduce((acc, item) => acc + (item.total ?? 0), 0);
             const total = subTotal + (form.deliveryCost ?? 0);
-            const payload = { ...form, subTotal, total };
+            const payload = {
+                ...form,
+                subTotal,
+                total,
+                items: toSaleOrderItemCommands(form.items ?? []),
+            };
 
             const res = isEdit && orderId ? await updateSaleOrder(orderId, payload) : await createSaleOrder(payload);
 

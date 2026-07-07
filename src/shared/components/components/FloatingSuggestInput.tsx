@@ -17,6 +17,8 @@ import { UI_LAYERS } from "@/shared/components/ui/layers";
 export type FloatingSuggestOption = {
   value: string;
   label: string;
+  searchText?: string;
+  metaText?: string;
 };
 
 export type FloatingSuggestInputProps = {
@@ -67,7 +69,9 @@ export function FloatingSuggestInput({
   const normalizedQuery = value.trim().toLowerCase();
   const filteredOptions = useMemo(() => {
     if (!normalizedQuery) return options;
-    return options.filter((opt) => opt.label.toLowerCase().includes(normalizedQuery));
+    return options.filter((opt) =>
+      (opt.searchText ?? opt.label).toLowerCase().includes(normalizedQuery),
+    );
   }, [normalizedQuery, options]);
 
   const hasValue = value.trim().length > 0;
@@ -306,7 +310,7 @@ export function FloatingSuggestInput({
                 role="option"
                 aria-selected={isActive}
                 className={cn(
-                  "flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors",
+                  "flex w-full items-center gap-3 px-3 py-2 text-left text-xs transition-colors",
                   isActive ? "bg-muted text-foreground" : "text-foreground hover:bg-muted",
                 )}
                 onMouseEnter={() => setActiveIndex(index)}
@@ -316,8 +320,15 @@ export function FloatingSuggestInput({
                   commitOption(index);
                 }}
               >
-                <span className="truncate">{option.label}</span>
-                {isExact ? <Check className="h-4 w-4 text-primary" /> : null}
+                <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                {option.metaText ? (
+                  <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+                    {option.metaText}
+                  </span>
+                ) : null}
+                {isExact ? (
+                  <Check className="h-4 w-4 shrink-0 text-primary" />
+                ) : null}
               </button>
             );
           })

@@ -1,98 +1,103 @@
-import { startTransition, useCallback, useMemo, useState } from "react";
-import { Bike, Pencil, Plus, Trash2 } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
+import {
+    forwardRef,
+    startTransition,
+    useCallback,
+    useImperativeHandle,
+    useState,
+    type Dispatch,
+    type ForwardedRef,
+    type ReactElement,
+    type RefAttributes,
+    type SetStateAction,
+} from "react";
+import { BadgePercent, Bike, Plus } from "lucide-react";
+import { env } from "@/env";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { DataTable } from "@/shared/components/table/DataTable";
-import type { DataTableColumn } from "@/shared/components/table/types";
-import type { CreateSaleOrderDto, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
+import type { CreateSaleOrderDto, SaleOrderItemComponentInput, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
 import { SaleOrderItemEditorModal } from "@/features/sale-orders/components/modal-create/SaleOrderItemEditorModal";
 import { buildEmptySaleOrderItem } from "@/features/sale-orders/utils/saleOrderForm";
 import { Modal } from "@/shared/components/modales/Modal";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { normalizeMoney, parseDecimalInput } from "@/shared/utils/functionPurchases";
-import { SaleOrderItemComponentsStockModal } from "@/features/sale-orders/components/modal-create/SaleOrderItemComponentsStockModal";
+import { SaleOrderItemsTable } from "@/features/sale-orders/components/SaleOrderItemsTable";
+import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
+import { getSku } from "@/shared/services/skuService";
 
-type Props = {
-    form: CreateSaleOrderDto;
-    setForm: Dispatch<SetStateAction<CreateSaleOrderDto>>;
+type SaleOrderItemsForm = Pick<
+    CreateSaleOrderDto,
+    "items" | "deliveryCost" | "discount" | "warehouseId"
+>;
+
+type Props<T extends SaleOrderItemsForm> = {
+    form: T;
+    setForm: Dispatch<SetStateAction<T>>;
+    productsEditable?: boolean;
+    showActions?: boolean;
 };
 
-type ItemRow = SaleOrderItemInput & { id: string; rowIndex: number };
+const resolveImageUrl = (value?: string | null) => {
+    if (!value) return "";
+    if (/^(https?:|blob:|data:)/i.test(value)) return value;
+    try {
+        return new URL(value, env.apiBaseUrl).toString();
+    } catch {
+        return value;
+    }
+};
 
-export function SaleOrderItemsSection({ form, setForm }: Props) {
+const getComponentImage = (component: SaleOrderItemComponentInput) =>
+    resolveImageUrl(component.sku?.image ?? component.skuImage ?? null);
+
+const getSkuDetailImage = (data: unknown) => {
+    const detail = data as {
+        image?: string | null;
+        sku?: { image?: string | null } | null;
+    } | null;
+
+    return resolveImageUrl(detail?.sku?.image ?? detail?.image ?? null);
+};
+
+const resolveComponentImage = async (component: SaleOrderItemComponentInput) => {
+    const cachedImage = getComponentImage(component);
+    if (cachedImage) return cachedImage;
+
+    const skuId = component.sku?.id ?? component.skuId ?? "";
+    if (!skuId) return "";
+
+    try {
+        return getSkuDetailImage(await getSku(skuId));
+    } catch {
+        return "";
+    }
+};
+
+export type SaleOrderItemsSectionHandle = {
+    openCreate: () => void;
+    openTariff: () => void;
+    openDiscount: () => void;
+};
+
+function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
+    {
+        form,
+        setForm,
+        productsEditable = true,
+        showActions = true,
+    }: Props<T>,
+    ref: ForwardedRef<SaleOrderItemsSectionHandle>,
+) {
     const [openEditor, setOpenEditor] = useState(false);
     const [openTarifa, setOpenTarifa] = useState(false);
-    const [openDetail, setOpenDetail] = useState(false);
-    const [detailItem, setDetailItem] = useState<SaleOrderItemInput | null>(null);
+    const [openDiscount, setOpenDiscount] = useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = useState("");
     const [tarifa, setTarifa] = useState(0);
+    const [discount, setDiscount] = useState(0);
     const [editIndex, setEditIndex] = useState<number | null>(null);
     const [draft, setDraft] = useState<SaleOrderItemInput>(() => buildEmptySaleOrderItem());
 
-    const subTotal = useMemo(() => (form.items ?? []).reduce((acc, item) => acc + (item.total ?? 0), 0), [form.items]);
-    const deliveryCost = form.deliveryCost ?? 0;
-    const total = subTotal + deliveryCost;
-
-    const rows = useMemo<ItemRow[]>(() => (form.items ?? []).map((item, index) => ({ ...item, id: `item-${index}`, rowIndex: index })), [form.items]);
-
-    const columns = useMemo<DataTableColumn<ItemRow>[]>(
-        () => [
-            { id: "description", header: "Descripción", cell: (row) => <span className="truncate">{row.description}</span> },
-            {
-                id: "quantity",
-                header: "Cantidad",
-                cell: (row) => <span className="tabular-nums">{row.quantity}</span>,
-            },
-            {
-                id: "unitPrice",
-                header: "Precio unit.",
-                cell: (row) => <span className="tabular-nums">{row.unitPrice.toLocaleString("es-PE", { style: "currency", currency: "PEN" })}</span>,
-            },
-            {
-                id: "total",
-                header: "Total",
-                cell: (row) => <span className="tabular-nums">{row.total.toLocaleString("es-PE", { style: "currency", currency: "PEN" })}</span>,
-            },
-            {
-                id: "actions",
-                header: "Acciones",
-                stopRowClick: true,
-                cell: (row) => (
-                    <div className="flex justify-center gap-2">
-                        <SystemButton
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
-                            title="Editar"
-                            onClick={() => {
-                                setEditIndex(row.rowIndex);
-                                setDraft(form.items[row.rowIndex]);
-                                setOpenEditor(true);
-                            }}
-                        >
-                            <Pencil className="h-4 w-4" />
-                        </SystemButton>
-                        <SystemButton
-                            size="icon"
-                            variant="danger"
-                            className="h-8 w-8"
-                            title="Eliminar"
-                            onClick={() => {
-                                startTransition(() =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        items: (prev.items ?? []).filter((_, i) => i !== row.rowIndex),
-                                    })),
-                                );
-                            }}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </SystemButton>
-                    </div>
-                ),
-            },
-        ],
-        [form.items, setForm],
-    );
+    const openComponentImagePreview = useCallback(async (component: SaleOrderItemComponentInput) => {
+        setPreviewImageUrl(await resolveComponentImage(component));
+    }, []);
 
     const openCreate = useCallback(() => {
         setEditIndex(null);
@@ -117,54 +122,82 @@ export function SaleOrderItemsSection({ form, setForm }: Props) {
         setOpenTarifa(true);
     }, [form.deliveryCost]);
 
+    const openDiscountModal = useCallback(() => {
+        setDiscount(form.discount ?? 0);
+        setOpenDiscount(true);
+    }, [form.discount]);
+
+    useImperativeHandle(
+        ref,
+        () => ({
+            openCreate,
+            openTariff: openTarifaModal,
+            openDiscount: openDiscountModal,
+        }),
+        [openCreate, openDiscountModal, openTarifaModal],
+    );
+
     return (
         <section className="overflow-hidden flex flex-col">
-            <div className="px-3 sm:px-4 flex items-center justify-end gap-2">
-                <SystemButton variant="motion" leftIcon={<Bike className="h-4 w-4" />} onClick={openTarifaModal}>
-                    Tarifa
-                </SystemButton>
-                <SystemButton leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>
-                    Agregar Pack
-                </SystemButton>
-            </div>
+            {showActions ? (
+                <div className="px-3 sm:px-4 flex items-center justify-end gap-2">
+                    <SystemButton variant="motion" leftIcon={<Bike className="h-4 w-4" />} onClick={openTarifaModal}>
+                        Tarifa
+                    </SystemButton>
+                    <SystemButton variant="warning" leftIcon={<BadgePercent className="h-4 w-4" />} onClick={openDiscountModal}>
+                        Descuento
+                    </SystemButton>
+                    <SystemButton leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate} disabled={!productsEditable}>
+                        Agregar Pack
+                    </SystemButton>
+                </div>
+            ) : null}
 
-            <div className="px-3 sm:px-4 mt-3 flex-1 overflow-auto">
-                <DataTable
-                    tableId="sale-orders-items"
-                    data={rows}
-                    columns={columns}
-                    rowKey="id"
-                    onRowClick={(row) => {
-                        const selected = form.items?.[row.rowIndex] ?? null;
-                        setDetailItem(selected);
-                        setOpenDetail(true);
+            <div
+                className={`flex-1 overflow-hidden px-0 sm:px-0 ${
+                    showActions ? "mt-0" : "mt-0"
+                }`}
+            >
+                <SaleOrderItemsTable
+                    items={form.items ?? []}
+                    warehouseId={form.warehouseId}
+                    productsEditable={productsEditable}
+                    onEdit={(item, index) => {
+                        setEditIndex(index);
+                        setDraft(item);
+                        setOpenEditor(true);
+                    }}
+                    onDelete={(_, index) => {
+                        startTransition(() =>
+                            setForm((previous) => ({
+                                ...previous,
+                                items: (previous.items ?? []).filter(
+                                    (_item, itemIndex) => itemIndex !== index,
+                                ),
+                            })),
+                        );
+                    }}
+                    onOpenDetail={(_item, _index, component) => {
+                        void openComponentImagePreview(component);
                     }}
                 />
-                <div className="p-2 space-y-1">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">SubTotal:</span>
-                        <span className="text-sm">{subTotal.toLocaleString("es-PE", { style: "currency", currency: "PEN" })}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Costo de envío:</span>
-                        <span className="text-sm">{deliveryCost.toLocaleString("es-PE", { style: "currency", currency: "PEN" })}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Total:</span>
-                        <span className="text-sm">{total.toLocaleString("es-PE", { style: "currency", currency: "PEN" })}</span>
-                    </div>
-                </div>
             </div>
 
             <SaleOrderItemEditorModal
                 open={openEditor}
-                title={editIndex === null ? "Agregar Producto" : "Editar Producto"}
+                title={editIndex === null ? "Agregar Pack" : "Adicionar Producto"}
                 value={draft}
                 onChange={setDraft}
                 onClose={() => setOpenEditor(false)}
                 onConfirm={confirm}
             />
-            <SaleOrderItemComponentsStockModal open={openDetail} onClose={() => setOpenDetail(false)} warehouseId={form.warehouseId} item={detailItem} />
+            <ImagePreviewModal
+                open={Boolean(previewImageUrl)}
+                images={previewImageUrl ? [previewImageUrl] : []}
+                currentIndex={0}
+                onClose={() => setPreviewImageUrl("")}
+                altPrefix="Imagen del SKU"
+            />
             <Modal open={openTarifa} onClose={() => setOpenTarifa(false)} title="Tarifa de envío">
                 <div className="p-4">
                     <FloatingInput
@@ -193,6 +226,44 @@ export function SaleOrderItemsSection({ form, setForm }: Props) {
                     </SystemButton>
                 </div>
             </Modal>
+            <Modal open={openDiscount} onClose={() => setOpenDiscount(false)} title="Descuento">
+                <div className="p-4">
+                    <FloatingInput
+                        label="Descuento"
+                        name="sale-order-discount"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={String(discount)}
+                        onChange={(event) => {
+                            setDiscount(normalizeMoney(parseDecimalInput(event.target.value)));
+                        }}
+                    />
+                </div>
+                <div className="p-4 border-t flex justify-end gap-2">
+                    <SystemButton variant="outline" onClick={() => setOpenDiscount(false)}>
+                        Cancelar
+                    </SystemButton>
+                    <SystemButton
+                        onClick={() => {
+                            setForm((previous) => ({
+                                ...previous,
+                                discount: Math.max(0, discount),
+                            }));
+                            setOpenDiscount(false);
+                        }}
+                    >
+                        Guardar
+                    </SystemButton>
+                </div>
+            </Modal>
         </section>
     );
 }
+
+export const SaleOrderItemsSection = forwardRef(
+    SaleOrderItemsSectionInner,
+) as <T extends SaleOrderItemsForm>(
+    props: Props<T> &
+        RefAttributes<SaleOrderItemsSectionHandle>,
+) => ReactElement;

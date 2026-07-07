@@ -12,7 +12,7 @@ type Props = {
   onEditOrder: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
-  onOrderChanged: (orderId: string) => void | Promise<void>;
+  onDeleteOrder: (order: SaleOrder) => void;
   statistics: SaleOrderStatisticsResponse | null;
   statisticsLoading: boolean;
   statisticsError: string | null;
@@ -27,7 +27,7 @@ export function SaleOrdersBoard({
   onEditOrder,
   onOpenPdf,
   onOpenPayments,
-  onOrderChanged,
+  onDeleteOrder,
   statistics,
   statisticsLoading,
   statisticsError,
@@ -50,7 +50,7 @@ export function SaleOrdersBoard({
               onEditOrder={onEditOrder}
               onOpenPdf={onOpenPdf}
               onOpenPayments={onOpenPayments}
-              onOrderChanged={onOrderChanged}
+              onDeleteOrder={onDeleteOrder}
             />
           </div>
           {listFooter ? <div className="shrink-0">{listFooter}</div> : null}

@@ -410,10 +410,12 @@ export const API_DOCUMENT_SERIES_GROUP = {
 export const API_SALE_ORDERS_GROUP = {
   base: "/sale-orders",
   create: "/sale-orders",
+  createWithClient: "/sale-orders/with-client",
   importPreview: "/sale-orders/import-preview",
   list: "/sale-orders",
   detail: (id: string) => `/sale-orders/${id}`,
   update: (id: string) => `/sale-orders/${id}`,
+  updateWithClient: (id: string) => `/sale-orders/${id}/with-client`,
   assignWorkflow: (id: string) => `/sale-orders/${id}/assign-workflow`,
   availableTransitions: (id: string) => `/sale-orders/${id}/available-transitions`,
   changeState: (id: string) => `/sale-orders/${id}/change-state`,
@@ -426,6 +428,11 @@ export const API_SALE_ORDERS_GROUP = {
   deleteSearchMetric: (metricId: string) => `/sale-orders/search-metrics/${metricId}`,
   saleOrderPdf: (id: string) => `/pdf-generated/sale-orders/${id}/pdf`,
   itemComponents: (itemId: string) => `/sale-orders/items/${itemId}/components`,
+};
+
+export const API_ADVISERS_GROUP = {
+  list: "/advisers",
+  create: "/advisers",
 };
 
 export const API_WORKFLOWS_GROUP = {

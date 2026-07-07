@@ -120,6 +120,23 @@ const buildSaleOrder = (stateName: string): SaleOrder => ({
   items: [],
 });
 
+const buildOrderWithComponent = (
+  stateName: string,
+  component: NonNullable<NonNullable<SaleOrder["items"]>[number]["components"]>[number],
+): SaleOrder => ({
+  ...buildSaleOrder(stateName),
+  items: [
+    {
+      id: "item-1",
+      quantity: 1,
+      unitPrice: 20,
+      total: 20,
+      description: "Pack detalle",
+      components: [component],
+    },
+  ],
+});
+
 const emptySearchState = {
   recent: [],
   saved: [],
@@ -185,6 +202,26 @@ describe("SaleOrders", () => {
     expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
   });
 
+  it("opens the unified modal in create mode from Nuevo pedido", async () => {
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /nuevo pedido/i }),
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Nuevo pedido" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Detalle de pedido" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("opens detail from the row and removes detail from the actions popover", async () => {
     const order = buildSaleOrder("Pendiente");
     listSaleOrdersMock.mockResolvedValue({
@@ -207,7 +244,60 @@ describe("SaleOrders", () => {
 
     await user.click(screen.getByRole("button", { name: /acciones del pedido/i }));
     expect(screen.queryByRole("button", { name: "Detalle" })).not.toBeInTheDocument();
-    expect(screen.getByText("Pagos")).toBeInTheDocument();
+    expect(screen.getAllByText("Pagos").length).toBeGreaterThan(0);
+  });
+
+  it("does not render listed id-only components while loading order detail", async () => {
+    let resolveDetail!: (order: SaleOrder) => void;
+    const detailPromise = new Promise<SaleOrder>((resolve) => {
+      resolveDetail = resolve;
+    });
+    const listedOrder = buildOrderWithComponent("Pendiente", {
+      skuId: "sku-only-id",
+      quantity: 1,
+      unitPrice: 20,
+      total: 20,
+    });
+    const detailedOrder = buildOrderWithComponent("Pendiente", {
+      skuId: "sku-1",
+      sku: {
+        id: "sku-1",
+        backendSku: "10017",
+        customSku: "EVA01893",
+        name: "JABON AZUFRE",
+        barcode: null,
+        image: null,
+      },
+      attributes: [{ code: "variant", name: "Variante", value: "AZUFRE" }],
+      quantity: 1,
+      unitPrice: 20,
+      total: 20,
+    });
+    listSaleOrdersMock.mockResolvedValue({
+      items: [listedOrder],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchSaleOrderByIdMock.mockReturnValue(detailPromise);
+    const user = userEvent.setup();
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await user.click(await screen.findByText("SO-1"));
+
+    expect(screen.queryByText("sku-only-id")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveDetail(detailedOrder);
+      await detailPromise;
+    });
+
+    expect(await screen.findByText("JABON AZUFRE AZUFRE -10017 (EVA01893)")).toBeInTheDocument();
   });
 
   it("refreshes the selected order detail when sale-orders.updated arrives without explicit ids", async () => {
@@ -215,12 +305,19 @@ describe("SaleOrders", () => {
     authState.userId = "user-1";
     const initialOrder = buildSaleOrder("Pendiente");
     const refreshedOrder = buildSaleOrder("Confirmado");
-    listSaleOrdersMock.mockResolvedValue({
-      items: [initialOrder],
-      total: 1,
-      page: 1,
-      limit: 10,
-    });
+    listSaleOrdersMock
+      .mockResolvedValueOnce({
+        items: [initialOrder],
+        total: 1,
+        page: 1,
+        limit: 10,
+      })
+      .mockResolvedValue({
+        items: [refreshedOrder],
+        total: 1,
+        page: 1,
+        limit: 10,
+      });
     fetchSaleOrderByIdMock
       .mockResolvedValueOnce(initialOrder)
       .mockResolvedValueOnce(refreshedOrder);
@@ -233,12 +330,15 @@ describe("SaleOrders", () => {
     );
 
     await user.click(await screen.findByText("SO-1"));
+    await waitFor(() => expect(fetchSaleOrderByIdMock).toHaveBeenCalledWith("order-1"));
     await waitFor(() => expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0));
+    await waitFor(() => expect(socketHandlers.has("sale-orders.updated")).toBe(true));
 
     await act(async () => {
       socketHandlers.get("sale-orders.updated")?.({ updated: 1, saleOrderIds: [] });
     });
 
+    await waitFor(() => expect(fetchSaleOrderByIdMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getAllByText("Confirmado").length).toBeGreaterThan(0));
     expect(fetchSaleOrderByIdMock).toHaveBeenLastCalledWith("order-1");
   });
