@@ -138,14 +138,14 @@ export function SaleOrderStatusPopover({ order, onOrderChanged }: Props) {
         showLabels
         triggerIcon={
           <span
-            className="h-2.5 w-2.5 rounded-full"
+            className="h-3 w-2.5 rounded-full"
             style={{ backgroundColor: stateColor }}
           />
         }
         triggerText={stateName}
-        triggerVariant="outline"
+        triggerVariant="ghost"
         triggerLabel={stateName}
-        triggerClassName="h-auto max-w-[140px] gap-1.5 px-1.5 py-1 text-[9px] font-semibold text-zinc-800"
+        triggerClassName="h-auto max-w-[140px] w-30 h-10 gap-1.5 px-1.5 py-1 text-[9px] font-semibold text-zinc-800"
         popoverClassName="min-w-[260px]"
         popoverBodyClassName="p-2"
         renderAction={(action, helpers) => {

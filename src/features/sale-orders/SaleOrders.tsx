@@ -868,13 +868,13 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
-                            <SystemButton size="sm" variant="outline" leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)}>
+                            <SystemButton size="lg" variant="outline"  leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)}>
                                 Tipos
                             </SystemButton>
-                            <SystemButton size="sm" variant="outline" leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle}>
+                            <SystemButton size="lg" variant="outline"  leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle}>
                                 Importar
                             </SystemButton>
-                            <SystemButton size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle}>
+                            <SystemButton size="lg" leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle}>
                                 Nuevo pedido
                             </SystemButton>
                         </>
@@ -912,13 +912,13 @@ export default function SaleOrders() {
                     onPageChange={handlePageChange}
                     onRowClick={(order) => void openOrderDetail(order)}
                     tableClassName="
-            text-[10px]
-            [&_th]:h-8
-            [&_th]:whitespace-nowrap
-            [&_th]:px-2
-            [&_td]:px-2
-            [&_td]:py-2
-          "
+                        text-[10px]
+                        [&_th]:h-8
+                        [&_th]:whitespace-nowrap
+                        [&_th]:px-2
+                        [&_td]:px-2
+                        [&_td]:py-2
+                    "
                 />
             </div>
             <PdfViewerModal
