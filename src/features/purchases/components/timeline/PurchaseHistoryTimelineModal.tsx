@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock3 } from "lucide-react";
 import { PurchaseTimeline, type PurchaseTimelineEvent } from "./PurchaseTimeline";
 import { Modal } from "@/shared/components/modales/Modal";
 import { DataTablePagination } from "@/shared/components/table/DataTablePagination";
@@ -85,25 +84,10 @@ export function PurchaseHistoryTimelineModal({
           ? `Linea de tiempo de la compra ${purchaseNumber}`
           : "Linea de tiempo de la compra"
       }
-      className="w-[min(920px,calc(100vw-2rem))]"
-      bodyClassName="max-h-[70vh] px-4 py-4"
+      className="w-auto"
+      bodyClassName="max-h-[70vh] px-3 py-3 sm:px-4 sm:py-4"
     >
       <div className="space-y-4">
-        <div className="flex flex-col gap-2 rounded-sm border border-black/10 bg-black/[0.02] px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sm font-semibold text-black">
-              <Clock3 className="h-4 w-4 text-black/60" aria-hidden="true" />
-              <span className="truncate">{purchaseNumber || "Compra"}</span>
-            </div>
-            {purchase?.supplierName ? (
-              <p className="mt-1 truncate text-xs text-black/55">{purchase.supplierName}</p>
-            ) : null}
-          </div>
-          <span className="shrink-0 rounded-sm border border-black/10 bg-white px-2 py-1 text-xs text-black/60">
-            {total} eventos
-          </span>
-        </div>
-
         {error ? (
           <div className="rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {error}

@@ -64,6 +64,7 @@ export const RoutesPaths = {
   purchaseReception: "/compras/:poId/recepcion",
   purchasePayments: "/compras/:id/pagos",
   purchaseDocuments: "/compras/:id/documentos",
+  purchaseHistory: "/compras/:id/historial",
   recurringPurchases: "/compras/recurrentes",
   purchaseEdit: "/compra/:poId",
   payments: "/pagos",

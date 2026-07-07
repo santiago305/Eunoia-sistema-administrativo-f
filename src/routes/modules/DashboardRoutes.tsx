@@ -218,6 +218,10 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withCompanyRouteGuard(RoutesPaths.purchaseDocuments, <PurchaseDetailPage />),
             },
             {
+                path: RoutesPaths.purchaseHistory,
+                element: withCompanyRouteGuard(RoutesPaths.purchaseHistory, <PurchaseDetailPage />),
+            },
+            {
                 path: RoutesPaths.purchaseDetail,
                 element: withCompanyRouteGuard(RoutesPaths.purchaseDetail, <PurchaseDetailPage />),
             },

@@ -13,6 +13,7 @@ describe("purchase pages routing", () => {
     expect(RoutesPaths.purchaseEditPage).toBe("/compras/:id/editar");
     expect(RoutesPaths.purchasePayments).toBe("/compras/:id/pagos");
     expect(RoutesPaths.purchaseDocuments).toBe("/compras/:id/documentos");
+    expect(RoutesPaths.purchaseHistory).toBe("/compras/:id/historial");
     expect(RoutesPaths.recurringPurchases).toBe("/compras/recurrentes");
     expect(RoutesPaths.paymentMethods).toBe("/metodos-pago");
   });
@@ -24,6 +25,7 @@ describe("purchase pages routing", () => {
       [RoutesPaths.purchaseEditPage, ["page.purchases.view"]],
       [RoutesPaths.purchasePayments, ["page.payments.view", "payments.read"]],
       [RoutesPaths.purchaseDocuments, ["page.purchases.view", "purchases.attach_documents"]],
+      [RoutesPaths.purchaseHistory, ["page.purchases.view", "purchases.view_detail", "purchases.view_history"]],
       [RoutesPaths.recurringPurchases, ["page.purchases.view", "page.recurring-purchases.view", "recurring_purchases.view"]],
     ] as const;
 
@@ -39,6 +41,7 @@ describe("purchase pages routing", () => {
     expect(getRouteMetaByUrl("/compras/PO-123/editar")?.path).toBe(RoutesPaths.purchaseEditPage);
     expect(getRouteMetaByUrl("/compras/PO-123/pagos")?.path).toBe(RoutesPaths.purchasePayments);
     expect(getRouteMetaByUrl("/compras/PO-123/documentos")?.path).toBe(RoutesPaths.purchaseDocuments);
+    expect(getRouteMetaByUrl("/compras/PO-123/historial")?.path).toBe(RoutesPaths.purchaseHistory);
     expect(getRouteMetaByUrl("/compra/PO-123")?.path).toBe(RoutesPaths.purchaseEdit);
   });
 

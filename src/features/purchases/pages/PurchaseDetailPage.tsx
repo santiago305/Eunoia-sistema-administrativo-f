@@ -11,21 +11,23 @@ import { PurchaseItemsTab } from "@/features/purchases/components/detail/Purchas
 import { PurchasePaymentsTab } from "@/features/purchases/components/detail/PurchasePaymentsTab";
 import { PurchaseDocumentsTab } from "@/features/purchases/components/detail/PurchaseDocumentsTab";
 import { PurchaseTimelineTab } from "@/features/purchases/components/detail/PurchaseTimelineTab";
-import { resolvePurchaseDetailTabFromPath, type PurchaseDetailTab } from "./purchaseDetailTabs";
+import { getVisiblePurchaseDetailTabs, resolvePurchaseDetailTabFromPath, type PurchaseDetailTab } from "./purchaseDetailTabs";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
-const tabItems: Array<{ value: PurchaseDetailTab; label: string; icon: typeof Package }> = [
-  { value: "summary", label: "Resumen", icon: Receipt },
-  { value: "items", label: "Items", icon: Package },
-  { value: "reception", label: "Recepción", icon: Truck },
-  { value: "payments", label: "Pagos", icon: FileText },
-  { value: "documents", label: "Documentos", icon: FileText },
-  { value: "timeline", label: "Historial", icon: History },
-  { value: "approvals", label: "Aprobaciones", icon: ShieldCheck },
-];
+const tabIcons: Record<PurchaseDetailTab, typeof Package> = {
+  summary: Receipt,
+  items: Package,
+  reception: Truck,
+  payments: FileText,
+  documents: FileText,
+  timeline: History,
+  approvals: ShieldCheck,
+};
 
 const buildPath = (purchaseId: string, tab: PurchaseDetailTab) => {
   if (tab === "payments") return `/compras/${purchaseId}/pagos`;
   if (tab === "documents") return `/compras/${purchaseId}/documentos`;
+  if (tab === "timeline") return `/compras/${purchaseId}/historial`;
   return `/compras/${purchaseId}`;
 };
 
@@ -33,11 +35,15 @@ export default function PurchaseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const purchaseId = id ?? "";
   const currentTab = resolvePurchaseDetailTabFromPath(location.pathname);
+  const canViewHistory = can("purchases.view_history");
+  const visibleTabs = getVisiblePurchaseDetailTabs(can);
+  const activeTab = currentTab === "timeline" && !canViewHistory ? "summary" : currentTab;
   const { detail, loading, reload } = usePurchaseDetail(purchaseId);
   const { payments, loading: paymentsLoading } = usePurchasePayments(purchaseId);
-  const { events, loading: timelineLoading } = usePurchaseTimeline(purchaseId);
+  const { events, loading: timelineLoading } = usePurchaseTimeline(canViewHistory ? purchaseId : undefined);
 
   const code = detail ? [detail.serie, detail.correlative].filter(Boolean).join("-") || detail.poId || purchaseId : purchaseId;
 
@@ -70,14 +76,17 @@ export default function PurchaseDetailPage() {
         {loading ? (
           <div className="rounded-sm border border-black/10 bg-white p-4 text-sm text-black/50">Cargando compra...</div>
         ) : detail ? (
-          <Tabs.Root value={currentTab} onValueChange={(value) => navigate(buildPath(purchaseId, value as PurchaseDetailTab))} className="space-y-4">
+          <Tabs.Root value={activeTab} onValueChange={(value) => navigate(buildPath(purchaseId, value as PurchaseDetailTab))} className="space-y-4">
             <Tabs.List className="flex gap-1 overflow-x-auto border-b border-black/10" aria-label="Secciones de compra">
-              {tabItems.map(({ value, label, icon: Icon }) => (
+              {visibleTabs.map(({ value, label }) => {
+                const Icon = tabIcons[value];
+                return (
                 <Tabs.Trigger key={value} value={value} className="inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-medium text-black/55 data-[state=active]:border-black data-[state=active]:text-black">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   {label}
                 </Tabs.Trigger>
-              ))}
+                );
+              })}
             </Tabs.List>
 
             <Tabs.Content value="summary"><PurchaseSummaryTab detail={detail} /></Tabs.Content>
@@ -91,7 +100,9 @@ export default function PurchaseDetailPage() {
             </Tabs.Content>
             <Tabs.Content value="payments"><PurchasePaymentsTab payments={payments} loading={paymentsLoading} /></Tabs.Content>
             <Tabs.Content value="documents"><PurchaseDocumentsTab purchaseId={purchaseId} payments={payments} legacyImages={detail.imageProdution ?? []} /></Tabs.Content>
-            <Tabs.Content value="timeline"><PurchaseTimelineTab events={events} loading={timelineLoading} /></Tabs.Content>
+            {canViewHistory ? (
+              <Tabs.Content value="timeline"><PurchaseTimelineTab events={events} loading={timelineLoading} /></Tabs.Content>
+            ) : null}
             <Tabs.Content value="approvals">
               <div className="rounded-sm border border-black/10 bg-white p-4 text-sm text-black/70">
                 <p>Creación con pago: {detail.status}</p>
