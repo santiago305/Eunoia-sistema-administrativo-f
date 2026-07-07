@@ -3,6 +3,7 @@ import {
   assignSaleOrderWorkflow,
   changeSaleOrderState,
   createSaleOrderPayment,
+  deleteSaleOrder,
   deleteSaleOrderPayment,
   getAvailableSaleOrderTransitions,
   getSaleOrderWorkflowHistory,
@@ -79,6 +80,15 @@ describe("saleOrderService payments/workflow", () => {
 
     expect(axiosInstance.delete).toHaveBeenCalledWith("/sale-orders/so-4/payments/p-9");
     expect(res.deleted).toBe(true);
+  });
+
+  it("deleteSaleOrder -> DELETE /sale-orders/:id", async () => {
+    (axiosInstance.delete as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { type: "success", message: "ok" } });
+
+    const res = await deleteSaleOrder("so-5");
+
+    expect(axiosInstance.delete).toHaveBeenCalledWith("/sale-orders/so-5");
+    expect(res.message).toBe("ok");
   });
 
   it("previewSaleOrdersJsonImport -> POST /sale-orders/import-preview with direct rows array", async () => {

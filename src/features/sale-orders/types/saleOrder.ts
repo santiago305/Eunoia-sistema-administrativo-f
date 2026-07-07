@@ -1,4 +1,8 @@
 import { ClientDocType } from "@/features/clients/types/client";
+import type {
+  CreateClientBody,
+  UpdateClientBody,
+} from "@/features/clients/types/clientApi";
 
 export enum SaleOrderAutomaticWorkflowTriggerEnum {
   SALE_ORDER_CREATED = "sale-order-created",
@@ -61,27 +65,52 @@ export type SaleOrdersUpdatedPayload = {
   statistics?: SaleOrderStatisticsResponse;
 };
 
+export type SaleOrderSkuSnapshot = {
+  id: string;
+  productId?: string | null;
+  backendSku: string;
+  customSku: string | null;
+  name: string;
+  barcode: string | null;
+  image: string | null;
+  price?: number;
+  cost?: number;
+  isSellable?: boolean;
+  isPurchasable?: boolean;
+  isManufacturable?: boolean;
+  isStockTracked?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string | null;
+};
+
+export type SaleOrderSkuUnit = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+export type SaleOrderSkuAttribute = {
+  code: string;
+  name: string | null;
+  value: string;
+};
+
 export type SaleOrderItemComponentInput = {
   id?: string;
+  saleOrderItemId?: string;
   skuId?: string;
-  sku?:
-    | {
-        id?: string;
-        name?: string | null;
-        backendSku?: string | null;
-        customSku?: string | null;
-        image?: string | null;
-        attributes?: Array<{ value?: string | null }> | null;
-      }
-    | null;
+  skuLabel?: string;
+  skuCode?: string;
+  skuImage?: string | null;
+  sku?: SaleOrderSkuSnapshot;
+  unit?: SaleOrderSkuUnit | null;
+  attributes?: SaleOrderSkuAttribute[];
+  stockItemId?: string | null;
   quantity: number;
   unitPrice: number;
   total: number;
   referencePackItemId?: string;
-
-  skuLabel?: string;
-  skuCode?: string;
-  skuImage?: string | null;
 };
 
 export type SaleOrderItemInput = {
@@ -94,13 +123,95 @@ export type SaleOrderItemInput = {
   components?: SaleOrderItemComponentInput[];
 };
 
+export type SaleOrderItemComponentCommand = {
+  skuId: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  referencePackItemId?: string;
+};
+
+export type SaleOrderItemCommand = Omit<SaleOrderItemInput, "components"> & {
+  components?: SaleOrderItemComponentCommand[];
+};
+
 export type SaleOrderPaymentInput = {
+  id?: string;
+  clientKey?: string;
   method: string;
   amount: number;
   bankAccountId?: string;
   date?: string;
   operationNumber?: string;
   note?: string;
+};
+
+export type SaleOrderClientCommand =
+  | { mode: "existing"; id: string }
+  | { mode: "create"; data: CreateClientBody }
+  | { mode: "update"; id: string; data: UpdateClientBody };
+
+export type SaleOrderAttachmentType =
+  | "SHIPPING_PHOTO"
+  | "PAYMENT_PROOF";
+
+export type SaleOrderAttachment = {
+  id: string;
+  saleOrderPaymentId: string | null;
+  type: SaleOrderAttachmentType;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  url: string;
+  note: string | null;
+  createdAt: string;
+};
+
+export type SaleOrderEditPolicy = {
+  stockStatus: "NONE" | "RESERVED" | "REVERTED" | "CONSUMED";
+  productsEditable: boolean;
+  warehouseEditable: boolean;
+  isFinal?: boolean;
+  reason: string | null;
+};
+
+export type UnifiedSaleOrderPaymentInput = {
+  id?: string;
+  clientKey: string;
+  bankAccountId?: string | null;
+  method: string;
+  amount: number;
+  date?: string;
+  operationNumber?: string | null;
+  note?: string | null;
+};
+
+export type SaveSaleOrderWithClientDto = {
+  client: SaleOrderClientCommand;
+  workflowId: string;
+  warehouseId?: string;
+  agencySubsidiaryId?: string;
+  sourceId?: string;
+  scheduleDate?: string;
+  deliveryDate?: string;
+  deliveryCost?: number;
+  discount?: number;
+  note?: string;
+  advertisingCode?: string | null;
+  observation?: string | null;
+  sendDate?: string | null;
+  sendCode?: string | null;
+  sendAddress?: string | null;
+  assignedBy?: string | null;
+  items: SaleOrderItemCommand[];
+  payments?: UnifiedSaleOrderPaymentInput[];
+  removedAttachmentIds?: string[];
+};
+
+export type SaveSaleOrderWithClientFiles = {
+  shippingPhoto?: File | null;
+  paymentPhotos?: Map<string, File> | Record<string, File>;
 };
 
 export type CreateSaleOrderDto = {
@@ -112,6 +223,7 @@ export type CreateSaleOrderDto = {
   scheduleDate: string;
   deliveryDate?: string;
   deliveryCost?: number;
+  discount?: number;
   subTotal?: number;
   total?: number;
   note?: string;
@@ -120,6 +232,10 @@ export type CreateSaleOrderDto = {
   items: SaleOrderItemInput[];
   payments: SaleOrderPaymentInput[];
   currentState?:string | null;
+};
+
+export type CreateSaleOrderCommandDto = Omit<CreateSaleOrderDto, "items"> & {
+  items: SaleOrderItemCommand[];
 };
 
 export type CreateSaleOrderResponse = {
@@ -180,12 +296,14 @@ export type SaleOrderPaymentStatus = "PAID" | "PENDING";
 
 export type SaleOrderPayment = {
   id: string;
+  clientKey?: string;
   bankAccount: { id: string; name: string; number?: string | null } | null;
   date: string;
   method: string;
   operationNumber: string | null;
   amount: number;
   note: string | null;
+  paymentPhoto?: string | null;
   createdAt: string;
 };
 
@@ -199,9 +317,16 @@ export type SaleOrder = {
     docType: ClientDocType;
     fullName: string;
     docNumber: string;
+    address?: string | null;
     reference?: string,
     count?:number,
     mainPhone?: string | null; 
+    telephones?: Array<{
+      id: string;
+      number: string;
+      isMain: boolean;
+      isActive: boolean;
+    }>;
     departmentId: string;
     provinceId: string;
     districtId: string;
@@ -241,10 +366,17 @@ export type SaleOrder = {
   invoiceSend: boolean;
   subTotal: number;
   deliveryCost: number;
+  discount?: number;
   total: number;
   note: string | null;
   advertisingCode?: string | null;
   observation?: string | null;
+  agencySubsidiaryId?: string | null;
+  sendDate?: string | null;
+  sendPhoto?: string | null;
+  sendCode?: string | null;
+  sendAddress?: string | null;
+  assignedBy?: { id: string; name: string; email: string } | null;
   agencyDetail?: string | null;
   isActive: boolean;
   createdAt: string;
@@ -253,6 +385,8 @@ export type SaleOrder = {
   pendingAmount: number;
   paymentStatus: SaleOrderPaymentStatus;
   payments: SaleOrderPayment[];
+  attachments?: SaleOrderAttachment[];
+  editPolicy?: SaleOrderEditPolicy;
   items?: SaleOrderItemInput[];
 };
 

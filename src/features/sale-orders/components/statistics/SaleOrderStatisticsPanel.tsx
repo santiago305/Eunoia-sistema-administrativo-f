@@ -677,32 +677,6 @@ function LocationChartTooltip({
   );
 }
 
-function ChartSummaryLegend({
-  orders,
-  total,
-}: {
-  orders: number;
-  total: number;
-}) {
-  return (
-    <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[10px] text-zinc-500">
-      <span>
-        Pedidos:{" "}
-        <strong className="tabular-nums text-zinc-800">
-          {orders}
-        </strong>
-      </span>
-
-      <span>
-        Total:{" "}
-        <strong className="tabular-nums text-zinc-800">
-          {formatMoney(total)}
-        </strong>
-      </span>
-    </div>
-  );
-}
-
 function BankAccountBarChart({
   data,
   height,

@@ -14,6 +14,7 @@ export type SaleOrderAddSkuSelection = {
   label: string;
   unitPrice: number;
   quantity: number;
+  skuImage?:string | null;
 };
 
 type Props = {
@@ -34,7 +35,7 @@ const buildSkuLabel = (item: ProductSkuWithAttributes) => {
   return `${name}${attrsPart}${skuPart}${customPart}`.trim();
 };
 
-type SkuOption = { value: string; label: string; price?: number };
+type SkuOption = { value: string; label: string; price?: number; skuImage?: string | null };
 
 export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
   const [skuId, setSkuId] = useState("");
@@ -71,6 +72,7 @@ export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
           value: item.sku.id,
           label: buildSkuLabel(item),
           price: Number(item.sku.price ?? 0),
+          skuImage: item.sku.image ?? null,
         })),
       );
     } catch {
@@ -107,6 +109,7 @@ export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
       label: selectedOption?.label ?? skuId,
       quantity,
       unitPrice,
+      skuImage: selectedOption?.skuImage ?? null,
     });
     reset();
   };

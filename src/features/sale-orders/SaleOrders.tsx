@@ -1,7 +1,6 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Sheet, Workflow } from "lucide-react";
+import { Copy, Plus, Sheet, Workflow } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { SaleOrderModal } from "@/features/sale-orders/components/modal-create/SaleOrderModal";
 import {
     ClientType,
     type SaleOrder,
@@ -11,6 +10,7 @@ import {
     type SaleOrdersUpdatedPayload,
 } from "@/features/sale-orders/types/saleOrder";
 import {
+    deleteSaleOrder,
     deleteSaleOrderSearchMetric,
     fetchSaleOrderById,
     getSaleOrderPdf,
@@ -43,11 +43,13 @@ import { SaleOrderPaymentsOrderModal } from "@/features/sale-orders/components/S
 import { ExcelImportModal } from "@/shared/components/importer";
 import { WorkflowEditorModal } from "@/features/workflows/components/WorkflowEditorModal";
 import { SaleOrderActionsPopover } from "./components/sale-order/SaleOrderActionsPopover";
+import { SaleOrderStatusPopover } from "./components/sale-order/SaleOrderStatusPopover";
 import { optionalSaleOrderImportFields, saleOrderImportFields } from "./types/saleImporter";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { formatDate } from "@/shared/utils/formatDate";
+import { AlertModal } from "@/shared/components/components/AlertModal";
 
 const sanitizeSaleOrderImportRows = (rows: SaleOrderJsonImportRow[]): SaleOrderJsonImportRow[] =>
     rows.map((row) => {
@@ -64,6 +66,48 @@ const formatMoney = (value?: number | null) =>
         currency: "PEN",
     }).format(Number(value ?? 0));
 
+function CopyableTableText({
+    label,
+    value,
+    fallback = "-",
+    className = "text-zinc-800",
+}: {
+    label: string;
+    value?: string | null;
+    fallback?: string;
+    className?: string;
+}) {
+    const text = value?.trim() || "";
+    const displayText = text || fallback;
+
+    return (
+        <div className="flex min-w-0 items-center gap-1">
+            <p className={`min-w-0 flex-1 truncate font-medium ${className}`} title={displayText}>
+                {displayText}
+            </p>
+            <button
+                type="button"
+                aria-label={`Copiar ${label}`}
+                title={`Copiar ${displayText}`}
+                disabled={!text}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    if (!text) return;
+                    void window.navigator.clipboard?.writeText(text);
+                }}
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:pointer-events-none disabled:opacity-30"
+            >
+                <Copy className="h-3 w-3" />
+            </button>
+        </div>
+    );
+}
+
+type SaleOrderModalState =
+    | { open: false }
+    | { open: true; mode: "create"; orderId: null }
+    | { open: true; mode: "edit"; orderId: string };
+
 export default function SaleOrders() {
     const { showFeedback, clearFeedback } = useFeedbackToast();
     const showFeedbackRef = useRef(showFeedback);
@@ -77,13 +121,12 @@ export default function SaleOrders() {
 
     const { isAuthenticated, userId } = useAuth();
 
-    const [open, setOpen] = useState(false);
+    const [modalState, setModalState] = useState<SaleOrderModalState>({ open: false });
+    const modalStateRef = useRef<SaleOrderModalState>({ open: false });
     const [loading, setLoading] = useState(false);
     const [orders, setOrders] = useState<SaleOrder[]>([]);
     const [searchState, setSearchState] = useState<SaleOrderSearchStateResponse | null>(null);
     const [savingMetric, setSavingMetric] = useState(false);
-    const [editOrderId, setEditOrderId] = useState<string | null>(null);
-    const [detailOpen, setDetailOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
     const selectedOrderRef = useRef<SaleOrder | null>(null);
     const [paymentsOpen, setPaymentsOpen] = useState(false);
@@ -91,9 +134,11 @@ export default function SaleOrders() {
     const [workflowEditorOpen, setWorkflowEditorOpen] = useState(false);
     const [pdfOpen, setPdfOpen] = useState(false);
     const [pdfOrderId, setPdfOrderId] = useState<string | null>(null);
+    const [deleteOrder, setDeleteOrder] = useState<SaleOrder | null>(null);
+    const [deletingOrder, setDeletingOrder] = useState(false);
     const [importLoading, setImportLoading] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
-    const DEFAULT_LIMIT = 10;
+    const DEFAULT_LIMIT = 25;
     const [serverPagination, setServerPagination] = useState({
         total: 0,
         page: 1,
@@ -151,12 +196,14 @@ export default function SaleOrders() {
     const searchChips = useMemo(() => buildSaleOrderSearchChips(executedSnapshot, searchState), [executedSnapshot, searchState]);
 
     const openModal = useCallback(() => {
-        setEditOrderId(null);
-        setOpen(true);
+        selectedOrderRef.current = null;
+        setSelectedOrder(null);
+        setModalState({ open: true, mode: "create", orderId: null });
     }, []);
     const closeModal = useCallback(() => {
-        setOpen(false);
-        setEditOrderId(null);
+        setModalState({ open: false });
+        selectedOrderRef.current = null;
+        setSelectedOrder(null);
     }, []);
     const submitSearch = useCallback(() => {
         startTransition(() => {
@@ -184,6 +231,10 @@ export default function SaleOrders() {
             return next;
         });
     }, []);
+
+    useEffect(() => {
+        modalStateRef.current = modalState;
+    }, [modalState]);
 
     const updateUx = async () => {
         await loadOrders();
@@ -262,7 +313,11 @@ export default function SaleOrders() {
                 if (!currentOrder) return [updatedOrder, ...currentOrders];
                 return currentOrders.map((order) => (order.id === updatedOrder.id ? mergeOrder(order) : order));
             });
-            updateSelectedOrder((current) => (current?.id === updatedOrder.id ? mergeOrder(current) : current));
+            updateSelectedOrder((current) => {
+                if (current?.id === updatedOrder.id) return mergeOrder(current);
+                const editingOrderId = modalStateRef.current.open && modalStateRef.current.mode === "edit" ? modalStateRef.current.orderId : null;
+                return editingOrderId === updatedOrder.id ? updatedOrder : current;
+            });
             setPaymentsOrder((current) => (current?.id === updatedOrder.id ? mergeOrder(current) : current));
         },
         [updateSelectedOrder],
@@ -297,8 +352,10 @@ export default function SaleOrders() {
 
     const openOrderDetail = useCallback(
         async (order: SaleOrder) => {
-            updateSelectedOrder(order);
-            setDetailOpen(true);
+            const summaryOrder = { ...order, items: [] };
+            selectedOrderRef.current = summaryOrder;
+            updateSelectedOrder(summaryOrder);
+            setModalState({ open: true, mode: "edit", orderId: order.id });
             try {
                 const detail = await fetchSaleOrderById(order.id);
                 updateSelectedOrder((current) => (current?.id === order.id && current?.currentStateId === order.currentStateId ? detail : current));
@@ -323,15 +380,14 @@ export default function SaleOrders() {
             const updatedOrders = hasSaleOrdersPayload ? (payload.saleOrders ?? []) : [];
             const updatedOrdersById = new Map(updatedOrders.filter((order) => order?.id).map((order) => [order.id, order]));
             const currentSelectedOrder = selectedOrderRef.current;
-            const selectedOrderWasUpdated = Boolean(currentSelectedOrder?.id && (saleOrderIds.length === 0 || saleOrderIds.includes(currentSelectedOrder.id)));
-
+            const openOrderId = currentSelectedOrder?.id ?? (modalStateRef.current.open && modalStateRef.current.mode === "edit" ? modalStateRef.current.orderId : null);
             updatedOrders.forEach((order) => {
                 if (saleOrderIds.length > 0 && !saleOrderIds.includes(order.id)) return;
                 syncRealtimeSaleOrder(order);
             });
 
-            if (selectedOrderWasUpdated && currentSelectedOrder?.id && !updatedOrdersById.has(currentSelectedOrder.id)) {
-                void refreshSelectedOrderDetail(currentSelectedOrder.id).catch(() => undefined);
+            if (openOrderId && (saleOrderIds.length === 0 || saleOrderIds.includes(openOrderId)) && !updatedOrdersById.has(openOrderId)) {
+                void refreshSelectedOrderDetail(openOrderId).catch(() => undefined);
             }
 
             if (!hasSaleOrdersPayload) {
@@ -511,6 +567,29 @@ export default function SaleOrders() {
         [loadSearchState, showFeedback],
     );
 
+    const confirmDeleteOrder = useCallback(async () => {
+        if (!deleteOrder?.id) return;
+        const deletingOrderId = deleteOrder.id;
+        setDeletingOrder(true);
+        try {
+            const response = await deleteSaleOrder(deletingOrderId);
+            showFeedback(successResponse(response.message ?? "Pedido eliminado correctamente."));
+            if (selectedOrderRef.current?.id === deletingOrderId) {
+                closeModal();
+            }
+            if (paymentsOrder?.id === deletingOrderId) {
+                setPaymentsOrder(null);
+                setPaymentsOpen(false);
+            }
+            setDeleteOrder(null);
+            await loadOrders();
+        } catch (error) {
+            showFeedback(errorResponse(parseApiError(error, "Error al eliminar el pedido.")));
+        } finally {
+            setDeletingOrder(false);
+        }
+    }, [closeModal, deleteOrder, loadOrders, paymentsOrder?.id, showFeedback]);
+
     const columns = useMemo<DataTableColumn<SaleOrder>[]>(
         () => [
             {
@@ -541,20 +620,35 @@ export default function SaleOrders() {
                 hideable: false,
             },
             {
-                id: "dates",
-                header: "Fechas",
+                id: "dateCreated",
+                header: "Creación",
                 cell: (order) => (
                     <div className="min-w-[50px] space-y-0.5 leading-tight">
                         <div className="grid grid-cols-[50px_1fr] items-center gap-0">
-                            <span className="text-zinc-500">Creación:</span>
                             <span className="whitespace-nowrap font-medium tabular-nums text-zinc-800">{order.createdAt ? formatDate(order.createdAt) : "-"}</span>
                         </div>
+                    </div>
+                ),
+                sortable: false,
+            },
+            {
+                id: "dateAgenda",
+                header: "Agenda",
+                cell: (order) => (
+                    <div className="min-w-[50px] space-y-0.5 leading-tight">
                         <div className="grid grid-cols-[50px_1fr] items-center gap-0">
-                            <span className="text-zinc-500">Agenda:</span>
                             <span className="whitespace-nowrap font-medium tabular-nums text-zinc-800">{order.scheduleDate ? formatDate(order.scheduleDate) : "-"}</span>
                         </div>
+                    </div>
+                ),
+                sortable: false,
+            },
+            {
+                id: "dateDelivery",
+                header: "Entrega",
+                cell: (order) => (
+                    <div className="min-w-[50px] space-y-0.5 leading-tight">
                         <div className="grid grid-cols-[50px_1fr] items-center gap-0">
-                            <span className="text-zinc-500">Entrega:</span>
                             <span className="whitespace-nowrap font-medium tabular-nums text-zinc-800">{order.deliveryDate ? formatDate(order.deliveryDate) : "-"}</span>
                         </div>
                     </div>
@@ -564,20 +658,35 @@ export default function SaleOrders() {
             {
                 id: "client",
                 header: "Cliente",
-                cell: (order) => {
-                    return (
-                        <div className="max-w-[120px] space-y-0.5 leading-tight">
-                            <div className="flex min-w-0 items-center gap-1">
-                                <p className="min-w-0 flex-1 truncate font-medium text-zinc-800" title={order.client?.fullName ?? "Sin cliente"}>
-                                    {order.client?.fullName ?? "Sin cliente"}
-                                </p>
-                            </div>
-                            <p className="truncate text-[10px] text-zinc-700  ">{order.client?.mainPhone ?? "Sin teléfono"}</p>
-                            <p className="truncate text-[10px] text-zinc-700">{order.client?.docNumber ?? "Sin documento"}</p>
-                        </div>
-                    );
-                },
+                cell: (order) => (
+                    <div className="max-w-[120px] space-y-0.5 leading-tight">
+                        <CopyableTableText label="cliente" value={order.client?.fullName} fallback="Sin cliente" />
+                    </div>
+                ),
                 sortable: false,
+                stopRowClick: true,
+            },
+            {
+                id: "document",
+                header: "Documento",
+                cell: (order) => (
+                    <div className="max-w-[120px] space-y-0.5 leading-tight">
+                        <CopyableTableText label="documento" value={order.client?.docNumber} fallback=" " />
+                    </div>
+                ),
+                sortable: false,
+                stopRowClick: true,
+            },
+            {
+                id: "phone",
+                header: "Teléfono",
+                cell: (order) => (
+                    <div className="max-w-[120px] space-y-0.5 leading-tight">
+                        <CopyableTableText label="telefono" value={order.client?.mainPhone} fallback="Sin telefono" />
+                    </div>
+                ),
+                sortable: false,
+                stopRowClick: true,
             },
             {
                 id: "location",
@@ -590,8 +699,8 @@ export default function SaleOrders() {
                     const location = [department, province, district].filter(Boolean).join(" / ");
 
                     return (
-                        <div className="max-w-[180px] leading-tight">
-                            <p className="line-clamp-2 text-zinc-700" title={location || "Sin ubicación"}>
+                        <div className="w-[120px] leading-tight">
+                            <p className="line-clamp-3 text-zinc-700" title={location || "Sin ubicación"}>
                                 {location || "-"}
                             </p>
                         </div>
@@ -600,12 +709,24 @@ export default function SaleOrders() {
                 sortable: false,
             },
             {
-                id: "delivery",
-                header: "Agencia/dirección",
+                id: "agency",
+                header: "Agencia",
                 cell: (order) => (
-                    <div className="max-w-[170px] leading-tight">
+                    <div className="w-[50px] max-w-[200px] leading-tight">
                         <p className="line-clamp-2 text-zinc-700" title={order.agencyDetail ?? "Sin información"}>
                             {order.agencyDetail ?? "-"}
+                        </p>
+                    </div>
+                ),
+                sortable: false,
+            },
+            {
+                id: "delivery",
+                header: "Dirección",
+                cell: (order) => (
+                    <div className="max-w-[170px] w-[50px] leading-tight">
+                        <p className="line-clamp-2 text-zinc-700" >
+                            {order.sendAddress ?? order.client?.address ?? ""}
                         </p>
                     </div>
                 ),
@@ -631,13 +752,33 @@ export default function SaleOrders() {
                         <p className="truncate font-medium text-zinc-700" title={order.source?.name ?? "-"}>
                             {order.source?.name ?? "-"}
                         </p>
-
-                        {order.advertisingCode ? <p className="mt-0.5 truncate text-[10px] text-zinc-600">{order.advertisingCode}</p> : null}
                     </div>
                 ),
                 sortable: false,
             },
-
+            {
+                id: "codefb",
+                header: "Codigo FB",
+                cell: (order) => (
+                    <div className="max-w-[180px] w-[130px] leading-tight">
+                        <CopyableTableText label="codigo FB" value={order.advertisingCode} className="text-zinc-700" />
+                    </div>
+                ),
+                sortable: false,
+                stopRowClick: true,
+            },
+            {
+                id: "assignedTo",
+                header: "Creado",
+                cell: (order) => (
+                    <div className="max-w-[180px] w-[120px] leading-tight">
+                        <p className="truncate font-medium text-zinc-700">
+                            {order.createdBy?.email ?? " "}
+                        </p>
+                    </div>
+                ),
+                sortable: false,
+            },
             {
                 id: "workflow",
                 header: "Tipo",
@@ -646,21 +787,21 @@ export default function SaleOrders() {
                         <p className="truncate text-zinc-700 text-[10px]" title={order.workflow?.name ?? "Sin tipo"}>
                             {order.workflow?.name ?? "Sin tipo"}
                         </p>
-                        <span
-                            className="inline-flex max-w-full truncate rounded-sm px-1.5 py-1 
-                            text-[9px] font-semibold text-white"
-                            style={{
-                                backgroundColor: order.currentState?.color ?? "#64748b",
-                            }}
-                            title={order.currentState?.name ?? "Sin estado"}
-                        >
-                            {order.currentState?.name ?? "Sin estado"}
-                        </span>
                     </div>
                 ),
                 sortable: false,
             },
-
+            {
+                id: "status",
+                header: "Estados",
+                cell: (order) => (
+                    <div className="max-w-[140px] space-y-1 leading-tight" onClick={(event) => event.stopPropagation()}>
+                        <SaleOrderStatusPopover order={order} onOrderChanged={refreshSelectedOrder} />
+                    </div>
+                ),
+                sortable: false,
+                stopRowClick: true,
+            },
             {
                 id: "amounts",
                 header: "Montos",
@@ -682,10 +823,9 @@ export default function SaleOrders() {
                 ),
                 sortable: false,
             },
-
             {
-                id: "statuses",
-                header: "Estados",
+                id: "lookup",
+                header: "Seguimiento",
                 cell: (order) => {
                     const isPaid = Number(order.pendingAmount ?? 0) <= 0;
                     return (
@@ -710,8 +850,7 @@ export default function SaleOrders() {
                         <SaleOrderActionsPopover
                             order={order}
                             onEdit={(selected) => {
-                                setEditOrderId(selected.id);
-                                setOpen(true);
+                                void openOrderDetail(selected);
                             }}
                             onOpenPdf={(selected) => {
                                 setPdfOrderId(selected.id);
@@ -721,7 +860,7 @@ export default function SaleOrders() {
                                 setPaymentsOrder(selected);
                                 setPaymentsOpen(true);
                             }}
-                            onOrderChanged={refreshSelectedOrder}
+                            onDelete={setDeleteOrder}
                         />
                     </div>
                 ),
@@ -731,13 +870,12 @@ export default function SaleOrders() {
                 stopRowClick: true,
             },
         ],
-        [refreshSelectedOrder],
+        [openOrderDetail, refreshSelectedOrder],
     );
     return (
         <PageShell className="bg-white">
             <div className="space-y-4">
                 <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
-
                 <DataTable
                     tableId="sale-orders-list"
                     data={orders}
@@ -751,13 +889,13 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
-                            <SystemButton size="sm" variant="outline" leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)}>
+                            <SystemButton size="lg" variant="outline"  leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)}>
                                 Tipos
                             </SystemButton>
-                            <SystemButton size="sm" variant="outline" leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle}>
+                            <SystemButton size="lg" variant="outline"  leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle}>
                                 Importar
                             </SystemButton>
-                            <SystemButton size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle}>
+                            <SystemButton size="lg" leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle}>
                                 Nuevo pedido
                             </SystemButton>
                         </>
@@ -795,16 +933,15 @@ export default function SaleOrders() {
                     onPageChange={handlePageChange}
                     onRowClick={(order) => void openOrderDetail(order)}
                     tableClassName="
-            text-[10px]
-            [&_th]:h-8
-            [&_th]:whitespace-nowrap
-            [&_th]:px-2
-            [&_td]:px-2
-            [&_td]:py-2
-          "
+                        text-[10px]
+                        [&_th]:h-8
+                        [&_th]:whitespace-nowrap
+                        [&_th]:px-2
+                        [&_td]:px-2
+                        [&_td]:py-2
+                    "
                 />
             </div>
-            <SaleOrderModal open={open} onClose={closeModal} orderId={editOrderId} onSaved={updateUx} />
             <PdfViewerModal
                 open={pdfOpen}
                 title="PDF del pedido"
@@ -820,13 +957,12 @@ export default function SaleOrders() {
                 }}
             />
             <SaleOrderDetailsModal
-                open={detailOpen}
+                open={modalState.open}
+                mode={modalState.open ? modalState.mode : "create"}
                 order={selectedOrder}
-                onClose={() => setDetailOpen(false)}
-                onOrderChanged={async () => {
-                    if (!selectedOrder?.id) return;
-                    const updated = await fetchSaleOrderById(selectedOrder.id);
-                    setSelectedOrder(updated);
+                onClose={closeModal}
+                onSaved={async () => {
+                    closeModal();
                     await loadOrders();
                 }}
             />
@@ -840,7 +976,7 @@ export default function SaleOrders() {
                     }}
                     onUpdated={() => {
                         void loadOrders();
-                        if (detailOpen && selectedOrder?.id === paymentsOrder.id) {
+                        if (modalState.open && modalState.mode === "edit" && selectedOrder?.id === paymentsOrder.id) {
                             void fetchSaleOrderById(paymentsOrder.id)
                                 .then(setSelectedOrder)
                                 .catch(() => undefined);
@@ -848,6 +984,21 @@ export default function SaleOrders() {
                     }}
                 />
             ) : null}
+            <AlertModal
+                open={Boolean(deleteOrder)}
+                type="deleted"
+                title="Eliminar pedido"
+                message="Estas por eliminar este pedido. Hazlo solo si estas seguro."
+                confirmText="Eliminar"
+                loading={deletingOrder}
+                onClose={() => {
+                    if (deletingOrder) return;
+                    setDeleteOrder(null);
+                }}
+                onConfirm={() => {
+                    void confirmDeleteOrder();
+                }}
+            />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />
             <ExcelImportModal<SaleOrderJsonImportRow>
                 open={importOpen}

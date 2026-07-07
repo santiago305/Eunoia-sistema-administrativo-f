@@ -9,7 +9,7 @@ type Props = {
   onEditOrder: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
   onOpenPayments: (order: SaleOrder) => void;
-  onOrderChanged: (orderId: string) => void | Promise<void>;
+  onDeleteOrder: (order: SaleOrder) => void;
 };
 
 export function SaleOrdersCardsList({
@@ -20,7 +20,7 @@ export function SaleOrdersCardsList({
   onEditOrder,
   onOpenPdf,
   onOpenPayments,
-  onOrderChanged,
+  onDeleteOrder,
 }: Props) {
   if (loading) {
     return (
@@ -62,7 +62,7 @@ export function SaleOrdersCardsList({
           onEdit={onEditOrder}
           onOpenPdf={onOpenPdf}
           onOpenPayments={onOpenPayments}
-          onOrderChanged={onOrderChanged}
+          onDelete={onDeleteOrder}
         />
       ))}
     </div>

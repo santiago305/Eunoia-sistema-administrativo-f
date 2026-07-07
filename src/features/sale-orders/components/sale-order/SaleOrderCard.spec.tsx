@@ -31,20 +31,20 @@ const order = {
 describe("SaleOrderCard", () => {
   it("selects the order when the card body is clicked", async () => {
     const onSelect = vi.fn();
-    render(<SaleOrderCard order={order} selected={false} onSelect={onSelect} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onOrderChanged={vi.fn()} />);
+    render(<SaleOrderCard order={order} selected={false} onSelect={onSelect} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onDelete={vi.fn()} />);
     await userEvent.click(screen.getByText("PE-12"));
     expect(onSelect).toHaveBeenCalledWith(order);
   });
 
   it("does not expose a detail action", () => {
-    render(<SaleOrderCard order={order} selected={false} onSelect={vi.fn()} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onOrderChanged={vi.fn()} />);
+    render(<SaleOrderCard order={order} selected={false} onSelect={vi.fn()} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "Detalle del pedido" })).not.toBeInTheDocument();
   });
 
   it("runs an action without opening the detail", async () => {
     const onSelect = vi.fn();
     const onEdit = vi.fn();
-    render(<SaleOrderCard order={order} selected={false} onSelect={onSelect} onEdit={onEdit} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onOrderChanged={vi.fn()} />);
+    render(<SaleOrderCard order={order} selected={false} onSelect={onSelect} onEdit={onEdit} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onDelete={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: "Acciones del pedido" }));
     expect(onEdit).toHaveBeenCalledWith(order);
     expect(onSelect).not.toHaveBeenCalled();

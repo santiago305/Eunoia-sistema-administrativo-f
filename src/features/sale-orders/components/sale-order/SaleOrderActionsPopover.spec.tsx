@@ -1,10 +1,16 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { SaleOrderActionsPopover } from "./SaleOrderActionsPopover";
 
-const { getTransitions } = vi.hoisted(() => ({ getTransitions: vi.fn() }));
+const { getTransitions, onDelete, onEdit, onOpenPdf, onOpenPayments } = vi.hoisted(() => ({
+  getTransitions: vi.fn(),
+  onDelete: vi.fn(),
+  onEdit: vi.fn(),
+  onOpenPdf: vi.fn(),
+  onOpenPayments: vi.fn(),
+}));
 
 vi.mock("@/shared/services/saleOrderService", () => ({
   getAvailableSaleOrderTransitions: getTransitions,
@@ -12,8 +18,15 @@ vi.mock("@/shared/services/saleOrderService", () => ({
 }));
 
 vi.mock("@/shared/components/components/ActionsPopover", () => ({
-  ActionsPopover: ({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) => (
-    <button type="button" onClick={() => onOpenChange?.(true)}>abrir acciones</button>
+  ActionsPopover: ({ actions, onOpenChange }: { actions: Array<{ id: string; label: string; onClick?: () => void }>; onOpenChange?: (open: boolean) => void }) => (
+    <div>
+      <button type="button" onClick={() => onOpenChange?.(true)}>abrir acciones</button>
+      {actions.map((action) => (
+        <button key={action.id} type="button" onClick={action.onClick}>
+          {action.label}
+        </button>
+      ))}
+    </div>
   ),
 }));
 
@@ -26,15 +39,33 @@ const order = {
 } as SaleOrder;
 
 describe("SaleOrderActionsPopover", () => {
-  it("loads available transitions every time the menu is opened", async () => {
+  it("keeps only order actions and does not load workflow transitions", async () => {
     getTransitions.mockReset();
     getTransitions.mockResolvedValue([]);
-    render(<SaleOrderActionsPopover order={order} onEdit={vi.fn()} onOpenPdf={vi.fn()} onOpenPayments={vi.fn()} onOrderChanged={vi.fn()} />);
+    onEdit.mockReset();
+    onDelete.mockReset();
+    onOpenPdf.mockReset();
+    onOpenPayments.mockReset();
+    render(
+      <SaleOrderActionsPopover
+        order={order}
+        onDelete={onDelete}
+        onEdit={onEdit}
+        onOpenPdf={onOpenPdf}
+        onOpenPayments={onOpenPayments}
+      />,
+    );
 
     expect(getTransitions).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
-    await waitFor(() => expect(getTransitions).toHaveBeenCalledOnce());
-    await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
-    await waitFor(() => expect(getTransitions).toHaveBeenCalledTimes(2));
+    expect(getTransitions).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver PDF" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pagos" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Eliminar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Historial del tipo" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Ver PDF" }));
+    expect(onOpenPdf).toHaveBeenCalledWith(order);
   });
 });
