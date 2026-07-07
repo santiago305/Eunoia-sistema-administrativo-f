@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Banknote, FileText, Menu, Pencil, Trash2 } from "lucide-react";
+import {  FileText, Menu,  } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 
@@ -13,41 +13,18 @@ type Props = {
 
 export function SaleOrderActionsPopover({
   order,
-  onEdit,
   onOpenPdf,
-  onOpenPayments,
-  onDelete,
 }: Props) {
   const actions = useMemo<ActionItem[]>(
     () => [
-      {
-        id: "edit",
-        label: "Editar",
-        icon: <Pencil className="h-4 w-4" />,
-        onClick: () => onEdit(order),
-      },
       {
         id: "pdf",
         label: "Ver PDF",
         icon: <FileText className="h-4 w-4" />,
         onClick: () => onOpenPdf(order),
       },
-      {
-        id: "payments",
-        label: "Pagos",
-        icon: <Banknote className="h-4 w-4" />,
-        onClick: () => onOpenPayments(order),
-      },
-      {
-        id: "delete",
-        label: "Eliminar",
-        icon: <Trash2 className="h-4 w-4" />,
-        danger: true,
-        className: "text-rose-700 hover:bg-rose-50",
-        onClick: () => onDelete(order),
-      },
     ],
-    [onDelete, onEdit, onOpenPayments, onOpenPdf, order],
+    [onOpenPdf, order],
   );
 
   return (

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SaleOrders from "@/features/sale-orders/SaleOrders";
@@ -245,6 +245,45 @@ describe("SaleOrders", () => {
     await user.click(screen.getByRole("button", { name: /acciones del pedido/i }));
     expect(screen.queryByRole("button", { name: "Detalle" })).not.toBeInTheDocument();
     expect(screen.getAllByText("Pagos").length).toBeGreaterThan(0);
+  });
+
+  it("copies client, document, phone and advertising code without opening detail", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    const order = {
+      ...buildSaleOrder("Pendiente"),
+      advertisingCode: "FB-123",
+    };
+    listSaleOrdersMock.mockResolvedValue({
+      items: [order],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("SO-1");
+
+    const copyClient = screen.getByRole("button", { name: "Copiar cliente" });
+    expect(copyClient).not.toBeDisabled();
+
+    fireEvent.click(copyClient);
+    fireEvent.click(screen.getByRole("button", { name: "Copiar documento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copiar telefono" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copiar codigo FB" }));
+
+    expect(writeText).toHaveBeenNthCalledWith(1, "Cliente Prueba");
+    expect(writeText).toHaveBeenNthCalledWith(2, "12345678");
+    expect(writeText).toHaveBeenNthCalledWith(3, "999999999");
+    expect(writeText).toHaveBeenNthCalledWith(4, "FB-123");
+    expect(fetchSaleOrderByIdMock).not.toHaveBeenCalled();
   });
 
   it("does not render listed id-only components while loading order detail", async () => {

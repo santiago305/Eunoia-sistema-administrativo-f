@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Sheet, Workflow } from "lucide-react";
+import { Copy, Plus, Sheet, Workflow } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
     ClientType,
@@ -65,6 +65,43 @@ const formatMoney = (value?: number | null) =>
         style: "currency",
         currency: "PEN",
     }).format(Number(value ?? 0));
+
+function CopyableTableText({
+    label,
+    value,
+    fallback = "-",
+    className = "text-zinc-800",
+}: {
+    label: string;
+    value?: string | null;
+    fallback?: string;
+    className?: string;
+}) {
+    const text = value?.trim() || "";
+    const displayText = text || fallback;
+
+    return (
+        <div className="flex min-w-0 items-center gap-1">
+            <p className={`min-w-0 flex-1 truncate font-medium ${className}`} title={displayText}>
+                {displayText}
+            </p>
+            <button
+                type="button"
+                aria-label={`Copiar ${label}`}
+                title={`Copiar ${displayText}`}
+                disabled={!text}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    if (!text) return;
+                    void window.navigator.clipboard?.writeText(text);
+                }}
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:pointer-events-none disabled:opacity-30"
+            >
+                <Copy className="h-3 w-3" />
+            </button>
+        </div>
+    );
+}
 
 type SaleOrderModalState =
     | { open: false }
@@ -621,50 +658,35 @@ export default function SaleOrders() {
             {
                 id: "client",
                 header: "Cliente",
-                cell: (order) => {
-                    return (
-                        <div className="max-w-[120px] space-y-0.5 leading-tight">
-                            <div className="flex min-w-0 items-center gap-1">
-                                <p className="min-w-0 flex-1 truncate font-medium text-zinc-800" title={order.client?.fullName ?? "Sin cliente"}>
-                                    {order.client?.fullName ?? "Sin cliente"}
-                                </p>
-                            </div>
-                        </div>
-                    );
-                },
+                cell: (order) => (
+                    <div className="max-w-[120px] space-y-0.5 leading-tight">
+                        <CopyableTableText label="cliente" value={order.client?.fullName} fallback="Sin cliente" />
+                    </div>
+                ),
                 sortable: false,
+                stopRowClick: true,
             },
             {
                 id: "document",
                 header: "Documento",
-                cell: (order) => {
-                    return (
-                        <div className="max-w-[120px] space-y-0.5 leading-tight">
-                            <div className="flex min-w-0 items-center gap-1">
-                                <p className="min-w-0 flex-1 truncate font-medium text-zinc-800" title={order.client?.fullName ?? "Sin cliente"}>
-                                    {order.client?.docNumber ?? " "}
-                                </p>
-                            </div>
-                        </div>
-                    );
-                },
+                cell: (order) => (
+                    <div className="max-w-[120px] space-y-0.5 leading-tight">
+                        <CopyableTableText label="documento" value={order.client?.docNumber} fallback=" " />
+                    </div>
+                ),
                 sortable: false,
+                stopRowClick: true,
             },
             {
                 id: "phone",
                 header: "Teléfono",
-                cell: (order) => {
-                    return (
-                        <div className="max-w-[120px] space-y-0.5 leading-tight">
-                            <div className="flex min-w-0 items-center gap-1">
-                                <p className="min-w-0 flex-1 truncate font-medium text-zinc-800">
-                                    {order.client?.mainPhone ?? "Sin teléfono"}
-                                </p>
-                            </div>
-                        </div>
-                    );
-                },
+                cell: (order) => (
+                    <div className="max-w-[120px] space-y-0.5 leading-tight">
+                        <CopyableTableText label="telefono" value={order.client?.mainPhone} fallback="Sin telefono" />
+                    </div>
+                ),
                 sortable: false,
+                stopRowClick: true,
             },
             {
                 id: "location",
@@ -738,17 +760,16 @@ export default function SaleOrders() {
                 id: "codefb",
                 header: "Codigo FB",
                 cell: (order) => (
-                    <div className="max-w-[180px] w-[120px] leading-tight">
-                        <p className="truncate font-medium text-zinc-700" title={order.advertisingCode ?? "-"}>
-                            {order.advertisingCode ?? "-"}
-                        </p>
+                    <div className="max-w-[180px] w-[130px] leading-tight">
+                        <CopyableTableText label="codigo FB" value={order.advertisingCode} className="text-zinc-700" />
                     </div>
                 ),
                 sortable: false,
+                stopRowClick: true,
             },
             {
                 id: "assignedTo",
-                header: "Asignado",
+                header: "Creado",
                 cell: (order) => (
                     <div className="max-w-[180px] w-[120px] leading-tight">
                         <p className="truncate font-medium text-zinc-700">
