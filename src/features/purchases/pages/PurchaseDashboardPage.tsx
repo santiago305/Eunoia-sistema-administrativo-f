@@ -10,7 +10,12 @@ import { PurchaseTypeChart } from "@/features/purchases/components/dashboard/Pur
 import { PurchasePaymentStatusChart } from "@/features/purchases/components/dashboard/PurchasePaymentStatusChart";
 import { UpcomingPaymentsTable } from "@/features/purchases/components/dashboard/UpcomingPaymentsTable";
 import { OverduePaymentsTable } from "@/features/purchases/components/dashboard/OverduePaymentsTable";
-import type { PurchaseDashboardFilters } from "@/features/purchases/types/purchase-dashboard.types";
+import { PurchaseDashboardRankingTable } from "@/features/purchases/components/dashboard/PurchaseDashboardRankingTable";
+import type { PurchaseDashboardFilters, PurchaseDashboardSeriesPoint } from "@/features/purchases/types/purchase-dashboard.types";
+import {
+  formatPurchaseDashboardItemType,
+  formatPurchaseDashboardSeriesLabel,
+} from "@/features/purchases/utils/purchaseDashboardLabels";
 
 const purchaseTypeOptions = [
   ["", "Todos los tipos"],
@@ -19,7 +24,7 @@ const purchaseTypeOptions = [
   ["INTERNAL_MATERIAL", "Material interno"],
   ["FIXED_ASSET", "Activo fijo"],
   ["SERVICE", "Servicio"],
-  ["SUBSCRIPTION", "Suscripcion"],
+  ["SUBSCRIPTION", "Suscripción"],
   ["MIXED", "Mixta"],
 ];
 
@@ -112,11 +117,11 @@ export default function PurchaseDashboardPage() {
             <Field label="Usuario">
               <input value={draftFilters.userId ?? ""} onChange={(event) => updateDraft("userId", event.target.value)} className={inputClass} placeholder="UUID usuario" />
             </Field>
-            <Field label="Almacen">
-              <input value={draftFilters.warehouseId ?? ""} onChange={(event) => updateDraft("warehouseId", event.target.value)} className={inputClass} placeholder="UUID almacen" />
+            <Field label="Almacén">
+              <input value={draftFilters.warehouseId ?? ""} onChange={(event) => updateDraft("warehouseId", event.target.value)} className={inputClass} placeholder="UUID almacén" />
             </Field>
-            <Field label="Metodo de pago">
-              <input value={draftFilters.paymentMethodId ?? ""} onChange={(event) => updateDraft("paymentMethodId", event.target.value)} className={inputClass} placeholder="UUID metodo" />
+            <Field label="Método de pago">
+              <input value={draftFilters.paymentMethodId ?? ""} onChange={(event) => updateDraft("paymentMethodId", event.target.value)} className={inputClass} placeholder="UUID método" />
             </Field>
             <Field label="Cuenta o tarjeta">
               <input value={draftFilters.companyPaymentAccountId ?? ""} onChange={(event) => updateDraft("companyPaymentAccountId", event.target.value)} className={inputClass} placeholder="UUID cuenta" />
@@ -133,38 +138,61 @@ export default function PurchaseDashboardPage() {
         </section>
 
         {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div> : null}
-        {loading ? <div className="rounded-md border border-black/10 bg-white px-4 py-6 text-sm text-black/55">Cargando metricas...</div> : null}
+        {loading ? <div className="rounded-md border border-black/10 bg-white px-4 py-6 text-sm text-black/55">Cargando métricas...</div> : null}
 
         <PurchaseKpiGrid summary={data?.summary ?? emptySummary} />
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
-          <PurchaseSpendingChart data={data?.monthlySpending ?? []} />
-          <PurchaseTypeChart title="Compras por tipo" description="Distribucion por monto comprado." data={data?.byType ?? []} />
+          {data?.monthlySpending ? <PurchaseSpendingChart data={data.monthlySpending} /> : null}
+          <PurchaseTypeChart title="Compras por tipo" description="Distribución por monto comprado." data={translateSeries(data?.byType)} />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-3">
-          <PurchasePaymentStatusChart title="Estado financiero" data={data?.byStatus ?? []} />
-          <PurchaseTypeChart title="Uso de metodos" description="Solo pagos aprobados." data={data?.paymentMethodUsage ?? []} />
-          <PurchaseTypeChart title="Inventario vs interno" description="Clasificacion operativa por reglas de recepcion." data={data?.internalVsInventory ?? []} />
+          <PurchasePaymentStatusChart title="Estado financiero" data={translateSeries(data?.byStatus)} />
+          {data?.paymentMethodUsage ? (
+            <PurchaseTypeChart title="Uso de métodos" description="Solo pagos aprobados." data={translateSeries(data.paymentMethodUsage)} />
+          ) : null}
+          {data?.internalVsInventory ? (
+            <PurchaseTypeChart title="Inventario vs interno" description="Clasificación operativa por reglas de recepción." data={translateSeries(data.internalVsInventory)} />
+          ) : null}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <UpcomingPaymentsTable title="Proximos pagos" rows={data?.upcomingPayments ?? []} />
-          <OverduePaymentsTable rows={data?.overduePayments ?? []} />
-        </div>
+        {data?.upcomingPayments || data?.overduePayments ? (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {data?.upcomingPayments ? <UpcomingPaymentsTable title="Próximos pagos" rows={data.upcomingPayments} /> : null}
+            {data?.overduePayments ? <OverduePaymentsTable rows={data.overduePayments} /> : null}
+          </div>
+        ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <RankingTable
-            title="Top proveedores"
-            headers={["Proveedor", "Compras", "Total"]}
-            rows={(data?.topSuppliers ?? []).map((item) => [item.supplierName, String(item.count), formatMoney(item.total)])}
-          />
-          <RankingTable
-            title="Top items"
-            headers={["Item", "Tipo", "Total"]}
-            rows={(data?.topItems ?? []).map((item) => [item.label, item.itemType, formatMoney(item.total)])}
-          />
-        </div>
+        {data?.topSuppliers || data?.topItems ? (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {data?.topSuppliers ? (
+              <PurchaseDashboardRankingTable
+                title="Top proveedores"
+                tableId="purchase-dashboard-top-suppliers"
+                headers={["Proveedor", "Compras", "Total"]}
+                rows={data.topSuppliers.map((item) => ({
+                  id: item.supplierId ?? item.supplierName,
+                  item: item.supplierName,
+                  type: String(item.count),
+                  total: formatMoney(item.total),
+                }))}
+              />
+            ) : null}
+            {data?.topItems ? (
+              <PurchaseDashboardRankingTable
+                title="Top ítems"
+                tableId="purchase-dashboard-top-items"
+                rows={data.topItems.map((item, index) => ({
+                  id: item.itemId ?? `${item.label}-${index}`,
+                  item: item.label,
+                  type: formatPurchaseDashboardItemType(item.itemType),
+                  total: formatMoney(item.total),
+                }))}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </PageShell>
   );
@@ -181,35 +209,13 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function RankingTable({ title, headers, rows }: { title: string; headers: string[]; rows: string[][] }) {
-  return (
-    <section className="rounded-md border border-black/10 bg-white p-4">
-      <h2 className="text-sm font-semibold text-black">{title}</h2>
-      <div className="mt-3 overflow-x-auto">
-        <table className="min-w-full text-left text-xs">
-          <thead className="border-b border-black/10 text-black/55">
-            <tr>{headers.map((header) => <th key={header} className="py-2 pr-3 font-medium last:text-right">{header}</th>)}</tr>
-          </thead>
-          <tbody className="divide-y divide-black/5">
-            {rows.map((row, index) => (
-              <tr key={`${row[0]}-${index}`}>
-                {row.map((cell, cellIndex) => (
-                  <td key={`${cell}-${cellIndex}`} className="py-2 pr-3 text-black/75 last:text-right last:font-medium last:text-black">{cell}</td>
-                ))}
-              </tr>
-            ))}
-            {!rows.length ? (
-              <tr>
-                <td colSpan={headers.length} className="py-6 text-center text-black/45">Sin datos para mostrar.</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
 function formatMoney(value: number) {
   return new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(value);
+}
+
+function translateSeries(data: PurchaseDashboardSeriesPoint[] | undefined) {
+  return (data ?? []).map((item) => ({
+    ...item,
+    label: formatPurchaseDashboardSeriesLabel(item.label),
+  }));
 }

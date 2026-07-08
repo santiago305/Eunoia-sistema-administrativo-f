@@ -64,11 +64,11 @@ export type PurchaseDashboardData = {
   summary: PurchaseDashboardSummary;
   byType: PurchaseDashboardSeriesPoint[];
   byStatus: PurchaseDashboardSeriesPoint[];
-  topItems: PurchaseDashboardTopItem[];
-  topSuppliers: PurchaseDashboardTopSupplier[];
-  monthlySpending: PurchaseDashboardMonthlyPoint[];
-  upcomingPayments: PurchaseDashboardPaymentRow[];
-  overduePayments: PurchaseDashboardPaymentRow[];
-  paymentMethodUsage: PurchaseDashboardSeriesPoint[];
-  internalVsInventory: PurchaseDashboardSeriesPoint[];
+  topItems?: PurchaseDashboardTopItem[];
+  topSuppliers?: PurchaseDashboardTopSupplier[];
+  monthlySpending?: PurchaseDashboardMonthlyPoint[];
+  upcomingPayments?: PurchaseDashboardPaymentRow[];
+  overduePayments?: PurchaseDashboardPaymentRow[];
+  paymentMethodUsage?: PurchaseDashboardSeriesPoint[];
+  internalVsInventory?: PurchaseDashboardSeriesPoint[];
 };

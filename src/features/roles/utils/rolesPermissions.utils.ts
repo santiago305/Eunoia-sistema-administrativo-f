@@ -22,6 +22,7 @@ export const cn = (...s: Array<string | false | null | undefined>) => s.filter(B
 
 const CATALOG_MODULES = new Set(["catalog", "packs"]);
 const RAW_MATERIAL_MODULES = new Set(["raw_material"]);
+const PURCHASE_DASHBOARD_MODULES = new Set(["purchases_dashboard"]);
 
 const CATALOG_SUBGROUPS: Array<Pick<PermissionSubgroup, "key" | "label">> = [
   { key: "products", label: "Productos" },
@@ -38,6 +39,10 @@ const RAW_MATERIAL_SUBGROUPS: Array<Pick<PermissionSubgroup, "key" | "label">> =
   { key: "adjustments", label: "Ajustes" },
   { key: "inventory", label: "Inventario" },
   { key: "movements", label: "Movimientos" },
+];
+
+const PURCHASE_DASHBOARD_SUBGROUPS: Array<Pick<PermissionSubgroup, "key" | "label">> = [
+  { key: "chart_groups", label: "Conjuntos de graficos" },
 ];
 
 const getCatalogPermissionSubgroupKey = (permission: AccessPermissionItem) => {
@@ -149,6 +154,11 @@ const getRawMaterialPermissionSubgroupKey = (permission: AccessPermissionItem) =
   return null;
 };
 
+const getPurchaseDashboardPermissionSubgroupKey = (permission: AccessPermissionItem) => {
+  if (permission.code === "purchases_dashboard.view") return null;
+  return "chart_groups";
+};
+
 const sortPermissionsByLabel = (permissions: AccessPermissionItem[]) =>
   permissions.sort((a, b) => getPermissionLabel(a).localeCompare(getPermissionLabel(b)));
 
@@ -213,6 +223,14 @@ const buildRawMaterialGroup = (permissions: AccessPermissionItem[]): PermissionM
     resolveSubgroupKey: getRawMaterialPermissionSubgroupKey,
   });
 
+const buildPurchaseDashboardGroup = (permissions: AccessPermissionItem[]): PermissionModuleGroup =>
+  buildSectionedGroup({
+    module: "purchases_dashboard",
+    permissions,
+    subgroupDefs: PURCHASE_DASHBOARD_SUBGROUPS,
+    resolveSubgroupKey: getPurchaseDashboardPermissionSubgroupKey,
+  });
+
 const insertGroupByLabel = (groups: PermissionModuleGroup[], group: PermissionModuleGroup) => {
   const groupIndex = groups.findIndex((item) => item.label.localeCompare(group.label) > 0);
   if (groupIndex === -1) return [...groups, group];
@@ -228,6 +246,7 @@ export const groupByModule = (permissions: AccessPermissionItem[]): PermissionMo
   const grouped = new Map<string, AccessPermissionItem[]>();
   const catalogPermissions: AccessPermissionItem[] = [];
   const rawMaterialPermissions: AccessPermissionItem[] = [];
+  const purchaseDashboardPermissions: AccessPermissionItem[] = [];
 
   for (const permission of permissions) {
     const key = permission.module || "general";
@@ -237,6 +256,10 @@ export const groupByModule = (permissions: AccessPermissionItem[]): PermissionMo
     }
     if (RAW_MATERIAL_MODULES.has(key)) {
       rawMaterialPermissions.push(permission);
+      continue;
+    }
+    if (PURCHASE_DASHBOARD_MODULES.has(key)) {
+      purchaseDashboardPermissions.push(permission);
       continue;
     }
 
@@ -254,7 +277,10 @@ export const groupByModule = (permissions: AccessPermissionItem[]): PermissionMo
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const withCatalog = catalogPermissions.length ? insertGroupByLabel(groups, buildCatalogGroup(catalogPermissions)) : groups;
-  return rawMaterialPermissions.length ? insertGroupByLabel(withCatalog, buildRawMaterialGroup(rawMaterialPermissions)) : withCatalog;
+  const withRawMaterial = rawMaterialPermissions.length ? insertGroupByLabel(withCatalog, buildRawMaterialGroup(rawMaterialPermissions)) : withCatalog;
+  return purchaseDashboardPermissions.length
+    ? insertGroupByLabel(withRawMaterial, buildPurchaseDashboardGroup(purchaseDashboardPermissions))
+    : withRawMaterial;
 };
 
 export const getRoleLabel = (role: string) =>

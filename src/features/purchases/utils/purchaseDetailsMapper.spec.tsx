@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CurrencyTypes, PaymentTypes, PurchaseOrderStatuses, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
+import { CurrencyTypes, PaymentFormTypes, PaymentTypes, PurchaseOrderStatuses, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
 import type { PurchaseAttachment } from "@/features/purchases/types/purchase-attachment.types";
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
 import type { SummaryPurchase } from "@/features/purchases/types/purchaseDetails";
@@ -52,6 +52,7 @@ describe("purchase details mapper", () => {
   it("keeps each payment proof image attached to its own payment", () => {
     const detail: PurchaseOrderDetailOutput = {
       ...purchase,
+      paymentForm: PaymentFormTypes.CONTADO,
       items: [],
       payments: [
         { payDocId: "payment-1", method: PaymentTypes.TRANSFERENCIA, date: "2026-07-01", currency: CurrencyTypes.PEN, amount: 25, operationNumber: "OP-1" },
@@ -95,6 +96,7 @@ describe("purchase details mapper", () => {
   it("keeps payment proof URLs available even when backend omits image metadata", () => {
     const detail: PurchaseOrderDetailOutput = {
       ...purchase,
+      paymentForm: PaymentFormTypes.CONTADO,
       items: [],
       payments: [
         { payDocId: "payment-1", method: PaymentTypes.TRANSFERENCIA, date: "2026-07-01", currency: CurrencyTypes.PEN, amount: 25, operationNumber: "OP-1" },

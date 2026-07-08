@@ -86,4 +86,28 @@ describe("rolesPermissions.utils", () => {
       "purchases.read",
     ]);
   });
+
+  it("groups purchase dashboard permissions as chart group permissions", () => {
+    const groups = groupByModule([
+      permission("purchases_dashboard.view", "purchases_dashboard", "purchases_dashboard", "Ver dashboard de compras"),
+      permission("purchases_dashboard.view_costs", "purchases_dashboard", "purchases_dashboard", "Ver costos"),
+      permission("purchases_dashboard.view_payments", "purchases_dashboard", "purchases_dashboard", "Ver pagos"),
+      permission("purchases_dashboard.view_suppliers", "purchases_dashboard", "purchases_dashboard", "Ver proveedores"),
+      permission("purchases_dashboard.view_items", "purchases_dashboard", "purchases_dashboard", "Ver items"),
+      permission("purchases_dashboard.view_operations", "purchases_dashboard", "purchases_dashboard", "Ver operaciones"),
+    ]);
+
+    const dashboard = groups.find((group) => group.module === "purchases_dashboard");
+
+    expect(dashboard?.label).toBe("Dashboard de compras");
+    expect(dashboard?.directPermissions?.map((item) => item.code)).toEqual(["purchases_dashboard.view"]);
+    expect(dashboard?.subgroups?.map((subgroup) => subgroup.key)).toEqual(["chart_groups"]);
+    expect(dashboard?.subgroups?.[0]?.permissions.map((item) => item.code)).toEqual([
+      "purchases_dashboard.view_costs",
+      "purchases_dashboard.view_payments",
+      "purchases_dashboard.view_suppliers",
+      "purchases_dashboard.view_items",
+      "purchases_dashboard.view_operations",
+    ]);
+  });
 });

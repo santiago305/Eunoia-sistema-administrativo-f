@@ -16,43 +16,59 @@ const get = async <T>(url: string, params: PurchaseDashboardFilters): Promise<T>
   return response.data;
 };
 
+const can = (permissions: string[], permission: string) => permissions.includes(permission);
+
 export const getPurchaseDashboardData = async (
   params: PurchaseDashboardFilters = {},
+  permissions: string[] = [],
 ): Promise<PurchaseDashboardData> => {
-  const [
-    summary,
-    byType,
-    byStatus,
-    topItems,
-    topSuppliers,
-    monthlySpending,
-    upcomingPayments,
-    overduePayments,
-    paymentMethodUsage,
-    internalVsInventory,
-  ] = await Promise.all([
+  const [summary, byType, byStatus] = await Promise.all([
     get<PurchaseDashboardSummary>(API_PURCHASE_DASHBOARD_GROUP.summary, params),
     get<PurchaseDashboardSeriesPoint[]>(API_PURCHASE_DASHBOARD_GROUP.byType, params),
     get<PurchaseDashboardSeriesPoint[]>(API_PURCHASE_DASHBOARD_GROUP.byStatus, params),
-    get<PurchaseDashboardTopItem[]>(API_PURCHASE_DASHBOARD_GROUP.topItems, params),
-    get<PurchaseDashboardTopSupplier[]>(API_PURCHASE_DASHBOARD_GROUP.topSuppliers, params),
-    get<PurchaseDashboardMonthlyPoint[]>(API_PURCHASE_DASHBOARD_GROUP.monthlySpending, params),
-    get<PurchaseDashboardPaymentRow[]>(API_PURCHASE_DASHBOARD_GROUP.upcomingPayments, params),
-    get<PurchaseDashboardPaymentRow[]>(API_PURCHASE_DASHBOARD_GROUP.overduePayments, params),
-    get<PurchaseDashboardSeriesPoint[]>(API_PURCHASE_DASHBOARD_GROUP.paymentMethodUsage, params),
-    get<PurchaseDashboardSeriesPoint[]>(API_PURCHASE_DASHBOARD_GROUP.internalVsInventory, params),
   ]);
 
-  return {
+  const data: PurchaseDashboardData = {
     summary,
     byType,
     byStatus,
-    topItems,
-    topSuppliers,
-    monthlySpending,
-    upcomingPayments,
-    overduePayments,
-    paymentMethodUsage,
-    internalVsInventory,
   };
+
+  if (can(permissions, "purchases_dashboard.view_costs")) {
+    data.monthlySpending = await get<PurchaseDashboardMonthlyPoint[]>(
+      API_PURCHASE_DASHBOARD_GROUP.monthlySpending,
+      params,
+    );
+  }
+
+  if (can(permissions, "purchases_dashboard.view_payments")) {
+    const [upcomingPayments, overduePayments, paymentMethodUsage] = await Promise.all([
+      get<PurchaseDashboardPaymentRow[]>(API_PURCHASE_DASHBOARD_GROUP.upcomingPayments, params),
+      get<PurchaseDashboardPaymentRow[]>(API_PURCHASE_DASHBOARD_GROUP.overduePayments, params),
+      get<PurchaseDashboardSeriesPoint[]>(API_PURCHASE_DASHBOARD_GROUP.paymentMethodUsage, params),
+    ]);
+    data.upcomingPayments = upcomingPayments;
+    data.overduePayments = overduePayments;
+    data.paymentMethodUsage = paymentMethodUsage;
+  }
+
+  if (can(permissions, "purchases_dashboard.view_suppliers")) {
+    data.topSuppliers = await get<PurchaseDashboardTopSupplier[]>(
+      API_PURCHASE_DASHBOARD_GROUP.topSuppliers,
+      params,
+    );
+  }
+
+  if (can(permissions, "purchases_dashboard.view_items")) {
+    data.topItems = await get<PurchaseDashboardTopItem[]>(API_PURCHASE_DASHBOARD_GROUP.topItems, params);
+  }
+
+  if (can(permissions, "purchases_dashboard.view_operations")) {
+    data.internalVsInventory = await get<PurchaseDashboardSeriesPoint[]>(
+      API_PURCHASE_DASHBOARD_GROUP.internalVsInventory,
+      params,
+    );
+  }
+
+  return data;
 };
