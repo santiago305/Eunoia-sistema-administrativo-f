@@ -48,23 +48,31 @@ export function OperationImageGallery({
   }, [images.length]);
 
   if (!normalizedImages.length) {
+    if (canUpload) {
+      return (
+        <label
+          className={`flex h-35 w-full cursor-pointer items-center justify-center rounded-md border border-dashed border-black/15 bg-slate-50 px-3 text-center text-xs font-medium text-black/55 transition hover:border-black/30 hover:bg-slate-100 ${
+            uploading ? "pointer-events-none opacity-60" : ""
+          }`}
+        >
+          <span>{uploading ? "Subiendo imagen..." : "Subir imagen"}</span>
+          <input
+            type="file"
+            accept="image/*"
+            disabled={uploading}
+            aria-label="Subir imagen"
+            onChange={(e) => void onUpload?.(e.target.files?.[0] ?? null)}
+            className="sr-only"
+          />
+        </label>
+      );
+    }
+
     return (
       <div className="space-y-2">
         <div className="rounded-md bg-slate-50 px-3 py-4 text-center text-xs text-black/45">
           {emptyMessage}
         </div>
-        {canUpload ? (
-          <label className="block text-xs text-black/60">
-            <span className="mb-1 block">Subir foto</span>
-            <input
-              type="file"
-              accept="image/*"
-              disabled={uploading}
-              onChange={(e) => void onUpload?.(e.target.files?.[0] ?? null)}
-              className="w-full rounded-md border border-black/10 px-2 py-1.5"
-            />
-          </label>
-        ) : null}
       </div>
     );
   }

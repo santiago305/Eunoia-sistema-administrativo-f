@@ -3,6 +3,7 @@ import type {
     AppliedDataTableFilter,
     DataTableFilterTree,
 } from './filters/types';
+import type { SmartSearchRule } from './search/types';
 
 export type DataTablePinned = 'left' | 'right';
 
@@ -20,6 +21,7 @@ export type DataTableColumn<T> = {
     clickable?: boolean;
     onCellClick?: (row: T, index: number, event: MouseEvent<HTMLElement>) => void;
     stopRowClick?: boolean;
+    copy?: boolean;
     searchable?: boolean;
     searchValue?: (row: T) => string;
     sortable?: boolean;
@@ -45,6 +47,22 @@ export type DataTableRangeDates = {
     name?: string;
     disabled?: boolean;
     panelMinWidth?: number;
+};
+
+export type DataTableSmartRangeDate<
+    TFieldKey extends string = string,
+    TOperator extends string = string,
+> = {
+    fieldId: TFieldKey;
+    value: SmartSearchRule<TFieldKey, TOperator> | null;
+    onChange: (rule: SmartSearchRule<TFieldKey, TOperator> | null) => void;
+    operators: {
+        range: TOperator;
+        week: TOperator;
+        month: TOperator;
+    };
+    label?: string;
+    disabled?: boolean;
 };
 
 export type DataTableFiltersConfig = {
@@ -94,6 +112,7 @@ export type DataTableProps<T> = {
     tableId: string;
     paddingPaginated?:string;
     paddingTablePaginated?:string;
+    showSelectionInfo?: boolean;
     loading?: boolean;
     emptyMessage?: string;
     rowKey?: keyof T | ((row: T, index: number) => string);
@@ -114,6 +133,7 @@ export type DataTableProps<T> = {
     onSearchChange?: (value: string) => void;
     filtersConfig?: DataTableFiltersConfig;
     rangeDates?: DataTableRangeDates;
+    smartRangeDate?: DataTableSmartRangeDate;
     searchMode?: DataTableSearchMode;
     globalSearchFn?: (row: T, query: string) => boolean;
     stickyHeader?: boolean;

@@ -2,7 +2,7 @@ import { Eye, ImagePlus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { env } from "@/env";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
-import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { FloatingSuggestInput } from "@/shared/components/components/FloatingSuggestInput";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
@@ -17,7 +17,7 @@ import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 type Props = {
   form: SaleOrderEditorForm;
   setForm: React.Dispatch<React.SetStateAction<SaleOrderEditorForm>>;
-  subsidiaryOptions: Array<{ value: string; label: string; address?:string }>;
+  subsidiaryOptions: Array<{ value: string; label: string; address?:string, cost?:number }>;
 };
 
 const resolveUrl = (value?: string | null) => {
@@ -43,6 +43,8 @@ export function SaleOrderShippingSection({
         : resolveUrl(form.existingShippingPhotoUrl),
     [form.existingShippingPhotoUrl, form.shippingPhoto],
   );
+  const inputClassName = "h-9 text-xs";
+
 
   return (
     <SaleOrderEditorSection title="Envío"
@@ -100,35 +102,49 @@ export function SaleOrderShippingSection({
         ) : null}
       </div>
     }>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2">
-        <FloatingSelect
-          label="Sucursal"
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 space-y-2">
+        <FloatingSuggestInput
+          label="Agencia/Dirección"
           name="sale-order-subsidiary"
-          value={form.agencySubsidiaryId}
+          className={inputClassName}
+          value={form.agencyDetail}
           options={subsidiaryOptions}
-          onChange={(agencySubsidiaryId) =>
+          onChange={(agencyDetail) =>
             setForm((current) => ({
               ...current,
-              agencySubsidiaryId,
-              sendAddress: subsidiaryOptions.find((item) => item.value === agencySubsidiaryId)?.address ?? "",
+              agencyDetail,
             }))
           }
-          searchable
+          onOptionSelect={(option) =>
+            setForm((current) => {
+              const subsidiary = subsidiaryOptions.find((item) => item.value === option.value);
+              return {
+                ...current,
+                agencyDetail: option.label,
+                deliveryCost: subsidiary?.cost ?? 0,
+              };
+            })
+          }
+          searchPlaceholder="Selecciona una agencia"
+          emptyMessage="Sin agencias"
+          panelWidthMode="min-trigger"
         />
         <FloatingInput
-          label="Clave"
-          name="sale-order-send-code"
-          value={form.sendCode}
+          label="Tarifa"
+          className={inputClassName}
+          name="sale-order-tarifa"
+          value={form.deliveryCost}
           onChange={(event) =>
             setForm((current) => ({
               ...current,
-              sendCode: event.target.value,
+              deliveryCost: Number(event.target.value) || 0,
             }))
           }
         />
         <FloatingDatePicker
           label="Fecha de envío"
           name="sale-order-send-date"
+          className={inputClassName}
           value={parseDateInputValue(form.sendDate)}
           onChange={(date) =>
             setForm((current) => ({
@@ -137,17 +153,15 @@ export function SaleOrderShippingSection({
             }))
           }
         />
-      </div>
-      <div className="mt-2">
         <FloatingInput
-          label="Dirección de sucursal"
-          name="sale-order-send-address"
-          type="text"
-          value={form.sendAddress}
+          label="Clave"
+          name="sale-order-send-code"
+          className={inputClassName}
+          value={form.sendCode}
           onChange={(event) =>
             setForm((current) => ({
               ...current,
-              sendAddress: event.target.value,
+              sendCode: event.target.value,
             }))
           }
         />

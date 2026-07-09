@@ -312,29 +312,6 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     return (
         <Modal open={open} onClose={onClose} title={title} className="max-w-4xl max-h-160" bodyClassName="p-4">
             <div className="space-y-4">
-                {/* <div className="grid grid-cols-1">
-                    <FloatingSelect
-                        label="Seleccionar Pack"
-                        name="pack"
-                        value={value.referencePackId ?? ""}
-                        onChange={(v) => {
-                            setExcludedSkuIds([]);
-                            onChange({
-                                ...value,
-                                referencePackId: v || undefined,
-                                components: [],
-                                unitPrice: 0,
-                                total: 0,
-                            });
-                        }}
-                        options={packOptions}
-                        searchable
-                        searchPlaceholder="Buscar pack..."
-                        emptyMessage="Sin packs"
-                        onSearchChange={setPackQuery}
-                    />
-                </div> */}
-
                     <div className="bg-gray-100/80 p-5 rounded-xl space-y-5">
                         <FloatingSuggestInput
                             label="Descripción"
@@ -457,7 +434,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
 
                     <div className="rounded-xl bg-white p-3 text-sm shadow-inherit">
                         <div className="flex">
-                            <div className="font-semibold p-2">Productos</div>
+                            <div className="font-semibold p-2">Adicionar</div>
                             <SystemButton size="sm" leftIcon={<Plus className="h-4 w-4" />} aria-label="Agregar SKU" title="Agregar SKU" onClick={() => setOpenAddSku(true)} />
                         </div>
 

@@ -58,7 +58,7 @@ export type SaleOrderEditorForm = {
   clientData: SaleOrderEditorClientData;
   workflowId: string;
   warehouseId: string;
-  agencySubsidiaryId: string;
+  agencyDetail: string;
   sourceId: string;
   scheduleDate: string;
   deliveryDate: string;
@@ -71,6 +71,7 @@ export type SaleOrderEditorForm = {
   sendCode: string;
   sendAddress: string;
   assignedBy: string;
+  reserveBool: boolean | null;
   items: SaleOrderItemInput[];
   payments: SaleOrderEditorPayment[];
   shippingPhoto: File | null;
@@ -112,7 +113,7 @@ export function buildEmptySaleOrderEditorForm(): SaleOrderEditorForm {
     clientData: emptyClient(),
     workflowId: "",
     warehouseId: "",
-    agencySubsidiaryId: "",
+    agencyDetail: "",
     sourceId: "",
     scheduleDate: toLocalDateKey(new Date()),
     deliveryDate: "",
@@ -125,6 +126,7 @@ export function buildEmptySaleOrderEditorForm(): SaleOrderEditorForm {
     sendCode: "",
     sendAddress: "",
     assignedBy: "",
+    reserveBool: null,
     items: [],
     payments: [],
     shippingPhoto: null,
@@ -203,7 +205,7 @@ export function mapSaleOrderToEditorForm(
       : emptyClient(),
     workflowId: order.workflow?.id ?? order.workflowId ?? "",
     warehouseId: order.warehouse?.id ?? "",
-    agencySubsidiaryId: order.agencySubsidiaryId ?? "",
+    agencyDetail: order.agencyDetail ?? "",
     sourceId: order.source?.id ?? "",
     scheduleDate: order.scheduleDate ?? "",
     deliveryDate: order.deliveryDate ?? "",
@@ -216,6 +218,7 @@ export function mapSaleOrderToEditorForm(
     sendCode: order.sendCode ?? "",
     sendAddress: order.sendAddress ?? "",
     assignedBy: order.assignedBy?.id ?? "",
+    reserveBool: order.reserveBool ?? null,
     items: normalizeSaleOrderItems(order.items ?? []),
     payments: (order.payments ?? []).map((payment) => {
       const attachment = proofByPaymentId.get(payment.id);
@@ -310,7 +313,7 @@ export function toSaveSaleOrderWithClientDto(
     client,
     workflowId: form.workflowId,
     warehouseId: form.warehouseId || undefined,
-    agencySubsidiaryId: form.agencySubsidiaryId || undefined,
+    agencyDetail: form.agencyDetail.trim() || undefined,
     sourceId: form.sourceId || undefined,
     scheduleDate: form.scheduleDate || undefined,
     deliveryDate: form.deliveryDate || undefined,

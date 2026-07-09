@@ -47,6 +47,7 @@ export function SaleOrderInformationSection({
     () => new Set(adviserOptions.map((adviser) => adviser.id)),
     [adviserOptions],
   );
+  const inputClassName = "h-9 text-xs";
 
   useEffect(() => {
     if (!open) return;
@@ -70,6 +71,7 @@ export function SaleOrderInformationSection({
          <FloatingDatePicker
             label="Fecha agenda"
             name="sale-order-schedule-date"
+            className={inputClassName}
             value={parseDateInputValue(form.scheduleDate)}
             onChange={(date) =>
               setForm((current) => ({
@@ -81,6 +83,7 @@ export function SaleOrderInformationSection({
           <FloatingDatePicker
             label="Fecha entrega"
             name="sale-order-delivery-date"
+            className={inputClassName}
             value={parseDateInputValue(form.deliveryDate)}
             onChange={(date) =>
               setForm((current) => ({
@@ -91,6 +94,7 @@ export function SaleOrderInformationSection({
           />
         <FloatingSelect
           label="Tipo"
+          className={inputClassName}
           name="sale-order-workflow"
           value={form.workflowId}
           options={workflowOptions}
@@ -102,6 +106,7 @@ export function SaleOrderInformationSection({
         <FloatingSelect
           label="Almacén"
           name="sale-order-warehouse"
+          className={inputClassName}
           value={form.warehouseId}
           options={warehouseOptions}
           onChange={(warehouseId) =>
@@ -113,6 +118,7 @@ export function SaleOrderInformationSection({
         <FloatingSelect
           label="Enganche"
           name="sale-order-source"
+          className={inputClassName}
           value={form.sourceId}
           options={sourceOptions}
           onChange={(sourceId) =>
@@ -123,6 +129,7 @@ export function SaleOrderInformationSection({
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <FloatingSelect
             label="Asignado"
+            className={inputClassName}
             name="sale-order-adviser"
             value={form.assignedBy}
             options={adviserOptions.map((adviser) => ({
@@ -138,7 +145,7 @@ export function SaleOrderInformationSection({
             <SystemButton
               type="button"
               size="icon"
-              className="h-9 w-9"
+              className="h-8 w-9"
               title="Clasificar usuario como asesor"
               aria-label="Clasificar usuario como asesor"
               onClick={() => setOpen(true)}
@@ -150,6 +157,7 @@ export function SaleOrderInformationSection({
         <FloatingInput
           label="Código publicitario"
           name="sale-order-advertising-code"
+          className={inputClassName}
           value={form.advertisingCode}
           onChange={(event) =>
             setForm((current) => ({
@@ -160,6 +168,7 @@ export function SaleOrderInformationSection({
         />
         <FloatingInput
           label="Observación"
+          className={inputClassName}
           name="sale-order-observation"
           value={form.observation}
           onChange={(event) =>

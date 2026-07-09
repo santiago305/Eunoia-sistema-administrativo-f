@@ -160,6 +160,24 @@ describe("saleOrderEditorForm", () => {
     expect(payload).not.toHaveProperty("createdAt");
   });
 
+  it("maps and saves agencyDetail as free text without agencySubsidiaryId", () => {
+    const form = mapSaleOrderToEditorForm({
+      ...order,
+      agencySubsidiaryId: "legacy-subsidiary",
+      agencyDetail: "Olva Miraflores",
+    } as unknown as SaleOrder);
+
+    const payload = toSaveSaleOrderWithClientDto(form);
+
+    expect(form.agencyDetail).toBe("Olva Miraflores");
+    expect(payload).toEqual(
+      expect.objectContaining({
+        agencyDetail: "Olva Miraflores",
+      }),
+    );
+    expect(payload).not.toHaveProperty("agencySubsidiaryId");
+  });
+
   it("tracks existing attachment removal once", () => {
     const form = buildEmptySaleOrderEditorForm();
     const once = markAttachmentRemoved(form, "attachment-1");

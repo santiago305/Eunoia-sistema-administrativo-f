@@ -17,6 +17,8 @@ const searchState: SaleOrderSearchStateResponse = {
     states: [{ id: "state-1", label: "Preparando" }],
     bankAccounts: [{ id: "bank-1", label: "BCP Soles" }],
     clientTypes: [{ id: "NEW", label: "Nuevo" }],
+    creators: [{ id: "user-1", label: "creador@eunoia.test" }],
+    assignees: [{ id: "user-2", label: "asignado@eunoia.test" }],
   },
 };
 
@@ -115,6 +117,67 @@ describe("sale order workflow and state smart filters", () => {
         id: "clientType",
         label: "Tipo de cliente: Nuevo",
         removeKey: "clientType",
+      },
+    ]);
+  });
+
+  it("builds, sanitizes, and labels created-by and assigned-by catalog filters", () => {
+    const columns = buildSaleOrderSmartSearchColumns(searchState);
+
+    expect(columns.find((column) => column.id === "createdBy")).toMatchObject({
+      label: "Creado por",
+      kind: "catalog",
+      supportsExclude: true,
+      options: searchState.catalogs.creators,
+    });
+    expect(columns.find((column) => column.id === "assignedBy")).toMatchObject({
+      label: "Asignado a",
+      kind: "catalog",
+      supportsExclude: true,
+      options: searchState.catalogs.assignees,
+    });
+
+    const snapshot = sanitizeSaleOrderSearchSnapshot({
+      filters: [
+        {
+          field: "createdBy",
+          operator: "in",
+          mode: "include",
+          values: ["user-1"],
+        },
+        {
+          field: "assignedBy",
+          operator: "in",
+          mode: "exclude",
+          values: ["user-2"],
+        },
+      ],
+    });
+
+    expect(snapshot.filters).toEqual([
+      {
+        field: "createdBy",
+        operator: "in",
+        mode: "include",
+        values: ["user-1"],
+      },
+      {
+        field: "assignedBy",
+        operator: "in",
+        mode: "exclude",
+        values: ["user-2"],
+      },
+    ]);
+    expect(buildSaleOrderSearchChips(snapshot, searchState)).toEqual([
+      {
+        id: "createdBy",
+        label: "Creado por: creador@eunoia.test",
+        removeKey: "createdBy",
+      },
+      {
+        id: "assignedBy",
+        label: "Asignado a: No asignado@eunoia.test",
+        removeKey: "assignedBy",
       },
     ]);
   });

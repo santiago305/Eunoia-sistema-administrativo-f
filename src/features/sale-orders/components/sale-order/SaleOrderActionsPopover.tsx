@@ -23,6 +23,20 @@ export function SaleOrderActionsPopover({
         icon: <FileText className="h-4 w-4" />,
         onClick: () => onOpenPdf(order),
       },
+      {
+        id: "boleta",
+        label: "generar factura",
+        icon: <FileText className="h-4 w-4" />,
+        onClick: () => onOpenPdf(order),
+        disabled:true
+      },
+      {
+        id: "factura",
+        label: "generar boleta",
+        icon: <FileText className="h-4 w-4" />,
+        onClick: () => onOpenPdf(order),
+        disabled:true
+      },
     ],
     [onOpenPdf, order],
   );

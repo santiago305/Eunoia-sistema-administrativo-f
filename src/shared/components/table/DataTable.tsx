@@ -58,6 +58,7 @@ export function DataTable<T extends Record<string, unknown>>({
   columns,
   tableId,
   loading = false,
+  showSelectionInfo = true,
   emptyMessage = "No hay registros disponibles.",
   rowKey,
   striped = false,
@@ -77,6 +78,7 @@ export function DataTable<T extends Record<string, unknown>>({
   onSearchChange,
   filtersConfig,
   rangeDates,
+  smartRangeDate,
   searchMode = "client",
   globalSearchFn,
   stickyHeader = true,
@@ -421,9 +423,10 @@ export function DataTable<T extends Record<string, unknown>>({
         }}
         filtersConfig={filtersConfig}
         rangeDates={resolvedRangeDates}
+        smartRangeDate={smartRangeDate}
         refreshAction={refreshAction}
         selectionInfo={
-          selectableRows ? (
+          selectableRows && showSelectionInfo ? (
             <div className="inline-flex items-center gap-2 rounded-sm border border-border/70 bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
               <CheckSquare className="h-4 w-4" />
               {activeSelectedRowKeys.length} fila(s) seleccionada(s)
@@ -625,7 +628,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           const isCellClickable =
                             !!column.onCellClick && column.clickable !== false;
                           const shouldStopRowClick =
-                            column.stopRowClick || isCellClickable;
+                            column.stopRowClick || column.copy || isCellClickable;
 
                           return (
                             <td
@@ -640,9 +643,17 @@ export function DataTable<T extends Record<string, unknown>>({
                                   }
                                   : undefined
                               }
+                              onMouseDown={
+                                column.copy
+                                  ? (event) => {
+                                    event.stopPropagation();
+                                  }
+                                  : undefined
+                              }
                               className={cn(
                                 "px-2 py-1 align-middle text-foregroun",
                                 column.className,
+                                column.copy && "!select-text cursor-text selection:bg-blue-200 selection:text-blue-950 [&_*]:!select-text [&_*]:cursor-text",
                                 isCellClickable && "cursor-pointer hover:underline",
                               )}
                             >
