@@ -312,28 +312,6 @@ function OrderStateBadge({
     );
 }
 
-function getTransitionFailureMessage(transition: AvailableTransition | undefined) {
-    const reasons = transition?.failures
-        ?.map((failure) => failure.reason)
-        .filter((reason): reason is string => Boolean(reason?.trim()));
-
-    if (reasons?.length) {
-        return reasons.join("; ");
-    }
-
-    return "No cumple las condiciones de esta transición.";
-}
-
-function getUnavailableTransitionForOrder(
-    saleOrderId: string,
-    transitionKey: string,
-    transitionsByOrderId: Record<string, AvailableTransition[]>,
-) {
-    return (transitionsByOrderId[saleOrderId] ?? []).find(
-        (transition) => getTransitionKey(transition) === transitionKey && !transition.available,
-    );
-}
-
 function getAvailableTransitionsForOrder(
     saleOrderId: string,
     transitionSummaries: TransitionSummary[],
@@ -504,8 +482,6 @@ export function SaleOrderBulkChangeStateModal({
 
     const assignedCount = assignedEntries.length;
     const activeCount = activeOrderIds.length;
-    const inactiveCount = selectedOrderIds.length - activeCount;
-    const pendingCount = activeCount - assignedCount;
 
     const assignedCountByTransitionKey = useMemo(() => {
         const counts = new Map<string, number>();
@@ -628,10 +604,6 @@ export function SaleOrderBulkChangeStateModal({
 
     const clearPlan = () => {
         setAssignedTransitionByOrderId({});
-    };
-
-    const selectAllOrders = () => {
-        setActiveOrderIds(selectedOrderIds);
     };
 
     const buildSelection = (): SaleOrderBulkChangeStateSelection => {

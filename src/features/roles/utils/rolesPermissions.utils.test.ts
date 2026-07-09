@@ -87,7 +87,7 @@ describe("rolesPermissions.utils", () => {
     ]);
   });
 
-  it("groups purchase dashboard permissions as chart group permissions", () => {
+  it("groups purchase dashboard permissions by dashboard data area", () => {
     const groups = groupByModule([
       permission("purchases_dashboard.view", "purchases_dashboard", "purchases_dashboard", "Ver dashboard de compras"),
       permission("purchases_dashboard.view_costs", "purchases_dashboard", "purchases_dashboard", "Ver costos"),
@@ -101,12 +101,26 @@ describe("rolesPermissions.utils", () => {
 
     expect(dashboard?.label).toBe("Dashboard de compras");
     expect(dashboard?.directPermissions?.map((item) => item.code)).toEqual(["purchases_dashboard.view"]);
-    expect(dashboard?.subgroups?.map((subgroup) => subgroup.key)).toEqual(["chart_groups"]);
-    expect(dashboard?.subgroups?.[0]?.permissions.map((item) => item.code)).toEqual([
+    expect(dashboard?.subgroups?.map((subgroup) => [subgroup.key, subgroup.label])).toEqual([
+      ["costs", "Costos"],
+      ["payments", "Pagos"],
+      ["suppliers", "Proveedores"],
+      ["items", "Items"],
+      ["operations", "Operaciones"],
+    ]);
+    expect(dashboard?.subgroups?.find((subgroup) => subgroup.key === "costs")?.permissions.map((item) => item.code)).toEqual([
       "purchases_dashboard.view_costs",
+    ]);
+    expect(dashboard?.subgroups?.find((subgroup) => subgroup.key === "payments")?.permissions.map((item) => item.code)).toEqual([
       "purchases_dashboard.view_payments",
+    ]);
+    expect(dashboard?.subgroups?.find((subgroup) => subgroup.key === "suppliers")?.permissions.map((item) => item.code)).toEqual([
       "purchases_dashboard.view_suppliers",
+    ]);
+    expect(dashboard?.subgroups?.find((subgroup) => subgroup.key === "items")?.permissions.map((item) => item.code)).toEqual([
       "purchases_dashboard.view_items",
+    ]);
+    expect(dashboard?.subgroups?.find((subgroup) => subgroup.key === "operations")?.permissions.map((item) => item.code)).toEqual([
       "purchases_dashboard.view_operations",
     ]);
   });

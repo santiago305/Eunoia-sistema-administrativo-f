@@ -42,7 +42,11 @@ const RAW_MATERIAL_SUBGROUPS: Array<Pick<PermissionSubgroup, "key" | "label">> =
 ];
 
 const PURCHASE_DASHBOARD_SUBGROUPS: Array<Pick<PermissionSubgroup, "key" | "label">> = [
-  { key: "chart_groups", label: "Conjuntos de graficos" },
+  { key: "costs", label: "Costos" },
+  { key: "payments", label: "Pagos" },
+  { key: "suppliers", label: "Proveedores" },
+  { key: "items", label: "Items" },
+  { key: "operations", label: "Operaciones" },
 ];
 
 const getCatalogPermissionSubgroupKey = (permission: AccessPermissionItem) => {
@@ -156,7 +160,16 @@ const getRawMaterialPermissionSubgroupKey = (permission: AccessPermissionItem) =
 
 const getPurchaseDashboardPermissionSubgroupKey = (permission: AccessPermissionItem) => {
   if (permission.code === "purchases_dashboard.view") return null;
-  return "chart_groups";
+
+  const purchaseDashboardSubgroups: Record<string, string> = {
+    "purchases_dashboard.view_costs": "costs",
+    "purchases_dashboard.view_payments": "payments",
+    "purchases_dashboard.view_suppliers": "suppliers",
+    "purchases_dashboard.view_items": "items",
+    "purchases_dashboard.view_operations": "operations",
+  };
+
+  return purchaseDashboardSubgroups[permission.code] ?? null;
 };
 
 const sortPermissionsByLabel = (permissions: AccessPermissionItem[]) =>
