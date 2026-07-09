@@ -9,6 +9,7 @@ export type PurchaseDashboardFilters = {
   warehouseId?: string;
   paymentMethodId?: string;
   companyPaymentAccountId?: string;
+  limit?: number;
 };
 
 export type PurchaseDashboardSummary = {

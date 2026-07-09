@@ -35,7 +35,7 @@ describe("purchaseDashboardService", () => {
   it("loads purchase dashboard groups allowed by permissions", async () => {
     vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
 
-    const params = { from: "2026-06-01" };
+    const params = { from: "2026-06-01", limit: 20 };
     await getPurchaseDashboardData(params, [
       "purchases_dashboard.view",
       "purchases_dashboard.view_costs",
