@@ -14,6 +14,7 @@ type Props = {
   tableId: string;
   rows: PurchaseDashboardRankingRow[];
   headers?: [string, string, string];
+  limit?: number;
 };
 
 export function PurchaseDashboardRankingTable({
@@ -21,6 +22,7 @@ export function PurchaseDashboardRankingTable({
   tableId,
   rows,
   headers = ["Item", "Tipo", "Total"],
+  limit,
 }: Props) {
   const columns = useMemo<DataTableColumn<PurchaseDashboardRankingRow>[]>(
     () => [
@@ -50,7 +52,10 @@ export function PurchaseDashboardRankingTable({
 
   return (
     <section className="rounded-md border border-black/10 bg-white p-4">
-      <h2 className="text-sm font-semibold text-black">{title}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-black">{title}</h2>
+        {limit ? <span className="text-xs text-black/50">Mostrando top {limit}</span> : null}
+      </div>
       <div className="mt-3">
         <DataTable
           tableId={tableId}

@@ -8,6 +8,7 @@ import { money } from "@/shared/utils/functionPurchases";
 type Props = {
   title: string;
   rows: PurchaseDashboardPaymentRow[];
+  limit?: number;
 };
 
 type DashboardPaymentRow = Record<string, unknown> & {
@@ -18,7 +19,7 @@ type DashboardPaymentRow = Record<string, unknown> & {
   pending: string;
 };
 
-export function UpcomingPaymentsTable({ title, rows }: Props) {
+export function UpcomingPaymentsTable({ title, rows, limit }: Props) {
   const tableId = `purchase-dashboard-payments-${toTableIdSuffix(title)}`;
   const tableRows = useMemo<DashboardPaymentRow[]>(
     () =>
@@ -51,7 +52,10 @@ export function UpcomingPaymentsTable({ title, rows }: Props) {
 
   return (
     <section className="rounded-md border border-black/10 bg-white p-4">
-      <h2 className="text-sm font-semibold text-black">{title}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-black">{title}</h2>
+        {limit ? <span className="text-xs text-black/50">Mostrando top {limit}</span> : null}
+      </div>
       <div className="mt-3">
         <DataTable
           tableId={tableId}

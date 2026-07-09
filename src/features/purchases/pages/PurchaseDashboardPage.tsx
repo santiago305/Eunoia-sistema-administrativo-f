@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import { RefreshCw, Search, X } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { usePurchaseDashboard } from "@/features/purchases/hooks/usePurchaseDashboard";
@@ -11,31 +10,16 @@ import { PurchasePaymentStatusChart } from "@/features/purchases/components/dash
 import { UpcomingPaymentsTable } from "@/features/purchases/components/dashboard/UpcomingPaymentsTable";
 import { OverduePaymentsTable } from "@/features/purchases/components/dashboard/OverduePaymentsTable";
 import { PurchaseDashboardRankingTable } from "@/features/purchases/components/dashboard/PurchaseDashboardRankingTable";
-import type { PurchaseDashboardFilters, PurchaseDashboardSeriesPoint } from "@/features/purchases/types/purchase-dashboard.types";
+import { PurchaseDashboardFilters } from "@/features/purchases/components/dashboard/PurchaseDashboardFilters";
+import { DEFAULT_PURCHASE_DASHBOARD_LIMIT } from "@/features/purchases/components/dashboard/PurchaseDashboardLimitSelect";
+import type {
+  PurchaseDashboardFilters as PurchaseDashboardFilterValue,
+  PurchaseDashboardSeriesPoint,
+} from "@/features/purchases/types/purchase-dashboard.types";
 import {
   formatPurchaseDashboardItemType,
   formatPurchaseDashboardSeriesLabel,
 } from "@/features/purchases/utils/purchaseDashboardLabels";
-
-const purchaseTypeOptions = [
-  ["", "Todos los tipos"],
-  ["INVENTORY", "Inventario"],
-  ["RAW_MATERIAL", "Materia prima"],
-  ["INTERNAL_MATERIAL", "Material interno"],
-  ["FIXED_ASSET", "Activo fijo"],
-  ["SERVICE", "Servicio"],
-  ["SUBSCRIPTION", "Suscripción"],
-  ["MIXED", "Mixta"],
-];
-
-const paymentStatusOptions = [
-  ["", "Todos los pagos"],
-  ["PENDING", "Pendiente"],
-  ["PARTIAL", "Parcial"],
-  ["PAID", "Pagado"],
-  ["OVERDUE", "Vencido"],
-  ["CANCELLED", "Cancelado"],
-];
 
 const emptySummary = {
   totalPurchased: 0,
@@ -49,27 +33,22 @@ const emptySummary = {
 };
 
 export default function PurchaseDashboardPage() {
-  const [draftFilters, setDraftFilters] = useState<PurchaseDashboardFilters>({});
-  const [appliedFilters, setAppliedFilters] = useState<PurchaseDashboardFilters>({});
+  const defaultFilters = useMemo<PurchaseDashboardFilterValue>(() => ({ limit: DEFAULT_PURCHASE_DASHBOARD_LIMIT }), []);
+  const [draftFilters, setDraftFilters] = useState<PurchaseDashboardFilterValue>(defaultFilters);
+  const [appliedFilters, setAppliedFilters] = useState<PurchaseDashboardFilterValue>(defaultFilters);
   const { data, loading, error, reload } = usePurchaseDashboard(appliedFilters);
 
   const activeFilterCount = useMemo(
-    () => Object.values(appliedFilters).filter(Boolean).length,
+    () => Object.entries(appliedFilters).filter(([key, value]) => key !== "limit" && Boolean(value)).length,
     [appliedFilters],
   );
 
-  const updateDraft = (key: keyof PurchaseDashboardFilters, value: string) => {
-    setDraftFilters((current) => ({
-      ...current,
-      [key]: value || undefined,
-    }));
-  };
-
   const applyFilters = () => setAppliedFilters({ ...draftFilters });
   const clearFilters = () => {
-    setDraftFilters({});
-    setAppliedFilters({});
+    setDraftFilters(defaultFilters);
+    setAppliedFilters(defaultFilters);
   };
+  const currentLimit = appliedFilters.limit ?? DEFAULT_PURCHASE_DASHBOARD_LIMIT;
 
   return (
     <PageShell className="bg-white">
@@ -93,49 +72,13 @@ export default function PurchaseDashboardPage() {
           </div>
         </header>
 
-        <section className="rounded-md border border-black/10 bg-white p-4" aria-label="Filtros del dashboard">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Field label="Desde">
-              <input type="date" value={draftFilters.from ?? ""} onChange={(event) => updateDraft("from", event.target.value)} className={inputClass} />
-            </Field>
-            <Field label="Hasta">
-              <input type="date" value={draftFilters.to ?? ""} onChange={(event) => updateDraft("to", event.target.value)} className={inputClass} />
-            </Field>
-            <Field label="Tipo de compra">
-              <select value={draftFilters.purchaseType ?? ""} onChange={(event) => updateDraft("purchaseType", event.target.value)} className={inputClass}>
-                {purchaseTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </Field>
-            <Field label="Estado de pago">
-              <select value={draftFilters.paymentStatus ?? ""} onChange={(event) => updateDraft("paymentStatus", event.target.value)} className={inputClass}>
-                {paymentStatusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </Field>
-            <Field label="Proveedor">
-              <input value={draftFilters.supplierId ?? ""} onChange={(event) => updateDraft("supplierId", event.target.value)} className={inputClass} placeholder="UUID proveedor" />
-            </Field>
-            <Field label="Usuario">
-              <input value={draftFilters.userId ?? ""} onChange={(event) => updateDraft("userId", event.target.value)} className={inputClass} placeholder="UUID usuario" />
-            </Field>
-            <Field label="Almacén">
-              <input value={draftFilters.warehouseId ?? ""} onChange={(event) => updateDraft("warehouseId", event.target.value)} className={inputClass} placeholder="UUID almacén" />
-            </Field>
-            <Field label="Método de pago">
-              <input value={draftFilters.paymentMethodId ?? ""} onChange={(event) => updateDraft("paymentMethodId", event.target.value)} className={inputClass} placeholder="UUID método" />
-            </Field>
-            <Field label="Cuenta o tarjeta">
-              <input value={draftFilters.companyPaymentAccountId ?? ""} onChange={(event) => updateDraft("companyPaymentAccountId", event.target.value)} className={inputClass} placeholder="UUID cuenta" />
-            </Field>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <SystemButton size="sm" leftIcon={<Search className="h-4 w-4" />} onClick={applyFilters} disabled={loading}>
-              Aplicar filtros
-            </SystemButton>
-            <SystemButton size="sm" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={clearFilters} disabled={loading}>
-              Limpiar
-            </SystemButton>
-          </div>
-        </section>
+        <PurchaseDashboardFilters
+          value={draftFilters}
+          loading={loading}
+          onChange={setDraftFilters}
+          onApply={applyFilters}
+          onClear={clearFilters}
+        />
 
         {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div> : null}
         {loading ? <div className="rounded-md border border-black/10 bg-white px-4 py-6 text-sm text-black/55">Cargando métricas...</div> : null}
@@ -159,8 +102,8 @@ export default function PurchaseDashboardPage() {
 
         {data?.upcomingPayments || data?.overduePayments ? (
           <div className="grid gap-4 xl:grid-cols-2">
-            {data?.upcomingPayments ? <UpcomingPaymentsTable title="Próximos pagos" rows={data.upcomingPayments} /> : null}
-            {data?.overduePayments ? <OverduePaymentsTable rows={data.overduePayments} /> : null}
+            {data?.upcomingPayments ? <UpcomingPaymentsTable title="Próximos pagos" rows={data.upcomingPayments} limit={currentLimit} /> : null}
+            {data?.overduePayments ? <OverduePaymentsTable rows={data.overduePayments} limit={currentLimit} /> : null}
           </div>
         ) : null}
 
@@ -171,6 +114,7 @@ export default function PurchaseDashboardPage() {
                 title="Top proveedores"
                 tableId="purchase-dashboard-top-suppliers"
                 headers={["Proveedor", "Compras", "Total"]}
+                limit={currentLimit}
                 rows={data.topSuppliers.map((item) => ({
                   id: item.supplierId ?? item.supplierName,
                   item: item.supplierName,
@@ -183,6 +127,7 @@ export default function PurchaseDashboardPage() {
               <PurchaseDashboardRankingTable
                 title="Top ítems"
                 tableId="purchase-dashboard-top-items"
+                limit={currentLimit}
                 rows={data.topItems.map((item, index) => ({
                   id: item.itemId ?? `${item.label}-${index}`,
                   item: item.label,
@@ -195,17 +140,6 @@ export default function PurchaseDashboardPage() {
         ) : null}
       </div>
     </PageShell>
-  );
-}
-
-const inputClass = "h-10 w-full rounded-md border border-black/10 bg-white px-3 text-sm text-black outline-none focus:border-black/30 focus:ring-2 focus:ring-black/10";
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="space-y-1.5">
-      <span className="text-xs font-medium text-black/65">{label}</span>
-      {children}
-    </label>
   );
 }
 

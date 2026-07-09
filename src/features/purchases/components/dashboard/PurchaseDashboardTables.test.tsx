@@ -20,6 +20,7 @@ describe("dashboard purchase tables", () => {
     render(
       <UpcomingPaymentsTable
         title="Próximos pagos"
+        limit={20}
         rows={[
           {
             accountPayableId: "payable-1",
@@ -36,6 +37,7 @@ describe("dashboard purchase tables", () => {
     );
 
     expect(screen.getByTestId("datatable-purchase-dashboard-payments-proximos-pagos")).toBeInTheDocument();
+    expect(screen.getByText("Mostrando top 20")).toBeInTheDocument();
     expect(dataTableCalls[0].columns.map((column) => column.header)).toEqual(["Proveedor", "Vence", "Estado", "Pendiente"]);
     expect(dataTableCalls[0].data).toHaveLength(1);
   });
@@ -47,6 +49,7 @@ describe("dashboard purchase tables", () => {
       <PurchaseDashboardRankingTable
         title="Top ítems"
         tableId="purchase-dashboard-top-items"
+        limit={50}
         rows={[
           { id: "item-1", item: "Jabón de cúrcuma", type: "Materia prima", total: "S/ 120.00" },
         ]}
@@ -54,6 +57,7 @@ describe("dashboard purchase tables", () => {
     );
 
     expect(screen.getByTestId("datatable-purchase-dashboard-top-items")).toBeInTheDocument();
+    expect(screen.getByText("Mostrando top 50")).toBeInTheDocument();
     expect(dataTableCalls[0].columns.map((column) => column.header)).toEqual(["Item", "Tipo", "Total"]);
     expect(dataTableCalls[0].data).toHaveLength(1);
   });
