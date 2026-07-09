@@ -1,3 +1,5 @@
+import type { DataTableSearchOption, SmartSearchRule } from "@/shared/components/table/search";
+
 export type PurchaseDashboardFilters = {
   from?: string;
   to?: string;
@@ -10,6 +12,45 @@ export type PurchaseDashboardFilters = {
   paymentMethodId?: string;
   companyPaymentAccountId?: string;
   limit?: number;
+};
+
+export type PurchaseDashboardFilterField =
+  | "purchaseType"
+  | "paymentStatus"
+  | "supplierId"
+  | "userId"
+  | "warehouseId"
+  | "paymentMethodId"
+  | "companyPaymentAccountId";
+
+export type PurchaseDashboardFilterOperator = "in";
+
+export type PurchaseDashboardSavedFilterRule = SmartSearchRule<
+  PurchaseDashboardFilterField,
+  PurchaseDashboardFilterOperator
+>;
+
+export type PurchaseDashboardDateRangeSnapshot = {
+  mode: "absolute";
+  from?: string;
+  to?: string;
+};
+
+export type PurchaseDashboardSavedFilterSnapshot = {
+  filters: PurchaseDashboardSavedFilterRule[];
+  dateRange?: PurchaseDashboardDateRangeSnapshot;
+};
+
+export type PurchaseDashboardSavedFilterCatalogs = Partial<
+  Record<`${PurchaseDashboardFilterField}s`, DataTableSearchOption[]>
+> & {
+  purchaseTypes?: DataTableSearchOption[];
+  paymentStatuses?: DataTableSearchOption[];
+  suppliers?: DataTableSearchOption[];
+  users?: DataTableSearchOption[];
+  warehouses?: DataTableSearchOption[];
+  paymentMethods?: DataTableSearchOption[];
+  companyPaymentAccounts?: DataTableSearchOption[];
 };
 
 export type PurchaseDashboardSummary = {

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { Search, X } from "lucide-react";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { FloatingDateRangePicker } from "@/shared/components/components/date-picker/FloatingDateRangePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { parseStoredDate, toLocalDateKey } from "@/shared/components/table/search/smartSearchUtils";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { listSuppliers } from "@/shared/services/supplierService";
 import { listUsers } from "@/shared/services/userService";
@@ -152,25 +153,29 @@ export function PurchaseDashboardFilters({ value, loading, onChange, onApply, on
     });
   };
 
+  const updateDateRange = (range: { startDate: Date | null; endDate: Date | null }) => {
+    const { from: _from, to: _to, ...rest } = value;
+    const from = range.startDate ? toLocalDateKey(range.startDate) : undefined;
+    const to = range.endDate ? toLocalDateKey(range.endDate) : undefined;
+
+    onChange({
+      ...rest,
+      ...(from ? { from } : {}),
+      ...(to ? { to } : {}),
+    });
+  };
+
   return (
     <section className="rounded-md border border-black/10 bg-white p-4" aria-label="Filtros del dashboard">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <Field label="Desde">
-          <input
-            type="date"
-            value={value.from ?? ""}
-            onChange={(event) => update("from", event.target.value)}
-            className={inputClass}
-          />
-        </Field>
-        <Field label="Hasta">
-          <input
-            type="date"
-            value={value.to ?? ""}
-            onChange={(event) => update("to", event.target.value)}
-            className={inputClass}
-          />
-        </Field>
+        <FloatingDateRangePicker
+          label="Desde / Hasta"
+          name="purchase-dashboard-date-range"
+          startDate={parseStoredDate(value.from)}
+          endDate={parseStoredDate(value.to)}
+          onChange={updateDateRange}
+          disabled={loading}
+        />
         <FloatingSelect
           label="Tipo de compra"
           name="purchase-dashboard-purchase-type"
@@ -246,18 +251,6 @@ export function PurchaseDashboardFilters({ value, loading, onChange, onApply, on
         </SystemButton>
       </div>
     </section>
-  );
-}
-
-const inputClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30";
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="space-y-1.5">
-      <span className="text-xs font-medium text-black/65">{label}</span>
-      {children}
-    </label>
   );
 }
 

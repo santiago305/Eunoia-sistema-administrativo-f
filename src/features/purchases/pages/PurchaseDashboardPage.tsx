@@ -54,12 +54,6 @@ export default function PurchaseDashboardPage() {
     <PageShell className="bg-white">
       <div className="space-y-5">
         <header className="flex flex-col gap-3 border-b border-black/10 pb-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-black">Dashboard de compras</h1>
-            <p className="mt-1 max-w-3xl text-sm text-black/60">
-              Vista gerencial de compras, pagos aprobados, vencimientos, proveedores, tipos y cuentas usadas.
-            </p>
-          </div>
           <div className="flex flex-wrap items-center gap-2">
             {activeFilterCount ? (
               <span className="rounded-md border border-black/10 px-3 py-2 text-xs text-black/65">

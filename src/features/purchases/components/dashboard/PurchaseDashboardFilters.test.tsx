@@ -18,6 +18,40 @@ vi.mock("@/shared/services/companyPaymentAccountService", () => ({
 vi.mock("@/shared/hooks/useCompany", () => ({
   useCompany: () => ({ company: { companyId: "company-1" } }),
 }));
+vi.mock("@/shared/components/components/date-picker/FloatingDateRangePicker", () => ({
+  FloatingDateRangePicker: ({
+    label,
+    startDate,
+    endDate,
+    onChange,
+  }: {
+    label: string;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    onChange: (range: { startDate: Date | null; endDate: Date | null }) => void;
+  }) => {
+    const formatDate = (date?: Date | null) => {
+      if (!date) return "";
+      const pad = (value: number) => String(value).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    };
+
+    return (
+      <div>
+        <button
+          type="button"
+          aria-label={label}
+          onClick={() => onChange({ startDate: new Date(2026, 6, 1), endDate: new Date(2026, 6, 9) })}
+        >
+          {formatDate(startDate)} / {formatDate(endDate)}
+        </button>
+        <button type="button" onClick={() => onChange({ startDate: null, endDate: null })}>
+          Limpiar rango
+        </button>
+      </div>
+    );
+  },
+}));
 vi.mock("@/shared/components/components/FloatingSelect", () => ({
   FloatingSelect: ({
     label,
@@ -92,9 +126,44 @@ describe("PurchaseDashboardFilters", () => {
     expect(onChange).toHaveBeenLastCalledWith({ limit: 20 });
 
     fireEvent.click(screen.getByRole("button", { name: /aplicar filtros/i }));
-    fireEvent.click(screen.getByRole("button", { name: /limpiar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^limpiar$/i }));
 
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the shared date range picker and maps selected dates to dashboard filters", () => {
+    listSuppliersMock.mockResolvedValue({ items: [] });
+    listUsersMock.mockResolvedValue({ items: [] });
+    listActiveWarehousesMock.mockResolvedValue({ items: [] });
+    getAllPaymentMethodsMock.mockResolvedValue([]);
+    listCompanyPaymentAccountsByCompanyMock.mockResolvedValue([]);
+    const onChange = vi.fn();
+
+    render(
+      <PurchaseDashboardFilters
+        value={{ limit: 10, supplierId: "supplier-1", from: "2026-07-03", to: "2026-07-08" }}
+        loading={false}
+        onChange={onChange}
+        onApply={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryAllByDisplayValue(/2026-07-/)).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Desde / Hasta" })).toHaveTextContent("2026-07-03 / 2026-07-08");
+
+    fireEvent.click(screen.getByRole("button", { name: "Desde / Hasta" }));
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      limit: 10,
+      supplierId: "supplier-1",
+      from: "2026-07-01",
+      to: "2026-07-09",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Limpiar rango" }));
+
+    expect(onChange).toHaveBeenLastCalledWith({ limit: 10, supplierId: "supplier-1" });
   });
 });
