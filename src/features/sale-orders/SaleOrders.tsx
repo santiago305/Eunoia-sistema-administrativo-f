@@ -1,15 +1,18 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Plus, Sheet, Workflow } from "lucide-react";
+import { Plus, Sheet, Workflow } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
     ClientType,
     type SaleOrder,
     type SaleOrderJsonImportRow,
+    type SaleOrderSearchRule,
     type SaleOrderSearchSnapshot,
     type SaleOrderSearchStateResponse,
     type SaleOrdersUpdatedPayload,
 } from "@/features/sale-orders/types/saleOrder";
 import {
+    bulkAssignSaleOrders,
+    bulkChangeSaleOrderState,
     deleteSaleOrder,
     deleteSaleOrderSearchMetric,
     fetchSaleOrderById,
@@ -18,6 +21,7 @@ import {
     listSaleOrders,
     previewSaleOrdersJsonImport,
     saveSaleOrderSearchMetric,
+    type SaleOrderBulkActionResponse,
 } from "@/shared/services/saleOrderService";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
@@ -26,10 +30,14 @@ import {
     buildSaleOrderSearchChips,
     buildSaleOrderSmartSearchColumns,
     createEmptySaleOrderSearchFilters,
+    findSaleOrderSearchRule,
     hasSaleOrderSearchCriteria,
     removeSaleOrderSearchKey,
+    SaleOrderSearchFields,
+    SaleOrderSearchOperators,
     sanitizeSaleOrderSearchSnapshot,
     upsertSaleOrderSearchRule,
+    type SaleOrderSearchFilters,
     type SaleOrderSearchFilterKey,
 } from "@/features/sale-orders/utils/saleOrderSmartSearch";
 import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
@@ -42,6 +50,13 @@ import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { SaleOrderPaymentsOrderModal } from "@/features/sale-orders/components/SaleOrderPaymentsOrderModal";
 import { ExcelImportModal } from "@/shared/components/importer";
 import { WorkflowEditorModal } from "@/features/workflows/components/WorkflowEditorModal";
+import {
+    SaleOrderBulkActionsBar,
+    SaleOrderBulkAssignModal,
+    SaleOrderBulkChangeStateModal,
+    SaleOrderBulkResultModal,
+    type SaleOrderBulkChangeStateSelection,
+} from "./components/bulk";
 import { SaleOrderActionsPopover } from "./components/sale-order/SaleOrderActionsPopover";
 import { SaleOrderStatusPopover } from "./components/sale-order/SaleOrderStatusPopover";
 import { optionalSaleOrderImportFields, saleOrderImportFields } from "./types/saleImporter";
@@ -66,47 +81,79 @@ const formatMoney = (value?: number | null) =>
         currency: "PEN",
     }).format(Number(value ?? 0));
 
-function CopyableTableText({
-    label,
-    value,
-    fallback = "-",
-    className = "text-zinc-800",
-}: {
-    label: string;
-    value?: string | null;
-    fallback?: string;
-    className?: string;
-}) {
-    const text = value?.trim() || "";
-    const displayText = text || fallback;
+const buildBulkActionFeedback = (result: SaleOrderBulkActionResponse) => {
+    const { requested, succeeded, failed } = result.data;
+    return `Procesados: ${requested}. Exitosos: ${succeeded}. Fallidos: ${failed}.`;
+};
 
-    return (
-        <div className="flex min-w-0 items-center gap-1">
-            <p className={`min-w-0 flex-1 truncate font-medium ${className}`} title={displayText}>
-                {displayText}
-            </p>
-            <button
-                type="button"
-                aria-label={`Copiar ${label}`}
-                title={`Copiar ${displayText}`}
-                disabled={!text}
-                onClick={(event) => {
-                    event.stopPropagation();
-                    if (!text) return;
-                    void window.navigator.clipboard?.writeText(text);
-                }}
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:pointer-events-none disabled:opacity-30"
-            >
-                <Copy className="h-3 w-3" />
-            </button>
-        </div>
-    );
-}
+const mergeBulkChangeStateResponses = (input: {
+    requestedSaleOrderIds: string[];
+    responses: SaleOrderBulkActionResponse[];
+}): SaleOrderBulkActionResponse => {
+    const resultsByOrderId = new Map<string, SaleOrderBulkActionResponse["data"]["results"][number]>();
+
+    input.responses.forEach((response) => {
+        response.data.results.forEach((result) => {
+            resultsByOrderId.set(result.saleOrderId, result);
+        });
+    });
+
+    input.requestedSaleOrderIds.forEach((saleOrderId) => {
+        if (!resultsByOrderId.has(saleOrderId)) {
+            resultsByOrderId.set(saleOrderId, {
+                saleOrderId,
+                status: "failed",
+                message: "No se recibió resultado para este pedido.",
+            });
+        }
+    });
+
+    const results = input.requestedSaleOrderIds
+        .map((saleOrderId) => resultsByOrderId.get(saleOrderId))
+        .filter((result): result is SaleOrderBulkActionResponse["data"]["results"][number] => Boolean(result));
+    const succeeded = results.filter((result) => result.status === "success").length;
+
+    return {
+        type: "success",
+        message: "Operacion masiva procesada",
+        data: {
+            requested: input.requestedSaleOrderIds.length,
+            succeeded,
+            failed: input.requestedSaleOrderIds.length - succeeded,
+            results,
+        },
+    };
+};
 
 type SaleOrderModalState =
     | { open: false }
     | { open: true; mode: "create"; orderId: null }
     | { open: true; mode: "edit"; orderId: string };
+
+const CLIENT_TYPE_CONFIG: Record<
+    ClientType,
+    {
+        label: string;
+        className: string;
+    }
+> = {
+    [ClientType.NEW]: {
+        label: "Nuevo",
+        className: "border-blue-600 bg-blue-600 text-white",
+    },
+    [ClientType.LAGGING]: {
+        label: "Rezagado",
+        className: "border-amber-500 bg-amber-500 text-white",
+    },
+    [ClientType.REPURCHASE]: {
+        label: "Recompra",
+        className: "border-emerald-600 bg-emerald-600 text-white",
+    },
+    [ClientType.UNDEFINED]: {
+        label: "Sin definir",
+        className: "border-zinc-500 bg-zinc-500 text-white",
+    },
+};
 
 export default function SaleOrders() {
     const { showFeedback, clearFeedback } = useFeedbackToast();
@@ -138,6 +185,11 @@ export default function SaleOrders() {
     const [deletingOrder, setDeletingOrder] = useState(false);
     const [importLoading, setImportLoading] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
+    const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+    const [bulkChangeStateOpen, setBulkChangeStateOpen] = useState(false);
+    const [bulkActionLoading, setBulkActionLoading] = useState(false);
+    const [bulkResult, setBulkResult] = useState<SaleOrderBulkActionResponse | null>(null);
+    const [selectedSaleOrderIds, setSelectedSaleOrderIds] = useState<string[]>([]);
     const DEFAULT_LIMIT = 25;
     const [serverPagination, setServerPagination] = useState({
         total: 0,
@@ -194,6 +246,14 @@ export default function SaleOrders() {
         [searchState],
     );
     const searchChips = useMemo(() => buildSaleOrderSearchChips(executedSnapshot, searchState), [executedSnapshot, searchState]);
+    const tableDateRule = useMemo(
+        () => findSaleOrderSearchRule(draftSnapshot, SaleOrderSearchFields.CREATED_AT),
+        [draftSnapshot],
+    );
+    const selectedSaleOrders = useMemo(
+        () => orders.filter((order) => selectedSaleOrderIds.includes(order.id)),
+        [orders, selectedSaleOrderIds],
+    );
 
     const openModal = useCallback(() => {
         selectedOrderRef.current = null;
@@ -371,6 +431,14 @@ export default function SaleOrders() {
     }, [loadOrders]);
 
     useEffect(() => {
+        setSelectedSaleOrderIds((current) => {
+            const visibleIds = new Set(orders.map((order) => order.id));
+            const next = current.filter((id) => visibleIds.has(id));
+            return next.length === current.length ? current : next;
+        });
+    }, [orders]);
+
+    useEffect(() => {
         if (!isAuthenticated || !userId) return;
         const socket = createSaleOrdersSocket(userId);
         if (!socket) return;
@@ -433,9 +501,9 @@ export default function SaleOrders() {
     };
 
     const handleApplySearchRule = useCallback(
-        (rule: any) => {
+        (rule: SaleOrderSearchRule) => {
             startTransition(() => {
-                setSearchFilters((current: any) => {
+                setSearchFilters((current: SaleOrderSearchFilters) => {
                     const next = upsertSaleOrderSearchRule(
                         sanitizeSaleOrderSearchSnapshot({
                             q: searchText,
@@ -454,7 +522,7 @@ export default function SaleOrders() {
     const handleRemoveSearchRule = useCallback(
         (fieldId: SaleOrderSearchFilterKey) => {
             startTransition(() => {
-                setSearchFilters((current: any) => {
+                setSearchFilters((current: SaleOrderSearchFilters) => {
                     const next = removeSaleOrderSearchKey(
                         sanitizeSaleOrderSearchSnapshot({
                             q: searchText,
@@ -525,31 +593,6 @@ export default function SaleOrders() {
         [appliedSearchText, loadSearchState, searchFilters, showFeedback],
     );
 
-    const CLIENT_TYPE_CONFIG: Record<
-        ClientType,
-        {
-            label: string;
-            className: string;
-        }
-    > = {
-        [ClientType.NEW]: {
-            label: "Nuevo",
-            className: "border-blue-600 bg-blue-600 text-white",
-        },
-        [ClientType.LAGGING]: {
-            label: "Rezagado",
-            className: "border-amber-500 bg-amber-500 text-white",
-        },
-        [ClientType.REPURCHASE]: {
-            label: "Recompra",
-            className: "border-emerald-600 bg-emerald-600 text-white",
-        },
-        [ClientType.UNDEFINED]: {
-            label: "Sin definir",
-            className: "border-zinc-500 bg-zinc-500 text-white",
-        },
-    };
-
     const handleDeleteMetric = useCallback(
         async (metricId: string) => {
             try {
@@ -590,11 +633,95 @@ export default function SaleOrders() {
         }
     }, [closeModal, deleteOrder, loadOrders, paymentsOrder?.id, showFeedback]);
 
+    const handleBulkAssign = useCallback(
+        async (assignedBy: string | null) => {
+            const saleOrderIds = [...selectedSaleOrderIds];
+            if (saleOrderIds.length === 0) return;
+
+            setBulkActionLoading(true);
+            try {
+                const result = await bulkAssignSaleOrders({
+                    saleOrderIds,
+                    assignedBy,
+                });
+                setBulkResult(result);
+                showFeedback(
+                    result.data.failed > 0
+                        ? errorResponse(buildBulkActionFeedback(result))
+                        : successResponse(buildBulkActionFeedback(result)),
+                );
+                setBulkAssignOpen(false);
+                setSelectedSaleOrderIds([]);
+                await loadOrders();
+            } catch (error) {
+                showFeedback(errorResponse(parseApiError(error, "Error al asignar asesores de forma masiva.")));
+            } finally {
+                setBulkActionLoading(false);
+            }
+        },
+        [loadOrders, selectedSaleOrderIds, showFeedback],
+    );
+
+    const handleBulkChangeState = useCallback(
+        async (selection: SaleOrderBulkChangeStateSelection) => {
+            const saleOrderIds = [...selection.saleOrderIds];
+            if (saleOrderIds.length === 0) return;
+
+            setBulkActionLoading(true);
+            try {
+                const responses = await Promise.all(
+                    selection.transitionPlans.flatMap((plan) =>
+                        plan.transitionGroups
+                            .filter((group) => group.saleOrderIds.length > 0)
+                            .map((group) =>
+                                bulkChangeSaleOrderState({
+                                    saleOrderIds: group.saleOrderIds,
+                                    transitionId: group.transitionId,
+                                    metadata: {
+                                        source: "sale-orders-bulk-action",
+                                        transitionName: plan.transitionName,
+                                    },
+                                }),
+                            ),
+                    ),
+                );
+
+                const result = mergeBulkChangeStateResponses({
+                    requestedSaleOrderIds: saleOrderIds,
+                    responses,
+                });
+
+                const succeededIds = result.data.results
+                    .filter((row) => row.status === "success")
+                    .map((row) => row.saleOrderId);
+
+                setBulkResult(result);
+                showFeedback(
+                    result.data.failed > 0
+                        ? errorResponse(buildBulkActionFeedback(result))
+                        : successResponse(buildBulkActionFeedback(result)),
+                );
+                setBulkChangeStateOpen(false);
+                setSelectedSaleOrderIds((current) =>
+                    current.filter((saleOrderId) => !succeededIds.includes(saleOrderId)),
+                );
+                await loadOrders();
+            } catch (error) {
+                showFeedback(errorResponse(parseApiError(error, "Error al cambiar estados de forma masiva.")));
+            } finally {
+                setBulkActionLoading(false);
+            }
+        },
+        [loadOrders, showFeedback],
+    );
+
+    const centeredHeaderClassName = "text-center [&>div]:justify-center";
     const columns = useMemo<DataTableColumn<SaleOrder>[]>(
         () => [
             {
                 id: "number",
                 header: "Pedido",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => {
                     const rawClientType = order.client?.type;
                     const clientType = Object.values(ClientType).includes(rawClientType as ClientType) ? (rawClientType as ClientType) : ClientType.UNDEFINED;
@@ -604,7 +731,6 @@ export default function SaleOrders() {
                             <p className="whitespace-nowrap text-[11px] font-semibold text-zinc-900">
                                 {order.serie ?? "-"}-{order.correlative ?? "-"}
                             </p>
-
                             <span
                                 className={`inline-flex max-w-full items-center justify-center truncate 
                                 whitespace-nowrap rounded-sm px-1.5 py-1 text-[9px] font-semibold text-white ${typeConfig.className}`}
@@ -622,6 +748,7 @@ export default function SaleOrders() {
             {
                 id: "dateCreated",
                 header: "Creación",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div className="min-w-[50px] space-y-0.5 leading-tight">
                         <div className="grid grid-cols-[50px_1fr] items-center gap-0">
@@ -634,6 +761,7 @@ export default function SaleOrders() {
             {
                 id: "dateAgenda",
                 header: "Agenda",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div className="min-w-[50px] space-y-0.5 leading-tight">
                         <div className="grid grid-cols-[50px_1fr] items-center gap-0">
@@ -646,6 +774,7 @@ export default function SaleOrders() {
             {
                 id: "dateDelivery",
                 header: "Entrega",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div className="min-w-[50px] space-y-0.5 leading-tight">
                         <div className="grid grid-cols-[50px_1fr] items-center gap-0">
@@ -658,46 +787,56 @@ export default function SaleOrders() {
             {
                 id: "client",
                 header: "Cliente",
+                headerClassName: centeredHeaderClassName,
+                copy: true,
                 cell: (order) => (
-                    <div className="max-w-[120px] space-y-0.5 leading-tight">
-                        <CopyableTableText label="cliente" value={order.client?.fullName} fallback="Sin cliente" />
+                    <div className="max-w-[120px]  w-[120px] space-y-0.5 leading-tight">
+                        <p className="line-clamp-2 text-zinc-700">
+                            {order.client?.fullName ?? "-"}
+                        </p>
                     </div>
                 ),
                 sortable: false,
-                stopRowClick: true,
             },
             {
                 id: "document",
                 header: "Documento",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div className="max-w-[120px] space-y-0.5 leading-tight">
-                        <CopyableTableText label="documento" value={order.client?.docNumber} fallback=" " />
+                        <p className="line-clamp-2 text-zinc-700" title={order.client?.docNumber ?? "Sin información"}>
+                            {order.client?.docNumber ?? "-"}
+                        </p>                    
                     </div>
                 ),
                 sortable: false,
                 stopRowClick: true,
+                copy: true,
             },
             {
                 id: "phone",
                 header: "Teléfono",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div className="max-w-[120px] space-y-0.5 leading-tight">
-                        <CopyableTableText label="telefono" value={order.client?.mainPhone} fallback="Sin telefono" />
+                        <p className="line-clamp-2 text-zinc-700" title={order.client?.mainPhone ?? "Sin información"}>
+                            {order.client?.mainPhone ?? "-"}
+                        </p>
                     </div>
                 ),
                 sortable: false,
                 stopRowClick: true,
+                copy: true,
             },
             {
                 id: "location",
                 header: "Ubicación",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => {
                     const department = order.client?.department?.name;
                     const province = order.client?.province?.name;
                     const district = order.client?.district?.name;
-
                     const location = [department, province, district].filter(Boolean).join(" / ");
-
                     return (
                         <div className="w-[120px] leading-tight">
                             <p className="line-clamp-3 text-zinc-700" title={location || "Sin ubicación"}>
@@ -710,23 +849,12 @@ export default function SaleOrders() {
             },
             {
                 id: "agency",
-                header: "Agencia",
+                header: "Agencia/Dirección",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="w-[50px] max-w-[200px] leading-tight">
+                    <div className="w-[140px] max-w-[200px] leading-tight">
                         <p className="line-clamp-2 text-zinc-700" title={order.agencyDetail ?? "Sin información"}>
                             {order.agencyDetail ?? "-"}
-                        </p>
-                    </div>
-                ),
-                sortable: false,
-            },
-            {
-                id: "delivery",
-                header: "Dirección",
-                cell: (order) => (
-                    <div className="max-w-[170px] w-[50px] leading-tight">
-                        <p className="line-clamp-2 text-zinc-700" >
-                            {order.sendAddress ?? order.client?.address ?? ""}
                         </p>
                     </div>
                 ),
@@ -759,19 +887,25 @@ export default function SaleOrders() {
             {
                 id: "codefb",
                 header: "Codigo FB",
+                headerClassName: centeredHeaderClassName,
+                copy: true,
                 cell: (order) => (
                     <div className="max-w-[180px] w-[130px] leading-tight">
-                        <CopyableTableText label="codigo FB" value={order.advertisingCode} className="text-zinc-700" />
+                        <p className="truncate font-medium text-zinc-700" title={order.advertisingCode ?? "Sin información"}>
+                            {order.advertisingCode ?? "-"}
+                        </p>
                     </div>
                 ),
                 sortable: false,
                 stopRowClick: true,
             },
             {
-                id: "assignedTo",
+                id: "createdTo",
                 header: "Creado",
+                headerClassName: centeredHeaderClassName,
+                copy: true,
                 cell: (order) => (
-                    <div className="max-w-[180px] w-[120px] leading-tight">
+                    <div className="max-w-[180px] w-[130px] leading-tight">
                         <p className="truncate font-medium text-zinc-700">
                             {order.createdBy?.email ?? " "}
                         </p>
@@ -780,8 +914,23 @@ export default function SaleOrders() {
                 sortable: false,
             },
             {
+                id: "assignedTo",
+                header: "Asignado",
+                headerClassName: centeredHeaderClassName,
+                copy: true,
+                cell: (order) => (
+                    <div className="max-w-[180px] w-[130px] leading-tight">
+                        <p className="truncate font-medium text-zinc-700">
+                            {order.assignedBy?.email ?? " "}
+                        </p>
+                    </div>
+                ),
+                sortable: false,
+            },
+            {
                 id: "workflow",
                 header: "Tipo",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div className="max-w-[140px] space-y-1 leading-tight">
                         <p className="truncate text-zinc-700 text-[10px]" title={order.workflow?.name ?? "Sin tipo"}>
@@ -794,6 +943,7 @@ export default function SaleOrders() {
             {
                 id: "status",
                 header: "Estados",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div className="max-w-[140px] space-y-1 leading-tight" onClick={(event) => event.stopPropagation()}>
                         <SaleOrderStatusPopover order={order} onOrderChanged={refreshSelectedOrder} />
@@ -805,6 +955,7 @@ export default function SaleOrders() {
             {
                 id: "amounts",
                 header: "Montos",
+                headerClassName:centeredHeaderClassName,
                 cell: (order) => (
                     <div className="min-w-[115px] space-y-0.5 leading-tight">
                         <p className="flex justify-between gap-2 whitespace-nowrap">
@@ -826,6 +977,7 @@ export default function SaleOrders() {
             {
                 id: "lookup",
                 header: "Seguimiento",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => {
                     const isPaid = Number(order.pendingAmount ?? 0) <= 0;
                     return (
@@ -873,15 +1025,26 @@ export default function SaleOrders() {
         [openOrderDetail, refreshSelectedOrder],
     );
     return (
-        <PageShell className="bg-white">
+        <PageShell className="bg-white" scrollArea>
             <div className="space-y-4">
                 <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
+                <SaleOrderBulkActionsBar
+                    selectedCount={selectedSaleOrderIds.length}
+                    disabled={bulkActionLoading}
+                    onOpenAssign={() => setBulkAssignOpen(true)}
+                    onOpenChangeState={() => setBulkChangeStateOpen(true)}
+                    onClearSelection={() => setSelectedSaleOrderIds([])}
+                />
                 <DataTable
                     tableId="sale-orders-list"
+                    showSelectionInfo={false}
                     data={orders}
                     columns={columns}
                     rowKey="id"
                     loading={loading}
+                    selectableRows
+                    selectedRowKeys={selectedSaleOrderIds}
+                    onSelectedRowKeysChange={(keys) => setSelectedSaleOrderIds(keys)}
                     emptyMessage="No hay pedidos con los filtros actuales."
                     selectableColumns
                     maxHeight="calc(100vh - 165px)"
@@ -889,17 +1052,37 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
-                            <SystemButton size="lg" variant="outline"  leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)}>
+                            <SystemButton size="lg" variant="outline"  className="rounded-md"
+                             leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)}>
                                 Tipos
                             </SystemButton>
-                            <SystemButton size="lg" variant="outline"  leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle}>
+                            <SystemButton size="lg" variant="outline"  className="rounded-md"
+                             leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle}>
                                 Importar
                             </SystemButton>
-                            <SystemButton size="lg" leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle}>
+                            <SystemButton size="lg" className="rounded-md"
+                             leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle}>
                                 Nuevo pedido
                             </SystemButton>
                         </>
                     }
+                    smartRangeDate={{
+                        fieldId: SaleOrderSearchFields.CREATED_AT,
+                        value: tableDateRule,
+                        onChange: (rule) => {
+                            if (rule) {
+                                handleApplySearchRule(rule as SaleOrderSearchRule);
+                                return;
+                            }
+                            handleRemoveSearchRule(SaleOrderSearchFields.CREATED_AT);
+                        },
+                        operators: {
+                            range: SaleOrderSearchOperators.BETWEEN,
+                            week: SaleOrderSearchOperators.IN_WEEK,
+                            month: SaleOrderSearchOperators.IN_MONTH,
+                        },
+                        label: "Fecha creacion",
+                    }}
                     toolbarSearchContent={
                         <DataTableSearchBar
                             value={searchText}
@@ -1000,6 +1183,27 @@ export default function SaleOrders() {
                 }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />
+            <SaleOrderBulkAssignModal
+                open={bulkAssignOpen}
+                selectedCount={selectedSaleOrderIds.length}
+                loading={bulkActionLoading}
+                onClose={() => setBulkAssignOpen(false)}
+                onSubmit={handleBulkAssign}
+            />
+            <SaleOrderBulkChangeStateModal
+                open={bulkChangeStateOpen}
+                selectedOrders={selectedSaleOrders}
+                selectedOrderIds={selectedSaleOrderIds}
+                loading={bulkActionLoading}
+                onClose={() => setBulkChangeStateOpen(false)}
+                onSubmit={handleBulkChangeState}
+            />
+            <SaleOrderBulkResultModal
+                open={Boolean(bulkResult)}
+                result={bulkResult}
+                knownOrders={orders}
+                onClose={() => setBulkResult(null)}
+            />
             <ExcelImportModal<SaleOrderJsonImportRow>
                 open={importOpen}
                 title="Importar pedidos"
@@ -1016,3 +1220,4 @@ export default function SaleOrders() {
         </PageShell>
     );
 }
+

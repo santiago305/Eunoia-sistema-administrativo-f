@@ -24,7 +24,7 @@ export function PageShell({
       )}
     >
 
-      <div className={cn("min-h-full h-auto max-w-425 mx-auto p-4 flex flex-col gap-4", contentClassName)}>
+      <div className={cn("min-h-full h-auto w-auto mx-auto p-4 flex flex-col gap-4", contentClassName)}>
         {children}
       </div>
     </main>

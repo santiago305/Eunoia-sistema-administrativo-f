@@ -40,6 +40,44 @@ export type ChangeSaleOrderStateResponse = {
   warnings: string[];
 };
 
+export type SaleOrderBulkActionSuccessRow = {
+  saleOrderId: string;
+  status: "success";
+  warnings?: string[];
+};
+
+export type SaleOrderBulkActionFailedRow = {
+  saleOrderId: string;
+  status: "failed";
+  message: string;
+};
+
+export type SaleOrderBulkActionResultRow =
+  | SaleOrderBulkActionSuccessRow
+  | SaleOrderBulkActionFailedRow;
+
+export type SaleOrderBulkActionResponse = {
+  type: "success" | string;
+  message: string;
+  data: {
+    requested: number;
+    succeeded: number;
+    failed: number;
+    results: SaleOrderBulkActionResultRow[];
+  };
+};
+
+export type BulkAssignSaleOrdersPayload = {
+  saleOrderIds: string[];
+  assignedBy: string | null;
+};
+
+export type BulkChangeSaleOrderStatePayload = {
+  saleOrderIds: string[];
+  transitionId: string;
+  metadata?: Record<string, unknown>;
+};
+
 export type SaleOrderItemComponentOutput = {
   id: string;
   saleOrderItemId: string;
@@ -162,6 +200,26 @@ export const changeSaleOrderState = async (
     transitionId,
     metadata,
   });
+  return response.data;
+};
+
+export const bulkAssignSaleOrders = async (
+  payload: BulkAssignSaleOrdersPayload,
+): Promise<SaleOrderBulkActionResponse> => {
+  const response = await axiosInstance.patch<SaleOrderBulkActionResponse>(
+    API_SALE_ORDERS_GROUP.bulkAssignedBy,
+    payload,
+  );
+  return response.data;
+};
+
+export const bulkChangeSaleOrderState = async (
+  payload: BulkChangeSaleOrderStatePayload,
+): Promise<SaleOrderBulkActionResponse> => {
+  const response = await axiosInstance.post<SaleOrderBulkActionResponse>(
+    API_SALE_ORDERS_GROUP.bulkChangeState,
+    payload,
+  );
   return response.data;
 };
 

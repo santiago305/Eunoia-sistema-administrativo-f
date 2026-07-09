@@ -318,7 +318,7 @@ export function ClientFormFields({
                 type="button"
                 size="icon"
                 variant="outline"
-                className="h-9 w-9"
+                className="h-8 w-9"
                 title="Editar teléfono"
                 aria-label="Editar teléfono"
                 disabled={disabled || !selectedTelephone}
@@ -329,7 +329,7 @@ export function ClientFormFields({
               <SystemButton
                 type="button"
                 size="icon"
-                className="h-9 w-9"
+                className="h-8 w-9"
                 title="Añadir teléfono"
                 aria-label="Añadir teléfono"
                 disabled={disabled}
@@ -435,21 +435,33 @@ export function ClientFormFields({
           emptyMessage="Sin distritos"
         />
       </div>
-      <div className={`mt-2 grid grid-cols-1 gap-3 ${fullNameOptions ? "md:grid-cols-2" : ""}`}>
-        <FloatingInput
-          label="Dirección"
-          name="client-address"
-          value={form.address}
-          onChange={(event) => updateField("address", event.target.value)}
-          {...sharedInputProps}
-        />
-        <FloatingInput
-          label="Referencia"
-          name="client-reference"
-          value={form.reference}
-          onChange={(event) => updateField("reference", event.target.value)}
-          {...sharedInputProps}
-        />
+      <div className={`mt-2`}>
+        {fullNameOptions ? (
+          <FloatingInput
+            label="Referencia"
+            name="client-reference"
+            value={form.reference}
+            onChange={(event) => updateField("reference", event.target.value)}
+            {...sharedInputProps}
+          />
+        ):(
+          <div className="grid grid-cols-2 gap-2">
+            <FloatingInput
+              label="Dirección"
+              name="client-address"
+              value={form.address}
+              onChange={(event) => updateField("address", event.target.value)}
+              {...sharedInputProps}
+            />
+            <FloatingInput
+              label="Referencia"
+              name="client-reference"
+              value={form.reference}
+              onChange={(event) => updateField("reference", event.target.value)}
+              {...sharedInputProps}
+            />
+          </div>
+        )}
       </div>
 
       

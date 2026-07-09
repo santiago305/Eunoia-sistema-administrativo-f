@@ -158,6 +158,7 @@ describe("SaleOrderItemsTable", () => {
       <SaleOrderItemsTable
         items={[packItem]}
         warehouseId="warehouse-1"
+        reserveBool={true}
         productsEditable
         onEdit={vi.fn()}
         onDelete={vi.fn()}
@@ -171,6 +172,65 @@ describe("SaleOrderItemsTable", () => {
     });
     expect(screen.getByTestId("component-stock-sku-1")).toHaveTextContent("5");
     expect(screen.getByTestId("component-stock-sku-2")).toHaveTextContent("3");
+  });
+
+  it("uses the sale order reserve flag instead of stock reserved amounts", async () => {
+    vi.mocked(getStockSku)
+      .mockResolvedValueOnce({
+        warehouseId: "warehouse-1",
+        stockItemId: "stock-1",
+        onHand: 8,
+        reserved: 3,
+        available: 5,
+        updatedAt: "2026-07-06T00:00:00.000Z",
+      })
+      .mockResolvedValueOnce({
+        warehouseId: "warehouse-1",
+        stockItemId: "stock-2",
+        onHand: 4,
+        reserved: 1,
+        available: 3,
+        updatedAt: "2026-07-06T00:00:00.000Z",
+      });
+
+    render(
+      <SaleOrderItemsTable
+        items={[packItem]}
+        warehouseId="warehouse-1"
+        reserveBool={false}
+        productsEditable
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pack-stock-item-1")).toHaveTextContent("Sí");
+      expect(screen.getByTestId("pack-reserved-item-1")).toHaveTextContent("No");
+    });
+  });
+
+
+  it("shows OUT for stock and reserved labels when stock is consumed", async () => {
+    render(
+      <SaleOrderItemsTable
+        items={[packItem]}
+        warehouseId="warehouse-1"
+        reserveBool={false}
+        stockStatus="CONSUMED"
+        productsEditable
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("pack-stock-item-1")).toHaveTextContent("OUT");
+    expect(screen.getByTestId("pack-reserved-item-1")).toHaveTextContent("OUT");
+    expect(screen.getByTestId("component-stock-sku-1")).toHaveTextContent("OUT");
+    expect(screen.getByTestId("component-stock-sku-2")).toHaveTextContent("OUT");
+    expect(getStockSku).not.toHaveBeenCalled();
   });
 
   it("opens pack editing from the row and keeps expand, delete and component detail independent", () => {

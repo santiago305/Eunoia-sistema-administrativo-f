@@ -16,6 +16,7 @@ import {
   toLocalDateKey,
   toLocalDateTimeString,
 } from "./smartSearchUtils";
+import { buildForwardCalendarWeeksRange, SmartRangeWeeksSection } from "./SmartRangeDate";
 import type {
   SmartSearchFieldConfig,
   SmartSearchRule,
@@ -66,6 +67,7 @@ export function SmartSearchActiveField<
   const [draftOperator, setDraftOperator] = useState<TOperator | "">("");
   const [draftValue, setDraftValue] = useState("");
   const [draftRange, setDraftRange] = useState({ start: "", end: "" });
+  const [weeksCount, setWeeksCount] = useState(1);
 
   useEffect(() => {
     setDraftMode(activeRule?.mode ?? "include");
@@ -81,6 +83,14 @@ export function SmartSearchActiveField<
   const inputMode = resolveInputMode(field, draftOperator);
   const placeholder = resolvePlaceholder(field, draftOperator);
   const summary = getRuleSummary(snapshot, field.id);
+  const weekRangeOperator = useMemo(
+    () =>
+      field.operators?.find(
+        (operator) => resolveInputMode(field, operator.id) === "date-range",
+      )?.id ?? null,
+    [field],
+  );
+  const usesWeekCount = inputMode === "week" && Boolean(weekRangeOperator);
 
   const handleApply = () => {
     if (!draftOperator) return;
@@ -106,6 +116,15 @@ export function SmartSearchActiveField<
       !draftRange.end
     ) {
       onRemoveRule(field.id);
+      return;
+    }
+
+    if (usesWeekCount && weekRangeOperator) {
+      onApplyRule({
+        field: field.id,
+        operator: weekRangeOperator,
+        range: buildForwardCalendarWeeksRange(weeksCount),
+      });
       return;
     }
 
@@ -259,14 +278,21 @@ export function SmartSearchActiveField<
             ) : null}
 
             {inputMode === "week" ? (
-              <FloatingWeekPicker
-                label="Semana"
-                name={`smart-search-week-${field.id}`}
-                value={draftValue}
-                onChange={setDraftValue}
-                className="h-10 rounded-sm text-xs"
-                placeholder={placeholder}
-              />
+              usesWeekCount ? (
+                <SmartRangeWeeksSection
+                  weeksCount={weeksCount}
+                  onWeeksCountChange={setWeeksCount}
+                />
+              ) : (
+                <FloatingWeekPicker
+                  label="Semana"
+                  name={`smart-search-week-${field.id}`}
+                  value={draftValue}
+                  onChange={setDraftValue}
+                  className="h-10 rounded-sm text-xs"
+                  placeholder={placeholder}
+                />
+              )
             ) : null}
 
             {inputMode === "date-range" ? (

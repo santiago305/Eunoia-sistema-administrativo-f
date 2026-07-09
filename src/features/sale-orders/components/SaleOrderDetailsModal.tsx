@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
@@ -23,6 +29,7 @@ export function SaleOrderDetailsModal({
 }: Props) {
   const [dirty, setDirty] = useState(false);
   const [showCloseAlert, setShowCloseAlert] = useState(false);
+  const [editorFooter, setEditorFooter] = useState<ReactNode | null>(null);
   const title = useMemo(() => {
     if (mode === "create") return "Nuevo pedido";
     if (!order) return "Editar pedido";
@@ -51,6 +58,15 @@ export function SaleOrderDetailsModal({
     onClose();
   }, [onClose]);
 
+  const handleSaved = useCallback(
+    async (saleOrderId: string) => {
+      setDirty(false);
+      await onSaved?.(saleOrderId);
+      await onOrderChanged?.();
+    },
+    [onOrderChanged, onSaved],
+  );
+
   return (
     <>
       <Modal
@@ -61,17 +77,15 @@ export function SaleOrderDetailsModal({
         containerClassName="p-2 sm:p-4"
         bodyClassName="p-0"
         closeOnOverlayClick={false}
+        footer={editorFooter}
       >
         <SaleOrderEditor
           mode={mode}
           order={order}
           onCancel={requestClose}
           onDirtyChange={setDirty}
-          onSaved={async (saleOrderId) => {
-            setDirty(false);
-            await onSaved?.(saleOrderId);
-            await onOrderChanged?.();
-          }}
+          onFooterChange={setEditorFooter}
+          onSaved={handleSaved}
         />
       </Modal>
 

@@ -191,7 +191,7 @@ export type SaveSaleOrderWithClientDto = {
   client: SaleOrderClientCommand;
   workflowId: string;
   warehouseId?: string;
-  agencySubsidiaryId?: string;
+  agencyDetail?: string;
   sourceId?: string;
   scheduleDate?: string;
   deliveryDate?: string;
@@ -382,6 +382,7 @@ export type SaleOrder = {
   createdAt: string;
   updatedAt: string | null;
   totalPaid: number;
+  reserveBool?:boolean | null;
   pendingAmount: number;
   paymentStatus: SaleOrderPaymentStatus;
   payments: SaleOrderPayment[];
@@ -429,7 +430,9 @@ export type SaleOrderSearchRule = {
     | "clientPhone"
     | "agencyDetail"
     | "sourceId"
-    | "invoiceStatus";
+    | "invoiceStatus"
+    | "createdBy"
+    | "assignedBy";
   operator:
     | "in"
     | "contains"
@@ -486,6 +489,8 @@ export type SaleOrderSearchStateResponse = {
     districts?: SaleOrderSearchOption[];
     sources?: SaleOrderSearchOption[];
     invoiceStatuses?: SaleOrderSearchOption[];
+    creators?: SaleOrderSearchOption[];
+    assignees?: SaleOrderSearchOption[];
   };
 };
 

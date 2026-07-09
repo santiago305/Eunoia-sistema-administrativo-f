@@ -1,10 +1,11 @@
-import { BadgePercent, Bike, Plus, Save, X } from "lucide-react";
+import { BadgePercent, Plus, Save, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { sileo } from "sileo";
 import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
@@ -45,6 +46,7 @@ type Props = {
   onCancel: () => void;
   onSaved: (saleOrderId: string) => void | Promise<void>;
   onDirtyChange?: (dirty: boolean) => void;
+  onFooterChange?: (footer: ReactNode | null) => void;
 };
 
 const comparable = (form: SaleOrderEditorForm) =>
@@ -68,6 +70,7 @@ export function SaleOrderEditor({
   onCancel,
   onSaved,
   onDirtyChange,
+  onFooterChange,
 }: Props) {
   const [form, setForm] = useState<SaleOrderEditorForm>(() =>
     order
@@ -89,7 +92,7 @@ export function SaleOrderEditor({
     Array<{ value: string; label: string }>
   >([]);
   const [subsidiaryOptions, setSubsidiaryOptions] = useState<
-    Array<{ value: string; label: string; address?: string }>
+    Array<{ value: string; label: string; address?: string, cost?: number }>
   >([]);
   const [adviserOptions, setAdviserOptions] = useState<AdviserOption[]>([]);
   const initialSnapshot = useRef("");
@@ -152,6 +155,7 @@ export function SaleOrderEditor({
               value: subsidiary.id,
               label: subsidiary.alias,
               address: subsidiary.address ?? undefined,
+              cost: subsidiary.basePrice ?? undefined,
             })),
           );
           setSourceOptions(
@@ -261,8 +265,9 @@ export function SaleOrderEditor({
       ),
     [form.payments],
   );
+  const pendingAmount = Math.max(0, totals.total - totalPaid);
 
-  const save = async () => {
+  const save = useCallback(async () => {
     if (validationMessage) {
       sileo.error({ title: validationMessage });
       return;
@@ -300,7 +305,45 @@ export function SaleOrderEditor({
     } finally {
       setSaving(false);
     }
-  };
+  }, [form, mode, onDirtyChange, onSaved, order?.id, validationMessage]);
+
+  const footerActions = useMemo(
+    () => (
+      <div className="flex justify-end gap-2">
+        <SystemButton
+          type="button"
+          variant="outline"
+          leftIcon={<X className="h-4 w-4" />}
+          onClick={onCancel}
+          disabled={saving}
+        >
+          Cerrar
+        </SystemButton>
+        <SystemButton
+          type="button"
+          leftIcon={<Save className="h-4 w-4" />}
+          onClick={() => void save()}
+          disabled={saving || Boolean(validationMessage)}
+          title={validationMessage ?? undefined}
+        >
+          {saving
+            ? "Guardando..."
+            : mode === "edit"
+              ? "Actualizar pedido"
+              : "Crear pedido"}
+        </SystemButton>
+      </div>
+    ),
+    [mode, onCancel, save, saving, validationMessage],
+  );
+
+  useEffect(() => {
+    onFooterChange?.(footerActions);
+  }, [footerActions, onFooterChange]);
+
+  useEffect(() => {
+    return () => onFooterChange?.(null);
+  }, [onFooterChange]);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -319,14 +362,6 @@ export function SaleOrderEditor({
             bodyClassName="max-h-[500px] min-h-[180px] py-4 overflow-hidden"
             actions={
               <div className="flex items-center justify-end gap-2">
-                <SystemButton
-                  size="sm"
-                  variant="motion"
-                  leftIcon={<Bike className="h-4 w-4" />}
-                  onClick={() => itemsSectionRef.current?.openTariff()}
-                >
-                  Tarifa
-                </SystemButton>
                 <SystemButton
                   size="sm"
                   variant="warning"
@@ -355,8 +390,66 @@ export function SaleOrderEditor({
             />
           </SaleOrderEditorSection>
           <div className="min-w-0 space-y-3">
-            <div className="grid grid-cols-1 gap-3 max-h-164 overflow-scroll scroll-area">
-              <SaleOrderPaymentCards form={form} setForm={setForm} />
+            <div className="grid grid-cols-1 gap-3 max-h-164 overflow-scroll scroll-area lg:grid-cols-2">
+              <div>
+                <SaleOrderEditorSection title="Resumen">
+                  <dl className="grid gap-2 text-xs">
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Subtotal</dt>
+                      <dd className="font-semibold tabular-nums">
+                        {money.format(totals.subTotal)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Tarifa</dt>
+                      <dd className="font-semibold tabular-nums">
+                        {money.format(totals.deliveryCost)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Descuento</dt>
+                      <dd className="font-semibold tabular-nums text-rose-600">
+                        -{money.format(totals.discount)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background px-3 py-2">
+                      <dt className="text-muted-foreground">Total</dt>
+                      <dd className="text-sm font-semibold tabular-nums">
+                        {money.format(totals.total)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Total pagado</dt>
+                      <dd className="font-semibold tabular-nums">
+                        {money.format(totalPaid)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Pendiente</dt>
+                      <dd className="font-semibold tabular-nums">
+                        {money.format(pendingAmount)}
+                      </dd>
+                    </div>
+                  </dl>
+                </SaleOrderEditorSection>
+              </div>
+              <div>
+                <SaleOrderPaymentCards form={form} setForm={setForm} />
+                <SaleOrderEditorSection title="Nota">
+                  <FloatingTextarea
+                    label="Nota"
+                    name="sale-order-note"
+                    value={form.note}
+                    rows={3}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        note: event.target.value,
+                      }))
+                    }
+                  />
+                </SaleOrderEditorSection>
+              </div>
             </div>
           </div>
         </div>
@@ -389,83 +482,7 @@ export function SaleOrderEditor({
             setForm={setForm}
             subsidiaryOptions={subsidiaryOptions}
           />
-          <SaleOrderEditorSection title="Nota">
-            <FloatingTextarea
-              label="Nota"
-              name="sale-order-note"
-              value={form.note}
-              rows={3}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  note: event.target.value,
-                }))
-              }
-            />
-          </SaleOrderEditorSection>
-          
         </aside>
-      </div>
-
-      <div className="sticky bottom-0 z-20 border-t border-border bg-background/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-5">
-            <div>
-              <dt className="text-muted-foreground">Subtotal</dt>
-              <dd className="text-[14px] font-semibold tabular-nums">
-                {money.format(totals.subTotal)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Tarifa</dt>
-              <dd className="text-[14px] font-semibold tabular-nums">
-                {money.format(totals.deliveryCost)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Descuento</dt>
-              <dd className="text-[14px] font-semibold tabular-nums text-rose-600">
-                -{money.format(totals.discount)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Total</dt>
-              <dd className="text-[14px] font-semibold tabular-nums">
-                {money.format(totals.total)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Total pagado</dt>
-              <dd className="text-[14px] font-semibold tabular-nums">
-                {money.format(totalPaid)}
-              </dd>
-            </div>
-          </dl>
-          <div className="flex justify-end gap-2">
-            <SystemButton
-              type="button"
-              variant="outline"
-              leftIcon={<X className="h-4 w-4" />}
-              onClick={onCancel}
-              disabled={saving}
-            >
-              Cerrar
-            </SystemButton>
-            <SystemButton
-              type="button"
-              leftIcon={<Save className="h-4 w-4" />}
-              onClick={() => void save()}
-              disabled={saving || Boolean(validationMessage)}
-              title={validationMessage ?? undefined}
-            >
-              {saving
-                ? "Guardando..."
-                : mode === "edit"
-                  ? "Actualizar pedido"
-                  : "Crear pedido"}
-            </SystemButton>
-          </div>
-        </div>
       </div>
     </div>
   );

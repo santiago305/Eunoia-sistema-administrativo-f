@@ -158,8 +158,18 @@ export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
             type="number"
             min={0}
             step="0.01"
-            value={priceText}
-            onChange={(e) => setPriceText(e.target.value)}
+            value={String(priceText)}
+            onFocus={(event) => {
+              if (event.currentTarget.value === "0") {
+                event.currentTarget.select();
+              }
+            }}
+            onChange={(event) => setPriceText(event.target.value)}
+            onBlur={() => {
+              if (String(priceText).trim() === "") {
+                setPriceText("0");
+              }
+            }}
           />
         </div>
       </div>

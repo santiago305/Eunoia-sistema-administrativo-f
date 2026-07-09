@@ -13,7 +13,11 @@ import {
 import { BadgePercent, Bike, Plus } from "lucide-react";
 import { env } from "@/env";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import type { CreateSaleOrderDto, SaleOrderItemComponentInput, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
+import type {
+    SaleOrderEditPolicy,
+    SaleOrderItemComponentInput,
+    SaleOrderItemInput,
+} from "@/features/sale-orders/types/saleOrder";
 import { SaleOrderItemEditorModal } from "@/features/sale-orders/components/modal-create/SaleOrderItemEditorModal";
 import { buildEmptySaleOrderItem } from "@/features/sale-orders/utils/saleOrderForm";
 import { Modal } from "@/shared/components/modales/Modal";
@@ -23,10 +27,14 @@ import { SaleOrderItemsTable } from "@/features/sale-orders/components/SaleOrder
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import { getSku } from "@/shared/services/skuService";
 
-type SaleOrderItemsForm = Pick<
-    CreateSaleOrderDto,
-    "items" | "deliveryCost" | "discount" | "warehouseId"
->;
+type SaleOrderItemsForm = {
+    items?: SaleOrderItemInput[] | null;
+    deliveryCost?: number | null;
+    discount?: number | null;
+    warehouseId?: string | null;
+    reserveBool?: boolean | null;
+    editPolicy?: SaleOrderEditPolicy;
+};
 
 type Props<T extends SaleOrderItemsForm> = {
     form: T;
@@ -160,7 +168,9 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
             >
                 <SaleOrderItemsTable
                     items={form.items ?? []}
-                    warehouseId={form.warehouseId}
+                    warehouseId={form.warehouseId ?? undefined}
+                    reserveBool={form.reserveBool ?? null}
+                    stockStatus={form.editPolicy?.stockStatus ?? "NONE"}
                     productsEditable={productsEditable}
                     onEdit={(item, index) => {
                         setEditIndex(index);

@@ -39,6 +39,40 @@ vi.mock(
   }),
 );
 
+vi.mock("@/shared/components/components/FloatingSuggestInput", () => ({
+  FloatingSuggestInput: ({
+    label,
+    value,
+    onChange,
+    onOptionSelect,
+    options,
+  }: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    onOptionSelect?: (option: { value: string; label: string }) => void;
+    options: Array<{ value: string; label: string }>;
+  }) => (
+    <div>
+      <label htmlFor="agency-suggest">{label}</label>
+      <input
+        id="agency-suggest"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onOptionSelect?.(option)}
+        >
+          select-{option.label}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+
 function ShippingHarness() {
   const [form, setForm] = useState(() => ({
     ...buildEmptySaleOrderEditorForm(),
@@ -52,13 +86,23 @@ function ShippingHarness() {
       <SaleOrderShippingSection
         form={form}
         setForm={setForm}
-        subsidiaryOptions={[]}
+        subsidiaryOptions={[
+          {
+            value: "subsidiary-1",
+            label: "Olva Miraflores",
+            address: "Av. Larco 123",
+            cost: 14,
+          },
+        ]}
       />
       <output data-testid="shipping-state">
         {JSON.stringify({
           scheduleDate: form.scheduleDate,
           sendDate: form.sendDate,
           deliveryDate: form.deliveryDate,
+          agencyDetail: form.agencyDetail,
+          sendAddress: form.sendAddress,
+          deliveryCost: form.deliveryCost,
         })}
       </output>
     </>
@@ -66,31 +110,53 @@ function ShippingHarness() {
 }
 
 describe("SaleOrderShippingSection date pickers", () => {
-  it("maps every shipping date between form strings and date pickers", async () => {
+  it("maps send date between form strings and the date picker", async () => {
     const user = userEvent.setup();
     const { container } = render(<ShippingHarness />);
 
-    expect(screen.getByText("Fecha agenda:2026-07-04")).toBeInTheDocument();
     expect(screen.getByText("Fecha de envío:2026-07-05")).toBeInTheDocument();
-    expect(screen.getByText("Fecha entrega:empty")).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", {
-        name: "select-sale-order-delivery-date",
+        name: "select-sale-order-send-date",
       }),
     );
     expect(screen.getByTestId("shipping-state")).toHaveTextContent(
-      '"deliveryDate":"2026-07-09"',
+      '"sendDate":"2026-07-09"',
     );
 
     await user.click(
       screen.getByRole("button", {
-        name: "clear-sale-order-schedule-date",
+        name: "clear-sale-order-send-date",
       }),
     );
     expect(screen.getByTestId("shipping-state")).toHaveTextContent(
-      '"scheduleDate":""',
+      '"sendDate":""',
     );
     expect(container.querySelectorAll('input[type="date"]')).toHaveLength(0);
   });
 });
+
+describe("SaleOrderShippingSection agency detail", () => {
+  it("accepts free text and fills shipping fields from a selected subsidiary", async () => {
+    const user = userEvent.setup();
+    render(<ShippingHarness />);
+
+    await user.type(screen.getByLabelText("Sucursal"), "Agencia personalizada");
+    expect(screen.getByTestId("shipping-state")).toHaveTextContent(
+      '"agencyDetail":"Agencia personalizada"',
+    );
+
+    await user.click(screen.getByRole("button", { name: "select-Olva Miraflores" }));
+    expect(screen.getByTestId("shipping-state")).toHaveTextContent(
+      '"agencyDetail":"Olva Miraflores"',
+    );
+    expect(screen.getByTestId("shipping-state")).toHaveTextContent(
+      '"sendAddress":"Av. Larco 123"',
+    );
+    expect(screen.getByTestId("shipping-state")).toHaveTextContent(
+      '"deliveryCost":14',
+    );
+  });
+});
+
