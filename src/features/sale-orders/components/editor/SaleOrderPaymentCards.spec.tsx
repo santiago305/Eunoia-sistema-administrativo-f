@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SaleOrderPaymentCards } from "./SaleOrderPaymentCards";
@@ -8,10 +8,20 @@ import {
   type SaleOrderEditorForm,
 } from "./saleOrderEditorForm";
 
+const { sileoError } = vi.hoisted(() => ({
+  sileoError: vi.fn(),
+}));
+
+vi.mock("sileo", () => ({
+  sileo: {
+    error: sileoError,
+  },
+}));
+
 vi.mock("../useSaleOrderPaymentOptions", () => ({
   useSaleOrderPaymentOptions: () => ({
-    methodOptions: [],
-    bankAccountOptions: [],
+    methodOptions: [{ value: "EFECTIVO", label: "EFECTIVO" }],
+    bankAccountOptions: [{ value: "account-1", label: "BCP 123" }],
   }),
 }));
 
@@ -60,6 +70,7 @@ function PaymentHarness() {
     payments: [
       {
         clientKey: "payment-1",
+        bankAccountId: "account-1",
         method: "EFECTIVO",
         amount: 10,
         date: "2026-07-06",
@@ -79,42 +90,67 @@ function PaymentHarness() {
 }
 
 describe("SaleOrderPaymentCards", () => {
-  it("maps each payment date between the form string and date picker", async () => {
+  it("creates and edits payments through a modal with all payment fields", async () => {
     const user = userEvent.setup();
-    const { container } = render(<PaymentHarness />);
+    render(<PaymentHarness />);
 
-    expect(screen.getByText("Fecha:2026-07-06")).toBeInTheDocument();
+    expect(screen.queryByText("Metodo")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Editar pago" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Monto")).toHaveValue(10);
+    expect(screen.getByLabelText("Operacion")).toBeInTheDocument();
+    expect(screen.getByLabelText("Subir imagen")).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", {
         name: "select-payment-date-payment-1",
       }),
     );
+    await user.clear(screen.getByLabelText("Monto"));
+    await user.type(screen.getByLabelText("Monto"), "25.5");
+    await user.click(screen.getByRole("button", { name: "Guardar pago" }));
+
     expect(screen.getByTestId("payment-state")).toHaveTextContent(
       '"date":"2026-07-09"',
     );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "clear-payment-date-payment-1",
-      }),
-    );
     expect(screen.getByTestId("payment-state")).toHaveTextContent(
-      '"date":""',
+      '"amount":25.5',
     );
-    expect(container.querySelectorAll('input[type="date"]')).toHaveLength(0);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Editar pago" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Agregar Pago" }));
+    expect(
+      screen.getByRole("dialog", { name: "Agregar pago" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Monto")).toHaveValue(74.5);
   });
 
-  it("uses the pending order balance for a new payment", async () => {
+  it("warns when required payment fields are missing", async () => {
     const user = userEvent.setup();
     render(<PaymentHarness />);
 
-    await user.click(screen.getByRole("button", { name: "Añadir" }));
+    await user.click(screen.getByRole("button", { name: "Agregar Pago" }));
+    await user.click(screen.getByRole("button", { name: "Guardar pago" }));
 
+    expect(sileoError).toHaveBeenCalledWith({
+      title: "Completa monto, metodo, fecha y cuenta para guardar el pago.",
+    });
+    expect(screen.getByRole("dialog", { name: "Agregar pago" })).toBeInTheDocument();
     const payments = JSON.parse(
       screen.getByTestId("payment-state").textContent ?? "[]",
     ) as Array<{ amount: number }>;
-    expect(payments).toHaveLength(2);
-    expect(payments[1]?.amount).toBe(90);
+    expect(payments).toHaveLength(1);
   });
 });

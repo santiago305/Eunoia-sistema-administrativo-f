@@ -7,10 +7,11 @@ import {
 } from "@/shared/components/ui/tooltip";
 import { ListFilter, RefreshCw, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import type { DataTableFiltersConfig, DataTableRangeDates, DataTableRefreshAction } from "./types";
+import type { DataTableFiltersConfig, DataTableRangeDates, DataTableRefreshAction, DataTableSmartRangeDate } from "./types";
 import { FloatingInput } from "../components/FloatingInput";
 import { AnimatedDateRangePicker } from "../components/date-picker/AnimatedDateRangePicker";
 import { SystemButton } from "../components/SystemButton";
+import { SmartRangeDate } from "./search/SmartRangeDate";
 
 type Props = {
   showSearch?: boolean;
@@ -20,6 +21,7 @@ type Props = {
   onSearchChange: (value: string) => void;
   filtersConfig?: DataTableFiltersConfig;
   rangeDates?: DataTableRangeDates;
+  smartRangeDate?: DataTableSmartRangeDate;
   refreshAction?: DataTableRefreshAction;
   rightContent?: ReactNode;
   selectionInfo?: ReactNode;
@@ -33,6 +35,7 @@ export function DataTableToolbar({
   onSearchChange,
   filtersConfig,
   rangeDates,
+  smartRangeDate,
   refreshAction,
   rightContent,
   selectionInfo,
@@ -45,6 +48,7 @@ export function DataTableToolbar({
     !showSearch &&
     !filtersConfig &&
     !rangeDates &&
+    !smartRangeDate &&
     !refreshAction?.visible &&
     !rightContent &&
     !selectionInfo
@@ -90,7 +94,7 @@ export function DataTableToolbar({
         {selectionInfo}
       </div>
 
-      {rightContent || filtersConfig || rangeDates || refreshAction?.visible ? (
+      {rightContent || filtersConfig || rangeDates || smartRangeDate || refreshAction?.visible ? (
         <div className="flex w-full gap-3 sm:w-auto sm:flex-row sm:items-center justify-end">
           {refreshAction?.visible ? (
             <Tooltip delayDuration={0}>
@@ -110,7 +114,16 @@ export function DataTableToolbar({
             </Tooltip>
           ) : null}
 
-          {rangeDates ? (
+          {smartRangeDate ? (
+            <SmartRangeDate
+              fieldId={smartRangeDate.fieldId}
+              value={smartRangeDate.value}
+              onChange={smartRangeDate.onChange}
+              operators={smartRangeDate.operators}
+              label={smartRangeDate.label}
+              disabled={smartRangeDate.disabled}
+            />
+          ) : rangeDates ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <div className="flex justify-end">

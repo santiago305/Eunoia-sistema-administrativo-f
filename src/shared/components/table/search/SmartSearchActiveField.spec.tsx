@@ -1,12 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SmartSearchActiveField } from "./SmartSearchActiveField";
 import { SmartSearchDatePeriodOperators } from "./datePeriodOperators";
 import type { SmartSearchFieldConfig, SmartSearchRule } from "./types";
 
 type FieldKey = "createdAt";
-type Operator = "inMonth" | "inWeek";
+type Operator = "between" | "inMonth" | "inWeek";
 type Snapshot = { filters: SmartSearchRule<FieldKey, Operator>[] };
 
 const renderPeriodField = (
@@ -32,6 +32,10 @@ const renderPeriodField = (
 };
 
 describe("SmartSearchActiveField calendar periods", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("uses the shared semantic operator identifiers", () => {
     expect(SmartSearchDatePeriodOperators).toEqual({
       IN_MONTH: "inMonth",
@@ -92,6 +96,42 @@ describe("SmartSearchActiveField calendar periods", () => {
       operator: "inWeek",
       value: "2026-06-29",
       range: undefined,
+    });
+  });
+
+  it("applies the selected number of weeks as a range when the field supports ranges", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 15));
+
+    const onApplyRule = renderPeriodField(
+      {
+        id: "createdAt",
+        label: "Creación",
+        kind: "date",
+        operators: [
+          { id: "between", label: "Entre", inputMode: "date-range" },
+          { id: "inWeek", label: "En la semana", inputMode: "week" },
+        ],
+      },
+      { field: "createdAt", operator: "inWeek", value: "2026-06-22" },
+    );
+
+    expect(
+      screen.getByLabelText("Cantidad de semanas", { selector: "input" }),
+    ).toHaveValue(1);
+
+    fireEvent.change(
+      screen.getByLabelText("Cantidad de semanas", { selector: "input" }),
+      {
+        target: { value: "2" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    expect(onApplyRule).toHaveBeenCalledWith({
+      field: "createdAt",
+      operator: "between",
+      range: { start: "2026-07-13", end: "2026-07-26" },
     });
   });
 });

@@ -39,6 +39,8 @@ export const SaleOrderSearchFields = {
   AGENCY_DETAIL: "agencyDetail",
   SOURCE_ID: "sourceId",
   INVOICE_STATUS: "invoiceStatus",
+  CREATED_BY: "createdBy",
+  ASSIGNED_BY: "assignedBy",
 } as const;
 
 export type SaleOrderSearchFilterKey = SaleOrderSearchField;
@@ -88,6 +90,8 @@ const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
   agencyDetail: "Agencia",
   sourceId: "Origen",
   invoiceStatus: "Comprobante",
+  createdBy: "Creado por",
+  assignedBy: "Asignado a",
 };
 
 const CATALOG_FIELDS = new Set<SaleOrderSearchField>([
@@ -103,6 +107,8 @@ const CATALOG_FIELDS = new Set<SaleOrderSearchField>([
   SaleOrderSearchFields.CLIENT_DISTRICT_ID,
   SaleOrderSearchFields.SOURCE_ID,
   SaleOrderSearchFields.INVOICE_STATUS,
+  SaleOrderSearchFields.CREATED_BY,
+  SaleOrderSearchFields.ASSIGNED_BY,
 ]);
 
 const DATE_FIELDS = new Set<SaleOrderSearchField>([
@@ -338,7 +344,11 @@ function getRuleLabel(rule: SaleOrderSearchRule, searchState?: SaleOrderSearchSt
                   ? getCatalogLabel(values, searchState?.catalogs.bankAccounts)
                   : rule.field === SaleOrderSearchFields.CLIENT_TYPE
                     ? getCatalogLabel(values, searchState?.catalogs.clientTypes)
-                    : getCatalogLabel(values, undefined);
+                    : rule.field === SaleOrderSearchFields.CREATED_BY
+                      ? getCatalogLabel(values, searchState?.catalogs.creators)
+                      : rule.field === SaleOrderSearchFields.ASSIGNED_BY
+                        ? getCatalogLabel(values, searchState?.catalogs.assignees)
+                        : getCatalogLabel(values, undefined);
     if (!label) return null;
     const modePrefix = rule.mode === "exclude" ? "No" : "";
     return `${fieldLabel}: ${modePrefix ? `${modePrefix} ` : ""}${label}`.trim();
@@ -442,6 +452,8 @@ export function buildSaleOrderSmartSearchColumns(
   const districtOptions = normalizeSearchOptions(searchState?.catalogs.districts);
   const sourceOptions = normalizeSearchOptions(searchState?.catalogs.sources);
   const invoiceStatusOptions = normalizeSearchOptions(searchState?.catalogs.invoiceStatuses);
+  const creatorOptions = normalizeSearchOptions(searchState?.catalogs.creators);
+  const assigneeOptions = normalizeSearchOptions(searchState?.catalogs.assignees);
 
   return [
     {
@@ -573,6 +585,22 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: invoiceStatusOptions,
+    },
+    {
+      id: SaleOrderSearchFields.CREATED_BY,
+      label: "Creado por",
+      kind: "catalog",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: creatorOptions,
+    },
+    {
+      id: SaleOrderSearchFields.ASSIGNED_BY,
+      label: "Asignado a",
+      kind: "catalog",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: assigneeOptions,
     },
     {
       id: SaleOrderSearchFields.WAREHOUSE_ID,

@@ -418,6 +418,8 @@ export const API_SALE_ORDERS_GROUP = {
   assignWorkflow: (id: string) => `/sale-orders/${id}/assign-workflow`,
   availableTransitions: (id: string) => `/sale-orders/${id}/available-transitions`,
   changeState: (id: string) => `/sale-orders/${id}/change-state`,
+  bulkAssignedBy: "/sale-orders/bulk/assigned-by",
+  bulkChangeState: "/sale-orders/bulk/change-state",
   history: (id: string) => `/sale-orders/${id}/history`,
   payments: (id: string) => `/sale-orders/${id}/payments`,
   paymentById: (id: string, paymentId: string) => `/sale-orders/${id}/payments/${paymentId}`,

@@ -202,6 +202,41 @@ describe("SaleOrders", () => {
     expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
   });
 
+  it("applies the fixed createdAt smart range month filter from the table toolbar", async () => {
+    const user = userEvent.setup();
+    const selectedYear = new Date().getFullYear();
+    listSaleOrdersMock.mockResolvedValue({
+      items: [buildSaleOrder("Pendiente")],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("SO-1");
+    await user.click(screen.getByRole("button", { name: "Fecha creacion" }));
+    await user.click(await screen.findByText("Mes"));
+    await user.click(await screen.findByRole("button", { name: "Julio" }));
+
+    await waitFor(() => {
+      expect(
+        listSaleOrdersMock.mock.calls.some(([params]) =>
+          params?.filters?.some(
+            (rule: { field?: string; operator?: string; value?: string }) =>
+              rule.field === "createdAt" &&
+              rule.operator === "inMonth" &&
+              rule.value === `${selectedYear}-07`,
+          ),
+        ),
+      ).toBe(true);
+    });
+  });
+
   it("opens the unified modal in create mode from Nuevo pedido", async () => {
     const user = userEvent.setup();
     render(

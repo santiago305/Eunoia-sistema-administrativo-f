@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Package, Trash2 } from "lucide-react";
 import { env } from "@/env";
 import type {
+  SaleOrderEditPolicy,
   SaleOrderItemComponentInput,
   SaleOrderItemInput,
 } from "@/features/sale-orders/types/saleOrder";
@@ -14,6 +15,8 @@ import { deriveSkuPresentation } from "@/features/sale-orders/utils/skuPresentat
 type Props = {
   items: SaleOrderItemInput[];
   warehouseId?: string;
+  reserveBool?: boolean | null;
+  stockStatus?: SaleOrderEditPolicy["stockStatus"];
   productsEditable: boolean;
   onEdit: (item: SaleOrderItemInput, index: number) => void;
   onDelete: (item: SaleOrderItemInput, index: number) => void;
@@ -65,6 +68,8 @@ const getSkuLabel = (component: SaleOrderItemComponentInput) =>
 export function SaleOrderItemsTable({
   items,
   warehouseId,
+  reserveBool,
+  stockStatus = "NONE",
   productsEditable,
   onEdit,
   onDelete,
@@ -89,7 +94,7 @@ export function SaleOrderItemsTable({
   );
 
   useEffect(() => {
-    if (!warehouseId || uniqueSkuIds.length === 0) {
+    if (stockStatus === "CONSUMED" || !warehouseId || uniqueSkuIds.length === 0) {
       setStocksBySkuId({});
       setLoadingStock(false);
       return;
@@ -122,7 +127,7 @@ export function SaleOrderItemsTable({
     return () => {
       cancelled = true;
     };
-  }, [uniqueSkuIds, warehouseId]);
+  }, [stockStatus, uniqueSkuIds, warehouseId]);
 
   const toggleItem = (key: string) => {
     setCollapsedItems((current) =>
@@ -170,8 +175,10 @@ export function SaleOrderItemsTable({
               const flags = getPackStockFlags(
                 components,
                 warehouseId,
+                reserveBool,
                 stocksBySkuId,
                 loadingStock,
+                stockStatus,
               );
 
               return (
@@ -186,6 +193,7 @@ export function SaleOrderItemsTable({
                   warehouseId={warehouseId}
                   stocksBySkuId={stocksBySkuId}
                   loadingStock={loadingStock}
+                  stockStatus={stockStatus}
                   productsEditable={productsEditable}
                   onToggle={() => toggleItem(itemKey)}
                   onEdit={onEdit}
@@ -212,6 +220,7 @@ function PackRows({
   warehouseId,
   stocksBySkuId,
   loadingStock,
+  stockStatus,
   productsEditable,
   onToggle,
   onEdit,
@@ -227,6 +236,7 @@ function PackRows({
   warehouseId?: string;
   stocksBySkuId: Record<string, skuStock | null>;
   loadingStock: boolean;
+  stockStatus: SaleOrderEditPolicy["stockStatus"];
   productsEditable: boolean;
   onToggle: () => void;
   onEdit: Props["onEdit"];
@@ -304,6 +314,7 @@ function PackRows({
               warehouseId={warehouseId}
               stocksBySkuId={stocksBySkuId}
               loadingStock={loadingStock}
+              stockStatus={stockStatus}
               onOpenDetail={(component) => onOpenDetail(item, index, component)}
             />
           </td>
@@ -318,12 +329,14 @@ function ComponentsSubtable({
   warehouseId,
   stocksBySkuId,
   loadingStock,
+  stockStatus,
   onOpenDetail,
 }: {
   item: SaleOrderItemInput;
   warehouseId?: string;
   stocksBySkuId: Record<string, skuStock | null>;
   loadingStock: boolean;
+  stockStatus: SaleOrderEditPolicy["stockStatus"];
   onOpenDetail: (component: SaleOrderItemComponentInput) => void;
 }) {
   const components = item.components ?? [];
@@ -354,11 +367,12 @@ function ComponentsSubtable({
             components.map((component, componentIndex) => {
               const skuId = getSkuId(component);
               const stock = skuId ? stocksBySkuId[skuId] : null;
-              const stockLabel = !warehouseId
-                ? "—"
-                : loadingStock
-                  ? "..."
-                  : formatQuantity(stock?.available);
+              const stockLabel = resolveComponentStockLabel({
+                warehouseId,
+                loadingStock,
+                stockStatus,
+                available: stock?.available,
+              });
 
               return (
                 <tr
@@ -386,31 +400,60 @@ function ComponentsSubtable({
   );
 }
 
+function resolveReserveLabel(
+  reserveBool: boolean | null | undefined,
+  stockStatus: SaleOrderEditPolicy["stockStatus"],
+) {
+  if (stockStatus === "CONSUMED") return "OUT";
+  if (reserveBool == null) return "\u2014";
+  return reserveBool ? "S\u00ed" : "No";
+}
+
+function resolveComponentStockLabel({
+  warehouseId,
+  loadingStock,
+  stockStatus,
+  available,
+}: {
+  warehouseId?: string;
+  loadingStock: boolean;
+  stockStatus: SaleOrderEditPolicy["stockStatus"];
+  available?: number | null;
+}) {
+  if (stockStatus === "CONSUMED") return "OUT";
+  if (!warehouseId) return "—";
+  if (loadingStock) return "...";
+  return formatQuantity(available);
+}
+
 function getPackStockFlags(
   components: SaleOrderItemComponentInput[],
   warehouseId: string | undefined,
+  reserveBool: boolean | null | undefined,
   stocksBySkuId: Record<string, skuStock | null>,
   loadingStock: boolean,
+  stockStatus: SaleOrderEditPolicy["stockStatus"],
 ) {
+  const reserved = resolveReserveLabel(reserveBool, stockStatus);
+
+  if (stockStatus === "CONSUMED") {
+    return { stock: "OUT", reserved };
+  }
+
   if (!warehouseId || components.length === 0) {
-    return { stock: "—", reserved: "—" };
+    return { stock: "—", reserved };
   }
   if (loadingStock) {
-    return { stock: "...", reserved: "..." };
+    return { stock: "...", reserved };
   }
 
   const hasEnough = components.every((component) => {
     const stock = stocksBySkuId[getSkuId(component)];
     return Number(stock?.available ?? 0) >= Number(component.quantity ?? 0);
   });
-  const isReserved = components.every((component) => {
-    const stock = stocksBySkuId[getSkuId(component)];
-    return Number(stock?.reserved ?? 0) >= Number(component.quantity ?? 0);
-  });
-
   return {
     stock: hasEnough ? "Sí" : "No",
-    reserved: isReserved ? "Sí" : "No",
+    reserved,
   };
 }
 

@@ -81,3 +81,127 @@ describe("DataTable toolbar actions", () => {
     expect(toolbarActions).toContainElement(columnsButton);
   });
 });
+
+describe("DataTable smart range date", () => {
+  const columns = [{ id: "name", header: "Nombre", accessorKey: "name" as const }];
+  const data = [{ id: "1", name: "Pedido demo" }];
+
+  it("renders the smart range date control from the toolbar", async () => {
+    render(
+      <TooltipProvider>
+        <DataTable
+          tableId="smart-range-date-test"
+          data={data}
+          columns={columns}
+          rowKey="id"
+          smartRangeDate={{
+            fieldId: "createdAt",
+            value: {
+              field: "createdAt",
+              operator: "inMonth",
+              value: "2026-07",
+            },
+            operators: {
+              range: "between",
+              week: "inWeek",
+              month: "inMonth",
+            },
+            onChange: vi.fn(),
+            label: "Fecha creacion",
+          }}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Mes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fecha creacion" })).toHaveTextContent(
+      /julio 2026/,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Fecha creacion" }));
+
+    expect(await screen.findByText("Mes")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("prefers smartRangeDate over the legacy rangeDates control", () => {
+    render(
+      <TooltipProvider>
+        <DataTable
+          tableId="smart-range-date-precedence-test"
+          data={data}
+          columns={columns}
+          rowKey="id"
+          smartRangeDate={{
+            fieldId: "createdAt",
+            value: null,
+            operators: {
+              range: "between",
+              week: "inWeek",
+              month: "inMonth",
+            },
+            onChange: vi.fn(),
+            label: "Fecha creacion",
+          }}
+          rangeDates={{
+            startDate: new Date(2026, 6, 1),
+            endDate: new Date(2026, 6, 10),
+            onChange: vi.fn(),
+            label: "Fecha legacy",
+            name: "legacy-range",
+          }}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Fecha creacion" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fecha legacy" })).not.toBeInTheDocument();
+  });
+});
+
+describe("DataTable copy columns", () => {
+  const data = [{ id: "1", name: "Cliente demo" }];
+
+  it("enables text selection without row click when column copy is true", () => {
+    const onRowClick = vi.fn();
+
+    render(
+      <TooltipProvider>
+        <DataTable
+          tableId="copy-column-test"
+          data={data}
+          columns={[{ id: "name", header: "Nombre", accessorKey: "name", copy: true }]}
+          rowKey="id"
+          onRowClick={onRowClick}
+        />
+      </TooltipProvider>,
+    );
+
+    const cell = screen.getByText("Cliente demo").closest("td");
+
+    expect(cell).toHaveClass("!select-text");
+    expect(cell).toHaveClass("cursor-text");
+
+    fireEvent.mouseDown(cell!);
+    fireEvent.click(cell!);
+
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it("keeps text selection disabled by default", () => {
+    render(
+      <TooltipProvider>
+        <DataTable
+          tableId="copy-column-default-test"
+          data={data}
+          columns={[{ id: "name", header: "Nombre", accessorKey: "name" }]}
+          rowKey="id"
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Cliente demo").closest("td")).not.toHaveClass("select-text");
+  });
+});
