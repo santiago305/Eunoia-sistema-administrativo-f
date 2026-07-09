@@ -57,4 +57,57 @@ describe("purchaseDashboardService", () => {
     expect(axiosInstance.get).toHaveBeenCalledWith("/purchases/dashboard/internal-vs-inventory", { params });
     expect(axiosInstance.get).toHaveBeenCalledTimes(10);
   });
+
+  it("loads payment endpoints only with the payments dashboard permission", async () => {
+    vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
+
+    await getPurchaseDashboardData({}, ["purchases_dashboard.view"]);
+
+    expect(calledUrls()).not.toContain("/purchases/dashboard/upcoming-payments");
+    expect(calledUrls()).not.toContain("/purchases/dashboard/overdue-payments");
+    expect(calledUrls()).not.toContain("/purchases/dashboard/payment-method-usage");
+
+    vi.clearAllMocks();
+    vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
+
+    await getPurchaseDashboardData({}, ["purchases_dashboard.view", "purchases_dashboard.view_payments"]);
+
+    expect(calledUrls()).toContain("/purchases/dashboard/upcoming-payments");
+    expect(calledUrls()).toContain("/purchases/dashboard/overdue-payments");
+    expect(calledUrls()).toContain("/purchases/dashboard/payment-method-usage");
+  });
+
+  it("loads top suppliers only with the suppliers dashboard permission", async () => {
+    vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
+
+    await getPurchaseDashboardData({}, ["purchases_dashboard.view"]);
+
+    expect(calledUrls()).not.toContain("/purchases/dashboard/top-suppliers");
+
+    vi.clearAllMocks();
+    vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
+
+    await getPurchaseDashboardData({}, ["purchases_dashboard.view", "purchases_dashboard.view_suppliers"]);
+
+    expect(calledUrls()).toContain("/purchases/dashboard/top-suppliers");
+  });
+
+  it("loads top items only with the items dashboard permission", async () => {
+    vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
+
+    await getPurchaseDashboardData({}, ["purchases_dashboard.view"]);
+
+    expect(calledUrls()).not.toContain("/purchases/dashboard/top-items");
+
+    vi.clearAllMocks();
+    vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
+
+    await getPurchaseDashboardData({}, ["purchases_dashboard.view", "purchases_dashboard.view_items"]);
+
+    expect(calledUrls()).toContain("/purchases/dashboard/top-items");
+  });
 });
+
+function calledUrls() {
+  return vi.mocked(axiosInstance.get).mock.calls.map(([url]) => url);
+}

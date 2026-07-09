@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { UpcomingPaymentsTable } from "./UpcomingPaymentsTable";
+import { OverduePaymentsTable } from "./OverduePaymentsTable";
 import { PurchaseDashboardRankingTable } from "./PurchaseDashboardRankingTable";
 
 const dataTableCalls: Array<{ tableId: string; data: unknown[]; columns: Array<{ header: string }> }> = [];
@@ -55,5 +56,36 @@ describe("dashboard purchase tables", () => {
     expect(screen.getByTestId("datatable-purchase-dashboard-top-items")).toBeInTheDocument();
     expect(dataTableCalls[0].columns.map((column) => column.header)).toEqual(["Item", "Tipo", "Total"]);
     expect(dataTableCalls[0].data).toHaveLength(1);
+  });
+
+  it("keeps visible payment columns and empty text for overdue payments", () => {
+    dataTableCalls.length = 0;
+
+    render(<OverduePaymentsTable rows={[]} />);
+
+    expect(screen.getByTestId("datatable-purchase-dashboard-payments-pagos-vencidos")).toHaveTextContent(
+      "Sin cuentas para mostrar.",
+    );
+    expect(dataTableCalls[0].columns.map((column) => column.header)).toEqual(["Proveedor", "Vence", "Estado", "Pendiente"]);
+    expect(dataTableCalls[0].data).toHaveLength(0);
+  });
+
+  it("keeps visible ranking columns and empty text", () => {
+    dataTableCalls.length = 0;
+
+    render(
+      <PurchaseDashboardRankingTable
+        title="Top proveedores"
+        tableId="purchase-dashboard-top-suppliers"
+        rows={[]}
+        headers={["Proveedor", "Compras", "Total"]}
+      />,
+    );
+
+    expect(screen.getByTestId("datatable-purchase-dashboard-top-suppliers")).toHaveTextContent(
+      "Sin datos para mostrar.",
+    );
+    expect(dataTableCalls[0].columns.map((column) => column.header)).toEqual(["Proveedor", "Compras", "Total"]);
+    expect(dataTableCalls[0].data).toHaveLength(0);
   });
 });
