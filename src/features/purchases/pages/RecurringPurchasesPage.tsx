@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
+import { PageTitle } from "@/shared/components/components/PageTitle";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -23,6 +26,13 @@ import type {
 } from "../types/recurring-purchase.types";
 
 const DEFAULT_LIMIT = 20;
+
+const statusOptions = [
+  { value: "ALL", label: "Todos los estados" },
+  { value: "ACTIVE", label: "Activas" },
+  { value: "PAUSED", label: "Pausadas" },
+  { value: "CANCELLED", label: "Canceladas" },
+];
 
 export default function RecurringPurchasesPage() {
   const { showFeedback } = useFeedbackToast();
@@ -106,6 +116,7 @@ export default function RecurringPurchasesPage() {
 
   return (
     <PageShell>
+      <PageTitle title="Compras recurrentes" />
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -122,25 +133,23 @@ export default function RecurringPurchasesPage() {
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value as RecurringStatus | "");
-              setPagination((prev) => ({ ...prev, page: 1 }));
-            }}
-            aria-label="Filtrar por estado"
-            className="h-10 rounded-md border border-black/15 bg-white px-3 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-          >
-            <option value="">Todos los estados</option>
-            <option value="ACTIVE">Activas</option>
-            <option value="PAUSED">Pausadas</option>
-            <option value="CANCELLED">Canceladas</option>
-          </select>
+        <PageActionsRow>
+          <div className="w-full sm:w-52">
+            <FloatingSelect
+              label="Estado"
+              name="recurring-purchase-status"
+              value={status || "ALL"}
+              options={statusOptions}
+              onChange={(value) => {
+                setStatus(value === "ALL" ? "" : (value as RecurringStatus));
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+            />
+          </div>
           <SystemButton variant="outline" onClick={() => void loadRecurring()}>
             Actualizar
           </SystemButton>
-        </div>
+        </PageActionsRow>
 
         <RecurringPurchaseTable
           items={items}

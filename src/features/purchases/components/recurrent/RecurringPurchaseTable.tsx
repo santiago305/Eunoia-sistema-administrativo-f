@@ -1,5 +1,7 @@
-import { Pause, Play, RefreshCw, XCircle } from "lucide-react";
-import { SystemButton } from "@/shared/components/components/SystemButton";
+import { Menu, Pause, Play, RefreshCw, XCircle } from "lucide-react";
+import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
+import { DataTable } from "@/shared/components/table/DataTable";
+import type { DataTableColumn } from "@/shared/components/table/types";
 import type { RecurringPurchase, RecurringStatus } from "../../types/recurring-purchase.types";
 
 const statusLabels: Record<RecurringStatus, string> = {
@@ -50,93 +52,166 @@ export function RecurringPurchaseTable({
   onGenerate,
   permissions = { canPause: true, canCancel: true, canGenerate: true },
 }: Props) {
-  const totalPages = Math.max(Math.ceil(total / limit), 1);
+  const columns: DataTableColumn<RecurringPurchase>[] = [
+    {
+      id: "service",
+      header: "Servicio",
+      cell: (item) => (
+        <div>
+          <div className="font-medium text-black">{item.name}</div>
+          {item.description ? (
+            <div className="mt-1 text-xs text-black/55">{item.description}</div>
+          ) : null}
+        </div>
+      ),
+      searchValue: (item) => `${item.name} ${item.description ?? ""}`,
+      cardTitle: true,
+      hideable: false,
+    },
+    {
+      id: "frequency",
+      header: "Frecuencia",
+      cell: (item) => (
+        <span className="text-black/70">{frequencyLabels[item.frequency]}</span>
+      ),
+      sortAccessor: (item) => frequencyLabels[item.frequency],
+    },
+    {
+      id: "amount",
+      header: "Monto",
+      cell: (item) => (
+        <span className="font-medium text-black">{formatMoney(item.amount, item.currency)}</span>
+      ),
+      sortAccessor: "amount",
+    },
+    {
+      id: "nextDueDate",
+      header: "Proximo vencimiento",
+      cell: (item) => <span className="text-black/70">{formatDate(item.nextDueDate)}</span>,
+      sortAccessor: "nextDueDate",
+    },
+    {
+      id: "status",
+      header: "Estado",
+      cell: (item) => <RecurringStatusBadge status={item.status} />,
+      sortAccessor: (item) => statusLabels[item.status],
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      stopRowClick: true,
+      hideable: false,
+      sortable: false,
+      className: "text-right",
+      headerClassName: "text-right [&>div]:justify-end",
+      cell: (item) => (
+        <ActionsPopover
+          actions={buildActions({
+            item,
+            onPause,
+            onResume,
+            onCancel,
+            onGenerate,
+            permissions,
+          })}
+          columns={1}
+          compact
+          showLabels
+          triggerIcon={<Menu className="h-4 w-4" />}
+          popoverClassName="min-w-40"
+          popoverBodyClassName="p-2"
+          renderAction={(action, helpers) => (
+            <button
+              key={action.id}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                helpers.onAction(action);
+              }}
+              disabled={action.disabled}
+              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] disabled:pointer-events-none disabled:opacity-50 ${action.className ?? ""}`}
+            >
+              {action.icon}
+              {action.label}
+            </button>
+          )}
+        />
+      ),
+    },
+  ];
 
   return (
-    <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-black/10 text-sm">
-          <thead className="bg-black/[0.03] text-left text-xs font-semibold uppercase tracking-normal text-black/60">
-            <tr>
-              <th className="px-4 py-3">Servicio</th>
-              <th className="px-4 py-3">Frecuencia</th>
-              <th className="px-4 py-3">Monto</th>
-              <th className="px-4 py-3">Proximo vencimiento</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-black/10">
-            {loading ? (
-              <tr>
-                <td className="px-4 py-8 text-center text-black/60" colSpan={6}>
-                  Cargando recurrentes...
-                </td>
-              </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td className="px-4 py-8 text-center text-black/60" colSpan={6}>
-                  No hay compras recurrentes registradas.
-                </td>
-              </tr>
-            ) : (
-              items.map((item) => (
-                <tr key={item.recurringPurchaseTemplateId} className="align-top">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-black">{item.name}</div>
-                    {item.description ? <div className="mt-1 text-xs text-black/55">{item.description}</div> : null}
-                  </td>
-                  <td className="px-4 py-3 text-black/70">{frequencyLabels[item.frequency]}</td>
-                  <td className="px-4 py-3 font-medium text-black">{formatMoney(item.amount, item.currency)}</td>
-                  <td className="px-4 py-3 text-black/70">{formatDate(item.nextDueDate)}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex rounded-full border border-black/10 px-2 py-1 text-xs font-medium text-black/70">
-                      {statusLabels[item.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      {permissions.canGenerate ? (
-                        <SystemButton size="sm" variant="outline" title="Generar cuenta" onClick={() => onGenerate(item)}>
-                          <RefreshCw className="h-4 w-4" />
-                        </SystemButton>
-                      ) : null}
-                      {permissions.canPause && item.status === "ACTIVE" ? (
-                        <SystemButton size="sm" variant="outline" title="Pausar" onClick={() => onPause(item)}>
-                          <Pause className="h-4 w-4" />
-                        </SystemButton>
-                      ) : null}
-                      {permissions.canPause && item.status === "PAUSED" ? (
-                        <SystemButton size="sm" variant="outline" title="Reanudar" onClick={() => onResume(item)}>
-                          <Play className="h-4 w-4" />
-                        </SystemButton>
-                      ) : null}
-                      {permissions.canCancel && item.status !== "CANCELLED" ? (
-                        <SystemButton size="sm" variant="outline" title="Cancelar" onClick={() => onCancel(item)}>
-                          <XCircle className="h-4 w-4" />
-                        </SystemButton>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between border-t border-black/10 px-4 py-3 text-xs text-black/60">
-        <span>
-          Pagina {page} de {totalPages} · {total} registros
-        </span>
-        <div className="flex gap-2">
-          <SystemButton size="sm" variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-            Anterior
-          </SystemButton>
-          <SystemButton size="sm" variant="outline" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-            Siguiente
-          </SystemButton>
-        </div>
-      </div>
-    </div>
+    <DataTable
+      tableId="recurring-purchases-table"
+      data={items}
+      columns={columns}
+      rowKey="recurringPurchaseTemplateId"
+      loading={loading}
+      emptyMessage="No hay compras recurrentes registradas."
+      hoverable={false}
+      animated={false}
+      selectableColumns
+      pagination={{ page, limit, total }}
+      onPageChange={onPageChange}
+    />
   );
+}
+
+function RecurringStatusBadge({ status }: { status: RecurringStatus }) {
+  const className =
+    status === "ACTIVE"
+      ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      : status === "PAUSED"
+        ? "bg-amber-50 text-amber-700 ring-amber-200"
+        : "bg-rose-50 text-rose-700 ring-rose-200";
+
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset ${className}`}>
+      {statusLabels[status]}
+    </span>
+  );
+}
+
+function buildActions({
+  item,
+  onPause,
+  onResume,
+  onCancel,
+  onGenerate,
+  permissions,
+}: {
+  item: RecurringPurchase;
+  onPause: (item: RecurringPurchase) => void;
+  onResume: (item: RecurringPurchase) => void;
+  onCancel: (item: RecurringPurchase) => void;
+  onGenerate: (item: RecurringPurchase) => void;
+  permissions: NonNullable<Props["permissions"]>;
+}) {
+  return [
+    permissions.canGenerate && {
+      id: "generate",
+      label: "Generar cuenta",
+      icon: <RefreshCw className="h-4 w-4 text-black/60" />,
+      onClick: () => onGenerate(item),
+    },
+    permissions.canPause && item.status === "ACTIVE" && {
+      id: "pause",
+      label: "Pausar",
+      icon: <Pause className="h-4 w-4 text-black/60" />,
+      onClick: () => onPause(item),
+    },
+    permissions.canPause && item.status === "PAUSED" && {
+      id: "resume",
+      label: "Reanudar",
+      icon: <Play className="h-4 w-4 text-black/60" />,
+      onClick: () => onResume(item),
+    },
+    permissions.canCancel && item.status !== "CANCELLED" && {
+      id: "cancel",
+      label: "Cancelar",
+      icon: <XCircle className="h-4 w-4" />,
+      className: "text-rose-700 hover:bg-rose-50",
+      onClick: () => onCancel(item),
+    },
+  ].filter(Boolean) as ActionItem[];
 }

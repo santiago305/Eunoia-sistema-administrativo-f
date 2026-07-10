@@ -1,6 +1,9 @@
 import { FormEvent, useState } from "react";
-import { X } from "lucide-react";
+import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { Modal } from "@/shared/components/modales/Modal";
 import type { CreateRecurringPurchasePayload, RecurringFrequency } from "../../types/recurring-purchase.types";
 import type { CurrencyType } from "../../types/purchaseEnums";
 
@@ -23,6 +26,21 @@ type RecurringPurchaseFormState = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+const frequencyOptions = [
+  { value: "MONTHLY", label: "Mensual" },
+  { value: "ANNUAL", label: "Anual" },
+];
+
+const purchaseTypeOptions = [
+  { value: "SUBSCRIPTION", label: "Suscripcion" },
+  { value: "SERVICE", label: "Servicio" },
+];
+
+const currencyOptions = [
+  { value: "PEN", label: "PEN" },
+  { value: "USD", label: "USD" },
+];
+
 export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<RecurringPurchaseFormState>({
@@ -35,8 +53,6 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
     amount: "",
     startDate: today(),
   });
-
-  if (!open) return null;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -59,62 +75,89 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <form onSubmit={(event) => void submit(event)} className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
-          <h2 className="text-base font-semibold text-black">Nueva compra recurrente</h2>
-          <button type="button" className="grid h-10 w-10 place-items-center rounded-md hover:bg-black/[0.04]" onClick={onClose} aria-label="Cerrar">
-            <X className="h-5 w-5" />
-          </button>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Nueva compra recurrente"
+      className="w-full max-w-2xl"
+      bodyClassName="p-0"
+      footer={
+        <div className="flex justify-end gap-2">
+          <SystemButton type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </SystemButton>
+          <SystemButton type="submit" form="recurring-purchase-form" disabled={saving}>
+            {saving ? "Guardando..." : "Crear recurrente"}
+          </SystemButton>
         </div>
+      }
+    >
+      <form id="recurring-purchase-form" onSubmit={(event) => void submit(event)}>
         <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <label className="space-y-1 text-sm font-medium text-black">
-            Proveedor
-            <input required value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })} className="h-11 w-full rounded-md border border-black/15 px-3 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
-          </label>
-          <label className="space-y-1 text-sm font-medium text-black">
-            Nombre
-            <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="h-11 w-full rounded-md border border-black/15 px-3 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
-          </label>
-          <label className="space-y-1 text-sm font-medium text-black">
-            Frecuencia
-            <select value={form.frequency} onChange={(event) => setForm({ ...form, frequency: event.target.value as RecurringFrequency })} className="h-11 w-full rounded-md border border-black/15 px-3 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10">
-              <option value="MONTHLY">Mensual</option>
-              <option value="ANNUAL">Anual</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-sm font-medium text-black">
-            Tipo
-            <select value={form.purchaseType} onChange={(event) => setForm({ ...form, purchaseType: event.target.value as "SERVICE" | "SUBSCRIPTION" })} className="h-11 w-full rounded-md border border-black/15 px-3 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10">
-              <option value="SUBSCRIPTION">Suscripcion</option>
-              <option value="SERVICE">Servicio</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-sm font-medium text-black">
-            Moneda
-            <select value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value as CurrencyType })} className="h-11 w-full rounded-md border border-black/15 px-3 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10">
-              <option value="PEN">PEN</option>
-              <option value="USD">USD</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-sm font-medium text-black">
-            Monto
-            <input required min="0.01" step="0.01" type="number" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} className="h-11 w-full rounded-md border border-black/15 px-3 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
-          </label>
-          <label className="space-y-1 text-sm font-medium text-black">
-            Inicio
-            <input required type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} className="h-11 w-full rounded-md border border-black/15 px-3 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
-          </label>
-          <label className="space-y-1 text-sm font-medium text-black sm:col-span-2">
-            Descripcion
-            <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} className="w-full rounded-md border border-black/15 px-3 py-2 text-sm font-normal outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
-          </label>
-        </div>
-        <div className="flex justify-end gap-2 border-t border-black/10 px-5 py-4">
-          <SystemButton type="button" variant="outline" onClick={onClose}>Cancelar</SystemButton>
-          <SystemButton type="submit" disabled={saving}>{saving ? "Guardando..." : "Crear recurrente"}</SystemButton>
+          <FloatingInput
+            required
+            label="Proveedor"
+            name="supplierId"
+            value={form.supplierId}
+            onChange={(event) => setForm({ ...form, supplierId: event.target.value })}
+          />
+          <FloatingInput
+            required
+            label="Nombre"
+            name="name"
+            value={form.name}
+            onChange={(event) => setForm({ ...form, name: event.target.value })}
+          />
+          <FloatingSelect
+            label="Frecuencia"
+            name="frequency"
+            value={form.frequency}
+            options={frequencyOptions}
+            onChange={(value) => setForm({ ...form, frequency: value as RecurringFrequency })}
+          />
+          <FloatingSelect
+            label="Tipo"
+            name="purchaseType"
+            value={form.purchaseType}
+            options={purchaseTypeOptions}
+            onChange={(value) => setForm({ ...form, purchaseType: value as "SERVICE" | "SUBSCRIPTION" })}
+          />
+          <FloatingSelect
+            label="Moneda"
+            name="currency"
+            value={form.currency}
+            options={currencyOptions}
+            onChange={(value) => setForm({ ...form, currency: value as CurrencyType })}
+          />
+          <FloatingInput
+            required
+            min="0.01"
+            step="0.01"
+            type="number"
+            label="Monto"
+            name="amount"
+            value={form.amount}
+            onChange={(event) => setForm({ ...form, amount: event.target.value })}
+          />
+          <FloatingInput
+            required
+            type="date"
+            label="Inicio"
+            name="startDate"
+            value={form.startDate}
+            onChange={(event) => setForm({ ...form, startDate: event.target.value })}
+          />
+          <div className="sm:col-span-2">
+            <FloatingTextarea
+              label="Descripcion"
+              name="description"
+              value={form.description}
+              rows={3}
+              onChange={(event) => setForm({ ...form, description: event.target.value })}
+            />
+          </div>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
