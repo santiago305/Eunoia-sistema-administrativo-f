@@ -134,4 +134,29 @@ describe("SmartSearchActiveField calendar periods", () => {
       range: { start: "2026-07-13", end: "2026-07-26" },
     });
   });
+
+  it("uses the animated date range picker for between date filters", async () => {
+    const user = userEvent.setup();
+    renderPeriodField(
+      {
+        id: "createdAt",
+        label: "Creación",
+        kind: "date",
+        operators: [
+          { id: "between", label: "Entre", inputMode: "date-range" },
+        ],
+      },
+      {
+        field: "createdAt",
+        operator: "between",
+        range: { start: "2026-07-13", end: "2026-07-26" },
+      },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Rango" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Rango: rango de fechas" }),
+    ).toBeInTheDocument();
+  });
 });

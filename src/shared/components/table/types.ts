@@ -47,6 +47,9 @@ export type DataTableRangeDates = {
     name?: string;
     disabled?: boolean;
     panelMinWidth?: number;
+    fields?: { value: string; label: string }[];
+    fieldValue?: string;
+    onFieldChange?: (field: string) => void;
 };
 
 export type DataTableSmartRangeDate<

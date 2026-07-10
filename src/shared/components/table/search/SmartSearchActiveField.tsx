@@ -4,8 +4,8 @@ import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingMultiSelect } from "@/shared/components/components/FloatingMultiSelect";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { AnimatedDateRangePicker } from "@/shared/components/components/date-picker/AnimatedDateRangePicker";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
-import { FloatingDateRangePicker } from "@/shared/components/components/date-picker/FloatingDateRangePicker";
 import { FloatingDateTimePicker } from "@/shared/components/components/date-picker/FloatingDateTimePicker";
 import { FloatingMonthPicker } from "@/shared/components/components/date-picker/FloatingMonthPicker";
 import { FloatingWeekPicker } from "@/shared/components/components/date-picker/FloatingWeekPicker";
@@ -296,7 +296,7 @@ export function SmartSearchActiveField<
             ) : null}
 
             {inputMode === "date-range" ? (
-              <FloatingDateRangePicker
+              <AnimatedDateRangePicker
                 label="Rango"
                 name={`smart-search-date-range-${field.id}`}
                 startDate={parseStoredDate(draftRange.start)}
@@ -308,6 +308,7 @@ export function SmartSearchActiveField<
                   })
                 }
                 className="h-10 rounded-sm text-xs"
+                containerClassName="w-full"
               />
             ) : null}
           </div>

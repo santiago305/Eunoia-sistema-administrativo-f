@@ -398,6 +398,20 @@ export type SaleOrderListResponse = {
   limit: number;
 };
 
+export type SaleOrderExportColumn = {
+  key: string;
+  label: string;
+};
+
+export type SaleOrderExportPreset = {
+  metricId: string;
+  name: string;
+  snapshot?: {
+    columns?: SaleOrderExportColumn[];
+    useDateRange?: boolean;
+  };
+};
+
 export type SaleOrderSearchOption = {
   id?: string;
   saleOrderStateId?: string;

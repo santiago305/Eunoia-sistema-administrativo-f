@@ -134,6 +134,10 @@ export function DataTableToolbar({
                     endDate={rangeDates.endDate}
                     onChange={rangeDates.onChange}
                     disabled={rangeDates.disabled}
+                    panelMinWidth={rangeDates.panelMinWidth}
+                    fields={rangeDates.fields}
+                    fieldValue={rangeDates.fieldValue}
+                    onFieldChange={rangeDates.onFieldChange}
                     className="h-11 rounded-md border-border/70 px-3 text-xs shadow-sm"
                   />
                 </div>

@@ -5,6 +5,9 @@ import SaleOrders from "@/features/sale-orders/SaleOrders";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { ClientType, type SaleOrder } from "@/features/sale-orders/types/saleOrder";
 
+const toDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
 vi.mock("@/shared/hooks/useCompany", () => ({
   useCompany: () => ({ hasCompany: true, company: { companyId: "company-1" } }),
 }));
@@ -35,15 +38,24 @@ vi.mock("@/shared/hooks/use-mobile", () => ({
 }));
 
 const {
+  deleteSaleOrderExportPresetMock,
+  exportSaleOrdersExcelMock,
   fetchSaleOrderByIdMock,
   getAvailableSaleOrderTransitionsMock,
+  getSaleOrderExportColumnsMock,
+  getSaleOrderExportPresetsMock,
   getSaleOrderSearchStateMock,
   getSaleOrderStatisticsMock,
   listSaleOrderPaymentsMock,
   listSaleOrdersMock,
+  saveSaleOrderExportPresetMock,
 } = vi.hoisted(() => ({
+  deleteSaleOrderExportPresetMock: vi.fn(),
+  exportSaleOrdersExcelMock: vi.fn(),
   fetchSaleOrderByIdMock: vi.fn(),
   getAvailableSaleOrderTransitionsMock: vi.fn(),
+  getSaleOrderExportColumnsMock: vi.fn(),
+  getSaleOrderExportPresetsMock: vi.fn(),
   getSaleOrderSearchStateMock: vi.fn(),
   getSaleOrderStatisticsMock: vi.fn().mockResolvedValue({
     byWorkflow: [],
@@ -53,6 +65,7 @@ const {
   }),
   listSaleOrderPaymentsMock: vi.fn(),
   listSaleOrdersMock: vi.fn(),
+  saveSaleOrderExportPresetMock: vi.fn(),
 }));
 
 vi.mock("@/shared/services/saleOrderService", async () => {
@@ -64,10 +77,15 @@ vi.mock("@/shared/services/saleOrderService", async () => {
     ...actual,
     fetchSaleOrderById: fetchSaleOrderByIdMock,
     listSaleOrders: listSaleOrdersMock,
+    deleteSaleOrderExportPreset: deleteSaleOrderExportPresetMock,
+    exportSaleOrdersExcel: exportSaleOrdersExcelMock,
+    getSaleOrderExportColumns: getSaleOrderExportColumnsMock,
+    getSaleOrderExportPresets: getSaleOrderExportPresetsMock,
     getSaleOrderSearchState: getSaleOrderSearchStateMock,
     getSaleOrderStatistics: getSaleOrderStatisticsMock,
     getAvailableSaleOrderTransitions: getAvailableSaleOrderTransitionsMock,
     listSaleOrderPayments: listSaleOrderPaymentsMock,
+    saveSaleOrderExportPreset: saveSaleOrderExportPresetMock,
   };
 });
 
@@ -159,6 +177,11 @@ describe("SaleOrders", () => {
     createSaleOrdersSocketMock.mockClear();
     fetchSaleOrderByIdMock.mockReset();
     getAvailableSaleOrderTransitionsMock.mockReset();
+    getSaleOrderExportColumnsMock.mockReset();
+    getSaleOrderExportPresetsMock.mockReset();
+    exportSaleOrdersExcelMock.mockReset();
+    saveSaleOrderExportPresetMock.mockReset();
+    deleteSaleOrderExportPresetMock.mockReset();
     listSaleOrdersMock.mockReset();
     getSaleOrderSearchStateMock.mockReset();
     getSaleOrderStatisticsMock.mockReset();
@@ -170,6 +193,10 @@ describe("SaleOrders", () => {
       limit: 10,
     });
     listSaleOrderPaymentsMock.mockResolvedValue([]);
+    getSaleOrderExportColumnsMock.mockResolvedValue([]);
+    getSaleOrderExportPresetsMock.mockResolvedValue([]);
+    saveSaleOrderExportPresetMock.mockResolvedValue({ metricId: "metric-1" });
+    deleteSaleOrderExportPresetMock.mockResolvedValue(true);
     getSaleOrderSearchStateMock.mockResolvedValue(emptySearchState);
     getAvailableSaleOrderTransitionsMock.mockResolvedValue([]);
     getSaleOrderStatisticsMock.mockResolvedValue({
@@ -202,9 +229,11 @@ describe("SaleOrders", () => {
     expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
   });
 
-  it("applies the fixed createdAt smart range month filter from the table toolbar", async () => {
+  it("applies the createdAt range preset from the table toolbar", async () => {
     const user = userEvent.setup();
-    const selectedYear = new Date().getFullYear();
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(start.getDate() - 6);
     listSaleOrdersMock.mockResolvedValue({
       items: [buildSaleOrder("Pendiente")],
       total: 1,
@@ -219,22 +248,112 @@ describe("SaleOrders", () => {
     );
 
     await screen.findByText("SO-1");
-    await user.click(screen.getByRole("button", { name: "Fecha creacion" }));
-    await user.click(await screen.findByText("Mes"));
-    await user.click(await screen.findByRole("button", { name: "Julio" }));
+    await user.click(screen.getByRole("button", { name: "Fechas" }));
+    await user.click(await screen.findByRole("button", { name: "Ultimos 7 dias" }));
 
     await waitFor(() => {
       expect(
         listSaleOrdersMock.mock.calls.some(([params]) =>
           params?.filters?.some(
-            (rule: { field?: string; operator?: string; value?: string }) =>
+            (rule: { field?: string; operator?: string; range?: { start?: string; end?: string } }) =>
               rule.field === "createdAt" &&
-              rule.operator === "inMonth" &&
-              rule.value === `${selectedYear}-07`,
+              rule.operator === "between" &&
+              rule.range?.start === toDateKey(start) &&
+              rule.range?.end === toDateKey(today),
           ),
         ),
       ).toBe(true);
     });
+  });
+
+  it("moves the toolbar date range to the selected date field", async () => {
+    const user = userEvent.setup();
+    listSaleOrdersMock.mockResolvedValue({
+      items: [buildSaleOrder("Pendiente")],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("SO-1");
+    await user.click(screen.getByRole("button", { name: "Fechas" }));
+    await user.click(await screen.findByRole("button", { name: "Ultimos 7 dias" }));
+
+    await user.click(screen.getByRole("button", { name: "Fechas" }));
+    await user.click(await screen.findByRole("button", { name: "Campo fecha: Fecha creacion" }));
+    await user.click(await screen.findByRole("option", { name: "Fecha entrega" }));
+
+    await waitFor(() => {
+      expect(
+        listSaleOrdersMock.mock.calls.some(([params]) =>
+          params?.filters?.some(
+            (rule: { field?: string; operator?: string; range?: { start?: string; end?: string } }) =>
+              rule.field === "deliveryDate" &&
+              rule.operator === "between" &&
+              Boolean(rule.range?.start) &&
+              Boolean(rule.range?.end),
+          ),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("exports sale orders with current smart-search filters", async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:pedidos");
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+
+    getSaleOrderExportColumnsMock.mockResolvedValue([{ key: "number", label: "Numero" }]);
+    getSaleOrderExportPresetsMock.mockResolvedValue([]);
+    exportSaleOrdersExcelMock.mockResolvedValue({
+      blob: new Blob(["demo"], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      filename: "pedidos.xlsx",
+    });
+    listSaleOrdersMock.mockResolvedValue({
+      items: [buildSaleOrder("Pendiente")],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("SO-1");
+    await user.click(await screen.findByRole("button", { name: /exportar/i }));
+    await screen.findByText("Selecciona columnas y orden para Excel.");
+    await user.click(screen.getAllByText("Exportar").at(-1)!);
+
+    await waitFor(() => {
+      expect(exportSaleOrdersExcelMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          columns: [{ key: "number", label: "Numero" }],
+        }),
+      );
+    });
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+    anchorClick.mockRestore();
   });
 
   it("opens the unified modal in create mode from Nuevo pedido", async () => {
@@ -282,12 +401,7 @@ describe("SaleOrders", () => {
     expect(screen.getAllByText("Pagos").length).toBeGreaterThan(0);
   });
 
-  it("copies client, document, phone and advertising code without opening detail", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(window.navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
+  it("keeps client, document, phone and advertising code cells from opening detail", async () => {
     const order = {
       ...buildSaleOrder("Pendiente"),
       advertisingCode: "FB-123",
@@ -306,18 +420,11 @@ describe("SaleOrders", () => {
 
     await screen.findByText("SO-1");
 
-    const copyClient = screen.getByRole("button", { name: "Copiar cliente" });
-    expect(copyClient).not.toBeDisabled();
+    fireEvent.click(screen.getByText("Cliente Prueba"));
+    fireEvent.click(screen.getByText("12345678"));
+    fireEvent.click(screen.getByText("999999999"));
+    fireEvent.click(screen.getByText("FB-123"));
 
-    fireEvent.click(copyClient);
-    fireEvent.click(screen.getByRole("button", { name: "Copiar documento" }));
-    fireEvent.click(screen.getByRole("button", { name: "Copiar telefono" }));
-    fireEvent.click(screen.getByRole("button", { name: "Copiar codigo FB" }));
-
-    expect(writeText).toHaveBeenNthCalledWith(1, "Cliente Prueba");
-    expect(writeText).toHaveBeenNthCalledWith(2, "12345678");
-    expect(writeText).toHaveBeenNthCalledWith(3, "999999999");
-    expect(writeText).toHaveBeenNthCalledWith(4, "FB-123");
     expect(fetchSaleOrderByIdMock).not.toHaveBeenCalled();
   });
 

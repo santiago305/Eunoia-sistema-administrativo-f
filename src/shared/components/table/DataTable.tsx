@@ -220,6 +220,22 @@ export function DataTable<T extends Record<string, unknown>>({
       };
     });
   };
+  const copyTextToClipboard = async (text: string) => {
+    if (!text.trim()) return;
+
+    try {
+      await navigator.clipboard.writeText(text.trim());
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text.trim();
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+  };
 
   const moveColumn = (columnId: string, targetColumnId: string) => {
     setColumnPreferences((previous) => {
@@ -634,26 +650,34 @@ export function DataTable<T extends Record<string, unknown>>({
                             <td
                               key={column.id}
                               onClick={
-                                shouldStopRowClick
+                                shouldStopRowClick || column.copy
                                   ? (event) => {
-                                    event.stopPropagation();
-                                    if (isCellClickable) {
-                                      column.onCellClick?.(row, index, event);
+                                      event.stopPropagation();
+
+                                      if (column.copy) {
+                                        const text = event.currentTarget.innerText;
+                                        void copyTextToClipboard(text);
+                                        return;
+                                      }
+
+                                      if (isCellClickable) {
+                                        column.onCellClick?.(row, index, event);
+                                      }
                                     }
-                                  }
                                   : undefined
                               }
                               onMouseDown={
                                 column.copy
                                   ? (event) => {
-                                    event.stopPropagation();
-                                  }
+                                      event.stopPropagation();
+                                    }
                                   : undefined
                               }
                               className={cn(
-                                "px-2 py-1 align-middle text-foregroun",
+                                "px-2 py-1 align-middle text-foreground",
                                 column.className,
-                                column.copy && "!select-text cursor-text selection:bg-blue-200 selection:text-blue-950 [&_*]:!select-text [&_*]:cursor-text",
+                                column.copy &&
+                                  "!select-text cursor-text hover:bg-blue-50 selection:bg-blue-200 selection:text-blue-950 [&_*]:!select-text [&_*]:cursor-text",
                                 isCellClickable && "cursor-pointer hover:underline",
                               )}
                             >

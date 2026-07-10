@@ -129,21 +129,9 @@ const isValidIsoDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 const DATE_OPERATOR_OPTIONS: SaleOrderSearchOperatorOption[] = [
   { id: SaleOrderSearchOperators.ON, label: "Es" },
-  {
-    id: SaleOrderSearchOperators.IN_MONTH,
-    label: "En el mes",
-    inputMode: "month",
-  },
-  {
-    id: SaleOrderSearchOperators.IN_WEEK,
-    label: "En la semana",
-    inputMode: "week",
-  },
   { id: SaleOrderSearchOperators.AFTER, label: "Después de" },
   { id: SaleOrderSearchOperators.BEFORE, label: "Antes de" },
   { id: SaleOrderSearchOperators.BETWEEN, label: "Entre" },
-  { id: SaleOrderSearchOperators.ON_OR_AFTER, label: "Desde" },
-  { id: SaleOrderSearchOperators.ON_OR_BEFORE, label: "Hasta" },
 ];
 
 const OPERATOR_LABELS: Record<SaleOrderSearchOperator, string> = {

@@ -10,7 +10,7 @@ import {
     type RefAttributes,
     type SetStateAction,
 } from "react";
-import { BadgePercent, Bike, Plus } from "lucide-react";
+import { Bike, Plus } from "lucide-react";
 import { env } from "@/env";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type {
@@ -82,7 +82,6 @@ const resolveComponentImage = async (component: SaleOrderItemComponentInput) => 
 export type SaleOrderItemsSectionHandle = {
     openCreate: () => void;
     openTariff: () => void;
-    openDiscount: () => void;
 };
 
 function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
@@ -96,10 +95,8 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
 ) {
     const [openEditor, setOpenEditor] = useState(false);
     const [openTarifa, setOpenTarifa] = useState(false);
-    const [openDiscount, setOpenDiscount] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState("");
     const [tarifa, setTarifa] = useState(0);
-    const [discount, setDiscount] = useState(0);
     const [editIndex, setEditIndex] = useState<number | null>(null);
     const [draft, setDraft] = useState<SaleOrderItemInput>(() => buildEmptySaleOrderItem());
 
@@ -130,19 +127,13 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
         setOpenTarifa(true);
     }, [form.deliveryCost]);
 
-    const openDiscountModal = useCallback(() => {
-        setDiscount(form.discount ?? 0);
-        setOpenDiscount(true);
-    }, [form.discount]);
-
     useImperativeHandle(
         ref,
         () => ({
             openCreate,
             openTariff: openTarifaModal,
-            openDiscount: openDiscountModal,
         }),
-        [openCreate, openDiscountModal, openTarifaModal],
+        [openCreate, openTarifaModal],
     );
 
     return (
@@ -151,9 +142,6 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
                 <div className="px-3 sm:px-4 flex items-center justify-end gap-2">
                     <SystemButton variant="motion" leftIcon={<Bike className="h-4 w-4" />} onClick={openTarifaModal}>
                         Tarifa
-                    </SystemButton>
-                    <SystemButton variant="warning" leftIcon={<BadgePercent className="h-4 w-4" />} onClick={openDiscountModal}>
-                        Descuento
                     </SystemButton>
                     <SystemButton leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate} disabled={!productsEditable}>
                         Agregar Pack
@@ -230,37 +218,6 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
                         onClick={() => {
                             setForm((prev) => ({ ...prev, deliveryCost: Math.max(0, tarifa) }));
                             setOpenTarifa(false);
-                        }}
-                    >
-                        Guardar
-                    </SystemButton>
-                </div>
-            </Modal>
-            <Modal open={openDiscount} onClose={() => setOpenDiscount(false)} title="Descuento">
-                <div className="p-4">
-                    <FloatingInput
-                        label="Descuento"
-                        name="sale-order-discount"
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={String(discount)}
-                        onChange={(event) => {
-                            setDiscount(normalizeMoney(parseDecimalInput(event.target.value)));
-                        }}
-                    />
-                </div>
-                <div className="p-4 border-t flex justify-end gap-2">
-                    <SystemButton variant="outline" onClick={() => setOpenDiscount(false)}>
-                        Cancelar
-                    </SystemButton>
-                    <SystemButton
-                        onClick={() => {
-                            setForm((previous) => ({
-                                ...previous,
-                                discount: Math.max(0, discount),
-                            }));
-                            setOpenDiscount(false);
                         }}
                     >
                         Guardar

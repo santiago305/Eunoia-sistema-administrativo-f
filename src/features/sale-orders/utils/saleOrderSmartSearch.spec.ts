@@ -183,26 +183,20 @@ describe("sale order workflow and state smart filters", () => {
   });
 });
 
-describe("sale order calendar period smart filters", () => {
-  it("exposes reusable month and week inputs on both date fields", () => {
+describe("sale order date smart filters", () => {
+  it("exposes the supported sale-order date operators", () => {
     const columns = buildSaleOrderSmartSearchColumns(searchState);
 
-    for (const field of ["scheduleDate", "deliveryDate"]) {
+    for (const field of ["createdAt", "scheduleDate", "deliveryDate"]) {
       const column = columns.find((item) => item.id === field);
 
       expect(column?.operators).toEqual(
-        expect.arrayContaining([
-          {
-            id: "inMonth",
-            label: "En el mes",
-            inputMode: "month",
-          },
-          {
-            id: "inWeek",
-            label: "En la semana",
-            inputMode: "week",
-          },
-        ]),
+        [
+          { id: "on", label: "Es" },
+          { id: "after", label: "Después de" },
+          { id: "before", label: "Antes de" },
+          { id: "between", label: "Entre" },
+        ],
       );
     }
   });

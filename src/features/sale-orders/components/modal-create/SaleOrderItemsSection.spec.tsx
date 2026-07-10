@@ -76,12 +76,6 @@ function ItemsHarness() {
       >
         Abrir tarifa externa
       </button>
-      <button
-        type="button"
-        onClick={() => actionsRef.current?.openDiscount()}
-      >
-        Abrir descuento externo
-      </button>
       <SaleOrderItemsSection
         ref={actionsRef}
         form={form}
@@ -225,7 +219,7 @@ describe("SaleOrderItemsSection external actions", () => {
     expect(image.src).toContain("/uploads/fetched-sku.webp");
   });
 
-  it("hides its internal actions and exposes every modal command", async () => {
+  it("hides its internal actions and exposes the remaining modal commands", async () => {
     const user = userEvent.setup();
     render(<ItemsHarness />);
 
@@ -250,11 +244,5 @@ describe("SaleOrderItemsSection external actions", () => {
       screen.getByRole("dialog", { name: "Tarifa de envío" }),
     ).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Abrir descuento externo" }),
-    );
-    expect(
-      screen.getByRole("dialog", { name: "Descuento" }),
-    ).toBeInTheDocument();
   });
 });
