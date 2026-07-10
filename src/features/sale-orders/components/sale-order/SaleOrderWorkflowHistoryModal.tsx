@@ -222,8 +222,8 @@ export function SaleOrderWorkflowHistoryModal({
       open={open}
       onClose={onClose}
       title={`Historial del tipo${saleOrderLabel ? ` · ${saleOrderLabel}` : ""}`}
-      className="max-w-[96vw]"
-      bodyClassName="h-[80vh] w-[70vh] p-0"
+      className="max-w-[350px]"
+      bodyClassName="h-[80vh] w-[50vh] p-0"
     >
       {loading ? (
         <div className="grid h-full place-items-center text-sm text-zinc-500">

@@ -1,5 +1,5 @@
 import { Popover } from "@/shared/components/modales/Popover";
-import { SystemButton } from "@/shared/components/components/SystemButton";
+import { ButtonSize, ButtonVariant, SystemButton } from "@/shared/components/components/SystemButton";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { GripVertical, Download, Save } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -23,6 +23,9 @@ type Props<TColumn extends ExportColumn = ExportColumn> = {
   onDeletePreset?: (metricId: string) => Promise<void> | void;
   onExport: (columns: TColumn[]) => Promise<void> | void;
   buttonLabel?: string;
+  buttonSize?: ButtonSize;
+  buttonClass?: string;
+  buttonVariant?: ButtonVariant;
 };
 
 export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
@@ -33,6 +36,9 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
   onDeletePreset,
   onExport,
   buttonLabel = "Exportar",
+  buttonSize="sm",
+  buttonClass,
+  buttonVariant
 }: Props<TColumn>) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -71,7 +77,7 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
 
   return (
     <div className="relative inline-block">
-      <SystemButton ref={buttonRef} size="sm" leftIcon={<Download className="h-4 w-4" />} onClick={() => setOpen((v) => !v)}>
+      <SystemButton ref={buttonRef} size={buttonSize} variant={buttonVariant} className={buttonClass} leftIcon={<Download className="h-4 w-4" />} onClick={() => setOpen((v) => !v)}>
         {buttonLabel}
       </SystemButton>
 

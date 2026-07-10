@@ -6,7 +6,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
-type ButtonVariant =
+export type ButtonVariant =
   | "primary"
   | "secondary"
   | "success"
@@ -17,7 +17,7 @@ type ButtonVariant =
   | "link"
   | "motion";
 
-type ButtonSize = "sm" | "md" | "lg" | "icon" | "custom";
+export type ButtonSize = "sm" | "md" | "lg" | "icon" | "custom";
 
 type SystemButtonProps = {
   children?: ReactNode;

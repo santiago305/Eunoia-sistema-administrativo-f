@@ -4,6 +4,8 @@ import type {
   CreateSaleOrderCommandDto,
   CreateSaleOrderResponse,
   SaleOrder,
+  SaleOrderExportColumn,
+  SaleOrderExportPreset,
   SaleOrderSkuAttribute,
   SaleOrderSkuSnapshot,
   SaleOrderSkuUnit,
@@ -253,6 +255,45 @@ export const deleteSaleOrderPayment = async (saleOrderId: string, paymentId: str
 export const getSaleOrderSearchState = async (): Promise<SaleOrderSearchStateResponse> => {
   const response = await axiosInstance.get<SaleOrderSearchStateResponse>(API_SALE_ORDERS_GROUP.searchState);
   return response.data;
+};
+
+export const getSaleOrderExportColumns = async (): Promise<SaleOrderExportColumn[]> => {
+  const response = await axiosInstance.get<SaleOrderExportColumn[]>(API_SALE_ORDERS_GROUP.exportColumns);
+  return response.data;
+};
+
+export const getSaleOrderExportPresets = async (): Promise<SaleOrderExportPreset[]> => {
+  const response = await axiosInstance.get<SaleOrderExportPreset[]>(API_SALE_ORDERS_GROUP.exportPresets);
+  return response.data;
+};
+
+export const saveSaleOrderExportPreset = async (payload: {
+  name: string;
+  columns: SaleOrderExportColumn[];
+  useDateRange?: boolean;
+}): Promise<{ metricId: string }> => {
+  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteSaleOrderExportPreset = async (metricId: string): Promise<boolean> => {
+  const response = await axiosInstance.delete(API_SALE_ORDERS_GROUP.deleteExportPreset(metricId));
+  return response.data;
+};
+
+export const exportSaleOrdersExcel = async (payload: {
+  columns: SaleOrderExportColumn[];
+  q?: string;
+  filters?: Record<string, unknown>[];
+  useDateRange?: boolean;
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `pedidos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
 };
 
 export const getSaleOrderStatistics = async (

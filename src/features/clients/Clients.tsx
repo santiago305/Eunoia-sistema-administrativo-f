@@ -51,7 +51,7 @@ import {
 } from "@/features/clients/utils/clientSmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 25;
 
 type BackendErrorPayload = {
   message?: string | string[];
@@ -580,14 +580,6 @@ export default function Clients() {
         header: "Dirección",
         cell: (row) => <span className="text-black/70">{row.address ?? "—"}</span>,
         className: "text-black/70",
-      },
-      {
-        id: "status",
-        header: "Estado",
-        cell: (row) => <StatusPill active={row.isActive} PRIMARY={PRIMARY} />,
-        headerClassName: "text-center [&>div]:justify-center",
-        className: "text-center",
-        sortAccessor: (row) => row.isActive,
       },
       {
         id: "actions",

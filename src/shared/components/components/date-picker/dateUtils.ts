@@ -265,6 +265,7 @@ export function formatRange(start?: Date | null, end?: Date | null) {
   if (!start && !end) return "";
   if (start && !end) return `${formatDate(start)} - ...`;
   if (!start && end) return `... - ${formatDate(end)}`;
+  if (isSameDay(start, end)) return formatDate(start);
   return `${formatDate(start)} - ${formatDate(end)}`;
 }
 

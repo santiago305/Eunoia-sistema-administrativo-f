@@ -4,6 +4,7 @@ import { PageShell } from "@/shared/layouts/PageShell";
 import {
     ClientType,
     type SaleOrder,
+    type SaleOrderExportColumn,
     type SaleOrderJsonImportRow,
     type SaleOrderSearchRule,
     type SaleOrderSearchSnapshot,
@@ -14,12 +15,17 @@ import {
     bulkAssignSaleOrders,
     bulkChangeSaleOrderState,
     deleteSaleOrder,
+    deleteSaleOrderExportPreset,
     deleteSaleOrderSearchMetric,
+    exportSaleOrdersExcel,
     fetchSaleOrderById,
+    getSaleOrderExportColumns,
+    getSaleOrderExportPresets,
     getSaleOrderPdf,
     getSaleOrderSearchState,
     listSaleOrders,
     previewSaleOrdersJsonImport,
+    saveSaleOrderExportPreset,
     saveSaleOrderSearchMetric,
     type SaleOrderBulkActionResponse,
 } from "@/shared/services/saleOrderService";
@@ -65,6 +71,9 @@ import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { formatDate } from "@/shared/utils/formatDate";
 import { AlertModal } from "@/shared/components/components/AlertModal";
+import { getDateKey, parseDateOnly } from "@/shared/components/components/date-picker/dateUtils";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
 const sanitizeSaleOrderImportRows = (rows: SaleOrderJsonImportRow[]): SaleOrderJsonImportRow[] =>
     rows.map((row) => {
@@ -74,6 +83,17 @@ const sanitizeSaleOrderImportRows = (rows: SaleOrderJsonImportRow[]): SaleOrderJ
         });
         return next;
     });
+
+const TABLE_DATE_FIELD_OPTIONS = [
+    { value: SaleOrderSearchFields.CREATED_AT, label: "Fecha creacion" },
+    { value: SaleOrderSearchFields.SCHEDULE_DATE, label: "Fecha agenda" },
+    { value: SaleOrderSearchFields.DELIVERY_DATE, label: "Fecha entrega" },
+];
+
+const parseTableDateRange = (rule: SaleOrderSearchRule | null) => ({
+    startDate: rule?.operator === SaleOrderSearchOperators.BETWEEN ? parseDateOnly(rule.range?.start) : null,
+    endDate: rule?.operator === SaleOrderSearchOperators.BETWEEN ? parseDateOnly(rule.range?.end) : null,
+});
 
 const formatMoney = (value?: number | null) =>
     new Intl.NumberFormat("es-PE", {
@@ -174,6 +194,10 @@ export default function SaleOrders() {
     const [orders, setOrders] = useState<SaleOrder[]>([]);
     const [searchState, setSearchState] = useState<SaleOrderSearchStateResponse | null>(null);
     const [savingMetric, setSavingMetric] = useState(false);
+    const [exportColumns, setExportColumns] = useState<SaleOrderExportColumn[]>([]);
+    const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: SaleOrderExportColumn[] }>>([]);
+    const [exporting, setExporting] = useState(false);
+    const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
     const selectedOrderRef = useRef<SaleOrder | null>(null);
     const [paymentsOpen, setPaymentsOpen] = useState(false);
@@ -246,14 +270,24 @@ export default function SaleOrders() {
         [searchState],
     );
     const searchChips = useMemo(() => buildSaleOrderSearchChips(executedSnapshot, searchState), [executedSnapshot, searchState]);
+    const [tableDateField, setTableDateField] = useState<SaleOrderSearchFilterKey>(SaleOrderSearchFields.CREATED_AT);
     const tableDateRule = useMemo(
-        () => findSaleOrderSearchRule(draftSnapshot, SaleOrderSearchFields.CREATED_AT),
-        [draftSnapshot],
+        () => findSaleOrderSearchRule(draftSnapshot, tableDateField),
+        [draftSnapshot, tableDateField],
     );
+    const tableDateRuleRange = useMemo(() => parseTableDateRange(tableDateRule), [tableDateRule]);
+    const [tableDateDraftRange, setTableDateDraftRange] = useState<{
+        startDate: Date | null;
+        endDate: Date | null;
+    }>(tableDateRuleRange);
     const selectedSaleOrders = useMemo(
         () => orders.filter((order) => selectedSaleOrderIds.includes(order.id)),
         [orders, selectedSaleOrderIds],
     );
+
+    useEffect(() => {
+        setTableDateDraftRange(tableDateRuleRange);
+    }, [tableDateRuleRange]);
 
     const openModal = useCallback(() => {
         selectedOrderRef.current = null;
@@ -284,6 +318,30 @@ export default function SaleOrders() {
         }
     }, []);
 
+    const loadExportColumns = useCallback(async () => {
+        try {
+            const response = await getSaleOrderExportColumns();
+            setExportColumns(response ?? []);
+        } catch {
+            showFeedbackRef.current(errorResponse("Error al cargar columnas de exportacion."));
+        }
+    }, []);
+
+    const loadExportPresets = useCallback(async () => {
+        try {
+            const response = await getSaleOrderExportPresets();
+            setExportPresets(
+                (response ?? []).map((item) => ({
+                    metricId: item.metricId,
+                    name: item.name,
+                    columns: item.snapshot?.columns ?? [],
+                })),
+            );
+        } catch {
+            showFeedbackRef.current(errorResponse("Error al cargar presets de exportacion."));
+        }
+    }, []);
+
     const updateSelectedOrder = useCallback((updater: React.SetStateAction<SaleOrder | null>) => {
         setSelectedOrder((current) => {
             const next = typeof updater === "function" ? (updater as (value: SaleOrder | null) => SaleOrder | null)(current) : updater;
@@ -295,6 +353,14 @@ export default function SaleOrders() {
     useEffect(() => {
         modalStateRef.current = modalState;
     }, [modalState]);
+
+    useEffect(() => {
+        void loadExportColumns();
+    }, [loadExportColumns]);
+
+    useEffect(() => {
+        void loadExportPresets();
+    }, [loadExportPresets]);
 
     const updateUx = async () => {
         await loadOrders();
@@ -538,6 +604,61 @@ export default function SaleOrders() {
         [searchText],
     );
 
+    const handleTableDateRangeChange = useCallback(
+        ({ startDate, endDate }: { startDate: Date | null; endDate: Date | null }) => {
+            setTableDateDraftRange({ startDate, endDate });
+
+            if (!startDate && !endDate) {
+                handleRemoveSearchRule(tableDateField);
+                return;
+            }
+
+            if (!startDate || !endDate) return;
+
+            handleApplySearchRule({
+                field: tableDateField,
+                operator: SaleOrderSearchOperators.BETWEEN,
+                range: {
+                    start: getDateKey(startDate),
+                    end: getDateKey(endDate),
+                },
+            });
+        },
+        [handleApplySearchRule, handleRemoveSearchRule, tableDateField],
+    );
+
+    const handleTableDateFieldChange = useCallback(
+        (fieldId: string) => {
+            const nextField = fieldId as SaleOrderSearchFilterKey;
+            const previousField = tableDateField;
+            setTableDateField(nextField);
+
+            const { startDate, endDate } = tableDateDraftRange;
+            if (!startDate || !endDate || previousField === nextField) return;
+
+            startTransition(() => {
+                setSearchFilters((current: SaleOrderSearchFilters) => {
+                    const snapshot = sanitizeSaleOrderSearchSnapshot({
+                        q: searchText,
+                        filters: current,
+                    });
+                    const withoutPrevious = removeSaleOrderSearchKey(snapshot, previousField);
+                    const next = upsertSaleOrderSearchRule(withoutPrevious, {
+                        field: nextField,
+                        operator: SaleOrderSearchOperators.BETWEEN,
+                        range: {
+                            start: getDateKey(startDate),
+                            end: getDateKey(endDate),
+                        },
+                    });
+                    return next.filters;
+                });
+                setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
+            });
+        },
+        [searchText, tableDateDraftRange, tableDateField],
+    );
+
     const handleRemoveChip = useCallback(
         (key: "q" | SaleOrderSearchFilterKey) => {
             const nextSnapshot = removeSaleOrderSearchKey(
@@ -609,6 +730,48 @@ export default function SaleOrders() {
         },
         [loadSearchState, showFeedback],
     );
+
+    const handleExport = useCallback(async (columnsToExport: SaleOrderExportColumn[]) => {
+        setExporting(true);
+        try {
+            const filters = useTableDateRangeForExport
+                ? executedSnapshot.filters
+                : executedSnapshot.filters.filter((rule) => !TABLE_DATE_FIELD_OPTIONS.some((field) => field.value === rule.field));
+            const file = await exportSaleOrdersExcel({
+                columns: columnsToExport,
+                q: executedSnapshot.q,
+                filters: filters as unknown as Record<string, unknown>[],
+                useDateRange: useTableDateRangeForExport,
+            });
+            const url = URL.createObjectURL(file.blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = file.filename;
+            anchor.click();
+            URL.revokeObjectURL(url);
+            showFeedback(successResponse("Excel exportado correctamente."));
+        } catch {
+            showFeedback(errorResponse("No se pudo exportar el Excel."));
+        } finally {
+            setExporting(false);
+        }
+    }, [executedSnapshot.filters, executedSnapshot.q, showFeedback, useTableDateRangeForExport]);
+
+    const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: SaleOrderExportColumn[] }) => {
+        await saveSaleOrderExportPreset({
+            name: payload.name,
+            columns: payload.columns,
+            useDateRange: useTableDateRangeForExport,
+        });
+        await loadExportPresets();
+        showFeedback(successResponse("Preset de exportacion guardado."));
+    }, [loadExportPresets, showFeedback, useTableDateRangeForExport]);
+
+    const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+        await deleteSaleOrderExportPreset(metricId);
+        await loadExportPresets();
+        showFeedback(successResponse("Preset eliminado."));
+    }, [loadExportPresets, showFeedback]);
 
     const confirmDeleteOrder = useCallback(async () => {
         if (!deleteOrder?.id) return;
@@ -883,6 +1046,7 @@ export default function SaleOrders() {
                     </div>
                 ),
                 sortable: false,
+                visible: false
             },
             {
                 id: "codefb",
@@ -898,6 +1062,7 @@ export default function SaleOrders() {
                 ),
                 sortable: false,
                 stopRowClick: true,
+                visible: false
             },
             {
                 id: "createdTo",
@@ -1052,36 +1217,70 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
-                            <SystemButton size="lg" variant="outline"  className="rounded-md"
-                             leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)}>
-                                Tipos
-                            </SystemButton>
-                            <SystemButton size="lg" variant="outline"  className="rounded-md"
-                             leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle}>
-                                Importar
-                            </SystemButton>
-                            <SystemButton size="lg" className="rounded-md"
-                             leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle}>
-                                Nuevo pedido
-                            </SystemButton>
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                    <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow"
+                                        leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
+                                    </SystemButton>
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">Tipos</TooltipContent>
+                            </Tooltip>
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                    <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow"
+                                    leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle ?? "Importar pedidos"}>
+                                    </SystemButton>
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">Importar</TooltipContent>
+                            </Tooltip>
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                    {exportColumns.length ? (
+                                        <ExportPopover
+                                            buttonLabel=""
+                                            buttonSize="icon"
+                                            buttonClass="h-11"
+                                            buttonVariant="outline"
+                                            columns={exportColumns}
+                                            loading={exporting}
+                                            presets={exportPresets}
+                                            onSavePreset={handleSaveExportPreset}
+                                            onDeletePreset={handleDeleteExportPreset}
+                                            onExport={handleExport}
+                                        />
+                                    ) : null}
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">Exportar</TooltipContent>
+                            </Tooltip>
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                        <SystemButton size="icon" className="rounded-md h-11 shadow"
+                                        leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle ?? "Nuevo pedido"}>
+                                        </SystemButton>
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">Nuevo</TooltipContent>
+                            </Tooltip>
                         </>
                     }
-                    smartRangeDate={{
-                        fieldId: SaleOrderSearchFields.CREATED_AT,
-                        value: tableDateRule,
-                        onChange: (rule) => {
-                            if (rule) {
-                                handleApplySearchRule(rule as SaleOrderSearchRule);
-                                return;
-                            }
-                            handleRemoveSearchRule(SaleOrderSearchFields.CREATED_AT);
-                        },
-                        operators: {
-                            range: SaleOrderSearchOperators.BETWEEN,
-                            week: SaleOrderSearchOperators.IN_WEEK,
-                            month: SaleOrderSearchOperators.IN_MONTH,
-                        },
-                        label: "Fecha creacion",
+                    rangeDates={{
+                        startDate: tableDateDraftRange.startDate,
+                        endDate: tableDateDraftRange.endDate,
+                        onChange: handleTableDateRangeChange,
+                        label: "Fechas",
+                        name: "sale-orders-range-dates",
+                        onFieldChange: handleTableDateFieldChange,
+                    }}
+                    useRangeDatesForExternalExport
+                    onExternalExportRangeStateChange={(state) => {
+                        setUseTableDateRangeForExport(state.useDateRange);
                     }}
                     toolbarSearchContent={
                         <DataTableSearchBar

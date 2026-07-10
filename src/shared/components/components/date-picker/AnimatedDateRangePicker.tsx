@@ -1,10 +1,24 @@
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { CalendarPanel } from "./CalendarPanel";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { DatePickerPanelPortal } from "./DatePickerPanelPortal";
-import { formatRange, isBeforeDay } from "./dateUtils";
+import {
+  addDays,
+  addMonths,
+  endOfMonth,
+  formatRange,
+  getMonthGrid,
+  getMonthTitle,
+  isDateDisabled,
+  isBeforeDay,
+  isSameDay,
+  isWithinInclusiveRange,
+  startOfCalendarWeek,
+  startOfMonth,
+  WEEKDAY_LABELS,
+} from "./dateUtils";
 import { useFloatingDatePanel } from "./useFloatingDatePanel";
 
 type AnimatedDateRangePickerProps = {
@@ -25,7 +39,175 @@ type AnimatedDateRangePickerProps = {
   disableFuture?: boolean;
   clearable?: boolean;
   closeOnComplete?: boolean;
+  panelMinWidth?: number;
+  fields?: { value: string; label: string }[];
+  fieldValue?: string;
+  onFieldChange?: (field: string) => void;
 };
+
+type RangePreset = {
+  label: string;
+  getRange: (today: Date) => { startDate: Date; endDate: Date };
+};
+
+const RANGE_PRESETS: RangePreset[] = [
+  {
+    label: "Hoy",
+    getRange: (today) => ({ startDate: today, endDate: today }),
+  },
+  {
+    label: "Ayer",
+    getRange: (today) => {
+      const yesterday = addDays(today, -1);
+      return { startDate: yesterday, endDate: yesterday };
+    },
+  },
+  {
+    label: "Ultimos 7 dias",
+    getRange: (today) => ({ startDate: addDays(today, -6), endDate: today }),
+  },
+  {
+    label: "Ultimos 30 dias",
+    getRange: (today) => ({ startDate: addDays(today, -29), endDate: today }),
+  },
+  {
+    label: "Ultimos 90 dias",
+    getRange: (today) => ({ startDate: addDays(today, -89), endDate: today }),
+  },
+  {
+    label: "El mes pasado",
+    getRange: (today) => {
+      const previousMonth = addMonths(startOfMonth(today), -1);
+      return {
+        startDate: startOfMonth(previousMonth),
+        endDate: endOfMonth(previousMonth),
+      };
+    },
+  },
+  {
+    label: "Desde inicio de semana hasta ahora",
+    getRange: (today) => ({
+      startDate: startOfCalendarWeek(today),
+      endDate: today,
+    }),
+  },
+  {
+    label: "Desde inicio de mes hasta ahora",
+    getRange: (today) => ({ startDate: startOfMonth(today), endDate: today }),
+  },
+];
+
+type RangeMonthGridProps = {
+  monthDate: Date;
+  rangeStart?: Date | null;
+  rangeEnd?: Date | null;
+  hoverDate?: Date | null;
+  onHoverDateChange: (date: Date | null) => void;
+  onSelectDate: (date: Date) => void;
+  minDate?: Date;
+  maxDate?: Date;
+  disablePast?: boolean;
+  disableFuture?: boolean;
+};
+
+function RangeMonthGrid({
+  monthDate,
+  rangeStart,
+  rangeEnd,
+  hoverDate,
+  onHoverDateChange,
+  onSelectDate,
+  minDate,
+  maxDate,
+  disablePast,
+  disableFuture,
+}: RangeMonthGridProps) {
+  const days = useMemo(() => getMonthGrid(monthDate), [monthDate]);
+  const previewRangeStart = rangeStart && !rangeEnd && hoverDate
+    ? isBeforeDay(hoverDate, rangeStart)
+      ? hoverDate
+      : rangeStart
+    : undefined;
+  const previewRangeEnd = rangeStart && !rangeEnd && hoverDate
+    ? isBeforeDay(hoverDate, rangeStart)
+      ? rangeStart
+      : hoverDate
+    : undefined;
+
+  return (
+    <div className="px-3 pb-3">
+      <div className="mb-2 grid grid-cols-7 gap-1">
+        {WEEKDAY_LABELS.map((day) => (
+          <div
+            key={day}
+            className="flex h-8 items-center justify-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day) => {
+          const disabled = isDateDisabled(day.date, {
+            minDate,
+            maxDate,
+            disablePast,
+            disableFuture,
+          });
+          const canShowRangeState = day.isCurrentMonth;
+          const isRangeStart = canShowRangeState && isSameDay(day.date, rangeStart);
+          const isRangeEnd = canShowRangeState && isSameDay(day.date, rangeEnd);
+          const isPreviewInRange =
+            canShowRangeState && previewRangeStart && previewRangeEnd
+              ? isWithinInclusiveRange(day.date, previewRangeStart, previewRangeEnd)
+              : false;
+          const isRangeInRange =
+            canShowRangeState && rangeStart && rangeEnd
+              ? isWithinInclusiveRange(day.date, rangeStart, rangeEnd)
+              : false;
+          const isInRange = isRangeInRange || isPreviewInRange;
+          const calendarDayLabel = `${day.dayNumber} ${getMonthTitle(day.date).toLowerCase()}`;
+
+          return (
+            <button
+              key={day.dateKey}
+              type="button"
+              disabled={disabled}
+              aria-pressed={isRangeStart || isRangeEnd}
+              aria-label={calendarDayLabel}
+              onClick={() => {
+                if (disabled) return;
+                onSelectDate(day.date);
+              }}
+              onMouseEnter={() => {
+                if (disabled) return;
+                onHoverDateChange(day.date);
+              }}
+              onMouseLeave={() => onHoverDateChange(null)}
+              className={cn(
+                "relative flex h-9 items-center justify-center rounded-lg text-sm transition-all",
+                day.isCurrentMonth ? "text-foreground" : "text-muted-foreground/50",
+                disabled && "cursor-not-allowed opacity-40",
+                !disabled && "hover:bg-muted",
+                isInRange && "rounded-none bg-primary/10",
+                (isRangeStart || isRangeEnd) &&
+                  "z-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary",
+                day.isToday &&
+                  !(isRangeStart || isRangeEnd) &&
+                  "border border-primary/40",
+                isRangeStart && "rounded-l-lg",
+                isRangeEnd && "rounded-r-lg",
+              )}
+            >
+              {day.dayNumber}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function AnimatedDateRangePicker({
   label,
@@ -45,6 +227,10 @@ export function AnimatedDateRangePicker({
   disableFuture,
   clearable = true,
   closeOnComplete = true,
+  panelMinWidth = 760,
+  fields,
+  fieldValue,
+  onFieldChange,
 }: AnimatedDateRangePickerProps) {
   const [monthDate, setMonthDate] = useState<Date>(startDate ?? new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
@@ -65,8 +251,8 @@ export function AnimatedDateRangePicker({
   } = useFloatingDatePanel({
     disabled,
     readOnly,
-    panelMinWidth: 320,
-    preferredHeight: 340,
+    panelMinWidth,
+    preferredHeight: 430,
   });
 
   const displayValue = useMemo(
@@ -84,6 +270,34 @@ export function AnimatedDateRangePicker({
   const handleClose = () => {
     closePanel();
     setHoverDate(null);
+  };
+
+  const handleSelectDate = (date: Date) => {
+    if (!startDate || (startDate && endDate)) {
+      onChange({ startDate: date, endDate: null });
+      return;
+    }
+
+    if (isBeforeDay(date, startDate)) {
+      onChange({ startDate: date, endDate: startDate });
+      if (closeOnComplete) {
+        closePanel();
+      }
+      return;
+    }
+
+    onChange({ startDate, endDate: date });
+    if (closeOnComplete) {
+      closePanel();
+    }
+  };
+
+  const handlePresetClick = (preset: RangePreset) => {
+    const today = new Date();
+    const nextRange = preset.getRange(today);
+    onChange(nextRange);
+    setMonthDate(nextRange.startDate);
+    closePanel();
   };
 
   return (
@@ -110,6 +324,7 @@ export function AnimatedDateRangePicker({
             disabled && "cursor-not-allowed border-border/70 bg-muted text-muted-foreground",
             readOnly && "cursor-default bg-muted/40 text-foreground",
             className,
+            hasValue && clearable && !disabled && !readOnly && "pr-8",
           )}
           aria-expanded={open}
           aria-haspopup="dialog"
@@ -131,6 +346,22 @@ export function AnimatedDateRangePicker({
           ) : null}
         </button>
 
+        {hasValue && clearable && !disabled && !readOnly ? (
+          <button
+            type="button"
+            aria-label={`Limpiar ${label}`}
+            className="absolute right-1.5 top-1/2 z-10 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onChange({ startDate: null, endDate: null });
+              handleClose();
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+
         <label id={labelId} className="sr-only">
           {label}
         </label>
@@ -148,59 +379,44 @@ export function AnimatedDateRangePicker({
         panelStyle={panelStyle}
         panelId={panelId}
       >
-        <CalendarPanel
-          mode="range"
-          monthDate={monthDate}
-          onMonthDateChange={setMonthDate}
-          rangeStart={startDate}
-          rangeEnd={endDate}
-          hoverDate={hoverDate}
-          onHoverDateChange={setHoverDate}
-          onSelectDate={(date) => {
-            if (!startDate || (startDate && endDate)) {
-              onChange({ startDate: date, endDate: null });
-              return;
-            }
+        <div
+          role="dialog"
+          aria-label={`${label}: rango de fechas`}
+          className="w-full overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-floating-panel"
+        >
+          <div className="grid gap-0 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <aside className="space-y-3 border-b border-border p-3 lg:border-b-0 lg:border-r">
+              {fields?.length ? (
+                <FloatingSelect
+                  label="Campo fecha"
+                  name={`${name}-field`}
+                  value={fieldValue ?? fields[0]?.value ?? ""}
+                  options={fields}
+                  onChange={(value) => onFieldChange?.(value)}
+                  className="h-9 rounded-md text-xs"
+                  panelWidthMode="min-trigger"
+                />
+              ) : null}
 
-            if (isBeforeDay(date, startDate)) {
-              onChange({ startDate: date, endDate: startDate });
-              if (closeOnComplete) {
-                closePanel();
-              }
-              return;
-            }
-
-            onChange({ startDate, endDate: date });
-            if (closeOnComplete) {
-              closePanel();
-            }
-          }}
-          minDate={minDate}
-          maxDate={maxDate}
-          disablePast={disablePast}
-          disableFuture={disableFuture}
-          footer={
-            <div className="flex items-center justify-between gap-2 [&_button]:h-7 [&_button]:rounded-md [&_button]:px-2.5 [&_button]:text-[11px]">
-              <SystemButton
-                type="button"
-                variant="ghost"
-                size="custom"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  const today = new Date();
-                  onChange({ startDate: today, endDate: today });
-                  closePanel();
-                }}
-              >
-                Hoy
-              </SystemButton>
+              <div className="space-y-1">
+                {RANGE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => handlePresetClick(preset)}
+                    className="flex min-h-8 w-full items-center rounded-md px-2 text-left text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
 
               {clearable ? (
                 <SystemButton
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="custom"
-                  className="text-muted-foreground hover:text-foreground"
+                  className="h-9 w-full justify-center rounded-md px-3 text-xs text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     onChange({ startDate: null, endDate: null });
                     handleClose();
@@ -209,10 +425,66 @@ export function AnimatedDateRangePicker({
                   Limpiar
                 </SystemButton>
               ) : null}
+            </aside>
+
+            <div className="border-border">
+              <div className="grid grid-cols-[auto_1fr_auto] items-center border-b border-border px-3 py-3">
+                <button
+                  type="button"
+                  onClick={() => setMonthDate((current) => addMonths(current, -1))}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  aria-label="Mes anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <div className="grid grid-cols-1 gap-2 px-2 text-center text-sm font-semibold text-foreground sm:grid-cols-2">
+                  <div>{getMonthTitle(monthDate)}</div>
+                  <div>{getMonthTitle(addMonths(monthDate, 1))}</div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMonthDate((current) => addMonths(current, 1))}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  aria-label="Mes siguiente"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid gap-0 sm:grid-cols-2">
+                <RangeMonthGrid
+                  monthDate={monthDate}
+                  rangeStart={startDate}
+                  rangeEnd={endDate}
+                  hoverDate={hoverDate}
+                  onHoverDateChange={setHoverDate}
+                  onSelectDate={handleSelectDate}
+                  minDate={minDate}
+                  maxDate={maxDate}
+                  disablePast={disablePast}
+                  disableFuture={disableFuture}
+                />
+
+                <div className="border-t border-border sm:border-l sm:border-t-0">
+                  <RangeMonthGrid
+                    monthDate={addMonths(monthDate, 1)}
+                    rangeStart={startDate}
+                    rangeEnd={endDate}
+                    hoverDate={hoverDate}
+                    onHoverDateChange={setHoverDate}
+                    onSelectDate={handleSelectDate}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    disablePast={disablePast}
+                    disableFuture={disableFuture}
+                  />
+                </div>
+              </div>
             </div>
-          }
-          className="w-full"
-        />
+          </div>
+        </div>
       </DatePickerPanelPortal>
     </div>
   );

@@ -43,10 +43,13 @@ export function SaleOrderPaymentsModal({
   const accent = primaryColor ?? DEFAULT_PRIMARY;
   const { methodOptions, bankAccountOptions } = useSaleOrderPaymentOptions();
 
-  const totalPrice = useMemo(
-    () => (form.items ?? []).reduce((acc, item) => acc + (item.total ?? 0), 0) + (form.deliveryCost ?? 0),
-    [form.deliveryCost, form.items],
-  );
+  const totalPrice = useMemo(() => {
+    const subTotal = (form.items ?? []).reduce((acc, item) => acc + Number(item.total ?? 0), 0);
+    const deliveryCost = Math.max(0, Number(form.deliveryCost ?? 0));
+    const discount = Math.max(0, Number(form.discount ?? 0));
+
+    return Math.max(0, subTotal + deliveryCost - discount);
+  }, [form.deliveryCost, form.discount, form.items]);
 
   const totalPaid = useMemo(() => (form.payments ?? []).reduce((acc, payment) => acc + (payment.amount ?? 0), 0), [form.payments]);
 

@@ -1,4 +1,4 @@
-import { BadgePercent, Plus, Save, X } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { sileo } from "sileo";
+import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { FloatingSuggestOption } from "@/shared/components/components/FloatingSuggestInput";
@@ -39,6 +40,7 @@ import {
   toSaveSaleOrderWithClientDto,
   type SaleOrderEditorForm,
 } from "./saleOrderEditorForm";
+import { normalizeMoney, parseDecimalInput } from "@/shared/utils/functionPurchases";
 
 type Props = {
   mode: "create" | "edit";
@@ -364,14 +366,6 @@ export function SaleOrderEditor({
               <div className="flex items-center justify-end gap-2">
                 <SystemButton
                   size="sm"
-                  variant="warning"
-                  leftIcon={<BadgePercent className="h-4 w-4" />}
-                  onClick={() => itemsSectionRef.current?.openDiscount()}
-                >
-                  Descuento
-                </SystemButton>
-                <SystemButton
-                  size="sm"
                   leftIcon={<Plus className="h-4 w-4" />}
                   onClick={() => itemsSectionRef.current?.openCreate()}
                   disabled={!form.editPolicy.productsEditable}
@@ -394,6 +388,25 @@ export function SaleOrderEditor({
               <div>
                 <SaleOrderEditorSection title="Resumen">
                   <dl className="grid gap-2 text-xs">
+                     <div className="rounded-lg bg-background/80 px-3 py-2">
+                      <FloatingInput
+                        label="Descuento"
+                        name="sale-order-discount"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={String(form.discount ?? 0)}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            discount: Math.max(
+                              0,
+                              normalizeMoney(parseDecimalInput(event.target.value)),
+                            ),
+                          }))
+                        }
+                      />
+                    </div>
                     <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
                       <dt className="text-muted-foreground">Subtotal</dt>
                       <dd className="font-semibold tabular-nums">
@@ -404,12 +417,6 @@ export function SaleOrderEditor({
                       <dt className="text-muted-foreground">Tarifa</dt>
                       <dd className="font-semibold tabular-nums">
                         {money.format(totals.deliveryCost)}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
-                      <dt className="text-muted-foreground">Descuento</dt>
-                      <dd className="font-semibold tabular-nums text-rose-600">
-                        -{money.format(totals.discount)}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-background px-3 py-2">

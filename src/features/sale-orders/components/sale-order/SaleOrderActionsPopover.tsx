@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import {  FileText, Menu,  } from "lucide-react";
+import { CreditCard, FileText, Menu } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 
@@ -14,9 +14,16 @@ type Props = {
 export function SaleOrderActionsPopover({
   order,
   onOpenPdf,
+  onOpenPayments,
 }: Props) {
   const actions = useMemo<ActionItem[]>(
     () => [
+      {
+        id: "payments",
+        label: "Pagos",
+        icon: <CreditCard className="h-4 w-4" />,
+        onClick: () => onOpenPayments(order),
+      },
       {
         id: "pdf",
         label: "Ver PDF",
@@ -38,7 +45,7 @@ export function SaleOrderActionsPopover({
         disabled:true
       },
     ],
-    [onOpenPdf, order],
+    [onOpenPayments, onOpenPdf, order],
   );
 
   return (

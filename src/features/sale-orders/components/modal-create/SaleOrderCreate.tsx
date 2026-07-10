@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
@@ -14,7 +14,7 @@ import { sileo } from "sileo";
 import { buildEmptySaleOrderForm } from "@/features/sale-orders/utils/saleOrderForm";
 import type { CreateSaleOrderDto } from "@/features/sale-orders/types/saleOrder";
 import { deriveSkuPresentation } from "@/features/sale-orders/utils/skuPresentation";
-import { toLocalDateKey } from "@/shared/utils/functionPurchases";
+import { normalizeMoney, parseDecimalInput, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { createSaleOrder, fetchSaleOrderById, getSaleOrderPdf, updateSaleOrder } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { validateSaleOrderForm } from "@/features/sale-orders/utils/saleOrderValidation";
@@ -36,6 +36,11 @@ type Props = {
 };
 
 const PRIMARY = "hsl(var(--primary))";
+
+const money = new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+});
 
 const dateOnlyToDate = (value?: string) => {
     if (!value) return null;
@@ -71,6 +76,15 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
 
     const isEdit = Boolean(orderId);
 
+    const totals = useMemo(() => {
+        const subTotal = (form.items ?? []).reduce((acc, item) => acc + Number(item.total ?? 0), 0);
+        const deliveryCost = Math.max(0, Number(form.deliveryCost ?? 0));
+        const discount = Math.max(0, Number(form.discount ?? 0));
+        const total = Math.max(0, subTotal + deliveryCost - discount);
+
+        return { subTotal, deliveryCost, discount, total };
+    }, [form.deliveryCost, form.discount, form.items]);
+
     const loadClientsOptions = useCallback(async () => {
         const clients = await listClients({ page: 1, limit: 100 });
 
@@ -103,6 +117,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                     scheduleDate: order.scheduleDate ?? toLocalDateKey(new Date()),
                     deliveryDate: order.deliveryDate ?? undefined,
                     deliveryCost: Number(order.deliveryCost ?? 0),
+                    discount: Number(order.discount ?? 0),
                     subTotal: Number(order.subTotal ?? 0),
                     total: Number(order.total ?? 0),
                     note: order.note ?? "",
@@ -312,12 +327,12 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
         }
         setLoading(true);
         try {
-            const subTotal = (form.items ?? []).reduce((acc, item) => acc + (item.total ?? 0), 0);
-            const total = subTotal + (form.deliveryCost ?? 0);
             const payload = {
                 ...form,
-                subTotal,
-                total,
+                subTotal: totals.subTotal,
+                deliveryCost: totals.deliveryCost,
+                discount: totals.discount,
+                total: totals.total,
                 items: toSaleOrderItemCommands(form.items ?? []),
             };
 
@@ -354,7 +369,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
         } finally {
             setLoading(false);
         }
-    }, [form, isEdit, orderId, onSaved]);
+    }, [form, isEdit, orderId, onSaved, totals]);
 
     const content = (
         <>
@@ -475,6 +490,38 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                                 />
                             </div>
                             <FloatingInput label="Nota" name="note" className="text-black text-xs" value={form.note ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))} />
+
+                            <div className="rounded-xl border border-border/70 bg-background p-3 space-y-2 text-xs">
+                                <p className="font-semibold text-foreground">Resumen</p>
+                                <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                                    <span className="text-muted-foreground">Subtotal</span>
+                                    <span className="font-semibold tabular-nums">{money.format(totals.subTotal)}</span>
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                                    <span className="text-muted-foreground">Tarifa</span>
+                                    <span className="font-semibold tabular-nums">{money.format(totals.deliveryCost)}</span>
+                                </div>
+                                <FloatingInput
+                                    label="Descuento"
+                                    name="sale-order-discount"
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    className="text-black text-xs"
+                                    value={String(form.discount ?? 0)}
+                                    onChange={(event) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            discount: Math.max(0, normalizeMoney(parseDecimalInput(event.target.value))),
+                                        }))
+                                    }
+                                />
+                                <div className="flex items-center justify-between rounded-lg bg-muted/70 px-3 py-2 text-sm font-semibold">
+                                    <span>Total</span>
+                                    <span className="tabular-nums">{money.format(totals.total)}</span>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-3">
                                 <FloatingDatePicker
                                     label="Fecha agenda"
