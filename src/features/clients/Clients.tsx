@@ -3,7 +3,6 @@ import { Menu, Pencil, Plus, Trash2 } from "lucide-react";
 import { isAxiosError } from "axios";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
-import { StatusPill } from "@/shared/components/components/StatusTag";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { Badge } from "@/shared/components/ui/badge";

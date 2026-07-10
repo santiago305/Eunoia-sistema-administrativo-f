@@ -13,8 +13,63 @@ import type {
   PurchaseDashboardTopSupplier,
 } from "@/features/purchases/types/purchase-dashboard.types";
 
+type PurchaseDashboardRequestParams = Omit<PurchaseDashboardFilters,
+  | "supplierIds"
+  | "purchaseTypes"
+  | "paymentStatuses"
+  | "userIds"
+  | "warehouseIds"
+  | "paymentMethodIds"
+  | "companyPaymentAccountIds"
+> & {
+  supplierIds?: string;
+  purchaseTypes?: string;
+  paymentStatuses?: string;
+  userIds?: string;
+  warehouseIds?: string;
+  paymentMethodIds?: string;
+  companyPaymentAccountIds?: string;
+};
+
+const ARRAY_FILTER_KEYS = [
+  "supplierIds",
+  "purchaseTypes",
+  "paymentStatuses",
+  "userIds",
+  "warehouseIds",
+  "paymentMethodIds",
+  "companyPaymentAccountIds",
+] satisfies Array<keyof PurchaseDashboardFilters>;
+
+const toCommaList = (value: string[] | undefined) => {
+  const normalized = Array.from(new Set((value ?? []).map((item) => item.trim()).filter(Boolean)));
+  return normalized.length ? normalized.join(",") : undefined;
+};
+
+const normalizeDashboardRequestParams = (
+  params: PurchaseDashboardFilters,
+): PurchaseDashboardRequestParams => {
+  const normalized = { ...params } as PurchaseDashboardRequestParams;
+
+  ARRAY_FILTER_KEYS.forEach((key) => {
+    const value = params[key];
+    if (Array.isArray(value)) {
+      normalized[key] = toCommaList(value) as never;
+    }
+  });
+
+  Object.keys(normalized).forEach((key) => {
+    const value = normalized[key as keyof PurchaseDashboardRequestParams];
+    if (value === undefined || value === "") {
+      delete normalized[key as keyof PurchaseDashboardRequestParams];
+    }
+  });
+
+  return normalized;
+};
+
 const get = async <T>(url: string, params: PurchaseDashboardFilters): Promise<T> => {
-  const response = await axiosInstance.get(url, { params });
+  const response = await axiosInstance.get(url, { params: normalizeDashboardRequestParams(params) });
   return response.data;
 };
 

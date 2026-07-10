@@ -65,6 +65,36 @@ describe("purchaseDashboardService", () => {
     expect(axiosInstance.get).toHaveBeenCalledTimes(10);
   });
 
+  it("serializes multi-value dashboard filters as comma-separated query params", async () => {
+    vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
+
+    await getPurchaseDashboardData({
+      supplierIds: ["supplier-1", "supplier-2"],
+      purchaseTypes: ["SERVICE", "RAW_MATERIAL"],
+      paymentStatuses: ["PENDING", "OVERDUE"],
+      userIds: ["user-1"],
+      warehouseIds: ["warehouse-1"],
+      paymentMethodIds: ["method-1", "method-2"],
+      companyPaymentAccountIds: ["account-1"],
+      limit: 10,
+    }, ["purchases_dashboard.view"]);
+
+    const expectedParams = {
+      supplierIds: "supplier-1,supplier-2",
+      purchaseTypes: "SERVICE,RAW_MATERIAL",
+      paymentStatuses: "PENDING,OVERDUE",
+      userIds: "user-1",
+      warehouseIds: "warehouse-1",
+      paymentMethodIds: "method-1,method-2",
+      companyPaymentAccountIds: "account-1",
+      limit: 10,
+    };
+
+    expect(axiosInstance.get).toHaveBeenCalledWith("/purchases/dashboard/summary", { params: expectedParams });
+    expect(axiosInstance.get).toHaveBeenCalledWith("/purchases/dashboard/by-type", { params: expectedParams });
+    expect(axiosInstance.get).toHaveBeenCalledWith("/purchases/dashboard/by-status", { params: expectedParams });
+  });
+
   it("loads payment endpoints only with the payments dashboard permission", async () => {
     vi.mocked(axiosInstance.get).mockResolvedValue({ data: [] });
 

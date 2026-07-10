@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCw, Save, SlidersHorizontal } from "lucide-react";
 import { FloatingDateRangePicker } from "@/shared/components/components/date-picker/FloatingDateRangePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -87,6 +87,7 @@ export function PurchaseDashboardFilters({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [metricModalOpen, setMetricModalOpen] = useState(false);
   const [metricName, setMetricName] = useState("");
+  const popoverWrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -165,6 +166,19 @@ export function PurchaseDashboardFilters({
       alive = false;
     };
   }, [company?.companyId]);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target || popoverWrapperRef.current?.contains(target)) return;
+      setFiltersOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [filtersOpen]);
 
   const catalogs = useMemo<PurchaseDashboardSavedFilterCatalogs>(() => ({
     purchaseTypes: toSearchOptions(purchaseTypeOptions),
@@ -289,7 +303,7 @@ export function PurchaseDashboardFilters({
           iconOnly
           containerClassName="w-10 shrink-0"
         />
-        <div className="relative">
+        <div className="relative" ref={popoverWrapperRef}>
           <SystemButton
             size="icon"
             variant="outline"

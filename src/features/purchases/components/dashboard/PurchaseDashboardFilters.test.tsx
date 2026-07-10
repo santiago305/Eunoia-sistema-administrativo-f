@@ -238,6 +238,34 @@ describe("PurchaseDashboardFilters", () => {
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
   });
 
+  it("closes the smart filter popover when clicking outside it", async () => {
+    listSuppliersMock.mockResolvedValue({ items: [] });
+    listUsersMock.mockResolvedValue({ items: [] });
+    listActiveWarehousesMock.mockResolvedValue({ items: [] });
+    getAllPaymentMethodsMock.mockResolvedValue([]);
+    listCompanyPaymentAccountsByCompanyMock.mockResolvedValue([]);
+
+    render(
+      <div>
+        <button type="button">Fuera del popover</button>
+        <PurchaseDashboardFilters
+          value={{ limit: 10 }}
+          loading={false}
+          onChange={vi.fn()}
+        />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros del dashboard de compras" }));
+    expect(screen.getByTestId("purchase-dashboard-filters-popover")).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: "Fuera del popover" }));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("purchase-dashboard-filters-popover")).not.toBeInTheDocument(),
+    );
+  });
+
   it("shows saved dashboard metrics and applies their snapshot with date range", async () => {
     listSuppliersMock.mockResolvedValue({ items: [] });
     listUsersMock.mockResolvedValue({ items: [] });
