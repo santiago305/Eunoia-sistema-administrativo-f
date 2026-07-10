@@ -37,7 +37,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.purchases,
         children: [
             {
-                label: "Dashboard",
+                label: "Dashboard Compras",
                 href: RoutesPaths.purchaseDashboard,
             },
             {

@@ -1,8 +1,13 @@
-import { useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { sileo } from "sileo";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { SystemButton } from "@/shared/components/components/SystemButton";
 import { usePurchaseDashboard } from "@/features/purchases/hooks/usePurchaseDashboard";
+import type { DataTableSavedSearchItem } from "@/shared/components/table/search";
+import {
+  deletePurchaseDashboardSearchMetric,
+  getPurchaseDashboardSearchState,
+  savePurchaseDashboardSearchMetric,
+} from "@/shared/services/purchaseDashboardService";
 import { PurchaseKpiGrid } from "@/features/purchases/components/dashboard/PurchaseKpiGrid";
 import { PurchaseSpendingChart } from "@/features/purchases/components/dashboard/PurchaseSpendingChart";
 import { PurchaseTypeChart } from "@/features/purchases/components/dashboard/PurchaseTypeChart";
@@ -11,11 +16,20 @@ import { UpcomingPaymentsTable } from "@/features/purchases/components/dashboard
 import { OverduePaymentsTable } from "@/features/purchases/components/dashboard/OverduePaymentsTable";
 import { PurchaseDashboardRankingTable } from "@/features/purchases/components/dashboard/PurchaseDashboardRankingTable";
 import { PurchaseDashboardFilters } from "@/features/purchases/components/dashboard/PurchaseDashboardFilters";
-import { DEFAULT_PURCHASE_DASHBOARD_LIMIT } from "@/features/purchases/components/dashboard/PurchaseDashboardLimitSelect";
 import type {
   PurchaseDashboardFilters as PurchaseDashboardFilterValue,
+  PurchaseDashboardSavedFilterSnapshot,
+  PurchaseDashboardSearchStateResponse,
   PurchaseDashboardSeriesPoint,
 } from "@/features/purchases/types/purchase-dashboard.types";
+import { DEFAULT_PURCHASE_DASHBOARD_LIMIT } from "@/features/purchases/types/purchase-dashboard.types";
+import {
+  buildPurchaseDashboardFilterLabel,
+  dashboardFiltersToSnapshot,
+  hasPurchaseDashboardFilterCriteria,
+  sanitizePurchaseDashboardFilterSnapshot,
+  snapshotToDashboardFilters,
+} from "@/features/purchases/utils/purchaseDashboardSmartFilters";
 import {
   formatPurchaseDashboardItemType,
   formatPurchaseDashboardSeriesLabel,
@@ -36,6 +50,8 @@ export default function PurchaseDashboardPage() {
   const defaultFilters = useMemo<PurchaseDashboardFilterValue>(() => ({ limit: DEFAULT_PURCHASE_DASHBOARD_LIMIT }), []);
   const [draftFilters, setDraftFilters] = useState<PurchaseDashboardFilterValue>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<PurchaseDashboardFilterValue>(defaultFilters);
+  const [searchState, setSearchState] = useState<PurchaseDashboardSearchStateResponse | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
   const { data, loading, error, reload } = usePurchaseDashboard(appliedFilters);
 
   const activeFilterCount = useMemo(
@@ -49,30 +65,103 @@ export default function PurchaseDashboardPage() {
     setAppliedFilters(defaultFilters);
   };
   const currentLimit = appliedFilters.limit ?? DEFAULT_PURCHASE_DASHBOARD_LIMIT;
+  const draftSnapshot = useMemo(() => dashboardFiltersToSnapshot(draftFilters), [draftFilters]);
+
+  const savedMetrics = useMemo<DataTableSavedSearchItem<PurchaseDashboardSavedFilterSnapshot>[]>(
+    () =>
+      (searchState?.saved ?? []).map((metric) => ({
+        id: metric.metricId,
+        name: metric.name,
+        label: buildPurchaseDashboardFilterLabel(metric.snapshot),
+        snapshot: sanitizePurchaseDashboardFilterSnapshot(metric.snapshot),
+      })),
+    [searchState],
+  );
+
+  const loadSearchState = useCallback(async () => {
+    try {
+      const response = await getPurchaseDashboardSearchState();
+      setSearchState(response);
+    } catch {
+      sileo.error({ title: "Error al cargar filtros guardados del dashboard" });
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadSearchState();
+  }, [loadSearchState]);
+
+  const applySavedSnapshot = useCallback((snapshot: PurchaseDashboardSavedFilterSnapshot) => {
+    const nextFilters = {
+      ...snapshotToDashboardFilters(snapshot),
+      limit: DEFAULT_PURCHASE_DASHBOARD_LIMIT,
+    };
+    setDraftFilters(nextFilters);
+    setAppliedFilters(nextFilters);
+  }, []);
+
+  const saveMetric = useCallback(async () => {
+    const snapshot = sanitizePurchaseDashboardFilterSnapshot(draftSnapshot);
+    if (!hasPurchaseDashboardFilterCriteria(snapshot)) return;
+
+    const name = window.prompt("Nombre del filtro");
+    const normalizedName = name?.trim();
+    if (!normalizedName) return;
+
+    setSavingMetric(true);
+    try {
+      const response = await savePurchaseDashboardSearchMetric(normalizedName, snapshot);
+      if (response.type === "success") {
+        sileo.success({ title: response.message });
+        await loadSearchState();
+      } else {
+        sileo.error({ title: response.message });
+      }
+    } catch {
+      sileo.error({ title: "Error al guardar el filtro" });
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [draftSnapshot, loadSearchState]);
+
+  const deleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deletePurchaseDashboardSearchMetric(metricId);
+      if (response.type === "success") {
+        sileo.success({ title: response.message });
+        await loadSearchState();
+      } else {
+        sileo.error({ title: response.message });
+      }
+    } catch {
+      sileo.error({ title: "Error al eliminar el filtro" });
+    }
+  }, [loadSearchState]);
 
   return (
     <PageShell className="bg-white">
       <div className="space-y-5">
-        <header className="flex flex-col gap-3 border-b border-black/10 pb-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            {activeFilterCount ? (
-              <span className="rounded-md border border-black/10 px-3 py-2 text-xs text-black/65">
-                {activeFilterCount} filtros activos
-              </span>
-            ) : null}
-            <SystemButton size="sm" variant="outline" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={reload} disabled={loading}>
-              Actualizar
-            </SystemButton>
-          </div>
-        </header>
-
-        <PurchaseDashboardFilters
-          value={draftFilters}
-          loading={loading}
-          onChange={setDraftFilters}
-          onApply={applyFilters}
-          onClear={clearFilters}
-        />
+        <div className="flex flex-nowrap items-center justify-end gap-2 border-b border-black/10 pb-4">
+          {activeFilterCount ? (
+            <span className="rounded-md border border-black/10 px-3 py-2 text-xs text-black/65">
+              {activeFilterCount} filtros activos
+            </span>
+          ) : null}
+          <PurchaseDashboardFilters
+            value={draftFilters}
+            loading={loading}
+            savedMetrics={savedMetrics}
+            canSaveMetric={hasPurchaseDashboardFilterCriteria(draftSnapshot)}
+            saveLoading={savingMetric}
+            onChange={setDraftFilters}
+            onRefresh={reload}
+            onApply={applyFilters}
+            onClear={clearFilters}
+            onApplySavedSnapshot={applySavedSnapshot}
+            onSaveMetric={saveMetric}
+            onDeleteMetric={deleteMetric}
+          />
+        </div>
 
         {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div> : null}
         {loading ? <div className="rounded-md border border-black/10 bg-white px-4 py-6 text-sm text-black/55">Cargando métricas...</div> : null}

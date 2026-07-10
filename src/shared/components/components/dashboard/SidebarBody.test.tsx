@@ -71,7 +71,7 @@ describe("SidebarBody purchase dashboard permissions", () => {
     renderSidebar();
 
     const purchaseSection = screen.getByTestId("sidebar-item-Compras");
-    expect(within(purchaseSection).queryByText("Dashboard")).toBeNull();
+    expect(within(purchaseSection).queryByText("Dashboard Compras")).toBeNull();
   });
 
   it("shows the purchase dashboard child when the user has the dashboard base permission", () => {
@@ -80,6 +80,6 @@ describe("SidebarBody purchase dashboard permissions", () => {
     renderSidebar();
 
     const purchaseSection = screen.getByTestId("sidebar-item-Compras");
-    expect(within(purchaseSection).getByText("Dashboard")).toBeDefined();
+    expect(within(purchaseSection).getByText("Dashboard Compras")).toBeDefined();
   });
 });

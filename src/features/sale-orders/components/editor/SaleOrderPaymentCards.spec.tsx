@@ -103,7 +103,7 @@ describe("SaleOrderPaymentCards", () => {
       screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }),
     );
     expect(
-      screen.getByRole("dialog", { name: "Editar pago" }),
+      screen.getByRole("dialog", { name: "Detalle de pago" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Monto")).toHaveValue(10);
     expect(screen.getByLabelText("Operacion")).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("SaleOrderPaymentCards", () => {
     );
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Editar pago" }),
+        screen.queryByRole("dialog", { name: "Detalle de pago" }),
       ).not.toBeInTheDocument(),
     );
 

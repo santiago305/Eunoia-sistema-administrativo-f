@@ -39,7 +39,7 @@ const order = {
 } as SaleOrder;
 
 describe("SaleOrderActionsPopover", () => {
-  it("keeps only order actions and does not load workflow transitions", async () => {
+  it("keeps only document actions and does not load workflow transitions", async () => {
     getTransitions.mockReset();
     getTransitions.mockResolvedValue([]);
     onEdit.mockReset();
@@ -59,10 +59,12 @@ describe("SaleOrderActionsPopover", () => {
     expect(getTransitions).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
     expect(getTransitions).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ver PDF" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Pagos" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Eliminar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "generar factura" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "generar boleta" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pagos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Eliminar" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Historial del tipo" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Ver PDF" }));

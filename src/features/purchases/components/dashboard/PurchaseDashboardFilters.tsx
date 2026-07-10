@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
-import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { FloatingDateRangePicker } from "@/shared/components/components/date-picker/FloatingDateRangePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { parseStoredDate, toLocalDateKey } from "@/shared/components/table/search/smartSearchUtils";
@@ -11,25 +10,43 @@ import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
 import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPaymentAccountService";
 import { getCompanyPaymentAccountDisplay } from "@/features/payments/paymentAccountView";
-import type { PurchaseDashboardFilters as PurchaseDashboardFilterValue } from "@/features/purchases/types/purchase-dashboard.types";
+import type {
+  DataTableSavedSearchItem,
+} from "@/shared/components/table/search";
+import type {
+  PurchaseDashboardFilterField,
+  PurchaseDashboardFilters as PurchaseDashboardFilterValue,
+  PurchaseDashboardSavedFilterCatalogs,
+  PurchaseDashboardSavedFilterRule,
+  PurchaseDashboardSavedFilterSnapshot,
+} from "@/features/purchases/types/purchase-dashboard.types";
+import { PurchaseDashboardSmartFilterPanel } from "@/features/purchases/components/dashboard/PurchaseDashboardSmartFilterPanel";
 import {
-  DEFAULT_PURCHASE_DASHBOARD_LIMIT,
-  PurchaseDashboardLimitSelect,
-  type PurchaseDashboardLimit,
-} from "./PurchaseDashboardLimitSelect";
+  buildPurchaseDashboardFilterLabel,
+  dashboardFiltersToSnapshot,
+  hasPurchaseDashboardFilterCriteria,
+  sanitizePurchaseDashboardFilterSnapshot,
+  snapshotToDashboardFilters,
+} from "@/features/purchases/utils/purchaseDashboardSmartFilters";
 
 type SelectOption = { value: string; label: string };
 
 type Props = {
   value: PurchaseDashboardFilterValue;
   loading: boolean;
+  savedMetrics?: DataTableSavedSearchItem<PurchaseDashboardSavedFilterSnapshot>[];
+  canSaveMetric?: boolean;
+  saveLoading?: boolean;
   onChange: (value: PurchaseDashboardFilterValue) => void;
+  onRefresh?: () => void;
   onApply: () => void;
   onClear: () => void;
+  onApplySavedSnapshot?: (snapshot: PurchaseDashboardSavedFilterSnapshot) => void;
+  onSaveMetric?: () => void;
+  onDeleteMetric?: (metricId: string) => void;
 };
 
 const purchaseTypeOptions: SelectOption[] = [
-  { value: "", label: "Todos los tipos" },
   { value: "INVENTORY", label: "Inventario" },
   { value: "RAW_MATERIAL", label: "Materia prima" },
   { value: "INTERNAL_MATERIAL", label: "Material interno" },
@@ -40,7 +57,6 @@ const purchaseTypeOptions: SelectOption[] = [
 ];
 
 const paymentStatusOptions: SelectOption[] = [
-  { value: "", label: "Todos los pagos" },
   { value: "PENDING", label: "Pendiente" },
   { value: "PARTIAL", label: "Parcial" },
   { value: "PAID", label: "Pagado" },
@@ -48,13 +64,27 @@ const paymentStatusOptions: SelectOption[] = [
   { value: "CANCELLED", label: "Cancelado" },
 ];
 
-export function PurchaseDashboardFilters({ value, loading, onChange, onApply, onClear }: Props) {
+export function PurchaseDashboardFilters({
+  value,
+  loading,
+  savedMetrics = [],
+  canSaveMetric = false,
+  saveLoading = false,
+  onChange,
+  onRefresh,
+  onApply,
+  onClear,
+  onApplySavedSnapshot,
+  onSaveMetric,
+  onDeleteMetric,
+}: Props) {
   const { company } = useCompany();
   const [supplierOptions, setSupplierOptions] = useState<SelectOption[]>([]);
   const [userOptions, setUserOptions] = useState<SelectOption[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<SelectOption[]>([]);
   const [paymentMethodOptions, setPaymentMethodOptions] = useState<SelectOption[]>([]);
   const [companyAccountOptions, setCompanyAccountOptions] = useState<SelectOption[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -134,24 +164,28 @@ export function PurchaseDashboardFilters({ value, loading, onChange, onApply, on
     };
   }, [company?.companyId]);
 
-  const supplierSelectOptions = useMemo(() => withAllOption("Todos los proveedores", supplierOptions), [supplierOptions]);
-  const userSelectOptions = useMemo(() => withAllOption("Todos los usuarios", userOptions), [userOptions]);
-  const warehouseSelectOptions = useMemo(() => withAllOption("Todos los almacenes", warehouseOptions), [warehouseOptions]);
-  const paymentMethodSelectOptions = useMemo(
-    () => withAllOption("Todos los métodos", paymentMethodOptions),
-    [paymentMethodOptions],
-  );
-  const companyAccountSelectOptions = useMemo(
-    () => withAllOption("Todas las cuentas", companyAccountOptions),
-    [companyAccountOptions],
-  );
+  const catalogs = useMemo<PurchaseDashboardSavedFilterCatalogs>(() => ({
+    purchaseTypes: toSearchOptions(purchaseTypeOptions),
+    paymentStatuses: toSearchOptions(paymentStatusOptions),
+    suppliers: toSearchOptions(supplierOptions),
+    users: toSearchOptions(userOptions),
+    warehouses: toSearchOptions(warehouseOptions),
+    paymentMethods: toSearchOptions(paymentMethodOptions),
+    companyPaymentAccounts: toSearchOptions(companyAccountOptions),
+  }), [
+    companyAccountOptions,
+    paymentMethodOptions,
+    supplierOptions,
+    userOptions,
+    warehouseOptions,
+  ]);
 
-  const update = (key: keyof PurchaseDashboardFilterValue, nextValue: string | number) => {
-    onChange({
-      ...value,
-      [key]: nextValue || undefined,
-    });
-  };
+  const snapshot = useMemo(() => dashboardFiltersToSnapshot(value), [value]);
+  const hasActiveFilters = hasPurchaseDashboardFilterCriteria(snapshot);
+  const activeFilterLabel = useMemo(
+    () => buildPurchaseDashboardFilterLabel(snapshot, catalogs),
+    [catalogs, snapshot],
+  );
 
   const updateDateRange = (range: { startDate: Date | null; endDate: Date | null }) => {
     const { from: _from, to: _to, ...rest } = value;
@@ -165,97 +199,142 @@ export function PurchaseDashboardFilters({ value, loading, onChange, onApply, on
     });
   };
 
+  const applyDraftSnapshot = (nextSnapshot: PurchaseDashboardSavedFilterSnapshot) => {
+    onChange(withPreservedLimit(value, snapshotToDashboardFilters(nextSnapshot)));
+  };
+
+  const applySavedSnapshot = (nextSnapshot: PurchaseDashboardSavedFilterSnapshot) => {
+    if (onApplySavedSnapshot) {
+      onApplySavedSnapshot(nextSnapshot);
+      return;
+    }
+
+    applyDraftSnapshot(nextSnapshot);
+  };
+
+  const applyRule = (rule: PurchaseDashboardSavedFilterRule) => {
+    const nextSnapshot = sanitizePurchaseDashboardFilterSnapshot({
+      ...snapshot,
+      filters: [
+        ...snapshot.filters.filter((currentRule) => currentRule.field !== rule.field),
+        rule,
+      ],
+    });
+
+    applyDraftSnapshot(nextSnapshot);
+  };
+
+  const removeRule = (fieldId: PurchaseDashboardFilterField) => {
+    const nextSnapshot = sanitizePurchaseDashboardFilterSnapshot({
+      ...snapshot,
+      filters: snapshot.filters.filter((rule) => rule.field !== fieldId),
+    });
+
+    applyDraftSnapshot(nextSnapshot);
+  };
+
+  const handleApply = () => {
+    onApply();
+    setFiltersOpen(false);
+  };
+
+  const handleClear = () => {
+    onClear();
+    setFiltersOpen(false);
+  };
+
   return (
-    <section className="rounded-md border border-black/10 bg-white p-4" aria-label="Filtros del dashboard">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <FloatingDateRangePicker
-          label="Desde / Hasta"
-          name="purchase-dashboard-date-range"
-          startDate={parseStoredDate(value.from)}
-          endDate={parseStoredDate(value.to)}
-          onChange={updateDateRange}
+    <section className="flex flex-nowrap items-center gap-2" aria-label="Filtros del dashboard">
+      {onRefresh ? (
+        <SystemButton
+          size="icon"
+          variant="outline"
+          className="shrink-0 border-border bg-background text-foreground hover:bg-black/[0.03] focus-visible:ring-primary/20"
+          aria-label="Actualizar dashboard de compras"
+          title="Actualizar dashboard de compras"
+          onClick={onRefresh}
           disabled={loading}
-        />
-        <FloatingSelect
-          label="Tipo de compra"
-          name="purchase-dashboard-purchase-type"
-          value={value.purchaseType ?? ""}
-          onChange={(next) => update("purchaseType", next)}
-          options={purchaseTypeOptions}
-        />
-        <FloatingSelect
-          label="Estado de pago"
-          name="purchase-dashboard-payment-status"
-          value={value.paymentStatus ?? ""}
-          onChange={(next) => update("paymentStatus", next)}
-          options={paymentStatusOptions}
-        />
-        <PurchaseDashboardLimitSelect
-          value={value.limit ?? DEFAULT_PURCHASE_DASHBOARD_LIMIT}
-          onChange={(next: PurchaseDashboardLimit) => update("limit", next)}
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        </SystemButton>
+      ) : null}
+
+      <FloatingDateRangePicker
+        label="Desde / Hasta"
+        name="purchase-dashboard-date-range"
+        startDate={parseStoredDate(value.from)}
+        endDate={parseStoredDate(value.to)}
+        onChange={updateDateRange}
+        disabled={loading}
+        iconOnly
+        containerClassName="w-10 shrink-0"
+      />
+      <div className="relative">
+        <SystemButton
+          size="icon"
+          variant="outline"
+          aria-label="Filtros del dashboard de compras"
+          title="Filtros del dashboard de compras"
+          onClick={() => setFiltersOpen((current) => !current)}
           disabled={loading}
-        />
-        <FloatingSelect
-          label="Proveedor"
-          name="purchase-dashboard-supplier"
-          value={value.supplierId ?? ""}
-          onChange={(next) => update("supplierId", next)}
-          options={supplierSelectOptions}
-          searchable
-          searchPlaceholder="Buscar proveedor"
-        />
-        <FloatingSelect
-          label="Usuario"
-          name="purchase-dashboard-user"
-          value={value.userId ?? ""}
-          onChange={(next) => update("userId", next)}
-          options={userSelectOptions}
-          searchable
-          searchPlaceholder="Buscar usuario"
-        />
-        <FloatingSelect
-          label="Almacén"
-          name="purchase-dashboard-warehouse"
-          value={value.warehouseId ?? ""}
-          onChange={(next) => update("warehouseId", next)}
-          options={warehouseSelectOptions}
-          searchable
-          searchPlaceholder="Buscar almacén"
-        />
-        <FloatingSelect
-          label="Método de pago"
-          name="purchase-dashboard-payment-method"
-          value={value.paymentMethodId ?? ""}
-          onChange={(next) => update("paymentMethodId", next)}
-          options={paymentMethodSelectOptions}
-          searchable
-          searchPlaceholder="Buscar método"
-        />
-        <FloatingSelect
-          label="Cuenta o tarjeta"
-          name="purchase-dashboard-company-account"
-          value={value.companyPaymentAccountId ?? ""}
-          onChange={(next) => update("companyPaymentAccountId", next)}
-          options={companyAccountSelectOptions}
-          searchable
-          searchPlaceholder="Buscar cuenta"
-          disabled={!company?.companyId}
-        />
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <SystemButton size="sm" leftIcon={<Search className="h-4 w-4" />} onClick={onApply} disabled={loading}>
-          Aplicar filtros
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
         </SystemButton>
-        <SystemButton size="sm" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={onClear} disabled={loading}>
-          Limpiar
-        </SystemButton>
+
+        {filtersOpen ? (
+          <div className="absolute left-0 top-full z-30 mt-2 w-[min(28rem,calc(100vw-2rem))] rounded-md border border-black/10 bg-white p-3 shadow-lg">
+            <PurchaseDashboardSmartFilterPanel
+              snapshot={snapshot}
+              saved={savedMetrics}
+              catalogs={catalogs}
+              onApplySnapshot={applySavedSnapshot}
+              onApplyRule={applyRule}
+              onRemoveRule={removeRule}
+              onDeleteMetric={onDeleteMetric}
+            />
+            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-black/10 pt-3">
+              <SystemButton size="sm" leftIcon={<Search className="h-4 w-4" />} onClick={handleApply} disabled={loading}>
+                Aplicar filtros
+              </SystemButton>
+              {onSaveMetric ? (
+                <SystemButton
+                  size="sm"
+                  variant="outline"
+                  onClick={onSaveMetric}
+                  disabled={loading || saveLoading || !canSaveMetric}
+                >
+                  {saveLoading ? "Guardando..." : "Guardar filtro"}
+                </SystemButton>
+              ) : null}
+              <SystemButton size="sm" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={handleClear} disabled={loading}>
+                Limpiar
+              </SystemButton>
+            </div>
+          </div>
+        ) : null}
       </div>
+
+      {hasActiveFilters ? (
+        <span className="min-w-0 max-w-full truncate rounded-md border border-black/10 px-3 py-2 text-xs text-black/65">
+          {activeFilterLabel}
+        </span>
+      ) : null}
     </section>
   );
 }
 
-function withAllOption(label: string, options: SelectOption[]) {
-  return [{ value: "", label }, ...options];
+function toSearchOptions(options: SelectOption[]) {
+  return options.map((option) => ({ id: option.value, label: option.label }));
+}
+
+function withPreservedLimit(
+  current: PurchaseDashboardFilterValue,
+  next: PurchaseDashboardFilterValue,
+) {
+  return {
+    ...(current.limit ? { limit: current.limit } : {}),
+    ...next,
+  };
 }
 
 function supplierLabel(supplier: { supplierId: string; name?: string | null; lastName?: string | null; tradeName?: string | null; documentNumber?: string | null }) {

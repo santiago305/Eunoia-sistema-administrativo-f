@@ -36,11 +36,70 @@ vi.mock("@/shared/services/saleOrderService", () => ({
 }));
 
 vi.mock("@/features/sale-orders/components/statistics/SaleOrderStatisticsPanel", () => ({
-  SaleOrderStatisticsPanel: ({ statistics }: { statistics: { totals?: { orders?: number } } | null }) => (
-    <section aria-label="Estadísticas de pedidos">
-      Pedidos estadísticos: {statistics?.totals?.orders ?? 0}
-    </section>
-  ),
+  SaleOrderStatisticsPanel: ({
+    statistics,
+    locationDistribution,
+  }: {
+    statistics: { totals?: { orders?: number } } | null;
+    locationDistribution?: {
+      data: typeof departmentsResponse | null;
+      level: "department" | "province" | "district";
+      onBack: () => void;
+      onGroupClick: (group: (typeof departmentsResponse)["groups"][number]) => void;
+    };
+  }) => {
+    const levelLabel = {
+      department: "departamentos",
+      province: "provincias",
+      district: "distritos",
+    }[locationDistribution?.level ?? "department"];
+    const nextLabel = {
+      department: "provincias",
+      province: "distritos",
+      district: "",
+    }[locationDistribution?.level ?? "department"];
+    const formatMoney = (value: number) =>
+      new Intl.NumberFormat("es-PE", {
+        style: "currency",
+        currency: "PEN",
+      }).format(value);
+
+    return (
+      <section aria-label="Estadísticas de pedidos">
+        Pedidos estadísticos: {statistics?.totals?.orders ?? 0}
+        {locationDistribution ? (
+          <section aria-label={`Distribución por ${levelLabel}`}>
+            {locationDistribution.level !== "department" ? (
+              <button type="button" onClick={locationDistribution.onBack}>
+                {locationDistribution.level === "district"
+                  ? "Volver a provincias"
+                  : "Volver a departamentos"}
+              </button>
+            ) : null}
+            <ul aria-label="Resumen del gráfico">
+              <li>{locationDistribution.data?.totals.orders ?? 0}</li>
+              <li>{formatMoney(locationDistribution.data?.totals.total ?? 0)}</li>
+            </ul>
+            {locationDistribution.data?.groups.map((group) =>
+              locationDistribution.level === "district" ? (
+                <span key={group.id}>
+                  {group.label} - {group.orders} pedidos
+                </span>
+              ) : (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => locationDistribution.onGroupClick(group)}
+                >
+                  Ver {nextLabel} de {group.label} - {group.orders} pedidos
+                </button>
+              ),
+            )}
+          </section>
+        ) : null}
+      </section>
+    );
+  },
 }));
 
 vi.mock("./components/DashboardSaleOrderSmartFilter", () => ({

@@ -26,6 +26,7 @@ type FloatingDateRangePickerProps = {
   clearable?: boolean;
   closeOnComplete?: boolean;
   panelMinWidth?: number;
+  iconOnly?: boolean;
 };
 
 export function FloatingDateRangePicker({
@@ -47,6 +48,7 @@ export function FloatingDateRangePicker({
   clearable = true,
   closeOnComplete = true,
   panelMinWidth = 320,
+  iconOnly = false,
 }: FloatingDateRangePickerProps) {
   const [monthDate, setMonthDate] = useState<Date>(startDate ?? new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
@@ -98,6 +100,7 @@ export function FloatingDateRangePicker({
           }}
           className={cn(
             "peer relative flex h-10 w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-left text-sm text-foreground outline-none transition-all",
+            iconOnly && "w-10 justify-center px-0 text-center",
             error
               ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200/40"
               : open
@@ -116,6 +119,7 @@ export function FloatingDateRangePicker({
           <span
             className={cn(
               "truncate pr-2",
+              iconOnly && "sr-only",
               hasValue ? "text-foreground" : "text-muted-foreground",
             )}
           >
@@ -129,6 +133,7 @@ export function FloatingDateRangePicker({
           id={labelId}
           className={cn(
             "pointer-events-none absolute left-3 px-1 text-xs transition-all duration-200",
+            iconOnly && "sr-only",
             disabled ? "bg-muted" : readOnly ? "bg-muted/40" : "bg-background",
             hasValue || open
               ? "top-0 -translate-y-1/2 text-[11px]"

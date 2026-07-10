@@ -143,7 +143,7 @@ describe("SaleOrderStatisticsPanel", () => {
     );
 
     expect(screen.queryByText("Total vendido")).toBeNull();
-    expect(screen.getByText("Pedidos por flujo")).toBeTruthy();
+    expect(screen.getByText("Pedidos por tipo")).toBeTruthy();
     expect(screen.getByText("Pedidos por estado")).toBeTruthy();
     expect(screen.getByText("Pedidos por tipo de cliente")).toBeTruthy();
     expect(screen.getByText("Cuentas bancarias")).toBeTruthy();

@@ -5,6 +5,8 @@ import type {
   PurchaseDashboardFilters,
   PurchaseDashboardMonthlyPoint,
   PurchaseDashboardPaymentRow,
+  PurchaseDashboardSavedFilterSnapshot,
+  PurchaseDashboardSearchStateResponse,
   PurchaseDashboardSeriesPoint,
   PurchaseDashboardSummary,
   PurchaseDashboardTopItem,
@@ -71,4 +73,27 @@ export const getPurchaseDashboardData = async (
   }
 
   return data;
+};
+
+export const getPurchaseDashboardSearchState = async (): Promise<PurchaseDashboardSearchStateResponse> => {
+  const response = await axiosInstance.get(API_PURCHASE_DASHBOARD_GROUP.searchState);
+  return response.data;
+};
+
+export const savePurchaseDashboardSearchMetric = async (
+  name: string,
+  snapshot: PurchaseDashboardSavedFilterSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PURCHASE_DASHBOARD_GROUP.saveSearchMetric, {
+    name,
+    snapshot,
+  });
+  return response.data;
+};
+
+export const deletePurchaseDashboardSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_PURCHASE_DASHBOARD_GROUP.deleteSearchMetric(metricId));
+  return response.data;
 };

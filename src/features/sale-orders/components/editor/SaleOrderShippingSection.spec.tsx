@@ -142,7 +142,7 @@ describe("SaleOrderShippingSection agency detail", () => {
     const user = userEvent.setup();
     render(<ShippingHarness />);
 
-    await user.type(screen.getByLabelText("Sucursal"), "Agencia personalizada");
+    await user.type(screen.getByLabelText("Agencia/Dirección"), "Agencia personalizada");
     expect(screen.getByTestId("shipping-state")).toHaveTextContent(
       '"agencyDetail":"Agencia personalizada"',
     );

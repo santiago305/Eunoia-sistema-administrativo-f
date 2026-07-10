@@ -72,7 +72,7 @@ describe("purchaseDashboardSmartFilters", () => {
         { field: "paymentStatus", operator: "in", values: [] },
       ],
       dateRange: { mode: "absolute", from: "not-a-date", to: "2026-07-09" },
-    });
+    } as Parameters<typeof sanitizePurchaseDashboardFilterSnapshot>[0]);
 
     expect(snapshot).toEqual({
       filters: [

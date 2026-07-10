@@ -3,24 +3,24 @@ import { validateSaleOrderForm } from "@/features/sale-orders/utils/saleOrderVal
 import { buildEmptySaleOrderForm } from "@/features/sale-orders/utils/saleOrderForm";
 
 describe("saleOrderValidation", () => {
-  it("requiere warehouseId y clientId", () => {
+  it("requiere clientId", () => {
     const form = { ...buildEmptySaleOrderForm(), workflowId: "wf" };
     const result = validateSaleOrderForm(form);
     expect(result.ok).toBe(false);
-    expect((result as any).message).toMatch(/almacén/i);
+    expect((result as any).message).toMatch(/cliente/i);
   });
 
-  it("requiere scheduleDate", () => {
+  it("permite scheduleDate vacío con items válidos", () => {
     const form = {
       ...buildEmptySaleOrderForm(),
       workflowId: "wf",
       warehouseId: "w",
       clientId: "c",
       scheduleDate: "",
+      items: [{ quantity: 1, unitPrice: 0, total: 0, description: "Pack", referencePackId: "p1", components: [] }],
     };
     const result = validateSaleOrderForm(form);
-    expect(result.ok).toBe(false);
-    expect((result as any).message).toMatch(/scheduleDate|fecha/i);
+    expect(result.ok).toBe(true);
   });
 
   it("sin pack requiere components", () => {

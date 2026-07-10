@@ -121,6 +121,7 @@ export function SaleOrderShippingSection({
               return {
                 ...current,
                 agencyDetail: option.label,
+                sendAddress: subsidiary?.address ?? current.sendAddress,
                 deliveryCost: subsidiary?.cost ?? 0,
               };
             })

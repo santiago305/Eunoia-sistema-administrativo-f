@@ -75,13 +75,14 @@ describe("SmartRangeDate", () => {
       value: "2026-06",
     });
 
-    expect(screen.queryByRole("button", { name: "Mes" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Meses" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Fecha creacion" })).toHaveTextContent(
       /junio 2026/,
     );
 
     await user.click(screen.getByRole("button", { name: "Fecha creacion" }));
-    await user.click(await screen.findByRole("button", { name: "Mes" }));
+    await user.click(await screen.findByRole("button", { name: "Meses" }));
+    await user.click(await screen.findByRole("button", { name: "Julio" }));
     await user.click(await screen.findByRole("button", { name: "Julio" }));
 
     expect(onChange).toHaveBeenLastCalledWith({
@@ -102,7 +103,7 @@ describe("SmartRangeDate", () => {
     fireEvent.change(screen.getByLabelText("Cantidad de semanas", { selector: "input" }), {
       target: { value: "2" },
     });
-    fireEvent.click(screen.getByText(/Aplicar .* semanas/));
+    fireEvent.click(screen.getByText("Aplicar semanas"));
 
     expect(onChange).toHaveBeenLastCalledWith({
       field: "createdAt",

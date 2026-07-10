@@ -1,5 +1,7 @@
 import type { DataTableSearchOption, SmartSearchRule } from "@/shared/components/table/search";
 
+export const DEFAULT_PURCHASE_DASHBOARD_LIMIT = 10;
+
 export type PurchaseDashboardFilters = {
   from?: string;
   to?: string;
@@ -39,6 +41,24 @@ export type PurchaseDashboardDateRangeSnapshot = {
 export type PurchaseDashboardSavedFilterSnapshot = {
   filters: PurchaseDashboardSavedFilterRule[];
   dateRange?: PurchaseDashboardDateRangeSnapshot;
+};
+
+export type PurchaseDashboardRecentSearch = {
+  recentId: string;
+  snapshot: PurchaseDashboardSavedFilterSnapshot;
+  lastUsedAt: string;
+};
+
+export type PurchaseDashboardSavedMetric = {
+  metricId: string;
+  name: string;
+  snapshot: PurchaseDashboardSavedFilterSnapshot;
+  updatedAt: string;
+};
+
+export type PurchaseDashboardSearchStateResponse = {
+  recent: PurchaseDashboardRecentSearch[];
+  saved: PurchaseDashboardSavedMetric[];
 };
 
 export type PurchaseDashboardSavedFilterCatalogs = Partial<
