@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PurchaseDashboardPage from "./PurchaseDashboardPage";
 import type { PurchaseDashboardFilters as PurchaseDashboardFilterValue } from "@/features/purchases/types/purchase-dashboard.types";
 
 const reloadMock = vi.fn();
 const getPurchaseDashboardSearchStateMock = vi.hoisted(() => vi.fn());
+const savePurchaseDashboardSearchMetricMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/shared/layouts/PageShell", () => ({
   PageShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
@@ -19,7 +20,7 @@ vi.mock("sileo", () => ({
 
 vi.mock("@/shared/services/purchaseDashboardService", () => ({
   getPurchaseDashboardSearchState: getPurchaseDashboardSearchStateMock,
-  savePurchaseDashboardSearchMetric: vi.fn(),
+  savePurchaseDashboardSearchMetric: savePurchaseDashboardSearchMetricMock,
   deletePurchaseDashboardSearchMetric: vi.fn(),
 }));
 
@@ -35,19 +36,19 @@ vi.mock("@/features/purchases/hooks/usePurchaseDashboard", () => ({
 vi.mock("@/features/purchases/components/dashboard/PurchaseDashboardFilters", () => ({
   PurchaseDashboardFilters: ({
     onChange,
-    onApply,
     onRefresh,
+    onSaveMetric,
   }: {
     onChange: (filters: PurchaseDashboardFilterValue) => void;
-    onApply: () => void;
     onRefresh: () => void;
+    onSaveMetric: (name: string) => void;
   }) => (
     <section>
       <button type="button" onClick={() => onChange({ limit: 10, supplierId: "supplier-1" })}>
         Seleccionar proveedor
       </button>
-      <button type="button" onClick={onApply}>
-        Aplicar filtros
+      <button type="button" onClick={() => onSaveMetric("Pagadas julio")}>
+        Guardar metrica
       </button>
       <button type="button" onClick={onRefresh}>
         Actualizar dashboard de compras
@@ -87,6 +88,8 @@ vi.mock("@/features/purchases/components/dashboard/PurchaseDashboardRankingTable
 describe("PurchaseDashboardPage", () => {
   beforeEach(() => {
     reloadMock.mockClear();
+    savePurchaseDashboardSearchMetricMock.mockReset();
+    savePurchaseDashboardSearchMetricMock.mockResolvedValue({ type: "success", message: "Filtro guardado" });
     getPurchaseDashboardSearchStateMock.mockResolvedValue({ recent: [], saved: [] });
   });
 
@@ -102,12 +105,29 @@ describe("PurchaseDashboardPage", () => {
     expect(reloadMock).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps showing the active filter count when filters are applied", () => {
+  it("updates active filter count as soon as filters change", () => {
     render(<PurchaseDashboardPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Seleccionar proveedor" }));
-    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
 
     expect(screen.getByText("1 filtros activos")).toBeInTheDocument();
+  });
+
+  it("saves dashboard filters with the provided metric name without using prompt", async () => {
+    const promptSpy = vi.spyOn(window, "prompt").mockReturnValue("No deberia usarse");
+
+    render(<PurchaseDashboardPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Seleccionar proveedor" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar metrica" }));
+
+    await waitFor(() =>
+      expect(savePurchaseDashboardSearchMetricMock).toHaveBeenCalledWith("Pagadas julio", {
+        filters: [{ field: "supplierId", operator: "in", mode: "include", values: ["supplier-1"] }],
+      }),
+    );
+    expect(promptSpy).not.toHaveBeenCalled();
+
+    promptSpy.mockRestore();
   });
 });

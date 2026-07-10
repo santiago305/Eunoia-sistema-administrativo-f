@@ -1,3 +1,4 @@
+import type { DataTableSearchChip } from "@/shared/components/table/search";
 import type {
   PurchaseDashboardFilterField,
   PurchaseDashboardFilters,
@@ -35,6 +36,18 @@ const CATALOG_KEYS: Record<PurchaseDashboardFilterField, keyof PurchaseDashboard
   paymentMethodId: "paymentMethods",
   companyPaymentAccountId: "companyPaymentAccounts",
 };
+
+const FILTER_ARRAY_KEYS = {
+  purchaseType: "purchaseTypes",
+  paymentStatus: "paymentStatuses",
+  supplierId: "supplierIds",
+  userId: "userIds",
+  warehouseId: "warehouseIds",
+  paymentMethodId: "paymentMethodIds",
+  companyPaymentAccountId: "companyPaymentAccountIds",
+} satisfies Record<PurchaseDashboardFilterField, keyof PurchaseDashboardFilters>;
+
+export type PurchaseDashboardSearchChip = DataTableSearchChip<PurchaseDashboardFilterField | "dateRange">;
 
 function uniqueStrings(values: string[] | undefined) {
   return Array.from(new Set((values ?? []).map((value) => value?.trim()).filter(Boolean))) as string[];
@@ -94,6 +107,12 @@ function getRuleValue(filters: PurchaseDashboardFilters, field: PurchaseDashboar
   return value || undefined;
 }
 
+function getRuleValues(filters: PurchaseDashboardFilters, field: PurchaseDashboardFilterField) {
+  const arrayKey = FILTER_ARRAY_KEYS[field];
+  const values = Array.isArray(filters[arrayKey]) ? filters[arrayKey] as string[] : [];
+  return uniqueStrings([...(getRuleValue(filters, field) ? [getRuleValue(filters, field) as string] : []), ...values]);
+}
+
 function getCatalogLabel(
   field: PurchaseDashboardFilterField,
   value: string,
@@ -134,13 +153,13 @@ export function dashboardFiltersToSnapshot(
   filters: PurchaseDashboardFilters,
 ): PurchaseDashboardSavedFilterSnapshot {
   const rules = FIELD_ORDER.flatMap((field) => {
-    const value = getRuleValue(filters, field);
-    if (!value) return [];
+    const values = getRuleValues(filters, field);
+    if (!values.length) return [];
     return [{
       field,
       operator: "in",
       mode: "include",
-      values: [value],
+      values,
     } satisfies PurchaseDashboardSavedFilterRule];
   });
 
@@ -164,8 +183,10 @@ export function snapshotToDashboardFilters(
   if (normalized.dateRange?.to) filters.to = normalized.dateRange.to;
 
   normalized.filters.forEach((rule) => {
-    const value = rule.values?.[0];
-    if (value) filters[rule.field] = value;
+    const values = uniqueStrings(rule.values);
+    if (!values.length) return;
+    const arrayKey = FILTER_ARRAY_KEYS[rule.field];
+    (filters[arrayKey] as string[] | undefined) = values;
   });
 
   return filters;
@@ -202,4 +223,34 @@ export function buildPurchaseDashboardFilterLabel(
   });
 
   return parts.join(" | ") || "Filtro guardado";
+}
+
+export function buildPurchaseDashboardSearchChips(
+  snapshot?: Partial<PurchaseDashboardSavedFilterSnapshot> | null,
+  catalogs?: PurchaseDashboardSavedFilterCatalogs | null,
+): PurchaseDashboardSearchChip[] {
+  const normalized = sanitizePurchaseDashboardFilterSnapshot(snapshot);
+  const chips: PurchaseDashboardSearchChip[] = [];
+
+  if (normalized.dateRange?.from || normalized.dateRange?.to) {
+    const from = formatDateLabel(normalized.dateRange.from);
+    const to = formatDateLabel(normalized.dateRange.to);
+    chips.push({
+      id: "dateRange",
+      label: `Fecha: ${from || "Inicio"} - ${to || "Fin"}`,
+      removeKey: "dateRange",
+    });
+  }
+
+  normalized.filters.forEach((rule) => {
+    const values = rule.values?.map((value) => getCatalogLabel(rule.field, value, catalogs)) ?? [];
+    if (!values.length) return;
+    chips.push({
+      id: rule.field,
+      label: `${FIELD_LABELS[rule.field]}: ${values.join(" - ")}`,
+      removeKey: rule.field,
+    });
+  });
+
+  return chips;
 }

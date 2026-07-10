@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { sileo } from "sileo";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { usePurchaseDashboard } from "@/features/purchases/hooks/usePurchaseDashboard";
-import type { DataTableSavedSearchItem } from "@/shared/components/table/search";
+import type { DataTableRecentSearchItem, DataTableSavedSearchItem } from "@/shared/components/table/search";
 import {
   deletePurchaseDashboardSearchMetric,
   getPurchaseDashboardSearchState,
@@ -48,24 +48,31 @@ const emptySummary = {
 
 export default function PurchaseDashboardPage() {
   const defaultFilters = useMemo<PurchaseDashboardFilterValue>(() => ({ limit: DEFAULT_PURCHASE_DASHBOARD_LIMIT }), []);
-  const [draftFilters, setDraftFilters] = useState<PurchaseDashboardFilterValue>(defaultFilters);
-  const [appliedFilters, setAppliedFilters] = useState<PurchaseDashboardFilterValue>(defaultFilters);
+  const [filters, setFilters] = useState<PurchaseDashboardFilterValue>(defaultFilters);
   const [searchState, setSearchState] = useState<PurchaseDashboardSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
-  const { data, loading, error, reload } = usePurchaseDashboard(appliedFilters);
+  const { data, loading, error, reload } = usePurchaseDashboard(filters);
 
   const activeFilterCount = useMemo(
-    () => Object.entries(appliedFilters).filter(([key, value]) => key !== "limit" && Boolean(value)).length,
-    [appliedFilters],
+    () => Object.entries(filters).filter(([key, value]) => key !== "limit" && Boolean(value)).length,
+    [filters],
   );
 
-  const applyFilters = () => setAppliedFilters({ ...draftFilters });
-  const clearFilters = () => {
-    setDraftFilters(defaultFilters);
-    setAppliedFilters(defaultFilters);
-  };
-  const currentLimit = appliedFilters.limit ?? DEFAULT_PURCHASE_DASHBOARD_LIMIT;
-  const draftSnapshot = useMemo(() => dashboardFiltersToSnapshot(draftFilters), [draftFilters]);
+  const currentLimit = filters.limit ?? DEFAULT_PURCHASE_DASHBOARD_LIMIT;
+  const snapshot = useMemo(() => dashboardFiltersToSnapshot(filters), [filters]);
+
+  const recentMetrics = useMemo<DataTableRecentSearchItem<PurchaseDashboardSavedFilterSnapshot>[]>(
+    () =>
+      (searchState?.recent ?? []).map((item) => {
+        const snapshot = sanitizePurchaseDashboardFilterSnapshot(item.snapshot);
+        return {
+          id: item.recentId,
+          label: buildPurchaseDashboardFilterLabel(snapshot),
+          snapshot,
+        };
+      }),
+    [searchState],
+  );
 
   const savedMetrics = useMemo<DataTableSavedSearchItem<PurchaseDashboardSavedFilterSnapshot>[]>(
     () =>
@@ -96,33 +103,34 @@ export default function PurchaseDashboardPage() {
       ...snapshotToDashboardFilters(snapshot),
       limit: DEFAULT_PURCHASE_DASHBOARD_LIMIT,
     };
-    setDraftFilters(nextFilters);
-    setAppliedFilters(nextFilters);
+    setFilters(nextFilters);
   }, []);
 
-  const saveMetric = useCallback(async () => {
-    const snapshot = sanitizePurchaseDashboardFilterSnapshot(draftSnapshot);
-    if (!hasPurchaseDashboardFilterCriteria(snapshot)) return;
+  const saveMetric = useCallback(async (name: string) => {
+    const sanitizedSnapshot = sanitizePurchaseDashboardFilterSnapshot(snapshot);
+    if (!hasPurchaseDashboardFilterCriteria(sanitizedSnapshot)) return false;
 
-    const name = window.prompt("Nombre del filtro");
-    const normalizedName = name?.trim();
-    if (!normalizedName) return;
+    const normalizedName = name.trim();
+    if (!normalizedName) return false;
 
     setSavingMetric(true);
     try {
-      const response = await savePurchaseDashboardSearchMetric(normalizedName, snapshot);
+      const response = await savePurchaseDashboardSearchMetric(normalizedName, sanitizedSnapshot);
       if (response.type === "success") {
         sileo.success({ title: response.message });
         await loadSearchState();
+        return true;
       } else {
         sileo.error({ title: response.message });
+        return false;
       }
     } catch {
       sileo.error({ title: "Error al guardar el filtro" });
+      return false;
     } finally {
       setSavingMetric(false);
     }
-  }, [draftSnapshot, loadSearchState]);
+  }, [loadSearchState, snapshot]);
 
   const deleteMetric = useCallback(async (metricId: string) => {
     try {
@@ -148,15 +156,14 @@ export default function PurchaseDashboardPage() {
             </span>
           ) : null}
           <PurchaseDashboardFilters
-            value={draftFilters}
+            value={filters}
             loading={loading}
+            recentMetrics={recentMetrics}
             savedMetrics={savedMetrics}
-            canSaveMetric={hasPurchaseDashboardFilterCriteria(draftSnapshot)}
+            canSaveMetric={hasPurchaseDashboardFilterCriteria(snapshot)}
             saveLoading={savingMetric}
-            onChange={setDraftFilters}
+            onChange={setFilters}
             onRefresh={reload}
-            onApply={applyFilters}
-            onClear={clearFilters}
             onApplySavedSnapshot={applySavedSnapshot}
             onSaveMetric={saveMetric}
             onDeleteMetric={deleteMetric}

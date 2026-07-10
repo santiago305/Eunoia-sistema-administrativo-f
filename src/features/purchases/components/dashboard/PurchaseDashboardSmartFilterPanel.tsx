@@ -1,5 +1,6 @@
 import {
   SmartSearchPanel,
+  type DataTableRecentSearchItem,
   type DataTableSearchOption,
   type DataTableSavedSearchItem,
   type SmartSearchFieldConfig,
@@ -14,6 +15,7 @@ import type {
 
 type Props = {
   snapshot: PurchaseDashboardSavedFilterSnapshot;
+  recent?: DataTableRecentSearchItem<PurchaseDashboardSavedFilterSnapshot>[];
   saved?: DataTableSavedSearchItem<PurchaseDashboardSavedFilterSnapshot>[];
   catalogs: PurchaseDashboardSavedFilterCatalogs;
   onApplySnapshot: (snapshot: PurchaseDashboardSavedFilterSnapshot) => void;
@@ -29,6 +31,7 @@ const IN_OPERATOR = [{ id: "in", label: "Es" }] satisfies Array<{
 
 export function PurchaseDashboardSmartFilterPanel({
   snapshot,
+  recent = [],
   saved = [],
   catalogs,
   onApplySnapshot,
@@ -41,6 +44,7 @@ export function PurchaseDashboardSmartFilterPanel({
   return (
     <SmartSearchPanel
       fields={fields}
+      recent={recent}
       saved={saved}
       snapshot={snapshot}
       onApplySnapshot={onApplySnapshot}

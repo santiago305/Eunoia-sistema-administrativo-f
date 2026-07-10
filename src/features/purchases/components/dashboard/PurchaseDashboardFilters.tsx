@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
+import { RefreshCw, Save, SlidersHorizontal } from "lucide-react";
 import { FloatingDateRangePicker } from "@/shared/components/components/date-picker/FloatingDateRangePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { parseStoredDate, toLocalDateKey } from "@/shared/components/table/search/smartSearchUtils";
+import { DataTableSaveMetricModal } from "@/shared/components/table/search";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { listSuppliers } from "@/shared/services/supplierService";
 import { listUsers } from "@/shared/services/userService";
@@ -11,8 +12,10 @@ import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
 import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPaymentAccountService";
 import { getCompanyPaymentAccountDisplay } from "@/features/payments/paymentAccountView";
 import type {
+  DataTableRecentSearchItem,
   DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
+import { DataTableSearchChips } from "@/shared/components/table/search";
 import type {
   PurchaseDashboardFilterField,
   PurchaseDashboardFilters as PurchaseDashboardFilterValue,
@@ -22,9 +25,8 @@ import type {
 } from "@/features/purchases/types/purchase-dashboard.types";
 import { PurchaseDashboardSmartFilterPanel } from "@/features/purchases/components/dashboard/PurchaseDashboardSmartFilterPanel";
 import {
-  buildPurchaseDashboardFilterLabel,
+  buildPurchaseDashboardSearchChips,
   dashboardFiltersToSnapshot,
-  hasPurchaseDashboardFilterCriteria,
   sanitizePurchaseDashboardFilterSnapshot,
   snapshotToDashboardFilters,
 } from "@/features/purchases/utils/purchaseDashboardSmartFilters";
@@ -34,15 +36,14 @@ type SelectOption = { value: string; label: string };
 type Props = {
   value: PurchaseDashboardFilterValue;
   loading: boolean;
+  recentMetrics?: DataTableRecentSearchItem<PurchaseDashboardSavedFilterSnapshot>[];
   savedMetrics?: DataTableSavedSearchItem<PurchaseDashboardSavedFilterSnapshot>[];
   canSaveMetric?: boolean;
   saveLoading?: boolean;
   onChange: (value: PurchaseDashboardFilterValue) => void;
   onRefresh?: () => void;
-  onApply: () => void;
-  onClear: () => void;
   onApplySavedSnapshot?: (snapshot: PurchaseDashboardSavedFilterSnapshot) => void;
-  onSaveMetric?: () => void;
+  onSaveMetric?: (name: string) => Promise<boolean | void> | boolean | void;
   onDeleteMetric?: (metricId: string) => void;
 };
 
@@ -67,13 +68,12 @@ const paymentStatusOptions: SelectOption[] = [
 export function PurchaseDashboardFilters({
   value,
   loading,
+  recentMetrics = [],
   savedMetrics = [],
   canSaveMetric = false,
   saveLoading = false,
   onChange,
   onRefresh,
-  onApply,
-  onClear,
   onApplySavedSnapshot,
   onSaveMetric,
   onDeleteMetric,
@@ -85,6 +85,8 @@ export function PurchaseDashboardFilters({
   const [paymentMethodOptions, setPaymentMethodOptions] = useState<SelectOption[]>([]);
   const [companyAccountOptions, setCompanyAccountOptions] = useState<SelectOption[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [metricModalOpen, setMetricModalOpen] = useState(false);
+  const [metricName, setMetricName] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -181,9 +183,8 @@ export function PurchaseDashboardFilters({
   ]);
 
   const snapshot = useMemo(() => dashboardFiltersToSnapshot(value), [value]);
-  const hasActiveFilters = hasPurchaseDashboardFilterCriteria(snapshot);
-  const activeFilterLabel = useMemo(
-    () => buildPurchaseDashboardFilterLabel(snapshot, catalogs),
+  const searchChips = useMemo(
+    () => buildPurchaseDashboardSearchChips(snapshot, catalogs),
     [catalogs, snapshot],
   );
 
@@ -233,93 +234,130 @@ export function PurchaseDashboardFilters({
     applyDraftSnapshot(nextSnapshot);
   };
 
-  const handleApply = () => {
-    onApply();
-    setFiltersOpen(false);
+  const removeChip = (removeKey: PurchaseDashboardFilterField | "dateRange") => {
+    const nextSnapshot = sanitizePurchaseDashboardFilterSnapshot({
+      ...snapshot,
+      dateRange: removeKey === "dateRange" ? undefined : snapshot.dateRange,
+      filters: removeKey === "dateRange"
+        ? snapshot.filters
+        : snapshot.filters.filter((rule) => rule.field !== removeKey),
+    });
+
+    applyDraftSnapshot(nextSnapshot);
   };
 
-  const handleClear = () => {
-    onClear();
+  const openSaveMetricModal = () => {
     setFiltersOpen(false);
+    setMetricModalOpen(true);
+  };
+
+  const saveMetric = async () => {
+    const trimmed = metricName.trim();
+    if (!trimmed || !onSaveMetric) return;
+
+    const result = await onSaveMetric(trimmed);
+    if (result === false) return;
+
+    setMetricName("");
+    setMetricModalOpen(false);
   };
 
   return (
-    <section className="flex flex-nowrap items-center gap-2" aria-label="Filtros del dashboard">
-      {onRefresh ? (
-        <SystemButton
-          size="icon"
-          variant="outline"
-          className="shrink-0 border-border bg-background text-foreground hover:bg-black/[0.03] focus-visible:ring-primary/20"
-          aria-label="Actualizar dashboard de compras"
-          title="Actualizar dashboard de compras"
-          onClick={onRefresh}
-          disabled={loading}
-        >
-          <RefreshCw className="h-4 w-4" aria-hidden="true" />
-        </SystemButton>
-      ) : null}
-
-      <FloatingDateRangePicker
-        label="Desde / Hasta"
-        name="purchase-dashboard-date-range"
-        startDate={parseStoredDate(value.from)}
-        endDate={parseStoredDate(value.to)}
-        onChange={updateDateRange}
-        disabled={loading}
-        iconOnly
-        containerClassName="w-10 shrink-0"
-      />
-      <div className="relative">
-        <SystemButton
-          size="icon"
-          variant="outline"
-          aria-label="Filtros del dashboard de compras"
-          title="Filtros del dashboard de compras"
-          onClick={() => setFiltersOpen((current) => !current)}
-          disabled={loading}
-        >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-        </SystemButton>
-
-        {filtersOpen ? (
-          <div className="absolute left-0 top-full z-30 mt-2 w-[min(28rem,calc(100vw-2rem))] rounded-md border border-black/10 bg-white p-3 shadow-lg">
-            <PurchaseDashboardSmartFilterPanel
-              snapshot={snapshot}
-              saved={savedMetrics}
-              catalogs={catalogs}
-              onApplySnapshot={applySavedSnapshot}
-              onApplyRule={applyRule}
-              onRemoveRule={removeRule}
-              onDeleteMetric={onDeleteMetric}
-            />
-            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-black/10 pt-3">
-              <SystemButton size="sm" leftIcon={<Search className="h-4 w-4" />} onClick={handleApply} disabled={loading}>
-                Aplicar filtros
-              </SystemButton>
-              {onSaveMetric ? (
-                <SystemButton
-                  size="sm"
-                  variant="outline"
-                  onClick={onSaveMetric}
-                  disabled={loading || saveLoading || !canSaveMetric}
-                >
-                  {saveLoading ? "Guardando..." : "Guardar filtro"}
-                </SystemButton>
-              ) : null}
-              <SystemButton size="sm" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={handleClear} disabled={loading}>
-                Limpiar
-              </SystemButton>
-            </div>
-          </div>
+    <>
+      <section className="flex flex-nowrap items-center gap-2" aria-label="Filtros del dashboard">
+        {onRefresh ? (
+          <SystemButton
+            size="icon"
+            variant="outline"
+            className="shrink-0 border-border bg-background text-foreground hover:bg-black/[0.03] focus-visible:ring-primary/20"
+            aria-label="Actualizar dashboard de compras"
+            title="Actualizar dashboard de compras"
+            onClick={onRefresh}
+            disabled={loading}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          </SystemButton>
         ) : null}
-      </div>
 
-      {hasActiveFilters ? (
-        <span className="min-w-0 max-w-full truncate rounded-md border border-black/10 px-3 py-2 text-xs text-black/65">
-          {activeFilterLabel}
-        </span>
+        <FloatingDateRangePicker
+          label="Desde / Hasta"
+          name="purchase-dashboard-date-range"
+          startDate={parseStoredDate(value.from)}
+          endDate={parseStoredDate(value.to)}
+          onChange={updateDateRange}
+          disabled={loading}
+          iconOnly
+          containerClassName="w-10 shrink-0"
+        />
+        <div className="relative">
+          <SystemButton
+            size="icon"
+            variant="outline"
+            aria-label="Filtros del dashboard de compras"
+            title="Filtros del dashboard de compras"
+            onClick={() => setFiltersOpen((current) => !current)}
+            disabled={loading}
+          >
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          </SystemButton>
+
+          {filtersOpen ? (
+            <div
+              data-testid="purchase-dashboard-filters-popover"
+              className="absolute right-0 top-full z-30 mt-2 max-h-[min(80vh,42rem)] w-[min(28rem,calc(100vw-1.5rem))] overflow-y-auto rounded-md border border-black/10 bg-white p-3 shadow-lg"
+            >
+              <PurchaseDashboardSmartFilterPanel
+                snapshot={snapshot}
+                recent={recentMetrics}
+                saved={savedMetrics}
+                catalogs={catalogs}
+                onApplySnapshot={applySavedSnapshot}
+                onApplyRule={applyRule}
+                onRemoveRule={removeRule}
+                onDeleteMetric={onDeleteMetric}
+              />
+              {onSaveMetric ? (
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-black/10 bg-black/[0.015] px-1 pt-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-foreground">
+                      Guardar metrica
+                    </p>
+                  </div>
+                  <SystemButton
+                    size="sm"
+                    leftIcon={<Save className="h-3.5 w-3.5" />}
+                    onClick={openSaveMetricModal}
+                    disabled={loading || saveLoading || !canSaveMetric}
+                    className="shrink-0 rounded-sm px-3 text-[11px]"
+                  >
+                    Guardar
+                  </SystemButton>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <DataTableSearchChips<PurchaseDashboardFilterField | "dateRange">
+          chips={searchChips}
+          onRemove={(chip) => {
+            if (chip.removeKey !== "q") removeChip(chip.removeKey);
+          }}
+        />
+      </section>
+
+      {onSaveMetric ? (
+        <DataTableSaveMetricModal
+          open={metricModalOpen}
+          metricName={metricName}
+          saveLoading={saveLoading}
+          inputName="purchase-dashboard-filter-metric-name"
+          onMetricNameChange={setMetricName}
+          onClose={() => setMetricModalOpen(false)}
+          onSave={() => void saveMetric()}
+        />
       ) : null}
-    </section>
+    </>
   );
 }
 

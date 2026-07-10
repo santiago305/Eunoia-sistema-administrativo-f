@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PurchaseDashboardFilters } from "./PurchaseDashboardFilters";
 
@@ -104,7 +104,7 @@ vi.mock("@/shared/components/components/FloatingMultiSelect", () => ({
 }));
 
 describe("PurchaseDashboardFilters", () => {
-  it("loads catalog options and applies selected filters only when requested", async () => {
+  it("loads catalog options and applies selected filters immediately from the smart filter panel", async () => {
     listSuppliersMock.mockResolvedValue({
       items: [{ supplierId: "supplier-1", tradeName: "Proveedor Norte", documentNumber: "20111111111" }],
     });
@@ -123,8 +123,6 @@ describe("PurchaseDashboardFilters", () => {
       },
     ]);
     const onChange = vi.fn();
-    const onApply = vi.fn();
-    const onClear = vi.fn();
     const onRefresh = vi.fn();
 
     render(
@@ -133,8 +131,6 @@ describe("PurchaseDashboardFilters", () => {
         loading={false}
         onRefresh={onRefresh}
         onChange={onChange}
-        onApply={onApply}
-        onClear={onClear}
       />,
     );
 
@@ -145,7 +141,7 @@ describe("PurchaseDashboardFilters", () => {
     expect(screen.getByRole("region", { name: "Filtros del dashboard" })).toHaveClass("flex-nowrap");
     expect(screen.getByRole("button", { name: "Actualizar dashboard de compras" })).toHaveClass("border-border");
     expect(screen.getByTestId("date-range-container")).toHaveClass("w-10", "shrink-0");
-    expect(screen.queryByRole("button", { name: /aplicar filtros/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^aplicar filtros$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^limpiar$/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Actualizar dashboard de compras" }));
@@ -156,17 +152,11 @@ describe("PurchaseDashboardFilters", () => {
     fireEvent.click(screen.getByRole("button", { name: "Proveedores" }));
     fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
 
-    expect(onApply).not.toHaveBeenCalled();
-    expect(onChange).toHaveBeenLastCalledWith({ limit: 10, supplierId: "supplier-1" });
+    expect(onChange).toHaveBeenLastCalledWith({ limit: 10, supplierIds: ["supplier-1"] });
     expect(screen.queryByPlaceholderText(/uuid/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Filas por cuadro")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /aplicar filtros/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Filtros del dashboard de compras" }));
-    fireEvent.click(screen.getByRole("button", { name: /^limpiar$/i }));
-
-    expect(onApply).toHaveBeenCalledTimes(1);
-    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /^aplicar filtros$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^limpiar$/i })).not.toBeInTheDocument();
   });
 
   it("uses the shared date range picker and maps selected dates to dashboard filters", () => {
@@ -182,8 +172,6 @@ describe("PurchaseDashboardFilters", () => {
         value={{ limit: 10, supplierId: "supplier-1", from: "2026-07-03", to: "2026-07-08" }}
         loading={false}
         onChange={onChange}
-        onApply={vi.fn()}
-        onClear={vi.fn()}
       />,
     );
 
@@ -228,8 +216,6 @@ describe("PurchaseDashboardFilters", () => {
         value={{ limit: 10 }}
         loading={false}
         onChange={vi.fn()}
-        onApply={vi.fn()}
-        onClear={vi.fn()}
       />,
     );
 
@@ -237,6 +223,8 @@ describe("PurchaseDashboardFilters", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Filtros del dashboard de compras" }));
 
+    expect(screen.getByTestId("purchase-dashboard-filters-popover")).toHaveClass("right-0");
+    expect(screen.getByTestId("purchase-dashboard-filters-popover")).not.toHaveClass("left-0");
     expect(screen.getByText("Filtros")).toBeInTheDocument();
     expect(screen.getByText("Selecciona filtros para el dashboard de compras.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Tipo de compra/i })).toBeInTheDocument();
@@ -275,8 +263,6 @@ describe("PurchaseDashboardFilters", () => {
           },
         ]}
         onChange={vi.fn()}
-        onApply={vi.fn()}
-        onClear={vi.fn()}
         onApplySavedSnapshot={onApplySavedSnapshot}
       />,
     );
@@ -285,5 +271,97 @@ describe("PurchaseDashboardFilters", () => {
     fireEvent.click(screen.getByRole("button", { name: /Pagadas julio/ }));
 
     expect(onApplySavedSnapshot).toHaveBeenCalledWith(savedSnapshot);
+  });
+
+  it("opens the shared save metric modal before saving dashboard filters", async () => {
+    listSuppliersMock.mockResolvedValue({ items: [] });
+    listUsersMock.mockResolvedValue({ items: [] });
+    listActiveWarehousesMock.mockResolvedValue({ items: [] });
+    getAllPaymentMethodsMock.mockResolvedValue([]);
+    listCompanyPaymentAccountsByCompanyMock.mockResolvedValue([]);
+    const onSaveMetric = vi.fn().mockResolvedValue(true);
+
+    render(
+      <PurchaseDashboardFilters
+        value={{ limit: 10, paymentStatuses: ["PAID"] }}
+        loading={false}
+        canSaveMetric
+        onChange={vi.fn()}
+        onSaveMetric={onSaveMetric}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros del dashboard de compras" }));
+
+    expect(screen.getByText("Guardar metrica")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Guardar metrica" });
+    fireEvent.change(within(dialog).getByLabelText("Nombre de la metrica"), {
+      target: { value: "Pagadas julio" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => expect(onSaveMetric).toHaveBeenCalledWith("Pagadas julio"));
+  });
+
+  it("shows recent dashboard filter snapshots in the same smart filter panel", async () => {
+    listSuppliersMock.mockResolvedValue({ items: [] });
+    listUsersMock.mockResolvedValue({ items: [] });
+    listActiveWarehousesMock.mockResolvedValue({ items: [] });
+    getAllPaymentMethodsMock.mockResolvedValue([]);
+    listCompanyPaymentAccountsByCompanyMock.mockResolvedValue([]);
+    const onApplySavedSnapshot = vi.fn();
+    const recentSnapshot = {
+      filters: [{ field: "paymentStatus" as const, operator: "in" as const, values: ["OVERDUE"] }],
+      dateRange: { mode: "absolute" as const, from: "2026-07-01", to: "2026-07-09" },
+    };
+
+    render(
+      <PurchaseDashboardFilters
+        value={{ limit: 10 }}
+        loading={false}
+        recentMetrics={[
+          {
+            id: "recent-1",
+            label: "Fecha: 01/07/2026 - 09/07/2026 | Estado de pago: Vencido",
+            snapshot: recentSnapshot,
+          },
+        ]}
+        onChange={vi.fn()}
+        onApplySavedSnapshot={onApplySavedSnapshot}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros del dashboard de compras" }));
+
+    expect(screen.getByText("Recientes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Estado de pago: Vencido/ }));
+
+    expect(onApplySavedSnapshot).toHaveBeenCalledWith(recentSnapshot);
+  });
+
+  it("shows active dashboard filters as removable smart filter chips", async () => {
+    listSuppliersMock.mockResolvedValue({ items: [] });
+    listUsersMock.mockResolvedValue({ items: [] });
+    listActiveWarehousesMock.mockResolvedValue({ items: [] });
+    getAllPaymentMethodsMock.mockResolvedValue([]);
+    listCompanyPaymentAccountsByCompanyMock.mockResolvedValue([]);
+    const onChange = vi.fn();
+
+    render(
+      <PurchaseDashboardFilters
+        value={{ limit: 10, paymentStatuses: ["PENDING", "OVERDUE"], from: "2026-07-01", to: "2026-07-09" }}
+        loading={false}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByText("Fecha: 01/07/2026 - 09/07/2026")).toBeInTheDocument();
+    expect(screen.getByText("Estado de pago: Pendiente - Vencido")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Quitar Estado de pago: Pendiente - Vencido" }));
+
+    expect(onChange).toHaveBeenCalledWith({ limit: 10, from: "2026-07-01", to: "2026-07-09" });
   });
 });

@@ -6,13 +6,20 @@ export type PurchaseDashboardFilters = {
   from?: string;
   to?: string;
   supplierId?: string;
+  supplierIds?: string[];
   purchaseType?: string;
+  purchaseTypes?: string[];
   status?: string;
   paymentStatus?: string;
+  paymentStatuses?: string[];
   userId?: string;
+  userIds?: string[];
   warehouseId?: string;
+  warehouseIds?: string[];
   paymentMethodId?: string;
+  paymentMethodIds?: string[];
   companyPaymentAccountId?: string;
+  companyPaymentAccountIds?: string[];
   limit?: number;
 };
 

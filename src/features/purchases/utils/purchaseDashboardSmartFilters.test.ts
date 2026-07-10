@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PurchaseDashboardFilters } from "../types/purchase-dashboard.types";
 import {
   buildPurchaseDashboardFilterLabel,
+  buildPurchaseDashboardSearchChips,
   dashboardFiltersToSnapshot,
   hasPurchaseDashboardFilterCriteria,
   sanitizePurchaseDashboardFilterSnapshot,
@@ -59,7 +60,7 @@ describe("purchaseDashboardSmartFilters", () => {
     expect(snapshotToDashboardFilters(snapshot)).toEqual({
       from: "2026-07-01",
       to: "2026-07-09",
-      supplierId: "supplier-1",
+      supplierIds: ["supplier-1"],
     });
   });
 
@@ -93,9 +94,32 @@ describe("purchaseDashboardSmartFilters", () => {
 
     expect(filters).toEqual({
       from: "2026-07-01",
-      supplierId: "supplier-1",
-      paymentStatus: "OVERDUE",
+      supplierIds: ["supplier-1", "supplier-2"],
+      paymentStatuses: ["OVERDUE"],
     } satisfies PurchaseDashboardFilters);
+  });
+
+  it("builds dashboard chips for each active filter and date range", () => {
+    expect(buildPurchaseDashboardSearchChips(
+      {
+        filters: [
+          { field: "paymentStatus", operator: "in", values: ["PENDING", "OVERDUE"] },
+          { field: "supplierId", operator: "in", values: ["supplier-1"] },
+        ],
+        dateRange: { mode: "absolute", from: "2026-07-01", to: "2026-07-09" },
+      },
+      {
+        paymentStatuses: [
+          { id: "PENDING", label: "Pendiente" },
+          { id: "OVERDUE", label: "Vencido" },
+        ],
+        suppliers: [{ id: "supplier-1", label: "Proveedor Uno" }],
+      },
+    )).toEqual([
+      { id: "dateRange", label: "Fecha: 01/07/2026 - 09/07/2026", removeKey: "dateRange" },
+      { id: "paymentStatus", label: "Estado de pago: Pendiente - Vencido", removeKey: "paymentStatus" },
+      { id: "supplierId", label: "Proveedor: Proveedor Uno", removeKey: "supplierId" },
+    ]);
   });
 
   it("builds a readable label using catalog labels and dates", () => {
