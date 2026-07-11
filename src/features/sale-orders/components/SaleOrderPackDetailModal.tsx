@@ -4,7 +4,7 @@
   import { parseApiError } from "@/shared/common/utils/handleApiError";
   import { getPackById } from "@/shared/services/packService";
   import type { PackDetailResponse } from "@/features/catalog/types/pack";
-  import { getSaleOrderStocksBySkuIds } from "@/features/sale-orders/services/saleOrderStockService";
+  import { getSaleOrderStocksBySkuIds } from "@/shared/services/saleOrderStockService";
   import type { skuStock } from "@/features/catalog/types/documentInventory";
 
   type Props = {

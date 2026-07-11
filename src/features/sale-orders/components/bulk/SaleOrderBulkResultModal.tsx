@@ -44,10 +44,7 @@ function getConditionFailureReasons(row: SaleOrderBulkActionFailedRow) {
                     field?: unknown;
                 };
             };
-            const label = typeof item.details?.label === "string" ? item.details.label : null;
             const reason = typeof item.reason === "string" ? item.reason : null;
-            const field = typeof item.details?.field === "string" ? item.details.field : null;
-            const type = typeof item.type === "string" ? item.type : null;
             return [reason].filter(Boolean).join(": ");
         })
         .filter((value): value is string => Boolean(value));

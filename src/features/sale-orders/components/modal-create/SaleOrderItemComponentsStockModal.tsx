@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Package } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import type { SaleOrderItemComponentInput, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
-import { getSaleOrderStocksBySkuIds } from "@/features/sale-orders/services/saleOrderStockService";
+import { getSaleOrderStocksBySkuIds } from "@/shared/services/saleOrderStockService";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { getSku } from "@/shared/services/skuService";
 import { getSaleOrderItemComponents } from "@/shared/services/saleOrderService";

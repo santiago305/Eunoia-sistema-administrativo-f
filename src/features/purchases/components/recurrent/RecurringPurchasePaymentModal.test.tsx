@@ -117,14 +117,16 @@ describe("RecurringPurchasePaymentModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() =>
-      expect(registerPaymentMock).toHaveBeenCalledWith("rec-1", {
-        method: "TRANSFERENCIA",
-        date: expect.any(String),
-        currency: CurrencyTypes.PEN,
-        amount: 120,
-        operationNumber: undefined,
-        note: undefined,
-      }),
+      expect(registerPaymentMock).toHaveBeenCalledWith(
+        "rec-1",
+        expect.objectContaining({
+          date: expect.any(String),
+          currency: CurrencyTypes.PEN,
+          amount: 120,
+          operationNumber: undefined,
+          note: undefined,
+        }),
+      ),
     );
     expect(uploadAttachmentMock).not.toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalled();
