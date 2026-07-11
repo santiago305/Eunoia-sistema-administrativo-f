@@ -12,9 +12,18 @@ import type {
 export const listRecurringPurchases = async (
   query: ListRecurringPurchasesQuery = {},
 ): Promise<ListRecurringPurchasesResponse> => {
+  const params = {
+    ...query,
+    filters:
+      Array.isArray(query.filters) && query.filters.length
+        ? JSON.stringify(query.filters)
+        : typeof query.filters === "string"
+          ? query.filters
+          : undefined,
+  };
   const response = await axiosInstance.get<ListRecurringPurchasesResponse>(
     API_RECURRING_PURCHASES_GROUP.list,
-    { params: query },
+    { params },
   );
   return response.data;
 };

@@ -1,16 +1,59 @@
 import { describe, expect, it, vi } from "vitest";
 import { CurrencyTypes } from "@/features/purchases/types/purchaseEnums";
-import { registerRecurringPurchasePayment } from "./recurringPurchaseService";
+import { listRecurringPurchases, registerRecurringPurchasePayment } from "./recurringPurchaseService";
 
-const postMock = vi.hoisted(() => vi.fn());
+const { getMock, postMock } = vi.hoisted(() => ({
+  getMock: vi.fn(),
+  postMock: vi.fn(),
+}));
 
 vi.mock("@/shared/common/utils/axios", () => ({
   default: {
+    get: getMock,
     post: postMock,
   },
 }));
 
 describe("recurringPurchaseService", () => {
+  it("serializes smart filters when listing recurring purchases", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 25,
+      },
+    });
+
+    await listRecurringPurchases({
+      page: 1,
+      limit: 25,
+      q: "hosting",
+      filters: [
+        {
+          field: "status",
+          operator: "in",
+          values: ["ACTIVE"],
+        },
+      ],
+    } as any);
+
+    expect(getMock).toHaveBeenCalledWith("/recurring-purchases", {
+      params: {
+        page: 1,
+        limit: 25,
+        q: "hosting",
+        filters: JSON.stringify([
+          {
+            field: "status",
+            operator: "in",
+            values: ["ACTIVE"],
+          },
+        ]),
+      },
+    });
+  });
+
   it("registers a recurring purchase payment", async () => {
     postMock.mockResolvedValueOnce({
       data: {
