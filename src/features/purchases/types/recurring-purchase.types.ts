@@ -1,8 +1,63 @@
 import type { CurrencyType } from "./purchaseEnums";
+import type { DataTableSearchOption, SmartSearchRangeValue, SmartSearchRuleMode } from "@/shared/components/table/search";
 
 export type RecurringFrequency = "MONTHLY" | "ANNUAL";
 export type RecurringStatus = "ACTIVE" | "PAUSED" | "CANCELLED";
 export type RecurringPurchaseType = "SERVICE" | "SUBSCRIPTION";
+
+export const RecurringPurchaseSearchFields = {
+  SUPPLIER_ID: "supplierId",
+  STATUS: "status",
+  FREQUENCY: "frequency",
+  PURCHASE_TYPE: "purchaseType",
+  CURRENCY: "currency",
+  START_DATE: "startDate",
+  NEXT_DUE_DATE: "nextDueDate",
+  AMOUNT: "amount",
+  PAYMENT_STATUS: "paymentStatus",
+} as const;
+
+export type RecurringPurchaseSearchField =
+  typeof RecurringPurchaseSearchFields[keyof typeof RecurringPurchaseSearchFields];
+
+export const RecurringPurchaseSearchOperators = {
+  IN: "in",
+  CONTAINS: "contains",
+  EQ: "eq",
+  GT: "gt",
+  GTE: "gte",
+  LT: "lt",
+  LTE: "lte",
+  ON: "on",
+  BEFORE: "before",
+  AFTER: "after",
+  BETWEEN: "between",
+  ON_OR_BEFORE: "onOrBefore",
+  ON_OR_AFTER: "onOrAfter",
+} as const;
+
+export type RecurringPurchaseSearchOperator =
+  typeof RecurringPurchaseSearchOperators[keyof typeof RecurringPurchaseSearchOperators];
+
+export type RecurringPurchaseSearchRule = {
+  field: RecurringPurchaseSearchField;
+  operator: RecurringPurchaseSearchOperator;
+  mode?: SmartSearchRuleMode;
+  value?: string;
+  values?: string[];
+  range?: SmartSearchRangeValue;
+};
+
+export type RecurringPurchaseSearchFilters = RecurringPurchaseSearchRule[];
+
+export type RecurringPurchaseSearchSnapshot = {
+  q?: string;
+  filters: RecurringPurchaseSearchFilters;
+};
+
+export type RecurringPurchaseSearchCatalogs = {
+  suppliers: DataTableSearchOption[];
+};
 
 export type RecurringPurchase = {
   recurringPurchaseTemplateId: string;
@@ -41,6 +96,17 @@ export type CreateRecurringPurchasePayload = {
 
 export type ListRecurringPurchasesQuery = {
   status?: RecurringStatus;
+  statuses?: RecurringStatus[];
+  supplierId?: string;
+  supplierIds?: string[];
+  frequency?: RecurringFrequency;
+  frequencies?: RecurringFrequency[];
+  currency?: CurrencyType;
+  currencies?: CurrencyType[];
+  purchaseType?: RecurringPurchaseType;
+  purchaseTypes?: RecurringPurchaseType[];
+  q?: string;
+  filters?: RecurringPurchaseSearchFilters | string;
   page?: number;
   limit?: number;
 };

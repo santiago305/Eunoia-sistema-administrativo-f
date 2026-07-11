@@ -1,4 +1,5 @@
 import { Menu, Pause, Play, RefreshCw, Wallet, XCircle } from "lucide-react";
+import type { ReactNode } from "react";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -33,6 +34,7 @@ type Props = {
   onCancel: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
   onRegisterPayment: (item: RecurringPurchase) => void;
+  toolbarSearchContent?: ReactNode;
   permissions?: {
     canPause: boolean;
     canCancel: boolean;
@@ -53,6 +55,7 @@ export function RecurringPurchaseTable({
   onCancel,
   onGenerate,
   onRegisterPayment,
+  toolbarSearchContent,
   permissions = { canPause: true, canCancel: true, canGenerate: true },
 }: Props) {
   const columns: DataTableColumn<RecurringPurchase>[] = [
@@ -155,6 +158,7 @@ export function RecurringPurchaseTable({
       hoverable={false}
       animated={false}
       selectableColumns
+      toolbarSearchContent={toolbarSearchContent}
       pagination={{ page, limit, total }}
       onPageChange={onPageChange}
     />

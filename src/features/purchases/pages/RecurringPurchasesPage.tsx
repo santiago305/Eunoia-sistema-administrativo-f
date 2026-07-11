@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { DataTableSearchBar, DataTableSearchChips } from "@/shared/components/table/search";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
+import { listSuppliers } from "@/shared/services/supplierService";
 import {
   cancelRecurringPurchase,
   createRecurringPurchase,
@@ -18,22 +19,27 @@ import {
 } from "@/shared/services/recurringPurchaseService";
 import { RecurringPurchaseFormModal } from "../components/recurrent/RecurringPurchaseFormModal";
 import { RecurringPurchasePaymentModal } from "../components/recurrent/RecurringPurchasePaymentModal";
+import { RecurringPurchaseSmartSearchPanel } from "../components/recurrent/RecurringPurchaseSmartSearchPanel";
 import { RecurringPurchaseTable } from "../components/recurrent/RecurringPurchaseTable";
 import type {
   CreateRecurringPurchasePayload,
   ListRecurringPurchasesResponse,
   RecurringPurchase,
-  RecurringStatus,
+  RecurringPurchaseSearchCatalogs,
+  RecurringPurchaseSearchRule,
+  RecurringPurchaseSearchSnapshot,
 } from "../types/recurring-purchase.types";
+import {
+  buildRecurringPurchaseSearchChips,
+  buildRecurringPurchaseSmartSearchColumns,
+  createEmptyRecurringPurchaseSearchFilters,
+  removeRecurringPurchaseSearchKey,
+  sanitizeRecurringPurchaseSearchSnapshot,
+  upsertRecurringPurchaseSearchRule,
+  type RecurringPurchaseSearchFilterKey,
+} from "../utils/recurringPurchaseSmartSearch";
 
-const DEFAULT_LIMIT = 20;
-
-const statusOptions = [
-  { value: "ALL", label: "Todos los estados" },
-  { value: "ACTIVE", label: "Activas" },
-  { value: "PAUSED", label: "Pausadas" },
-  { value: "CANCELLED", label: "Canceladas" },
-];
+const DEFAULT_LIMIT = 25;
 
 export default function RecurringPurchasesPage() {
   const { showFeedback } = useFeedbackToast();
@@ -41,7 +47,10 @@ export default function RecurringPurchasesPage() {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<RecurringPurchase | null>(null);
-  const [status, setStatus] = useState<RecurringStatus | "">("");
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState(() => createEmptyRecurringPurchaseSearchFilters());
+  const [supplierOptions, setSupplierOptions] = useState<RecurringPurchaseSearchCatalogs["suppliers"]>([]);
   const [items, setItems] = useState<RecurringPurchase[]>([]);
   const [pagination, setPagination] = useState<Pick<ListRecurringPurchasesResponse, "total" | "page" | "limit">>({
     total: 0,
@@ -49,13 +58,56 @@ export default function RecurringPurchasesPage() {
     limit: DEFAULT_LIMIT,
   });
 
+  const catalogs = useMemo<RecurringPurchaseSearchCatalogs>(
+    () => ({ suppliers: supplierOptions }),
+    [supplierOptions],
+  );
+
+  const draftSnapshot = useMemo(
+    () => sanitizeRecurringPurchaseSearchSnapshot({ q: searchText, filters: searchFilters }),
+    [searchFilters, searchText],
+  );
+
+  const executedSnapshot = useMemo(
+    () => sanitizeRecurringPurchaseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+    [appliedSearchText, searchFilters],
+  );
+
+  const smartSearchColumns = useMemo(
+    () => buildRecurringPurchaseSmartSearchColumns(catalogs),
+    [catalogs],
+  );
+
+  const searchChips = useMemo(
+    () => buildRecurringPurchaseSearchChips(executedSnapshot, catalogs),
+    [catalogs, executedSnapshot],
+  );
+
+  const loadSuppliers = useCallback(async () => {
+    try {
+      const response = await listSuppliers({ page: 1, limit: 100 });
+      setSupplierOptions(
+        (response.items ?? []).map((supplier) => {
+          const personName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
+          return {
+            id: supplier.supplierId,
+            label: supplier.tradeName || personName || supplier.documentNumber || supplier.supplierId,
+          };
+        }),
+      );
+    } catch {
+      setSupplierOptions([]);
+    }
+  }, []);
+
   const loadRecurring = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listRecurringPurchases({
-        status: status || undefined,
         page: pagination.page,
-        limit: pagination.limit,
+        limit: DEFAULT_LIMIT,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
       });
       setItems(Array.isArray(data.items) ? data.items : []);
       setPagination({
@@ -69,11 +121,61 @@ export default function RecurringPurchasesPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.limit, pagination.page, showFeedback, status]);
+  }, [executedSnapshot, pagination.page, showFeedback]);
 
   useEffect(() => {
     void loadRecurring();
   }, [loadRecurring]);
+
+  useEffect(() => {
+    void loadSuppliers();
+  }, [loadSuppliers]);
+
+  const submitSearch = useCallback(() => {
+    setAppliedSearchText(searchText.trim());
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, [searchText]);
+
+  const applySmartSnapshot = useCallback((snapshot: RecurringPurchaseSearchSnapshot) => {
+    const normalized = sanitizeRecurringPurchaseSearchSnapshot(snapshot);
+    setSearchText(normalized.q ?? "");
+    setAppliedSearchText(normalized.q ?? "");
+    setSearchFilters(normalized.filters);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, []);
+
+  const handleApplySearchRule = useCallback((rule: RecurringPurchaseSearchRule) => {
+    setSearchFilters((current) => {
+      const next = upsertRecurringPurchaseSearchRule(
+        sanitizeRecurringPurchaseSearchSnapshot({ q: searchText, filters: current }),
+        rule,
+      );
+      return next.filters;
+    });
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, [searchText]);
+
+  const handleRemoveSearchRule = useCallback((fieldId: RecurringPurchaseSearchFilterKey) => {
+    setSearchFilters((current) => {
+      const next = removeRecurringPurchaseSearchKey(
+        sanitizeRecurringPurchaseSearchSnapshot({ q: searchText, filters: current }),
+        fieldId,
+      );
+      return next.filters;
+    });
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, [searchText]);
+
+  const handleRemoveChip = useCallback((key: "q" | RecurringPurchaseSearchFilterKey) => {
+    const nextSnapshot = removeRecurringPurchaseSearchKey(
+      sanitizeRecurringPurchaseSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+      key,
+    );
+    setSearchText(nextSnapshot.q ?? "");
+    setAppliedSearchText(nextSnapshot.q ?? "");
+    setSearchFilters(nextSnapshot.filters);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, [appliedSearchText, searchFilters]);
 
   const createTemplate = async (payload: CreateRecurringPurchasePayload) => {
     try {
@@ -120,38 +222,19 @@ export default function RecurringPurchasesPage() {
     <PageShell>
       <PageTitle title="Compras recurrentes" />
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-black">Compras recurrentes</h1>
-            <p className="mt-1 text-sm text-black/60">
-              Membresias, servicios y suscripciones que generan cuentas por pagar por periodo.
-            </p>
-          </div>
+        <PageActionsRow>
           {can("recurring_purchases.create") ? (
             <SystemButton onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4" />
               Nueva recurrente
             </SystemButton>
           ) : null}
-        </div>
-
-        <PageActionsRow>
-          <div className="w-full sm:w-52">
-            <FloatingSelect
-              label="Estado"
-              name="recurring-purchase-status"
-              value={status || "ALL"}
-              options={statusOptions}
-              onChange={(value) => {
-                setStatus(value === "ALL" ? "" : (value as RecurringStatus));
-                setPagination((prev) => ({ ...prev, page: 1 }));
-              }}
-            />
-          </div>
-          <SystemButton variant="outline" onClick={() => void loadRecurring()}>
-            Actualizar
-          </SystemButton>
         </PageActionsRow>
+
+        <DataTableSearchChips
+          chips={searchChips}
+          onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+        />
 
         <RecurringPurchaseTable
           items={items}
@@ -171,6 +254,25 @@ export default function RecurringPurchasesPage() {
           }
           onGenerate={(item) => void generatePayable(item)}
           onRegisterPayment={(item) => setPaymentTarget(item)}
+          toolbarSearchContent={
+            <DataTableSearchBar
+              value={searchText}
+              onChange={setSearchText}
+              onSubmitSearch={submitSearch}
+              searchLabel="Busca recurrente"
+              searchName="recurring-purchase-smart-search"
+            >
+              <RecurringPurchaseSmartSearchPanel
+                columns={smartSearchColumns}
+                snapshot={draftSnapshot}
+                catalogs={catalogs}
+                filterQuery={searchText}
+                onApplySnapshot={applySmartSnapshot}
+                onApplyRule={handleApplySearchRule}
+                onRemoveRule={handleRemoveSearchRule}
+              />
+            </DataTableSearchBar>
+          }
           permissions={{
             canPause: can("recurring_purchases.pause"),
             canCancel: can("recurring_purchases.cancel"),
