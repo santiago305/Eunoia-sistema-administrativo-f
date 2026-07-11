@@ -4,6 +4,8 @@ import type {
   CreateRecurringPurchasePayload,
   ListRecurringPurchasesQuery,
   ListRecurringPurchasesResponse,
+  RegisterRecurringPurchasePaymentPayload,
+  RegisterRecurringPurchasePaymentResponse,
   RecurringPurchase,
 } from "@/features/purchases/types/recurring-purchase.types";
 
@@ -46,5 +48,16 @@ export const generateCurrentRecurringPayable = async (
   id: string,
 ): Promise<{ generated: boolean; purchaseId?: string; accountPayableId?: string; reason?: string }> => {
   const response = await axiosInstance.post(API_RECURRING_PURCHASES_GROUP.generateCurrentPayable(id));
+  return response.data;
+};
+
+export const registerRecurringPurchasePayment = async (
+  id: string,
+  payload: RegisterRecurringPurchasePaymentPayload,
+): Promise<RegisterRecurringPurchasePaymentResponse> => {
+  const response = await axiosInstance.post<RegisterRecurringPurchasePaymentResponse>(
+    API_RECURRING_PURCHASES_GROUP.registerPayment(id),
+    payload,
+  );
   return response.data;
 };

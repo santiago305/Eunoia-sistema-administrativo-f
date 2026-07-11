@@ -1,4 +1,4 @@
-import { Menu, Pause, Play, RefreshCw, XCircle } from "lucide-react";
+import { Menu, Pause, Play, RefreshCw, Wallet, XCircle } from "lucide-react";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -32,10 +32,12 @@ type Props = {
   onResume: (item: RecurringPurchase) => void;
   onCancel: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
+  onRegisterPayment: (item: RecurringPurchase) => void;
   permissions?: {
     canPause: boolean;
     canCancel: boolean;
     canGenerate: boolean;
+    canRegisterPayment?: boolean;
   };
 };
 
@@ -50,6 +52,7 @@ export function RecurringPurchaseTable({
   onResume,
   onCancel,
   onGenerate,
+  onRegisterPayment,
   permissions = { canPause: true, canCancel: true, canGenerate: true },
 }: Props) {
   const columns: DataTableColumn<RecurringPurchase>[] = [
@@ -112,6 +115,7 @@ export function RecurringPurchaseTable({
             onResume,
             onCancel,
             onGenerate,
+            onRegisterPayment,
             permissions,
           })}
           columns={1}
@@ -178,6 +182,7 @@ function buildActions({
   onResume,
   onCancel,
   onGenerate,
+  onRegisterPayment,
   permissions,
 }: {
   item: RecurringPurchase;
@@ -185,9 +190,16 @@ function buildActions({
   onResume: (item: RecurringPurchase) => void;
   onCancel: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
+  onRegisterPayment: (item: RecurringPurchase) => void;
   permissions: NonNullable<Props["permissions"]>;
 }) {
   return [
+    permissions.canRegisterPayment && item.status === "ACTIVE" && {
+      id: "register-payment",
+      label: "Registrar pago",
+      icon: <Wallet className="h-4 w-4 text-black/60" />,
+      onClick: () => onRegisterPayment(item),
+    },
     permissions.canGenerate && {
       id: "generate",
       label: "Generar cuenta",

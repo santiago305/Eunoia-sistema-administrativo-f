@@ -17,6 +17,7 @@ import {
   resumeRecurringPurchase,
 } from "@/shared/services/recurringPurchaseService";
 import { RecurringPurchaseFormModal } from "../components/recurrent/RecurringPurchaseFormModal";
+import { RecurringPurchasePaymentModal } from "../components/recurrent/RecurringPurchasePaymentModal";
 import { RecurringPurchaseTable } from "../components/recurrent/RecurringPurchaseTable";
 import type {
   CreateRecurringPurchasePayload,
@@ -39,6 +40,7 @@ export default function RecurringPurchasesPage() {
   const { can } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [paymentTarget, setPaymentTarget] = useState<RecurringPurchase | null>(null);
   const [status, setStatus] = useState<RecurringStatus | "">("");
   const [items, setItems] = useState<RecurringPurchase[]>([]);
   const [pagination, setPagination] = useState<Pick<ListRecurringPurchasesResponse, "total" | "page" | "limit">>({
@@ -168,10 +170,12 @@ export default function RecurringPurchasesPage() {
             void runAction(item, cancelRecurringPurchase, "Recurrencia cancelada.", "No se pudo cancelar.")
           }
           onGenerate={(item) => void generatePayable(item)}
+          onRegisterPayment={(item) => setPaymentTarget(item)}
           permissions={{
             canPause: can("recurring_purchases.pause"),
             canCancel: can("recurring_purchases.cancel"),
             canGenerate: can("recurring_purchases.pay"),
+            canRegisterPayment: can("recurring_purchases.register_payment"),
           }}
         />
       </div>
@@ -180,6 +184,17 @@ export default function RecurringPurchasesPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={createTemplate}
+      />
+
+      <RecurringPurchasePaymentModal
+        open={Boolean(paymentTarget)}
+        item={paymentTarget}
+        onClose={() => setPaymentTarget(null)}
+        onSaved={() => {
+          showFeedback(successResponse("Pago recurrente registrado."));
+          void loadRecurring();
+        }}
+        canUploadEvidence={can("recurring_purchases.upload_payment_evidence")}
       />
     </PageShell>
   );

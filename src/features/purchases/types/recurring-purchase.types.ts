@@ -54,3 +54,29 @@ export type ListRecurringPurchasesResponse = {
   hasPrev?: boolean;
   hasNext?: boolean;
 };
+
+export type RegisterRecurringPurchasePaymentPayload = {
+  method: string;
+  date: string;
+  operationNumber?: string;
+  currency: CurrencyType;
+  amount: number;
+  note?: string;
+  companyPaymentAccountId?: string;
+  paymentMethodId?: string;
+  scheduledAt?: string;
+  paidAt?: string;
+  paymentEvidenceFileId?: string;
+  bankName?: string;
+  cardLastFour?: string;
+  operationCode?: string;
+  isPartial?: boolean;
+};
+
+export type RegisterRecurringPurchasePaymentResponse = {
+  type: string;
+  message: string;
+  paymentId?: string;
+  purchaseId?: string;
+  accountPayableId?: string;
+};

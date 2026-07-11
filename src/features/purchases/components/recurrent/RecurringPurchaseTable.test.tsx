@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { RecurringPurchaseTable } from "./RecurringPurchaseTable";
 import type { RecurringPurchase } from "../../types/recurring-purchase.types";
@@ -41,6 +42,7 @@ describe("RecurringPurchaseTable", () => {
         onResume={vi.fn()}
         onCancel={vi.fn()}
         onGenerate={vi.fn()}
+        onRegisterPayment={vi.fn()}
       />,
     );
 
@@ -54,5 +56,38 @@ describe("RecurringPurchaseTable", () => {
         pagination: { page: 1, limit: 20, total: 1 },
       }),
     );
+  });
+
+  it("adds the register payment action when allowed", async () => {
+    const user = userEvent.setup();
+    render(
+      <RecurringPurchaseTable
+        items={[item]}
+        loading={false}
+        page={1}
+        limit={20}
+        total={1}
+        onPageChange={vi.fn()}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+        onCancel={vi.fn()}
+        onGenerate={vi.fn()}
+        onRegisterPayment={vi.fn()}
+        permissions={{
+          canPause: false,
+          canCancel: false,
+          canGenerate: false,
+          canRegisterPayment: true,
+        }}
+      />,
+    );
+
+    const props = dataTableMock.mock.calls.at(-1)?.[0] as { columns: Array<{ id: string; cell: (row: RecurringPurchase) => React.ReactNode }> };
+    const actionsColumn = props.columns.find((column) => column.id === "actions");
+
+    render(<>{actionsColumn?.cell(item)}</>);
+    await user.click(screen.getByLabelText("Abrir acciones"));
+
+    expect(screen.getByText("Registrar pago")).toBeInTheDocument();
   });
 });

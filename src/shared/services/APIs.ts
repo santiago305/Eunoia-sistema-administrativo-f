@@ -389,6 +389,7 @@ export const API_RECURRING_PURCHASES_GROUP = {
   resume: (id: string) => `/recurring-purchases/${id}/resume`,
   cancel: (id: string) => `/recurring-purchases/${id}/cancel`,
   generateCurrentPayable: (id: string) => `/recurring-purchases/${id}/generate-current-payable`,
+  registerPayment: (id: string) => `/recurring-purchases/${id}/register-payment`,
 };
 
 export const API_COMPANY_PAYMENT_ACCOUNTS_GROUP = {
