@@ -168,7 +168,7 @@ describe("SaleOrderItemsSection external actions", () => {
       />,
     );
 
-    await user.click(screen.getByText("Polo azul"));
+    await user.click(screen.getByRole("button", { name: "Ver imagen de Polo azul" }));
 
     const image = screen.getByAltText("Imagen del SKU 1") as HTMLImageElement;
     expect(image).toBeInTheDocument();
@@ -212,7 +212,7 @@ describe("SaleOrderItemsSection external actions", () => {
       />,
     );
 
-    await user.click(screen.getByText("Polo azul"));
+    await user.click(screen.getByRole("button", { name: "Ver imagen de Polo azul" }));
 
     await waitFor(() => expect(getSku).toHaveBeenCalledWith("sku-1"));
     const image = await screen.findByAltText("Imagen del SKU 1") as HTMLImageElement;
@@ -234,7 +234,7 @@ describe("SaleOrderItemsSection external actions", () => {
       screen.getByRole("button", { name: "Abrir pack externo" }),
     );
     expect(
-      screen.getByRole("dialog", { name: "Agregar Producto" }),
+      screen.getByRole("dialog", { name: "Agregar Pack" }),
     ).toBeInTheDocument();
 
     await user.click(

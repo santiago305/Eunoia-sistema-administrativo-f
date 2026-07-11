@@ -97,7 +97,6 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
     const [openTarifa, setOpenTarifa] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState("");
     const [tarifa, setTarifa] = useState(0);
-    const [editIndex, setEditIndex] = useState<number | null>(null);
     const [draft, setDraft] = useState<SaleOrderItemInput>(() => buildEmptySaleOrderItem());
 
     const openComponentImagePreview = useCallback(async (component: SaleOrderItemComponentInput) => {
@@ -105,7 +104,6 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
     }, []);
 
     const openCreate = useCallback(() => {
-        setEditIndex(null);
         setDraft(buildEmptySaleOrderItem());
         setOpenEditor(true);
     }, []);
@@ -113,14 +111,11 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
     const confirm = useCallback(() => {
         startTransition(() => {
             setForm((prev) => {
-                const items = [...(prev.items ?? [])];
-                if (editIndex === null) items.push(draft);
-                else items[editIndex] = draft;
-                return { ...prev, items };
+                return { ...prev, items: [...(prev.items ?? []), draft] };
             });
         });
         setOpenEditor(false);
-    }, [draft, editIndex, setForm]);
+    }, [draft, setForm]);
 
     const openTarifaModal = useCallback(() => {
         setTarifa(form.deliveryCost ?? 0);
@@ -160,10 +155,13 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
                     reserveBool={form.reserveBool ?? null}
                     stockStatus={form.editPolicy?.stockStatus ?? "NONE"}
                     productsEditable={productsEditable}
-                    onEdit={(item, index) => {
-                        setEditIndex(index);
-                        setDraft(item);
-                        setOpenEditor(true);
+                    onChangeItem={(nextItem, index) => {
+                        setForm((previous) => ({
+                            ...previous,
+                            items: (previous.items ?? []).map((item, itemIndex) =>
+                                itemIndex === index ? nextItem : item,
+                            ),
+                        }));
                     }}
                     onDelete={(_, index) => {
                         startTransition(() =>
@@ -183,7 +181,7 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
 
             <SaleOrderItemEditorModal
                 open={openEditor}
-                title={editIndex === null ? "Agregar Pack" : "Adicionar Producto"}
+                title="Agregar Pack"
                 value={draft}
                 onChange={setDraft}
                 onClose={() => setOpenEditor(false)}

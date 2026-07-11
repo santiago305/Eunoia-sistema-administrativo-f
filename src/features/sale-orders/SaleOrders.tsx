@@ -102,8 +102,8 @@ const formatMoney = (value?: number | null) =>
     }).format(Number(value ?? 0));
 
 const buildBulkActionFeedback = (result: SaleOrderBulkActionResponse) => {
-    const { requested, succeeded, failed } = result.data;
-    return `Procesados: ${requested}. Exitosos: ${succeeded}. Fallidos: ${failed}.`;
+    const { requested, succeeded, failed, partiallyCompleted = 0 } = result.data;
+    return `Procesados: ${requested}. Exitosos: ${succeeded}. Fallidos: ${failed}. Parciales: ${partiallyCompleted}.`;
 };
 
 const mergeBulkChangeStateResponses = (input: {
@@ -144,6 +144,8 @@ const mergeBulkChangeStateResponses = (input: {
         },
     };
 };
+
+void mergeBulkChangeStateResponses;
 
 type SaleOrderModalState =
     | { open: false }
@@ -797,15 +799,15 @@ export default function SaleOrders() {
     }, [closeModal, deleteOrder, loadOrders, paymentsOrder?.id, showFeedback]);
 
     const handleBulkAssign = useCallback(
-        async (assignedBy: string | null) => {
-            const saleOrderIds = [...selectedSaleOrderIds];
+        async (input: { assignedBy: string | null; saleOrderIds: string[] }) => {
+            const saleOrderIds = [...input.saleOrderIds];
             if (saleOrderIds.length === 0) return;
 
             setBulkActionLoading(true);
             try {
                 const result = await bulkAssignSaleOrders({
                     saleOrderIds,
-                    assignedBy,
+                    assignedBy: input.assignedBy,
                 });
                 setBulkResult(result);
                 showFeedback(
@@ -822,40 +824,35 @@ export default function SaleOrders() {
                 setBulkActionLoading(false);
             }
         },
-        [loadOrders, selectedSaleOrderIds, showFeedback],
+        [loadOrders, showFeedback],
+    );
+
+    const loadBulkFilteredOrders = useCallback(
+        async (input: { page: 1; limit: 100; filters: SaleOrderSearchRule[] }) => {
+            const response = await listSaleOrders({
+                page: input.page,
+                limit: input.limit,
+                filters: input.filters.length ? input.filters : undefined,
+            });
+            return response.items ?? [];
+        },
+        [],
     );
 
     const handleBulkChangeState = useCallback(
         async (selection: SaleOrderBulkChangeStateSelection) => {
             const saleOrderIds = [...selection.saleOrderIds];
-            if (saleOrderIds.length === 0) return;
+            if (saleOrderIds.length === 0 || !selection.targetStateId) return;
 
             setBulkActionLoading(true);
             try {
-                const responses = await Promise.all(
-                    selection.transitionPlans.flatMap((plan) =>
-                        plan.transitionGroups
-                            .filter((group) => group.saleOrderIds.length > 0)
-                            .map((group) =>
-                                bulkChangeSaleOrderState({
-                                    saleOrderIds: group.saleOrderIds,
-                                    transitionId: group.transitionId,
-                                    metadata: {
-                                        source: "sale-orders-bulk-action",
-                                        transitionName: plan.transitionName,
-                                    },
-                                }),
-                            ),
-                    ),
-                );
-
-                const result = mergeBulkChangeStateResponses({
-                    requestedSaleOrderIds: saleOrderIds,
-                    responses,
+                const result = await bulkChangeSaleOrderState({
+                    saleOrderIds,
+                    targetStateId: selection.targetStateId,
                 });
 
-                const succeededIds = result.data.results
-                    .filter((row) => row.status === "success")
+                const failedIds = result.data.results
+                    .filter((row) => row.status === "failed")
                     .map((row) => row.saleOrderId);
 
                 setBulkResult(result);
@@ -866,7 +863,7 @@ export default function SaleOrders() {
                 );
                 setBulkChangeStateOpen(false);
                 setSelectedSaleOrderIds((current) =>
-                    current.filter((saleOrderId) => !succeededIds.includes(saleOrderId)),
+                    current.filter((saleOrderId) => failedIds.includes(saleOrderId)),
                 );
                 await loadOrders();
             } catch (error) {
@@ -1384,9 +1381,14 @@ export default function SaleOrders() {
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />
             <SaleOrderBulkAssignModal
                 open={bulkAssignOpen}
-                selectedCount={selectedSaleOrderIds.length}
+                selectedOrders={selectedSaleOrders}
+                selectedOrderIds={selectedSaleOrderIds}
                 loading={bulkActionLoading}
                 onClose={() => setBulkAssignOpen(false)}
+                onDiscardOrder={(saleOrderId) =>
+                    setSelectedSaleOrderIds((current) => current.filter((id) => id !== saleOrderId))
+                }
+                onLoadFilteredOrders={loadBulkFilteredOrders}
                 onSubmit={handleBulkAssign}
             />
             <SaleOrderBulkChangeStateModal
@@ -1395,6 +1397,10 @@ export default function SaleOrders() {
                 selectedOrderIds={selectedSaleOrderIds}
                 loading={bulkActionLoading}
                 onClose={() => setBulkChangeStateOpen(false)}
+                onDiscardOrder={(saleOrderId) =>
+                    setSelectedSaleOrderIds((current) => current.filter((id) => id !== saleOrderId))
+                }
+                onLoadFilteredOrders={loadBulkFilteredOrders}
                 onSubmit={handleBulkChangeState}
             />
             <SaleOrderBulkResultModal
