@@ -4,7 +4,7 @@
   import { parseApiError } from "@/shared/common/utils/handleApiError";
   import { getPackById } from "@/shared/services/packService";
   import type { PackDetailResponse } from "@/features/catalog/types/pack";
-  import { getStockSku } from "@/shared/services/documentService";
+  import { getSaleOrderStocksBySkuIds } from "@/features/sale-orders/services/saleOrderStockService";
   import type { skuStock } from "@/features/catalog/types/documentInventory";
 
   type Props = {
@@ -125,22 +125,16 @@
         setStockLoading(true);
         setStockError(null);
         try {
-          const skuIds = Array.from(new Set((detail.items ?? []).map((item) => item.skuId).filter(Boolean)));
-          const results = await Promise.all(
-            skuIds.map(async (skuId) => {
-              try {
-                const stock = await getStockSku({ warehouseId, skuId });
-                return [skuId, stock] as const;
-              } catch {
-                return [skuId, null] as const;
-              }
-            }),
-          );
+          const skuIds = Array.from(
+            new Set((detail.items ?? []).map((item) => item.skuId).filter(Boolean)),
+          ).sort();
+          const stocks = await getSaleOrderStocksBySkuIds({
+            warehouseId,
+            skuIds,
+          });
 
           if (cancelled) return;
-          const next: Record<string, skuStock | null> = {};
-          for (const [skuId, stock] of results) next[skuId] = stock;
-          setStockBySkuId(next);
+          setStockBySkuId(stocks);
         } catch (err) {
           if (cancelled) return;
           setStockBySkuId({});

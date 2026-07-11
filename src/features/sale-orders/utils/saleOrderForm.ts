@@ -3,6 +3,7 @@ import { toLocalDateKey } from "@/shared/utils/functionPurchases";
 
 export const buildEmptySaleOrderItem = (): SaleOrderItemInput => ({
   quantity: 1,
+  basePrice: undefined,
   unitPrice: 0,
   total: 0,
   description: "",

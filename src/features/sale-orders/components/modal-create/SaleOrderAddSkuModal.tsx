@@ -12,6 +12,7 @@ import { ProductTypes } from "@/features/catalog/types/ProductTypes";
 export type SaleOrderAddSkuSelection = {
   skuId: string;
   label: string;
+  basePrice: number;
   unitPrice: number;
   quantity: number;
   skuImage?:string | null;
@@ -99,7 +100,10 @@ export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
 
   const submit = () => {
     const quantity = parseDecimalInput(quantityText);
-    const unitPrice = parseDecimalInput(priceText || String(selectedOption?.price ?? 0));
+    const basePrice = Number(selectedOption?.price ?? 0);
+    const unitPrice = parseDecimalInput(
+      priceText || String(basePrice),
+    );
     if (!skuId) return;
     if (quantity <= 0) return;
     if (unitPrice < 0) return;
@@ -108,6 +112,7 @@ export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
       skuId,
       label: selectedOption?.label ?? skuId,
       quantity,
+      basePrice,
       unitPrice,
       skuImage: selectedOption?.skuImage ?? null,
     });

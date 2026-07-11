@@ -39,6 +39,7 @@ const order = {
     {
       id: "item-1",
       quantity: 2,
+      basePrice: 30,
       unitPrice: 25,
       total: 50,
       description: "Pack",
@@ -156,6 +157,9 @@ describe("saleOrderEditorForm", () => {
         id: "payment-1",
         clientKey: "payment-1",
       }),
+    );
+    expect(payload.items[0]).toEqual(
+      expect.objectContaining({ basePrice: 30 }),
     );
     expect(payload).not.toHaveProperty("createdAt");
   });

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SaleOrderItemEditorModal } from "@/features/sale-orders/components/modal-create/SaleOrderItemEditorModal";
-import { getPackById } from "@/shared/services/packService";
+import { getPackById, listPacks } from "@/shared/services/packService";
 
 vi.mock("@/shared/services/packService", () => ({
     listPacks: vi.fn(async () => ({
@@ -34,6 +34,42 @@ vi.mock("@/shared/services/skuService", () => ({
 }));
 
 describe("SaleOrderItemEditorModal - add catalog SKU", () => {
+    it("debounces pack searches and only requests the latest query", async () => {
+        vi.mocked(listPacks).mockClear();
+
+        render(
+            <SaleOrderItemEditorModal
+                open
+                title="Editar"
+                value={{
+                    description: "",
+                    quantity: 1,
+                    unitPrice: 0,
+                    total: 0,
+                    components: [],
+                }}
+                onChange={() => {}}
+                onClose={() => {}}
+                onConfirm={() => {}}
+            />,
+        );
+
+        const descriptionInput = screen.getByLabelText("Descripción");
+        fireEvent.change(descriptionInput, { target: { value: "p" } });
+        fireEvent.change(descriptionInput, { target: { value: "pa" } });
+        fireEvent.change(descriptionInput, { target: { value: "pack" } });
+
+        await waitFor(
+            () => {
+                expect(listPacks).toHaveBeenCalledTimes(1);
+                expect(listPacks).toHaveBeenLastCalledWith(
+                    expect.objectContaining({ q: "pack" }),
+                );
+            },
+            { timeout: 1_000 },
+        );
+    });
+
     it("copies pack SKU images into generated components", async () => {
         const onChange = vi.fn();
         vi.mocked(getPackById).mockResolvedValueOnce({
@@ -86,10 +122,12 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         await waitFor(() =>
             expect(onChange).toHaveBeenCalledWith(
                 expect.objectContaining({
+                    basePrice: 20,
                     components: [
                         expect.objectContaining({
                             skuId: "sku-1",
                             skuImage: "/uploads/sku-1.webp",
+                            basePrice: 20,
                         }),
                     ],
                 }),
@@ -170,10 +208,22 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
 
         const priceInput = within(dialog).getByLabelText("Precio unit.") as HTMLInputElement;
         await waitFor(() => expect(priceInput.value).toContain("12.5"));
+        await user.clear(priceInput);
+        await user.type(priceInput, "9.9");
 
         await user.click(within(dialog).getByRole("button", { name: "Agregar" }));
 
-        expect(onChange).toHaveBeenCalled();
+        expect(onChange).toHaveBeenCalledWith(
+            expect.objectContaining({
+                components: expect.arrayContaining([
+                    expect.objectContaining({
+                        skuId: "sku-1",
+                        basePrice: 12.5,
+                        unitPrice: 9.9,
+                    }),
+                ]),
+            }),
+        );
     });
 
     it("updates an existing normalized component without duplicating it when changing its unit price", async () => {

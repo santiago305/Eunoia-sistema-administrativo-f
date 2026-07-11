@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Package } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import type { SaleOrderItemComponentInput, SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
-import { getStockSku } from "@/shared/services/documentService";
+import { getSaleOrderStocksBySkuIds } from "@/features/sale-orders/services/saleOrderStockService";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { getSku } from "@/shared/services/skuService";
 import { getSaleOrderItemComponents } from "@/shared/services/saleOrderService";
@@ -117,12 +117,17 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
 
   const hasComponents = components.length > 0;
 
-  const uniqueSkuIds = useMemo(() => {
+  const skuIdsKey = useMemo(() => {
     const values = components
       .map((component) => component.skuId ?? component.sku?.id ?? "")
       .filter(Boolean);
-    return Array.from(new Set(values));
+    return Array.from(new Set(values)).sort().join("|");
   }, [components]);
+
+  const uniqueSkuIds = useMemo(
+    () => (skuIdsKey ? skuIdsKey.split("|") : []),
+    [skuIdsKey],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -248,18 +253,12 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
       setStockError(null);
 
       try {
-        const pairs = await Promise.all(
-          uniqueSkuIds.map(async (skuId) => {
-            try {
-              const data = await getStockSku({ warehouseId: warehouseIdValue, skuId });
-              return [skuId, data] as const;
-            } catch {
-              return [skuId, null] as const;
-            }
-          }),
-        );
+        const stocks = await getSaleOrderStocksBySkuIds({
+          warehouseId: warehouseIdValue,
+          skuIds: uniqueSkuIds,
+        });
 
-        if (!cancelled) setStocksBySkuId(Object.fromEntries(pairs));
+        if (!cancelled) setStocksBySkuId(stocks);
       } catch (err) {
         if (!cancelled) {
           setStocksBySkuId({});

@@ -126,6 +126,7 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                     items: (order.items ?? []).map((item) => ({
                         id: item.id,
                         quantity: Number(item.quantity ?? 0),
+                        basePrice: Number(item.basePrice ?? item.unitPrice ?? 0),
                         unitPrice: Number(item.unitPrice ?? 0),
                         total: Number(item.total ?? 0),
                         description: item.description ?? "",
@@ -138,6 +139,12 @@ export default function SaleOrderCreate({ inModal = false, onClose, orderId, onS
                                 id: component.id,
                                 skuId,
                                 quantity: Number(component.quantity ?? 0),
+                                basePrice: Number(
+                                    component.basePrice ??
+                                        component.sku?.price ??
+                                        component.unitPrice ??
+                                        0,
+                                ),
                                 unitPrice: Number(component.unitPrice ?? 0),
                                 total: Number(component.total ?? 0),
                                 referencePackItemId: component.referencePackItemId ?? undefined,
