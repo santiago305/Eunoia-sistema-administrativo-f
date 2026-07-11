@@ -19,6 +19,7 @@ type ComponentSource = {
   attributes?: Array<Partial<SaleOrderSkuAttribute>> | null;
   stockItemId?: string | null;
   quantity?: number | null;
+  basePrice?: number | null;
   unitPrice?: number | null;
   total?: number | null;
   referencePackItemId?: string | null;
@@ -77,6 +78,9 @@ export function normalizeSaleOrderItemComponent(
     attributes: skuAttributes,
     stockItemId: text(source.stockItemId) || null,
     quantity: Number(source.quantity ?? 0),
+    basePrice: Number(
+      source.basePrice ?? source.sku?.price ?? source.unitPrice ?? 0,
+    ),
     unitPrice: Number(source.unitPrice ?? 0),
     total: Number(source.total ?? 0),
     referencePackItemId:
@@ -90,6 +94,9 @@ export function toSaleOrderItemComponentCommand(
   return {
     skuId: component.sku?.id ?? component.skuId ?? "",
     quantity: Number(component.quantity ?? 0),
+    basePrice: Number(
+      component.basePrice ?? component.sku?.price ?? component.unitPrice ?? 0,
+    ),
     unitPrice: Number(component.unitPrice ?? 0),
     total: Number(component.total ?? 0),
     ...(component.referencePackItemId
@@ -99,10 +106,15 @@ export function toSaleOrderItemComponentCommand(
 }
 
 export function normalizeSaleOrderItems<
-  T extends { components?: ComponentSource[] },
+  T extends {
+    components?: ComponentSource[];
+    basePrice?: number | null;
+    unitPrice?: number | null;
+  },
 >(items: T[]) {
   return items.map((item) => ({
     ...item,
+    basePrice: Number(item.basePrice ?? item.unitPrice ?? 0),
     components: (item.components ?? []).map(normalizeSaleOrderItemComponent),
   }));
 }

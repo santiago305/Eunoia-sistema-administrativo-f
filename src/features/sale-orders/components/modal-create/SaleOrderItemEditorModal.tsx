@@ -103,23 +103,37 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     useEffect(() => {
         if (!open) return;
 
-        const load = async () => {
-            const res = await listPacks({
-                q: packQuery || undefined,
-                page: 1,
-                limit: 10,
-                isActive: "true",
-            });
+        let cancelled = false;
+        const timeoutId = window.setTimeout(() => {
+            const load = async () => {
+                try {
+                    const res = await listPacks({
+                        q: packQuery.trim() || undefined,
+                        page: 1,
+                        limit: 10,
+                        isActive: "true",
+                    });
 
-            setPackOptions(
-                (res.items ?? []).map((row) => {
-                    const id = typeof row.pack.packId === "string" ? row.pack.packId : (row.pack.packId?.value ?? "");
-                    return { value: id, label: row.pack.description };
-                }),
-            );
+                    if (cancelled) return;
+
+                    setPackOptions(
+                        (res.items ?? []).map((row) => {
+                            const id = typeof row.pack.packId === "string" ? row.pack.packId : (row.pack.packId?.value ?? "");
+                            return { value: id, label: row.pack.description };
+                        }),
+                    );
+                } catch {
+                    if (!cancelled) setPackOptions([]);
+                }
+            };
+
+            void load();
+        }, 350);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timeoutId);
         };
-
-        void load();
     }, [open, packQuery]);
 
     useEffect(() => {
@@ -135,10 +149,42 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
             const res = await getPackById(packId);
             setPackDetail(res);
 
-            if (value.components?.length) return;
-
             const description = String(res.pack.description ?? "").trim();
             const quantity = Number(value.quantity) > 0 ? Number(value.quantity) : 1;
+            const packBasePrice = Number(res.pack.total ?? 0);
+
+            if (value.components?.length) {
+                const components = value.components.map((component) => {
+                    if (component.basePrice != null) return component;
+
+                    const skuId = getComponentSkuId(component);
+                    const packItem = (res.items ?? []).find(
+                        (row) =>
+                            row.id === component.referencePackItemId ||
+                            row.skuId === skuId,
+                    );
+
+                    return {
+                        ...component,
+                        basePrice: Number(
+                            packItem?.price ??
+                                packItem?.sku?.price ??
+                                component.sku?.price ??
+                                component.unitPrice ??
+                                0,
+                        ),
+                    };
+                });
+
+                onChange({
+                    ...value,
+                    description: value.description || description,
+                    basePrice:
+                        value.basePrice ?? packBasePrice ?? value.unitPrice,
+                    components,
+                });
+                return;
+            }
 
             const components: SaleOrderItemComponentInput[] = (res.items ?? []).map((row) => {
                 const componentQuantity = roundMoney((Number(row.quantity) || 0) * quantity);
@@ -152,6 +198,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                     skuCode: getSkuCode(row.sku, row.skuId),
                     skuImage: getSkuImage(row.sku),
                     quantity: componentQuantity,
+                    basePrice: componentUnitPrice,
                     unitPrice: componentUnitPrice,
                     total: componentTotal,
                     referencePackItemId: row.id,
@@ -165,6 +212,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                 ...value,
                 description,
                 quantity,
+                basePrice: packBasePrice,
                 unitPrice,
                 total,
                 components,
@@ -205,7 +253,14 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                     skuId: resolvedSkuId,
                     label,
                     packQuantity,
-                    packPrice: Number(packItem?.price ?? packItem?.sku?.price ?? component.unitPrice ?? 0),
+                    packPrice: Number(
+                        component.basePrice ??
+                            packItem?.price ??
+                            packItem?.sku?.price ??
+                            component.sku?.price ??
+                            component.unitPrice ??
+                            0,
+                    ),
                     referencePackItemId: component.referencePackItemId ?? packItem?.id,
                     component: {
                         ...component,
@@ -239,6 +294,12 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                     skuCode: existingComponent?.skuCode ?? getSkuCode(row.sku, row.skuId),
                     skuImage: existingComponent?.skuImage ?? getSkuImage(row.sku),
                     quantity,
+                    basePrice: Number(
+                        existingComponent?.basePrice ??
+                            row.price ??
+                            row.sku?.price ??
+                            unitPrice,
+                    ),
                     unitPrice,
                     total: existingComponent?.total ?? calcTotal(quantity, unitPrice),
                     referencePackItemId: row.id,
@@ -322,6 +383,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                     ...value,
                                     description: text,
                                     referencePackId: undefined,
+                                    basePrice: undefined,
                                 })
                             }
                             onOptionSelect={(option) => {
@@ -331,6 +393,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                     description: option.label,
                                     referencePackId: option.value || undefined,
                                     components: [],
+                                    basePrice: undefined,
                                     unitPrice: 0,
                                     total: 0,
                                 });
@@ -341,7 +404,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                             panelWidthMode="min-trigger"
                         />
 
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                             <FloatingInput
                                 label="Cantidad"
                                 name="item-qty"
@@ -369,6 +432,16 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                         total,
                                     });
                                 }}
+                            />
+
+                            <FloatingInput
+                                label="Precio base"
+                                name="item-base-price"
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={String(value.basePrice ?? value.unitPrice)}
+                                readOnly
                             />
 
                             <FloatingInput
@@ -442,11 +515,14 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                             {componentRows.map((row) => {
                                 const currentQty = Number(row.component.quantity) || 0;
                                 const currentUnitPrice = Number(row.component.unitPrice) || 0;
+                                const currentBasePrice = Number(
+                                    row.component.basePrice ?? row.packPrice ?? currentUnitPrice,
+                                ) || 0;
                                 const currentTotal = Number(row.component.total) || 0;
                                 const disabledDelete = componentRows.length <= 1;
 
                                 return (
-                                    <div key={row.id} className="grid grid-cols-[1fr_90px_90px_90px_50px] gap-2 items-center">
+                                    <div key={row.id} className="grid grid-cols-[1fr_90px_90px_90px_90px_50px] gap-2 items-center">
                                         <div className="truncate">{row.label}</div>
 
                                         <FloatingInput
@@ -476,6 +552,16 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
 
                                                 onChange(recalcParentFromComponents(value, components));
                                             }}
+                                        />
+
+                                        <FloatingInput
+                                            label="Precio base"
+                                            name={`pack-sku-base-price-${row.skuId}`}
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={String(currentBasePrice)}
+                                            readOnly
                                         />
 
                                         <FloatingInput
@@ -558,8 +644,8 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                 <SaleOrderAddSkuModal
                     open={openAddSku}
                     onClose={() => setOpenAddSku(false)}
-                    onAdd={({ skuId, label, quantity, unitPrice, skuImage }) => {
-                        setSkuMetaById((prev) => ({ ...prev, [skuId]: { label, price: unitPrice } }));
+                    onAdd={({ skuId, label, quantity, basePrice, unitPrice, skuImage }) => {
+                        setSkuMetaById((prev) => ({ ...prev, [skuId]: { label, price: basePrice } }));
                         setExcludedSkuIds((prev) => prev.filter((id) => id !== skuId));
 
                         const total = calcTotal(quantity, unitPrice);
@@ -570,6 +656,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                             skuCode: skuId,
                             skuImage: skuImage ?? null,
                             quantity,
+                            basePrice,
                             unitPrice,
                             total,
                             referencePackItemId: undefined,

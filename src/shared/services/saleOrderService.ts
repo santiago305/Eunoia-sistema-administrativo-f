@@ -45,13 +45,23 @@ export type ChangeSaleOrderStateResponse = {
 export type SaleOrderBulkActionSuccessRow = {
   saleOrderId: string;
   status: "success";
+  targetStateId?: string;
+  initialState?: SaleOrderWorkflowStateReference | null;
+  finalState?: SaleOrderWorkflowStateReference | null;
+  completedTransitions?: CompletedSaleOrderWorkflowTransition[];
   warnings?: string[];
 };
 
 export type SaleOrderBulkActionFailedRow = {
   saleOrderId: string;
   status: "failed";
+  targetStateId?: string;
   message: string;
+  initialState?: SaleOrderWorkflowStateReference | null;
+  finalState?: SaleOrderWorkflowStateReference | null;
+  completedTransitions?: CompletedSaleOrderWorkflowTransition[];
+  warnings?: string[];
+  failure?: SaleOrderWorkflowRouteFailure;
 };
 
 export type SaleOrderBulkActionResultRow =
@@ -62,9 +72,11 @@ export type SaleOrderBulkActionResponse = {
   type: "success" | string;
   message: string;
   data: {
+    targetStateId?: string;
     requested: number;
     succeeded: number;
     failed: number;
+    partiallyCompleted?: number;
     results: SaleOrderBulkActionResultRow[];
   };
 };
@@ -76,8 +88,48 @@ export type BulkAssignSaleOrdersPayload = {
 
 export type BulkChangeSaleOrderStatePayload = {
   saleOrderIds: string[];
+  targetStateId: string;
+};
+
+export type SaleOrderWorkflowStateReference = {
+  workflowStateId: string;
+  saleOrderStateId: string;
+  code: string;
+  name: string;
+};
+
+export type CompletedSaleOrderWorkflowTransition = {
   transitionId: string;
-  metadata?: Record<string, unknown>;
+  code: string;
+  name: string;
+  fromState: SaleOrderWorkflowStateReference;
+  toState: SaleOrderWorkflowStateReference;
+  warnings: string[];
+  actionOutcomes: Array<{
+    actionType: string;
+    status: string;
+    message?: string;
+  }>;
+};
+
+export type SaleOrderWorkflowRouteFailure = {
+  code:
+    | "SALE_ORDER_NOT_FOUND"
+    | "WORKFLOW_NOT_ASSIGNED"
+    | "WORKFLOW_NOT_FOUND"
+    | "WORKFLOW_INACTIVE"
+    | "CURRENT_STATE_INVALID"
+    | "CURRENT_STATE_INACTIVE"
+    | "TARGET_STATE_NOT_IN_WORKFLOW"
+    | "TARGET_STATE_INACTIVE"
+    | "ROUTE_NOT_FOUND"
+    | "AMBIGUOUS_ROUTE"
+    | "CONDITION_FAILED"
+    | "ACTION_FAILED"
+    | "ROUTE_INVALIDATED"
+    | "UNEXPECTED_ERROR";
+  message: string;
+  details?: Record<string, unknown>;
 };
 
 export type SaleOrderItemComponentOutput = {
@@ -89,6 +141,7 @@ export type SaleOrderItemComponentOutput = {
   stockItemId: string | null;
   referencePackItemId: string | null;
   quantity: number;
+  basePrice?: number;
   unitPrice: number;
   total: number;
   createdAt: string;

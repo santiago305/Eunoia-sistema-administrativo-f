@@ -22,6 +22,37 @@ function getOrderLabel(order: SaleOrder | undefined, saleOrderId: string) {
     return `${number || saleOrderId.slice(0, 8)}${client}`;
 }
 
+function getStateRouteLabel(row: SaleOrderBulkActionFailedRow | SaleOrderBulkActionSuccessRow) {
+    const finalState = row.finalState?.name;
+    const completed = row.completedTransitions?.length ?? 0;
+    if (!finalState && completed === 0) return null;
+    return `${finalState ? `Estado final: ${finalState}. ` : ""}Transiciones completadas: ${completed}.`;
+}
+
+function getConditionFailureReasons(row: SaleOrderBulkActionFailedRow) {
+    const failures = row.failure?.details?.failures;
+    if (!Array.isArray(failures)) return [];
+
+    return failures
+        .map((failure) => {
+            if (!failure || typeof failure !== "object") return null;
+            const item = failure as {
+                reason?: unknown;
+                type?: unknown;
+                details?: {
+                    label?: unknown;
+                    field?: unknown;
+                };
+            };
+            const label = typeof item.details?.label === "string" ? item.details.label : null;
+            const reason = typeof item.reason === "string" ? item.reason : null;
+            const field = typeof item.details?.field === "string" ? item.details.field : null;
+            const type = typeof item.type === "string" ? item.type : null;
+            return [reason].filter(Boolean).join(": ");
+        })
+        .filter((value): value is string => Boolean(value));
+}
+
 export function SaleOrderBulkResultModal({
     open,
     result,
@@ -43,9 +74,16 @@ export function SaleOrderBulkResultModal({
             open={open}
             title="Resultado de acción masiva"
             onClose={onClose}
-            className="w-full max-w-2xl"
+            className="w-140 h-500 "
             closeButtonClassName="rounded-sm"
             bodyClassName="px-4 py-4"
+            footer={
+                <div className="flex justify-end">
+                    <SystemButton size="sm" className="rounded-md" onClick={onClose}>
+                        Entendido
+                    </SystemButton>
+                </div>
+            }
         >
             <div className="space-y-4">
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -81,13 +119,30 @@ export function SaleOrderBulkResultModal({
                             <AlertTriangle className="h-4 w-4" />
                             Pedidos que fallaron
                         </div>
-                        <div className="max-h-64 space-y-2 overflow-auto pr-1">
+                        <div className="h-full space-y-2 pr-1">
                             {failedRows.map((row) => (
                                 <div key={row.saleOrderId} className="rounded-md bg-white/70 px-2 py-2">
                                     <p className="font-semibold text-rose-900">
                                         {getOrderLabel(orderById.get(row.saleOrderId), row.saleOrderId)}
                                     </p>
+                                    {getStateRouteLabel(row) ? (
+                                        <p className="mt-0.5 leading-5 text-rose-700">
+                                            {getStateRouteLabel(row)}
+                                        </p>
+                                    ) : null}
                                     <p className="mt-0.5 leading-5">{row.message}</p>
+                                    {row.failure?.code ? (
+                                        <p className="mt-0.5 text-[11px] font-semibold text-rose-700">
+                                            Código: {row.failure.code}
+                                        </p>
+                                    ) : null}
+                                    {getConditionFailureReasons(row).length ? (
+                                        <ul className="mt-1 list-disc space-y-1 pl-4">
+                                            {getConditionFailureReasons(row).map((reason) => (
+                                                <li key={reason}>{reason}</li>
+                                            ))}
+                                        </ul>
+                                    ) : null}
                                 </div>
                             ))}
                         </div>
@@ -111,6 +166,11 @@ export function SaleOrderBulkResultModal({
                                     <p className="font-semibold text-amber-900">
                                         {getOrderLabel(orderById.get(row.saleOrderId), row.saleOrderId)}
                                     </p>
+                                    {getStateRouteLabel(row) ? (
+                                        <p className="mt-0.5 leading-5 text-amber-700">
+                                            {getStateRouteLabel(row)}
+                                        </p>
+                                    ) : null}
                                     <ul className="mt-1 list-disc space-y-1 pl-4">
                                         {row.warnings?.map((warning) => (
                                             <li key={warning}>{warning}</li>
@@ -121,12 +181,6 @@ export function SaleOrderBulkResultModal({
                         </div>
                     </div>
                 ) : null}
-
-                <div className="flex justify-end">
-                    <SystemButton size="sm" className="rounded-md" onClick={onClose}>
-                        Entendido
-                    </SystemButton>
-                </div>
             </div>
         </Modal>
     );

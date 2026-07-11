@@ -43,6 +43,7 @@ describe("saleOrderItemComponents", () => {
       skuCode: "10018",
       skuImage: null,
       quantity: 1,
+      basePrice: 30,
       unitPrice: 22,
       total: 22,
     });
@@ -71,6 +72,7 @@ describe("saleOrderItemComponents", () => {
       },
       attributes: [],
       quantity: 1,
+      basePrice: 30,
       unitPrice: 22,
       total: 22,
     });
@@ -78,6 +80,7 @@ describe("saleOrderItemComponents", () => {
     expect(toSaleOrderItemComponentCommand(component)).toEqual({
       skuId: "sku-1",
       quantity: 1,
+      basePrice: 30,
       unitPrice: 22,
       total: 22,
     });

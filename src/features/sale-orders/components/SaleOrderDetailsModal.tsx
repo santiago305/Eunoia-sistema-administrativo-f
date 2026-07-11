@@ -76,7 +76,6 @@ export function SaleOrderDetailsModal({
         className="h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] max-w-[1500px]"
         containerClassName="p-2 sm:p-4"
         bodyClassName="p-0"
-        closeOnOverlayClick={false}
         footer={editorFooter}
       >
         <SaleOrderEditor

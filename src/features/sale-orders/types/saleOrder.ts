@@ -108,6 +108,7 @@ export type SaleOrderItemComponentInput = {
   attributes?: SaleOrderSkuAttribute[];
   stockItemId?: string | null;
   quantity: number;
+  basePrice?: number;
   unitPrice: number;
   total: number;
   referencePackItemId?: string;
@@ -116,6 +117,7 @@ export type SaleOrderItemComponentInput = {
 export type SaleOrderItemInput = {
   id?: string;
   quantity: number;
+  basePrice?: number;
   unitPrice: number;
   total: number;
   description: string;
@@ -126,6 +128,7 @@ export type SaleOrderItemInput = {
 export type SaleOrderItemComponentCommand = {
   skuId: string;
   quantity: number;
+  basePrice?: number;
   unitPrice: number;
   total: number;
   referencePackItemId?: string;
