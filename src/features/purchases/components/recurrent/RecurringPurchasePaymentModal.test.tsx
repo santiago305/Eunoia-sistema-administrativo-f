@@ -97,4 +97,36 @@ describe("RecurringPurchasePaymentModal", () => {
     );
     expect(onSaved).toHaveBeenCalled();
   });
+
+  it("does not show or upload evidence when the user cannot upload payment evidence", async () => {
+    const onSaved = vi.fn();
+    render(
+      <RecurringPurchasePaymentModal
+        open
+        item={item}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+        canUploadEvidence={false}
+      />,
+    );
+
+    await screen.findByText("Registrar pago recurrente");
+    expect(screen.queryByLabelText("Comprobante")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Metodo")).toHaveValue("TRANSFERENCIA"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() =>
+      expect(registerPaymentMock).toHaveBeenCalledWith("rec-1", {
+        method: "TRANSFERENCIA",
+        date: expect.any(String),
+        currency: CurrencyTypes.PEN,
+        amount: 120,
+        operationNumber: undefined,
+        note: undefined,
+      }),
+    );
+    expect(uploadAttachmentMock).not.toHaveBeenCalled();
+    expect(onSaved).toHaveBeenCalled();
+  });
 });
