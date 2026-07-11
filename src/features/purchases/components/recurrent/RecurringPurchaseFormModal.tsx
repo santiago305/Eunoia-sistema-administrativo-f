@@ -1,9 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
+import { SupplierFormModal } from "@/features/providers/components/SupplierFormModal";
+import { listSuppliers } from "@/shared/services/supplierService";
 import type { CreateRecurringPurchasePayload, RecurringFrequency } from "../../types/recurring-purchase.types";
 import type { CurrencyType } from "../../types/purchaseEnums";
 
@@ -22,6 +25,11 @@ type RecurringPurchaseFormState = {
   currency: CurrencyType;
   amount: string;
   startDate: string;
+};
+
+type SupplierSelectOption = {
+  value: string;
+  label: string;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -43,6 +51,9 @@ const currencyOptions = [
 
 export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
   const [saving, setSaving] = useState(false);
+  const [supplierOptions, setSupplierOptions] = useState<SupplierSelectOption[]>([]);
+  const [supplierQuery, setSupplierQuery] = useState("");
+  const [openCreateSupplier, setOpenCreateSupplier] = useState(false);
   const [form, setForm] = useState<RecurringPurchaseFormState>({
     supplierId: "",
     name: "",
@@ -54,8 +65,40 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
     startDate: today(),
   });
 
+  const loadSuppliers = useCallback(async (query = "") => {
+    try {
+      const response = await listSuppliers({
+        page: 1,
+        limit: 100,
+        q: query.trim() || undefined,
+      });
+
+      setSupplierOptions(
+        (response.items ?? []).map((supplier) => {
+          const fullName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
+          const display = (fullName || supplier.tradeName || "").trim();
+          const document = supplier.documentNumber ? ` (${supplier.documentNumber})` : "";
+
+          return {
+            value: supplier.supplierId,
+            label: `${display}${document}`.trim() || supplier.supplierId,
+          };
+        }),
+      );
+    } catch {
+      setSupplierOptions([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    void loadSuppliers(supplierQuery);
+  }, [loadSuppliers, open, supplierQuery]);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!form.supplierId.trim()) return;
+
     setSaving(true);
     try {
       await onSubmit({
@@ -94,13 +137,28 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
     >
       <form id="recurring-purchase-form" onSubmit={(event) => void submit(event)}>
         <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <FloatingInput
-            required
-            label="Proveedor"
-            name="supplierId"
-            value={form.supplierId}
-            onChange={(event) => setForm({ ...form, supplierId: event.target.value })}
-          />
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <FloatingSelect
+              label="Proveedor"
+              name="supplierId"
+              value={form.supplierId}
+              options={supplierOptions}
+              onChange={(value) => setForm({ ...form, supplierId: value })}
+              searchable
+              searchPlaceholder="Buscar proveedor..."
+              emptyMessage="Sin proveedores"
+              onSearchChange={setSupplierQuery}
+            />
+            <SystemButton
+              type="button"
+              size="icon"
+              className="h-10 w-10"
+              title="Agregar proveedor"
+              onClick={() => setOpenCreateSupplier(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </SystemButton>
+          </div>
           <FloatingInput
             required
             label="Nombre"
@@ -158,6 +216,14 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
           </div>
         </div>
       </form>
+      <SupplierFormModal
+        open={openCreateSupplier}
+        mode="create"
+        onClose={() => setOpenCreateSupplier(false)}
+        onSaved={() => {
+          void loadSuppliers(supplierQuery);
+        }}
+      />
     </Modal>
   );
 }

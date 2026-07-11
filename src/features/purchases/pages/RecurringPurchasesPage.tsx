@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { AlertCircle, Plus } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { DataTableSearchBar, DataTableSearchChips } from "@/shared/components/table/search";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
@@ -21,6 +21,7 @@ import { RecurringPurchaseFormModal } from "../components/recurrent/RecurringPur
 import { RecurringPurchasePaymentModal } from "../components/recurrent/RecurringPurchasePaymentModal";
 import { RecurringPurchaseSmartSearchPanel } from "../components/recurrent/RecurringPurchaseSmartSearchPanel";
 import { RecurringPurchaseTable } from "../components/recurrent/RecurringPurchaseTable";
+import { RecurringPurchaseTypesInfoModal } from "../components/recurrent/RecurringPurchaseTypesInfoModal";
 import type {
   CreateRecurringPurchasePayload,
   ListRecurringPurchasesResponse,
@@ -46,6 +47,7 @@ export default function RecurringPurchasesPage() {
   const { can } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [openRecurringTypesInfo, setOpenRecurringTypesInfo] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<RecurringPurchase | null>(null);
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
@@ -223,6 +225,14 @@ export default function RecurringPurchasesPage() {
       <PageTitle title="Compras recurrentes" />
       <div className="flex flex-col gap-4">
         <PageActionsRow>
+          <SystemButton
+            className="w-9"
+            size="sm"
+            variant="outline"
+            leftIcon={<AlertCircle className="h-4 w-4" />}
+            onClick={() => setOpenRecurringTypesInfo(true)}
+            aria-label="Ver tipos recurrentes"
+          />
           {can("recurring_purchases.create") ? (
             <SystemButton onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4" />
@@ -286,6 +296,11 @@ export default function RecurringPurchasesPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={createTemplate}
+      />
+
+      <RecurringPurchaseTypesInfoModal
+        open={openRecurringTypesInfo}
+        onClose={() => setOpenRecurringTypesInfo(false)}
       />
 
       <RecurringPurchasePaymentModal

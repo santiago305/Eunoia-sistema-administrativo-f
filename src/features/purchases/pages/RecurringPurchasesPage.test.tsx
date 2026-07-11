@@ -117,6 +117,11 @@ vi.mock("../components/recurrent/RecurringPurchasePaymentModal", () => ({
   RecurringPurchasePaymentModal: () => null,
 }));
 
+vi.mock("../components/recurrent/RecurringPurchaseTypesInfoModal", () => ({
+  RecurringPurchaseTypesInfoModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="recurring-types-info-modal">Tipos recurrentes</div> : null,
+}));
+
 describe("RecurringPurchasesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -151,6 +156,7 @@ describe("RecurringPurchasesPage", () => {
     expect(screen.queryByRole("heading", { name: "Compras recurrentes" })).not.toBeInTheDocument();
     expect(screen.queryByText("Membresias, servicios y suscripciones que generan cuentas por pagar por periodo.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Actualizar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver tipos recurrentes" })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(listRecurringPurchasesMock).toHaveBeenCalledWith({
@@ -180,5 +186,19 @@ describe("RecurringPurchasesPage", () => {
         ],
       });
     });
+  });
+
+  it("opens recurring type explanations from the alert icon action", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <RecurringPurchasesPage />
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId("recurring-data-table");
+    await user.click(screen.getByRole("button", { name: "Ver tipos recurrentes" }));
+
+    expect(screen.getByTestId("recurring-types-info-modal")).toBeInTheDocument();
   });
 });
