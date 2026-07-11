@@ -10,6 +10,7 @@ export const NOTIFICATION_WINDOW_EVENTS = {
   mailActionUpdated: 'mail:action-updated',
   systemNotificationCreated: 'system-notification:created',
   purchaseHistoryUpdated: 'purchases:history-updated',
+  recurringPurchasesNotificationCreated: 'recurring-purchases:notification-created',
   mailUnreadSync: 'notifications:mail-unread-sync',
   mailUnreadStateChanged: 'notifications:mail-unread-state-changed',
 } as const;

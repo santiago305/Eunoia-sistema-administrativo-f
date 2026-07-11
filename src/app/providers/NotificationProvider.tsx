@@ -23,6 +23,7 @@ type SystemNotificationCreatedPayload = {
     actionLabel?: string;
     showAsToast?: boolean;
     metadata?: Record<string, unknown>;
+    sourceModule?: string;
     sourceEntityType?: string;
     sourceEntityId?: string;
   };
@@ -33,7 +34,24 @@ export const NotificationContext = createContext<NotificationContextValue>({
   hasUnreadMail: false,
 });
 
+const RECURRING_PURCHASES_MODULE = 'recurring-purchases';
+const RECURRING_PURCHASE_ENTITY_TYPE = 'recurring_purchase_template';
+
+function isRecurringPurchaseNotification(payload: SystemNotificationCreatedPayload) {
+  const notification = payload.notification;
+  const metadata = notification?.metadata ?? {};
+
+  return (
+    metadata.module === RECURRING_PURCHASES_MODULE ||
+    notification?.sourceModule === RECURRING_PURCHASES_MODULE ||
+    notification?.sourceEntityType === RECURRING_PURCHASE_ENTITY_TYPE ||
+    typeof metadata.recurringTemplateId === 'string'
+  );
+}
+
 function isPurchaseNotification(payload: SystemNotificationCreatedPayload) {
+  if (isRecurringPurchaseNotification(payload)) return false;
+
   const notification = payload.notification;
   const metadata = notification?.metadata ?? {};
 
@@ -115,6 +133,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           new CustomEvent<SystemNotificationCreatedPayload>(NOTIFICATION_WINDOW_EVENTS.purchaseHistoryUpdated, {
             detail: payload,
           }),
+        );
+      }
+      if (isRecurringPurchaseNotification(payload)) {
+        window.dispatchEvent(
+          new CustomEvent<SystemNotificationCreatedPayload>(
+            NOTIFICATION_WINDOW_EVENTS.recurringPurchasesNotificationCreated,
+            {
+              detail: payload,
+            },
+          ),
         );
       }
       window.dispatchEvent(new Event(NOTIFICATION_WINDOW_EVENTS.messagesRefresh));

@@ -2,6 +2,7 @@ import { render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotificationProvider } from "./NotificationProvider";
 import { NOTIFICATION_SOCKET_EVENTS, NOTIFICATION_WINDOW_EVENTS } from "@/features/mail/constants/mail-events.constants";
+import { showNotificationToast } from "@/features/mail/services/mail-toast.service";
 
 type SocketHandler = (payload?: unknown) => void;
 
@@ -73,6 +74,68 @@ describe("NotificationProvider purchase notifications", () => {
       }),
     );
 
+    window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.purchaseHistoryUpdated, onPurchaseHistoryUpdated);
+  });
+
+  it("classifies recurring purchase notifications by module metadata without refreshing purchase history", async () => {
+    const onRecurringPurchaseNotification = vi.fn();
+    const onPurchaseHistoryUpdated = vi.fn();
+    window.addEventListener(
+      NOTIFICATION_WINDOW_EVENTS.recurringPurchasesNotificationCreated,
+      onRecurringPurchaseNotification,
+    );
+    window.addEventListener(NOTIFICATION_WINDOW_EVENTS.purchaseHistoryUpdated, onPurchaseHistoryUpdated);
+
+    render(
+      <NotificationProvider>
+        <div>app</div>
+      </NotificationProvider>,
+    );
+
+    await waitFor(() => {
+      expect(socketHandlers.has(NOTIFICATION_SOCKET_EVENTS.created)).toBe(true);
+    });
+
+    const payload = {
+      recipientId: "recipient-2",
+      notification: {
+        title: "Compra recurrente vence hoy",
+        message: "Hosting vence hoy. Monto: USD 25.00.",
+        priority: "URGENT",
+        actionUrl: "/compras/recurrentes",
+        actionLabel: "Ver o registrar pago",
+        sourceEntityType: "recurring_purchase_template",
+        sourceEntityId: "rec-1",
+        metadata: {
+          module: "recurring-purchases",
+          notificationKind: "due_reminder",
+          recurringTemplateId: "rec-1",
+          dueDate: "2026-07-11",
+        },
+      },
+    };
+
+    socketHandlers.get(NOTIFICATION_SOCKET_EVENTS.created)?.(payload);
+
+    expect(showNotificationToast).toHaveBeenCalledWith(payload.notification);
+    expect(onRecurringPurchaseNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({
+          notification: expect.objectContaining({
+            metadata: expect.objectContaining({
+              module: "recurring-purchases",
+              recurringTemplateId: "rec-1",
+            }),
+          }),
+        }),
+      }),
+    );
+    expect(onPurchaseHistoryUpdated).not.toHaveBeenCalled();
+
+    window.removeEventListener(
+      NOTIFICATION_WINDOW_EVENTS.recurringPurchasesNotificationCreated,
+      onRecurringPurchaseNotification,
+    );
     window.removeEventListener(NOTIFICATION_WINDOW_EVENTS.purchaseHistoryUpdated, onPurchaseHistoryUpdated);
   });
 });
