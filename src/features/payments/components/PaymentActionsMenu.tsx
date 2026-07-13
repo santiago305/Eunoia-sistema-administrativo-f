@@ -3,6 +3,7 @@ import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import {
   canShowPaymentApprovalActions,
   canShowPaymentDeleteAction,
+  hasPaymentEvidence,
 } from "../paymentView";
 import type { PaymentRecord } from "../types/payment.types";
 
@@ -42,6 +43,7 @@ export function PaymentActionsMenu({
     canApprovePayment || canRejectPayment,
   );
   const hasPaymentId = Boolean(payment.payDocId);
+  const evidenceAvailable = hasPaymentEvidence(payment);
 
   return (
     <ActionsPopover
@@ -75,7 +77,7 @@ export function PaymentActionsMenu({
           label: "Ver evidencia",
           icon: <ReceiptText className="h-4 w-4 text-black/60" />,
           hidden: !canViewEvidence,
-          disabled: !payment.paymentEvidenceFileId,
+          disabled: !evidenceAvailable,
           onClick: () => onViewEvidence(payment),
         },
         {

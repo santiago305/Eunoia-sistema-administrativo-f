@@ -506,6 +506,7 @@ export default function PaymentsPage() {
       <PaymentEvidenceModal
         open={Boolean(evidencePayment)}
         payment={evidencePayment}
+        canViewEvidence={canViewEvidence}
         canAttachEvidence={canAttachEvidence}
         onClose={() => setEvidencePayment(null)}
         onUploaded={loadPayments}

@@ -19,6 +19,7 @@ import { formatPaymentAmount, formatPaymentDate } from "../utils/paymentFormatte
 type Props = {
   open: boolean;
   payment: PaymentRecord | null;
+  canViewEvidence: boolean;
   canAttachEvidence: boolean;
   onClose: () => void;
   onUploaded?: () => void | Promise<void>;
@@ -34,6 +35,7 @@ const formatFileSize = (bytes?: number | null) => {
 export function PaymentEvidenceModal({
   open,
   payment,
+  canViewEvidence,
   canAttachEvidence,
   onClose,
   onUploaded,
@@ -49,7 +51,7 @@ export function PaymentEvidenceModal({
   const canUpload = Boolean(canAttachEvidence && paymentId && purchaseId);
 
   const loadAttachments = async () => {
-    if (!open || !paymentId || !purchaseId) {
+    if (!open || !canViewEvidence || !paymentId || !purchaseId) {
       setAttachments([]);
       return;
     }
@@ -76,7 +78,7 @@ export function PaymentEvidenceModal({
     void loadAttachments();
     // loadAttachments closes over current payment and open state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, paymentId, purchaseId]);
+  }, [open, paymentId, purchaseId, canViewEvidence]);
 
   const detail = useMemo(() => {
     if (!payment) return "";
@@ -173,7 +175,11 @@ export function PaymentEvidenceModal({
 
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">Comprobantes</h3>
-          {loading ? (
+          {!canViewEvidence ? (
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+              No tienes permiso para ver la evidencia existente de este pago.
+            </div>
+          ) : loading ? (
             <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
               Cargando evidencia...
             </div>

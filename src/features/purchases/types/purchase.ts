@@ -234,6 +234,8 @@ export type Payment = {
   scheduledAt?: string | null;
   paidAt?: string | null;
   paymentEvidenceFileId?: string | null;
+  paymentEvidenceCount?: number;
+  hasEvidence?: boolean;
   bankName?: string | null;
   cardLastFour?: string | null;
   operationCode?: string | null;

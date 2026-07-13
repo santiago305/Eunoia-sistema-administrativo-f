@@ -9,6 +9,7 @@ import {
   formatPaymentDate,
   getPaymentAccountLabel,
 } from "../utils/paymentFormatters";
+import { hasPaymentEvidence } from "../paymentView";
 
 type Props = {
   payments: PaymentRecord[];
@@ -125,7 +126,7 @@ export function PaymentsTable({
         header: "Evidencia",
         cell: (row) => (
           <span className="text-xs text-black/70">
-            {row.paymentEvidenceFileId ? "Adjunta" : "Pendiente"}
+            {hasPaymentEvidence(row) ? `Adjunta${row.paymentEvidenceCount ? ` (${row.paymentEvidenceCount})` : ""}` : "Pendiente"}
           </span>
         ),
       },

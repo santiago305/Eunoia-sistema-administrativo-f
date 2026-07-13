@@ -4,6 +4,7 @@ import {
   canShowPaymentDeleteAction,
   getPaymentStatusView,
   getPaymentMethodOptions,
+  hasPaymentEvidence,
 } from "./paymentView";
 import { PaymentTypes } from "@/features/purchases/types/purchaseEnums";
 
@@ -24,6 +25,13 @@ describe("paymentView", () => {
   it("only shows delete action when user can manage payments", () => {
     expect(canShowPaymentDeleteAction(true)).toBe(true);
     expect(canShowPaymentDeleteAction(false)).toBe(false);
+  });
+
+  it("detects evidence from payment proof attachment summary", () => {
+    expect(hasPaymentEvidence({ paymentEvidenceCount: 2 })).toBe(true);
+    expect(hasPaymentEvidence({ hasEvidence: true })).toBe(true);
+    expect(hasPaymentEvidence({ paymentEvidenceFileId: "legacy-file" })).toBe(true);
+    expect(hasPaymentEvidence({})).toBe(false);
   });
 
   it("prefers backend payment method records and falls back to local enum", () => {

@@ -39,6 +39,9 @@ export const canShowPaymentApprovalActions = (
 
 export const canShowPaymentDeleteAction = (canManagePayments: boolean) => canManagePayments;
 
+export const hasPaymentEvidence = (payment: Pick<Payment, "paymentEvidenceFileId" | "paymentEvidenceCount" | "hasEvidence">) =>
+  Boolean(payment.hasEvidence || payment.paymentEvidenceFileId || Number(payment.paymentEvidenceCount ?? 0) > 0);
+
 export const getPaymentMethodOptions = (records?: PaymentMethod[] | null) => {
   const activeRecords = (records ?? []).filter((method) => method.isActive);
 
