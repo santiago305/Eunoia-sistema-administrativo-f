@@ -50,9 +50,11 @@ export interface PaymentSearchRule {
   range?: PaymentSearchRangeValue;
 }
 
+export type PaymentSearchFilters = PaymentSearchRule[];
+
 export interface PaymentSearchSnapshot {
   q?: string;
-  filters: PaymentSearchRule[];
+  filters: PaymentSearchFilters;
 }
 
 export interface PaymentSearchOption {
