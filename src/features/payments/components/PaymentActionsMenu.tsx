@@ -1,4 +1,4 @@
-import { Check, FileUp, Menu, ReceiptText, Trash2, X } from "lucide-react";
+import { Check, Eye, FileUp, Menu, ReceiptText, Trash2, X } from "lucide-react";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import {
   canShowPaymentApprovalActions,
@@ -17,6 +17,9 @@ type Props = {
   onApprove: (payment: PaymentRecord) => void;
   onReject: (payment: PaymentRecord) => void;
   onDelete: (payment: PaymentRecord) => void;
+  onViewDetail: (payment: PaymentRecord) => void;
+  onViewEvidence: (payment: PaymentRecord) => void;
+  onAttachEvidence: (payment: PaymentRecord) => void;
 };
 
 export function PaymentActionsMenu({
@@ -30,6 +33,9 @@ export function PaymentActionsMenu({
   onApprove,
   onReject,
   onDelete,
+  onViewDetail,
+  onViewEvidence,
+  onAttachEvidence,
 }: Props) {
   const canReview = canShowPaymentApprovalActions(
     payment.status,
@@ -40,6 +46,13 @@ export function PaymentActionsMenu({
   return (
     <ActionsPopover
       actions={[
+        {
+          id: "detail",
+          label: "Ver detalle",
+          icon: <Eye className="h-4 w-4 text-black/60" />,
+          disabled: !hasPaymentId,
+          onClick: () => onViewDetail(payment),
+        },
         {
           id: "approve",
           label: "Aprobar",
@@ -63,6 +76,7 @@ export function PaymentActionsMenu({
           icon: <ReceiptText className="h-4 w-4 text-black/60" />,
           hidden: !canViewEvidence,
           disabled: !payment.paymentEvidenceFileId,
+          onClick: () => onViewEvidence(payment),
         },
         {
           id: "attach-evidence",
@@ -70,6 +84,7 @@ export function PaymentActionsMenu({
           icon: <FileUp className="h-4 w-4 text-black/60" />,
           hidden: !canAttachEvidence,
           disabled: !hasPaymentId,
+          onClick: () => onAttachEvidence(payment),
         },
         {
           id: "delete",

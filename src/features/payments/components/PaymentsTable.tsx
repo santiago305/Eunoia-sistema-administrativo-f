@@ -29,6 +29,9 @@ type Props = {
   onApprove: (payment: PaymentRecord) => void;
   onReject: (payment: PaymentRecord) => void;
   onDelete: (payment: PaymentRecord) => void;
+  onViewDetail: (payment: PaymentRecord) => void;
+  onViewEvidence: (payment: PaymentRecord) => void;
+  onAttachEvidence: (payment: PaymentRecord) => void;
 };
 
 export function PaymentsTable({
@@ -46,6 +49,9 @@ export function PaymentsTable({
   onApprove,
   onReject,
   onDelete,
+  onViewDetail,
+  onViewEvidence,
+  onAttachEvidence,
 }: Props) {
   const columns = useMemo<DataTableColumn<PaymentRecord>[]>(
     () => [
@@ -147,6 +153,9 @@ export function PaymentsTable({
             onApprove={onApprove}
             onReject={onReject}
             onDelete={onDelete}
+            onViewDetail={onViewDetail}
+            onViewEvidence={onViewEvidence}
+            onAttachEvidence={onAttachEvidence}
           />
         ),
         className: "text-center",
@@ -162,8 +171,11 @@ export function PaymentsTable({
       canRejectPayment,
       canViewEvidence,
       onApprove,
+      onAttachEvidence,
       onDelete,
       onReject,
+      onViewDetail,
+      onViewEvidence,
     ],
   );
 

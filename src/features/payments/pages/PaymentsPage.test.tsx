@@ -4,6 +4,7 @@ import Payments from "../Payments";
 
 const {
   approvePaymentMock,
+  createPaymentMock,
   deletePaymentSearchMetricMock,
   getPaymentSearchStateMock,
   listPaymentsMock,
@@ -12,6 +13,7 @@ const {
   savePaymentSearchMetricMock,
 } = vi.hoisted(() => ({
   approvePaymentMock: vi.fn(),
+  createPaymentMock: vi.fn(),
   deletePaymentSearchMetricMock: vi.fn(),
   getPaymentSearchStateMock: vi.fn(),
   listPaymentsMock: vi.fn(),
@@ -22,6 +24,7 @@ const {
 
 vi.mock("@/shared/services/paymentService", () => ({
   approvePayment: approvePaymentMock,
+  createPayment: createPaymentMock,
   deletePaymentSearchMetric: deletePaymentSearchMetricMock,
   getPaymentSearchState: getPaymentSearchStateMock,
   listPayments: listPaymentsMock,
@@ -107,6 +110,52 @@ vi.mock("../components/PaymentSmartSearchPanel", () => ({
   PaymentSmartSearchPanel: () => <div data-testid="payments-smart-search-panel" />,
 }));
 
+vi.mock("../components/PaymentFormModal", () => ({
+  PaymentFormModal: ({
+    open,
+    mode,
+    onSaved,
+  }: {
+    open: boolean;
+    mode: "create" | "schedule";
+    onSaved: () => void;
+  }) =>
+    open ? (
+      <div data-testid={`payment-form-modal-${mode}`}>
+        <button type="button" onClick={onSaved}>
+          Guardar modal
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("../components/RejectPaymentModal", () => ({
+  RejectPaymentModal: ({
+    open,
+    onConfirm,
+  }: {
+    open: boolean;
+    onConfirm: (reason: string) => void;
+  }) =>
+    open ? (
+      <div data-testid="reject-payment-modal">
+        <button type="button" onClick={() => onConfirm("Documento duplicado")}>
+          Confirmar rechazo
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("../components/PaymentEvidenceModal", () => ({
+  PaymentEvidenceModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="payment-evidence-modal" /> : null,
+}));
+
+vi.mock("../components/PaymentDetailModal", () => ({
+  PaymentDetailModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="payment-detail-modal" /> : null,
+}));
+
 describe("PaymentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -170,15 +219,18 @@ describe("PaymentsPage", () => {
     });
   });
 
-  it("rejects a payment from the actions menu without using a native prompt", async () => {
+  it("rejects a payment from the actions menu using a reason modal", async () => {
     const promptSpy = vi.spyOn(window, "prompt");
 
     render(<Payments />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Rechazar" }));
+    expect(screen.getByTestId("reject-payment-modal")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar rechazo" }));
 
     await waitFor(() => {
-      expect(rejectPaymentMock).toHaveBeenCalledWith("payment-1", undefined);
+      expect(rejectPaymentMock).toHaveBeenCalledWith("payment-1", "Documento duplicado");
     });
     expect(promptSpy).not.toHaveBeenCalled();
 

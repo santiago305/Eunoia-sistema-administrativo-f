@@ -23,8 +23,12 @@ import {
   type ListPaymentsResponse,
 } from "@/shared/services/paymentService";
 import { PaymentKpiStrip } from "../components/PaymentKpiStrip";
+import { PaymentDetailModal } from "../components/PaymentDetailModal";
+import { PaymentEvidenceModal } from "../components/PaymentEvidenceModal";
+import { PaymentFormModal } from "../components/PaymentFormModal";
 import { PaymentsTable } from "../components/PaymentsTable";
 import { PaymentSmartSearchPanel } from "../components/PaymentSmartSearchPanel";
+import { RejectPaymentModal } from "../components/RejectPaymentModal";
 import type {
   PaymentSearchRule,
   PaymentSearchSnapshot,
@@ -75,6 +79,10 @@ export default function PaymentsPage() {
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
   const [searchFilters, setSearchFilters] = useState(() => createEmptyPaymentSearchFilters());
+  const [paymentFormMode, setPaymentFormMode] = useState<"create" | "schedule" | null>(null);
+  const [rejectingPayment, setRejectingPayment] = useState<PaymentRecord | null>(null);
+  const [evidencePayment, setEvidencePayment] = useState<PaymentRecord | null>(null);
+  const [detailPayment, setDetailPayment] = useState<PaymentRecord | null>(null);
 
   const draftSnapshot = useMemo(
     () => sanitizePaymentSearchSnapshot({ q: searchText, filters: searchFilters }),
@@ -252,13 +260,20 @@ export default function PaymentsPage() {
     }
   }, [busyPaymentId, canApprovePayment, loadPayments, showFeedback]);
 
-  const handleReject = useCallback(async (payment: PaymentRecord) => {
+  const handleRequestReject = useCallback((payment: PaymentRecord) => {
     if (!canRejectPayment || !payment.payDocId || busyPaymentId) return;
+    setRejectingPayment(payment);
+  }, [busyPaymentId, canRejectPayment]);
+
+  const handleConfirmReject = useCallback(async (reason: string) => {
+    const payment = rejectingPayment;
+    if (!canRejectPayment || !payment?.payDocId || busyPaymentId) return;
     setBusyPaymentId(payment.payDocId);
     try {
-      const response = await rejectPayment(payment.payDocId, undefined);
+      const response = await rejectPayment(payment.payDocId, reason);
       if (response.type === "success") {
         showFeedback(successResponse(response.message));
+        setRejectingPayment(null);
         await loadPayments();
         return;
       }
@@ -268,7 +283,7 @@ export default function PaymentsPage() {
     } finally {
       setBusyPaymentId(null);
     }
-  }, [busyPaymentId, canRejectPayment, loadPayments, showFeedback]);
+  }, [busyPaymentId, canRejectPayment, loadPayments, rejectingPayment, showFeedback]);
 
   const handleDelete = useCallback(async (payment: PaymentRecord) => {
     if (!canDeletePayment || !payment.payDocId || busyPaymentId) return;
@@ -345,12 +360,21 @@ export default function PaymentsPage() {
     <PageShell>
       <PageActionsRow>
         {canCreatePayment ? (
-          <SystemButton size="sm" leftIcon={<Plus className="h-4 w-4" />} disabled>
+          <SystemButton
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setPaymentFormMode("create")}
+          >
             Crear pago
           </SystemButton>
         ) : null}
         {canSchedulePayment ? (
-          <SystemButton size="sm" variant="secondary" leftIcon={<CalendarClock className="h-4 w-4" />} disabled>
+          <SystemButton
+            size="sm"
+            variant="secondary"
+            leftIcon={<CalendarClock className="h-4 w-4" />}
+            onClick={() => setPaymentFormMode("schedule")}
+          >
             Programar
           </SystemButton>
         ) : null}
@@ -376,8 +400,37 @@ export default function PaymentsPage() {
         busyPaymentId={busyPaymentId}
         onPageChange={(nextPage) => setPagination((prev) => ({ ...prev, page: nextPage }))}
         onApprove={handleApprove}
-        onReject={handleReject}
+        onReject={handleRequestReject}
         onDelete={handleDelete}
+        onViewDetail={setDetailPayment}
+        onViewEvidence={setEvidencePayment}
+        onAttachEvidence={setEvidencePayment}
+      />
+
+      <PaymentFormModal
+        open={paymentFormMode !== null}
+        mode={paymentFormMode ?? "create"}
+        onClose={() => setPaymentFormMode(null)}
+        onSaved={loadPayments}
+      />
+      <RejectPaymentModal
+        open={Boolean(rejectingPayment)}
+        paymentId={rejectingPayment?.payDocId}
+        onClose={() => setRejectingPayment(null)}
+        onConfirm={(reason) => void handleConfirmReject(reason)}
+        loading={Boolean(rejectingPayment?.payDocId && busyPaymentId === rejectingPayment.payDocId)}
+      />
+      <PaymentEvidenceModal
+        open={Boolean(evidencePayment)}
+        payment={evidencePayment}
+        canAttachEvidence={canAttachEvidence}
+        onClose={() => setEvidencePayment(null)}
+        onUploaded={loadPayments}
+      />
+      <PaymentDetailModal
+        open={Boolean(detailPayment)}
+        payment={detailPayment}
+        onClose={() => setDetailPayment(null)}
       />
     </PageShell>
   );
