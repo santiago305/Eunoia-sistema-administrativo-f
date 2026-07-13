@@ -436,14 +436,18 @@ export function buildAccountPayableSmartSearchColumns(
 
 export function buildAccountPayableListQuery(
   snapshot: AccountPayableSearchSnapshot,
-): Pick<ListAccountPayablesQuery, "status" | "purchaseId"> {
+): Omit<ListAccountPayablesQuery, "page" | "limit"> {
   const normalized = sanitizeAccountPayableSearchSnapshot(snapshot);
   const statusRule = findAccountPayableSearchRule(normalized, AccountPayableSearchFields.STATUS);
   const purchaseRule = findAccountPayableSearchRule(normalized, AccountPayableSearchFields.PURCHASE_ID);
+  const supplierRule = findAccountPayableSearchRule(normalized, AccountPayableSearchFields.SUPPLIER_ID);
+  const currencyRule = findAccountPayableSearchRule(normalized, AccountPayableSearchFields.CURRENCY);
+  const amountPendingRule = findAccountPayableSearchRule(normalized, AccountPayableSearchFields.AMOUNT_PENDING);
+  const dueDateRule = findAccountPayableSearchRule(normalized, AccountPayableSearchFields.DUE_DATE);
 
-  const status =
+  const statuses =
     statusRule?.operator === AccountPayableSearchOperators.IN && statusRule.mode !== "exclude"
-      ? statusRule.values?.[0]
+      ? statusRule.values
       : undefined;
 
   const purchaseId =
@@ -451,8 +455,59 @@ export function buildAccountPayableListQuery(
       ? purchaseRule.value
       : normalized.q;
 
-  return {
-    status: status as ListAccountPayablesQuery["status"],
+  const supplierId =
+    supplierRule?.operator === AccountPayableSearchOperators.EQ
+      ? supplierRule.value
+      : undefined;
+
+  const currency =
+    currencyRule?.operator === AccountPayableSearchOperators.IN && currencyRule.mode !== "exclude"
+      ? currencyRule.values?.[0]
+      : undefined;
+
+  const query: Omit<ListAccountPayablesQuery, "page" | "limit"> = {
+    q: normalized.q,
+    statuses: statuses as ListAccountPayablesQuery["statuses"],
     purchaseId: purchaseId?.trim() || undefined,
+    supplierId: supplierId?.trim() || undefined,
+    currency: currency as ListAccountPayablesQuery["currency"],
   };
+
+  if (amountPendingRule?.value) {
+    const amount = Number(amountPendingRule.value);
+    if (amountPendingRule.operator === AccountPayableSearchOperators.EQ) {
+      query.amountPendingMin = amount;
+      query.amountPendingMax = amount;
+    }
+    if (amountPendingRule.operator === AccountPayableSearchOperators.GT) {
+      query.amountPendingMin = amount + Number.EPSILON;
+    }
+    if (amountPendingRule.operator === AccountPayableSearchOperators.GTE) {
+      query.amountPendingMin = amount;
+    }
+    if (amountPendingRule.operator === AccountPayableSearchOperators.LT) {
+      query.amountPendingMax = amount - Number.EPSILON;
+    }
+    if (amountPendingRule.operator === AccountPayableSearchOperators.LTE) {
+      query.amountPendingMax = amount;
+    }
+  }
+
+  if (dueDateRule?.operator === AccountPayableSearchOperators.BETWEEN) {
+    query.dueFrom = dueDateRule.range?.start;
+    query.dueTo = dueDateRule.range?.end;
+  } else if (dueDateRule?.value) {
+    if (dueDateRule.operator === AccountPayableSearchOperators.ON) {
+      query.dueFrom = dueDateRule.value;
+      query.dueTo = dueDateRule.value;
+    }
+    if (dueDateRule.operator === AccountPayableSearchOperators.AFTER) {
+      query.dueFrom = dueDateRule.value;
+    }
+    if (dueDateRule.operator === AccountPayableSearchOperators.BEFORE) {
+      query.dueTo = dueDateRule.value;
+    }
+  }
+
+  return query;
 }

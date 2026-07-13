@@ -72,26 +72,52 @@ describe("accountPayableSmartSearch", () => {
     ]);
   });
 
-  it("maps the current backend-supported filters to the list query", () => {
+  it("maps smart filters to the advanced backend list query", () => {
     const query = buildAccountPayableListQuery({
       q: "purchase-from-search",
       filters: [
         {
           field: AccountPayableSearchFields.STATUS,
           operator: AccountPayableSearchOperators.IN,
-          values: ["PARTIAL"],
+          values: ["PARTIAL", "OVERDUE"],
         },
         {
           field: AccountPayableSearchFields.PURCHASE_ID,
           operator: AccountPayableSearchOperators.EQ,
           value: "purchase-from-filter",
         },
+        {
+          field: AccountPayableSearchFields.SUPPLIER_ID,
+          operator: AccountPayableSearchOperators.EQ,
+          value: "supplier-1",
+        },
+        {
+          field: AccountPayableSearchFields.CURRENCY,
+          operator: AccountPayableSearchOperators.IN,
+          values: ["PEN"],
+        },
+        {
+          field: AccountPayableSearchFields.AMOUNT_PENDING,
+          operator: AccountPayableSearchOperators.GTE,
+          value: "100",
+        },
+        {
+          field: AccountPayableSearchFields.DUE_DATE,
+          operator: AccountPayableSearchOperators.BETWEEN,
+          range: { start: "2026-07-31", end: "2026-07-01" },
+        },
       ],
     });
 
     expect(query).toEqual({
-      status: "PARTIAL",
+      q: "purchase-from-search",
+      statuses: ["PARTIAL", "OVERDUE"],
       purchaseId: "purchase-from-filter",
+      supplierId: "supplier-1",
+      currency: "PEN",
+      amountPendingMin: 100,
+      dueFrom: "2026-07-01",
+      dueTo: "2026-07-31",
     });
   });
 });

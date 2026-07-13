@@ -20,8 +20,16 @@ export type AccountPayable = {
 };
 
 export type ListAccountPayablesQuery = {
+  q?: string;
   status?: AccountPayableStatus;
+  statuses?: AccountPayableStatus[];
   purchaseId?: string;
+  supplierId?: string;
+  currency?: CurrencyType;
+  dueFrom?: string;
+  dueTo?: string;
+  amountPendingMin?: number;
+  amountPendingMax?: number;
   page?: number;
   limit?: number;
 };

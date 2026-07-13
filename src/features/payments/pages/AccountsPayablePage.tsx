@@ -115,8 +115,7 @@ export default function AccountsPayablePage() {
       const data = await listAccountPayables({
         page: pagination.page,
         limit: pagination.limit,
-        status: query.status,
-        purchaseId: query.purchaseId,
+        ...query,
       });
       setItems(Array.isArray(data.items) ? data.items : []);
       setPagination({
