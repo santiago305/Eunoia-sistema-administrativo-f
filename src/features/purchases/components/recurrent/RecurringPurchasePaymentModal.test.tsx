@@ -10,6 +10,9 @@ const { registerPaymentMock, uploadAttachmentMock, getAllPaymentMethodsMock } = 
   getAllPaymentMethodsMock: vi.fn(),
 }));
 
+const floatingSelectMock = vi.hoisted(() => vi.fn());
+const floatingInputMock = vi.hoisted(() => vi.fn());
+
 vi.mock("@/shared/services/recurringPurchaseService", () => ({
   registerRecurringPurchasePayment: registerPaymentMock,
 }));
@@ -30,6 +33,51 @@ vi.mock("@/shared/components/modales/Modal", () => ({
         {children}
       </section>
     ) : null,
+}));
+
+vi.mock("@/shared/components/components/FloatingSelect", () => ({
+  FloatingSelect: (props: {
+    label: string;
+    name: string;
+    value: string;
+    options: Array<{ value: string; label: string }>;
+    onChange: (value: string) => void;
+  }) => {
+    floatingSelectMock(props);
+    return (
+      <select
+        aria-label={props.label}
+        name={props.name}
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+      >
+        {props.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  },
+}));
+
+vi.mock("@/shared/components/components/FloatingInput", () => ({
+  FloatingInput: (props: {
+    label: string;
+    name: string;
+    value: string;
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  }) => {
+    floatingInputMock(props);
+    return (
+      <input
+        aria-label={props.label}
+        name={props.name}
+        value={props.value}
+        onChange={props.onChange}
+      />
+    );
+  },
 }));
 
 const item: RecurringPurchase = {
@@ -71,7 +119,7 @@ describe("RecurringPurchasePaymentModal", () => {
     );
 
     await screen.findByText("Registrar pago recurrente");
-    fireEvent.change(screen.getByLabelText("Operacion"), { target: { value: "OP-123" } });
+    fireEvent.change(screen.getByLabelText("Operación"), { target: { value: "OP-123" } });
     fireEvent.change(screen.getByLabelText("Comprobante"), {
       target: { files: [new File(["voucher"], "voucher.png", { type: "image/png" })] },
     });
@@ -98,6 +146,35 @@ describe("RecurringPurchasePaymentModal", () => {
     expect(onSaved).toHaveBeenCalled();
   });
 
+  it("uses shared floating controls for method and operation fields", async () => {
+    render(
+      <RecurringPurchasePaymentModal
+        open
+        item={item}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await screen.findByText("Registrar pago recurrente");
+
+    await waitFor(() => {
+      expect(floatingSelectMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          label: "Método",
+          name: "method",
+          options: [{ value: "TRANSFERENCIA", label: "TRANSFERENCIA", requiresVoucher: undefined }],
+        }),
+      );
+    });
+    expect(floatingInputMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        label: "Operación",
+        name: "operationNumber",
+      }),
+    );
+  });
+
   it("does not show or upload evidence when the user cannot upload payment evidence", async () => {
     const onSaved = vi.fn();
     render(
@@ -112,7 +189,7 @@ describe("RecurringPurchasePaymentModal", () => {
 
     await screen.findByText("Registrar pago recurrente");
     expect(screen.queryByLabelText("Comprobante")).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText("Metodo")).toHaveValue("TRANSFERENCIA"));
+    await waitFor(() => expect(screen.getByLabelText("Método")).toHaveValue("TRANSFERENCIA"));
 
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
@@ -162,7 +239,7 @@ describe("RecurringPurchasePaymentModal", () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByLabelText("Metodo")).toHaveValue("EFECTIVO"));
+    await waitFor(() => expect(screen.getByLabelText("Método")).toHaveValue("EFECTIVO"));
     expect(screen.queryByLabelText("Comprobante")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));

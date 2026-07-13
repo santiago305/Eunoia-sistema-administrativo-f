@@ -29,6 +29,13 @@ describe("permissionPresentation", () => {
     expect(getPermissionModuleLabel("purchases")).toBe("Compras");
     expect(getPermissionModuleLabel("raw_material")).toBe("Materia prima");
     expect(getPermissionModuleLabel("payment_methods")).toBe("Métodos de pago");
+    expect(getPermissionModuleLabel("sources")).toBe("Fuentes");
+    expect(getPermissionModuleLabel("sale_orders")).toBe("Pedidos");
+    expect(getPermissionModuleLabel("identity")).toBe("Identidad");
+    expect(getPermissionModuleLabel("bank_accounts")).toBe("Cuentas bancarias");
+    expect(getPermissionModuleLabel("accounts_payable")).toBe("Cuentas por pagar");
+    expect(getPermissionModuleLabel("agencies")).toBe("Agencias");
+    expect(getPermissionModuleLabel("payment_accounts")).toBe("Cuentas de pago");
   });
 
   it("detects inherited, granted and denied user permission states", () => {

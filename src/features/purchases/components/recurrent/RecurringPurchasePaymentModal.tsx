@@ -3,6 +3,8 @@ import { FileUp } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { MoneyInput } from "@/shared/components/components/MoneyInput";
+import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
 import { getDateKey } from "@/shared/components/components/date-picker/dateUtils";
 import { registerRecurringPurchasePayment } from "@/shared/services/recurringPurchaseService";
@@ -131,20 +133,13 @@ export function RecurringPurchasePaymentModal({
     >
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground/70">
-            Metodo
-            <select
-              value={method}
-              onChange={(event) => setMethod(event.target.value)}
-              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-            >
-              {methodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FloatingSelect
+            label="Método"
+            name="method"
+            value={method}
+            onChange={setMethod}
+            options={methodOptions}
+          />
 
           <FloatingDatePicker
             label="Fecha"
@@ -164,14 +159,12 @@ export function RecurringPurchasePaymentModal({
             onChange={(event) => setAmount(event.target.value)}
           />
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground/70">
-            Operacion
-            <input
-              value={operationNumber}
-              onChange={(event) => setOperationNumber(event.target.value)}
-              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-            />
-          </label>
+          <FloatingInput
+            label="Operación"
+            name="operationNumber"
+            value={operationNumber}
+            onChange={(event) => setOperationNumber(event.target.value)}
+          />
         </div>
 
         {shouldShowEvidence ? (
