@@ -1,4 +1,4 @@
-import { Menu, Pause, Pencil, Play, RefreshCw, Wallet, XCircle } from "lucide-react";
+import { Eye, Menu, Pause, Pencil, Play, RefreshCw, Wallet, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -35,6 +35,7 @@ type Props = {
   onEdit?: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
   onRegisterPayment: (item: RecurringPurchase) => void;
+  onViewPayable?: (item: RecurringPurchase) => void;
   toolbarSearchContent?: ReactNode;
   permissions?: {
     canPause: boolean;
@@ -58,6 +59,7 @@ export function RecurringPurchaseTable({
   onEdit,
   onGenerate,
   onRegisterPayment,
+  onViewPayable,
   toolbarSearchContent,
   permissions = { canPause: true, canCancel: true, canGenerate: true },
 }: Props) {
@@ -124,6 +126,7 @@ export function RecurringPurchaseTable({
               onEdit,
               onGenerate,
               onRegisterPayment,
+              onViewPayable,
               permissions,
             })}
             columns={1}
@@ -194,6 +197,7 @@ function buildActions({
   onEdit,
   onGenerate,
   onRegisterPayment,
+  onViewPayable,
   permissions,
 }: {
   item: RecurringPurchase;
@@ -203,6 +207,7 @@ function buildActions({
   onEdit?: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
   onRegisterPayment: (item: RecurringPurchase) => void;
+  onViewPayable?: (item: RecurringPurchase) => void;
   permissions: NonNullable<Props["permissions"]>;
 }) {
   return [
@@ -218,9 +223,15 @@ function buildActions({
       icon: <Wallet className="h-4 w-4 text-black/60" />,
       onClick: () => onRegisterPayment(item),
     },
+    onViewPayable && (item.lastGeneratedPurchaseId || item.lastGeneratedAccountPayableId) && {
+      id: "view-payable",
+      label: "Ver deuda",
+      icon: <Eye className="h-4 w-4 text-black/60" />,
+      onClick: () => onViewPayable(item),
+    },
     permissions.canGenerate && {
       id: "generate",
-      label: "Generar cuenta",
+      label: "Generar cuenta ahora",
       icon: <RefreshCw className="h-4 w-4 text-black/60" />,
       onClick: () => onGenerate(item),
     },

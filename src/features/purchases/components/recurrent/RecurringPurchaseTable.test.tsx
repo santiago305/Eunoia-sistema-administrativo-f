@@ -91,6 +91,53 @@ describe("RecurringPurchaseTable", () => {
     expect(screen.getByText("Registrar pago")).toBeInTheDocument();
   });
 
+  it("shows a clear manual generation action and a view debt action when a payable was generated", async () => {
+    const user = userEvent.setup();
+    const onGenerate = vi.fn();
+    const onViewPayable = vi.fn();
+    const generatedItem = {
+      ...item,
+      lastGeneratedPurchaseId: "purchase-1",
+      lastGeneratedAccountPayableId: "payable-1",
+    };
+
+    render(
+      <RecurringPurchaseTable
+        items={[generatedItem]}
+        loading={false}
+        page={1}
+        limit={20}
+        total={1}
+        onPageChange={vi.fn()}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+        onCancel={vi.fn()}
+        onGenerate={onGenerate}
+        onRegisterPayment={vi.fn()}
+        onViewPayable={onViewPayable}
+        permissions={{
+          canPause: false,
+          canCancel: false,
+          canGenerate: true,
+          canRegisterPayment: false,
+        }}
+      />,
+    );
+
+    const props = dataTableMock.mock.calls.at(-1)?.[0] as { columns: Array<{ id: string; cell: (row: RecurringPurchase) => React.ReactNode }> };
+    const actionsColumn = props.columns.find((column) => column.id === "actions");
+
+    render(<>{actionsColumn?.cell(generatedItem)}</>);
+    await user.click(screen.getByLabelText("Abrir acciones"));
+
+    expect(screen.getByText("Generar cuenta ahora")).toBeInTheDocument();
+    expect(screen.queryByText("Generar cuenta")).not.toBeInTheDocument();
+
+    await user.click(screen.getByText("Ver deuda"));
+
+    await waitFor(() => expect(onViewPayable).toHaveBeenCalledWith(generatedItem));
+  });
+
   it("adds the edit action when allowed", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();

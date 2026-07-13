@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -21,13 +22,14 @@ const DEFAULT_LIMIT = 20;
 export default function AccountsPayablePage() {
   const { can } = usePermissions();
   const { showFeedback } = useFeedbackToast();
+  const [searchParams] = useSearchParams();
   const canManage = can("accounts-payable.manage");
   const canMarkOverdue = can("accounts-payable.mark_overdue");
 
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<AccountPayable[]>([]);
   const [status, setStatus] = useState<AccountPayableStatus | "">("");
-  const [purchaseId, setPurchaseId] = useState("");
+  const [purchaseId, setPurchaseId] = useState(() => searchParams.get("purchaseId") ?? "");
   const [selected, setSelected] = useState<AccountPayable | null>(null);
   const [pagination, setPagination] = useState<Pick<ListAccountPayablesResponse, "total" | "page" | "limit">>({
     total: 0,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AlertCircle, Plus } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
@@ -56,12 +57,14 @@ import {
   upsertRecurringPurchaseSearchRule,
   type RecurringPurchaseSearchFilterKey,
 } from "../utils/recurringPurchaseSmartSearch";
+import { RoutesPaths } from "@/routes/config/routesPaths";
 
 const DEFAULT_LIMIT = 25;
 
 export default function RecurringPurchasesPage() {
   const { showFeedback } = useFeedbackToast();
   const { can } = usePermissions();
+  const navigate = useNavigate();
   const canExportRecurringPurchases = can("recurring_purchases.export");
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -362,6 +365,14 @@ export default function RecurringPurchasesPage() {
     }
   };
 
+  const viewGeneratedPayable = (item: RecurringPurchase) => {
+    if (!item.lastGeneratedPurchaseId) {
+      showFeedback(errorResponse("Esta recurrente aun no tiene una deuda generada."));
+      return;
+    }
+    navigate(`${RoutesPaths.accountsPayable}?purchaseId=${encodeURIComponent(item.lastGeneratedPurchaseId)}`);
+  };
+
   return (
     <PageShell>
       <PageTitle title="Compras recurrentes" />
@@ -420,6 +431,7 @@ export default function RecurringPurchasesPage() {
           }}
           onGenerate={(item) => void generatePayable(item)}
           onRegisterPayment={(item) => setPaymentTarget(item)}
+          onViewPayable={viewGeneratedPayable}
           toolbarSearchContent={
             <DataTableSearchBar
               value={searchText}
