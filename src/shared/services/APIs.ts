@@ -370,6 +370,9 @@ export const API_PRODUCTION_ORDERS_GROUP = {
 export const API_PAYMENT_GROUP = {
   create: "/payments",
   list: "/payments",
+  searchState: "/payments/search-state",
+  saveSearchMetric: "/payments/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/payments/search-metrics/${metricId}`,
   byId: (id: string) => `/payments/${id}`,
   listByPo: (id: string) => `/payments/get-by-po/${id}`,
   approve: (id: string) => `/payments/${id}/approve`,

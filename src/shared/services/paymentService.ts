@@ -3,6 +3,10 @@ import { API_PAYMENT_GROUP } from "@/shared/services/APIs";
 import type {
   Payment,
 } from "@/features/purchases/types/purchase";
+import type {
+  PaymentSearchSnapshot,
+  PaymentSearchStateResponse,
+} from "@/features/payments/types/payment-search.types";
 
 export type ListPaymentsQuery = {
   poId?: string;
@@ -10,6 +14,8 @@ export type ListPaymentsQuery = {
   status?: "SCHEDULED" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
   page?: number;
   limit?: number;
+  q?: string;
+  filters?: Record<string, unknown>[];
 };
 
 export type ListPaymentsResponse = {
@@ -28,8 +34,34 @@ export const createPayment = async (
 
 export const listPayments = async (query: ListPaymentsQuery = {}): Promise<ListPaymentsResponse> => {
   const response = await axiosInstance.get<ListPaymentsResponse>(API_PAYMENT_GROUP.list, {
-    params: query,
+    params: {
+      ...query,
+      filters: query.filters?.length ? JSON.stringify(query.filters) : undefined,
+    },
   });
+  return response.data;
+};
+
+export const getPaymentSearchState = async (): Promise<PaymentSearchStateResponse> => {
+  const response = await axiosInstance.get(API_PAYMENT_GROUP.searchState);
+  return response.data;
+};
+
+export const savePaymentSearchMetric = async (
+  name: string,
+  snapshot: PaymentSearchSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.saveSearchMetric, {
+    name,
+    snapshot,
+  });
+  return response.data;
+};
+
+export const deletePaymentSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_PAYMENT_GROUP.deleteSearchMetric(metricId));
   return response.data;
 };
 
