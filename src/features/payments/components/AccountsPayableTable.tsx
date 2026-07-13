@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import { CreditCard } from "lucide-react";
+import type { ReactNode } from "react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { SystemButton } from "@/shared/components/components/SystemButton";
-import { canRegisterAccountPayablePayment, getAccountPayableStatusView } from "../accountPayableView";
+import { getAccountPayableStatusView } from "../accountPayableView";
 import type { AccountPayable } from "../types/payable.types";
+import { AccountPayableActionsMenu } from "./AccountPayableActionsMenu";
 
 type Props = {
   items: AccountPayable[];
@@ -13,8 +13,10 @@ type Props = {
   limit: number;
   total: number;
   canManage: boolean;
+  toolbarSearchContent: ReactNode;
   onPageChange: (page: number) => void;
   onRegisterPayment: (payable: AccountPayable) => void;
+  onSchedulePayment: (payable: AccountPayable) => void;
 };
 
 const formatMoney = (amount: number, currency: string) =>
@@ -34,8 +36,10 @@ export function AccountsPayableTable({
   limit,
   total,
   canManage,
+  toolbarSearchContent,
   onPageChange,
   onRegisterPayment,
+  onSchedulePayment,
 }: Props) {
   const columns = useMemo<DataTableColumn<AccountPayable>[]>(() => [
     {
@@ -46,36 +50,40 @@ export function AccountsPayableTable({
         return <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${view.className}`}>{view.label}</span>;
       },
       hideable: false,
+      cardTitle: true,
     },
     { id: "description", header: "Descripcion", cell: (row) => row.description ?? "-" },
-    { id: "purchaseId", header: "Compra", cell: (row) => <span className="text-xs text-black/70">{row.purchaseId}</span> },
-    { id: "quotaId", header: "Cuota", cell: (row) => <span className="text-xs text-black/70">{row.quotaId ?? "-"}</span> },
-    { id: "amountTotal", header: "Total", cell: (row) => formatMoney(row.amountTotal, row.currency) },
-    { id: "amountPaid", header: "Pagado", cell: (row) => formatMoney(row.amountPaid, row.currency) },
-    { id: "amountPending", header: "Pendiente", cell: (row) => formatMoney(row.amountPending, row.currency) },
-    { id: "dueDate", header: "Vence", cell: (row) => formatDate(row.dueDate) },
+    { id: "purchaseId", header: "Compra", cell: (row) => <span className="text-xs text-black/70">{row.purchaseId}</span>, copy: true },
+    { id: "quotaId", header: "Cuota", cell: (row) => <span className="text-xs text-black/70">{row.quotaId ?? "-"}</span>, visible: false, copy: true },
+    { id: "supplierId", header: "Proveedor", cell: (row) => <span className="text-xs text-black/70">{row.supplierId ?? "-"}</span>, visible: false, copy: true },
+    { id: "amountTotal", header: "Total", cell: (row) => formatMoney(row.amountTotal, row.currency), sortAccessor: (row) => Number(row.amountTotal ?? 0) },
+    { id: "amountPaid", header: "Pagado", cell: (row) => formatMoney(row.amountPaid, row.currency), sortAccessor: (row) => Number(row.amountPaid ?? 0) },
+    {
+      id: "amountPending",
+      header: "Pendiente",
+      cell: (row) => <span className="font-medium text-black/80">{formatMoney(row.amountPending, row.currency)}</span>,
+      sortAccessor: (row) => Number(row.amountPending ?? 0),
+    },
+    { id: "dueDate", header: "Vence", cell: (row) => formatDate(row.dueDate), sortAccessor: (row) => row.dueDate ?? "" },
     {
       id: "actions",
       header: "Acciones",
       stopRowClick: true,
       hideable: false,
       sortable: false,
-      cell: (row) => canRegisterAccountPayablePayment(row.status, canManage) ? (
-        <div className="flex justify-end">
-          <SystemButton
-            size="sm"
-            variant="outline"
-            onClick={() => onRegisterPayment(row)}
-            leftIcon={<CreditCard className="h-4 w-4" />}
-          >
-            Pagar
-          </SystemButton>
-        </div>
-      ) : null,
-      className: "text-right",
-      headerClassName: "text-right [&>div]:justify-end",
+      cell: (row) => (
+        <AccountPayableActionsMenu
+          payable={row}
+          canManage={canManage}
+          onRegisterPayment={onRegisterPayment}
+          onSchedulePayment={onSchedulePayment}
+        />
+      ),
+      className: "text-center",
+      headerClassName: "text-center [&>div]:justify-center",
+      showInCards: false,
     },
-  ], [canManage, onRegisterPayment]);
+  ], [canManage, onRegisterPayment, onSchedulePayment]);
 
   return (
     <DataTable
@@ -85,10 +93,13 @@ export function AccountsPayableTable({
       rowKey="accountPayableId"
       loading={loading}
       emptyMessage="No hay cuentas por pagar para los filtros actuales."
+      selectableColumns
       hoverable={false}
       animated={false}
+      toolbarSearchContent={toolbarSearchContent}
       pagination={{ page, limit, total }}
       onPageChange={onPageChange}
+      tableClassName="text-[10px]"
     />
   );
 }

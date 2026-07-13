@@ -28,8 +28,8 @@ vi.mock("../components/AccountsPayableTable", () => ({
   AccountsPayableTable: () => <div data-testid="accounts-payable-table" />,
 }));
 
-vi.mock("../components/RegisterPayablePaymentModal", () => ({
-  RegisterPayablePaymentModal: () => null,
+vi.mock("../components/PaymentFormModal", () => ({
+  PaymentFormModal: () => null,
 }));
 
 describe("AccountsPayablePage", () => {
