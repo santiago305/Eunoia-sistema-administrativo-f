@@ -185,14 +185,14 @@ export function DataTableSearchPanel<
         </section>
       ) : null}
 
-      {/* ================= COLUMNAS ================= */}
+      {/* ================= FILTROS ================= */}
       <section className="space-y-2">
         <div>
           <h3 className="text-sm font-semibold text-slate-900">
-            Columnas
+            Filtros
           </h3>
           <p className="text-[11px] text-slate-500">
-            Selecciona una columna para filtrar rápidamente.
+            Selecciona un filtro para buscar rápidamente.
           </p>
         </div>
 

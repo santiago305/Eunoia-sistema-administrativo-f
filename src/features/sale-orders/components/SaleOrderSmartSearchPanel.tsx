@@ -46,7 +46,7 @@ export function SaleOrderSmartSearchPanel({
       getRule={findSaleOrderSearchRule}
       getRuleSummary={(currentSnapshot, fieldId) => getSaleOrderSearchRuleSummary(currentSnapshot, fieldId, searchState)}
       getSelectionCount={getSaleOrderSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra pedidos por estado de pago o fechas de agenda/entrega."
       initialVisibleFields={4}
       filterQuery={filterQuery}

@@ -51,7 +51,7 @@ export function ClientSmartSearchPanel({
       getRule={findClientSearchRule}
       getRuleSummary={(currentSnapshot, fieldId) => getClientSearchRuleSummary(currentSnapshot, fieldId, catalogs)}
       getSelectionCount={getClientSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra clientes por identidad, ubicación o estado."
       initialVisibleFields={4}
       filterQuery={filterQuery}

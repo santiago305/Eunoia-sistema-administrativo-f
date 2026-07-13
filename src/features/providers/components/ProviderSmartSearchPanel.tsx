@@ -56,7 +56,7 @@ export function ProviderSmartSearchPanel({
         getProviderSearchRuleSummary(currentSnapshot, fieldId, searchState)
       }
       getSelectionCount={getProviderSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra proveedores por identidad, contacto o estado."
       initialVisibleFields={4}
       filterQuery={filterQuery}

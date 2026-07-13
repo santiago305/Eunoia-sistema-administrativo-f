@@ -56,8 +56,8 @@ export function PurchaseSmartSearchPanel({
         getPurchaseSearchRuleSummary(currentSnapshot, fieldId, searchState)
       }
       getSelectionCount={getPurchaseSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
-      fieldsSectionDescription="Usa cualquier columna de la tabla salvo fechas de auditoria."
+      fieldsSectionTitle="Filtros"
+      fieldsSectionDescription="Usa cualquier filtro de la tabla salvo fechas de auditoria."
       initialVisibleFields={4}
       filterQuery={filterQuery}
     />

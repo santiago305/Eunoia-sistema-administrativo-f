@@ -51,7 +51,7 @@ export function ProductSmartSearchPanel({
       getRule={findProductSearchRule}
       getRuleSummary={getProductSearchRuleSummary}
       getSelectionCount={getProductSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra por nombre, descripción, marca y estado."
       initialVisibleFields={4}
       filterQuery={filterQuery}

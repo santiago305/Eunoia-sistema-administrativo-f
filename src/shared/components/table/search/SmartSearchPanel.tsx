@@ -54,8 +54,8 @@ export function SmartSearchPanel<
   getRule,
   getRuleSummary,
   getSelectionCount,
-  fieldsSectionTitle = "Columnas",
-  fieldsSectionDescription = "Selecciona una columna para filtrar rapidamente.",
+  fieldsSectionTitle = "Filtros",
+  fieldsSectionDescription = "Selecciona un filtro para buscar rapidamente.",
   initialVisibleFields = DEFAULT_VISIBLE_FIELDS,
   filterQuery,
 }: Props<TFieldKey, TOperator, TSnapshot>) {

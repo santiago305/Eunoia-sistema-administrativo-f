@@ -41,7 +41,7 @@ export function LedgerSmartSearchPanel({
       getRule={findLedgerSearchRule}
       getRuleSummary={getLedgerSearchRuleSummary}
       getSelectionCount={getLedgerSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra documento, tipo y tercero dentro del kardex visible."
       initialVisibleFields={3}
       filterQuery={filterQuery}

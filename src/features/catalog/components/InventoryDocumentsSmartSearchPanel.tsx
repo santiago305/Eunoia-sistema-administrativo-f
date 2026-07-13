@@ -58,7 +58,7 @@ export function InventoryDocumentsSmartSearchPanel({
         getInventoryDocumentsSearchRuleSummary(currentSnapshot, fieldId, searchState)
       }
       getSelectionCount={getInventoryDocumentsSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra por almacén y estado del documento."
       initialVisibleFields={4}
       filterQuery={filterQuery}

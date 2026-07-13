@@ -61,7 +61,7 @@ export function InventoryLedgerSmartSearchPanel({
         getInventoryLedgerSearchRuleSummary(currentSnapshot, fieldId, searchState, { skuOptions })
       }
       getSelectionCount={getInventoryLedgerSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra por SKU, almacén, usuario y entrada/salida."
       initialVisibleFields={4}
       filterQuery={filterQuery}

@@ -59,7 +59,7 @@ export function InventorySmartSearchPanel({
         getInventorySearchRuleSummary(currentSnapshot, fieldId, catalogs)
       }
       getSelectionCount={getInventorySearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription={`Filtra inventario por ${labels?.item?.toLowerCase() ?? "producto"}, almacen y stock.`}
       initialVisibleFields={4}
       filterQuery={filterQuery}

@@ -56,7 +56,7 @@ export function WarehouseSmartSearchPanel({
         getWarehouseSearchRuleSummary(currentSnapshot, fieldId, catalogs)
       }
       getSelectionCount={getWarehouseSearchSelectionCount}
-      fieldsSectionTitle="Columnas"
+      fieldsSectionTitle="Filtros"
       fieldsSectionDescription="Filtra almacenes por ubicacion, nombre, direccion o estado."
       initialVisibleFields={4}
       filterQuery={filterQuery}
