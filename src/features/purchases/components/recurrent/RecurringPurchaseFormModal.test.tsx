@@ -5,6 +5,8 @@ import { RecurringPurchaseFormModal } from "./RecurringPurchaseFormModal";
 
 const modalMock = vi.hoisted(() => vi.fn());
 const floatingInputMock = vi.hoisted(() => vi.fn());
+const moneyInputMock = vi.hoisted(() => vi.fn());
+const floatingDatePickerMock = vi.hoisted(() => vi.fn());
 const floatingSelectMock = vi.hoisted(() => vi.fn());
 const floatingTextareaMock = vi.hoisted(() => vi.fn());
 const supplierFormModalMock = vi.hoisted(() => vi.fn());
@@ -29,6 +31,20 @@ vi.mock("@/shared/components/components/FloatingInput", () => ({
   FloatingInput: (props: unknown) => {
     floatingInputMock(props);
     return <input aria-label={(props as { label: string }).label} />;
+  },
+}));
+
+vi.mock("@/shared/components/components/MoneyInput", () => ({
+  MoneyInput: (props: unknown) => {
+    moneyInputMock(props);
+    return <input aria-label={(props as { label: string }).label} />;
+  },
+}));
+
+vi.mock("@/shared/components/components/date-picker/FloatingDatePicker", () => ({
+  FloatingDatePicker: (props: unknown) => {
+    floatingDatePickerMock(props);
+    return <button type="button">{(props as { label: string }).label}</button>;
   },
 }));
 
@@ -112,6 +128,35 @@ describe("RecurringPurchaseFormModal", () => {
     expect(floatingInputMock).not.toHaveBeenCalledWith(expect.objectContaining({ name: "supplierId" }));
     expect(floatingSelectMock).toHaveBeenCalledWith(expect.objectContaining({ name: "frequency" }));
     expect(floatingTextareaMock).toHaveBeenCalledWith(expect.objectContaining({ name: "description" }));
+  });
+
+  it("uses money and shared date controls for amount and start date", () => {
+    render(
+      <RecurringPurchaseFormModal
+        open
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(moneyInputMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "amount",
+        label: "Monto",
+        currency: "PEN",
+        min: "0.01",
+        step: "0.01",
+      }),
+    );
+    expect(floatingDatePickerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "startDate",
+        label: "Inicio",
+        clearable: false,
+      }),
+    );
+    expect(floatingInputMock).not.toHaveBeenCalledWith(expect.objectContaining({ name: "amount" }));
+    expect(floatingInputMock).not.toHaveBeenCalledWith(expect.objectContaining({ name: "startDate" }));
   });
 
   it("opens the shared supplier creation modal from the provider action", async () => {

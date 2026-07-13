@@ -1,10 +1,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { MoneyInput } from "@/shared/components/components/MoneyInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
+import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
+import { getDateKey } from "@/shared/components/components/date-picker/dateUtils";
 import { SupplierFormModal } from "@/features/providers/components/SupplierFormModal";
 import { listSuppliers } from "@/shared/services/supplierService";
 import type { CreateRecurringPurchasePayload, RecurringFrequency } from "../../types/recurring-purchase.types";
@@ -33,6 +36,12 @@ type SupplierSelectOption = {
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const parseDateKey = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
 
 const frequencyOptions = [
   { value: "MONTHLY", label: "Mensual" },
@@ -187,23 +196,22 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
             options={currencyOptions}
             onChange={(value) => setForm({ ...form, currency: value as CurrencyType })}
           />
-          <FloatingInput
+          <MoneyInput
             required
             min="0.01"
             step="0.01"
-            type="number"
             label="Monto"
             name="amount"
+            currency={form.currency}
             value={form.amount}
             onChange={(event) => setForm({ ...form, amount: event.target.value })}
           />
-          <FloatingInput
-            required
-            type="date"
+          <FloatingDatePicker
             label="Inicio"
             name="startDate"
-            value={form.startDate}
-            onChange={(event) => setForm({ ...form, startDate: event.target.value })}
+            value={parseDateKey(form.startDate)}
+            onChange={(date) => setForm({ ...form, startDate: date ? getDateKey(date) : today() })}
+            clearable={false}
           />
           <div className="sm:col-span-2">
             <FloatingTextarea

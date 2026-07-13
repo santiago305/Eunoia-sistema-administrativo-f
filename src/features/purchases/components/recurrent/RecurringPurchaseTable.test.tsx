@@ -90,4 +90,34 @@ describe("RecurringPurchaseTable", () => {
 
     expect(screen.getByText("Registrar pago")).toBeInTheDocument();
   });
+
+  it("centers the actions header and popover trigger", () => {
+    render(
+      <RecurringPurchaseTable
+        items={[item]}
+        loading={false}
+        page={1}
+        limit={20}
+        total={1}
+        onPageChange={vi.fn()}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+        onCancel={vi.fn()}
+        onGenerate={vi.fn()}
+        onRegisterPayment={vi.fn()}
+      />,
+    );
+
+    const props = dataTableMock.mock.calls.at(-1)?.[0] as {
+      columns: Array<{ id: string; className?: string; headerClassName?: string }>;
+    };
+    const actionsColumn = props.columns.find((column) => column.id === "actions");
+
+    expect(actionsColumn).toEqual(
+      expect.objectContaining({
+        className: expect.stringContaining("text-center"),
+        headerClassName: expect.stringContaining("justify-center"),
+      }),
+    );
+  });
 });

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { FileUp } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { MoneyInput } from "@/shared/components/components/MoneyInput";
+import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
+import { getDateKey } from "@/shared/components/components/date-picker/dateUtils";
 import { registerRecurringPurchasePayment } from "@/shared/services/recurringPurchaseService";
 import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
 import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
@@ -19,6 +22,12 @@ type Props = {
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const parseDateKey = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
 
 export function RecurringPurchasePaymentModal({
   open,
@@ -52,6 +61,13 @@ export function RecurringPurchasePaymentModal({
 
     return getPaymentMethodOptions(null);
   }, [methodRecords]);
+
+  const selectedMethod = methodOptions.find((option) => option.value === method);
+  const requiresVoucher =
+    selectedMethod && "requiresVoucher" in selectedMethod
+      ? selectedMethod.requiresVoucher
+      : undefined;
+  const shouldShowEvidence = canUploadEvidence && requiresVoucher !== false;
 
   useEffect(() => {
     if (!open || !item) return;
@@ -88,7 +104,7 @@ export function RecurringPurchasePaymentModal({
         note: note.trim() || undefined,
       });
 
-      if (canUploadEvidence && file && result.purchaseId && result.paymentId) {
+      if (shouldShowEvidence && file && result.purchaseId && result.paymentId) {
         await uploadPurchaseAttachment({
           purchaseId: result.purchaseId,
           paymentId: result.paymentId,
@@ -130,27 +146,23 @@ export function RecurringPurchasePaymentModal({
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground/70">
-            Fecha
-            <input
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-            />
-          </label>
+          <FloatingDatePicker
+            label="Fecha"
+            name="paymentDate"
+            value={parseDateKey(date)}
+            onChange={(nextDate) => setDate(nextDate ? getDateKey(nextDate) : today())}
+            clearable={false}
+          />
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground/70">
-            Monto
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-            />
-          </label>
+          <MoneyInput
+            min="0.01"
+            step="0.01"
+            label="Monto"
+            name="amount"
+            currency={item.currency}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+          />
 
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground/70">
             Operacion
@@ -162,7 +174,7 @@ export function RecurringPurchasePaymentModal({
           </label>
         </div>
 
-        {canUploadEvidence ? (
+        {shouldShowEvidence ? (
           <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dashed border-border bg-muted/35 px-3 text-xs text-foreground/70 hover:border-primary/40 hover:bg-primary/5">
             <FileUp className="h-4 w-4 shrink-0 text-foreground/45" />
             <input

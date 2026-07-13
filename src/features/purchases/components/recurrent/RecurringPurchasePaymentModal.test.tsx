@@ -131,4 +131,52 @@ describe("RecurringPurchasePaymentModal", () => {
     expect(uploadAttachmentMock).not.toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalled();
   });
+
+  it("renders the recurring payment amount as Peruvian money", async () => {
+    render(
+      <RecurringPurchasePaymentModal
+        open
+        item={item}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await screen.findByText("Registrar pago recurrente");
+
+    expect(screen.getByText("S/")).toBeInTheDocument();
+    expect(screen.getByLabelText("Monto")).toHaveValue(120);
+  });
+
+  it("does not show or upload evidence for cash payments", async () => {
+    getAllPaymentMethodsMock.mockResolvedValue([{ name: "EFECTIVO", requiresVoucher: false }]);
+    const onSaved = vi.fn();
+
+    render(
+      <RecurringPurchasePaymentModal
+        open
+        item={item}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+        canUploadEvidence
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByLabelText("Metodo")).toHaveValue("EFECTIVO"));
+    expect(screen.queryByLabelText("Comprobante")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() =>
+      expect(registerPaymentMock).toHaveBeenCalledWith(
+        "rec-1",
+        expect.objectContaining({
+          method: "EFECTIVO",
+          amount: 120,
+        }),
+      ),
+    );
+    expect(uploadAttachmentMock).not.toHaveBeenCalled();
+    expect(onSaved).toHaveBeenCalled();
+  });
 });

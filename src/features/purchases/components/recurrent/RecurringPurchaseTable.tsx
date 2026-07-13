@@ -108,41 +108,43 @@ export function RecurringPurchaseTable({
       stopRowClick: true,
       hideable: false,
       sortable: false,
-      className: "text-right",
-      headerClassName: "text-right [&>div]:justify-end",
+      className: "text-center",
+      headerClassName: "text-center [&>div]:justify-center",
       cell: (item) => (
-        <ActionsPopover
-          actions={buildActions({
-            item,
-            onPause,
-            onResume,
-            onCancel,
-            onGenerate,
-            onRegisterPayment,
-            permissions,
-          })}
-          columns={1}
-          compact
-          showLabels
-          triggerIcon={<Menu className="h-4 w-4" />}
-          popoverClassName="min-w-40"
-          popoverBodyClassName="p-2"
-          renderAction={(action, helpers) => (
-            <button
-              key={action.id}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                helpers.onAction(action);
-              }}
-              disabled={action.disabled}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] disabled:pointer-events-none disabled:opacity-50 ${action.className ?? ""}`}
-            >
-              {action.icon}
-              {action.label}
-            </button>
-          )}
-        />
+        <div className="flex justify-center">
+          <ActionsPopover
+            actions={buildActions({
+              item,
+              onPause,
+              onResume,
+              onCancel,
+              onGenerate,
+              onRegisterPayment,
+              permissions,
+            })}
+            columns={1}
+            compact
+            showLabels
+            triggerIcon={<Menu className="h-4 w-4" />}
+            popoverClassName="min-w-40"
+            popoverBodyClassName="p-2"
+            renderAction={(action, helpers) => (
+              <button
+                key={action.id}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  helpers.onAction(action);
+                }}
+                disabled={action.disabled}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] disabled:pointer-events-none disabled:opacity-50 ${action.className ?? ""}`}
+              >
+                {action.icon}
+                {action.label}
+              </button>
+            )}
+          />
+        </div>
       ),
     },
   ];
