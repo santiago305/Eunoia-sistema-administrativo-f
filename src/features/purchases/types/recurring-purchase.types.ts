@@ -85,6 +85,19 @@ export type RecurringPurchaseSearchStateResponse = {
   catalogs: RecurringPurchaseSearchCatalogs;
 };
 
+export type RecurringPurchaseExportColumn = {
+  key: string;
+  label: string;
+};
+
+export type RecurringPurchaseExportPreset = {
+  metricId: string;
+  name: string;
+  snapshot: {
+    columns?: RecurringPurchaseExportColumn[];
+  };
+};
+
 export type RecurringPurchase = {
   recurringPurchaseTemplateId: string;
   supplierId: string;

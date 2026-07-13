@@ -17,13 +17,19 @@ import {
   cancelRecurringPurchase,
   createRecurringPurchase,
   deleteRecurringPurchaseSearchMetric,
+  deleteRecurringPurchaseExportPreset,
+  exportRecurringPurchasesExcel,
   generateCurrentRecurringPayable,
+  getRecurringPurchaseExportColumns,
+  getRecurringPurchaseExportPresets,
   getRecurringPurchaseSearchState,
   listRecurringPurchases,
   pauseRecurringPurchase,
   resumeRecurringPurchase,
+  saveRecurringPurchaseExportPreset,
   saveRecurringPurchaseSearchMetric,
 } from "@/shared/services/recurringPurchaseService";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { RecurringPurchaseFormModal } from "../components/recurrent/RecurringPurchaseFormModal";
 import { RecurringPurchasePaymentModal } from "../components/recurrent/RecurringPurchasePaymentModal";
 import { RecurringPurchaseSmartSearchPanel } from "../components/recurrent/RecurringPurchaseSmartSearchPanel";
@@ -33,6 +39,7 @@ import type {
   CreateRecurringPurchasePayload,
   ListRecurringPurchasesResponse,
   RecurringPurchase,
+  RecurringPurchaseExportColumn,
   RecurringPurchaseSearchCatalogs,
   RecurringPurchaseSearchRule,
   RecurringPurchaseSearchSnapshot,
@@ -54,6 +61,7 @@ const DEFAULT_LIMIT = 25;
 export default function RecurringPurchasesPage() {
   const { showFeedback } = useFeedbackToast();
   const { can } = usePermissions();
+  const canExportRecurringPurchases = can("recurring_purchases.export");
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [openRecurringTypesInfo, setOpenRecurringTypesInfo] = useState(false);
@@ -62,6 +70,9 @@ export default function RecurringPurchasesPage() {
   const [appliedSearchText, setAppliedSearchText] = useState("");
   const [searchFilters, setSearchFilters] = useState(() => createEmptyRecurringPurchaseSearchFilters());
   const [searchState, setSearchState] = useState<RecurringPurchaseSearchStateResponse | null>(null);
+  const [exportColumns, setExportColumns] = useState<RecurringPurchaseExportColumn[]>([]);
+  const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: RecurringPurchaseExportColumn[] }>>([]);
+  const [exporting, setExporting] = useState(false);
   const [savingMetric, setSavingMetric] = useState(false);
   const [items, setItems] = useState<RecurringPurchase[]>([]);
   const [pagination, setPagination] = useState<Pick<ListRecurringPurchasesResponse, "total" | "page" | "limit">>({
@@ -103,6 +114,29 @@ export default function RecurringPurchasesPage() {
     }
   }, [showFeedback]);
 
+  const loadExportColumns = useCallback(async () => {
+    try {
+      setExportColumns(await getRecurringPurchaseExportColumns());
+    } catch {
+      showFeedback(errorResponse("Error al cargar columnas de exportacion."));
+    }
+  }, [showFeedback]);
+
+  const loadExportPresets = useCallback(async () => {
+    try {
+      const response = await getRecurringPurchaseExportPresets();
+      setExportPresets(
+        (response ?? []).map((item) => ({
+          metricId: item.metricId,
+          name: item.name,
+          columns: item.snapshot?.columns ?? [],
+        })),
+      );
+    } catch {
+      showFeedback(errorResponse("Error al cargar presets de exportacion."));
+    }
+  }, [showFeedback]);
+
   const loadRecurring = useCallback(async () => {
     setLoading(true);
     try {
@@ -136,6 +170,12 @@ export default function RecurringPurchasesPage() {
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  useEffect(() => {
+    if (!canExportRecurringPurchases) return;
+    void loadExportColumns();
+    void loadExportPresets();
+  }, [canExportRecurringPurchases, loadExportColumns, loadExportPresets]);
 
   const recentSearches = useMemo<DataTableRecentSearchItem<RecurringPurchaseSearchSnapshot>[]>(
     () =>
@@ -240,6 +280,40 @@ export default function RecurringPurchasesPage() {
     }
   }, [loadSearchState, showFeedback]);
 
+  const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: RecurringPurchaseExportColumn[] }) => {
+    await saveRecurringPurchaseExportPreset(payload);
+    await loadExportPresets();
+    showFeedback(successResponse("Preset de exportacion guardado."));
+  }, [loadExportPresets, showFeedback]);
+
+  const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+    await deleteRecurringPurchaseExportPreset(metricId);
+    await loadExportPresets();
+    showFeedback(successResponse("Preset eliminado."));
+  }, [loadExportPresets, showFeedback]);
+
+  const handleExport = useCallback(async (columnsToExport: RecurringPurchaseExportColumn[]) => {
+    setExporting(true);
+    try {
+      const file = await exportRecurringPurchasesExcel({
+        columns: columnsToExport,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
+      });
+      const url = URL.createObjectURL(file.blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = file.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      showFeedback(successResponse("Excel exportado correctamente."));
+    } catch {
+      showFeedback(errorResponse("No se pudo exportar el Excel."));
+    } finally {
+      setExporting(false);
+    }
+  }, [executedSnapshot.filters, executedSnapshot.q, showFeedback]);
+
   const createTemplate = async (payload: CreateRecurringPurchasePayload) => {
     try {
       await createRecurringPurchase(payload);
@@ -294,6 +368,16 @@ export default function RecurringPurchasesPage() {
             onClick={() => setOpenRecurringTypesInfo(true)}
             aria-label="Ver tipos recurrentes"
           />
+          {canExportRecurringPurchases && exportColumns.length ? (
+            <ExportPopover
+              columns={exportColumns}
+              loading={exporting}
+              presets={exportPresets}
+              onSavePreset={handleSaveExportPreset}
+              onDeletePreset={handleDeleteExportPreset}
+              onExport={handleExport}
+            />
+          ) : null}
           {can("recurring_purchases.create") ? (
             <SystemButton onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4" />

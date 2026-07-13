@@ -81,12 +81,13 @@ const SidebarBody = () => {
         const children = item.children?.filter((child) =>
           canAccessHref(child.href, userRole, permissions, isSuperAdmin)
         );
+        const hasVisibleHref = canAccessHref(item.href, userRole, permissions, isSuperAdmin);
 
-        return { ...item, children };
+        return { ...item, href: hasVisibleHref ? item.href : undefined, children };
       })
       .filter((item) => {
         const hasVisibleChildren = Boolean(item.children?.length);
-        const hasVisibleHref = canAccessHref(item.href, userRole, permissions, isSuperAdmin);
+        const hasVisibleHref = Boolean(item.href);
 
         // Un item sin href se muestra si es accion local (ej: Redactar) o tiene hijos visibles.
         if (!item.href) return Boolean(item.isComposeAction) || hasVisibleChildren;

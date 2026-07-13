@@ -7,6 +7,8 @@ import type {
   RegisterRecurringPurchasePaymentPayload,
   RegisterRecurringPurchasePaymentResponse,
   RecurringPurchase,
+  RecurringPurchaseExportColumn,
+  RecurringPurchaseExportPreset,
   RecurringPurchaseSearchSnapshot,
   RecurringPurchaseSearchStateResponse,
 } from "@/features/purchases/types/recurring-purchase.types";
@@ -45,6 +47,47 @@ export const getRecurringPurchaseSearchState = async (): Promise<RecurringPurcha
     API_RECURRING_PURCHASES_GROUP.searchState,
   );
   return response.data;
+};
+
+export const getRecurringPurchaseExportColumns = async (): Promise<RecurringPurchaseExportColumn[]> => {
+  const response = await axiosInstance.get<RecurringPurchaseExportColumn[]>(
+    API_RECURRING_PURCHASES_GROUP.exportColumns,
+  );
+  return response.data;
+};
+
+export const getRecurringPurchaseExportPresets = async (): Promise<RecurringPurchaseExportPreset[]> => {
+  const response = await axiosInstance.get<RecurringPurchaseExportPreset[]>(
+    API_RECURRING_PURCHASES_GROUP.exportPresets,
+  );
+  return response.data;
+};
+
+export const saveRecurringPurchaseExportPreset = async (payload: {
+  name: string;
+  columns: RecurringPurchaseExportColumn[];
+}): Promise<{ metricId: string }> => {
+  const response = await axiosInstance.post(API_RECURRING_PURCHASES_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteRecurringPurchaseExportPreset = async (metricId: string): Promise<boolean> => {
+  const response = await axiosInstance.delete(API_RECURRING_PURCHASES_GROUP.deleteExportPreset(metricId));
+  return response.data;
+};
+
+export const exportRecurringPurchasesExcel = async (payload: {
+  columns: RecurringPurchaseExportColumn[];
+  q?: string;
+  filters?: RecurringPurchaseSearchSnapshot["filters"];
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_RECURRING_PURCHASES_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `compras-recurrentes-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
 };
 
 export const saveRecurringPurchaseSearchMetric = async (

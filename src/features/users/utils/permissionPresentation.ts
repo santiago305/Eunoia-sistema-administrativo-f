@@ -36,6 +36,7 @@ const MODULE_LABELS: Record<string, string> = {
   suppliers: "Proveedores",
   purchases: "Compras",
   purchases_dashboard: "Dashboard de compras",
+  recurring_purchases: "Compras recurrentes",
   payments: "Pagos",
   payment_methods: "Métodos de pago",
   production: "Producción",

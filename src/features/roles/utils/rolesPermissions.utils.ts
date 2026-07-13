@@ -23,6 +23,11 @@ export const cn = (...s: Array<string | false | null | undefined>) => s.filter(B
 const CATALOG_MODULES = new Set(["catalog", "packs"]);
 const RAW_MATERIAL_MODULES = new Set(["raw_material"]);
 const PURCHASE_DASHBOARD_MODULES = new Set(["purchases_dashboard"]);
+const PURCHASE_PERMISSION_ORDER = new Map([
+  ["purchases_dashboard", 0],
+  ["purchases", 1],
+  ["recurring_purchases", 2],
+]);
 
 const CATALOG_SUBGROUPS: Array<Pick<PermissionSubgroup, "key" | "label">> = [
   { key: "products", label: "Productos" },
@@ -255,6 +260,18 @@ const insertGroupByLabel = (groups: PermissionModuleGroup[], group: PermissionMo
   ];
 };
 
+const sortGroups = (groups: PermissionModuleGroup[]) =>
+  groups.sort((a, b) => {
+    const aPurchaseOrder = PURCHASE_PERMISSION_ORDER.get(a.module);
+    const bPurchaseOrder = PURCHASE_PERMISSION_ORDER.get(b.module);
+    if (aPurchaseOrder !== undefined && bPurchaseOrder !== undefined) {
+      return aPurchaseOrder - bPurchaseOrder;
+    }
+    if (aPurchaseOrder !== undefined) return "Compras".localeCompare(b.label);
+    if (bPurchaseOrder !== undefined) return a.label.localeCompare("Compras");
+    return a.label.localeCompare(b.label);
+  });
+
 export const groupByModule = (permissions: AccessPermissionItem[]): PermissionModuleGroup[] => {
   const grouped = new Map<string, AccessPermissionItem[]>();
   const catalogPermissions: AccessPermissionItem[] = [];
@@ -291,9 +308,10 @@ export const groupByModule = (permissions: AccessPermissionItem[]): PermissionMo
 
   const withCatalog = catalogPermissions.length ? insertGroupByLabel(groups, buildCatalogGroup(catalogPermissions)) : groups;
   const withRawMaterial = rawMaterialPermissions.length ? insertGroupByLabel(withCatalog, buildRawMaterialGroup(rawMaterialPermissions)) : withCatalog;
-  return purchaseDashboardPermissions.length
+  const withPurchaseDashboard = purchaseDashboardPermissions.length
     ? insertGroupByLabel(withRawMaterial, buildPurchaseDashboardGroup(purchaseDashboardPermissions))
     : withRawMaterial;
+  return sortGroups(withPurchaseDashboard);
 };
 
 export const getRoleLabel = (role: string) =>

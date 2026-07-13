@@ -26,7 +26,7 @@ describe("purchase pages routing", () => {
       [RoutesPaths.purchasePayments, ["page.payments.view", "payments.read"]],
       [RoutesPaths.purchaseDocuments, ["page.purchases.view", "purchases.attach_documents"]],
       [RoutesPaths.purchaseHistory, ["page.purchases.view", "purchases.view_detail", "purchases.view_history"]],
-      [RoutesPaths.recurringPurchases, ["page.purchases.view", "page.recurring-purchases.view", "recurring_purchases.view"]],
+      [RoutesPaths.recurringPurchases, ["page.recurring-purchases.view", "recurring_purchases.view"]],
     ] as const;
 
     expectations.forEach(([path, permissions]) => {

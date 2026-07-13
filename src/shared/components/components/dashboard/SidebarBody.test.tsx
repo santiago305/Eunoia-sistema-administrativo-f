@@ -82,4 +82,18 @@ describe("SidebarBody purchase dashboard permissions", () => {
     const purchaseSection = screen.getByTestId("sidebar-item-Compras");
     expect(within(purchaseSection).getByText("Dashboard Compras")).toBeDefined();
   });
+
+  it("keeps the purchase parent visible with only recurring purchase permissions", () => {
+    authState.permissions = [
+      "page.recurring-purchases.view",
+      "recurring_purchases.view",
+    ];
+
+    renderSidebar();
+
+    const purchaseSection = screen.getByTestId("sidebar-item-Compras");
+    expect(within(purchaseSection).queryByText("Dashboard Compras")).toBeNull();
+    expect(within(purchaseSection).getAllByText("Compras")).toHaveLength(1);
+    expect(within(purchaseSection).getByText("Recurrentes")).toBeDefined();
+  });
 });

@@ -12,6 +12,11 @@ const {
   cancelRecurringPurchaseMock,
   generateCurrentRecurringPayableMock,
   getRecurringPurchaseSearchStateMock,
+  getRecurringPurchaseExportColumnsMock,
+  getRecurringPurchaseExportPresetsMock,
+  saveRecurringPurchaseExportPresetMock,
+  deleteRecurringPurchaseExportPresetMock,
+  exportRecurringPurchasesExcelMock,
   saveRecurringPurchaseSearchMetricMock,
   deleteRecurringPurchaseSearchMetricMock,
 } = vi.hoisted(() => ({
@@ -22,6 +27,11 @@ const {
   cancelRecurringPurchaseMock: vi.fn(),
   generateCurrentRecurringPayableMock: vi.fn(),
   getRecurringPurchaseSearchStateMock: vi.fn(),
+  getRecurringPurchaseExportColumnsMock: vi.fn(),
+  getRecurringPurchaseExportPresetsMock: vi.fn(),
+  saveRecurringPurchaseExportPresetMock: vi.fn(),
+  deleteRecurringPurchaseExportPresetMock: vi.fn(),
+  exportRecurringPurchasesExcelMock: vi.fn(),
   saveRecurringPurchaseSearchMetricMock: vi.fn(),
   deleteRecurringPurchaseSearchMetricMock: vi.fn(),
 }));
@@ -34,6 +44,11 @@ vi.mock("@/shared/services/recurringPurchaseService", () => ({
   cancelRecurringPurchase: cancelRecurringPurchaseMock,
   generateCurrentRecurringPayable: generateCurrentRecurringPayableMock,
   getRecurringPurchaseSearchState: getRecurringPurchaseSearchStateMock,
+  getRecurringPurchaseExportColumns: getRecurringPurchaseExportColumnsMock,
+  getRecurringPurchaseExportPresets: getRecurringPurchaseExportPresetsMock,
+  saveRecurringPurchaseExportPreset: saveRecurringPurchaseExportPresetMock,
+  deleteRecurringPurchaseExportPreset: deleteRecurringPurchaseExportPresetMock,
+  exportRecurringPurchasesExcel: exportRecurringPurchasesExcelMock,
   saveRecurringPurchaseSearchMetric: saveRecurringPurchaseSearchMetricMock,
   deleteRecurringPurchaseSearchMetric: deleteRecurringPurchaseSearchMetricMock,
 }));
@@ -48,6 +63,36 @@ vi.mock("@/shared/hooks/usePermissions", () => ({
 
 vi.mock("@/shared/components/components/PageTitle", () => ({
   PageTitle: () => null,
+}));
+
+vi.mock("@/shared/components/components/ExportPopover", () => ({
+  ExportPopover: ({
+    columns,
+    presets,
+    onSavePreset,
+    onDeletePreset,
+    onExport,
+  }: {
+    columns: Array<{ key: string; label: string }>;
+    presets: Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>;
+    onSavePreset: (payload: { name: string; columns: Array<{ key: string; label: string }> }) => void;
+    onDeletePreset: (metricId: string) => void;
+    onExport: (columns: Array<{ key: string; label: string }>) => void;
+  }) => (
+    <div data-testid="recurring-export-popover">
+      <span data-testid="recurring-export-columns">{columns.map((column) => column.label).join(",")}</span>
+      <span data-testid="recurring-export-presets">{presets.map((preset) => preset.name).join(",")}</span>
+      <button type="button" onClick={() => onSavePreset({ name: "Basico", columns })}>
+        Guardar exportacion
+      </button>
+      <button type="button" onClick={() => onDeletePreset("export-metric-1")}>
+        Borrar exportacion
+      </button>
+      <button type="button" onClick={() => onExport(columns)}>
+        Exportar recurrentes
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/shared/components/table/DataTable", () => ({
@@ -199,6 +244,16 @@ describe("RecurringPurchasesPage", () => {
     });
     saveRecurringPurchaseSearchMetricMock.mockResolvedValue({ type: "success", message: "Metrica guardada" });
     deleteRecurringPurchaseSearchMetricMock.mockResolvedValue({ type: "success", message: "Metrica eliminada" });
+    getRecurringPurchaseExportColumnsMock.mockResolvedValue([{ key: "name", label: "Nombre" }]);
+    getRecurringPurchaseExportPresetsMock.mockResolvedValue([
+      { metricId: "export-metric-1", name: "Basico", snapshot: { columns: [{ key: "name", label: "Nombre" }] } },
+    ]);
+    saveRecurringPurchaseExportPresetMock.mockResolvedValue({ metricId: "export-metric-2" });
+    deleteRecurringPurchaseExportPresetMock.mockResolvedValue(true);
+    exportRecurringPurchasesExcelMock.mockResolvedValue({
+      blob: new Blob(["xlsx"]),
+      filename: "recurrentes.xlsx",
+    });
   });
 
   it("uses smart search with 25 pagination and removes the old heading and refresh button", async () => {
@@ -283,5 +338,68 @@ describe("RecurringPurchasesPage", () => {
     await user.click(screen.getByRole("button", { name: "Ver tipos recurrentes" }));
 
     expect(screen.getByTestId("recurring-types-info-modal")).toBeInTheDocument();
+  });
+
+  it("renders export controls and exports with the applied recurring search", async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:recurring-export");
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const anchorClick = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
+      const element = originalCreateElement(tagName);
+      if (tagName.toLowerCase() === "a") {
+        Object.defineProperty(element, "click", { value: anchorClick });
+      }
+      return element;
+    });
+
+    render(
+      <MemoryRouter>
+        <RecurringPurchasesPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("recurring-export-popover")).toBeInTheDocument();
+    expect(screen.getByTestId("recurring-export-columns")).toHaveTextContent("Nombre");
+    expect(screen.getByTestId("recurring-export-presets")).toHaveTextContent("Basico");
+
+    await user.type(screen.getByLabelText("Buscar recurrente"), "hosting");
+    await user.click(screen.getByRole("button", { name: "Filtrar activas" }));
+    await user.click(screen.getByRole("button", { name: "Buscar" }));
+    await user.click(screen.getByRole("button", { name: "Guardar exportacion" }));
+    await user.click(screen.getByRole("button", { name: "Borrar exportacion" }));
+    await user.click(screen.getByRole("button", { name: "Exportar recurrentes" }));
+
+    expect(saveRecurringPurchaseExportPresetMock).toHaveBeenCalledWith({
+      name: "Basico",
+      columns: [{ key: "name", label: "Nombre" }],
+    });
+    expect(deleteRecurringPurchaseExportPresetMock).toHaveBeenCalledWith("export-metric-1");
+    expect(exportRecurringPurchasesExcelMock).toHaveBeenCalledWith({
+      columns: [{ key: "name", label: "Nombre" }],
+      q: "hosting",
+      filters: [
+        {
+          field: "status",
+          operator: "in",
+          mode: "include",
+          values: ["ACTIVE"],
+        },
+      ],
+    });
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(anchorClick).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:recurring-export");
   });
 });

@@ -124,4 +124,21 @@ describe("rolesPermissions.utils", () => {
       "purchases_dashboard.view_operations",
     ]);
   });
+
+  it("keeps dashboard, purchases, and recurring purchases as consecutive permission groups", () => {
+    const groups = groupByModule([
+      permission("payments.read", "payments", "payments", "Consultar pagos"),
+      permission("purchases.view", "purchases", "purchases", "Consultar compras"),
+      permission("recurring_purchases.view", "recurring_purchases", "recurring_purchases", "Consultar recurrentes"),
+      permission("purchases_dashboard.view", "purchases_dashboard", "purchases_dashboard", "Ver dashboard de compras"),
+    ]);
+
+    expect(groups.map((group) => group.module)).toEqual([
+      "purchases_dashboard",
+      "purchases",
+      "recurring_purchases",
+      "payments",
+    ]);
+    expect(groups.find((group) => group.module === "recurring_purchases")?.label).toBe("Compras recurrentes");
+  });
 });

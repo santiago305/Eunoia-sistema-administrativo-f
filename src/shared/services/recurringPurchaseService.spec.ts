@@ -3,10 +3,15 @@ import axiosInstance from "@/shared/common/utils/axios";
 import {
   cancelRecurringPurchase,
   createRecurringPurchase,
+  deleteRecurringPurchaseExportPreset,
+  exportRecurringPurchasesExcel,
   generateCurrentRecurringPayable,
+  getRecurringPurchaseExportColumns,
+  getRecurringPurchaseExportPresets,
   listRecurringPurchases,
   pauseRecurringPurchase,
   resumeRecurringPurchase,
+  saveRecurringPurchaseExportPreset,
 } from "./recurringPurchaseService";
 
 vi.mock("@/shared/common/utils/axios", () => ({
@@ -14,6 +19,7 @@ vi.mock("@/shared/common/utils/axios", () => ({
     get: vi.fn(),
     post: vi.fn(),
     patch: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -49,5 +55,52 @@ describe("recurringPurchaseService", () => {
     expect(axiosInstance.patch).toHaveBeenNthCalledWith(2, "/recurring-purchases/rec-1/resume");
     expect(axiosInstance.patch).toHaveBeenNthCalledWith(3, "/recurring-purchases/rec-1/cancel");
     expect(axiosInstance.post).toHaveBeenNthCalledWith(2, "/recurring-purchases/rec-1/generate-current-payable");
+  });
+
+  it("uses recurring purchase export endpoints", async () => {
+    const blob = new Blob(["xlsx"]);
+    vi.mocked(axiosInstance.get)
+      .mockResolvedValueOnce({ data: [{ key: "name", label: "Nombre" }] })
+      .mockResolvedValueOnce({
+        data: [{ metricId: "metric-1", name: "Basico", snapshot: { columns: [{ key: "name", label: "Nombre" }] } }],
+      });
+    vi.mocked(axiosInstance.post)
+      .mockResolvedValueOnce({ data: { metricId: "metric-2" } })
+      .mockResolvedValueOnce({
+        data: blob,
+        headers: { "content-disposition": 'attachment; filename="recurrentes.xlsx"' },
+      });
+    vi.mocked(axiosInstance.delete).mockResolvedValueOnce({ data: true });
+
+    await expect(getRecurringPurchaseExportColumns()).resolves.toEqual([{ key: "name", label: "Nombre" }]);
+    await expect(getRecurringPurchaseExportPresets()).resolves.toEqual([
+      { metricId: "metric-1", name: "Basico", snapshot: { columns: [{ key: "name", label: "Nombre" }] } },
+    ]);
+    await saveRecurringPurchaseExportPreset({ name: "Basico", columns: [{ key: "name", label: "Nombre" }] });
+    await deleteRecurringPurchaseExportPreset("metric-1");
+    const file = await exportRecurringPurchasesExcel({
+      columns: [{ key: "name", label: "Nombre" }],
+      q: "hosting",
+      filters: [{ field: "status", operator: "in", values: ["ACTIVE"] }],
+    });
+
+    expect(axiosInstance.get).toHaveBeenNthCalledWith(1, "/recurring-purchases/export-columns");
+    expect(axiosInstance.get).toHaveBeenNthCalledWith(2, "/recurring-purchases/export-presets");
+    expect(axiosInstance.post).toHaveBeenNthCalledWith(1, "/recurring-purchases/export-presets", {
+      name: "Basico",
+      columns: [{ key: "name", label: "Nombre" }],
+    });
+    expect(axiosInstance.delete).toHaveBeenCalledWith("/recurring-purchases/export-presets/metric-1");
+    expect(axiosInstance.post).toHaveBeenNthCalledWith(
+      2,
+      "/recurring-purchases/export-excel",
+      {
+        columns: [{ key: "name", label: "Nombre" }],
+        q: "hosting",
+        filters: [{ field: "status", operator: "in", values: ["ACTIVE"] }],
+      },
+      { responseType: "blob" },
+    );
+    expect(file).toEqual({ blob, filename: "recurrentes.xlsx" });
   });
 });
