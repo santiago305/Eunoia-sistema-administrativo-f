@@ -8,6 +8,7 @@ import {
 } from "@/shared/components/table/search";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
@@ -15,11 +16,17 @@ import { usePermissions } from "@/shared/hooks/usePermissions";
 import {
   approvePayment,
   deletePaymentSearchMetric,
+  deletePaymentExportPreset,
+  exportPaymentsExcel,
+  getPaymentExportColumns,
+  getPaymentExportPresets,
   getPaymentSearchState,
   listPayments,
   rejectPayment,
   removePayment,
+  savePaymentExportPreset,
   savePaymentSearchMetric,
+  type PaymentExportColumn,
   type ListPaymentsResponse,
 } from "@/shared/services/paymentService";
 import { PaymentKpiStrip } from "../components/PaymentKpiStrip";
@@ -65,10 +72,14 @@ export default function PaymentsPage() {
   const canDeletePayment = can("payments.delete");
   const canViewEvidence = can("payments.view_evidence");
   const canAttachEvidence = can("payments.attach_evidence");
+  const canExportPayments = can("payments.export");
 
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportColumns, setExportColumns] = useState<PaymentExportColumn[]>([]);
+  const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: PaymentExportColumn[] }>>([]);
   const [busyPaymentId, setBusyPaymentId] = useState<string | null>(null);
   const [searchState, setSearchState] = useState<PaymentSearchStateResponse | null>(null);
   const [pagination, setPagination] = useState<Pick<ListPaymentsResponse, "total" | "page" | "limit">>({
@@ -104,6 +115,29 @@ export default function PaymentsPage() {
       showFeedbackRef.current(errorResponse("No se pudo cargar el buscador inteligente de pagos."));
     }
   }, [canReadPayments]);
+
+  const loadExportColumns = useCallback(async () => {
+    if (!canExportPayments) return;
+    try {
+      setExportColumns(await getPaymentExportColumns());
+    } catch {
+      showFeedbackRef.current(errorResponse("No se pudo cargar columnas de exportacion de pagos."));
+    }
+  }, [canExportPayments]);
+
+  const loadExportPresets = useCallback(async () => {
+    if (!canExportPayments) return;
+    try {
+      const response = await getPaymentExportPresets();
+      setExportPresets((response ?? []).map((item) => ({
+        metricId: item.metricId,
+        name: item.name,
+        columns: item.snapshot?.columns ?? [],
+      })));
+    } catch {
+      showFeedbackRef.current(errorResponse("No se pudo cargar presets de exportacion de pagos."));
+    }
+  }, [canExportPayments]);
 
   const loadPayments = useCallback(async () => {
     if (!canReadPayments) {
@@ -142,6 +176,11 @@ export default function PaymentsPage() {
   useEffect(() => {
     void loadSearchState();
   }, [loadSearchState]);
+
+  useEffect(() => {
+    void loadExportColumns();
+    void loadExportPresets();
+  }, [loadExportColumns, loadExportPresets]);
 
   useEffect(() => {
     void loadPayments();
@@ -299,6 +338,40 @@ export default function PaymentsPage() {
     }
   }, [busyPaymentId, canDeletePayment, loadPayments, showFeedback]);
 
+  const handleExport = useCallback(async (columnsToExport: PaymentExportColumn[]) => {
+    setExporting(true);
+    try {
+      const file = await exportPaymentsExcel({
+        columns: columnsToExport,
+        q: executedSnapshot.q,
+        filters: executedSnapshot.filters as unknown as Record<string, unknown>[],
+      });
+      const url = URL.createObjectURL(file.blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = file.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      showFeedback(successResponse("Excel de pagos exportado correctamente."));
+    } catch {
+      showFeedback(errorResponse("No se pudo exportar el Excel de pagos."));
+    } finally {
+      setExporting(false);
+    }
+  }, [executedSnapshot.filters, executedSnapshot.q, showFeedback]);
+
+  const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: PaymentExportColumn[] }) => {
+    await savePaymentExportPreset(payload);
+    await loadExportPresets();
+    showFeedback(successResponse("Preset de exportacion guardado."));
+  }, [loadExportPresets, showFeedback]);
+
+  const handleDeleteExportPreset = useCallback(async (metricId: string) => {
+    await deletePaymentExportPreset(metricId);
+    await loadExportPresets();
+    showFeedback(successResponse("Preset de exportacion eliminado."));
+  }, [loadExportPresets, showFeedback]);
+
   const smartSearchColumns = useMemo(
     () => buildPaymentSmartSearchColumns(searchState),
     [searchState],
@@ -359,6 +432,16 @@ export default function PaymentsPage() {
   return (
     <PageShell>
       <PageActionsRow>
+        {canExportPayments && exportColumns.length ? (
+          <ExportPopover
+            columns={exportColumns}
+            loading={exporting}
+            presets={exportPresets}
+            onSavePreset={handleSaveExportPreset}
+            onDeletePreset={handleDeleteExportPreset}
+            onExport={handleExport}
+          />
+        ) : null}
         {canCreatePayment ? (
           <SystemButton
             size="sm"

@@ -6,19 +6,29 @@ const {
   approvePaymentMock,
   createPaymentMock,
   deletePaymentSearchMetricMock,
+  deletePaymentExportPresetMock,
+  exportPaymentsExcelMock,
+  getPaymentExportColumnsMock,
+  getPaymentExportPresetsMock,
   getPaymentSearchStateMock,
   listPaymentsMock,
   rejectPaymentMock,
   removePaymentMock,
+  savePaymentExportPresetMock,
   savePaymentSearchMetricMock,
 } = vi.hoisted(() => ({
   approvePaymentMock: vi.fn(),
   createPaymentMock: vi.fn(),
   deletePaymentSearchMetricMock: vi.fn(),
+  deletePaymentExportPresetMock: vi.fn(),
+  exportPaymentsExcelMock: vi.fn(),
+  getPaymentExportColumnsMock: vi.fn(),
+  getPaymentExportPresetsMock: vi.fn(),
   getPaymentSearchStateMock: vi.fn(),
   listPaymentsMock: vi.fn(),
   rejectPaymentMock: vi.fn(),
   removePaymentMock: vi.fn(),
+  savePaymentExportPresetMock: vi.fn(),
   savePaymentSearchMetricMock: vi.fn(),
 }));
 
@@ -26,10 +36,15 @@ vi.mock("@/shared/services/paymentService", () => ({
   approvePayment: approvePaymentMock,
   createPayment: createPaymentMock,
   deletePaymentSearchMetric: deletePaymentSearchMetricMock,
+  deletePaymentExportPreset: deletePaymentExportPresetMock,
+  exportPaymentsExcel: exportPaymentsExcelMock,
+  getPaymentExportColumns: getPaymentExportColumnsMock,
+  getPaymentExportPresets: getPaymentExportPresetsMock,
   getPaymentSearchState: getPaymentSearchStateMock,
   listPayments: listPaymentsMock,
   rejectPayment: rejectPaymentMock,
   removePayment: removePaymentMock,
+  savePaymentExportPreset: savePaymentExportPresetMock,
   savePaymentSearchMetric: savePaymentSearchMetricMock,
 }));
 
@@ -104,6 +119,26 @@ vi.mock("@/shared/components/table/search", () => ({
     </div>
   ),
   DataTableSearchChips: () => <div data-testid="payments-search-chips" />,
+}));
+
+vi.mock("@/shared/components/components/ExportPopover", () => ({
+  ExportPopover: ({
+    columns,
+    presets,
+    onExport,
+  }: {
+    columns: Array<{ key: string; label: string }>;
+    presets: Array<{ name: string }>;
+    onExport: (columns: Array<{ key: string; label: string }>) => void;
+  }) => (
+    <div data-testid="payments-export-popover">
+      <span data-testid="payments-export-columns">{columns.map((column) => column.label).join(",")}</span>
+      <span data-testid="payments-export-presets">{presets.map((preset) => preset.name).join(",")}</span>
+      <button type="button" onClick={() => onExport(columns)}>
+        Exportar pagos
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../components/PaymentSmartSearchPanel", () => ({
@@ -193,6 +228,17 @@ describe("PaymentsPage", () => {
     removePaymentMock.mockResolvedValue({ type: "success", message: "Pago eliminado." });
     savePaymentSearchMetricMock.mockResolvedValue({ type: "success", message: "Metrica guardada." });
     deletePaymentSearchMetricMock.mockResolvedValue({ type: "success", message: "Metrica eliminada." });
+    getPaymentExportColumnsMock.mockResolvedValue([
+      { key: "status", label: "Estado" },
+      { key: "amount", label: "Monto" },
+    ]);
+    getPaymentExportPresetsMock.mockResolvedValue([
+      { metricId: "preset-1", name: "Basico", snapshot: { columns: [{ key: "status", label: "Estado" }] } },
+    ]);
+    exportPaymentsExcelMock.mockResolvedValue({
+      blob: new Blob(["excel"]),
+      filename: "pagos-2026-07-13.xlsx",
+    });
   });
 
   it("renders the redesigned payments page with smart search, selectable table and KPI strip", async () => {
@@ -207,9 +253,14 @@ describe("PaymentsPage", () => {
     expect(screen.getAllByText("S/ 120.00").length).toBeGreaterThan(0);
     expect(screen.getByText("BCP **** 1234")).toBeInTheDocument();
     expect(screen.getByTestId("payment-actions-popover")).toBeInTheDocument();
+    expect(screen.getByTestId("payments-export-popover")).toBeInTheDocument();
+    expect(screen.getByTestId("payments-export-columns")).toHaveTextContent("Estado,Monto");
+    expect(screen.getByTestId("payments-export-presets")).toHaveTextContent("Basico");
 
     await waitFor(() => {
       expect(getPaymentSearchStateMock).toHaveBeenCalledTimes(1);
+      expect(getPaymentExportColumnsMock).toHaveBeenCalledTimes(1);
+      expect(getPaymentExportPresetsMock).toHaveBeenCalledTimes(1);
       expect(listPaymentsMock).toHaveBeenCalledWith({
         page: 1,
         limit: 20,
@@ -235,5 +286,22 @@ describe("PaymentsPage", () => {
     expect(promptSpy).not.toHaveBeenCalled();
 
     promptSpy.mockRestore();
+  });
+
+  it("exports payments with the executed smart filters", async () => {
+    render(<Payments />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Exportar pagos" }));
+
+    await waitFor(() => {
+      expect(exportPaymentsExcelMock).toHaveBeenCalledWith({
+        columns: [
+          { key: "status", label: "Estado" },
+          { key: "amount", label: "Monto" },
+        ],
+        q: undefined,
+        filters: [],
+      });
+    });
   });
 });

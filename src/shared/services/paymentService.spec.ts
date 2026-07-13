@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import axiosInstance from "@/shared/common/utils/axios";
 import {
+  deletePaymentExportPreset,
   deletePaymentSearchMetric,
+  exportPaymentsExcel,
+  getPaymentExportColumns,
+  getPaymentExportPresets,
   getPaymentSearchState,
+  savePaymentExportPreset,
   savePaymentSearchMetric,
 } from "./paymentService";
 import {
@@ -65,5 +70,37 @@ describe("paymentService search state", () => {
 
     expect(axiosInstance.delete).toHaveBeenCalledWith("/payments/search-metrics/metric-1");
     expect(result.type).toBe("success");
+  });
+
+  it("uses payment export endpoints for columns, presets and Excel", async () => {
+    vi.mocked(axiosInstance.get)
+      .mockResolvedValueOnce({ data: [{ key: "status", label: "Estado" }] })
+      .mockResolvedValueOnce({ data: [{ metricId: "preset-1", name: "Basico", snapshot: { columns: [] } }] });
+    vi.mocked(axiosInstance.post)
+      .mockResolvedValueOnce({ data: { metricId: "preset-2" } })
+      .mockResolvedValueOnce({
+        data: new Blob(["excel"]),
+        headers: { "content-disposition": 'attachment; filename="pagos.xlsx"' },
+      });
+    vi.mocked(axiosInstance.delete).mockResolvedValueOnce({ data: true });
+
+    await getPaymentExportColumns();
+    await getPaymentExportPresets();
+    await savePaymentExportPreset({ name: "Basico", columns: [{ key: "status", label: "Estado" }] });
+    await deletePaymentExportPreset("preset-1");
+    const file = await exportPaymentsExcel({ columns: [{ key: "status", label: "Estado" }], filters: [] });
+
+    expect(axiosInstance.get).toHaveBeenNthCalledWith(1, "/payments/export-columns");
+    expect(axiosInstance.get).toHaveBeenNthCalledWith(2, "/payments/export-presets");
+    expect(axiosInstance.post).toHaveBeenNthCalledWith(1, "/payments/export-presets", {
+      name: "Basico",
+      columns: [{ key: "status", label: "Estado" }],
+    });
+    expect(axiosInstance.delete).toHaveBeenCalledWith("/payments/export-presets/preset-1");
+    expect(axiosInstance.post).toHaveBeenNthCalledWith(2, "/payments/export-excel", {
+      columns: [{ key: "status", label: "Estado" }],
+      filters: [],
+    }, { responseType: "blob" });
+    expect(file.filename).toBe("pagos.xlsx");
   });
 });

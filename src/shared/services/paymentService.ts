@@ -26,6 +26,11 @@ export type ListPaymentsResponse = {
   limit: number;
 };
 
+export type PaymentExportColumn = {
+  key: string;
+  label: string;
+};
+
 export const createPayment = async (
   payload: Payment
 ): Promise<{type:string, message:string, paymentId?: string}> => {
@@ -64,6 +69,43 @@ export const deletePaymentSearchMetric = async (
 ): Promise<{ type: string; message: string }> => {
   const response = await axiosInstance.delete(API_PAYMENT_GROUP.deleteSearchMetric(metricId));
   return response.data;
+};
+
+export const getPaymentExportColumns = async (): Promise<PaymentExportColumn[]> => {
+  const response = await axiosInstance.get(API_PAYMENT_GROUP.exportColumns);
+  return response.data;
+};
+
+export const getPaymentExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: PaymentExportColumn[] } }>> => {
+  const response = await axiosInstance.get(API_PAYMENT_GROUP.exportPresets);
+  return response.data;
+};
+
+export const savePaymentExportPreset = async (payload: {
+  name: string;
+  columns: PaymentExportColumn[];
+}): Promise<{ metricId: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.exportPresets, payload);
+  return response.data;
+};
+
+export const deletePaymentExportPreset = async (metricId: string): Promise<boolean> => {
+  const response = await axiosInstance.delete(API_PAYMENT_GROUP.deleteExportPreset(metricId));
+  return response.data;
+};
+
+export const exportPaymentsExcel = async (payload: {
+  columns: PaymentExportColumn[];
+  q?: string;
+  filters?: Record<string, unknown>[];
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `pagos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
 };
 
 export const getPaymentById = async (id: string): Promise<Payment> => {
