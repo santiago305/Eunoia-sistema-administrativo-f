@@ -4,6 +4,7 @@ import type {
   Payment,
 } from "@/features/purchases/types/purchase";
 import type {
+  PaymentSearchFilters,
   PaymentSearchSnapshot,
   PaymentSearchStateResponse,
 } from "@/features/payments/types/payment-search.types";
@@ -15,7 +16,7 @@ export type ListPaymentsQuery = {
   page?: number;
   limit?: number;
   q?: string;
-  filters?: Record<string, unknown>[];
+  filters?: PaymentSearchFilters;
 };
 
 export type ListPaymentsResponse = {
