@@ -385,6 +385,9 @@ export const API_ACCOUNTS_PAYABLE_GROUP = {
 export const API_RECURRING_PURCHASES_GROUP = {
   list: "/recurring-purchases",
   create: "/recurring-purchases",
+  searchState: "/recurring-purchases/search-state",
+  saveSearchMetric: "/recurring-purchases/search-metrics",
+  deleteSearchMetric: (metricId: string) => `/recurring-purchases/search-metrics/${metricId}`,
   pause: (id: string) => `/recurring-purchases/${id}/pause`,
   resume: (id: string) => `/recurring-purchases/${id}/resume`,
   cancel: (id: string) => `/recurring-purchases/${id}/cancel`,

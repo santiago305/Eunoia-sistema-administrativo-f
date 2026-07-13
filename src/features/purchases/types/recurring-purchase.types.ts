@@ -57,6 +57,32 @@ export type RecurringPurchaseSearchSnapshot = {
 
 export type RecurringPurchaseSearchCatalogs = {
   suppliers: DataTableSearchOption[];
+  statuses?: DataTableSearchOption[];
+  frequencies?: DataTableSearchOption[];
+  purchaseTypes?: DataTableSearchOption[];
+  currencies?: DataTableSearchOption[];
+  paymentStatuses?: DataTableSearchOption[];
+};
+
+export type RecurringPurchaseRecentSearch = {
+  recentId: string;
+  label: string;
+  snapshot: RecurringPurchaseSearchSnapshot;
+  lastUsedAt: string;
+};
+
+export type RecurringPurchaseSavedMetric = {
+  metricId: string;
+  name: string;
+  label: string;
+  snapshot: RecurringPurchaseSearchSnapshot;
+  updatedAt: string;
+};
+
+export type RecurringPurchaseSearchStateResponse = {
+  recent: RecurringPurchaseRecentSearch[];
+  saved: RecurringPurchaseSavedMetric[];
+  catalogs: RecurringPurchaseSearchCatalogs;
 };
 
 export type RecurringPurchase = {

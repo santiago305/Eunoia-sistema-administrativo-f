@@ -189,11 +189,11 @@ function getCatalogMap(field: RecurringPurchaseSearchField, catalogs?: Recurring
   if (field === RecurringPurchaseSearchFields.SUPPLIER_ID) {
     return new Map((catalogs?.suppliers ?? []).map((item) => [item.id, item.label]));
   }
-  if (field === RecurringPurchaseSearchFields.STATUS) return new Map(STATUS_OPTIONS.map((item) => [item.id, item.label]));
-  if (field === RecurringPurchaseSearchFields.FREQUENCY) return new Map(FREQUENCY_OPTIONS.map((item) => [item.id, item.label]));
-  if (field === RecurringPurchaseSearchFields.PURCHASE_TYPE) return new Map(PURCHASE_TYPE_OPTIONS.map((item) => [item.id, item.label]));
-  if (field === RecurringPurchaseSearchFields.CURRENCY) return new Map(CURRENCY_OPTIONS.map((item) => [item.id, item.label]));
-  if (field === RecurringPurchaseSearchFields.PAYMENT_STATUS) return new Map(PAYMENT_STATUS_OPTIONS.map((item) => [item.id, item.label]));
+  if (field === RecurringPurchaseSearchFields.STATUS) return new Map((catalogs?.statuses ?? STATUS_OPTIONS).map((item) => [item.id, item.label]));
+  if (field === RecurringPurchaseSearchFields.FREQUENCY) return new Map((catalogs?.frequencies ?? FREQUENCY_OPTIONS).map((item) => [item.id, item.label]));
+  if (field === RecurringPurchaseSearchFields.PURCHASE_TYPE) return new Map((catalogs?.purchaseTypes ?? PURCHASE_TYPE_OPTIONS).map((item) => [item.id, item.label]));
+  if (field === RecurringPurchaseSearchFields.CURRENCY) return new Map((catalogs?.currencies ?? CURRENCY_OPTIONS).map((item) => [item.id, item.label]));
+  if (field === RecurringPurchaseSearchFields.PAYMENT_STATUS) return new Map((catalogs?.paymentStatuses ?? PAYMENT_STATUS_OPTIONS).map((item) => [item.id, item.label]));
   return new Map<string, string>();
 }
 
@@ -371,7 +371,7 @@ export function buildRecurringPurchaseSmartSearchColumns(
       description: "Selecciona estados para incluir o excluir.",
       operators: [{ id: RecurringPurchaseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: STATUS_OPTIONS,
+      options: catalogs?.statuses ?? STATUS_OPTIONS,
     },
     {
       id: RecurringPurchaseSearchFields.FREQUENCY,
@@ -380,7 +380,7 @@ export function buildRecurringPurchaseSmartSearchColumns(
       description: "Filtra compras mensuales o anuales.",
       operators: [{ id: RecurringPurchaseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: FREQUENCY_OPTIONS,
+      options: catalogs?.frequencies ?? FREQUENCY_OPTIONS,
     },
     {
       id: RecurringPurchaseSearchFields.CURRENCY,
@@ -389,7 +389,7 @@ export function buildRecurringPurchaseSmartSearchColumns(
       description: "Filtra por moneda.",
       operators: [{ id: RecurringPurchaseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: CURRENCY_OPTIONS,
+      options: catalogs?.currencies ?? CURRENCY_OPTIONS,
     },
     {
       id: RecurringPurchaseSearchFields.PURCHASE_TYPE,
@@ -398,7 +398,7 @@ export function buildRecurringPurchaseSmartSearchColumns(
       description: "Filtra servicios o suscripciones.",
       operators: [{ id: RecurringPurchaseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: PURCHASE_TYPE_OPTIONS,
+      options: catalogs?.purchaseTypes ?? PURCHASE_TYPE_OPTIONS,
     },
     {
       id: RecurringPurchaseSearchFields.AMOUNT,
@@ -415,7 +415,7 @@ export function buildRecurringPurchaseSmartSearchColumns(
       description: "Filtra por estado de la cuenta por pagar generada.",
       operators: [{ id: RecurringPurchaseSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: PAYMENT_STATUS_OPTIONS,
+      options: catalogs?.paymentStatuses ?? PAYMENT_STATUS_OPTIONS,
     },
     {
       id: RecurringPurchaseSearchFields.START_DATE,

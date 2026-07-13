@@ -1,4 +1,4 @@
-import { SmartSearchPanel } from "@/shared/components/table/search";
+import { SmartSearchPanel, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
 import type {
   RecurringPurchaseSearchCatalogs,
   RecurringPurchaseSearchRule,
@@ -15,29 +15,38 @@ import {
 type Props = {
   columns: RecurringPurchaseSmartSearchColumn[];
   snapshot: RecurringPurchaseSearchSnapshot;
+  recent?: DataTableRecentSearchItem<RecurringPurchaseSearchSnapshot>[];
+  saved?: DataTableSavedSearchItem<RecurringPurchaseSearchSnapshot>[];
   catalogs?: RecurringPurchaseSearchCatalogs | null;
   filterQuery?: string;
   onApplySnapshot: (snapshot: RecurringPurchaseSearchSnapshot) => void;
   onApplyRule: (rule: RecurringPurchaseSearchRule) => void;
   onRemoveRule: (fieldId: RecurringPurchaseSearchFilterKey) => void;
+  onDeleteMetric?: (metricId: string) => void;
 };
 
 export function RecurringPurchaseSmartSearchPanel({
   columns,
   snapshot,
+  recent,
+  saved,
   catalogs,
   filterQuery,
   onApplySnapshot,
   onApplyRule,
   onRemoveRule,
+  onDeleteMetric,
 }: Props) {
   return (
     <SmartSearchPanel
+      recent={recent}
+      saved={saved}
       fields={columns}
       snapshot={snapshot}
       onApplySnapshot={onApplySnapshot}
       onApplyRule={onApplyRule}
       onRemoveRule={onRemoveRule}
+      onDeleteMetric={onDeleteMetric}
       getRule={findRecurringPurchaseSearchRule}
       getRuleSummary={(currentSnapshot, fieldId) =>
         getRecurringPurchaseSearchRuleSummary(currentSnapshot, fieldId, catalogs)
