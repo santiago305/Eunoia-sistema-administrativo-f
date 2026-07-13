@@ -51,6 +51,7 @@ describe("PaymentEvidenceModal", () => {
           currency: "PEN",
           amount: 120,
         }}
+        canViewEvidence
         canAttachEvidence
         onClose={vi.fn()}
         onUploaded={onUploaded}
@@ -75,5 +76,28 @@ describe("PaymentEvidenceModal", () => {
       });
     });
     expect(onUploaded).toHaveBeenCalled();
+  });
+
+  it("does not list existing evidence when the user can only attach", async () => {
+    render(
+      <PaymentEvidenceModal
+        open
+        payment={{
+          payDocId: "payment-1",
+          poId: "purchase-1",
+          method: "TRANSFERENCIA",
+          date: "2026-07-13",
+          currency: "PEN",
+          amount: 120,
+        }}
+        canViewEvidence={false}
+        canAttachEvidence
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(listPurchaseAttachmentsMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/no tienes permiso para ver/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /subir evidencia/i })).toBeInTheDocument();
   });
 });

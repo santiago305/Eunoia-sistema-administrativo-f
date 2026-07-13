@@ -1,5 +1,6 @@
 import { formatPaymentAmount } from "../utils/paymentFormatters";
 import type { PaymentRecord } from "../types/payment.types";
+import { hasPaymentEvidence } from "../paymentView";
 
 type Props = {
   payments: PaymentRecord[];
@@ -16,7 +17,7 @@ export function PaymentKpiStrip({ payments }: Props) {
   const pendingPayments = payments.filter((payment) => payment.status === "PENDING_APPROVAL");
   const scheduledPayments = payments.filter((payment) => payment.status === "SCHEDULED");
   const approvedPayments = payments.filter((payment) => payment.status === "APPROVED");
-  const withoutEvidence = payments.filter((payment) => !payment.paymentEvidenceFileId);
+  const withoutEvidence = payments.filter((payment) => !hasPaymentEvidence(payment));
 
   const items = [
     {

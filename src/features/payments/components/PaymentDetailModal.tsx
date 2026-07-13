@@ -3,6 +3,7 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
 import { formatPaymentStatusLabel } from "../utils/paymentFormatters";
 import type { PaymentRecord } from "../types/payment.types";
+import { hasPaymentEvidence } from "../paymentView";
 import {
   formatPaymentAmount,
   formatPaymentDate,
@@ -67,7 +68,10 @@ export function PaymentDetailModal({ open, payment, onClose }: Props) {
             <DetailRow label="Fecha documento" value={formatPaymentDate(payment.date)} />
             <DetailRow label="Fecha pagada" value={formatPaymentDate(payment.paidAt ?? payment.approvedAt)} />
             <DetailRow label="Programado" value={formatPaymentDate(payment.scheduledAt)} />
-            <DetailRow label="Evidencia" value={payment.paymentEvidenceFileId ? "Adjunta" : "Pendiente"} />
+            <DetailRow
+              label="Evidencia"
+              value={hasPaymentEvidence(payment) ? `Adjunta${payment.paymentEvidenceCount ? ` (${payment.paymentEvidenceCount})` : ""}` : "Pendiente"}
+            />
             <DetailRow label="Solicitante" value={payment.requestedByUserId} />
             <DetailRow label="Aprobador" value={payment.approvedByUserId} />
           </div>
