@@ -49,6 +49,17 @@ export const getRecurringPurchaseSearchState = async (): Promise<RecurringPurcha
   return response.data;
 };
 
+export const updateRecurringPurchase = async (
+  id: string,
+  payload: CreateRecurringPurchasePayload,
+): Promise<RecurringPurchase> => {
+  const response = await axiosInstance.patch<RecurringPurchase>(
+    API_RECURRING_PURCHASES_GROUP.update(id),
+    payload,
+  );
+  return response.data;
+};
+
 export const getRecurringPurchaseExportColumns = async (): Promise<RecurringPurchaseExportColumn[]> => {
   const response = await axiosInstance.get<RecurringPurchaseExportColumn[]>(
     API_RECURRING_PURCHASES_GROUP.exportColumns,

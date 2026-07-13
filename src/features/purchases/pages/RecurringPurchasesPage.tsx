@@ -28,6 +28,7 @@ import {
   resumeRecurringPurchase,
   saveRecurringPurchaseExportPreset,
   saveRecurringPurchaseSearchMetric,
+  updateRecurringPurchase,
 } from "@/shared/services/recurringPurchaseService";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { RecurringPurchaseFormModal } from "../components/recurrent/RecurringPurchaseFormModal";
@@ -65,6 +66,7 @@ export default function RecurringPurchasesPage() {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [openRecurringTypesInfo, setOpenRecurringTypesInfo] = useState(false);
+  const [editingTarget, setEditingTarget] = useState<RecurringPurchase | null>(null);
   const [paymentTarget, setPaymentTarget] = useState<RecurringPurchase | null>(null);
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
@@ -314,13 +316,18 @@ export default function RecurringPurchasesPage() {
     }
   }, [executedSnapshot.filters, executedSnapshot.q, showFeedback]);
 
-  const createTemplate = async (payload: CreateRecurringPurchasePayload) => {
+  const saveTemplate = async (payload: CreateRecurringPurchasePayload) => {
     try {
-      await createRecurringPurchase(payload);
-      showFeedback(successResponse("Compra recurrente creada."));
+      if (editingTarget) {
+        await updateRecurringPurchase(editingTarget.recurringPurchaseTemplateId, payload);
+        showFeedback(successResponse("Compra recurrente actualizada."));
+      } else {
+        await createRecurringPurchase(payload);
+        showFeedback(successResponse("Compra recurrente creada."));
+      }
       await loadRecurring();
     } catch {
-      showFeedback(errorResponse("No se pudo crear la compra recurrente."));
+      showFeedback(errorResponse(editingTarget ? "No se pudo actualizar la compra recurrente." : "No se pudo crear la compra recurrente."));
     }
   };
 
@@ -407,6 +414,10 @@ export default function RecurringPurchasesPage() {
           onCancel={(item) =>
             void runAction(item, cancelRecurringPurchase, "Recurrencia cancelada.", "No se pudo cancelar.")
           }
+          onEdit={(item) => {
+            setEditingTarget(item);
+            setModalOpen(true);
+          }}
           onGenerate={(item) => void generatePayable(item)}
           onRegisterPayment={(item) => setPaymentTarget(item)}
           toolbarSearchContent={
@@ -437,6 +448,7 @@ export default function RecurringPurchasesPage() {
           permissions={{
             canPause: can("recurring_purchases.pause"),
             canCancel: can("recurring_purchases.cancel"),
+            canEdit: can("recurring_purchases.edit"),
             canGenerate: can("recurring_purchases.pay"),
             canRegisterPayment: can("recurring_purchases.register_payment"),
           }}
@@ -445,8 +457,12 @@ export default function RecurringPurchasesPage() {
 
       <RecurringPurchaseFormModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={createTemplate}
+        initialValue={editingTarget}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingTarget(null);
+        }}
+        onSubmit={saveTemplate}
       />
 
       <RecurringPurchaseTypesInfoModal

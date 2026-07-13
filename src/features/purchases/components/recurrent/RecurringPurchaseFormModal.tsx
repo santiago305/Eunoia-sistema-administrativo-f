@@ -10,13 +10,14 @@ import { FloatingDatePicker } from "@/shared/components/components/date-picker/F
 import { getDateKey } from "@/shared/components/components/date-picker/dateUtils";
 import { SupplierFormModal } from "@/features/providers/components/SupplierFormModal";
 import { listSuppliers } from "@/shared/services/supplierService";
-import type { CreateRecurringPurchasePayload, RecurringFrequency } from "../../types/recurring-purchase.types";
+import type { CreateRecurringPurchasePayload, RecurringFrequency, RecurringPurchase } from "../../types/recurring-purchase.types";
 import type { CurrencyType } from "../../types/purchaseEnums";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onSubmit: (payload: CreateRecurringPurchasePayload) => Promise<void>;
+  initialValue?: RecurringPurchase | null;
 };
 
 type RecurringPurchaseFormState = {
@@ -36,6 +37,17 @@ type SupplierSelectOption = {
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const buildInitialForm = (initialValue?: RecurringPurchase | null): RecurringPurchaseFormState => ({
+  supplierId: initialValue?.supplierId ?? "",
+  name: initialValue?.name ?? "",
+  description: initialValue?.description ?? "",
+  frequency: initialValue?.frequency ?? ("MONTHLY" as RecurringFrequency),
+  purchaseType: (initialValue?.purchaseType as "SERVICE" | "SUBSCRIPTION" | undefined) ?? "SUBSCRIPTION",
+  currency: initialValue?.currency ?? ("PEN" as CurrencyType),
+  amount: initialValue ? String(initialValue.amount) : "",
+  startDate: initialValue?.startDate ? initialValue.startDate.slice(0, 10) : today(),
+});
 
 const parseDateKey = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
@@ -58,21 +70,13 @@ const currencyOptions = [
   { value: "USD", label: "USD" },
 ];
 
-export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
+export function RecurringPurchaseFormModal({ open, onClose, onSubmit, initialValue }: Props) {
   const [saving, setSaving] = useState(false);
   const [supplierOptions, setSupplierOptions] = useState<SupplierSelectOption[]>([]);
   const [supplierQuery, setSupplierQuery] = useState("");
   const [openCreateSupplier, setOpenCreateSupplier] = useState(false);
-  const [form, setForm] = useState<RecurringPurchaseFormState>({
-    supplierId: "",
-    name: "",
-    description: "",
-    frequency: "MONTHLY" as RecurringFrequency,
-    purchaseType: "SUBSCRIPTION" as const,
-    currency: "PEN" as CurrencyType,
-    amount: "",
-    startDate: today(),
-  });
+  const [form, setForm] = useState<RecurringPurchaseFormState>(() => buildInitialForm(initialValue));
+  const isEditing = Boolean(initialValue);
 
   const loadSuppliers = useCallback(async (query = "") => {
     try {
@@ -104,6 +108,11 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
     void loadSuppliers(supplierQuery);
   }, [loadSuppliers, open, supplierQuery]);
 
+  useEffect(() => {
+    if (!open) return;
+    setForm(buildInitialForm(initialValue));
+  }, [initialValue, open]);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!form.supplierId.trim()) return;
@@ -130,7 +139,7 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Nueva compra recurrente"
+      title={isEditing ? "Editar compra recurrente" : "Nueva compra recurrente"}
       className="w-full max-w-2xl"
       bodyClassName="p-0"
       footer={
@@ -139,7 +148,7 @@ export function RecurringPurchaseFormModal({ open, onClose, onSubmit }: Props) {
             Cancelar
           </SystemButton>
           <SystemButton type="submit" form="recurring-purchase-form" disabled={saving}>
-            {saving ? "Guardando..." : "Crear recurrente"}
+            {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear recurrente"}
           </SystemButton>
         </div>
       }

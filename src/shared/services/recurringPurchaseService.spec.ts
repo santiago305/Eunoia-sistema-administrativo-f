@@ -12,6 +12,7 @@ import {
   pauseRecurringPurchase,
   resumeRecurringPurchase,
   saveRecurringPurchaseExportPreset,
+  updateRecurringPurchase,
 } from "./recurringPurchaseService";
 
 vi.mock("@/shared/common/utils/axios", () => ({
@@ -46,6 +47,7 @@ describe("recurringPurchaseService", () => {
     await resumeRecurringPurchase("rec-1");
     await cancelRecurringPurchase("rec-1");
     await generateCurrentRecurringPayable("rec-1");
+    await updateRecurringPurchase("rec-1", { ...payload, name: "Hosting actualizado" });
 
     expect(axiosInstance.get).toHaveBeenCalledWith("/recurring-purchases", {
       params: { status: "ACTIVE", page: 2, limit: 10 },
@@ -54,6 +56,10 @@ describe("recurringPurchaseService", () => {
     expect(axiosInstance.patch).toHaveBeenNthCalledWith(1, "/recurring-purchases/rec-1/pause");
     expect(axiosInstance.patch).toHaveBeenNthCalledWith(2, "/recurring-purchases/rec-1/resume");
     expect(axiosInstance.patch).toHaveBeenNthCalledWith(3, "/recurring-purchases/rec-1/cancel");
+    expect(axiosInstance.patch).toHaveBeenNthCalledWith(4, "/recurring-purchases/rec-1", {
+      ...payload,
+      name: "Hosting actualizado",
+    });
     expect(axiosInstance.post).toHaveBeenNthCalledWith(2, "/recurring-purchases/rec-1/generate-current-payable");
   });
 

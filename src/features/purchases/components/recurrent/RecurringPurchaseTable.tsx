@@ -1,4 +1,4 @@
-import { Menu, Pause, Play, RefreshCw, Wallet, XCircle } from "lucide-react";
+import { Menu, Pause, Pencil, Play, RefreshCw, Wallet, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -32,12 +32,14 @@ type Props = {
   onPause: (item: RecurringPurchase) => void;
   onResume: (item: RecurringPurchase) => void;
   onCancel: (item: RecurringPurchase) => void;
+  onEdit?: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
   onRegisterPayment: (item: RecurringPurchase) => void;
   toolbarSearchContent?: ReactNode;
   permissions?: {
     canPause: boolean;
     canCancel: boolean;
+    canEdit?: boolean;
     canGenerate: boolean;
     canRegisterPayment?: boolean;
   };
@@ -53,6 +55,7 @@ export function RecurringPurchaseTable({
   onPause,
   onResume,
   onCancel,
+  onEdit,
   onGenerate,
   onRegisterPayment,
   toolbarSearchContent,
@@ -118,6 +121,7 @@ export function RecurringPurchaseTable({
               onPause,
               onResume,
               onCancel,
+              onEdit,
               onGenerate,
               onRegisterPayment,
               permissions,
@@ -187,6 +191,7 @@ function buildActions({
   onPause,
   onResume,
   onCancel,
+  onEdit,
   onGenerate,
   onRegisterPayment,
   permissions,
@@ -195,11 +200,18 @@ function buildActions({
   onPause: (item: RecurringPurchase) => void;
   onResume: (item: RecurringPurchase) => void;
   onCancel: (item: RecurringPurchase) => void;
+  onEdit?: (item: RecurringPurchase) => void;
   onGenerate: (item: RecurringPurchase) => void;
   onRegisterPayment: (item: RecurringPurchase) => void;
   permissions: NonNullable<Props["permissions"]>;
 }) {
   return [
+    permissions.canEdit && item.status !== "CANCELLED" && onEdit && {
+      id: "edit",
+      label: "Editar",
+      icon: <Pencil className="h-4 w-4 text-black/60" />,
+      onClick: () => onEdit(item),
+    },
     permissions.canRegisterPayment && item.status === "ACTIVE" && {
       id: "register-payment",
       label: "Registrar pago",
