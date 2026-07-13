@@ -11,7 +11,9 @@ const {
   resumeRecurringPurchaseMock,
   cancelRecurringPurchaseMock,
   generateCurrentRecurringPayableMock,
-  listSuppliersMock,
+  getRecurringPurchaseSearchStateMock,
+  saveRecurringPurchaseSearchMetricMock,
+  deleteRecurringPurchaseSearchMetricMock,
 } = vi.hoisted(() => ({
   listRecurringPurchasesMock: vi.fn(),
   createRecurringPurchaseMock: vi.fn(),
@@ -19,7 +21,9 @@ const {
   resumeRecurringPurchaseMock: vi.fn(),
   cancelRecurringPurchaseMock: vi.fn(),
   generateCurrentRecurringPayableMock: vi.fn(),
-  listSuppliersMock: vi.fn(),
+  getRecurringPurchaseSearchStateMock: vi.fn(),
+  saveRecurringPurchaseSearchMetricMock: vi.fn(),
+  deleteRecurringPurchaseSearchMetricMock: vi.fn(),
 }));
 
 vi.mock("@/shared/services/recurringPurchaseService", () => ({
@@ -29,10 +33,9 @@ vi.mock("@/shared/services/recurringPurchaseService", () => ({
   resumeRecurringPurchase: resumeRecurringPurchaseMock,
   cancelRecurringPurchase: cancelRecurringPurchaseMock,
   generateCurrentRecurringPayable: generateCurrentRecurringPayableMock,
-}));
-
-vi.mock("@/shared/services/supplierService", () => ({
-  listSuppliers: listSuppliersMock,
+  getRecurringPurchaseSearchState: getRecurringPurchaseSearchStateMock,
+  saveRecurringPurchaseSearchMetric: saveRecurringPurchaseSearchMetricMock,
+  deleteRecurringPurchaseSearchMetric: deleteRecurringPurchaseSearchMetricMock,
 }));
 
 vi.mock("@/shared/hooks/useFeedbackToast", () => ({
@@ -69,11 +72,15 @@ vi.mock("@/shared/components/table/search", () => ({
     value,
     onChange,
     onSubmitSearch,
+    canSaveMetric,
+    onSaveMetric,
     children,
   }: {
     value: string;
     onChange: (value: string) => void;
     onSubmitSearch: () => void;
+    canSaveMetric?: boolean;
+    onSaveMetric?: (name: string) => Promise<boolean>;
     children?: React.ReactNode;
   }) => (
     <div data-testid="recurring-search-bar">
@@ -85,6 +92,11 @@ vi.mock("@/shared/components/table/search", () => ({
       <button type="button" onClick={onSubmitSearch}>
         Buscar
       </button>
+      {canSaveMetric ? (
+        <button type="button" onClick={() => void onSaveMetric?.("Mis recurrentes")}>
+          Guardar metrica
+        </button>
+      ) : null}
       {children}
     </div>
   ),
@@ -96,16 +108,41 @@ vi.mock("@/shared/components/table/search", () => ({
     </div>
   ),
   SmartSearchPanel: ({
+    recent,
+    saved,
     onApplyRule,
+    onApplySnapshot,
+    onDeleteMetric,
   }: {
+    recent?: Array<{ label: string; snapshot: { q?: string; filters: unknown[] } }>;
+    saved?: Array<{ id: string; name: string; label: string; snapshot: { q?: string; filters: unknown[] } }>;
     onApplyRule: (rule: { field: string; operator: string; values: string[] }) => void;
+    onApplySnapshot?: (snapshot: { q?: string; filters: unknown[] }) => void;
+    onDeleteMetric?: (metricId: string) => void;
   }) => (
-    <button
-      type="button"
-      onClick={() => onApplyRule({ field: "status", operator: "in", values: ["ACTIVE"] })}
-    >
-      Filtrar activas
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={() => onApplyRule({ field: "status", operator: "in", values: ["ACTIVE"] })}
+      >
+        Filtrar activas
+      </button>
+      {recent?.map((item) => (
+        <button key={item.label} type="button" onClick={() => onApplySnapshot?.(item.snapshot)}>
+          Reciente: {item.label}
+        </button>
+      ))}
+      {saved?.map((item) => (
+        <div key={item.id}>
+          <button type="button" onClick={() => onApplySnapshot?.(item.snapshot)}>
+            Guardada: {item.name}
+          </button>
+          <button type="button" onClick={() => onDeleteMetric?.(item.id)}>
+            Eliminar {item.name}
+          </button>
+        </div>
+      ))}
+    </div>
   ),
 }));
 
@@ -131,12 +168,37 @@ describe("RecurringPurchasesPage", () => {
       page: 1,
       limit: 25,
     });
-    listSuppliersMock.mockResolvedValue({
-      items: [{ supplierId: "supplier-1", tradeName: "Proveedor Uno", name: null, lastName: null }],
-      total: 1,
-      page: 1,
-      limit: 100,
+    getRecurringPurchaseSearchStateMock.mockResolvedValue({
+      recent: [
+        {
+          recentId: "recent-1",
+          label: "Busqueda: hosting",
+          snapshot: { q: "hosting", filters: [] },
+          lastUsedAt: "2026-07-12T10:00:00.000Z",
+        },
+      ],
+      saved: [
+        {
+          metricId: "metric-1",
+          name: "Activas",
+          label: "Estado: Activa",
+          snapshot: {
+            filters: [{ field: "status", operator: "in", values: ["ACTIVE"] }],
+          },
+          updatedAt: "2026-07-12T11:00:00.000Z",
+        },
+      ],
+      catalogs: {
+        suppliers: [{ id: "supplier-1", label: "Proveedor Uno" }],
+        statuses: [{ id: "ACTIVE", label: "Activa" }],
+        frequencies: [{ id: "MONTHLY", label: "Mensual" }],
+        purchaseTypes: [{ id: "SUBSCRIPTION", label: "Suscripcion" }],
+        currencies: [{ id: "PEN", label: "PEN" }],
+        paymentStatuses: [{ id: "PENDING", label: "Pendiente" }],
+      },
     });
+    saveRecurringPurchaseSearchMetricMock.mockResolvedValue({ type: "success", message: "Metrica guardada" });
+    deleteRecurringPurchaseSearchMetricMock.mockResolvedValue({ type: "success", message: "Metrica eliminada" });
   });
 
   it("uses smart search with 25 pagination and removes the old heading and refresh button", async () => {
@@ -157,6 +219,9 @@ describe("RecurringPurchasesPage", () => {
     expect(screen.queryByText("Membresias, servicios y suscripciones que generan cuentas por pagar por periodo.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Actualizar" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ver tipos recurrentes" })).toBeInTheDocument();
+    expect(getRecurringPurchaseSearchStateMock).toHaveBeenCalled();
+    expect(await screen.findByRole("button", { name: "Reciente: Busqueda: hosting" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Guardada: Activas" })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(listRecurringPurchasesMock).toHaveBeenCalledWith({
@@ -186,6 +251,24 @@ describe("RecurringPurchasesPage", () => {
         ],
       });
     });
+
+    await user.click(screen.getByRole("button", { name: "Guardar metrica" }));
+    await waitFor(() => {
+      expect(saveRecurringPurchaseSearchMetricMock).toHaveBeenCalledWith("Mis recurrentes", {
+        q: "hosting",
+        filters: [
+          {
+            field: "status",
+            operator: "in",
+            mode: "include",
+            values: ["ACTIVE"],
+          },
+        ],
+      });
+    });
+
+    await user.click(screen.getByRole("button", { name: "Eliminar Activas" }));
+    expect(deleteRecurringPurchaseSearchMetricMock).toHaveBeenCalledWith("metric-1");
   });
 
   it("opens recurring type explanations from the alert icon action", async () => {

@@ -1,21 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, Plus } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { DataTableSearchBar, DataTableSearchChips } from "@/shared/components/table/search";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  type DataTableRecentSearchItem,
+  type DataTableSavedSearchItem,
+} from "@/shared/components/table/search";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
-import { listSuppliers } from "@/shared/services/supplierService";
 import {
   cancelRecurringPurchase,
   createRecurringPurchase,
+  deleteRecurringPurchaseSearchMetric,
   generateCurrentRecurringPayable,
+  getRecurringPurchaseSearchState,
   listRecurringPurchases,
   pauseRecurringPurchase,
   resumeRecurringPurchase,
+  saveRecurringPurchaseSearchMetric,
 } from "@/shared/services/recurringPurchaseService";
 import { RecurringPurchaseFormModal } from "../components/recurrent/RecurringPurchaseFormModal";
 import { RecurringPurchasePaymentModal } from "../components/recurrent/RecurringPurchasePaymentModal";
@@ -29,11 +36,13 @@ import type {
   RecurringPurchaseSearchCatalogs,
   RecurringPurchaseSearchRule,
   RecurringPurchaseSearchSnapshot,
+  RecurringPurchaseSearchStateResponse,
 } from "../types/recurring-purchase.types";
 import {
   buildRecurringPurchaseSearchChips,
   buildRecurringPurchaseSmartSearchColumns,
   createEmptyRecurringPurchaseSearchFilters,
+  hasRecurringPurchaseSearchCriteria,
   removeRecurringPurchaseSearchKey,
   sanitizeRecurringPurchaseSearchSnapshot,
   upsertRecurringPurchaseSearchRule,
@@ -52,7 +61,8 @@ export default function RecurringPurchasesPage() {
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
   const [searchFilters, setSearchFilters] = useState(() => createEmptyRecurringPurchaseSearchFilters());
-  const [supplierOptions, setSupplierOptions] = useState<RecurringPurchaseSearchCatalogs["suppliers"]>([]);
+  const [searchState, setSearchState] = useState<RecurringPurchaseSearchStateResponse | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
   const [items, setItems] = useState<RecurringPurchase[]>([]);
   const [pagination, setPagination] = useState<Pick<ListRecurringPurchasesResponse, "total" | "page" | "limit">>({
     total: 0,
@@ -61,8 +71,8 @@ export default function RecurringPurchasesPage() {
   });
 
   const catalogs = useMemo<RecurringPurchaseSearchCatalogs>(
-    () => ({ suppliers: supplierOptions }),
-    [supplierOptions],
+    () => searchState?.catalogs ?? { suppliers: [] },
+    [searchState],
   );
 
   const draftSnapshot = useMemo(
@@ -85,22 +95,13 @@ export default function RecurringPurchasesPage() {
     [catalogs, executedSnapshot],
   );
 
-  const loadSuppliers = useCallback(async () => {
+  const loadSearchState = useCallback(async () => {
     try {
-      const response = await listSuppliers({ page: 1, limit: 100 });
-      setSupplierOptions(
-        (response.items ?? []).map((supplier) => {
-          const personName = [supplier.name, supplier.lastName].filter(Boolean).join(" ").trim();
-          return {
-            id: supplier.supplierId,
-            label: supplier.tradeName || personName || supplier.documentNumber || supplier.supplierId,
-          };
-        }),
-      );
+      setSearchState(await getRecurringPurchaseSearchState());
     } catch {
-      setSupplierOptions([]);
+      showFeedback(errorResponse("Error al cargar el estado del buscador inteligente."));
     }
-  }, []);
+  }, [showFeedback]);
 
   const loadRecurring = useCallback(async () => {
     setLoading(true);
@@ -117,21 +118,45 @@ export default function RecurringPurchasesPage() {
         page: data.page ?? 1,
         limit: data.limit ?? DEFAULT_LIMIT,
       });
+      if (hasRecurringPurchaseSearchCriteria(executedSnapshot)) {
+        void loadSearchState();
+      }
     } catch {
       setItems([]);
       showFeedback(errorResponse("No se pudo cargar compras recurrentes."));
     } finally {
       setLoading(false);
     }
-  }, [executedSnapshot, pagination.page, showFeedback]);
+  }, [executedSnapshot, loadSearchState, pagination.page, showFeedback]);
 
   useEffect(() => {
     void loadRecurring();
   }, [loadRecurring]);
 
   useEffect(() => {
-    void loadSuppliers();
-  }, [loadSuppliers]);
+    void loadSearchState();
+  }, [loadSearchState]);
+
+  const recentSearches = useMemo<DataTableRecentSearchItem<RecurringPurchaseSearchSnapshot>[]>(
+    () =>
+      (searchState?.recent ?? []).map((item) => ({
+        id: item.recentId,
+        label: item.label,
+        snapshot: item.snapshot,
+      })),
+    [searchState],
+  );
+
+  const savedMetrics = useMemo<DataTableSavedSearchItem<RecurringPurchaseSearchSnapshot>[]>(
+    () =>
+      (searchState?.saved ?? []).map((metric) => ({
+        id: metric.metricId,
+        name: metric.name,
+        label: metric.label,
+        snapshot: metric.snapshot,
+      })),
+    [searchState],
+  );
 
   const submitSearch = useCallback(() => {
     setAppliedSearchText(searchText.trim());
@@ -178,6 +203,42 @@ export default function RecurringPurchasesPage() {
     setSearchFilters(nextSnapshot.filters);
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, [appliedSearchText, searchFilters]);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    const snapshot = sanitizeRecurringPurchaseSearchSnapshot({ q: appliedSearchText, filters: searchFilters });
+    if (!hasRecurringPurchaseSearchCriteria(snapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const response = await saveRecurringPurchaseSearchMetric(name, snapshot);
+      if (response.type === "success") {
+        showFeedback(successResponse(response.message));
+        await loadSearchState();
+        return true;
+      }
+      showFeedback(errorResponse(response.message));
+      return false;
+    } catch {
+      showFeedback(errorResponse("Error al guardar la metrica."));
+      return false;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [appliedSearchText, loadSearchState, searchFilters, showFeedback]);
+
+  const handleDeleteMetric = useCallback(async (metricId: string) => {
+    try {
+      const response = await deleteRecurringPurchaseSearchMetric(metricId);
+      if (response.type === "success") {
+        showFeedback(successResponse(response.message));
+        await loadSearchState();
+        return;
+      }
+      showFeedback(errorResponse(response.message));
+    } catch {
+      showFeedback(errorResponse("Error al eliminar la metrica."));
+    }
+  }, [loadSearchState, showFeedback]);
 
   const createTemplate = async (payload: CreateRecurringPurchasePayload) => {
     try {
@@ -271,15 +332,21 @@ export default function RecurringPurchasesPage() {
               onSubmitSearch={submitSearch}
               searchLabel="Busca recurrente"
               searchName="recurring-purchase-smart-search"
+              canSaveMetric={hasRecurringPurchaseSearchCriteria(executedSnapshot)}
+              saveLoading={savingMetric}
+              onSaveMetric={handleSaveMetric}
             >
               <RecurringPurchaseSmartSearchPanel
                 columns={smartSearchColumns}
                 snapshot={draftSnapshot}
+                recent={recentSearches}
+                saved={savedMetrics}
                 catalogs={catalogs}
                 filterQuery={searchText}
                 onApplySnapshot={applySmartSnapshot}
                 onApplyRule={handleApplySearchRule}
                 onRemoveRule={handleRemoveSearchRule}
+                onDeleteMetric={handleDeleteMetric}
               />
             </DataTableSearchBar>
           }

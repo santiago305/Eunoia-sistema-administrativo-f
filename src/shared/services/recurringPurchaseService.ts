@@ -7,6 +7,8 @@ import type {
   RegisterRecurringPurchasePaymentPayload,
   RegisterRecurringPurchasePaymentResponse,
   RecurringPurchase,
+  RecurringPurchaseSearchSnapshot,
+  RecurringPurchaseSearchStateResponse,
 } from "@/features/purchases/types/recurring-purchase.types";
 
 export const listRecurringPurchases = async (
@@ -35,6 +37,31 @@ export const createRecurringPurchase = async (
     API_RECURRING_PURCHASES_GROUP.create,
     payload,
   );
+  return response.data;
+};
+
+export const getRecurringPurchaseSearchState = async (): Promise<RecurringPurchaseSearchStateResponse> => {
+  const response = await axiosInstance.get<RecurringPurchaseSearchStateResponse>(
+    API_RECURRING_PURCHASES_GROUP.searchState,
+  );
+  return response.data;
+};
+
+export const saveRecurringPurchaseSearchMetric = async (
+  name: string,
+  snapshot: RecurringPurchaseSearchSnapshot,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_RECURRING_PURCHASES_GROUP.saveSearchMetric, {
+    name,
+    snapshot,
+  });
+  return response.data;
+};
+
+export const deleteRecurringPurchaseSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(API_RECURRING_PURCHASES_GROUP.deleteSearchMetric(metricId));
   return response.data;
 };
 
