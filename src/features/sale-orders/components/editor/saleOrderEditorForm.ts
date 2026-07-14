@@ -63,6 +63,8 @@ export type SaleOrderEditorForm = {
   scheduleDate: string;
   deliveryDate: string;
   deliveryCost: number;
+  logisticsCost: number;
+  logisticsGeneratesPayable: boolean;
   discount: number;
   note: string;
   advertisingCode: string;
@@ -118,6 +120,8 @@ export function buildEmptySaleOrderEditorForm(): SaleOrderEditorForm {
     scheduleDate: toLocalDateKey(new Date()),
     deliveryDate: "",
     deliveryCost: 0,
+    logisticsCost: 0,
+    logisticsGeneratesPayable: false,
     discount: 0,
     note: "",
     advertisingCode: "",
@@ -162,14 +166,18 @@ export function mapSaleOrderToEditorForm(
 ): SaleOrderEditorForm {
   const base = buildEmptySaleOrderEditorForm();
   const attachments = order.attachments ?? [];
+  const isShippingProof = (type: string) =>
+    type === "SHIPPING_PHOTO" || type === "SHIPPING_PROOF";
+  const isSalePaymentProof = (type: string) =>
+    type === "PAYMENT_PROOF" || type === "SALE_PAYMENT_PROOF";
   const shipping = attachments.find(
-    (attachment) => attachment.type === "SHIPPING_PHOTO",
+    (attachment) => isShippingProof(attachment.type),
   );
   const proofByPaymentId = new Map(
     attachments
       .filter(
         (attachment) =>
-          attachment.type === "PAYMENT_PROOF" &&
+          isSalePaymentProof(attachment.type) &&
           attachment.saleOrderPaymentId,
       )
       .map((attachment) => [
@@ -210,6 +218,8 @@ export function mapSaleOrderToEditorForm(
     scheduleDate: order.scheduleDate ?? "",
     deliveryDate: order.deliveryDate ?? "",
     deliveryCost: Number(order.deliveryCost ?? 0),
+    logisticsCost: Number(order.logisticsCost ?? order.deliveryCost ?? 0),
+    logisticsGeneratesPayable: Boolean(order.logisticsGeneratesPayable),
     discount: Number(order.discount ?? 0),
     note: order.note ?? "",
     advertisingCode: order.advertisingCode ?? "",
@@ -318,6 +328,7 @@ export function toSaveSaleOrderWithClientDto(
     scheduleDate: form.scheduleDate || undefined,
     deliveryDate: form.deliveryDate || undefined,
     deliveryCost: Math.max(0, Number(form.deliveryCost || 0)),
+    logisticsCost: Math.max(0, Number(form.logisticsCost || 0)),
     discount: Math.max(0, Number(form.discount || 0)),
     note: form.note.trim() || undefined,
     advertisingCode: form.advertisingCode.trim() || null,
@@ -347,7 +358,8 @@ export function findAttachmentForPayment(
 ) {
   return attachments.find(
     (attachment) =>
-      attachment.type === "PAYMENT_PROOF" &&
+      (attachment.type === "PAYMENT_PROOF" ||
+        attachment.type === "SALE_PAYMENT_PROOF") &&
       attachment.saleOrderPaymentId === paymentId,
   );
 }

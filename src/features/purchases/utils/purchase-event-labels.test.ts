@@ -16,6 +16,11 @@ describe("purchase event labels", () => {
     expect(getPurchaseEventLabel("PURCHASE_STOCK_ENTRY_CREATED")).toBe("Ingreso de stock creado");
     expect(getPurchaseEventLabel("PURCHASE_SERVICE_CONFIRMED")).toBe("Servicio confirmado");
     expect(getPurchaseEventLabel("PAYMENT_EVIDENCE_ATTACHED")).toBe("Evidencia de pago adjuntada");
+    expect(getPurchaseEventLabel("INCOME_REGISTERED")).toBe("Ingreso registrado");
+    expect(getPurchaseEventLabel("INCOME_EVIDENCE_ATTACHED")).toBe("Evidencia de ingreso adjuntada");
+    expect(getPurchaseEventLabel("LOGISTICS_PAYABLE_CREATED")).toBe("Cuenta por pagar logistica creada");
+    expect(getPurchaseEventLabel("LOGISTICS_PAYABLE_UPDATED")).toBe("Cuenta por pagar logistica actualizada");
+    expect(getPurchaseEventLabel("PAYABLE_RECALCULATED")).toBe("Cuenta por pagar recalculada");
     expect(getPurchaseEventLabel("PURCHASE_FULLY_RECEIVED")).toBe("Compra recibida completamente");
     expect(getPurchaseEventLabel("UNKNOWN_EVENT")).toBe("UNKNOWN_EVENT");
   });

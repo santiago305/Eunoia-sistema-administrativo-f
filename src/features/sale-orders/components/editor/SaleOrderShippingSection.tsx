@@ -17,7 +17,14 @@ import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 type Props = {
   form: SaleOrderEditorForm;
   setForm: React.Dispatch<React.SetStateAction<SaleOrderEditorForm>>;
-  subsidiaryOptions: Array<{ value: string; label: string; address?:string, cost?:number }>;
+  subsidiaryOptions: Array<{
+    value: string;
+    label: string;
+    address?: string;
+    cost?: number;
+    payableCost?: number;
+    generatesPayable?: boolean;
+  }>;
 };
 
 const resolveUrl = (value?: string | null) => {
@@ -117,11 +124,18 @@ export function SaleOrderShippingSection({
         onOptionSelect={(option) =>
           setForm((current) => {
             const subsidiary = subsidiaryOptions.find((item) => item.value === option.value);
+            const chargedCost = Math.max(0, Number(subsidiary?.cost ?? 0));
+            const payableCost = Math.max(
+              0,
+              Number(subsidiary?.payableCost ?? chargedCost),
+            );
             return {
               ...current,
               agencyDetail: option.label,
               sendAddress: subsidiary?.address ?? current.sendAddress,
-              deliveryCost: subsidiary?.cost ?? 0,
+              deliveryCost: chargedCost,
+              logisticsCost: payableCost,
+              logisticsGeneratesPayable: Boolean(subsidiary?.generatesPayable),
             };
           })
         }
@@ -129,16 +143,29 @@ export function SaleOrderShippingSection({
         emptyMessage="Sin agencias"
         panelWidthMode="min-trigger"
       />
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 space-y-2">
         <FloatingInput
-          label="Tarifa"
+          label="Tarifa cobrada al cliente"
           className={inputClassName}
-          name="sale-order-tarifa"
+          name="sale-order-delivery-charge"
           value={form.deliveryCost}
           onChange={(event) =>
             setForm((current) => ({
               ...current,
               deliveryCost: Number(event.target.value) || 0,
+              logisticsCost: current.logisticsCost || Number(event.target.value) || 0,
+            }))
+          }
+        />
+        <FloatingInput
+          label="Costo a pagar a agencia"
+          className={inputClassName}
+          name="sale-order-logistics-cost"
+          value={form.logisticsCost}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              logisticsCost: Number(event.target.value) || 0,
             }))
           }
         />
@@ -167,6 +194,11 @@ export function SaleOrderShippingSection({
           }
         />
       </div>
+      {form.logisticsGeneratesPayable ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+          Generara cuenta por pagar logistica
+        </p>
+      ) : null}
       
       <ImagePreviewModal
         open={previewOpen}

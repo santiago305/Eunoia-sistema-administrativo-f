@@ -92,6 +92,8 @@ function ShippingHarness() {
             label: "Olva Miraflores",
             address: "Av. Larco 123",
             cost: 14,
+            generatesPayable: true,
+            payableCost: 11,
           },
         ]}
       />
@@ -103,6 +105,7 @@ function ShippingHarness() {
           agencyDetail: form.agencyDetail,
           sendAddress: form.sendAddress,
           deliveryCost: form.deliveryCost,
+          logisticsCost: form.logisticsCost,
         })}
       </output>
     </>
@@ -156,6 +159,27 @@ describe("SaleOrderShippingSection agency detail", () => {
     );
     expect(screen.getByTestId("shipping-state")).toHaveTextContent(
       '"deliveryCost":14',
+    );
+    expect(screen.getByTestId("shipping-state")).toHaveTextContent(
+      '"logisticsCost":11',
+    );
+  });
+
+  it("separates customer delivery tariff from payable agency cost", async () => {
+    const user = userEvent.setup();
+    render(<ShippingHarness />);
+
+    expect(screen.getByLabelText("Tarifa cobrada al cliente")).toBeInTheDocument();
+    expect(screen.getByLabelText("Costo a pagar a agencia")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "select-Olva Miraflores" }));
+
+    expect(screen.getByText("Generara cuenta por pagar logistica")).toBeInTheDocument();
+    expect(screen.getByTestId("shipping-state")).toHaveTextContent(
+      '"deliveryCost":14',
+    );
+    expect(screen.getByTestId("shipping-state")).toHaveTextContent(
+      '"logisticsCost":11',
     );
   });
 });

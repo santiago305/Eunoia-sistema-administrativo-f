@@ -95,6 +95,41 @@ describe("saleOrderEditorForm", () => {
     );
   });
 
+  it("accepts semantic sale payment and shipping proof attachment types", () => {
+    const form = mapSaleOrderToEditorForm({
+      ...order,
+      attachments: [
+        {
+          id: "attachment-payment",
+          saleOrderPaymentId: "payment-1",
+          type: "SALE_PAYMENT_PROOF",
+          filename: "sale-proof.webp",
+          originalName: "sale-proof.webp",
+          mimeType: "image/webp",
+          sizeBytes: 100,
+          url: "sale-proof.webp",
+          note: null,
+          createdAt: "2026-07-03T00:00:00.000Z",
+        },
+        {
+          id: "attachment-shipping",
+          saleOrderPaymentId: null,
+          type: "SHIPPING_PROOF",
+          filename: "shipping.webp",
+          originalName: "shipping.webp",
+          mimeType: "image/webp",
+          sizeBytes: 100,
+          url: "shipping.webp",
+          note: null,
+          createdAt: "2026-07-03T00:00:00.000Z",
+        },
+      ],
+    } as unknown as SaleOrder);
+
+    expect(form.payments[0].existingPhotoUrl).toBe("sale-proof.webp");
+    expect(form.existingShippingPhotoUrl).toBe("shipping.webp");
+  });
+
   it("normalizes sale order item components for editor display", () => {
     const form = mapSaleOrderToEditorForm({
       ...order,

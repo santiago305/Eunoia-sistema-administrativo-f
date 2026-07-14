@@ -59,6 +59,10 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 href: RoutesPaths.income,
             },
             {
+                label: "Dashboard administrativo",
+                href: RoutesPaths.adminFinance,
+            },
+            {
                 label: "Cuentas por pagar",
                 href: RoutesPaths.accountsPayable,
             },

@@ -39,6 +39,11 @@ export const purchaseEventLabels = {
   PAYMENT_REGISTERED: "Pago registrado",
   PAYMENT_EVIDENCE_ATTACHED: "Evidencia de pago adjuntada",
   PAYMENT_DELETED: "Pago eliminado",
+  INCOME_REGISTERED: "Ingreso registrado",
+  INCOME_EVIDENCE_ATTACHED: "Evidencia de ingreso adjuntada",
+  LOGISTICS_PAYABLE_CREATED: "Cuenta por pagar logistica creada",
+  LOGISTICS_PAYABLE_UPDATED: "Cuenta por pagar logistica actualizada",
+  PAYABLE_RECALCULATED: "Cuenta por pagar recalculada",
 } as const;
 
 export type PurchaseEventType = keyof typeof purchaseEventLabels;

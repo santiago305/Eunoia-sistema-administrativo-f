@@ -394,6 +394,11 @@ export const API_INCOME_GROUP = {
   summary: "/income/summary",
 };
 
+export const API_ADMIN_FINANCE_GROUP = {
+  summary: "/admin-finance/summary",
+  movements: "/admin-finance/movements",
+};
+
 export const API_ACCOUNTS_PAYABLE_GROUP = {
   list: "/accounts-payable",
   markOverdue: "/accounts-payable/mark-overdue",

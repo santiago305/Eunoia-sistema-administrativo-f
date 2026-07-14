@@ -73,6 +73,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.purchaseEdit, name: "purchaseEditLegacy", isProtected: true, permissionsAllowed: ["page.purchases.view"] },
   { path: RoutesPaths.payments, name: "payments", isProtected: true, permissionsAllowed: ["page.payments.view", "payments.read"] },
   { path: RoutesPaths.income, name: "income", isProtected: true, permissionsAllowed: ["page.income.view", "income.read"] },
+  { path: RoutesPaths.adminFinance, name: "adminFinance", isProtected: true, permissionsAllowed: ["page.admin-finance.view", "admin_finance.read"] },
   { path: RoutesPaths.accountsPayable, name: "accountsPayable", isProtected: true, permissionsAllowed: ["page.accounts-payable.view", "accounts-payable.view"] },
   { path: RoutesPaths.paymentAccounts, name: "paymentAccounts", isProtected: true, permissionsAllowed: ["page.payment-accounts.view", "payment_accounts.view"] },
   { path: RoutesPaths.paymentMethods, name: "paymentMethods", isProtected: true, permissionsAllowed: ["page.payment-methods.view"] },

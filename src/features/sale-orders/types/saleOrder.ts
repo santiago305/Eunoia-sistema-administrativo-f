@@ -156,7 +156,9 @@ export type SaleOrderClientCommand =
 
 export type SaleOrderAttachmentType =
   | "SHIPPING_PHOTO"
-  | "PAYMENT_PROOF";
+  | "PAYMENT_PROOF"
+  | "SALE_PAYMENT_PROOF"
+  | "SHIPPING_PROOF";
 
 export type SaleOrderAttachment = {
   id: string;
@@ -199,6 +201,7 @@ export type SaveSaleOrderWithClientDto = {
   scheduleDate?: string;
   deliveryDate?: string;
   deliveryCost?: number;
+  logisticsCost?: number;
   discount?: number;
   note?: string;
   advertisingCode?: string | null;
@@ -369,6 +372,8 @@ export type SaleOrder = {
   invoiceSend: boolean;
   subTotal: number;
   deliveryCost: number;
+  logisticsCost?: number | null;
+  logisticsGeneratesPayable?: boolean;
   discount?: number;
   total: number;
   note: string | null;
