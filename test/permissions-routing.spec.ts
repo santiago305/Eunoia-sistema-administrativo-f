@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canAccessRoute, getFirstAccessibleProtectedPath } from "@/routes/config/routeAccess";
 import { getRouteMetaByPath, routesConfig } from "@/routes/config/routesConfig";
 import { RoutesPaths } from "@/routes/config/routesPaths";
+import { getSidebarTitleByPath } from "@/shared/config/sidebarConfig";
 
 describe("permissions routing regression", () => {
   it("denies /pagos when page.payments.view is missing", () => {
@@ -21,6 +22,20 @@ describe("permissions routing regression", () => {
     expect(meta?.permissionsAllowed).toEqual(["page.income.view", "income.read"]);
     expect(canAccessRoute(meta, null, ["page.income.view"])).toBe(false);
     expect(canAccessRoute(meta, null, ["page.income.view", "income.read"])).toBe(true);
+  });
+
+  it("allows /admin-finance only with admin finance page and read permissions", () => {
+    const meta = getRouteMetaByPath(RoutesPaths.adminFinance);
+    expect(meta?.permissionsAllowed).toEqual(["page.admin-finance.view", "admin_finance.read"]);
+    expect(canAccessRoute(meta, null, ["page.admin-finance.view"])).toBe(false);
+    expect(canAccessRoute(meta, null, ["admin_finance.read"])).toBe(false);
+    expect(canAccessRoute(meta, null, ["page.admin-finance.view", "admin_finance.read"])).toBe(true);
+  });
+
+  it("exposes administrative money pages in navigation titles", () => {
+    expect(getSidebarTitleByPath(RoutesPaths.income)).toBe("Ingresos");
+    expect(getSidebarTitleByPath(RoutesPaths.adminFinance)).toBe("Dashboard administrativo");
+    expect(getSidebarTitleByPath(RoutesPaths.accountsPayable)).toBe("Cuentas por pagar");
   });
 
   it("resolves first protected route for authenticated users without role", () => {
