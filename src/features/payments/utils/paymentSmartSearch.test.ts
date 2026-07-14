@@ -15,6 +15,7 @@ import {
 import {
   PaymentSearchFields,
   PaymentSearchOperators,
+  type PaymentSearchRule,
   type PaymentSearchStateResponse,
 } from "../types/payment-search.types";
 
@@ -60,11 +61,11 @@ describe("paymentSmartSearch", () => {
           operator: PaymentSearchOperators.BETWEEN,
           range: { start: "2026-07-20", end: "2026-07-10" },
         },
-        {
+        ({
           field: "unsupported",
           operator: PaymentSearchOperators.EQ,
           value: "ignored",
-        } as any,
+        } as unknown as PaymentSearchRule),
       ],
     });
 
