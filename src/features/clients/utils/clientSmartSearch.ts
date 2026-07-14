@@ -293,15 +293,6 @@ export function buildClientSmartSearchColumns(catalogs?: ClientSearchCatalogs | 
       operators: TEXT_OPERATOR_OPTIONS,
       placeholder: "Ej. feria",
     },
-    {
-      id: ClientSearchFields.IS_ACTIVE,
-      label: "Estado",
-      kind: "catalog",
-      description: "Filtra por estado activo/inactivo.",
-      operators: [{ id: ClientSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: catalogs?.activeStates ?? STATUS_OPTIONS,
-    },
   ];
 }
 

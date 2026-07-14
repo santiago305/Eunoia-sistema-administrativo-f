@@ -88,7 +88,7 @@ const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
   clientDistrictId: "Distrito",
   clientPhone: "Celular",
   agencyDetail: "Agencia",
-  sourceId: "Origen",
+  sourceId: "Enganche",
   invoiceStatus: "Comprobante",
   createdBy: "Creado por",
   assignedBy: "Asignado a",
@@ -332,11 +332,13 @@ function getRuleLabel(rule: SaleOrderSearchRule, searchState?: SaleOrderSearchSt
                   ? getCatalogLabel(values, searchState?.catalogs.bankAccounts)
                   : rule.field === SaleOrderSearchFields.CLIENT_TYPE
                     ? getCatalogLabel(values, searchState?.catalogs.clientTypes)
-                    : rule.field === SaleOrderSearchFields.CREATED_BY
-                      ? getCatalogLabel(values, searchState?.catalogs.creators)
-                      : rule.field === SaleOrderSearchFields.ASSIGNED_BY
-                        ? getCatalogLabel(values, searchState?.catalogs.assignees)
-                        : getCatalogLabel(values, undefined);
+                    : rule.field === SaleOrderSearchFields.SOURCE_ID
+                      ? getCatalogLabel(values, searchState?.catalogs.sources)
+                      : rule.field === SaleOrderSearchFields.CREATED_BY
+                        ? getCatalogLabel(values, searchState?.catalogs.creators)
+                        : rule.field === SaleOrderSearchFields.ASSIGNED_BY
+                          ? getCatalogLabel(values, searchState?.catalogs.assignees)
+                          : getCatalogLabel(values, undefined);
     if (!label) return null;
     const modePrefix = rule.mode === "exclude" ? "No" : "";
     return `${fieldLabel}: ${modePrefix ? `${modePrefix} ` : ""}${label}`.trim();
@@ -486,6 +488,15 @@ export function buildSaleOrderSmartSearchColumns(
       placeholder: "Ej. S01-123",
     },
     {
+      id: SaleOrderSearchFields.WORKFLOW_ID,
+      label: "Tipo",
+      kind: "catalog",
+      description: "Filtra por tipo de pedido.",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: workflowOptions,
+    },
+    {
       id: SaleOrderSearchFields.ADVERTISING_CODE,
       label: "Código publicitario",
       kind: "text",
@@ -497,17 +508,6 @@ export function buildSaleOrderSmartSearchColumns(
       placeholder: "Ej. META-123",
     },
     {
-      id: SaleOrderSearchFields.OBSERVATION,
-      label: "Observación",
-      kind: "text",
-      description: "Filtra por observación.",
-      operators: [
-        { id: SaleOrderSearchOperators.CONTAINS, label: "Contiene" },
-        { id: SaleOrderSearchOperators.EQ, label: "Es igual a" },
-      ],
-      placeholder: "Texto de la observación",
-    },
-    {
       id: SaleOrderSearchFields.CLIENT_ID,
       label: "Cliente",
       kind: "catalog",
@@ -515,6 +515,24 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: clientOptions,
+    },
+     {
+      id: SaleOrderSearchFields.CLIENT_PHONE,
+      label: "Celular",
+      kind: "text",
+      operators: [
+        { id: SaleOrderSearchOperators.CONTAINS, label: "Contiene" },
+        { id: SaleOrderSearchOperators.EQ, label: "Es igual a" },
+      ],
+    },
+    {
+      id: SaleOrderSearchFields.CLIENT_TYPE,
+      label: "Tipo de cliente",
+      kind: "catalog",
+      description: "Filtra por Nuevo, Rezagado o Recompra.",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: clientTypeOptions,
     },
     {
       id: SaleOrderSearchFields.CLIENT_DEPARTMENT_ID,
@@ -541,56 +559,6 @@ export function buildSaleOrderSmartSearchColumns(
       options: districtOptions,
     },
     {
-      id: SaleOrderSearchFields.CLIENT_PHONE,
-      label: "Celular",
-      kind: "text",
-      operators: [
-        { id: SaleOrderSearchOperators.CONTAINS, label: "Contiene" },
-        { id: SaleOrderSearchOperators.EQ, label: "Es igual a" },
-      ],
-    },
-    {
-      id: SaleOrderSearchFields.AGENCY_DETAIL,
-      label: "Agencia",
-      kind: "text",
-      operators: [
-        { id: SaleOrderSearchOperators.CONTAINS, label: "Contiene" },
-        { id: SaleOrderSearchOperators.EQ, label: "Es igual a" },
-      ],
-    },
-    {
-      id: SaleOrderSearchFields.SOURCE_ID,
-      label: "Origen",
-      kind: "catalog",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: sourceOptions,
-    },
-    {
-      id: SaleOrderSearchFields.INVOICE_STATUS,
-      label: "Comprobante",
-      kind: "catalog",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: invoiceStatusOptions,
-    },
-    {
-      id: SaleOrderSearchFields.CREATED_BY,
-      label: "Creado por",
-      kind: "catalog",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: creatorOptions,
-    },
-    {
-      id: SaleOrderSearchFields.ASSIGNED_BY,
-      label: "Asignado a",
-      kind: "catalog",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: assigneeOptions,
-    },
-    {
       id: SaleOrderSearchFields.WAREHOUSE_ID,
       label: "Almacén",
       kind: "catalog",
@@ -609,15 +577,6 @@ export function buildSaleOrderSmartSearchColumns(
       options: paymentStatusOptions,
     },
     {
-      id: SaleOrderSearchFields.WORKFLOW_ID,
-      label: "Tipo",
-      kind: "catalog",
-      description: "Filtra por tipo de pedido.",
-      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: workflowOptions,
-    },
-    {
       id: SaleOrderSearchFields.SALE_ORDER_STATE_ID,
       label: "Estado",
       kind: "catalog",
@@ -625,6 +584,31 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: stateOptions,
+    },
+    {
+      id: SaleOrderSearchFields.AGENCY_DETAIL,
+      label: "Agencia",
+      kind: "text",
+      operators: [
+        { id: SaleOrderSearchOperators.CONTAINS, label: "Contiene" },
+        { id: SaleOrderSearchOperators.EQ, label: "Es igual a" },
+      ],
+    },
+    {
+      id: SaleOrderSearchFields.SOURCE_ID,
+      label: "Enganche",
+      kind: "catalog",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: sourceOptions,
+    },
+    {
+      id: SaleOrderSearchFields.INVOICE_STATUS,
+      label: "Comprobante",
+      kind: "catalog",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: invoiceStatusOptions,
     },
     {
       id: SaleOrderSearchFields.BANK_ACCOUNT_ID,
@@ -636,13 +620,20 @@ export function buildSaleOrderSmartSearchColumns(
       options: bankAccountOptions,
     },
     {
-      id: SaleOrderSearchFields.CLIENT_TYPE,
-      label: "Tipo de cliente",
+      id: SaleOrderSearchFields.CREATED_BY,
+      label: "Creado por",
       kind: "catalog",
-      description: "Filtra por Nuevo, Rezagado o Recompra.",
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
-      options: clientTypeOptions,
+      options: creatorOptions,
+    },
+    {
+      id: SaleOrderSearchFields.ASSIGNED_BY,
+      label: "Asignado a",
+      kind: "catalog",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: assigneeOptions,
     },
   ];
 }

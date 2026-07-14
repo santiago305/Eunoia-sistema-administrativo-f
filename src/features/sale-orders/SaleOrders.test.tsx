@@ -46,7 +46,6 @@ const {
   getSaleOrderExportPresetsMock,
   getSaleOrderSearchStateMock,
   getSaleOrderStatisticsMock,
-  listSaleOrderPaymentsMock,
   listSaleOrdersMock,
   saveSaleOrderExportPresetMock,
 } = vi.hoisted(() => ({
@@ -63,7 +62,6 @@ const {
     byClientType: [],
     totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
   }),
-  listSaleOrderPaymentsMock: vi.fn(),
   listSaleOrdersMock: vi.fn(),
   saveSaleOrderExportPresetMock: vi.fn(),
 }));
@@ -84,7 +82,6 @@ vi.mock("@/shared/services/saleOrderService", async () => {
     getSaleOrderSearchState: getSaleOrderSearchStateMock,
     getSaleOrderStatistics: getSaleOrderStatisticsMock,
     getAvailableSaleOrderTransitions: getAvailableSaleOrderTransitionsMock,
-    listSaleOrderPayments: listSaleOrderPaymentsMock,
     saveSaleOrderExportPreset: saveSaleOrderExportPresetMock,
   };
 });
@@ -185,14 +182,12 @@ describe("SaleOrders", () => {
     listSaleOrdersMock.mockReset();
     getSaleOrderSearchStateMock.mockReset();
     getSaleOrderStatisticsMock.mockReset();
-    listSaleOrderPaymentsMock.mockReset();
     listSaleOrdersMock.mockResolvedValue({
       items: [],
       total: 0,
       page: 1,
       limit: 10,
     });
-    listSaleOrderPaymentsMock.mockResolvedValue([]);
     getSaleOrderExportColumnsMock.mockResolvedValue([]);
     getSaleOrderExportPresetsMock.mockResolvedValue([]);
     saveSaleOrderExportPresetMock.mockResolvedValue({ metricId: "metric-1" });
@@ -397,8 +392,10 @@ describe("SaleOrders", () => {
     await waitFor(() => expect(fetchSaleOrderByIdMock).toHaveBeenCalledWith("order-1"));
 
     await user.click(screen.getByRole("button", { name: /acciones del pedido/i }));
-    expect(screen.queryByRole("button", { name: "Detalle" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("Pagos").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Detalle")).not.toBeInTheDocument();
+    expect(screen.getByText("Ver PDF")).toBeInTheDocument();
+    expect(screen.getByText("Factura")).toBeInTheDocument();
+    expect(screen.getByText("Boleta")).toBeInTheDocument();
   });
 
   it("keeps client, document, phone and advertising code cells from opening detail", async () => {
@@ -709,7 +706,7 @@ describe("SaleOrders", () => {
     expect(screen.queryByText("Listo para entrega")).toBeNull();
   });
 
-  it("opens payments using the listed order totals without fetching order detail", async () => {
+  it("does not expose payments from row actions", async () => {
     const order = buildSaleOrder("Pendiente");
     order.total = 150;
     order.totalPaid = 50;
@@ -728,13 +725,12 @@ describe("SaleOrders", () => {
       </TooltipProvider>,
     );
 
-    await user.click(await screen.findByRole("button", { name: /acciones/i }));
-    await user.click(await screen.findByText("Pagos"));
+    await user.click(await screen.findByRole("button", { name: /acciones del pedido/i }));
 
-    await waitFor(() => expect(listSaleOrderPaymentsMock).toHaveBeenCalledWith("order-1"));
+    expect(screen.queryByText("Pagos")).not.toBeInTheDocument();
+    expect(screen.getByText("Ver PDF")).toBeInTheDocument();
+    expect(screen.getByText("Factura")).toBeInTheDocument();
+    expect(screen.getByText("Boleta")).toBeInTheDocument();
     expect(fetchSaleOrderByIdMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/Total: S\/\s*150\.00/)).toBeTruthy();
-    expect(screen.getByText(/Pagado: S\/\s*50\.00/)).toBeTruthy();
-    expect(screen.getByText(/Pendiente: S\/\s*100\.00/)).toBeTruthy();
   });
 });

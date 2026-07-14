@@ -1,4 +1,4 @@
-import { SmartSearchPanel, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
+﻿import { SmartSearchPanel, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
 import type { AgencySearchRule, AgencySearchSnapshot, AgencySearchStateResponse } from "@/features/agencies/types/agencySearch";
 import {
   buildAgencySmartSearchColumns,
@@ -49,7 +49,7 @@ export function AgencySmartSearchPanel({
       }
       getSelectionCount={getAgencySearchSelectionCount}
       fieldsSectionTitle="Filtros"
-      fieldsSectionDescription="Filtra agencias por nombre, alias de sucursal, ubigeo, direccion o estado de sucursal."
+      fieldsSectionDescription="Filtra agencias por nombre, alias de sucursal, ubigeo o direccion."
       initialVisibleFields={3}
       filterQuery={filterQuery}
     />

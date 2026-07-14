@@ -5,6 +5,7 @@ import {
 } from "react";
 import { Loader2 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export type ButtonVariant =
   | "primary"
@@ -27,6 +28,7 @@ type SystemButtonProps = {
   fullWidth?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
+  tooltip?: string;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -75,6 +77,7 @@ export const SystemButton = forwardRef<HTMLButtonElement, SystemButtonProps>(
       disabled,
       className,
       type = "button",
+      tooltip,
       ...props
     },
     ref,
@@ -82,32 +85,66 @@ export const SystemButton = forwardRef<HTMLButtonElement, SystemButtonProps>(
     const isDisabled = disabled || loading;
 
     return (
-      <button
-        ref={ref}
-        type={type}
-        disabled={isDisabled}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 font-medium outline-none transition-all duration-200 select-none",
-          "focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-60",
-          variantClasses[variant],
-          sizeClasses[size],
-          fullWidth && "w-full",
-          className
-        )}
-        {...props}
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      tooltip ? (
+        <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                ref={ref}
+                type={type}
+                disabled={isDisabled}
+                className={cn(
+                  "inline-flex items-center justify-center gap-2 font-medium outline-none transition-all duration-200 select-none",
+                  "focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-60",
+                  variantClasses[variant],
+                  sizeClasses[size],
+                  fullWidth && "w-full",
+                  className
+                )}
+                {...props}
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
 
-        {!loading && leftIcon && (
-          <span className="flex items-center justify-center">{leftIcon}</span>
-        )}
+                {!loading && leftIcon && (
+                  <span className="flex items-center justify-center">{leftIcon}</span>
+                )}
 
-        {children}
+                {children}
 
-        {!loading && rightIcon && (
-          <span className="flex items-center justify-center">{rightIcon}</span>
-        )}
-      </button>
+                {!loading && rightIcon && (
+                  <span className="flex items-center justify-center">{rightIcon}</span>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{tooltip}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <button
+          ref={ref}
+          type={type}
+          disabled={isDisabled}
+          className={cn(
+            "inline-flex items-center justify-center gap-2 font-medium outline-none transition-all duration-200 select-none",
+            "focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-60",
+            variantClasses[variant],
+            sizeClasses[size],
+            fullWidth && "w-full",
+            className
+          )}
+          {...props}
+        >
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+
+          {!loading && leftIcon && (
+            <span className="flex items-center justify-center">{leftIcon}</span>
+          )}
+
+          {children}
+
+          {!loading && rightIcon && (
+            <span className="flex items-center justify-center">{rightIcon}</span>
+          )}
+        </button>
+      )
     );
   },
 );

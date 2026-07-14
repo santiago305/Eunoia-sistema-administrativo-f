@@ -102,34 +102,34 @@ export function SaleOrderShippingSection({
         ) : null}
       </div>
     }>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 space-y-2">
-        <FloatingSuggestInput
-          label="Agencia/Dirección"
-          name="sale-order-subsidiary"
-          className={inputClassName}
-          value={form.agencyDetail}
-          options={subsidiaryOptions}
-          onChange={(agencyDetail) =>
-            setForm((current) => ({
+      <FloatingSuggestInput
+        label="Agencia/Dirección"
+        name="sale-order-subsidiary"
+        className={inputClassName}
+        value={form.agencyDetail}
+        options={subsidiaryOptions}
+        onChange={(agencyDetail) =>
+          setForm((current) => ({
+            ...current,
+            agencyDetail,
+          }))
+        }
+        onOptionSelect={(option) =>
+          setForm((current) => {
+            const subsidiary = subsidiaryOptions.find((item) => item.value === option.value);
+            return {
               ...current,
-              agencyDetail,
-            }))
-          }
-          onOptionSelect={(option) =>
-            setForm((current) => {
-              const subsidiary = subsidiaryOptions.find((item) => item.value === option.value);
-              return {
-                ...current,
-                agencyDetail: option.label,
-                sendAddress: subsidiary?.address ?? current.sendAddress,
-                deliveryCost: subsidiary?.cost ?? 0,
-              };
-            })
-          }
-          searchPlaceholder="Selecciona una agencia"
-          emptyMessage="Sin agencias"
-          panelWidthMode="min-trigger"
-        />
+              agencyDetail: option.label,
+              sendAddress: subsidiary?.address ?? current.sendAddress,
+              deliveryCost: subsidiary?.cost ?? 0,
+            };
+          })
+        }
+        searchPlaceholder="Selecciona una agencia"
+        emptyMessage="Sin agencias"
+        panelWidthMode="min-trigger"
+      />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2">
         <FloatingInput
           label="Tarifa"
           className={inputClassName}

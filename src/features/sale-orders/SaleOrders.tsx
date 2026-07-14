@@ -14,7 +14,6 @@ import {
 import {
     bulkAssignSaleOrders,
     bulkChangeSaleOrderState,
-    deleteSaleOrder,
     deleteSaleOrderExportPreset,
     deleteSaleOrderSearchMetric,
     exportSaleOrdersExcel,
@@ -53,7 +52,6 @@ import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { createSaleOrdersSocket } from "@/shared/lib/socket";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
-import { SaleOrderPaymentsOrderModal } from "@/features/sale-orders/components/SaleOrderPaymentsOrderModal";
 import { ExcelImportModal } from "@/shared/components/importer";
 import { WorkflowEditorModal } from "@/features/workflows/components/WorkflowEditorModal";
 import {
@@ -70,10 +68,8 @@ import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { formatDate } from "@/shared/utils/formatDate";
-import { AlertModal } from "@/shared/components/components/AlertModal";
 import { getDateKey, parseDateOnly } from "@/shared/components/components/date-picker/dateUtils";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
 const sanitizeSaleOrderImportRows = (rows: SaleOrderJsonImportRow[]): SaleOrderJsonImportRow[] =>
     rows.map((row) => {
@@ -105,47 +101,6 @@ const buildBulkActionFeedback = (result: SaleOrderBulkActionResponse) => {
     const { requested, succeeded, failed, partiallyCompleted = 0 } = result.data;
     return `Procesados: ${requested}. Exitosos: ${succeeded}. Fallidos: ${failed}. Parciales: ${partiallyCompleted}.`;
 };
-
-const mergeBulkChangeStateResponses = (input: {
-    requestedSaleOrderIds: string[];
-    responses: SaleOrderBulkActionResponse[];
-}): SaleOrderBulkActionResponse => {
-    const resultsByOrderId = new Map<string, SaleOrderBulkActionResponse["data"]["results"][number]>();
-
-    input.responses.forEach((response) => {
-        response.data.results.forEach((result) => {
-            resultsByOrderId.set(result.saleOrderId, result);
-        });
-    });
-
-    input.requestedSaleOrderIds.forEach((saleOrderId) => {
-        if (!resultsByOrderId.has(saleOrderId)) {
-            resultsByOrderId.set(saleOrderId, {
-                saleOrderId,
-                status: "failed",
-                message: "No se recibió resultado para este pedido.",
-            });
-        }
-    });
-
-    const results = input.requestedSaleOrderIds
-        .map((saleOrderId) => resultsByOrderId.get(saleOrderId))
-        .filter((result): result is SaleOrderBulkActionResponse["data"]["results"][number] => Boolean(result));
-    const succeeded = results.filter((result) => result.status === "success").length;
-
-    return {
-        type: "success",
-        message: "Operacion masiva procesada",
-        data: {
-            requested: input.requestedSaleOrderIds.length,
-            succeeded,
-            failed: input.requestedSaleOrderIds.length - succeeded,
-            results,
-        },
-    };
-};
-
-void mergeBulkChangeStateResponses;
 
 type SaleOrderModalState =
     | { open: false }
@@ -202,13 +157,9 @@ export default function SaleOrders() {
     const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
     const selectedOrderRef = useRef<SaleOrder | null>(null);
-    const [paymentsOpen, setPaymentsOpen] = useState(false);
-    const [paymentsOrder, setPaymentsOrder] = useState<SaleOrder | null>(null);
     const [workflowEditorOpen, setWorkflowEditorOpen] = useState(false);
     const [pdfOpen, setPdfOpen] = useState(false);
     const [pdfOrderId, setPdfOrderId] = useState<string | null>(null);
-    const [deleteOrder, setDeleteOrder] = useState<SaleOrder | null>(null);
-    const [deletingOrder, setDeletingOrder] = useState(false);
     const [importLoading, setImportLoading] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
@@ -446,7 +397,6 @@ export default function SaleOrders() {
                 const editingOrderId = modalStateRef.current.open && modalStateRef.current.mode === "edit" ? modalStateRef.current.orderId : null;
                 return editingOrderId === updatedOrder.id ? updatedOrder : current;
             });
-            setPaymentsOrder((current) => (current?.id === updatedOrder.id ? mergeOrder(current) : current));
         },
         [updateSelectedOrder],
     );
@@ -775,29 +725,6 @@ export default function SaleOrders() {
         showFeedback(successResponse("Preset eliminado."));
     }, [loadExportPresets, showFeedback]);
 
-    const confirmDeleteOrder = useCallback(async () => {
-        if (!deleteOrder?.id) return;
-        const deletingOrderId = deleteOrder.id;
-        setDeletingOrder(true);
-        try {
-            const response = await deleteSaleOrder(deletingOrderId);
-            showFeedback(successResponse(response.message ?? "Pedido eliminado correctamente."));
-            if (selectedOrderRef.current?.id === deletingOrderId) {
-                closeModal();
-            }
-            if (paymentsOrder?.id === deletingOrderId) {
-                setPaymentsOrder(null);
-                setPaymentsOpen(false);
-            }
-            setDeleteOrder(null);
-            await loadOrders();
-        } catch (error) {
-            showFeedback(errorResponse(parseApiError(error, "Error al eliminar el pedido.")));
-        } finally {
-            setDeletingOrder(false);
-        }
-    }, [closeModal, deleteOrder, loadOrders, paymentsOrder?.id, showFeedback]);
-
     const handleBulkAssign = useCallback(
         async (input: { assignedBy: string | null; saleOrderIds: string[] }) => {
             const saleOrderIds = [...input.saleOrderIds];
@@ -999,7 +926,7 @@ export default function SaleOrders() {
                     const location = [department, province, district].filter(Boolean).join(" / ");
                     return (
                         <div className="w-[120px] leading-tight">
-                            <p className="line-clamp-3 text-zinc-700" title={location || "Sin ubicación"}>
+                            <p className="text-zinc-700" title={location || "Sin ubicación"}>
                                 {location || "-"}
                             </p>
                         </div>
@@ -1012,8 +939,8 @@ export default function SaleOrders() {
                 header: "Agencia/Dirección",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="w-[140px] max-w-[200px] leading-tight">
-                        <p className="line-clamp-2 text-zinc-700" title={order.agencyDetail ?? "Sin información"}>
+                    <div className="w-[220px] leading-tight">
+                        <p className=" text-zinc-700" title={order.agencyDetail ?? "Sin información"}>
                             {order.agencyDetail ?? "-"}
                         </p>
                     </div>
@@ -1158,23 +1085,15 @@ export default function SaleOrders() {
             },
             {
                 id: "actions",
-                header: "",
+                header: "Acciones",
                 cell: (order) => (
-                    <div onClick={(event) => event.stopPropagation()}>
+                    <div onClick={(event) => event.stopPropagation()} className="flex justify-center">
                         <SaleOrderActionsPopover
                             order={order}
-                            onEdit={(selected) => {
-                                void openOrderDetail(selected);
-                            }}
                             onOpenPdf={(selected) => {
                                 setPdfOrderId(selected.id);
                                 setPdfOpen(true);
                             }}
-                            onOpenPayments={(selected) => {
-                                setPaymentsOrder(selected);
-                                setPaymentsOpen(true);
-                            }}
-                            onDelete={setDeleteOrder}
                         />
                     </div>
                 ),
@@ -1184,7 +1103,7 @@ export default function SaleOrders() {
                 stopRowClick: true,
             },
         ],
-        [openOrderDetail, refreshSelectedOrder],
+        [refreshSelectedOrder],
     );
     return (
         <PageShell className="bg-white" scrollArea>
@@ -1214,57 +1133,31 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
-                            <Tooltip delayDuration={0}>
-                                <TooltipTrigger asChild>
-                                    <span>
-                                    <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow"
-                                        leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
-                                    </SystemButton>
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom">Tipos</TooltipContent>
-                            </Tooltip>
-                            <Tooltip delayDuration={0}>
-                                <TooltipTrigger asChild>
-                                    <span>
-                                    <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow"
-                                    leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle ?? "Importar pedidos"}>
-                                    </SystemButton>
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom">Importar</TooltipContent>
-                            </Tooltip>
-                            <Tooltip delayDuration={0}>
-                                <TooltipTrigger asChild>
-                                    <span>
-                                    {exportColumns.length ? (
-                                        <ExportPopover
-                                            buttonLabel=""
-                                            buttonSize="icon"
-                                            buttonClass="h-11"
-                                            buttonVariant="outline"
-                                            columns={exportColumns}
-                                            loading={exporting}
-                                            presets={exportPresets}
-                                            onSavePreset={handleSaveExportPreset}
-                                            onDeletePreset={handleDeleteExportPreset}
-                                            onExport={handleExport}
-                                        />
-                                    ) : null}
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom">Exportar</TooltipContent>
-                            </Tooltip>
-                            <Tooltip delayDuration={0}>
-                                <TooltipTrigger asChild>
-                                    <span>
-                                        <SystemButton size="icon" className="rounded-md h-11 shadow"
-                                        leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle ?? "Nuevo pedido"}>
-                                        </SystemButton>
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom">Nuevo</TooltipContent>
-                            </Tooltip>
+                        
+                            <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Tipos"
+                                leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
+                            </SystemButton>
+                            <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Importar"
+                            leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle ?? "Importar pedidos"}>
+                            </SystemButton>
+                            {exportColumns.length ? (
+                                <ExportPopover
+                                    buttonLabel=""
+                                    buttonSize="icon"
+                                    buttonClass="h-11 shadow"
+                                    buttonTooltip="Exportar"
+                                    buttonVariant="outline"
+                                    columns={exportColumns}
+                                    loading={exporting}
+                                    presets={exportPresets}
+                                    onSavePreset={handleSaveExportPreset}
+                                    onDeletePreset={handleDeleteExportPreset}
+                                    onExport={handleExport}
+                                />
+                            ) : null}
+                            <SystemButton size="icon" className="rounded-md h-11 shadow" tooltip="Nuevo pedido"
+                            leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle ?? "Nuevo pedido"}>
+                            </SystemButton>
                         </>
                     }
                     rangeDates={{
@@ -1343,39 +1236,6 @@ export default function SaleOrders() {
                 onSaved={async () => {
                     closeModal();
                     await loadOrders();
-                }}
-            />
-            {paymentsOpen && paymentsOrder ? (
-                <SaleOrderPaymentsOrderModal
-                    open={paymentsOpen}
-                    saleOrder={paymentsOrder}
-                    onClose={() => {
-                        setPaymentsOpen(false);
-                        setPaymentsOrder(null);
-                    }}
-                    onUpdated={() => {
-                        void loadOrders();
-                        if (modalState.open && modalState.mode === "edit" && selectedOrder?.id === paymentsOrder.id) {
-                            void fetchSaleOrderById(paymentsOrder.id)
-                                .then(setSelectedOrder)
-                                .catch(() => undefined);
-                        }
-                    }}
-                />
-            ) : null}
-            <AlertModal
-                open={Boolean(deleteOrder)}
-                type="deleted"
-                title="Eliminar pedido"
-                message="Estas por eliminar este pedido. Hazlo solo si estas seguro."
-                confirmText="Eliminar"
-                loading={deletingOrder}
-                onClose={() => {
-                    if (deletingOrder) return;
-                    setDeleteOrder(null);
-                }}
-                onConfirm={() => {
-                    void confirmDeleteOrder();
                 }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />

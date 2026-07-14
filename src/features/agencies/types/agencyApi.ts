@@ -1,4 +1,4 @@
-import type { AgencySearchRule } from "./agencySearch";
+﻿import type { AgencySearchRule } from "./agencySearch";
 
 export type SubsidiaryDto = {
   id: string;
@@ -16,6 +16,7 @@ export type SubsidiaryDto = {
 export type AgencyListItem = {
   id: string;
   name: string;
+  description?: string | null;
   isActive: boolean;
   subsidiaries?: SubsidiaryDto[];
 };
@@ -39,12 +40,14 @@ export type SubsidiaryPayload = {
 
 export type CreateAgencyBody = {
   name: string;
+  description?: string | null;
   isActive?: boolean;
   subsidiaries: SubsidiaryPayload[];
 };
 
 export type UpdateAgencyBody = {
   name?: string;
+  description?: string | null;
   isActive?: boolean;
   subsidiaries?: SubsidiaryPayload[];
 };
@@ -61,4 +64,36 @@ export type SubsidiariesListQuery = {
   q?: string;
   agencyId?: string;
   isActive?: boolean;
+};
+
+export type AgencyJsonImportRow = {
+  department: string;
+  province: string;
+  district: string;
+  address?: string;
+  alias: string;
+  price?: number;
+};
+
+export type AgencyImportCreateResponse = {
+  totalRows: number;
+  importedRows: number;
+  failedRows: number;
+  agencyId: string | null;
+  rows: Array<{ rowNumber: number; subsidiaryId: string; alias: string }>;
+  errors: Array<{ rowNumber: number; alias?: string; message: string }>;
+};
+
+export type AgencyExportColumn = {
+  key: string;
+  label: string;
+};
+
+export type AgencyExportPreset = {
+  metricId: string;
+  name: string;
+  label?: string;
+  snapshot?: {
+    columns?: AgencyExportColumn[];
+  };
 };

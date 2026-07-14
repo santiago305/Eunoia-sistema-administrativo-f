@@ -4,8 +4,9 @@ import { ClientType, type SaleOrder } from "@/features/sale-orders/types/saleOrd
 import { SaleOrderBulkAssignModal } from "./SaleOrderBulkAssignModal";
 import { SaleOrderBulkChangeStateModal } from "./SaleOrderBulkChangeStateModal";
 
-const { listSaleOrderStatesMock, listAdvisersMock, listUsersMock } = vi.hoisted(() => ({
+const { listSaleOrderStatesMock, listWorkflowsMock, listAdvisersMock, listUsersMock } = vi.hoisted(() => ({
     listSaleOrderStatesMock: vi.fn(),
+    listWorkflowsMock: vi.fn(),
     listAdvisersMock: vi.fn(),
     listUsersMock: vi.fn(),
 }));
@@ -19,6 +20,28 @@ vi.mock("@/shared/components/modales/Modal", () => ({
                 {children}
             </section>
         ) : null,
+}));
+
+vi.mock("@/shared/components/components/SystemButton", () => ({
+    SystemButton: ({
+        children,
+        leftIcon,
+        rightIcon,
+        tooltip,
+        loading,
+        ...props
+    }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+        leftIcon?: React.ReactNode;
+        rightIcon?: React.ReactNode;
+        tooltip?: string;
+        loading?: boolean;
+    }) => (
+        <button type="button" aria-label={!children ? tooltip : undefined} disabled={props.disabled || loading} {...props}>
+            {leftIcon}
+            {children}
+            {rightIcon}
+        </button>
+    ),
 }));
 
 vi.mock("@/shared/components/components/FloatingSelect", () => ({
@@ -83,12 +106,20 @@ vi.mock("@/shared/components/components/date-picker/AnimatedDateRangePicker", ()
     ),
 }));
 
+vi.mock("@/shared/components/ui/tooltip", () => ({
+    TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    TooltipContent: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}));
+
 vi.mock("@/shared/hooks/useAuth", () => ({
     useAuth: () => ({ permissions: [] }),
 }));
 
 vi.mock("@/shared/services/workflowService", () => ({
     listSaleOrderStates: listSaleOrderStatesMock,
+    listWorkflows: listWorkflowsMock,
 }));
 
 vi.mock("@/shared/services/adviserService", () => ({
@@ -155,6 +186,7 @@ function buildOrder(overrides: Partial<SaleOrder>): SaleOrder {
 describe("SaleOrderBulkChangeStateModal", () => {
     beforeEach(() => {
         listSaleOrderStatesMock.mockReset();
+        listWorkflowsMock.mockReset();
     });
 
     it("uses all sale-order states for the selected-orders state filter", async () => {
@@ -303,6 +335,54 @@ describe("SaleOrderBulkChangeStateModal", () => {
         expect(screen.getAllByText("Nuevo").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Validado").length).toBeGreaterThan(0);
         expect(screen.queryByRole("button", { name: "Traer pedidos" })).not.toBeInTheDocument();
+    });
+
+    it("automatically loads up to 100 orders when workflow type and date range are selected", async () => {
+        listSaleOrderStatesMock.mockResolvedValue([
+            { id: "state-1", name: "Nuevo", color: "#64748b" },
+        ]);
+        listWorkflowsMock.mockResolvedValue([
+            { id: "workflow-1", name: "Venta", description: null, isActive: true },
+            { id: "workflow-2", name: "Renovacion", description: null, isActive: true },
+        ]);
+        const onLoadFilteredOrders = vi.fn().mockResolvedValue([
+            buildOrder({
+                id: "order-2",
+                serie: "SO",
+                correlative: 2,
+                workflowId: "workflow-2",
+                workflow: { id: "workflow-2", name: "Renovacion", description: null, isActive: true },
+            }),
+        ]);
+
+        render(
+            <SaleOrderBulkChangeStateModal
+                open
+                selectedOrders={[]}
+                selectedOrderIds={[]}
+                onClose={vi.fn()}
+                onSubmit={vi.fn()}
+                onLoadFilteredOrders={onLoadFilteredOrders}
+            />,
+        );
+
+        await waitFor(() => expect(listWorkflowsMock).toHaveBeenCalled());
+
+        fireEvent.change(screen.getByLabelText("Filtrar por tipo"), { target: { value: "workflow-2" } });
+        fireEvent.click(screen.getByRole("button", { name: "Rango de fechas" }));
+
+        await waitFor(() =>
+            expect(onLoadFilteredOrders).toHaveBeenCalledWith({
+                page: 1,
+                limit: 100,
+                filters: [
+                    { field: "workflowId", operator: "in", values: ["workflow-2"] },
+                    { field: "createdAt", operator: "between", range: { start: "2026-07-01", end: "2026-07-31" } },
+                ],
+            }),
+        );
+        expect(await screen.findByText("SO-2")).toBeInTheDocument();
+        expect(screen.getAllByText("Renovacion").length).toBeGreaterThan(0);
     });
 
     it("clears the list after a remote date-range search is cleared", async () => {

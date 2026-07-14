@@ -37,7 +37,7 @@ function formatExecutionDate(value: string) {
   }).format(date);
 }
 
-function StateBadge({ state }: { state: WorkflowState }) {
+export function StateBadge({ state }: { state: WorkflowState }) {
   const color = state.color ?? "#64748b";
 
   return (
@@ -57,9 +57,6 @@ function StateBadge({ state }: { state: WorkflowState }) {
           {state.name}
         </span>
       </div>
-      {/* <div className="mt-1 truncate pl-[18px] text-[10px] text-zinc-500">
-        {state.code}
-      </div> */}
     </div>
   );
 }
@@ -94,7 +91,7 @@ function HistoryCard({
               <ArrowRight className="h-4 w-4 shrink-0 text-zinc-500" />
             )}
             <span className="truncate text-sm font-semibold text-zinc-900">
-              {event.transitionName}
+              {event.toState.name}
             </span>
           </div>
           <div className="mt-1 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
@@ -103,7 +100,6 @@ function HistoryCard({
               : isCancellation
                 ? "Cancelacion"
                 : "Cambio de estado"}{" "} 
-                {/* · {event.transitionCode} */}
           </div>
         </div>
         <time className="text-[11px] font-medium text-zinc-500">
@@ -131,7 +127,12 @@ function HistoryCard({
           <UserRound className="h-3.5 w-3.5" />
           <span className="truncate">{event.executorEmail}</span>
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-3 flex items-center gap-1.5 border-t border-black/5 pt-3 text-[11px] text-zinc-500">
+          <UserRound className="h-3.5 w-3.5" />
+          <span className="truncate">Ejecutado automáticamente</span>
+        </div>
+      )}
     </article>
   );
 }
@@ -222,9 +223,8 @@ export function SaleOrderWorkflowHistoryModal({
       open={open}
       onClose={onClose}
       title={`Historial del tipo${saleOrderLabel ? ` · ${saleOrderLabel}` : ""}`}
-      className="max-w-[350px]"
-      bodyClassName="h-[80vh] w-[50vh] p-0"
-    >
+      className="max-w-[400px]"
+      >
       {loading ? (
         <div className="grid h-full place-items-center text-sm text-zinc-500">
           <div className="flex items-center gap-2">

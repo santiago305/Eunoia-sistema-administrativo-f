@@ -1,8 +1,12 @@
-import axiosInstance from "@/shared/common/utils/axios";
+﻿import axiosInstance from "@/shared/common/utils/axios";
 import type { Paginated } from "@/features/clients/types/clientApi";
 import type {
   AgenciesListQuery,
   AgencyDetail,
+  AgencyExportColumn,
+  AgencyExportPreset,
+  AgencyImportCreateResponse,
+  AgencyJsonImportRow,
   AgencyListItem,
   CreateAgencyBody,
   SubsidiariesListQuery,
@@ -71,6 +75,16 @@ export const updateAgency = async (
   return response.data;
 };
 
+export const importCreateAgencies = async (
+  rows: AgencyJsonImportRow[],
+): Promise<AgencyImportCreateResponse> => {
+  const response = await axiosInstance.post<AgencyImportCreateResponse>(
+    agencyRoutes.importCreate,
+    { rows },
+  );
+  return response.data;
+};
+
 export const listSubsidiaries = async (
   params: SubsidiariesListQuery,
 ): Promise<SubsidiaryDto[]> => {
@@ -123,4 +137,41 @@ export const deleteAgencySearchMetric = async (
   );
 
   return response.data;
+};
+
+export const getAgencyExportColumns = async (): Promise<AgencyExportColumn[]> => {
+  const response = await axiosInstance.get<AgencyExportColumn[]>(agencyRoutes.exportColumns);
+  return response.data;
+};
+
+export const getAgencyExportPresets = async (): Promise<AgencyExportPreset[]> => {
+  const response = await axiosInstance.get<AgencyExportPreset[]>(agencyRoutes.exportPresets);
+  return response.data;
+};
+
+export const saveAgencyExportPreset = async (payload: {
+  name: string;
+  columns: AgencyExportColumn[];
+}): Promise<{ metricId: string }> => {
+  const response = await axiosInstance.post(agencyRoutes.exportPresets, payload);
+  return response.data;
+};
+
+export const deleteAgencyExportPreset = async (metricId: string): Promise<boolean> => {
+  const response = await axiosInstance.delete(agencyRoutes.deleteExportPreset(metricId));
+  return response.data;
+};
+
+export const exportAgenciesExcel = async (payload: {
+  columns: AgencyExportColumn[];
+  q?: string;
+  filters?: Record<string, unknown>[];
+}): Promise<{ blob: Blob; filename: string }> => {
+  const response = await axiosInstance.post(agencyRoutes.exportExcel, payload, {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? `agencias-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob: response.data as Blob, filename };
 };
