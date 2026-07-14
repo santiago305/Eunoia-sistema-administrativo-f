@@ -389,6 +389,11 @@ export const API_PAYMENT_GROUP = {
   remove: (id: string) => `/payments/${id}`,
 }
 
+export const API_INCOME_GROUP = {
+  list: "/income",
+  summary: "/income/summary",
+};
+
 export const API_ACCOUNTS_PAYABLE_GROUP = {
   list: "/accounts-payable",
   markOverdue: "/accounts-payable/mark-overdue",

@@ -49,6 +49,7 @@ const PurchaseDetailPage = lazy(() => import("@/features/purchases/pages/Purchas
 const RecurringPurchasesPage = lazy(() => import("@/features/purchases/pages/RecurringPurchasesPage"));
 const PurchaseReceptionPage = lazy(() => import("@/features/purchases/pages/PurchaseReceptionPage"));
 const Payments = lazy(() => import("@/features/payments/Payments"));
+const IncomePage = lazy(() => import("@/features/income/IncomePage"));
 const AccountsPayablePage = lazy(() => import("@/features/payments/pages/AccountsPayablePage"));
 const PaymentAccountsPage = lazy(() => import("@/features/payments/pages/PaymentAccountsPage"));
 const PaymentMethodsPage = lazy(() => import("@/features/payment-methods/PaymentMethodsPage"));
@@ -232,6 +233,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.payments,
                 element: withRouteGuard(RoutesPaths.payments, <Payments />),
+            },
+            {
+                path: RoutesPaths.income,
+                element: withRouteGuard(RoutesPaths.income, <IncomePage />),
             },
             {
                 path: RoutesPaths.accountsPayable,

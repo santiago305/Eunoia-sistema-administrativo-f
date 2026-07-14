@@ -16,6 +16,13 @@ describe("permissions routing regression", () => {
     expect(canAccess).toBe(true);
   });
 
+  it("allows /ingresos only with income page and read permissions", () => {
+    const meta = getRouteMetaByPath(RoutesPaths.income);
+    expect(meta?.permissionsAllowed).toEqual(["page.income.view", "income.read"]);
+    expect(canAccessRoute(meta, null, ["page.income.view"])).toBe(false);
+    expect(canAccessRoute(meta, null, ["page.income.view", "income.read"])).toBe(true);
+  });
+
   it("resolves first protected route for authenticated users without role", () => {
     const path = getFirstAccessibleProtectedPath(null, ["page.suppliers.view"]);
     expect(path).toBe(RoutesPaths.profile);

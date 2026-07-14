@@ -68,6 +68,7 @@ export const RoutesPaths = {
   recurringPurchases: "/compras/recurrentes",
   purchaseEdit: "/compra/:poId",
   payments: "/pagos",
+  income: "/ingresos",
   accountsPayable: "/cuentas-por-pagar",
   paymentAccounts: "/cuentas-pago",
   paymentMethods: "/metodos-pago",

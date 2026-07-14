@@ -55,6 +55,10 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 href: RoutesPaths.payments,
             },
             {
+                label: "Ingresos",
+                href: RoutesPaths.income,
+            },
+            {
                 label: "Cuentas por pagar",
                 href: RoutesPaths.accountsPayable,
             },
