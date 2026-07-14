@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Workflow, X } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import type { SaleOrderSearchRule } from "@/features/sale-orders/types/saleOrder";
-import type { SaleOrderState } from "@/features/workflows/types/workflow";
+import type { SaleOrderState, Workflow as WorkflowDefinition } from "@/features/workflows/types/workflow";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { AnimatedDateRangePicker } from "@/shared/components/components/date-picker/AnimatedDateRangePicker";
 import { getDateKey } from "@/shared/components/components/date-picker/dateUtils";
 import { Modal } from "@/shared/components/modales/Modal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
-import { listSaleOrderStates } from "@/shared/services/workflowService";
+import { listSaleOrderStates, listWorkflows } from "@/shared/services/workflowService";
 
 export type SaleOrderBulkChangeStateSelection = {
     saleOrderIds: string[];
@@ -56,6 +56,8 @@ export function SaleOrderBulkChangeStateModal({
     const [loadingStates, setLoadingStates] = useState(false);
     const [error, setError] = useState("");
     const [stateFilter, setStateFilter] = useState<string[]>([]);
+    const [workflows, setWorkflows] = useState<Array<Pick<WorkflowDefinition, "id" | "name" | "isActive">>>([]);
+    const [workflowFilter, setWorkflowFilter] = useState<string[]>([]);
     const [range, setRange] = useState<{ startDate: Date | null; endDate: Date | null }>({ startDate: null, endDate: null });
     const [remoteOrders, setRemoteOrders] = useState<SaleOrder[]>([]);
     const [hasRemoteSearch, setHasRemoteSearch] = useState(false);
@@ -90,6 +92,7 @@ export function SaleOrderBulkChangeStateModal({
                     saleOrderId,
                     orderLabel: getOrderLabel(order, saleOrderId),
                     typeLabel: getOrderTypeLabel(order),
+                    workflowId: order?.workflow?.id ?? order?.workflowId ?? "__none__",
                     stateLabel: getOrderStateLabel(order),
                     color: order?.currentState?.color,
                     stateId: order?.currentState?.id ?? "__none__",
@@ -114,6 +117,27 @@ export function SaleOrderBulkChangeStateModal({
         return [{ value: "__all__", label: "Todos los estados" }, ...options];
     }, [previewRows, states]);
 
+    const workflowOptions = useMemo(() => {
+        const options = workflows
+            .filter((workflow) => Boolean(workflow.id))
+            .map((workflow) => ({
+                value: workflow.id,
+                label: workflow.name,
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label, "es"));
+
+        if (previewRows.some((row) => row.workflowId === "__none__")) {
+            options.unshift({ value: "__none__", label: "Sin tipo" });
+        }
+
+        return [{ value: "__all__", label: "Todos los tipos" }, ...options];
+    }, [previewRows, workflows]);
+
+    const workflowLabelById = useMemo(
+        () => new Map(workflowOptions.map((option) => [option.value, option.label])),
+        [workflowOptions],
+    );
+
     const currentStateIdsByName = useMemo(() => {
         const map = new Map<string, string[]>();
         states.forEach((state) => {
@@ -129,6 +153,10 @@ export function SaleOrderBulkChangeStateModal({
         if (stateIds.length > 0) {
             filters.push({ field: "saleOrderStateId", operator: "in", values: Array.from(new Set(stateIds)) });
         }
+        const workflowIds = workflowFilter.filter((value) => value && !value.startsWith("__"));
+        if (workflowIds.length > 0) {
+            filters.push({ field: "workflowId", operator: "in", values: Array.from(new Set(workflowIds)) });
+        }
         if (range.startDate && range.endDate) {
             filters.push({
                 field: "createdAt",
@@ -137,14 +165,16 @@ export function SaleOrderBulkChangeStateModal({
             });
         }
         return filters;
-    }, [currentStateIdsByName, range.endDate, range.startDate, stateFilter]);
+    }, [currentStateIdsByName, range.endDate, range.startDate, stateFilter, workflowFilter]);
 
     const visiblePreviewRows = useMemo(
         () =>
-            stateFilter.length === 0
-                ? previewRows
-                : previewRows.filter((row) => stateFilter.includes(row.stateLabel)),
-        [previewRows, stateFilter],
+            previewRows.filter((row) => {
+                const matchesState = stateFilter.length === 0 || stateFilter.includes(row.stateLabel);
+                const matchesWorkflow = workflowFilter.length === 0 || workflowFilter.includes(row.workflowId);
+                return matchesState && matchesWorkflow;
+            }),
+        [previewRows, stateFilter, workflowFilter],
     );
 
     const executableSaleOrderIds = useMemo(
@@ -169,6 +199,7 @@ export function SaleOrderBulkChangeStateModal({
             setTargetStateId("");
             setError("");
             setStateFilter([]);
+            setWorkflowFilter([]);
             setRange({ startDate: null, endDate: null });
             setRemoteOrders([]);
             setHasRemoteSearch(false);
@@ -178,17 +209,22 @@ export function SaleOrderBulkChangeStateModal({
         requestIdRef.current += 1;
         const requestId = requestIdRef.current;
 
-        const loadStates = async () => {
+        const loadCatalogs = async () => {
             setLoadingStates(true);
             setError("");
             try {
-                const response = await listSaleOrderStates();
+                const [statesResponse, workflowsResponse] = await Promise.all([
+                    listSaleOrderStates(),
+                    listWorkflows(),
+                ]);
                 if (requestId !== requestIdRef.current) return;
-                setStates(response);
+                setStates(statesResponse);
+                setWorkflows(Array.isArray(workflowsResponse) ? workflowsResponse : []);
             } catch (loadError) {
                 if (requestId !== requestIdRef.current) return;
                 setStates([]);
-                setError(parseApiError(loadError, "No se pudieron cargar los estados."));
+                setWorkflows([]);
+                setError(parseApiError(loadError, "No se pudieron cargar los catalogos."));
             } finally {
                 if (requestId === requestIdRef.current) {
                     setLoadingStates(false);
@@ -196,7 +232,7 @@ export function SaleOrderBulkChangeStateModal({
             }
         };
 
-        void loadStates();
+        void loadCatalogs();
     }, [open]);
 
     const toggleStateFilter = (value: string) => {
@@ -208,6 +244,17 @@ export function SaleOrderBulkChangeStateModal({
 
     const removeStateFilter = (value: string) => {
         setStateFilter((current) => current.filter((item) => item !== value));
+    };
+
+    const toggleWorkflowFilter = (value: string) => {
+        setWorkflowFilter((current) => {
+            if (!value || value === "__all__") return [];
+            return current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
+        });
+    };
+
+    const removeWorkflowFilter = (value: string) => {
+        setWorkflowFilter((current) => current.filter((item) => item !== value));
     };
 
     useEffect(() => {
@@ -292,16 +339,28 @@ export function SaleOrderBulkChangeStateModal({
                                 />
                             </div>
                         </div>
-                        <FloatingSelect
-                            label="Filtrar por estado"
-                            name="bulk-current-state-filter"
-                            value={stateFilter.at(-1) ?? "__all__"}
-                            options={currentStateOptions}
-                            onChange={toggleStateFilter}
-                            disabled={loading}
-                            searchable
-                            panelWidthMode="min-trigger"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                            <FloatingSelect
+                                label="Filtrar por estado"
+                                name="bulk-current-state-filter"
+                                value={stateFilter.at(-1) ?? "__all__"}
+                                options={currentStateOptions}
+                                onChange={toggleStateFilter}
+                                disabled={loading}
+                                searchable
+                                panelWidthMode="min-trigger"
+                            />
+                            <FloatingSelect
+                                label="Filtrar por tipo"
+                                name="bulk-workflow-filter"
+                                value={workflowFilter.at(-1) ?? "__all__"}
+                                options={workflowOptions}
+                                onChange={toggleWorkflowFilter}
+                                disabled={loading}
+                                searchable
+                                panelWidthMode="min-trigger"
+                            />
+                        </div>
                         {stateFilter.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                                 {stateFilter.map((item) => (
@@ -312,6 +371,20 @@ export function SaleOrderBulkChangeStateModal({
                                         onClick={() => removeStateFilter(item)}
                                     >
                                         {item}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+                        {workflowFilter.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                                {workflowFilter.map((item) => (
+                                    <button
+                                        key={item}
+                                        type="button"
+                                        className="rounded-md bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700"
+                                        onClick={() => removeWorkflowFilter(item)}
+                                    >
+                                        {workflowLabelById.get(item) ?? item}
                                     </button>
                                 ))}
                             </div>

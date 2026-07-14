@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
+import { FloatingRequiredLabel } from "@/shared/components/components/FloatingRequiredLabel";
 
 type Props = {
   title: string;
   description?: string;
+  requiredIndicator?: boolean;
   actions?: ReactNode;
   children: ReactNode;
   bodyClassName?: string;
@@ -12,6 +14,7 @@ type Props = {
 export function SaleOrderEditorSection({
   title,
   description,
+  requiredIndicator = false,
   actions,
   children,
   bodyClassName = "",
@@ -25,7 +28,9 @@ export function SaleOrderEditorSection({
             className="h-5 w-1 shrink-0 rounded-full bg-primary/70"
           />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold leading-tight">{title}</h3>
+            <h3 className="text-sm font-semibold leading-tight">
+              <FloatingRequiredLabel label={title} required={requiredIndicator} />
+            </h3>
             {description ? (
               <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
                 {description}

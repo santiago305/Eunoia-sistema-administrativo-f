@@ -1,6 +1,6 @@
-
+﻿
 /**
- * Grupo de rutas para la autenticación.
+ * Grupo de rutas para la autenticaciÃ³n.
  */
 export const API_AUTH_GROUP = {
   authentication: '/auth/login',
@@ -10,7 +10,7 @@ export const API_AUTH_GROUP = {
 };
 
 /**
- * Grupo de rutas para la gestión de usuarios.
+ * Grupo de rutas para la gestiÃ³n de usuarios.
  */
 export const API_USERS_GROUP = {
   list: "/users",
@@ -103,9 +103,14 @@ export const agencyRoutes = {
   update: (id: string) => `/agencies/${id}`,
   active: (id: string) => `/agencies/${id}/active`,
   subsidiaries: "/agencies/subsidiaries",
+  importCreate: "/agencies/import-create",
   searchState: "/agencies/search-state",
   searchMetrics: "/agencies/search-metrics",
   searchMetricDetail: (metricId: string) => `/agencies/search-metrics/${metricId}`,
+  exportColumns: "/agencies/export-columns",
+  exportPresets: "/agencies/export-presets",
+  deleteExportPreset: (metricId: string) => `/agencies/export-presets/${metricId}`,
+  exportExcel: "/agencies/export-excel",
 };
 
 export const sourceRoutes = {
@@ -559,5 +564,4 @@ export const API_SUPPLIER_METHODS_GROUP = {
   byId: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
   remove: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
 };
-
 

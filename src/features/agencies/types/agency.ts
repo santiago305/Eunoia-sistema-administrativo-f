@@ -1,4 +1,4 @@
-export type Subsidiary = {
+﻿export type Subsidiary = {
   id: string;
   agencyId: string;
   alias: string;
@@ -14,6 +14,7 @@ export type Subsidiary = {
 export type Agency = {
   id: string;
   name: string;
+  description?: string | null;
   isActive: boolean;
   subsidiaries?: Subsidiary[];
 };
@@ -32,6 +33,7 @@ export type AgencySubsidiaryForm = {
 
 export type AgencyForm = {
   name: string;
+  description?: string | null;
   isActive: boolean;
   subsidiaries: AgencySubsidiaryForm[];
 };

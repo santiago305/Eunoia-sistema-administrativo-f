@@ -26,6 +26,7 @@ type Props<TColumn extends ExportColumn = ExportColumn> = {
   buttonSize?: ButtonSize;
   buttonClass?: string;
   buttonVariant?: ButtonVariant;
+  buttonTooltip?:string;
 };
 
 export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
@@ -38,7 +39,8 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
   buttonLabel = "Exportar",
   buttonSize="sm",
   buttonClass,
-  buttonVariant
+  buttonVariant,
+  buttonTooltip,
 }: Props<TColumn>) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -77,7 +79,8 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
 
   return (
     <div className="relative inline-block">
-      <SystemButton ref={buttonRef} size={buttonSize} variant={buttonVariant} className={buttonClass} leftIcon={<Download className="h-4 w-4" />} onClick={() => setOpen((v) => !v)}>
+      <SystemButton ref={buttonRef} size={buttonSize} variant={buttonVariant} className={buttonClass}
+      tooltip={buttonTooltip} leftIcon={<Download className="h-4 w-4" />} onClick={() => setOpen((v) => !v)}>
         {buttonLabel}
       </SystemButton>
 

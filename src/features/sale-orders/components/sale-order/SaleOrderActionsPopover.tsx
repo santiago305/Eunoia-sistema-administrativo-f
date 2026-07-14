@@ -1,29 +1,19 @@
 import { useMemo } from "react";
-import { CreditCard, FileText, Menu } from "lucide-react";
+import { FileCheck2, FileText, Menu, ReceiptText } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
 
 type Props = {
   order: SaleOrder;
-  onEdit: (order: SaleOrder) => void;
   onOpenPdf: (order: SaleOrder) => void;
-  onOpenPayments: (order: SaleOrder) => void;
-  onDelete: (order: SaleOrder) => void;
 };
 
 export function SaleOrderActionsPopover({
   order,
   onOpenPdf,
-  onOpenPayments,
 }: Props) {
   const actions = useMemo<ActionItem[]>(
     () => [
-      {
-        id: "payments",
-        label: "Pagos",
-        icon: <CreditCard className="h-4 w-4" />,
-        onClick: () => onOpenPayments(order),
-      },
       {
         id: "pdf",
         label: "Ver PDF",
@@ -31,21 +21,19 @@ export function SaleOrderActionsPopover({
         onClick: () => onOpenPdf(order),
       },
       {
-        id: "boleta",
-        label: "generar factura",
-        icon: <FileText className="h-4 w-4" />,
-        onClick: () => onOpenPdf(order),
-        disabled:true
+        id: "invoice",
+        label: "Factura",
+        icon: <FileCheck2 className="h-4 w-4" />,
+        disabled: true,
       },
       {
-        id: "factura",
-        label: "generar boleta",
-        icon: <FileText className="h-4 w-4" />,
-        onClick: () => onOpenPdf(order),
-        disabled:true
+        id: "receipt",
+        label: "Boleta",
+        icon: <ReceiptText className="h-4 w-4" />,
+        disabled: true,
       },
     ],
-    [onOpenPayments, onOpenPdf, order],
+    [onOpenPdf, order],
   );
 
   return (
@@ -55,9 +43,9 @@ export function SaleOrderActionsPopover({
       compact
       showLabels
       triggerIcon={<Menu className="h-5 w-5 text-black text-bold" />}
-      triggerVariant="ghost"
+      triggerVariant="subtle"
       triggerLabel="Acciones del pedido"
-      popoverClassName="min-w-[180px]"
+      popoverClassName="min-w-30"
       popoverBodyClassName="p-2"
     />
   );

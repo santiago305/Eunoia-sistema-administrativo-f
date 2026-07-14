@@ -1,8 +1,7 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { Menu, Pencil, Plus, Trash2 } from "lucide-react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Plus } from "lucide-react";
 import { isAxiosError } from "axios";
 import { AlertModal } from "@/shared/components/components/AlertModal";
-import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { Badge } from "@/shared/components/ui/badge";
@@ -13,7 +12,6 @@ import {
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -579,61 +577,7 @@ export default function Clients() {
         header: "Dirección",
         cell: (row) => <span className="text-black/70">{row.address ?? "—"}</span>,
         className: "text-black/70",
-      },
-      {
-        id: "actions",
-        header: "Acciones",
-        stopRowClick: true,
-        cell: (row) => (
-          <ActionsPopover
-            actions={[
-              {
-                id: "edit",
-                label: "Editar",
-                icon: <Pencil className="h-4 w-4 text-black/60" />,
-                hidden: !canManageClients,
-                onClick: () => setEditingClientId(row.id),
-              },
-              {
-                id: "toggle",
-                label: row.isActive ? "Eliminar" : "Restaurar",
-                icon: <Trash2 className="h-4 w-4" />,
-                danger: row.isActive,
-                hidden: !canManageClients,
-                className: row.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50",
-                onClick: () => setToggleClientId(row.id),
-              },
-            ]}
-            columns={1}
-            compact
-            showLabels
-            triggerIcon={<Menu className="h-4 w-4" />}
-            popoverClassName="min-w-35"
-            popoverBodyClassName="p-2"
-            renderAction={(action, helpers) => (
-              <button
-                key={action.id}
-                type="button"
-                onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                  e.stopPropagation();
-                  helpers.onAction(action);
-                }}
-                className={[
-                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition",
-                  action.danger ? "text-rose-700 hover:bg-rose-50" : "",
-                ].join(" ")}
-                disabled={action.disabled}
-              >
-                {action.icon}
-                <span className="truncate">{action.label}</span>
-              </button>
-            )}
-          />
-        ),
-        headerClassName: "text-center [&>div]:justify-center",
-        className: "text-center text-black/70",
-        showInCards: false,
-      },
+      }
     ],
     [canManageClients, ubigeoNames.departmentsById, ubigeoNames.districtsById, ubigeoNames.provincesById],
   );
@@ -642,30 +586,12 @@ export default function Clients() {
 
   return (
     <PageShell>
-      <PageActionsRow>
-        <SystemButton
-          size="sm"
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={startCreate}
-          style={{
-            backgroundColor: PRIMARY,
-            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-          }}
-          disabled={!canManageClients}
-          title={companyActionTitle}
-        >
-          Crear cliente
-        </SystemButton>
-      </PageActionsRow>
-
       <DataTableSearchChips
         chips={searchChips}
         onRemove={(chip) => {
           handleRemoveSearchRule(chip.removeKey);
         }}
       />
-
       <DataTable
         tableId="clients-table"
         data={items}
@@ -676,7 +602,10 @@ export default function Clients() {
         selectableColumns
         hoverable={false}
         animated={false}
-        onRowClick={(row) => setDetailClientId(row.id)}
+        onRowClick={row => setEditingClientId(row.id)}
+        paddingPaginated="py-1"
+        paddingTablePaginated="py-0"
+        maxHeight="calc(100vh - 165px)"
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}
@@ -700,6 +629,16 @@ export default function Clients() {
               onDeleteMetric={handleDeleteMetric}
             />
           </DataTableSearchBar>
+        }
+        toolbarActions={
+          <SystemButton
+            size="icon" className="rounded-md h-11 w-10 shadow"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={startCreate}
+            disabled={!canManageClients}
+            title={companyActionTitle}
+            tooltip="Crear cliente"
+          />
         }
         pagination={{
           page: serverPagination.page,

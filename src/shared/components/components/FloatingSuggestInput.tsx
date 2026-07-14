@@ -13,6 +13,7 @@ import {
 } from "react";
 import { cn } from "@/shared/lib/utils";
 import { UI_LAYERS } from "@/shared/components/ui/layers";
+import { FloatingRequiredLabel } from "./FloatingRequiredLabel";
 
 export type FloatingSuggestOption = {
   value: string;
@@ -30,7 +31,9 @@ export type FloatingSuggestInputProps = {
   options: FloatingSuggestOption[];
   placeholder?: string;
   disabled?: boolean;
+  requiredIndicator?: boolean;
   error?: string;
+  "aria-label"?: string;
   className?: string;
   containerClassName?: string;
   searchPlaceholder?: string;
@@ -48,7 +51,9 @@ export function FloatingSuggestInput({
   options,
   placeholder,
   disabled = false,
+  requiredIndicator = false,
   error,
+  "aria-label": ariaLabel,
   className = "",
   containerClassName = "",
   searchPlaceholder,
@@ -367,7 +372,9 @@ export function FloatingSuggestInput({
             });
           }}
           disabled={disabled}
+          required={requiredIndicator}
           placeholder={placeholder ?? " "}
+          aria-label={ariaLabel ?? (requiredIndicator ? label : undefined)}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
           aria-expanded={open}
@@ -398,7 +405,7 @@ export function FloatingSuggestInput({
             "peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[11px]",
           )}
         >
-          {label}
+          <FloatingRequiredLabel label={label} required={requiredIndicator} />
         </label>
       </div>
 

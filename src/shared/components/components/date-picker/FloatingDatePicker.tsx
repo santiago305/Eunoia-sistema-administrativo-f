@@ -2,6 +2,7 @@ import { Calendar } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { FloatingRequiredLabel } from "@/shared/components/components/FloatingRequiredLabel";
 import { CalendarPanel } from "./CalendarPanel";
 import { DatePickerPanelPortal } from "./DatePickerPanelPortal";
 import { formatDate } from "./dateUtils";
@@ -16,6 +17,7 @@ type FloatingDatePickerProps = {
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  requiredIndicator?: boolean;
   className?: string;
   containerClassName?: string;
   minDate?: Date;
@@ -34,6 +36,7 @@ export function FloatingDatePicker({
   placeholder = "Seleccionar",
   disabled = false,
   readOnly = false,
+  requiredIndicator = false,
   className,
   containerClassName,
   minDate,
@@ -101,6 +104,7 @@ export function FloatingDatePicker({
           aria-controls={open ? panelId : undefined}
           aria-describedby={error ? errorId : undefined}
           aria-labelledby={labelId}
+          aria-required={requiredIndicator || undefined}
         >
           <span
             className={cn(
@@ -133,7 +137,7 @@ export function FloatingDatePicker({
                     : "text-muted-foreground",
           )}
         >
-          {label}
+          <FloatingRequiredLabel label={label} required={requiredIndicator} />
         </label>
       </div>
 

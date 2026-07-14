@@ -361,6 +361,7 @@ export function SaleOrderEditor({
         <div className="space-y-3">
           <SaleOrderEditorSection
             title="Packs"
+            requiredIndicator
             bodyClassName="max-h-[500px] min-h-[180px] py-4 overflow-hidden"
             actions={
               <div className="flex items-center justify-end gap-2">

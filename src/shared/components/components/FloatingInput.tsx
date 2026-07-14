@@ -7,12 +7,14 @@ import {
   type InputHTMLAttributes,
 } from "react";
 import { cn } from "@/shared/lib/utils";
+import { FloatingRequiredLabel } from "./FloatingRequiredLabel";
 
 type FloatingInputProps = {
   label: string;
   name: string;
   value?: string | number;
   error?: string;
+  requiredIndicator?: boolean;
   onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
 } & Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -26,6 +28,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
       name,
       value,
       error,
+      requiredIndicator = false,
       onChange,
       type = "text",
       disabled,
@@ -33,6 +36,8 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
       defaultValue,
       id,
       readOnly,
+      required,
+      "aria-label": ariaLabel,
       "aria-describedby": ariaDescribedBy,
       ...props
     }: FloatingInputProps,
@@ -54,6 +59,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
     const isNumber = type === "number";
     const isReadOnly = Boolean(readOnly);
     const canTogglePassword = isPassword && !disabled;
+    const isRequired = requiredIndicator || Boolean(required);
 
     return (
       <div className="w-full">
@@ -73,7 +79,9 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
             }}
             disabled={disabled}
             readOnly={readOnly}
+            required={isRequired}
             placeholder=" "
+            aria-label={ariaLabel ?? (isRequired ? label : undefined)}
             aria-invalid={Boolean(error)}
             aria-describedby={describedBy}
             className={cn(
@@ -112,7 +120,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
               "peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[11px]",
             )}
           >
-            {label}
+            <FloatingRequiredLabel label={label} required={isRequired} />
           </label>
 
           {isPassword ? (
