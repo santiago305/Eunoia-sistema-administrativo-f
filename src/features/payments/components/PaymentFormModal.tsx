@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, CalendarClock, FileText, ImageIcon, Paperclip, UploadCloud, X } from "lucide-react";
+import { Banknote, CalendarClock, CircleHelp, FileText, ImageIcon, Paperclip, UploadCloud, X } from "lucide-react";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
@@ -7,6 +7,7 @@ import { FloatingTextarea } from "@/shared/components/components/FloatingTextare
 import { MoneyInput } from "@/shared/components/components/MoneyInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { createPayment } from "@/shared/services/paymentService";
 import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
 import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
@@ -21,7 +22,9 @@ import type { PaymentMethod } from "@/features/payment-methods/types/paymentMeth
 import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
 import { normalizeMoney, parseDateInputValue, parseDecimalInput, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { CompanyPaymentAccountSelect } from "./CompanyPaymentAccountSelect";
+import { PurchasePayableSelect } from "./PurchasePayableSelect";
 import type { CompanyPaymentAccount } from "../types/payment-account.types";
+import type { AccountPayable } from "../types/payable.types";
 
 type PaymentFormMode = "create" | "schedule";
 
@@ -90,6 +93,10 @@ export function PaymentFormModal({
   const selectedMethod = useMemo(
     () => paymentMethods?.find((item) => item.name === method) ?? null,
     [method, paymentMethods],
+  );
+  const selectedPaymentMethodId = useMemo(
+    () => selectedMethod?.methodId ?? (selectedMethod as { id?: string } | null)?.id ?? null,
+    [selectedMethod],
   );
   const showAccountSelect = !isCashMethod(method);
   const selectedMethodRequiresVoucher = showAccountSelect && (selectedMethod?.requiresVoucher ?? false);
@@ -179,6 +186,15 @@ export function PaymentFormModal({
     return Object.keys(nextErrors).length === 0;
   };
 
+  const applyPayable = (payable: AccountPayable | null) => {
+    if (!payable) return;
+    setPoId(payable.purchaseId);
+    setQuotaId(payable.quotaId ?? "");
+    setAccountPayableId(payable.accountPayableId);
+    setCurrency(payable.currency);
+    setAmount(String(payable.amountPending));
+  };
+
   const handleSave = async () => {
     if (saving || !validate()) return;
 
@@ -195,6 +211,7 @@ export function PaymentFormModal({
         poId: poId.trim(),
         quotaId: quotaId.trim() || undefined,
         accountPayableId: accountPayableId.trim() || undefined,
+        paymentMethodId: selectedPaymentMethodId,
         companyPaymentAccountId: showAccountSelect ? selectedAccount?.id ?? null : null,
         bankName: showAccountSelect ? selectedAccount?.bankName ?? null : null,
         cardLastFour: showAccountSelect ? selectedAccount?.cardLastFour ?? selectedAccount?.accountLastFour ?? null : null,
@@ -250,7 +267,45 @@ export function PaymentFormModal({
         </div>
       }
     >
+      <div className="mb-4 flex items-start justify-between gap-3 rounded-sm border border-border bg-muted/25 px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">
+            {mode === "schedule" ? "Programacion de salida de dinero" : "Registro de salida de dinero"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {mode === "schedule"
+              ? "Crea un pago futuro; no confirma desembolso hasta su aprobacion o ejecucion."
+              : "Crea un pago asociado a una compra o cuenta por pagar y puede adjuntar comprobante."}
+          </p>
+        </div>
+        <TooltipProvider delayDuration={120}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Ayuda del formulario de pagos"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <CircleHelp className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-xs rounded-sm px-3 py-2 text-xs">
+              Compra y cuenta por pagar enlazan el pago con la obligacion. Monto define el desembolso parcial o total. Metodo y cuenta de empresa indican desde donde sale el dinero. Fecha de pago registra el movimiento; fecha programada agenda una salida futura. Comprobante se exige cuando el metodo requiere voucher.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
+        {!initialPayment?.poId ? (
+          <div className="sm:col-span-2">
+            <PurchasePayableSelect
+              value={accountPayableId}
+              disabled={saving}
+              onChange={applyPayable}
+            />
+          </div>
+        ) : null}
         <FloatingInput
           label="Compra"
           name="payment-po-id"

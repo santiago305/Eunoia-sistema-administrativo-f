@@ -107,6 +107,7 @@ const accounts = [
 describe("PaymentAccountsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     canMock.mockImplementation((permission: string) => permission !== "payment_accounts.view_sensitive");
     listAccountsMock.mockResolvedValue(accounts);
     createAccountMock.mockResolvedValue(accounts[0]);
@@ -123,6 +124,7 @@ describe("PaymentAccountsPage", () => {
     fireEvent.change(screen.getByLabelText("Buscar cuentas de pago"), {
       target: { value: "visa" },
     });
+    fireEvent.click(screen.getByLabelText("Buscar"));
 
     await waitFor(() => {
       expect(screen.queryByText("BCP Operaciones ****6677 · PEN")).not.toBeInTheDocument();
@@ -155,5 +157,34 @@ describe("PaymentAccountsPage", () => {
     await screen.findByText("BCP Operaciones ****6677 · PEN");
 
     expect(screen.queryByText("0011223344556677")).not.toBeInTheDocument();
+  });
+
+  it("uses smart filters, chips and saved metrics for payment accounts", async () => {
+    render(<PaymentAccountsPage />);
+
+    expect(await screen.findByText("BCP Operaciones ****6677 · PEN")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Buscar cuentas de pago"), {
+      target: { value: "interbank" },
+    });
+    fireEvent.click(screen.getByLabelText("Buscar"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("BCP Operaciones ****6677 · PEN")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Busqueda: interbank")).toBeInTheDocument();
+
+    fireEvent.focus(screen.getByLabelText("Buscar cuentas de pago"));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.change(screen.getByLabelText("Nombre de la metrica"), {
+      target: { value: "Interbank guardado" },
+    });
+    const dialog = screen.getByRole("dialog", { name: "Guardar metrica" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    fireEvent.focus(screen.getByLabelText("Buscar cuentas de pago"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Interbank guardado")).toBeInTheDocument();
+    });
   });
 });

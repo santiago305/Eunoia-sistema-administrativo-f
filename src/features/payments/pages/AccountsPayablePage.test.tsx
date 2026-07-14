@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AccountsPayablePage from "./AccountsPayablePage";
@@ -25,7 +25,12 @@ vi.mock("@/shared/layouts/PageShell", () => ({
 }));
 
 vi.mock("../components/AccountsPayableTable", () => ({
-  AccountsPayableTable: () => <div data-testid="accounts-payable-table" />,
+  AccountsPayableTable: ({ toolbarSearchContent }: { toolbarSearchContent: React.ReactNode }) => (
+    <div>
+      <div>{toolbarSearchContent}</div>
+      <div data-testid="accounts-payable-table" />
+    </div>
+  ),
 }));
 
 vi.mock("../components/PaymentFormModal", () => ({
@@ -35,6 +40,7 @@ vi.mock("../components/PaymentFormModal", () => ({
 describe("AccountsPayablePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     listAccountPayablesMock.mockResolvedValue({ items: [], total: 0, page: 1, limit: 20 });
     markOverdueAccountPayablesMock.mockResolvedValue({ updated: 0 });
   });
@@ -51,5 +57,33 @@ describe("AccountsPayablePage", () => {
         expect.objectContaining({ purchaseId: "purchase-1" }),
       ),
     );
+  });
+
+  it("saves payable smart search metrics locally and renders them in the panel", async () => {
+    render(
+      <MemoryRouter initialEntries={["/cuentas-por-pagar"]}>
+        <AccountsPayablePage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Busca cuentas por pagar"), {
+      target: { value: "proveedor norte" },
+    });
+    fireEvent.click(screen.getByLabelText("Buscar"));
+    fireEvent.focus(screen.getByLabelText("Busca cuentas por pagar"));
+
+    const saveButton = await screen.findByRole("button", { name: "Guardar" });
+    expect(saveButton).not.toBeDisabled();
+    fireEvent.click(saveButton);
+    fireEvent.change(screen.getByLabelText("Nombre de la metrica"), {
+      target: { value: "Pendientes proveedor norte" },
+    });
+    const dialog = screen.getByRole("dialog", { name: "Guardar metrica" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    fireEvent.focus(screen.getByLabelText("Busca cuentas por pagar"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Pendientes proveedor norte")).toBeInTheDocument();
+    });
   });
 });

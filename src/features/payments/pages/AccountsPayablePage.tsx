@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   DataTableSearchBar,
   DataTableSearchChips,
+  type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { PageShell } from "@/shared/layouts/PageShell";
@@ -10,6 +11,11 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
+import {
+  deleteLocalSearchMetric,
+  loadLocalSavedSearchMetrics,
+  saveLocalSearchMetric,
+} from "@/shared/utils/localSavedSearchMetrics";
 import {
   listAccountPayables,
   markOverdueAccountPayables,
@@ -46,6 +52,7 @@ import {
 } from "../utils/accountPayableSmartSearch";
 
 const DEFAULT_LIMIT = 20;
+const PAYABLE_SAVED_METRICS_KEY = "eunoia:accounts-payable:saved-search-metrics";
 
 const SEARCH_STATE: AccountPayableSearchStateResponse = {
   recent: [],
@@ -89,6 +96,10 @@ export default function AccountsPayablePage() {
   const [items, setItems] = useState<AccountPayable[]>([]);
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [savingMetric, setSavingMetric] = useState(false);
+  const [savedMetrics, setSavedMetrics] = useState<DataTableSavedSearchItem<AccountPayableSearchSnapshot>[]>(() =>
+    loadLocalSavedSearchMetrics<AccountPayableSearchSnapshot>(PAYABLE_SAVED_METRICS_KEY),
+  );
   const [searchFilters, setSearchFilters] = useState(() => buildInitialFilters(searchParams.get("purchaseId") ?? ""));
   const [paymentFormMode, setPaymentFormMode] = useState<"create" | "schedule" | null>(null);
   const [selected, setSelected] = useState<AccountPayable | null>(null);
@@ -199,6 +210,34 @@ export default function AccountsPayablePage() {
     });
   }, [executedSnapshot]);
 
+  const handleSaveMetric = useCallback(async (name: string) => {
+    const snapshot = sanitizeAccountPayableSearchSnapshot({
+      q: appliedSearchText,
+      filters: searchFilters,
+    });
+    if (!hasAccountPayableSearchCriteria(snapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const next = saveLocalSearchMetric<AccountPayableSearchSnapshot>(PAYABLE_SAVED_METRICS_KEY, {
+        name,
+        label: buildAccountPayableSearchChips(snapshot, SEARCH_STATE).map((chip) => chip.label).join(" · ") || name,
+        snapshot,
+      });
+      setSavedMetrics(next);
+      showFeedback(successResponse("Metrica de cuentas por pagar guardada."));
+      return true;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [appliedSearchText, searchFilters, showFeedback]);
+
+  const handleDeleteMetric = useCallback((metricId: string) => {
+    const next = deleteLocalSearchMetric<AccountPayableSearchSnapshot>(PAYABLE_SAVED_METRICS_KEY, metricId);
+    setSavedMetrics(next);
+    showFeedback(successResponse("Metrica de cuentas por pagar eliminada."));
+  }, [showFeedback]);
+
   const openPaymentForm = useCallback((payable: AccountPayable, mode: "create" | "schedule") => {
     setSelected(payable);
     setPaymentFormMode(mode);
@@ -222,10 +261,12 @@ export default function AccountsPayablePage() {
       searchLabel="Busca cuentas por pagar"
       searchName="accounts-payable-smart-search"
       canSaveMetric={hasAccountPayableSearchCriteria(executedSnapshot)}
+      saveLoading={savingMetric}
+      onSaveMetric={handleSaveMetric}
     >
       <AccountPayableSmartSearchPanel
         recent={[]}
-        saved={[]}
+        saved={savedMetrics}
         columns={smartSearchColumns}
         snapshot={draftSnapshot}
         searchState={SEARCH_STATE}
@@ -233,6 +274,7 @@ export default function AccountsPayablePage() {
         onApplySnapshot={applySmartSnapshot}
         onApplyRule={handleApplySearchRule}
         onRemoveRule={handleRemoveSearchRule}
+        onDeleteMetric={handleDeleteMetric}
       />
     </DataTableSearchBar>
   );

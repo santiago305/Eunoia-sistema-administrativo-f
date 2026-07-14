@@ -1,14 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
-import { DataTableSearchBar } from "@/shared/components/table/search";
-import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import {
+  DataTableSearchBar,
+  DataTableSearchChips,
+  type DataTableSavedSearchItem,
+} from "@/shared/components/table/search";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
+import { successResponse } from "@/shared/common/utils/response";
+import {
+  deleteLocalSearchMetric,
+  loadLocalSavedSearchMetrics,
+  saveLocalSearchMetric,
+} from "@/shared/utils/localSavedSearchMetrics";
 import {
   listCompanyPaymentAccountsByCompany,
   setCompanyPaymentAccountActive,
@@ -17,37 +27,43 @@ import type { CompanyPaymentAccount } from "../types/payment-account.types";
 import { getCompanyPaymentAccountDisplay, getCompanyPaymentAccountTypeLabel } from "../paymentAccountView";
 import { CompanyPaymentAccountFormModal } from "../components/CompanyPaymentAccountFormModal";
 import { PaymentAccountActionsMenu } from "../components/PaymentAccountActionsMenu";
+import { PaymentAccountSmartSearchPanel } from "../components/PaymentAccountSmartSearchPanel";
 import { PaymentAccountStatusBadge } from "../components/PaymentAccountStatusBadge";
-
-type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
-type TypeFilter = "ALL" | CompanyPaymentAccount["type"];
-
-const typeFilterOptions: Array<{ value: TypeFilter; label: string }> = [
-  { value: "ALL", label: "Todos los tipos" },
-  { value: "BANK_ACCOUNT", label: "Cuenta bancaria" },
-  { value: "CREDIT_CARD", label: "Tarjeta de credito" },
-  { value: "CASH", label: "Caja" },
-  { value: "DIGITAL_WALLET", label: "Billetera digital" },
-];
-
-const statusFilterOptions: Array<{ value: StatusFilter; label: string }> = [
-  { value: "ALL", label: "Todos los estados" },
-  { value: "ACTIVE", label: "Activas" },
-  { value: "INACTIVE", label: "Inactivas" },
-];
+import {
+  PaymentAccountSearchFields,
+  type PaymentAccountSearchRule,
+  type PaymentAccountSearchSnapshot,
+} from "../types/payment-account-search.types";
+import {
+  buildPaymentAccountSearchChips,
+  buildPaymentAccountSmartSearchColumns,
+  createEmptyPaymentAccountSearchFilters,
+  getDefaultPaymentAccountSearchState,
+  hasPaymentAccountSearchCriteria,
+  removePaymentAccountSearchKey,
+  sanitizePaymentAccountSearchSnapshot,
+  upsertPaymentAccountSearchRule,
+  type PaymentAccountSearchFilterKey,
+} from "../utils/paymentAccountSmartSearch";
 
 const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
+const PAYMENT_ACCOUNT_SAVED_METRICS_KEY = "eunoia:payment-accounts:saved-search-metrics";
 
 export default function PaymentAccountsPage() {
   const { company } = useCompany();
   const { can } = usePermissions();
+  const { showFeedback } = useFeedbackToast();
   const [items, setItems] = useState<CompanyPaymentAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<CompanyPaymentAccount | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchFilters, setSearchFilters] = useState(() => createEmptyPaymentAccountSearchFilters());
+  const [savingMetric, setSavingMetric] = useState(false);
+  const [savedMetrics, setSavedMetrics] = useState<DataTableSavedSearchItem<PaymentAccountSearchSnapshot>[]>(() =>
+    loadLocalSavedSearchMetrics<PaymentAccountSearchSnapshot>(PAYMENT_ACCOUNT_SAVED_METRICS_KEY),
+  );
   const [busyAccountId, setBusyAccountId] = useState<string | null>(null);
   const canCreate = can("payment_accounts.create");
   const canEdit = can("payment_accounts.edit");
@@ -68,13 +84,39 @@ export default function PaymentAccountsPage() {
     void load();
   }, [load]);
 
+  const searchState = useMemo(() => getDefaultPaymentAccountSearchState(), []);
+  const draftSnapshot = useMemo(
+    () => sanitizePaymentAccountSearchSnapshot({ q: searchText, filters: searchFilters }),
+    [searchFilters, searchText],
+  );
+  const executedSnapshot = useMemo(
+    () => sanitizePaymentAccountSearchSnapshot({ q: appliedSearchText, filters: searchFilters }),
+    [appliedSearchText, searchFilters],
+  );
+
   const filteredItems = useMemo(() => {
-    const query = normalize(searchText);
+    const snapshot = sanitizePaymentAccountSearchSnapshot(executedSnapshot);
+    const query = normalize(snapshot.q);
+    const typeRule = snapshot.filters.find((rule) => rule.field === PaymentAccountSearchFields.TYPE);
+    const statusRule = snapshot.filters.find((rule) => rule.field === PaymentAccountSearchFields.STATUS);
+    const currencyRule = snapshot.filters.find((rule) => rule.field === PaymentAccountSearchFields.CURRENCY);
+    const defaultRule = snapshot.filters.find((rule) => rule.field === PaymentAccountSearchFields.DEFAULT);
 
     return items.filter((account) => {
-      if (typeFilter !== "ALL" && account.type !== typeFilter) return false;
-      if (statusFilter === "ACTIVE" && !account.isActive) return false;
-      if (statusFilter === "INACTIVE" && account.isActive) return false;
+      if (typeRule?.values?.length && typeRule.mode !== "exclude" && !typeRule.values.includes(account.type)) return false;
+      if (typeRule?.values?.length && typeRule.mode === "exclude" && typeRule.values.includes(account.type)) return false;
+
+      const statusValue = account.isActive ? "ACTIVE" : "INACTIVE";
+      if (statusRule?.values?.length && statusRule.mode !== "exclude" && !statusRule.values.includes(statusValue)) return false;
+      if (statusRule?.values?.length && statusRule.mode === "exclude" && statusRule.values.includes(statusValue)) return false;
+
+      if (currencyRule?.values?.length && currencyRule.mode !== "exclude" && !currencyRule.values.includes(account.currency)) return false;
+      if (currencyRule?.values?.length && currencyRule.mode === "exclude" && currencyRule.values.includes(account.currency)) return false;
+
+      const defaultValue = account.isDefault ? "DEFAULT" : "NOT_DEFAULT";
+      if (defaultRule?.values?.length && defaultRule.mode !== "exclude" && !defaultRule.values.includes(defaultValue)) return false;
+      if (defaultRule?.values?.length && defaultRule.mode === "exclude" && defaultRule.values.includes(defaultValue)) return false;
+
       if (!query) return true;
 
       const searchableText = [
@@ -88,7 +130,7 @@ export default function PaymentAccountsPage() {
 
       return searchableText.includes(query);
     });
-  }, [items, searchText, statusFilter, typeFilter]);
+  }, [executedSnapshot, items]);
 
   const closeForm = useCallback(() => {
     setFormOpen(false);
@@ -110,6 +152,80 @@ export default function PaymentAccountsPage() {
       setBusyAccountId(null);
     }
   }, [busyAccountId, canDisable, load]);
+
+  const submitSearch = useCallback(() => {
+    startTransition(() => setAppliedSearchText(searchText.trim()));
+  }, [searchText]);
+
+  const applySmartSnapshot = useCallback((snapshot: PaymentAccountSearchSnapshot) => {
+    const normalized = sanitizePaymentAccountSearchSnapshot(snapshot);
+    startTransition(() => {
+      setSearchText(normalized.q ?? "");
+      setAppliedSearchText(normalized.q ?? "");
+      setSearchFilters(normalized.filters);
+    });
+  }, []);
+
+  const handleApplySearchRule = useCallback((rule: PaymentAccountSearchRule) => {
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = upsertPaymentAccountSearchRule(
+          sanitizePaymentAccountSearchSnapshot({ q: searchText, filters: current }),
+          rule,
+        );
+        return next.filters;
+      });
+    });
+  }, [searchText]);
+
+  const handleRemoveSearchRule = useCallback((fieldId: PaymentAccountSearchFilterKey) => {
+    startTransition(() => {
+      setSearchFilters((current) => {
+        const next = removePaymentAccountSearchKey(
+          sanitizePaymentAccountSearchSnapshot({ q: searchText, filters: current }),
+          fieldId,
+        );
+        return next.filters;
+      });
+    });
+  }, [searchText]);
+
+  const handleRemoveChip = useCallback((key: "q" | PaymentAccountSearchFilterKey) => {
+    const nextSnapshot = removePaymentAccountSearchKey(executedSnapshot, key);
+    startTransition(() => {
+      setSearchText(nextSnapshot.q ?? "");
+      setAppliedSearchText(nextSnapshot.q ?? "");
+      setSearchFilters(nextSnapshot.filters);
+    });
+  }, [executedSnapshot]);
+
+  const handleSaveMetric = useCallback(async (name: string) => {
+    const snapshot = sanitizePaymentAccountSearchSnapshot({
+      q: appliedSearchText,
+      filters: searchFilters,
+    });
+    if (!hasPaymentAccountSearchCriteria(snapshot)) return false;
+
+    setSavingMetric(true);
+    try {
+      const next = saveLocalSearchMetric<PaymentAccountSearchSnapshot>(PAYMENT_ACCOUNT_SAVED_METRICS_KEY, {
+        name,
+        label: buildPaymentAccountSearchChips(snapshot, searchState).map((chip) => chip.label).join(" · ") || name,
+        snapshot,
+      });
+      setSavedMetrics(next);
+      showFeedback(successResponse("Metrica de cuentas de pago guardada."));
+      return true;
+    } finally {
+      setSavingMetric(false);
+    }
+  }, [appliedSearchText, searchFilters, searchState, showFeedback]);
+
+  const handleDeleteMetric = useCallback((metricId: string) => {
+    const next = deleteLocalSearchMetric<PaymentAccountSearchSnapshot>(PAYMENT_ACCOUNT_SAVED_METRICS_KEY, metricId);
+    setSavedMetrics(next);
+    showFeedback(successResponse("Metrica de cuentas de pago eliminada."));
+  }, [showFeedback]);
 
   const columns = useMemo<DataTableColumn<CompanyPaymentAccount>[]>(
     () => [
@@ -178,8 +294,8 @@ export default function PaymentAccountsPage() {
         stopRowClick: true,
         hideable: false,
         sortable: false,
-        className: "text-right",
-        headerClassName: "text-right [&>div]:justify-end",
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
         cell: (row) => (
           <PaymentAccountActionsMenu
             account={row}
@@ -195,31 +311,38 @@ export default function PaymentAccountsPage() {
     [busyAccountId, canDisable, canEdit, canViewSensitive, handleEdit, handleToggleActive],
   );
 
+  const smartSearchColumns = useMemo(
+    () => buildPaymentAccountSmartSearchColumns(searchState),
+    [searchState],
+  );
+  const searchChips = useMemo(
+    () => buildPaymentAccountSearchChips(executedSnapshot, searchState),
+    [executedSnapshot, searchState],
+  );
+
   const toolbarSearchContent = (
     <DataTableSearchBar
       value={searchText}
-      onChange={setSearchText}
-      onSubmitSearch={() => undefined}
+      onChange={(value) => startTransition(() => setSearchText(value))}
+      onSubmitSearch={submitSearch}
       searchLabel="Buscar cuentas de pago"
-      searchName="payment-accounts-search"
-      helperText="Busca por cuenta, banco, billetera, moneda o tipo."
+      searchName="payment-accounts-smart-search"
+      canSaveMetric={hasPaymentAccountSearchCriteria(executedSnapshot)}
+      saveLoading={savingMetric}
+      onSaveMetric={handleSaveMetric}
     >
-      <div className="space-y-3">
-        <FloatingSelect
-          label="Tipo"
-          name="payment-account-type-filter"
-          value={typeFilter}
-          options={typeFilterOptions}
-          onChange={(value) => setTypeFilter(value as TypeFilter)}
-        />
-        <FloatingSelect
-          label="Estado"
-          name="payment-account-status-filter"
-          value={statusFilter}
-          options={statusFilterOptions}
-          onChange={(value) => setStatusFilter(value as StatusFilter)}
-        />
-      </div>
+      <PaymentAccountSmartSearchPanel
+        recent={[]}
+        saved={savedMetrics}
+        columns={smartSearchColumns}
+        snapshot={draftSnapshot}
+        searchState={searchState}
+        filterQuery={searchText}
+        onApplySnapshot={applySmartSnapshot}
+        onApplyRule={handleApplySearchRule}
+        onRemoveRule={handleRemoveSearchRule}
+        onDeleteMetric={handleDeleteMetric}
+      />
     </DataTableSearchBar>
   );
 
@@ -239,6 +362,11 @@ export default function PaymentAccountsPage() {
           </SystemButton>
         ) : null}
       </PageActionsRow>
+
+      <DataTableSearchChips
+        chips={searchChips}
+        onRemove={(chip) => handleRemoveChip(chip.removeKey)}
+      />
 
       <DataTable
         tableId="payment-accounts-table"

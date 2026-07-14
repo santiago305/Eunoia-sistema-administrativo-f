@@ -5,10 +5,12 @@ import { PaymentFormModal } from "./PaymentFormModal";
 const {
   createPaymentMock,
   getAllPaymentMethodsMock,
+  listAccountPayablesMock,
   uploadPurchaseAttachmentMock,
 } = vi.hoisted(() => ({
   createPaymentMock: vi.fn(),
   getAllPaymentMethodsMock: vi.fn(),
+  listAccountPayablesMock: vi.fn(),
   uploadPurchaseAttachmentMock: vi.fn(),
 }));
 
@@ -18,6 +20,10 @@ vi.mock("@/shared/services/paymentService", () => ({
 
 vi.mock("@/shared/services/paymentMethodService", () => ({
   getAllPaymentMethods: getAllPaymentMethodsMock,
+}));
+
+vi.mock("@/shared/services/accountsPayableService", () => ({
+  listAccountPayables: listAccountPayablesMock,
 }));
 
 vi.mock("@/shared/services/purchaseAttachmentService", () => ({
@@ -53,8 +59,14 @@ describe("PaymentFormModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getAllPaymentMethodsMock.mockResolvedValue([
-      { id: "method-1", name: "TRANSFERENCIA", isActive: true, requiresVoucher: false },
+      { methodId: "method-1", name: "TRANSFERENCIA", isActive: true, requiresVoucher: false },
     ]);
+    listAccountPayablesMock.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+    });
     createPaymentMock.mockResolvedValue({ type: "success", message: "Pago registrado.", paymentId: "payment-1" });
     uploadPurchaseAttachmentMock.mockResolvedValue({ type: "success", message: "Comprobante subido." });
   });
@@ -88,10 +100,62 @@ describe("PaymentFormModal", () => {
           accountPayableId: "payable-1",
           amount: 80,
           currency: "PEN",
+          paymentMethodId: "method-1",
           companyPaymentAccountId: "account-1",
           bankName: "BCP",
           cardLastFour: "1234",
           scheduledAt: undefined,
+        }),
+      );
+    });
+    expect(onSaved).toHaveBeenCalled();
+  });
+
+  it("prefills payment fields from a selected account payable", async () => {
+    listAccountPayablesMock.mockResolvedValueOnce({
+      items: [
+        {
+          accountPayableId: "payable-1",
+          purchaseId: "purchase-1",
+          quotaId: "quota-1",
+          description: "Servicio hosting",
+          currency: "PEN",
+          amountTotal: 300,
+          amountPaid: 100,
+          amountPending: 200,
+          status: "PARTIAL",
+          dueDate: "2026-07-20",
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+    });
+    const onSaved = vi.fn();
+
+    render(
+      <PaymentFormModal
+        open
+        mode="create"
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /seleccionar cuenta por pagar/i }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: /servicio hosting/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /seleccionar cuenta bcp/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar pago/i }));
+
+    await waitFor(() => {
+      expect(createPaymentMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          poId: "purchase-1",
+          accountPayableId: "payable-1",
+          quotaId: "quota-1",
+          amount: 200,
+          currency: "PEN",
+          paymentMethodId: "method-1",
         }),
       );
     });
