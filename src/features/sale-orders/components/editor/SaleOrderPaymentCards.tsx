@@ -248,6 +248,7 @@ export function SaleOrderPaymentCards({ form, setForm }: Props) {
                 min={0}
                 step="0.01"
                 value={String(modalState.draft.amount)}
+                requiredIndicator
                 onChange={(event) =>
                   updateDraft({
                     amount: Math.max(0, Number(event.target.value || 0)),
@@ -258,6 +259,7 @@ export function SaleOrderPaymentCards({ form, setForm }: Props) {
                 label="Fecha"
                 name={`payment-date-${modalState.draft.clientKey}`}
                 value={parseDateInputValue(modalState.draft.date)}
+                requiredIndicator
                 onChange={(date) =>
                   updateDraft({
                     date: date ? toLocalDateKey(date) : "",
@@ -269,6 +271,7 @@ export function SaleOrderPaymentCards({ form, setForm }: Props) {
                 name={`payment-method-${modalState.draft.clientKey}`}
                 value={modalState.draft.method}
                 options={methodOptions}
+                requiredIndicator
                 onChange={(method) => updateDraft({ method })}
               />
               <FloatingSelect
@@ -276,6 +279,7 @@ export function SaleOrderPaymentCards({ form, setForm }: Props) {
                 name={`payment-account-${modalState.draft.clientKey}`}
                 value={modalState.draft.bankAccountId ?? ""}
                 options={bankAccountOptions}
+                requiredIndicator
                 onChange={(bankAccountId) =>
                   updateDraft({ bankAccountId: bankAccountId || null })
                 }

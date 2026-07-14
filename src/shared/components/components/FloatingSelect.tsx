@@ -7,6 +7,7 @@ import {
   dispatchCloseAllFloatingSelects,
 } from "../components/floatingSelectEvents";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { FloatingRequiredLabel } from "@/shared/components/components/FloatingRequiredLabel";
 import { UI_LAYERS } from "@/shared/components/ui/layers";
 
 type SelectOption = {
@@ -23,6 +24,7 @@ type FloatingSelectProps = {
   error?: string;
   placeholder?: string;
   disabled?: boolean;
+  requiredIndicator?: boolean;
   className?: string;
   containerClassName?: string;
   searchable?: boolean;
@@ -42,6 +44,7 @@ export function FloatingSelect({
   error,
   placeholder,
   disabled = false,
+  requiredIndicator = false,
   className = "",
   containerClassName = "",
   searchable = false,
@@ -541,6 +544,7 @@ export function FloatingSelect({
           aria-haspopup="listbox"
           aria-controls={open ? panelId : undefined}
           aria-label={selectedOption ? `${label}: ${selectedOption.label}` : label}
+          aria-required={requiredIndicator || undefined}
           aria-describedby={error ? errorId : undefined}
         >
           <span
@@ -569,7 +573,7 @@ export function FloatingSelect({
             error ? "text-red-500" : open ? "text-primary" : "text-muted-foreground",
           ].join(" ")}
         >
-          {label}
+          <FloatingRequiredLabel label={label} required={requiredIndicator} />
         </label>
       </div>
 

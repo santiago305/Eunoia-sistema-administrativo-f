@@ -17,6 +17,7 @@ const searchState: SaleOrderSearchStateResponse = {
     states: [{ id: "state-1", label: "Preparando" }],
     bankAccounts: [{ id: "bank-1", label: "BCP Soles" }],
     clientTypes: [{ id: "NEW", label: "Nuevo" }],
+    sources: [{ id: "source-1", label: "Facebook Ads" }],
     creators: [{ id: "user-1", label: "creador@eunoia.test" }],
     assignees: [{ id: "user-2", label: "asignado@eunoia.test" }],
   },
@@ -64,9 +65,15 @@ describe("sale order workflow and state smart filters", () => {
       supportsExclude: true,
       options: searchState.catalogs.clientTypes,
     });
+    expect(columns.find((column) => column.id === "sourceId")).toMatchObject({
+      label: "Enganche",
+      kind: "catalog",
+      supportsExclude: true,
+      options: searchState.catalogs.sources,
+    });
   });
 
-  it("sanitizes and labels include/exclude workflow, state, bank account, and client type rules", () => {
+  it("sanitizes and labels include/exclude workflow, state, bank account, client type, and source rules", () => {
     const snapshot = sanitizeSaleOrderSearchSnapshot({
       filters: [
         {
@@ -93,10 +100,16 @@ describe("sale order workflow and state smart filters", () => {
           mode: "include",
           values: ["NEW"],
         },
+        {
+          field: "sourceId",
+          operator: "in",
+          mode: "include",
+          values: ["source-1"],
+        },
       ],
     });
 
-    expect(snapshot.filters).toHaveLength(4);
+    expect(snapshot.filters).toHaveLength(5);
     expect(buildSaleOrderSearchChips(snapshot, searchState)).toEqual([
       {
         id: "workflowId",
@@ -117,6 +130,11 @@ describe("sale order workflow and state smart filters", () => {
         id: "clientType",
         label: "Tipo de cliente: Nuevo",
         removeKey: "clientType",
+      },
+      {
+        id: "sourceId",
+        label: "Enganche: Facebook Ads",
+        removeKey: "sourceId",
       },
     ]);
   });

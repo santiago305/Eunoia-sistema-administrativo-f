@@ -38,11 +38,6 @@ function getConditionFailureReasons(row: SaleOrderBulkActionFailedRow) {
             if (!failure || typeof failure !== "object") return null;
             const item = failure as {
                 reason?: unknown;
-                type?: unknown;
-                details?: {
-                    label?: unknown;
-                    field?: unknown;
-                };
             };
             const reason = typeof item.reason === "string" ? item.reason : null;
             return [reason].filter(Boolean).join(": ");

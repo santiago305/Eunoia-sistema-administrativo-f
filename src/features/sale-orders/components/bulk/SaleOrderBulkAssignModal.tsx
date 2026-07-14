@@ -15,6 +15,7 @@ import {
     type AdviserOption,
 } from "@/shared/services/adviserService";
 import { listUsers, type UserApiListItem } from "@/shared/services/userService";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
 export type SaleOrderBulkAssignModalProps = {
     open: boolean;
@@ -327,7 +328,7 @@ export function SaleOrderBulkAssignModal({
                 if (loading) return;
                 onClose();
             }}
-            className="w-180"
+            className="w-200"
             closeButtonClassName="rounded-sm"
             bodyClassName="px-4 py-4"
             footer={
@@ -423,16 +424,19 @@ export function SaleOrderBulkAssignModal({
                                     <p className="text-[11px] text-muted-foreground">Creado por: <span className="font-semibold">{row.createdByLabel}</span></p>
                                     <p className="text-[11px] text-muted-foreground">Asesor actual: <span className="font-semibold">{row.assignedByLabel}</span></p>
                                 </div>
-                                <button
-                                    type="button"
-                                    aria-label={`Descartar pedido ${row.orderLabel}`}
-                                    title="Descartar de la seleccion"
-                                    disabled={loading || !onDiscardOrder}
-                                    onClick={() => onDiscardOrder?.(row.saleOrderId)}
-                                    className="flex h-12 w-12 items-center justify-center rounded-md text-zinc-500 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
+                                <Tooltip delayDuration={0}>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            type="button"
+                                            disabled={loading || !onDiscardOrder}
+                                            onClick={() => onDiscardOrder?.(row.saleOrderId)}
+                                            className="flex h-12 w-12 items-center justify-center rounded-md text-zinc-500 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                        </TooltipTrigger>
+                                    <TooltipContent side="bottom">{`Descartar pedido ${row.orderLabel}`}</TooltipContent>
+                                </Tooltip>
                             </div>
                         ))}
                     </div>
@@ -458,14 +462,12 @@ export function SaleOrderBulkAssignModal({
                             panelWidthMode="min-trigger"
                             emptyMessage="Sin asesores"
                         />
-
                         {canAssignRoles ? (
                             <SystemButton
                                 type="button"
                                 size="icon"
-                                className="h-9 w-9 rounded-md"
-                                title="Anadir asesor"
-                                aria-label="Anadir asesor"
+                                className="h-10 w-10 rounded-md"
+                                tooltip="Añadir asesor"
                                 onClick={() => setAddAdviserOpen(true)}
                                 disabled={loading || loadingAdvisers}
                             >
@@ -474,30 +476,25 @@ export function SaleOrderBulkAssignModal({
                         ) : null}
                     </div>
                     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-           
-
                         <SystemButton
                             variant="danger"
                             size="sm"
                             className="rounded-md"
-                            leftIcon={<UserX className="h-4 w-4" />}
+                            tooltip="Quitar asignados"
+                            leftIcon={<UserX className="h-5 w-5" />}
                             onClick={submitClearAssignment}
                             disabled={loading || loadingAdvisers || selectedOrderIds.length === 0}
                             loading={loading && !selectedAdviserId}
-                        >
-                            Quitar
-                        </SystemButton>
-
+                        />
                         <SystemButton
                             size="sm"
                             className="rounded-md"
-                            leftIcon={<UserCheck className="h-4 w-4" />}
+                            tooltip="Asignar"
+                            leftIcon={<UserCheck className="h-5 w-5" />}
                             onClick={submitAssignment}
                             disabled={!selectedAdviserId || loading || loadingAdvisers || executableSaleOrderIds.length === 0}
                             loading={loading && Boolean(selectedAdviserId)}
-                        >
-                            Asignar
-                        </SystemButton>
+                        />
                     </div>
                 </div>
             </div>

@@ -109,6 +109,13 @@ export function SaleOrderClientSection({
           }))
         }
         disabled={loading}
+        requiredFields={{
+          fullName: true,
+          docNumber: form.clientData.docType !== "NONE",
+          department: true,
+          province: true,
+          district: true,
+        }}
         showTelephoneField
         fullNameOptions={clientOptions}
         onFullNameTextChange={() =>

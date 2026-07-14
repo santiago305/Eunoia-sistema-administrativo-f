@@ -98,6 +98,7 @@ export function SaleOrderInformationSection({
           name="sale-order-workflow"
           value={form.workflowId}
           options={workflowOptions}
+          requiredIndicator
           onChange={(workflowId) =>
             setForm((current) => ({ ...current, workflowId }))
           }

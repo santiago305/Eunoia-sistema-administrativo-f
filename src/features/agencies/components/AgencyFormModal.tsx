@@ -1,7 +1,6 @@
-import { useEffect, useMemo, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Trash2 } from "lucide-react";
-
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -35,6 +34,7 @@ const DEFAULT_SUBSIDIARY = {
 
 const DEFAULT_FORM: AgencyForm = {
   name: "",
+  description: "",
   isActive: true,
   subsidiaries: [DEFAULT_SUBSIDIARY],
 };
@@ -44,6 +44,7 @@ function mapAgencyToForm(agency?: Agency | null): AgencyForm {
 
   return {
     name: agency.name ?? "",
+    description: agency.description ?? "",
     isActive: agency.isActive,
     subsidiaries: agency.subsidiaries?.length
       ? agency.subsidiaries.map((subsidiary) => ({
@@ -81,6 +82,7 @@ export function AgencyFormModal({
   } = useForm<AgencyForm>({
     defaultValues: DEFAULT_FORM,
   });
+  const autoFillFirstAliasRef = useRef(true);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -90,23 +92,20 @@ export function AgencyFormModal({
     () => fields.map((field, index) => ({ ...field, rowId: field.id, index })),
     [fields],
   );
+  const agencyName = watch("name");
   const agencyIsActive = watch("isActive");
-
-  const setAgencyActive = (isActive: boolean) => {
-    setValue("isActive", isActive, { shouldDirty: true, shouldValidate: true });
-
-    fields.forEach((_, index) => {
-      setValue(`subsidiaries.${index}.isActive`, isActive, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    });
-  };
-
   useEffect(() => {
     if (!open) return;
+    autoFillFirstAliasRef.current = mode === "create";
     reset(mode === "edit" ? mapAgencyToForm(agency) : DEFAULT_FORM);
   }, [agency, mode, open, reset]);
+
+  useEffect(() => {
+    if (!open || mode !== "create" || !autoFillFirstAliasRef.current) return;
+    setValue("subsidiaries.0.alias", agencyName ?? "", {
+      shouldValidate: true,
+    });
+  }, [agencyName, mode, open, setValue]);
 
   const saveButtonStyle = useMemo(
     () =>
@@ -125,15 +124,26 @@ export function AgencyFormModal({
       {
         id: "alias",
         header: "Alias",
-        cell: (row) => (
-          <FloatingInput
-            label="Alias"
-            className="h-9 text-xs"
-            value={watch(`subsidiaries.${row.index}.alias`) ?? ""}
-            disabled={loading || isSubmitting}
-            {...register(`subsidiaries.${row.index}.alias`, { required: true })}
-          />
-        ),
+        cell: (row) => {
+          const aliasRegistration = register(`subsidiaries.${row.index}.alias`, {
+            required: true,
+            onChange: () => {
+              if (mode === "create" && row.index === 0) {
+                autoFillFirstAliasRef.current = false;
+              }
+            },
+          });
+
+          return (
+            <FloatingInput
+              label="Alias"
+              className="h-9 text-xs"
+              value={watch(`subsidiaries.${row.index}.alias`) ?? ""}
+              disabled={loading || isSubmitting}
+              {...aliasRegistration}
+            />
+          );
+        },
       },
       {
         id: "ubigeo",
@@ -171,10 +181,10 @@ export function AgencyFormModal({
       },
       {
         id: "address",
-        header: "Dirección",
+        header: "Direccion",
         cell: (row) => (
           <FloatingInput
-            label="Dirección"
+            label="Direccion"
             className="h-9 text-xs"
             value={watch(`subsidiaries.${row.index}.address`) ?? ""}
             disabled={loading || isSubmitting}
@@ -222,22 +232,22 @@ export function AgencyFormModal({
       },
       {
         id: "remove",
-        header: "Acción",
+        header: "Accion",
         cell: (row) => (
           <div className="flex justify-center">
-            <button
-              type="button"
+            <SystemButton 
+              size="icon"
+              variant="danger" 
+              tooltip="Eliminar" 
+              leftIcon={<Trash2 className="h-5 w-5"/>}
+              onClick={()=> remove(row.index)} 
               disabled={loading || isSubmitting || fields.length <= 1}
-              onClick={() => remove(row.index)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-600 transition hover:bg-red-50 disabled:opacity-40"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            />
           </div>
         ),
       },
     ],
-    [agencyIsActive, fields.length, isSubmitting, loading, register, remove, setValue, watch],
+    [agencyIsActive, fields.length, isSubmitting, loading, mode, register, remove, setValue, watch],
   );
 
   if (!open) return null;
@@ -247,50 +257,65 @@ export function AgencyFormModal({
       open={open}
       title={title}
       onClose={onClose}
-      className="w-[1100px] max-h-[85vh]"
-    >
-      <form
-        onSubmit={handleSubmit((form) => onSubmit(form))}
-        className="space-y-4"
-      >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
-          <FloatingInput
-            label="Nombre"
-            className="h-12 text-xs"
+      className="w-full max-w-[1400px]"
+      footer={
+        <div className="mt-2 flex justify-end gap-2">
+          <SystemButton
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={onClose}
             disabled={loading || isSubmitting}
-            value={watch("name")}
-            {...register("name", { required: true })}
-          />
-
-          <label className="flex items-center gap-2 rounded-md border px-3 text-xs text-black/70">
-            <Checkbox
-              checked={agencyIsActive}
-              disabled={loading || isSubmitting}
-              onCheckedChange={(checked) => setAgencyActive(checked === true)}
-            />
-            Agencia activa
-          </label>
+          >
+            Cancelar
+          </SystemButton>
+          <SystemButton
+            type="submit"
+            size="md"
+            style={saveButtonStyle}
+            disabled={loading || isSubmitting}
+            loading={loading || isSubmitting}
+            onClick={handleSubmit((form) => onSubmit(form))}
+          >
+            Guardar
+          </SystemButton>
         </div>
-
-        <div className="space-y-4 rounded-xl border p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-black/50">
-              Sucursales
-            </h3>
-
-            <SystemButton
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading || isSubmitting}
-              onClick={() =>
-                append({ ...DEFAULT_SUBSIDIARY, isActive: agencyIsActive })
-              }
-            >
-              Agregar sucursal
-            </SystemButton>
-          </div>
-
+      }
+    >
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mb-3">
+        <FloatingInput
+          label="Nombre"
+          className="h-11 text-xs"
+          disabled={loading || isSubmitting}
+          value={agencyName}
+          {...register("name", { required: true })}
+        />
+        <FloatingInput
+          label="Descripcion"
+          className="h-11 text-xs"
+          disabled={loading || isSubmitting}
+          value={watch("description") ?? ""}
+          {...register("description")}
+        />
+      </div>
+      <div className="space-y-4 rounded-xl border p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-black/50">
+            Sucursales
+          </h3>
+          <SystemButton
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={loading || isSubmitting}
+            onClick={() =>
+              append({ ...DEFAULT_SUBSIDIARY, isActive: agencyIsActive })
+            }
+          >
+            Agregar sucursal
+          </SystemButton>
+        </div>
+        <div className="max-h-350 overflow-hidden">
           <DataTable
             tableId="agency-form-subsidiaries"
             data={rows}
@@ -303,34 +328,14 @@ export function AgencyFormModal({
             stickyHeader={false}
             responsiveCards={false}
             tableClassName="text-xs"
+            maxHeight="calc(100vh - 300px)"
             emptyMessage="Agrega al menos una sucursal."
-            maxHeight="520px"
             rowClickable={false}
+            rowClassName={() => "[&>td]:py-2 [&>td]:px-2"}
           />
         </div>
-
-        <div className="mt-2 flex justify-end gap-2">
-          <SystemButton
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={onClose}
-            disabled={loading || isSubmitting}
-          >
-            Cancelar
-          </SystemButton>
-
-          <SystemButton
-            type="submit"
-            size="md"
-            style={saveButtonStyle}
-            disabled={loading || isSubmitting}
-            loading={loading || isSubmitting}
-          >
-            Guardar
-          </SystemButton>
-        </div>
-      </form>
+      </div>
     </Modal>
   );
 }
+

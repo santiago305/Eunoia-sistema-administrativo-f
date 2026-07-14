@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   DataTableSearchChip,
   SmartSearchFieldConfig,
   SmartSearchOperatorOption,
@@ -28,7 +28,6 @@ const CATALOG_FIELDS = new Set<AgencySearchField>([
   AgencySearchFields.DEPARTMENT_ID,
   AgencySearchFields.PROVINCE_ID,
   AgencySearchFields.DISTRICT_ID,
-  AgencySearchFields.IS_ACTIVE,
 ]);
 
 const TEXT_FIELDS = new Set<AgencySearchField>([
@@ -42,25 +41,19 @@ const TEXT_OPERATOR_OPTIONS: AgencySearchOperatorOption[] = [
   { id: AgencySearchOperators.EQ, label: "Es igual a" },
 ];
 
-const STATUS_OPTIONS = [
-  { id: "true", label: "Activos", keywords: ["activo", "habilitado"] },
-  { id: "false", label: "Inactivos", keywords: ["inactivo", "deshabilitado"] },
-];
-
 const OPERATOR_LABELS: Record<AgencySearchOperator, string> = {
   [AgencySearchOperators.IN]: ":",
   [AgencySearchOperators.CONTAINS]: "contiene",
   [AgencySearchOperators.EQ]: "=",
 };
 
-const FIELD_LABELS: Record<AgencySearchField, string> = {
+const FIELD_LABELS: Partial<Record<AgencySearchField, string>> = {
   [AgencySearchFields.NAME]: "Nombre",
   [AgencySearchFields.ALIAS]: "Alias",
   [AgencySearchFields.ADDRESS]: "Direccion",
   [AgencySearchFields.DEPARTMENT_ID]: "Departamento",
   [AgencySearchFields.PROVINCE_ID]: "Provincia",
   [AgencySearchFields.DISTRICT_ID]: "Distrito",
-  [AgencySearchFields.IS_ACTIVE]: "Estado de sucursal",
 };
 
 function uniqueStrings(values: string[] | undefined) {
@@ -128,7 +121,6 @@ function removeAgencySearchKey(snapshot: AgencySearchSnapshot, key: "q" | Agency
 
 function getCatalogMaps(catalogs?: AgencySearchCatalogs | null) {
   return {
-    active: new Map((catalogs?.activeStates ?? STATUS_OPTIONS).map((item) => [item.id, item.label])),
     department: new Map((catalogs?.departments ?? []).map((item) => [item.id, item.label])),
     province: new Map((catalogs?.provinces ?? []).map((item) => [item.id, item.label])),
     district: new Map((catalogs?.districts ?? []).map((item) => [item.id, item.label])),
@@ -138,15 +130,13 @@ function getCatalogMaps(catalogs?: AgencySearchCatalogs | null) {
 function getCatalogLabels(field: AgencySearchField, values: string[], catalogs?: AgencySearchCatalogs | null) {
   const maps = getCatalogMaps(catalogs);
   const map =
-    field === AgencySearchFields.IS_ACTIVE
-      ? maps.active
-      : field === AgencySearchFields.DEPARTMENT_ID
-        ? maps.department
-        : field === AgencySearchFields.PROVINCE_ID
-          ? maps.province
-          : field === AgencySearchFields.DISTRICT_ID
-            ? maps.district
-            : null;
+    field === AgencySearchFields.DEPARTMENT_ID
+      ? maps.department
+      : field === AgencySearchFields.PROVINCE_ID
+        ? maps.province
+        : field === AgencySearchFields.DISTRICT_ID
+          ? maps.district
+          : null;
 
   if (!map) return values;
   return values.map((value) => map.get(value) ?? value);
@@ -254,15 +244,6 @@ export function buildAgencySmartSearchColumns(catalogs?: AgencySearchCatalogs | 
       operators: [{ id: AgencySearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: catalogs?.districts ?? [],
-    },
-    {
-      id: AgencySearchFields.IS_ACTIVE,
-      label: "Estado",
-      kind: "catalog",
-      description: "Filtra por estado activo/inactivo.",
-      operators: [{ id: AgencySearchOperators.IN, label: "Es alguno de" }],
-      supportsExclude: true,
-      options: catalogs?.activeStates ?? STATUS_OPTIONS,
     },
   ];
 }

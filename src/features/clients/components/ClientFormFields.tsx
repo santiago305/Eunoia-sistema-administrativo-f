@@ -43,6 +43,12 @@ type Props = {
   fullNameOptions?: FloatingSuggestOption[];
   onFullNameOptionSelect?: (option: FloatingSuggestOption) => void;
   onFullNameTextChange?: (value: string) => void;
+  requiredFields?: Partial<
+    Record<
+      "fullName" | "docNumber" | "department" | "province" | "district",
+      boolean
+    >
+  >;
 };
 
 const inputClassName = "h-9 text-xs";
@@ -71,6 +77,7 @@ export function ClientFormFields({
   fullNameOptions,
   onFullNameOptionSelect,
   onFullNameTextChange,
+  requiredFields = {},
 }: Props) {
   const [selectedTelephoneIndex, setSelectedTelephoneIndex] = useState("");
   const [telephoneModalMode, setTelephoneModalMode] = useState<
@@ -267,10 +274,11 @@ export function ClientFormFields({
 
         {!isDocTypeNone ? (
           <FloatingInput
-            label="Número de documento"
+            label="Número"
             name="client-doc-number"
             value={form.docNumber}
             onChange={(event) => updateField("docNumber", event.target.value)}
+            requiredIndicator={requiredFields.docNumber}
             {...sharedInputProps}
           />
         ) : null}
@@ -289,6 +297,7 @@ export function ClientFormFields({
             onOptionSelect={onFullNameOptionSelect}
             disabled={disabled}
             className={inputClassName}
+            requiredIndicator={requiredFields.fullName}
             searchPlaceholder="Buscar por nombre o documento"
             emptyMessage="Sin clientes"
           />
@@ -298,6 +307,7 @@ export function ClientFormFields({
             name="client-full-name"
             value={form.fullName}
             onChange={(event) => updateField("fullName", event.target.value)}
+            requiredIndicator={requiredFields.fullName}
             {...sharedInputProps}
           />
         )}
@@ -406,6 +416,7 @@ export function ClientFormFields({
           onChange={onDepartmentChange}
           disabled={disabled}
           className={inputClassName}
+          requiredIndicator={requiredFields.department}
           searchable
           searchPlaceholder="Buscar departamento..."
           emptyMessage="Sin departamentos"
@@ -418,6 +429,7 @@ export function ClientFormFields({
           onChange={onProvinceChange}
           disabled={disabled || !form.departmentId}
           className={inputClassName}
+          requiredIndicator={requiredFields.province}
           searchable
           searchPlaceholder="Buscar provincia..."
           emptyMessage="Sin provincias"
@@ -430,6 +442,7 @@ export function ClientFormFields({
           onChange={onDistrictChange}
           disabled={disabled || !form.provinceId}
           className={inputClassName}
+          requiredIndicator={requiredFields.district}
           searchable
           searchPlaceholder="Buscar distrito..."
           emptyMessage="Sin distritos"

@@ -4,12 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { SaleOrderActionsPopover } from "./SaleOrderActionsPopover";
 
-const { getTransitions, onDelete, onEdit, onOpenPdf, onOpenPayments } = vi.hoisted(() => ({
+const { getTransitions, onOpenPdf } = vi.hoisted(() => ({
   getTransitions: vi.fn(),
-  onDelete: vi.fn(),
-  onEdit: vi.fn(),
   onOpenPdf: vi.fn(),
-  onOpenPayments: vi.fn(),
 }));
 
 vi.mock("@/shared/services/saleOrderService", () => ({
@@ -18,11 +15,11 @@ vi.mock("@/shared/services/saleOrderService", () => ({
 }));
 
 vi.mock("@/shared/components/components/ActionsPopover", () => ({
-  ActionsPopover: ({ actions, onOpenChange }: { actions: Array<{ id: string; label: string; onClick?: () => void }>; onOpenChange?: (open: boolean) => void }) => (
+  ActionsPopover: ({ actions, onOpenChange }: { actions: Array<{ id: string; label: string; onClick?: () => void; disabled?: boolean }>; onOpenChange?: (open: boolean) => void }) => (
     <div>
       <button type="button" onClick={() => onOpenChange?.(true)}>abrir acciones</button>
       {actions.map((action) => (
-        <button key={action.id} type="button" onClick={action.onClick}>
+        <button key={action.id} type="button" onClick={action.onClick} disabled={action.disabled}>
           {action.label}
         </button>
       ))}
@@ -42,17 +39,11 @@ describe("SaleOrderActionsPopover", () => {
   it("keeps only document actions and does not load workflow transitions", async () => {
     getTransitions.mockReset();
     getTransitions.mockResolvedValue([]);
-    onEdit.mockReset();
-    onDelete.mockReset();
     onOpenPdf.mockReset();
-    onOpenPayments.mockReset();
     render(
       <SaleOrderActionsPopover
         order={order}
-        onDelete={onDelete}
-        onEdit={onEdit}
         onOpenPdf={onOpenPdf}
-        onOpenPayments={onOpenPayments}
       />,
     );
 
@@ -60,8 +51,8 @@ describe("SaleOrderActionsPopover", () => {
     await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
     expect(getTransitions).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Ver PDF" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "generar factura" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "generar boleta" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Factura" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Boleta" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pagos" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Eliminar" })).not.toBeInTheDocument();
