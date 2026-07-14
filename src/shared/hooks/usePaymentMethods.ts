@@ -32,6 +32,14 @@ const buildQuery = (params: ListPaymentMethodsQuery & { name?: string }) => {
   return query;
 };
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = (error as { response?: { data?: { message?: unknown } } }).response;
+    if (typeof response?.data?.message === "string") return response.data.message;
+  }
+  return fallback;
+};
+
 export function usePaymentMethods(params: ListPaymentMethodsQuery & { name?: string }) {
   const [state, setState] = useState<PaymentMethodsState>({
     items: [],
@@ -55,8 +63,8 @@ export function usePaymentMethods(params: ListPaymentMethodsQuery & { name?: str
         page: res.page ?? query.page ?? 1,
         limit: res.limit ?? query.limit ?? 20,
       });
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Error al cargar los m\u00e9todos de pago.");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Error al cargar los m\u00e9todos de pago."));
       setState((prev) => ({ ...prev, items: [], total: 0 }));
     } finally {
       setLoading(false);

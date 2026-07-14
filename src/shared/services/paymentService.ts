@@ -113,7 +113,7 @@ export const getPaymentById = async (id: string): Promise<Payment> => {
   return response.data;
 };
 
-export const removePayment = async (id:string): Promise<{type:String, message:string}> => {
+export const removePayment = async (id:string): Promise<{type:string, message:string}> => {
   const response = await axiosInstance.delete(API_PAYMENT_GROUP.remove(id));
   return response.data;
 }

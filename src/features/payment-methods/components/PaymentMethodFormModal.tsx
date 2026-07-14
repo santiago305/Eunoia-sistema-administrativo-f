@@ -22,6 +22,14 @@ const DEFAULT_FORM: PaymentMethodFormState = {
     requiresVoucher: true,
 };
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error !== null && "response" in error) {
+        const response = (error as { response?: { data?: { message?: unknown } } }).response;
+        if (typeof response?.data?.message === "string") return response.data.message;
+    }
+    return fallback;
+};
+
 export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage = true, onClose, onSaved, primaryColor, entityLabel = "metodo de pago" }: PaymentMethodFormModalProps) {
     const shouldReduceMotion = useReducedMotion();
     const [form, setForm] = useState<PaymentMethodFormState>(DEFAULT_FORM);
@@ -51,9 +59,9 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
                     isActive: method.isActive ?? true,
                     requiresVoucher: method.requiresVoucher ?? true,
                 });
-            } catch (e: any) {
+            } catch (e: unknown) {
                 if (!cancelled) {
-                    setError(e?.response?.data?.message ?? "No se pudo cargar el metodo de pago.");
+                    setError(getErrorMessage(e, "No se pudo cargar el metodo de pago."));
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -94,8 +102,8 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
 
             onSaved?.();
             onClose();
-        } catch (e: any) {
-            setError(e?.response?.data?.message ?? "No se pudo guardar el metodo de pago.");
+        } catch (e: unknown) {
+            setError(getErrorMessage(e, "No se pudo guardar el metodo de pago."));
         } finally {
             setSaving(false);
         }
