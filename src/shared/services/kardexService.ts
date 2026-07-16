@@ -98,7 +98,7 @@ export const exportInventoryLedgerExcel = async (payload: {
 
 export const getInventoryLedgerExportPresets = async (params: {
   productType?: ProductCatalogProductType;
-}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+}): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: Array<{ key: string; label: string }> } }>> => {
   const response = await axiosInstance.get(API_KARDEX_GROUP.exportPresets, { params });
   return response.data;
 };

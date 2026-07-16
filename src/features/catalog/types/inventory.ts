@@ -81,10 +81,10 @@ export type ListInventoryQuery = {
   limit?: number;
   warehouseId?: string;
   skuId?: string;
-  warehouseIdsIn?: string[];
-  warehouseIdsNotIn?: string[];
-  skuIdsIn?: string[];
-  skuIdsNotIn?: string[];
+  warehouseIdsIn?: string[] | string;
+  warehouseIdsNotIn?: string[] | string;
+  skuIdsIn?: string[] | string;
+  skuIdsNotIn?: string[] | string;
   itemId?: string;
   stockItemId?: string;
   locationId?: string;

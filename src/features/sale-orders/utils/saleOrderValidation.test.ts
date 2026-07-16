@@ -7,7 +7,7 @@ describe("saleOrderValidation", () => {
     const form = { ...buildEmptySaleOrderForm(), workflowId: "wf" };
     const result = validateSaleOrderForm(form);
     expect(result.ok).toBe(false);
-    expect((result as any).message).toMatch(/cliente/i);
+    expect(result.ok === false ? result.message : "").toMatch(/cliente/i);
   });
 
   it("permite scheduleDate vacío con items válidos", () => {

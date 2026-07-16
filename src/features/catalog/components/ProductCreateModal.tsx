@@ -383,11 +383,11 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const canSave = canPersistProduct && form.name.trim().length > 0 && !loadingUnits && !createFlowLocked && (!isEditMode || !loadingProduct);
     const isBusy = isEditMode && (loadingUnits || loadingProduct);
 
-    const tabs = [
+    const tabs = useMemo(() => [
         { id: "details" as WorkspaceTab, label: "Producto", icon: PackageCheck },
         ...(effectivePermissions.manageEquivalences ? [{ id: "equivalences" as WorkspaceTab, label: "Equivalencias", icon: Scale }] : []),
         ...(!isMaterial && effectivePermissions.manageRecipes ? [{ id: "recipes" as WorkspaceTab, label: "Recetas", icon: FlaskConical }] : []),
-    ];
+    ], [effectivePermissions.manageEquivalences, effectivePermissions.manageRecipes, isMaterial]);
 
     useEffect(() => {
         if (!tabs.some((tab) => tab.id === workspaceTab)) {

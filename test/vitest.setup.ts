@@ -14,7 +14,7 @@ if (!("ResizeObserver" in globalThis)) {
 }
 
 if (!Element.prototype.scrollIntoView) {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
+   
   Element.prototype.scrollIntoView = () => {};
 }
 

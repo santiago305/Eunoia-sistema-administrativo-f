@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { SaleOrderClientSection } from "./SaleOrderClientSection";
 import {
@@ -14,12 +14,18 @@ vi.mock("@/shared/hooks/useUbigeoCatalog", () => ({
 }));
 
 vi.mock("@/features/clients/components/ClientFormFields", () => ({
-  ClientFormFields: ({ onFullNameTextChange, setForm }: any) => (
+  ClientFormFields: ({
+    onFullNameTextChange,
+    setForm,
+  }: {
+    onFullNameTextChange?: (value: string) => void;
+    setForm: Dispatch<SetStateAction<{ fullName?: string }>>;
+  }) => (
     <button
       type="button"
       onClick={() => {
         onFullNameTextChange?.("Ana Maria");
-        setForm((current: any) => ({ ...current, fullName: "Ana Maria" }));
+        setForm((current) => ({ ...current, fullName: "Ana Maria" }));
       }}
     >
       change-client-name

@@ -224,7 +224,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     async (q?: string) => {
       try {
         const res = await listSkus({ limit: 20, q, productType: config.productType });
-        const options = (res.items ?? []).map((item: any) => ({
+        const options = (res.items ?? []).map((item: ProductSkuWithAttributes) => ({
           id: item.sku.id,
           label: item.sku.name || item.sku.backendSku,
         }));
@@ -428,7 +428,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         q: executedSnapshot.q || undefined,
         filters: executedSnapshot.filters.length ? JSON.stringify(executedSnapshot.filters) : undefined,
         productType: config.productType,
-      } as any)) as unknown as {
+      })) as unknown as {
         items?: InventorySnapshotRow[];
         total?: number;
         page?: number;
@@ -625,7 +625,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         filters: JSON.stringify(executedSnapshot.filters),
         productType: config.productType,
         columns: columnsToExport,
-      } as any);
+      });
       const url = URL.createObjectURL(file.blob);
       const a = document.createElement("a");
       a.href = url;

@@ -59,8 +59,7 @@ export default function IpDetailPage() {
       setError(null);
       const response = await getSecurityHistoryByIp(ip, { limit });
       setData(response);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("No se pudo cargar el historial de la IP.");
     } finally {
       setLoading(false);
@@ -107,8 +106,7 @@ export default function IpDetailPage() {
       await blacklistSecurityIp({ ip, notes: notes.trim() || undefined });
       await fetchData();
       setNotes("");
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("No se pudo bloquear la IP.");
     } finally {
       setMutating(false);
@@ -120,8 +118,7 @@ export default function IpDetailPage() {
       setMutating(true);
       await removeSecurityBlacklistIp(ip);
       await fetchData();
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("No se pudo quitar el bloqueo.");
     } finally {
       setMutating(false);

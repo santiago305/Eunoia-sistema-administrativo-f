@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-export function useFilter<T extends Record<string, any>>(
+export function useFilter<T extends Record<string, unknown>>(
   data: T[],
   fields: (keyof T)[]
 ) {

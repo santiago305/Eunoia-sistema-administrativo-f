@@ -86,8 +86,8 @@ export type GetInventoryDocumentsParams = {
   to?: string | Date;
   warehouseId?: string;
   warehouseIds?: string[];
-  warehouseIdsIn?: string[];
-  warehouseIdsNotIn?: string[];
+  warehouseIdsIn?: string[] | string;
+  warehouseIdsNotIn?: string[] | string;
   docType?: DocType;
   productType?: InventoryDocumentProductType;
   status?: DocStatus;
@@ -95,8 +95,8 @@ export type GetInventoryDocumentsParams = {
   filters?: string;
   includeItems?: boolean;
   createdById?: string;
-  createdByIdsIn?: string[];
-  createdByIdsNotIn?: string[];
+  createdByIdsIn?: string[] | string;
+  createdByIdsNotIn?: string[] | string;
 };
 
 export type InventoryDocumentListResponse = {

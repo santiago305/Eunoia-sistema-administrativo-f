@@ -289,7 +289,7 @@ export function EquivalenceModal({
     return () => {
       active = false;
     };
-  }, [open, itemId, products, handleClose, loadEquivalences, loadUnits, showFeedback]);
+  }, [open, itemId, products, handleClose, loadEquivalences, loadUnits, purchaseType, showFeedback]);
 
   const afectTypeOptions = [
     { value: AfectType.TAXED, label: "GRAVADA - OPERACION ONEROSA" },

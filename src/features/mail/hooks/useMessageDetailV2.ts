@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getMessageDetail, markMessageAsRead, forwardMessage, replyMessage } from "../services/messages.service";
 
 export function useMessageDetailV2(id?: string) {
-  const [item, setItem] = useState<any>(null);
+  const [item, setItem] = useState<Awaited<ReturnType<typeof getMessageDetail>> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {

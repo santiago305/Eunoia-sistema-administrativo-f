@@ -398,7 +398,7 @@ export default function Sources() {
     setTogglingStatus(true);
 
     try {
-      const nextActive = !Boolean(sourcePendingToggle?.isActive);
+      const nextActive = !sourcePendingToggle?.isActive;
       const response = await updateSourceActive(toggleSourceId, { isActive: nextActive });
       showFeedback(successResponse(response.message || "Estado actualizado"));
       setToggleSourceId(null);

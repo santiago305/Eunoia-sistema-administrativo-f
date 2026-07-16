@@ -490,7 +490,7 @@ export default function Clients() {
     setTogglingStatus(true);
 
     try {
-      const nextActive = !Boolean(clientPendingToggle?.isActive);
+      const nextActive = !clientPendingToggle?.isActive;
       const response = await updateClientActive(toggleClientId, { isActive: nextActive });
       showFeedback(successResponse(response.message || "Estado actualizado"));
       setToggleClientId(null);
@@ -579,7 +579,7 @@ export default function Clients() {
         className: "text-black/70",
       }
     ],
-    [canManageClients, ubigeoNames.departmentsById, ubigeoNames.districtsById, ubigeoNames.provincesById],
+    [ubigeoNames.departmentsById, ubigeoNames.districtsById, ubigeoNames.provincesById],
   );
 
   const companyActionTitle = canManageClients ? undefined : "Sin permisos para gestionar clientes.";

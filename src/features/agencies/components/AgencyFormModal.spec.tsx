@@ -28,26 +28,25 @@ vi.mock("@/shared/components/components/UbigeoSelectSection", () => ({
 }));
 
 vi.mock("@/shared/components/components/SystemButton", () => ({
-  SystemButton: ({
-    children,
-    loading: _loading,
-    leftIcon,
-    size: _size,
-    tooltip: _tooltip,
-    variant: _variant,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  SystemButton: (props: React.ButtonHTMLAttributes<HTMLButtonElement> & {
     leftIcon?: React.ReactNode;
     loading?: boolean;
     size?: string;
     tooltip?: string;
     variant?: string;
-  }) => (
-    <button type="button" {...props}>
-      {leftIcon}
-      {children}
-    </button>
-  ),
+  }) => {
+    const { children, leftIcon, ...buttonProps } = props;
+    delete buttonProps.loading;
+    delete buttonProps.tooltip;
+    delete buttonProps.variant;
+
+    return (
+      <button type="button" {...buttonProps}>
+        {leftIcon}
+        {children}
+      </button>
+    );
+  },
 }));
 
 vi.mock("@/shared/components/table/DataTable", () => ({

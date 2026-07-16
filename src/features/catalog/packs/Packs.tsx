@@ -478,7 +478,7 @@ export default function CatalogPacks() {
     setTogglingStatus(true);
 
     try {
-      const nextActive = !Boolean(packPendingToggle?.isActive);
+      const nextActive = !packPendingToggle?.isActive;
       const response = await updatePackActive(togglePackId, { isActive: nextActive });
       showFeedback(successResponse(response.message || "Estado actualizado"));
       setTogglePackId(null);

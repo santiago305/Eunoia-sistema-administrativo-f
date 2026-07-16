@@ -21,7 +21,6 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { useUbigeoCatalog } from "@/shared/hooks/useUbigeoCatalog";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { AgencyFormModal } from "@/features/agencies/components/AgencyFormModal";
 import { AgencySmartSearchPanel } from "@/features/agencies/components/AgencySmartSearchPanel";
@@ -133,8 +132,6 @@ export default function Agencies() {
 
   const { can } = usePermissions();
   const canManageAgencies = can("agencies.manage");
-  const { namesById: ubigeoNames } = useUbigeoCatalog(true);
-
   const [items, setItems] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -581,7 +578,7 @@ export default function Agencies() {
     setTogglingStatus(true);
 
     try {
-      const nextActive = !Boolean(agencyPendingToggle?.isActive);
+      const nextActive = !agencyPendingToggle?.isActive;
 
       const response = await updateAgencyActive(toggleAgencyId, {
         isActive: nextActive,
@@ -646,12 +643,7 @@ export default function Agencies() {
         sortable: false,
       }
     ],
-    [
-      canManageAgencies,
-      ubigeoNames.departmentsById,
-      ubigeoNames.districtsById,
-      ubigeoNames.provincesById,
-    ],
+    [],
   );
 
   return (

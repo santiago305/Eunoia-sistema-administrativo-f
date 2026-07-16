@@ -155,7 +155,7 @@ export const getProductExportColumns = async (params: {
 
 export const getProductExportPresets = async (params: {
   type?: string;
-}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+}): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: Array<{ key: string; label: string }> } }>> => {
   const response = await axiosInstance.get(API_PRODUCTS_GROUP.exportPresets, { params });
   return response.data;
 };

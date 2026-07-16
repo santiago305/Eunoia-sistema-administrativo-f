@@ -108,8 +108,7 @@ export default function SecurityPage() {
       setReasonCatalog(catalog);
       setLastUpdated(new Date());
       setHasLoadedDashboard(true);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("No se pudo cargar la informacion de seguridad.");
     } finally {
       setDashboardLoading(false);
@@ -130,8 +129,7 @@ export default function SecurityPage() {
       setActiveBansLimit(bans.pagination?.limit ?? Math.max(bans.data.length, 1));
       setActiveBansTotal(bans.pagination?.total ?? bans.data.length);
       setHasLoadedBans(true);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("No se pudo cargar la informacion de seguridad.");
     } finally {
       setBansLoading(false);
@@ -177,8 +175,7 @@ export default function SecurityPage() {
         fetchDashboardData({ preserveContent: true }),
         fetchActiveBansPage({ preserveContent: true }),
       ]);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("No se pudo bloquear la IP manualmente.");
     } finally {
       setMutating(false);
@@ -201,8 +198,7 @@ export default function SecurityPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
       showFeedback(successResponse("Exportacion de auditoria completada."));
-    } catch (err) {
-      console.error(err);
+    } catch {
       showFeedback(errorResponse("No se pudo exportar la auditoria."));
     } finally {
       setAuditExporting(false);
@@ -223,8 +219,7 @@ export default function SecurityPage() {
       const result = await getSecurityRiskScoreByIp(ip, { hours });
       setIpRiskResult(result);
       showFeedback(successResponse(`Riesgo consultado para ${result.ip}.`));
-    } catch (err) {
-      console.error(err);
+    } catch {
       setIpRiskResult(null);
       showFeedback(errorResponse("No se pudo consultar el score de riesgo por IP."));
     } finally {

@@ -442,6 +442,8 @@ export default function MailComposerSurface({
     setRecipientsExpanded(Boolean(to.trim() || cc.trim() || bcc.trim()));
     latestBodyRef.current = null;
     lastSyncedBodyRef.current = body || "";
+    // Reset only when switching compose surfaces; recipient/body props seed the new draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [composeId]);
 
   useEffect(() => {

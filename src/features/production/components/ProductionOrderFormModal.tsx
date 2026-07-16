@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -110,7 +110,7 @@ export function ProductionOrderFormModal({
   const [, setQuantityTextByItemId] = useState<Record<string, string>>({});
   const [editingQuantityItemId, setEditingQuantityItemId] = useState<string | null>(null);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setForm(buildEmptyForm());
     setProducts([]);
     setSearchResults([]);
@@ -119,9 +119,9 @@ export function ProductionOrderFormModal({
     quantityTextByItemIdRef.current = {};
     setQuantityTextByItemId({});
     setEditingQuantityItemId(null);
-  };
+  }, []);
 
-  const loadWarehouses = async () => {
+  const loadWarehouses = useCallback(async () => {
     try {
       const res = await listActive();
       setWarehouseOptions(
@@ -134,9 +134,9 @@ export function ProductionOrderFormModal({
       setWarehouseOptions([]);
       showFeedback(errorResponse("Error al cargar almacenes"));
     }
-  };
+  }, [showFeedback]);
 
-  const searchFinishedProducts = async () => {
+  const searchFinishedProducts = useCallback(async () => {
     const normalizedQuery = query.trim();
 
     try {
@@ -152,9 +152,9 @@ export function ProductionOrderFormModal({
       setSearchResults([]);
       showFeedback(errorResponse("Error al cargar SKUs terminados"));
     }
-  };
+  }, [query, showFeedback]);
 
-  const mapOrderProducts = (items: ProductionOrderItem[]) => {
+  const mapOrderProducts = useCallback((items: ProductionOrderItem[]) => {
     const map = new Map<string, CatalogSearchSkuResult>();
 
     items.forEach((item) => {
@@ -191,7 +191,7 @@ export function ProductionOrderFormModal({
     });
 
     return Array.from(map.values());
-  };
+  }, []);
 
   const loadSeries = async (warehouseId: string) => {
     if (!warehouseId) {
@@ -457,7 +457,7 @@ export function ProductionOrderFormModal({
     }
   };
 
-  const loadOrder = async (nextProductionId: string) => {
+  const loadOrder = useCallback(async (nextProductionId: string) => {
     setLoading(true);
     clearFeedback();
 
@@ -485,7 +485,7 @@ export function ProductionOrderFormModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearFeedback, mapOrderProducts, showFeedback]);
 
   useEffect(() => {
     if (!open) return;
@@ -498,12 +498,12 @@ export function ProductionOrderFormModal({
     }
 
     resetForm();
-  }, [open, mode, productionId]);
+  }, [loadOrder, loadWarehouses, mode, open, productionId, resetForm]);
 
   useEffect(() => {
     if (open) return;
     resetForm();
-  }, [open]);
+  }, [open, resetForm]);
 
   useEffect(() => {
     if (!open) return;
@@ -513,7 +513,7 @@ export function ProductionOrderFormModal({
     }, query.trim() ? 500 : 0);
 
     return () => clearTimeout(timeoutId);
-  }, [open, query]);
+  }, [open, query, searchFinishedProducts]);
 
   return (
     <>

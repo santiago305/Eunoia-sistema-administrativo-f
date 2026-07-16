@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { CurrencyTypes } from "@/features/purchases/types/purchaseEnums";
+import type { ListRecurringPurchasesQuery } from "@/features/purchases/types/recurring-purchase.types";
 import { listRecurringPurchases, registerRecurringPurchasePayment } from "./recurringPurchaseService";
 
 const { getMock, postMock } = vi.hoisted(() => ({
@@ -25,7 +26,7 @@ describe("recurringPurchaseService", () => {
       },
     });
 
-    await listRecurringPurchases({
+    const query: ListRecurringPurchasesQuery = {
       page: 1,
       limit: 25,
       q: "hosting",
@@ -36,7 +37,9 @@ describe("recurringPurchaseService", () => {
           values: ["ACTIVE"],
         },
       ],
-    } as any);
+    };
+
+    await listRecurringPurchases(query);
 
     expect(getMock).toHaveBeenCalledWith("/recurring-purchases", {
       params: {

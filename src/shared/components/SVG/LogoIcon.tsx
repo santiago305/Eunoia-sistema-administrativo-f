@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "@/shared/lib/utils"; // Asegúrate de tener esta utilidad
 
-interface LogoIconProps extends React.SVGProps<SVGSVGElement> {}
+type LogoIconProps = React.SVGProps<SVGSVGElement>;
 
 const LogoIcon: React.FC<LogoIconProps> = ({ className, ...props }) => {
   return (

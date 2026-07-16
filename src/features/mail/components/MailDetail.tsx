@@ -153,7 +153,7 @@ export default function MailDetail(props: Props) {
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [inlineSending, setInlineSending] = useState(false);
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
-  const attachments = mail?.attachments ?? [];
+  const attachments = useMemo(() => mail?.attachments ?? [], [mail?.attachments]);
   const threadItems = props.detailData?.thread ?? EMPTY_THREAD_ITEMS;
   const conversationItems = useMemo<DetailThreadItem[]>(() => {
     if (!mail) return [];

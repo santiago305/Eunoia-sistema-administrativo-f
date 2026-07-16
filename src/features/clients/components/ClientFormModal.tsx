@@ -115,7 +115,7 @@ export function ClientFormModal({
         form.provinceId.trim() &&
         form.districtId.trim(),
       ),
-    [form.departmentId, form.districtId, form.docNumber, form.docType, form.fullName, form.provinceId, form.reference],
+    [form.departmentId, form.districtId, form.docNumber, form.docType, form.fullName, form.provinceId],
   );
 
   const canSaveAll = canSave && !phonesLoading;
@@ -130,9 +130,9 @@ export function ClientFormModal({
     "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
   } as CSSProperties;
 
-  const departments = ubigeoCatalog?.departments ?? [];
-  const provinces = ubigeoCatalog?.provinces ?? [];
-  const districts = ubigeoCatalog?.districts ?? [];
+  const departments = useMemo(() => ubigeoCatalog?.departments ?? [], [ubigeoCatalog?.departments]);
+  const provinces = useMemo(() => ubigeoCatalog?.provinces ?? [], [ubigeoCatalog?.provinces]);
+  const districts = useMemo(() => ubigeoCatalog?.districts ?? [], [ubigeoCatalog?.districts]);
 
   const provincesById = useMemo(() => {
     const map: Record<string, { id: string; name: string; departmentId: string }> = {};

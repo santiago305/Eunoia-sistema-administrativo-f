@@ -19,7 +19,8 @@ export const paymentRequiresEvidence = (payment: Pick<Payment, "method">) => {
 };
 
 export const stripPaymentEvidenceFile = (payment: Payment): Payment => {
-  const { paymentEvidenceFile, ...payload } = payment;
+  const payload = { ...payment };
+  delete payload.paymentEvidenceFile;
   return payload;
 };
 

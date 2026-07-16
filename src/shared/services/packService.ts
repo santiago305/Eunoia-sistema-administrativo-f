@@ -143,7 +143,7 @@ export const getPackExportColumns = async (params: {
   return response.data;
 };
 
-export const getPackExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+export const getPackExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: Array<{ key: string; label: string }> } }>> => {
   const response = await axiosInstance.get(packRoutes.exportPresets);
   return response.data;
 };

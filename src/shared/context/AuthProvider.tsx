@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }: PropsUrl) => {
     try {
       await refresh_token();
       return await fetchAuthenticatedUser();
-    } catch (refreshError: unknown) {
+    } catch {
       resetAuthState(true);
       return {
         success: false,

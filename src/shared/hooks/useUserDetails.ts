@@ -15,8 +15,7 @@ export const useUserDetails = () => {
       );
 
       setUserDetails(response.data);
-    } catch (error) {
-      console.error("Error al cargar los detalles del usuario", error);
+    } catch {
       setUserDetails(null);
     } finally {
       setLoading(false);

@@ -617,7 +617,7 @@ export function InventoryAdjustmentsPage({
         sortable: false,
       },
     ];
-  }, [handleProcessDocument, processingDocumentId]);
+  }, [handleProcessDocument, permissions.process, processingDocumentId]);
 
   const handleExport = useCallback(async (columnsToExport: Array<{ key: string; label: string }>) => {
     setExporting(true);
@@ -632,7 +632,7 @@ export function InventoryAdjustmentsPage({
         from: useTableDateRangeForExport ? (fromDate || undefined) : undefined,
         to: useTableDateRangeForExport ? (toDate || undefined) : undefined,
         columns: columnsToExport,
-      } as any);
+      });
       const url = URL.createObjectURL(file.blob);
       const a = document.createElement("a");
       a.href = url;

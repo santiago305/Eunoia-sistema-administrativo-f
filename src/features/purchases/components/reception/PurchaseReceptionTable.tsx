@@ -17,7 +17,8 @@ type Props = {
 };
 
 const itemLabel = (item: PurchaseOrderItemEditOutput) => {
-  const skuName = (item.sku as any)?.sku?.name ?? (item.sku as any)?.name;
+  const sku = item.sku as { sku?: { name?: string | null }; name?: string | null } | null | undefined;
+  const skuName = sku?.sku?.name ?? sku?.name;
   return item.serviceName || item.name || skuName || item.description || "Item de compra";
 };
 

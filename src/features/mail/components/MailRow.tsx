@@ -39,7 +39,7 @@ export default function MailRow({
 }: Props) {
   const snoozeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [snoozePopoverOpen, setSnoozePopoverOpen] = useState(false);
-  const snoozeQuickOptions = useMemo(() => buildSnoozeQuickOptions(new Date()), [snoozePopoverOpen]);
+  const snoozeQuickOptions = useMemo(() => buildSnoozeQuickOptions(new Date()), []);
   const isScheduledFolder = mail.folder === "scheduled";
 
   return (

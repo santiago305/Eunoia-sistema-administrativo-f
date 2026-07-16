@@ -3,6 +3,7 @@ import {
   buildProviderSmartSearchColumns,
   sanitizeProviderSearchSnapshot,
 } from "@/features/providers/utils/providerSmartSearch";
+import type { ProviderSearchStateResponse } from "@/features/providers/types/supplier";
 
 describe("providerSmartSearch", () => {
   it("normalizes legacy status to isActive and drops leadTimeDays", () => {
@@ -25,14 +26,15 @@ describe("providerSmartSearch", () => {
   });
 
   it("builds smart-search columns from activeStates and excludes leadTimeDays", () => {
-    const columns = buildProviderSmartSearchColumns({
+    const searchState: ProviderSearchStateResponse = {
       recent: [],
       saved: [],
       catalogs: {
         documentTypes: [{ id: "RUC", label: "RUC" }],
         activeStates: [{ id: "true", label: "Activos" }],
       },
-    } as any);
+    };
+    const columns = buildProviderSmartSearchColumns(searchState);
 
     expect(columns.some((column) => column.id === "isActive")).toBe(true);
     expect(columns.some((column) => column.id === "leadTimeDays")).toBe(false);

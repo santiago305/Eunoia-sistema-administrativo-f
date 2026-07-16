@@ -104,8 +104,9 @@ function sanitizeRule(rule?: Partial<ClientSearchRule> | null): ClientSearchRule
 }
 
 export function sanitizeClientSearchSnapshot(snapshot?: Partial<ClientSearchSnapshot> | null): ClientSearchSnapshot {
-  const q = snapshot?.q?.trim() || undefined;
-  const filters = (Array.isArray(snapshot?.filters) ? snapshot?.filters : [])
+  const q = typeof snapshot?.q === "string" ? snapshot.q.trim() || undefined : undefined;
+  const filtersSource = snapshot && Array.isArray(snapshot.filters) ? snapshot.filters : [];
+  const filters = filtersSource
     .map((rule) => sanitizeRule(rule))
     .filter(Boolean) as ClientSearchFilters;
   return { q, filters };

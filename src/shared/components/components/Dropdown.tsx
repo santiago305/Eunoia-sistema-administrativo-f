@@ -64,7 +64,7 @@ export function Dropdown({
     const spacing = 8;
 
     let top = rect.bottom + spacing;
-    let left = rect.right;
+    const left = rect.right;
     let transform = "translateX(-100%)";
 
     const wouldOverflowBottom = top + menuRect.height > window.innerHeight;

@@ -648,7 +648,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         from: useTableDateRangeForExport ? (fromDate || undefined) : undefined,
         to: useTableDateRangeForExport ? (toDate || undefined) : undefined,
         columns: columnsToExport,
-      } as any);
+      });
       const url = URL.createObjectURL(file.blob);
       const a = document.createElement("a");
       a.href = url;

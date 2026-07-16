@@ -579,14 +579,17 @@ export default function MailPage() {
     setComposeDrafts((prev) => prev.map((item) => (item.id === composeId ? { ...item, ...patch } : item)));
   }, []);
 
-  const getBackendErrorMessage = (error: unknown): string | null => {
+  const getBackendErrorMessage = useCallback((error: unknown): string | null => {
     if (!isAxiosError<BackendErrorPayload>(error)) return null;
     const backendMessage = error.response?.data?.message;
     if (Array.isArray(backendMessage)) return backendMessage[0] ?? null;
     return typeof backendMessage === "string" ? backendMessage : null;
-  };
+  }, []);
 
-  const isDraftNotFoundError = (error: unknown) => getBackendErrorMessage(error) === "DRAFT_NOT_FOUND";
+  const isDraftNotFoundError = useCallback(
+    (error: unknown) => getBackendErrorMessage(error) === "DRAFT_NOT_FOUND",
+    [getBackendErrorMessage],
+  );
 
   const deleteDraftIdempotent = useCallback(async (draftId: string) => {
     try {
@@ -596,7 +599,7 @@ export default function MailPage() {
       if (isDraftNotFoundError(error)) return true;
       throw error;
     }
-  }, []);
+  }, [isDraftNotFoundError]);
 
   const persistComposeDraft = useCallback(async (composeId: string) => {
     const draft = composeDraftsRef.current.find((item) => item.id === composeId);

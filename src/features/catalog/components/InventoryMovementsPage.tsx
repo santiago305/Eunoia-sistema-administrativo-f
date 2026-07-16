@@ -16,7 +16,7 @@ import {
   parseDateInputValue,
   toLocalDateKey,
 } from "@/shared/utils/functionPurchases";
-import type { ProductCatalogProductType } from "@/features/catalog/types/product";
+import type { ProductCatalogProductType, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import type { InventoryLedgerMovementListItem } from "@/features/catalog/types/inventoryLedgerMovements";
 import {
   InventoryLedgerSearchFields,
@@ -54,9 +54,9 @@ import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { getInventoryMovementPermissions } from "@/features/catalog/utils/catalogPermissions";
 
-function useDebouncedCallback<T extends (...args: any[]) => void>(callback: T, delay: number) {
+function useDebouncedCallback<Args extends unknown[]>(callback: (...args: Args) => void, delay: number) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  return useCallback((...args: Parameters<T>) => {
+  return useCallback((...args: Args) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => callback(...args), delay);
   }, [callback, delay]);
@@ -125,13 +125,13 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   const loadSkus = useCallback(async (q?: string) => {
     try {
       const res = await listSkus({ limit: 20, q, productType: config.productType });
-      const opts = (res.items ?? []).map((item: any) => ({
+      const opts = (res.items ?? []).map((item: ProductSkuWithAttributes) => ({
         id: item.sku.id,
         label: item.sku.name || item.sku.backendSku,
       }));
       setSkuOptions((prev) => {
         const next = [...prev];
-        opts.forEach((opt: any) => {
+        opts.forEach((opt) => {
           if (!next.some((n) => n.id === opt.id)) next.push(opt);
         });
         return next;
@@ -414,7 +414,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           : "-";
         const documentNumber = "-";
         const skuLabel = buildSkuLabelFromItem({
-          skuItem: { sku: item.sku as any, attributes: (item.sku as any).attributes ?? [] } as any,
+          skuItem: { sku: item.sku, attributes: [] },
           fallbackName: item.sku.name || "-",
           withCode: false,
         });

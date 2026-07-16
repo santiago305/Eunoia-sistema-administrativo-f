@@ -42,18 +42,18 @@ export const listInventory = async (params: ListInventoryQuery): Promise<Invento
   };
 
   const warehouseIdsIn = unique([
-    ...mergeLists((params as any).warehouseIdsIn),
+    ...mergeLists(params.warehouseIdsIn),
     ...(params.warehouseId ? [params.warehouseId] : []),
   ]);
 
-  const warehouseIdsNotIn = mergeLists((params as any).warehouseIdsNotIn);
+  const warehouseIdsNotIn = mergeLists(params.warehouseIdsNotIn);
 
   const skuIdsIn = unique([
-    ...mergeLists((params as any).skuIdsIn),
+    ...mergeLists(params.skuIdsIn),
     ...(params.skuId ? [params.skuId] : []),
   ]);
 
-  const skuIdsNotIn = mergeLists((params as any).skuIdsNotIn);
+  const skuIdsNotIn = mergeLists(params.skuIdsNotIn);
 
   const q = params.q?.trim() || params.search?.trim() || undefined;
 
@@ -124,7 +124,7 @@ export const exportInventoryExcel = async (payload: ListInventoryQuery & {
 
 export const getInventoryExportPresets = async (params: {
   productType?: ProductCatalogProductType;
-}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+}): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: Array<{ key: string; label: string }> } }>> => {
   const response = await axiosInstance.get(API_INVENTORY_GROUP.exportPresets, { params });
   return response.data;
 };
@@ -151,10 +151,12 @@ export const deleteInventoryExportPreset = async (params: {
   return response.data;
 };
 
-const normalizeInventoryAlertSetting = (setting: any): InventoryAlertSetting => ({
-  id: setting?.id ?? null,
+type InventoryAlertSettingApi = Partial<Record<keyof InventoryAlertSetting, unknown>>;
+
+const normalizeInventoryAlertSetting = (setting: InventoryAlertSettingApi): InventoryAlertSetting => ({
+  id: typeof setting?.id === "string" ? setting.id : null,
   stockItemId: String(setting?.stockItemId ?? ""),
-  warehouseId: setting?.warehouseId ?? null,
+  warehouseId: typeof setting?.warehouseId === "string" ? setting.warehouseId : null,
   minStockAlertQty:
     setting?.minStockAlertQty === null || setting?.minStockAlertQty === undefined
       ? null
@@ -162,8 +164,8 @@ const normalizeInventoryAlertSetting = (setting: any): InventoryAlertSetting => 
   alertThresholdDays: Number(setting?.alertThresholdDays ?? 3),
   alertEnabled: Boolean(setting?.alertEnabled ?? true),
   isDefault: Boolean(setting?.isDefault ?? false),
-  createdAt: setting?.createdAt,
-  updatedAt: setting?.updatedAt,
+  createdAt: typeof setting?.createdAt === "string" ? setting.createdAt : undefined,
+  updatedAt: typeof setting?.updatedAt === "string" ? setting.updatedAt : undefined,
 });
 
 export const listInventoryAlertSettings = async (

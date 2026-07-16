@@ -42,7 +42,7 @@ export const getPurchaseExportColumns = async (): Promise<PurchaseExportColumn[]
   return response.data;
 };
 
-export const getPurchaseExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+export const getPurchaseExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: PurchaseExportColumn[] } }>> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.exportPresets);
   return response.data;
 };

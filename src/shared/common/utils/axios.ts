@@ -57,16 +57,6 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = (error.config ?? {}) as AuthAxiosRequestConfig;
     const status = error.response?.status;
-    const responseMessage = String(error.response?.data?.message ?? "");
-
-    if (status === 429) {
-      console.warn("Demasiados intentos. Intenta de nuevo en 1 minuto.");
-    }
-
-    if (status === 403 && responseMessage.toLowerCase().includes("csrf")) {
-      console.warn("Tu sesion de seguridad expiro. Recarga la pagina e intenta de nuevo.");
-    }
-
     const isAuthEndpoint = originalRequest.url?.includes('/auth/') ?? false;
     const shouldSkipAuthRefresh = originalRequest.skipAuthRefresh === true;
 

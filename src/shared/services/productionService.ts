@@ -112,7 +112,7 @@ export const getProductionExportColumns = async (): Promise<ProductionExportColu
   return response.data;
 };
 
-export const getProductionExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+export const getProductionExportPresets = async (): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: ProductionExportColumn[] } }>> => {
   const response = await axiosInstance.get(API_PRODUCTION_ORDERS_GROUP.exportPresets);
   return response.data;
 };

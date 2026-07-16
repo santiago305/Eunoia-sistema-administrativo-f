@@ -99,8 +99,9 @@ function sanitizeRule(rule?: Partial<PackSearchRule> | null): PackSearchRule | n
 }
 
 export function sanitizePackSearchSnapshot(snapshot?: Partial<PackSearchSnapshot> | null): PackSearchSnapshot {
-  const q = snapshot?.q?.trim() || undefined;
-  const filters = (Array.isArray(snapshot?.filters) ? snapshot?.filters : [])
+  const q = typeof snapshot?.q === "string" ? snapshot.q.trim() || undefined : undefined;
+  const filtersSource = snapshot && Array.isArray(snapshot.filters) ? snapshot.filters : [];
+  const filters = filtersSource
     .map((rule) => sanitizeRule(rule))
     .filter(Boolean) as PackSearchRule[];
   return { q, filters };

@@ -203,7 +203,9 @@ export function PurchaseDashboardFilters({
   );
 
   const updateDateRange = (range: { startDate: Date | null; endDate: Date | null }) => {
-    const { from: _from, to: _to, ...rest } = value;
+    const rest = { ...value };
+    delete rest.from;
+    delete rest.to;
     const from = range.startDate ? toLocalDateKey(range.startDate) : undefined;
     const to = range.endDate ? toLocalDateKey(range.endDate) : undefined;
 

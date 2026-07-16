@@ -116,4 +116,4 @@ export interface InboxItem {
   message: SentMessageItem | null;
 }
 
-export interface DraftMessageItem extends SentMessageItem {}
+export type DraftMessageItem = SentMessageItem;

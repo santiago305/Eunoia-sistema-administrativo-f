@@ -3,6 +3,7 @@ import {
   buildProductionSmartSearchColumns,
   sanitizeProductionSearchSnapshot,
 } from "@/features/production/utils/productionSmartSearch";
+import type { ProductionSearchStateResponse } from "@/features/production/types/production";
 
 const mockAxiosGet = vi.fn();
 
@@ -36,7 +37,7 @@ describe("productionSmartSearch", () => {
   });
 
   it("reuses warehouses catalog for origin and destination columns", () => {
-    const columns = buildProductionSmartSearchColumns({
+    const searchState: ProductionSearchStateResponse = {
       recent: [],
       saved: [],
       catalogs: {
@@ -44,7 +45,8 @@ describe("productionSmartSearch", () => {
         statuses: [{ id: "DRAFT", label: "Borrador" }],
         products: [{ id: "sku-1", label: "SKU-1 - Producto" }],
       },
-    } as any);
+    };
+    const columns = buildProductionSmartSearchColumns(searchState);
 
     expect(columns.find((column) => column.id === "fromWarehouseId")?.options).toEqual([
       { id: "wh-1", label: "Planta Central" },

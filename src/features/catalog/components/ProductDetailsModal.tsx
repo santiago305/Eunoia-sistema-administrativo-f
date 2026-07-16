@@ -25,6 +25,16 @@ interface ProductDetailsModalProps {
   warehouseId?: string;
 }
 
+type PieActiveShapeProps = {
+  cx: number;
+  cy: number;
+  innerRadius: number;
+  outerRadius: number;
+  startAngle: number;
+  endAngle: number;
+  fill: string;
+};
+
 function SkuInventoryChart({ sku }: { sku: ProductSkuDetail }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -102,19 +112,22 @@ function SkuInventoryChart({ sku }: { sku: ProductSkuDetail }) {
               stroke="#ffffff"
               strokeWidth={3}
               activeIndex={activeIndex ?? undefined}
-              activeShape={(props: any) => (
-                <g>
-                  <Sector
-                    cx={props.cx}
-                    cy={props.cy}
-                    innerRadius={props.innerRadius}
-                    outerRadius={props.outerRadius + 3}
-                    startAngle={props.startAngle}
-                    endAngle={props.endAngle}
-                    fill={props.fill}
-                  />
-                </g>
-              )}
+              activeShape={(props: unknown) => {
+                const shape = props as PieActiveShapeProps;
+                return (
+                  <g>
+                    <Sector
+                      cx={shape.cx}
+                      cy={shape.cy}
+                      innerRadius={shape.innerRadius}
+                      outerRadius={shape.outerRadius + 3}
+                      startAngle={shape.startAngle}
+                      endAngle={shape.endAngle}
+                      fill={shape.fill}
+                    />
+                  </g>
+                );
+              }}
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
             >

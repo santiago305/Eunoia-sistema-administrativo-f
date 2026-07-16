@@ -84,8 +84,9 @@ function sanitizeRule(rule?: Partial<SourceSearchRule> | null): SourceSearchRule
 }
 
 export function sanitizeSourceSearchSnapshot(snapshot?: Partial<SourceSearchSnapshot> | null): SourceSearchSnapshot {
-  const q = snapshot?.q?.trim() || undefined;
-  const filters = (Array.isArray(snapshot?.filters) ? snapshot?.filters : [])
+  const q = typeof snapshot?.q === "string" ? snapshot.q.trim() || undefined : undefined;
+  const filtersSource = snapshot && Array.isArray(snapshot.filters) ? snapshot.filters : [];
+  const filters = filtersSource
     .map((rule) => sanitizeRule(rule))
     .filter(Boolean) as SourceSearchRule[];
   return { q, filters };

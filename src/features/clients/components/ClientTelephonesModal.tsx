@@ -122,7 +122,7 @@ export function ClientTelephonesModal({ clientId, close, className }: Props) {
 
     try {
       const current = pendingTogglePhone;
-      const nextActive = !Boolean(current?.isActive);
+      const nextActive = !current?.isActive;
       const response = await updateTelephoneActive(pendingToggleId, { isActive: nextActive });
       showFeedback(successResponse(response.message || "Estado actualizado"));
       setPendingToggleId(null);

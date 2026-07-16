@@ -29,19 +29,19 @@ export const getDocuments = async (
   };
 
   const warehouseIdsIn = unique([
-    ...mergeList((params as any).warehouseIdsIn),
+    ...mergeList(params.warehouseIdsIn),
     ...mergeList(params.warehouseIds),
     ...(params.warehouseId ? [params.warehouseId] : []),
   ]);
 
-  const warehouseIdsNotIn = mergeList((params as any).warehouseIdsNotIn);
+  const warehouseIdsNotIn = mergeList(params.warehouseIdsNotIn);
 
   const createdByIdsIn = unique([
-    ...mergeList((params as any).createdByIdsIn),
+    ...mergeList(params.createdByIdsIn),
     ...(params.createdById ? [params.createdById] : []),
   ]);
 
-  const createdByIdsNotIn = mergeList((params as any).createdByIdsNotIn);
+  const createdByIdsNotIn = mergeList(params.createdByIdsNotIn);
 
   const requestParams: Record<string, unknown> = {
     ...params,
@@ -150,7 +150,7 @@ export const exportInventoryDocumentsExcel = async (payload: GetInventoryDocumen
 export const getInventoryDocumentsExportPresets = async (params: {
   docType: DocType;
   productType?: InventoryDocumentProductType;
-}): Promise<Array<{ metricId: string; name: string; snapshot: any }>> => {
+}): Promise<Array<{ metricId: string; name: string; snapshot: { columns?: Array<{ key: string; label: string }> } }>> => {
   const response = await axiosInstance.get(API_DOCUMENT_INVENTORY_GROUP.exportPresets, { params });
   return response.data;
 };

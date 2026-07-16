@@ -16,7 +16,7 @@ type TransferInput = {
   quantity: number;
 };
 
-let stockState: StockMockData = structuredClone(stockMockData);
+const stockState: StockMockData = structuredClone(stockMockData);
 
 const resolveWarehouseId = (warehouse: string) => {
   const value = warehouse.trim();

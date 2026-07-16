@@ -91,8 +91,9 @@ function sanitizeRule(rule?: Partial<AgencySearchRule> | null): AgencySearchRule
 }
 
 export function sanitizeAgencySearchSnapshot(snapshot?: Partial<AgencySearchSnapshot> | null): AgencySearchSnapshot {
-  const q = snapshot?.q?.trim() || undefined;
-  const filters = (Array.isArray(snapshot?.filters) ? snapshot?.filters : [])
+  const q = typeof snapshot?.q === "string" ? snapshot.q.trim() || undefined : undefined;
+  const filtersSource = snapshot && Array.isArray(snapshot.filters) ? snapshot.filters : [];
+  const filters = filtersSource
     .map((rule) => sanitizeRule(rule))
     .filter(Boolean) as AgencySearchRule[];
   return { q, filters };

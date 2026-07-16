@@ -1,5 +1,4 @@
 import axiosInstance from "@/shared/common/utils/axios";
-import { getApiErrorMessage } from "@/shared/common/utils/apiError";
 import { API_AUTH_GROUP } from "./APIs";
 import { LoginCredentials } from "@/features/Auth/types/auth";
 import type { AxiosRequestConfig } from "axios";
@@ -71,9 +70,7 @@ export const logoutUser = async () => {
   try {
     const response = await axiosInstance.post(API_AUTH_GROUP.logout);
     return response.data;
-  } catch (error: unknown) {
-    const message = getApiErrorMessage(error, "Error en logout");
-    console.error(message);
+  } catch {
     return false;
   }
 };

@@ -58,7 +58,7 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
       try {
         const response = await findAllRoles({ status: "all" });
         const normalized: UserRoleOptionApi[] = (Array.isArray(response) ? response : [])
-          .filter((r) => !Boolean((r as { deleted?: boolean }).deleted))
+          .filter((r) => !(r as { deleted?: boolean }).deleted)
           .map((r) => ({
             id: String(r.id ?? ""),
             description: String(r.description ?? "").toLowerCase(),
@@ -66,8 +66,8 @@ export const UserForm = ({ closeModal, onCreated }: UserFormProps) => {
           .filter((r) => !!r.id && r.description !== MASTER_ROLE_DESCRIPTION);
 
         setRoles(normalized);
-      } catch (error) {
-        console.error("Error fetching roles:", error);
+      } catch {
+        setRoles([]);
       }
     };
 

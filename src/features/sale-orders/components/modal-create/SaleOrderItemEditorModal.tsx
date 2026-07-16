@@ -220,6 +220,8 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
         };
 
         void loadDetail();
+        // Hydrate only when the selected pack changes; value/onChange updates inside the effect should not retrigger it.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, value.referencePackId]);
 
     useEffect(() => {
@@ -676,7 +678,6 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                     <SystemButton
                         onClick={() => {
                             onConfirm();
-                            console.log("confirm", value);
                         }}
                     >
                         Guardar

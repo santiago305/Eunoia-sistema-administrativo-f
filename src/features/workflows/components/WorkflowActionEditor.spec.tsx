@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkflowActionEditor } from "./WorkflowActionEditor";
+import { ACTIONS, type ActionCatalogItem, type WorkflowAction } from "../types/workflow";
+
+type SelectOption = { value: string; label: string };
 
 const serviceMocks = vi.hoisted(() => ({
   listAllUbigeoProvinces: vi.fn(),
@@ -16,10 +19,20 @@ vi.mock("@/shared/services/warehouseServices", () => ({
 }));
 
 vi.mock("@/shared/components/components/FloatingSelect", () => ({
-  FloatingSelect: ({ label, value, options, onChange }: any) => (
+  FloatingSelect: ({
+    label,
+    value,
+    options,
+    onChange,
+  }: {
+    label: string;
+    value: string;
+    options: SelectOption[];
+    onChange: (value: string) => void;
+  }) => (
     <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
       <option value="" />
-      {options.map((option: any) => (
+      {options.map((option) => (
         <option key={option.value} value={option.value}>{option.label}</option>
       ))}
     </select>
@@ -27,13 +40,23 @@ vi.mock("@/shared/components/components/FloatingSelect", () => ({
 }));
 
 vi.mock("@/shared/components/components/FloatingMultiSelect", () => ({
-  FloatingMultiSelect: ({ label, name, options, onChange }: any) => (
+  FloatingMultiSelect: ({
+    label,
+    name,
+    options,
+    onChange,
+  }: {
+    label: string;
+    name: string;
+    options: SelectOption[];
+    onChange: (value: string[]) => void;
+  }) => (
     <div>
-      <button type="button" onClick={() => onChange(options.map((option: any) => option.value))}>
+      <button type="button" onClick={() => onChange(options.map((option) => option.value))}>
         {label}
       </button>
       <div data-testid={`${name}-options`}>
-        {options.map((option: any) => (
+        {options.map((option) => (
           <span key={option.value}>{option.label}</span>
         ))}
       </div>
@@ -42,6 +65,10 @@ vi.mock("@/shared/components/components/FloatingMultiSelect", () => ({
 }));
 
 describe("WorkflowActionEditor", () => {
+  const provinceAssignmentCatalog: ActionCatalogItem[] = [
+    { type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE, configSchema: {} },
+  ];
+
   beforeEach(() => {
     serviceMocks.listAllUbigeoProvinces.mockResolvedValue([
       { id: "1501", name: "Lima" },
@@ -54,15 +81,15 @@ describe("WorkflowActionEditor", () => {
 
   it("stores mode, provinces, and warehouse for province assignment", async () => {
     const onChange = vi.fn();
-    const value = [{
-      type: "ASSIGN_WAREHOUSE_BY_PROVINCE",
+    const value: WorkflowAction[] = [{
+      type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
       config: { mode: "INCLUDE", provinceIds: [], warehouseId: "" },
       position: 0,
-    }] as any;
+    }];
 
     render(
       <WorkflowActionEditor
-        catalog={[{ type: "ASSIGN_WAREHOUSE_BY_PROVINCE", configSchema: {} }] as any}
+        catalog={provinceAssignmentCatalog}
         value={value}
         onChange={onChange}
       />,
@@ -97,15 +124,15 @@ describe("WorkflowActionEditor", () => {
   it("keeps province options available when warehouses cannot be loaded", async () => {
     serviceMocks.listAllActiveWarehouses.mockRejectedValueOnce(new Error("forbidden"));
     const onChange = vi.fn();
-    const value = [{
-      type: "ASSIGN_WAREHOUSE_BY_PROVINCE",
+    const value: WorkflowAction[] = [{
+      type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
       config: { mode: "INCLUDE", provinceIds: [], warehouseId: "" },
       position: 0,
-    }] as any;
+    }];
 
     render(
       <WorkflowActionEditor
-        catalog={[{ type: "ASSIGN_WAREHOUSE_BY_PROVINCE", configSchema: {} }] as any}
+        catalog={provinceAssignmentCatalog}
         value={value}
         onChange={onChange}
       />,
@@ -123,15 +150,15 @@ describe("WorkflowActionEditor", () => {
 
   it("shows every selected province below the province multi-select and removes them from chips", async () => {
     const onChange = vi.fn();
-    const value = [{
-      type: "ASSIGN_WAREHOUSE_BY_PROVINCE",
+    const value: WorkflowAction[] = [{
+      type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
       config: { mode: "INCLUDE", provinceIds: ["1501", "0401", "9999"], warehouseId: "" },
       position: 0,
-    }] as any;
+    }];
 
     render(
       <WorkflowActionEditor
-        catalog={[{ type: "ASSIGN_WAREHOUSE_BY_PROVINCE", configSchema: {} }] as any}
+        catalog={provinceAssignmentCatalog}
         value={value}
         onChange={onChange}
       />,
@@ -151,22 +178,22 @@ describe("WorkflowActionEditor", () => {
   });
 
   it("hides provinces already assigned in sibling warehouse assignment actions", async () => {
-    const value = [
+    const value: WorkflowAction[] = [
       {
-        type: "ASSIGN_WAREHOUSE_BY_PROVINCE",
+        type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
         config: { mode: "INCLUDE", provinceIds: ["1501"], warehouseId: "warehouse-1" },
         position: 0,
       },
       {
-        type: "ASSIGN_WAREHOUSE_BY_PROVINCE",
+        type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
         config: { mode: "INCLUDE", provinceIds: [], warehouseId: "" },
         position: 1,
       },
-    ] as any;
+    ];
 
     render(
       <WorkflowActionEditor
-        catalog={[{ type: "ASSIGN_WAREHOUSE_BY_PROVINCE", configSchema: {} }] as any}
+        catalog={provinceAssignmentCatalog}
         value={value}
         onChange={vi.fn()}
       />,
