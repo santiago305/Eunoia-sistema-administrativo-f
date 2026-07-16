@@ -11,10 +11,9 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-// Si tu proyecto usa otro wrapper de ECharts, cambia este import.
-// El más común es: npm i echarts echarts-for-react
-import ReactECharts from "echarts-for-react";
+import ReactECharts from "echarts-for-react/lib/core";
 import { PageShell } from "@/shared/layouts/PageShell";
+import { echarts } from "../utils/echarts";
 
 type Product = {
   id: string;
@@ -371,6 +370,7 @@ export default function CatalogSummary() {
 
             <div className="mt-4">
               <ReactECharts
+                echarts={echarts}
                 option={statusPieOption}
                 style={{ height: 260, width: "100%" }}
                 opts={{ renderer: "canvas" }}
@@ -400,6 +400,7 @@ export default function CatalogSummary() {
 
             <div className="mt-4">
               <ReactECharts
+                echarts={echarts}
                 option={createdBarOption}
                 style={{ height: 260, width: "100%" }}
                 opts={{ renderer: "canvas" }}

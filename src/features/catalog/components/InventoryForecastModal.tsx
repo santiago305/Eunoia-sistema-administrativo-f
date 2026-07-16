@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import * as echarts from "echarts";
 import { useReducedMotion } from "framer-motion";
 import { Modal } from "@/shared/components/modales/Modal";
 import { normalizeQuantity } from "@/shared/utils/functionPurchases";
 import { useEChart } from "../utils/inventoryUtils";
+import type { EChartsOption } from "../utils/echarts";
 import type { SkuStockForecast } from "@/shared/services/inventoryService";
 
 type InventoryForecastModalProps = {
@@ -59,7 +59,7 @@ export function InventoryForecastModal({
 
   const animationConfig = useMemo<
     Pick<
-      echarts.EChartsOption,
+      EChartsOption,
       | "animation"
       | "animationDuration"
       | "animationEasing"
@@ -136,7 +136,7 @@ export function InventoryForecastModal({
     };
   }, [forecast]);
 
-  const forecastChart = useMemo<echarts.EChartsOption>(() => {
+  const forecastChart = useMemo<EChartsOption>(() => {
     if (!forecast) {
       return {
         ...animationConfig,

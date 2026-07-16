@@ -18,11 +18,12 @@
  * @returns {Router} Instancia de enrutador de la aplicación.
  */
 
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import { authRoutes } from "./modules/AuthRoutes";
 import { dashboardRoutes } from "./modules/DashboardRoutes";
-import ErrorPage from "@/pages/Error404";
 
+const ErrorPage = lazy(() => import("@/pages/Error404"));
 
 export const router = createBrowserRouter([
   ...authRoutes,

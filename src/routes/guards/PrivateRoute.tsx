@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { lazy, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { PrivateRouteProps } from "@/routes/guards/typeGuards";
 import { RoutesPaths } from "../config/routesPaths";
-import ErrorPage from "@/pages/Error404";
 import { getFirstAccessibleProtectedPath } from "../config/routeAccess";
+
+const ErrorPage = lazy(() => import("@/pages/Error404"));
 
 /**
  * Private route guard.

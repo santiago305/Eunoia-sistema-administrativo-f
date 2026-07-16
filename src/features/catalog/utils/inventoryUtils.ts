@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { InventoryRow, InventorySnapshotOutput } from "../types/inventory";
-import * as echarts from "echarts";
+import { echarts, type EChartsOption, type EChartsType } from "./echarts";
 
-export const useEChart = (options: echarts.EChartsOption) => {
-  const chartRef = useRef<echarts.EChartsType | null>(null);
+export const useEChart = (options: EChartsOption) => {
+  const chartRef = useRef<EChartsType | null>(null);
   const optionsRef = useRef(options);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
 
