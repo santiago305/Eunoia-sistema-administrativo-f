@@ -378,14 +378,15 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                             label="Descripción"
                             name="item-description"
                             value={value.description}
-                            onChange={(text) =>
+                            onChange={(text) => {
+                                setPackQuery(text);
                                 onChange({
                                     ...value,
                                     description: text,
                                     referencePackId: undefined,
                                     basePrice: undefined,
-                                })
-                            }
+                                });
+                            }}
                             onOptionSelect={(option) => {
                                 setExcludedSkuIds([]);
                                 onChange({

@@ -1,4 +1,6 @@
 import { ClientDocType } from "@/features/clients/types/client";
+import type { PaymentMethodPivot } from "@/features/payment-methods/types/paymentMethod";
+import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
 import type {
   CreateClientBody,
   UpdateClientBody,
@@ -404,6 +406,17 @@ export type SaleOrderListResponse = {
   total: number;
   page: number;
   limit: number;
+};
+
+export type SaleOrderEditorCatalogsResponse = {
+  clients: Array<{ id: string; fullName: string; docNumber?: string | null }>;
+  warehouses: Array<{ warehouseId: string; name: string }>;
+  subsidiaries: Array<{ id: string; alias: string; address?: string | null; basePrice?: number | null }>;
+  sources: Array<{ id: string; name: string }>;
+  workflows: Array<{ id: string; name: string; isActive: boolean }>;
+  advisers: Array<{ id: string; name: string; email: string }>;
+  paymentMethods: PaymentMethodPivot[];
+  companyPaymentAccounts: CompanyPaymentAccount[];
 };
 
 export type SaleOrderExportColumn = {

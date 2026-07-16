@@ -14,6 +14,7 @@ type Props = {
   setForm: Dispatch<SetStateAction<SaleOrderEditorForm>>;
   clientOptions: FloatingSuggestOption[];
   onSelectClient: (clientId: string) => void;
+  onSearchClients?: (query: string) => void | Promise<void>;
   loading?: boolean;
 };
 
@@ -22,6 +23,7 @@ export function SaleOrderClientSection({
   setForm,
   clientOptions,
   onSelectClient,
+  onSearchClients,
   loading = false,
 }: Props) {
   const { catalog } = useUbigeoCatalog(true);
@@ -118,7 +120,8 @@ export function SaleOrderClientSection({
         }}
         showTelephoneField
         fullNameOptions={clientOptions}
-        onFullNameTextChange={() =>
+        onFullNameTextChange={(value) => {
+          void onSearchClients?.(value);
           setForm((current) => {
             if (current.clientMode === "update" && current.selectedClientId) {
               return current;
@@ -129,8 +132,8 @@ export function SaleOrderClientSection({
               clientMode: "create",
               selectedClientId: "",
             };
-          })
-        }
+          });
+        }}
         onFullNameOptionSelect={(option) => onSelectClient(option.value)}
       />
     </SaleOrderEditorSection>

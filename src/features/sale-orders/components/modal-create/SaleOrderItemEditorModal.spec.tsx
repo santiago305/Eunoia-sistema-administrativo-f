@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SaleOrderItemEditorModal } from "@/features/sale-orders/components/modal-create/SaleOrderItemEditorModal";
+import type { SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
 import { getPackById, listPacks } from "@/shared/services/packService";
 
 vi.mock("@/shared/services/packService", () => ({
@@ -37,24 +39,33 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
     it("debounces pack searches and only requests the latest query", async () => {
         vi.mocked(listPacks).mockClear();
 
-        render(
-            <SaleOrderItemEditorModal
-                open
-                title="Editar"
-                value={{
+        function Harness() {
+            const [value, setValue] = useState<SaleOrderItemInput>({
                     description: "",
                     quantity: 1,
                     unitPrice: 0,
                     total: 0,
                     components: [],
-                }}
-                onChange={() => {}}
-                onClose={() => {}}
-                onConfirm={() => {}}
-            />,
-        );
+                });
+
+            return (
+                <SaleOrderItemEditorModal
+                    open
+                    title="Editar"
+                    value={value}
+                    onChange={setValue}
+                    onClose={() => {}}
+                    onConfirm={() => {}}
+                />
+            );
+        }
+
+        render(<Harness />);
 
         const descriptionInput = screen.getByLabelText("Descripción");
+        await waitFor(() => expect(listPacks).toHaveBeenCalled());
+        vi.mocked(listPacks).mockClear();
+
         fireEvent.change(descriptionInput, { target: { value: "p" } });
         fireEvent.change(descriptionInput, { target: { value: "pa" } });
         fireEvent.change(descriptionInput, { target: { value: "pack" } });
@@ -208,8 +219,7 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
 
         const priceInput = within(dialog).getByLabelText("Precio unit.") as HTMLInputElement;
         await waitFor(() => expect(priceInput.value).toContain("12.5"));
-        await user.clear(priceInput);
-        await user.type(priceInput, "9.9");
+        fireEvent.change(priceInput, { target: { value: "9.9" } });
 
         await user.click(within(dialog).getByRole("button", { name: "Agregar" }));
 

@@ -49,6 +49,12 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
   const [presetName, setPresetName] = useState("");
 
   const selectedKeys = useMemo(() => new Set(selected.map((column) => column.key)), [selected]);
+  const orderedColumns = useMemo(() => {
+    const availableKeys = new Set(columns.map((column) => column.key));
+    const selectedInOrder = selected.filter((column) => availableKeys.has(column.key));
+    const unselected = columns.filter((column) => !selectedKeys.has(column.key));
+    return [...selectedInOrder, ...unselected];
+  }, [columns, selected, selectedKeys]);
 
   const toggleColumn = (column: TColumn) => {
     setSelected((current) => {
@@ -80,7 +86,7 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
   return (
     <div className="relative inline-block">
       <SystemButton ref={buttonRef} size={buttonSize} variant={buttonVariant} className={buttonClass}
-      tooltip={buttonTooltip} leftIcon={<Download className="h-4 w-4" />} onClick={() => setOpen((v) => !v)}>
+      tooltip={buttonTooltip} aria-label={buttonTooltip ?? (buttonLabel || "Exportar")} leftIcon={<Download className="h-4 w-4" />} onClick={() => setOpen((v) => !v)}>
         {buttonLabel}
       </SystemButton>
 
@@ -108,7 +114,7 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
           ) : null}
 
           <div className="max-h-72 space-y-2 overflow-auto scrollbar-panel p-0">
-            {columns.map((column) => {
+            {orderedColumns.map((column) => {
               const checked = selectedKeys.has(column.key);
               return (
                 <div

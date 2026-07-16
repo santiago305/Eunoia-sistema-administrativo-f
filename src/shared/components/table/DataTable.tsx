@@ -220,20 +220,28 @@ export function DataTable<T extends Record<string, unknown>>({
       };
     });
   };
-  const copyTextToClipboard = async (text: string) => {
-    if (!text.trim()) return;
+  const copyTextToClipboard = async (text: unknown) => {
+    const normalized = typeof text === "string" ? text.trim() : "";
+    if (!normalized) return;
 
     try {
-      await navigator.clipboard.writeText(text.trim());
+      await navigator.clipboard.writeText(normalized);
     } catch {
       const textarea = document.createElement("textarea");
-      textarea.value = text.trim();
+      textarea.value = normalized;
       textarea.style.position = "fixed";
       textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
+      try {
+        document.body.appendChild(textarea);
+        textarea.select();
+        if (typeof document.execCommand === "function") {
+          document.execCommand("copy");
+        }
+      } finally {
+        if (textarea.parentNode) {
+          document.body.removeChild(textarea);
+        }
+      }
     }
   };
 
@@ -655,7 +663,10 @@ export function DataTable<T extends Record<string, unknown>>({
                                       event.stopPropagation();
 
                                       if (column.copy) {
-                                        const text = event.currentTarget.innerText;
+                                        const text =
+                                          event.currentTarget.innerText ??
+                                          event.currentTarget.textContent ??
+                                          "";
                                         void copyTextToClipboard(text);
                                         return;
                                       }
