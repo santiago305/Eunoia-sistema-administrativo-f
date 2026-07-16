@@ -12,7 +12,10 @@ import {
   parseDateInputValue,
   toLocalDateKey,
 } from "@/shared/utils/functionPurchases";
-import { useSaleOrderPaymentOptions } from "../useSaleOrderPaymentOptions";
+import {
+  useSaleOrderPaymentOptions,
+  type SaleOrderPaymentSelectOption,
+} from "../useSaleOrderPaymentOptions";
 import type {
   SaleOrderEditorForm,
   SaleOrderEditorPayment,
@@ -26,6 +29,8 @@ import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 type Props = {
   form: SaleOrderEditorForm;
   setForm: React.Dispatch<React.SetStateAction<SaleOrderEditorForm>>;
+  methodOptions?: SaleOrderPaymentSelectOption[];
+  bankAccountOptions?: SaleOrderPaymentSelectOption[];
 };
 
 type PaymentModalState = {
@@ -49,9 +54,20 @@ const resolveUrl = (value?: string | null) => {
   }
 };
 
-export function SaleOrderPaymentCards({ form, setForm }: Props) {
-  const { methodOptions, bankAccountOptions } =
-    useSaleOrderPaymentOptions();
+export function SaleOrderPaymentCards({
+  form,
+  setForm,
+  methodOptions: providedMethodOptions,
+  bankAccountOptions: providedBankAccountOptions,
+}: Props) {
+  const shouldLoadPaymentOptions =
+    providedMethodOptions === undefined || providedBankAccountOptions === undefined;
+  const fallbackOptions = useSaleOrderPaymentOptions({
+    enabled: shouldLoadPaymentOptions,
+  });
+  const methodOptions = providedMethodOptions ?? fallbackOptions.methodOptions;
+  const bankAccountOptions =
+    providedBankAccountOptions ?? fallbackOptions.bankAccountOptions;
   const [modalState, setModalState] = useState<PaymentModalState | null>(null);
   const [draftPhotoUrl, setDraftPhotoUrl] = useState("");
   const money = useMemo(

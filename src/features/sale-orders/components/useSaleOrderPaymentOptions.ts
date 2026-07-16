@@ -7,34 +7,77 @@ import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPa
 import type { PaymentMethodPivot } from "@/features/payment-methods/types/paymentMethod";
 import { PaymentTypes } from "@/features/purchases/types/purchaseEnums";
 import { getCompanyPaymentAccountDisplay } from "@/features/payments/paymentAccountView";
+import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
 
-export function useSaleOrderPaymentOptions() {
+export type SaleOrderPaymentSelectOption = { value: string; label: string };
+
+type UseSaleOrderPaymentOptionsConfig = {
+  enabled?: boolean;
+};
+
+const normalizePaymentMethods = (paymentMethods: PaymentMethodPivot[]) => {
+  const normalized = (paymentMethods ?? []).map((method) => ({
+    ...method,
+    name: (method.name ?? "").trim().toUpperCase(),
+  }));
+
+  normalized.sort((left, right) => {
+    const leftIsCash = left.name === "EFECTIVO";
+    const rightIsCash = right.name === "EFECTIVO";
+    if (leftIsCash && !rightIsCash) return -1;
+    if (!leftIsCash && rightIsCash) return 1;
+    return left.name.localeCompare(right.name, "es");
+  });
+
+  return normalized;
+};
+
+export const buildSaleOrderPaymentMethodOptions = (
+  paymentMethods: PaymentMethodPivot[],
+): SaleOrderPaymentSelectOption[] => {
+  const fromApi = normalizePaymentMethods(paymentMethods).map((method) => {
+    const label = `${method.name} ${method.number ? `- ${method.number}` : ""}`.trim();
+    return { value: label, label };
+  });
+
+  if (fromApi.length > 0) return fromApi;
+
+  return [
+    { value: PaymentTypes.EFECTIVO, label: "EFECTIVO" },
+    { value: PaymentTypes.TRANSFERENCIA, label: "TRANSFERENCIA" },
+    { value: PaymentTypes.TARJETA, label: "TARJETA" },
+    { value: PaymentTypes.DEPOSITO, label: "DEPOSITO" },
+    { value: PaymentTypes.PLIN, label: "PLIN" },
+    { value: PaymentTypes.YAPE, label: "YAPE" },
+  ];
+};
+
+export const buildSaleOrderBankAccountOptions = (
+  accounts: CompanyPaymentAccount[],
+): SaleOrderPaymentSelectOption[] =>
+  (accounts ?? [])
+    .filter((account) => account.isActive)
+    .map((account) => ({
+      value: account.id,
+      label: getCompanyPaymentAccountDisplay(account),
+    }));
+
+export function useSaleOrderPaymentOptions({
+  enabled = true,
+}: UseSaleOrderPaymentOptionsConfig = {}) {
   const { company } = useCompany();
   const companyId = company?.companyId ?? "";
   const { showFeedback, clearFeedback } = useFeedbackToast();
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodPivot[]>([]);
-  const [bankAccountOptions, setBankAccountOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [bankAccountOptions, setBankAccountOptions] = useState<SaleOrderPaymentSelectOption[]>([]);
 
   const loadCompanyMethods = useCallback(
     async (id: string) => {
       clearFeedback();
       try {
         const data = await getPaymentMethodsByCompany(id);
-        const normalized = (data ?? []).map((m) => ({
-          ...m,
-          name: (m.name ?? "").trim().toUpperCase(),
-        }));
-
-        normalized.sort((a, b) => {
-          const aIsCash = a.name === "EFECTIVO";
-          const bIsCash = b.name === "EFECTIVO";
-          if (aIsCash && !bIsCash) return -1;
-          if (!aIsCash && bIsCash) return 1;
-          return a.name.localeCompare(b.name, "es");
-        });
-
-        setPaymentMethods(normalized ?? []);
+        setPaymentMethods(normalizePaymentMethods(data ?? []));
       } catch {
         showFeedback(errorResponse("No se pudieron cargar los metodos de pago."));
       }
@@ -47,14 +90,7 @@ export function useSaleOrderPaymentOptions() {
       clearFeedback();
       try {
         const accounts = await listCompanyPaymentAccountsByCompany(id);
-        setBankAccountOptions(
-          (accounts ?? [])
-            .filter((account) => account.isActive)
-            .map((account) => ({
-              value: account.id,
-              label: getCompanyPaymentAccountDisplay(account),
-            })),
-        );
+        setBankAccountOptions(buildSaleOrderBankAccountOptions(accounts ?? []));
       } catch {
         showFeedback(errorResponse("No se pudieron cargar las cuentas de pago."));
         setBankAccountOptions([]);
@@ -64,7 +100,7 @@ export function useSaleOrderPaymentOptions() {
   );
 
   useEffect(() => {
-    if (!companyId) {
+    if (!enabled || !companyId) {
       setPaymentMethods([]);
       setBankAccountOptions([]);
       return;
@@ -72,26 +108,12 @@ export function useSaleOrderPaymentOptions() {
 
     void loadCompanyMethods(companyId);
     void loadCompanyBankAccounts(companyId);
-  }, [companyId, loadCompanyBankAccounts, loadCompanyMethods]);
+  }, [companyId, enabled, loadCompanyBankAccounts, loadCompanyMethods]);
 
-  const methodOptions = useMemo(() => {
-    const fromApi = (paymentMethods ?? []).map((m) => {
-      const label = `${m.name} ${m.number ? `- ${m.number}` : ""}`.trim();
-      return { value: label, label };
-    });
-
-    if (fromApi.length > 0) return fromApi;
-
-    return [
-      { value: PaymentTypes.EFECTIVO, label: "EFECTIVO" },
-      { value: PaymentTypes.TRANSFERENCIA, label: "TRANSFERENCIA" },
-      { value: PaymentTypes.TARJETA, label: "TARJETA" },
-      { value: PaymentTypes.DEPOSITO, label: "DEPÓSITO" },
-      { value: PaymentTypes.PLIN, label: "PLIN" },
-      { value: PaymentTypes.YAPE, label: "YAPE" },
-    ];
-  }, [paymentMethods]);
+  const methodOptions = useMemo(
+    () => buildSaleOrderPaymentMethodOptions(paymentMethods),
+    [paymentMethods],
+  );
 
   return { companyId, methodOptions, bankAccountOptions };
 }
-

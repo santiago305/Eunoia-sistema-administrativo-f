@@ -71,7 +71,9 @@ describe("SaleOrderStatusPopover", () => {
     expect(screen.getByText("Confirmar")).toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Historial del tipo"));
-    expect(screen.getByText("historial abierto")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("historial abierto")).toBeInTheDocument(),
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Pendiente" }));
     await userEvent.click(screen.getByText("Confirmar"));

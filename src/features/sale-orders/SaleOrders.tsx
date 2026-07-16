@@ -18,8 +18,6 @@ import {
     deleteSaleOrderSearchMetric,
     exportSaleOrdersExcel,
     fetchSaleOrderById,
-    getSaleOrderExportColumns,
-    getSaleOrderExportPresets,
     getSaleOrderPdf,
     getSaleOrderSearchState,
     listSaleOrders,
@@ -70,6 +68,11 @@ import { SystemButton } from "@/shared/components/components/SystemButton";
 import { formatDate } from "@/shared/utils/formatDate";
 import { getDateKey, parseDateOnly } from "@/shared/components/components/date-picker/dateUtils";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import {
+    invalidateSaleOrderExportPresetsCache,
+    loadSaleOrderExportColumnsCached,
+    loadSaleOrderExportPresetsCached,
+} from "@/features/sale-orders/utils/saleOrderExportCache";
 
 const sanitizeSaleOrderImportRows = (rows: SaleOrderJsonImportRow[]): SaleOrderJsonImportRow[] =>
     rows.map((row) => {
@@ -273,7 +276,7 @@ export default function SaleOrders() {
 
     const loadExportColumns = useCallback(async () => {
         try {
-            const response = await getSaleOrderExportColumns();
+            const response = await loadSaleOrderExportColumnsCached();
             setExportColumns(response ?? []);
         } catch {
             showFeedbackRef.current(errorResponse("Error al cargar columnas de exportacion."));
@@ -282,7 +285,7 @@ export default function SaleOrders() {
 
     const loadExportPresets = useCallback(async () => {
         try {
-            const response = await getSaleOrderExportPresets();
+            const response = await loadSaleOrderExportPresetsCached(userId);
             setExportPresets(
                 (response ?? []).map((item) => ({
                     metricId: item.metricId,
@@ -293,7 +296,7 @@ export default function SaleOrders() {
         } catch {
             showFeedbackRef.current(errorResponse("Error al cargar presets de exportacion."));
         }
-    }, []);
+    }, [userId]);
 
     const updateSelectedOrder = useCallback((updater: React.SetStateAction<SaleOrder | null>) => {
         setSelectedOrder((current) => {
@@ -715,15 +718,17 @@ export default function SaleOrders() {
             columns: payload.columns,
             useDateRange: useTableDateRangeForExport,
         });
+        invalidateSaleOrderExportPresetsCache(userId);
         await loadExportPresets();
         showFeedback(successResponse("Preset de exportacion guardado."));
-    }, [loadExportPresets, showFeedback, useTableDateRangeForExport]);
+    }, [loadExportPresets, showFeedback, useTableDateRangeForExport, userId]);
 
     const handleDeleteExportPreset = useCallback(async (metricId: string) => {
         await deleteSaleOrderExportPreset(metricId);
+        invalidateSaleOrderExportPresetsCache(userId);
         await loadExportPresets();
         showFeedback(successResponse("Preset eliminado."));
-    }, [loadExportPresets, showFeedback]);
+    }, [loadExportPresets, showFeedback, userId]);
 
     const handleBulkAssign = useCallback(
         async (input: { assignedBy: string | null; saleOrderIds: string[] }) => {
@@ -1133,7 +1138,6 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
-                        
                             <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Tipos"
                                 leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
                             </SystemButton>
@@ -1166,6 +1170,8 @@ export default function SaleOrders() {
                         onChange: handleTableDateRangeChange,
                         label: "Fechas",
                         name: "sale-orders-range-dates",
+                        fields: TABLE_DATE_FIELD_OPTIONS,
+                        fieldValue: tableDateField,
                         onFieldChange: handleTableDateFieldChange,
                     }}
                     useRangeDatesForExternalExport

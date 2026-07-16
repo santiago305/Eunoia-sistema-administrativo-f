@@ -13,16 +13,14 @@ import { FloatingTextarea } from "@/shared/components/components/FloatingTextare
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { FloatingSuggestOption } from "@/shared/components/components/FloatingSuggestInput";
 import { getClientById, listClients } from "@/shared/services/clientService";
+import type { AdviserOption } from "@/shared/services/adviserService";
 import { listSubsidiaries } from "@/shared/services/agencyService";
-import { listSources } from "@/shared/services/sourceService";
-import { listWorkflows } from "@/shared/services/workflowService";
-import { listActiveWarehouses } from "@/shared/services/warehouseServices";
 import {
-  listAdvisers,
-  type AdviserOption,
-} from "@/shared/services/adviserService";
-import { saveSaleOrderWithClient } from "@/shared/services/saleOrderService";
+  getSaleOrderEditorCatalogs,
+  saveSaleOrderWithClient,
+} from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
+import { useCompany } from "@/shared/hooks/useCompany";
 import type { SaleOrder } from "../../types/saleOrder";
 import {
   SaleOrderItemsSection,
@@ -41,6 +39,11 @@ import {
   type SaleOrderEditorForm,
 } from "./saleOrderEditorForm";
 import { normalizeMoney, parseDecimalInput } from "@/shared/utils/functionPurchases";
+import {
+  buildSaleOrderBankAccountOptions,
+  buildSaleOrderPaymentMethodOptions,
+  type SaleOrderPaymentSelectOption,
+} from "../useSaleOrderPaymentOptions";
 
 type Props = {
   mode: "create" | "edit";
@@ -74,6 +77,8 @@ export function SaleOrderEditor({
   onDirtyChange,
   onFooterChange,
 }: Props) {
+  const { company } = useCompany();
+  const companyId = company?.companyId ?? "";
   const [form, setForm] = useState<SaleOrderEditorForm>(() =>
     order
       ? mapSaleOrderToEditorForm(order)
@@ -84,6 +89,9 @@ export function SaleOrderEditor({
   const [clientOptions, setClientOptions] = useState<FloatingSuggestOption[]>(
     [],
   );
+  const [initialClientOptions, setInitialClientOptions] = useState<
+    FloatingSuggestOption[]
+  >([]);
   const [warehouseOptions, setWarehouseOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
@@ -96,7 +104,18 @@ export function SaleOrderEditor({
   const [subsidiaryOptions, setSubsidiaryOptions] = useState<
     Array<{ value: string; label: string; address?: string, cost?: number }>
   >([]);
+  const [initialSubsidiaryOptions, setInitialSubsidiaryOptions] = useState<
+    Array<{ value: string; label: string; address?: string, cost?: number }>
+  >([]);
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [subsidiarySearchQuery, setSubsidiarySearchQuery] = useState("");
   const [adviserOptions, setAdviserOptions] = useState<AdviserOption[]>([]);
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<
+    SaleOrderPaymentSelectOption[]
+  >(() => buildSaleOrderPaymentMethodOptions([]));
+  const [bankAccountOptions, setBankAccountOptions] = useState<
+    SaleOrderPaymentSelectOption[]
+  >([]);
   const initialSnapshot = useRef("");
   const itemsSectionRef = useRef<SaleOrderItemsSectionHandle>(null);
 
@@ -120,63 +139,53 @@ export function SaleOrderEditor({
   useEffect(() => {
     let cancelled = false;
     setCatalogLoading(true);
-    void Promise.all([
-      listClients({ page: 1, limit: 100 }),
-      listActiveWarehouses({ page: 1, limit: 100 }),
-      listSubsidiaries({ isActive: true }),
-      listSources({ page: 1, limit: 100, isActive: "true" }),
-      listWorkflows(),
-      listAdvisers(),
-    ])
-      .then(
-        ([
-          clients,
-          warehouses,
-          subsidiaries,
-          sources,
-          workflows,
-          advisers,
-        ]) => {
-          if (cancelled) return;
-          setClientOptions(
-            clients.items.map((client) => ({
-              value: client.id,
-              label: client.fullName,
-              searchText: `${client.fullName} ${client.docNumber ?? ""}`.trim(),
-              metaText: client.docNumber || undefined,
+    void getSaleOrderEditorCatalogs(companyId || undefined)
+      .then((catalogs) => {
+        if (cancelled) return;
+        const nextClientOptions = catalogs.clients.map((client) => ({
+          value: client.id,
+          label: client.fullName,
+          searchText: `${client.fullName} ${client.docNumber ?? ""}`.trim(),
+          metaText: client.docNumber || undefined,
+        }));
+        setInitialClientOptions(nextClientOptions);
+        setClientOptions(nextClientOptions);
+        setWarehouseOptions(
+          catalogs.warehouses.map((warehouse) => ({
+            value: warehouse.warehouseId,
+            label: warehouse.name,
+          })),
+        );
+        const nextSubsidiaryOptions = catalogs.subsidiaries.map((subsidiary) => ({
+          value: subsidiary.id,
+          label: subsidiary.alias,
+          address: subsidiary.address ?? undefined,
+          cost: subsidiary.basePrice ?? undefined,
+        }));
+        setInitialSubsidiaryOptions(nextSubsidiaryOptions);
+        setSubsidiaryOptions(nextSubsidiaryOptions);
+        setSourceOptions(
+          catalogs.sources.map((source) => ({
+            value: source.id,
+            label: source.name,
+          })),
+        );
+        setWorkflowOptions(
+          catalogs.workflows
+            .filter((workflow) => workflow.isActive)
+            .map((workflow) => ({
+              value: workflow.id,
+              label: workflow.name,
             })),
-          );
-          setWarehouseOptions(
-            warehouses.items.map((warehouse) => ({
-              value: warehouse.warehouseId,
-              label: warehouse.name,
-            })),
-          );
-          setSubsidiaryOptions(
-            subsidiaries.map((subsidiary) => ({
-              value: subsidiary.id,
-              label: subsidiary.alias,
-              address: subsidiary.address ?? undefined,
-              cost: subsidiary.basePrice ?? undefined,
-            })),
-          );
-          setSourceOptions(
-            sources.items.map((source) => ({
-              value: source.id,
-              label: source.name,
-            })),
-          );
-          setWorkflowOptions(
-            workflows
-              .filter((workflow) => workflow.isActive)
-              .map((workflow) => ({
-                value: workflow.id,
-                label: workflow.name,
-              })),
-          );
-          setAdviserOptions(advisers);
-        },
-      )
+        );
+        setAdviserOptions(catalogs.advisers);
+        setPaymentMethodOptions(
+          buildSaleOrderPaymentMethodOptions(catalogs.paymentMethods),
+        );
+        setBankAccountOptions(
+          buildSaleOrderBankAccountOptions(catalogs.companyPaymentAccounts),
+        );
+      })
       .catch(() =>
         sileo.error({ title: "No se pudieron cargar los catálogos." }),
       )
@@ -186,7 +195,75 @@ export function SaleOrderEditor({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [companyId]);
+
+  useEffect(() => {
+    const q = clientSearchQuery.trim();
+    if (!q) {
+      setClientOptions(initialClientOptions);
+      return;
+    }
+
+    let cancelled = false;
+    const timerId = window.setTimeout(() => {
+      void listClients({ page: 1, limit: 25, q })
+        .then((result) => {
+          if (cancelled) return;
+          setClientOptions(
+            (result.items ?? []).map((client) => ({
+              value: client.id,
+              label: client.fullName,
+              searchText: `${client.fullName} ${client.docNumber ?? ""}`.trim(),
+              metaText: client.docNumber || undefined,
+            })),
+          );
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setClientOptions([]);
+          sileo.error({ title: "No se pudieron buscar clientes." });
+        });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timerId);
+    };
+  }, [clientSearchQuery, initialClientOptions]);
+
+  useEffect(() => {
+    const q = subsidiarySearchQuery.trim();
+    if (!q) {
+      setSubsidiaryOptions(initialSubsidiaryOptions);
+      return;
+    }
+
+    let cancelled = false;
+    const timerId = window.setTimeout(() => {
+      void listSubsidiaries({ isActive: true, q })
+        .then((result) => {
+          if (cancelled) return;
+          setSubsidiaryOptions(
+            result.map((subsidiary) => ({
+              value: subsidiary.id,
+              label: subsidiary.alias,
+              address: subsidiary.address ?? undefined,
+              cost: subsidiary.basePrice ?? undefined,
+            })),
+          );
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setSubsidiaryOptions([]);
+          sileo.error({ title: "No se pudieron buscar sucursales." });
+        });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timerId);
+    };
+  }, [subsidiarySearchQuery, initialSubsidiaryOptions]);
 
   const selectClient = useCallback((clientId: string) => {
     setCatalogLoading(true);
@@ -442,7 +519,12 @@ export function SaleOrderEditor({
                 </SaleOrderEditorSection>
               </div>
               <div>
-                <SaleOrderPaymentCards form={form} setForm={setForm} />
+                <SaleOrderPaymentCards
+                  form={form}
+                  setForm={setForm}
+                  methodOptions={paymentMethodOptions}
+                  bankAccountOptions={bankAccountOptions}
+                />
                 <SaleOrderEditorSection title="Nota">
                   <FloatingTextarea
                     label="Nota"
@@ -468,6 +550,7 @@ export function SaleOrderEditor({
             setForm={setForm}
             clientOptions={clientOptions}
             onSelectClient={selectClient}
+            onSearchClients={setClientSearchQuery}
             loading={catalogLoading}
           />
           <SaleOrderInformationSection
@@ -489,6 +572,7 @@ export function SaleOrderEditor({
             form={form}
             setForm={setForm}
             subsidiaryOptions={subsidiaryOptions}
+            onSearchSubsidiaries={setSubsidiarySearchQuery}
           />
         </aside>
       </div>
