@@ -45,12 +45,14 @@ describe("purchase pages routing", () => {
     expect(getRouteMetaByUrl("/compra/PO-123")?.path).toBe(RoutesPaths.purchaseEdit);
   });
 
-  it("adds page-based purchase entries to the sidebar", () => {
+  it("uses the purchase parent as the dashboard entry in the sidebar", () => {
     const purchaseMenu = getSidebarItems().find((item) => item.label === "Compras");
+    expect(purchaseMenu?.href).toBe(RoutesPaths.purchaseDashboard);
+
     const purchaseHrefs = purchaseMenu?.children?.map((child) => child.href) ?? [];
 
-    expect(purchaseHrefs).toContain(RoutesPaths.purchaseDashboard);
     expect(purchaseHrefs).toContain(RoutesPaths.purchases);
+    expect(purchaseHrefs).not.toContain(RoutesPaths.purchaseDashboard);
     expect(purchaseHrefs).not.toContain("/compras/nueva");
     expect(purchaseHrefs).not.toContain("/compras/historial");
     expect(purchaseHrefs).toContain(RoutesPaths.recurringPurchases);

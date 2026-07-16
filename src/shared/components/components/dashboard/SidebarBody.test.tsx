@@ -43,9 +43,21 @@ vi.mock("@/features/mail/services/messages.service", () => ({
 vi.mock("./SidebarItem", () => ({
   default: ({ item }: { item: SidebarItem }) => (
     <section data-testid={`sidebar-item-${item.label}`}>
-      <span>{item.label}</span>
+      {item.href ? (
+        <a data-testid={`sidebar-parent-${item.href}`} href={item.href}>
+          {item.label}
+        </a>
+      ) : (
+        <span>{item.label}</span>
+      )}
       {item.children?.map((child) => (
-        <span key={child.href ?? child.label}>{child.label}</span>
+        <a
+          data-testid={`sidebar-child-${child.href ?? child.label}`}
+          href={child.href}
+          key={child.href ?? child.label}
+        >
+          {child.label}
+        </a>
       ))}
     </section>
   ),
@@ -65,22 +77,24 @@ describe("SidebarBody purchase dashboard permissions", () => {
     authState.isSuperAdmin = false;
   });
 
-  it("hides the purchase dashboard child when the user only has purchase list access", () => {
+  it("keeps the dashboard parent as text when the user only has purchase list access", () => {
     authState.permissions = ["page.purchases.view"];
 
     renderSidebar();
 
     const purchaseSection = screen.getByTestId("sidebar-item-Compras");
-    expect(within(purchaseSection).queryByText("Dashboard Compras")).toBeNull();
+    expect(within(purchaseSection).queryByTestId("sidebar-parent-/compras/dashboard")).toBeNull();
+    expect(within(purchaseSection).getByTestId("sidebar-child-/compras")).toBeDefined();
   });
 
-  it("shows the purchase dashboard child when the user has the dashboard base permission", () => {
+  it("links the purchase parent to the dashboard when the user has the dashboard base permission", () => {
     authState.permissions = ["page.purchases.view", "purchases_dashboard.view"];
 
     renderSidebar();
 
     const purchaseSection = screen.getByTestId("sidebar-item-Compras");
-    expect(within(purchaseSection).getByText("Dashboard Compras")).toBeDefined();
+    expect(within(purchaseSection).getByTestId("sidebar-parent-/compras/dashboard")).toBeDefined();
+    expect(within(purchaseSection).getByTestId("sidebar-child-/compras")).toBeDefined();
   });
 
   it("keeps the purchase parent visible with only recurring purchase permissions", () => {
@@ -92,8 +106,8 @@ describe("SidebarBody purchase dashboard permissions", () => {
     renderSidebar();
 
     const purchaseSection = screen.getByTestId("sidebar-item-Compras");
-    expect(within(purchaseSection).queryByText("Dashboard Compras")).toBeNull();
-    expect(within(purchaseSection).getAllByText("Compras")).toHaveLength(1);
-    expect(within(purchaseSection).getByText("Recurrentes")).toBeDefined();
+    expect(within(purchaseSection).queryByTestId("sidebar-parent-/compras/dashboard")).toBeNull();
+    expect(within(purchaseSection).queryByTestId("sidebar-child-/compras")).toBeNull();
+    expect(within(purchaseSection).getByTestId("sidebar-child-/compras/recurrentes")).toBeDefined();
   });
 });

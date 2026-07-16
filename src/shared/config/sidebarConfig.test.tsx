@@ -19,7 +19,7 @@ describe("sidebarConfig", () => {
     expect(purchaseSection?.children?.some((item) => item.href === "/compras/historial")).toBe(false);
   });
 
-  it("uses Dashboard Compras as the purchase dashboard header title", () => {
-    expect(getSidebarTitleByPath(RoutesPaths.purchaseDashboard)).toBe("Dashboard Compras");
+  it("uses Compras as the purchase dashboard header title", () => {
+    expect(getSidebarTitleByPath(RoutesPaths.purchaseDashboard)).toBe("Compras");
   });
 });

@@ -1,54 +1,65 @@
-# React + TypeScript + Vite
+# Eunoia Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacion administrativa construida con React, TypeScript, Vite y Tailwind.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 20+
+- pnpm
 
-## Expanding the ESLint configuration
+## Configuracion local
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. Copia `.env.example` a `.env`.
+2. Ajusta la URL del backend si cambia:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```env
+VITE_API_BASE_URL=http://localhost:3000/api
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Instalacion
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+pnpm install
 ```
+
+## Ejecutar
+
+```bash
+pnpm dev
+```
+
+La aplicacion queda disponible en `http://localhost:5173`.
+
+## Scripts utiles
+
+```bash
+pnpm build
+pnpm test:unit
+pnpm lint
+pnpm preview
+```
+
+## Docker
+
+Desde la raiz del workspace (`D:\eunoia`):
+
+```bash
+docker compose up --build
+```
+
+El frontend se publica con Nginx en `http://localhost:5173`.
+
+Para cambiar la URL de API en la imagen, ajusta el build arg del servicio `frontend` en el `docker-compose.yml` raiz:
+
+```yaml
+args:
+  VITE_API_BASE_URL: https://api.tu-dominio.com/api
+```
+
+## Estructura
+
+- `src/app`: punto de entrada de la aplicacion.
+- `src/routes`: rutas y metadatos de permisos.
+- `src/features`: pantallas y logica por modulo.
+- `src/shared`: componentes, servicios, hooks y configuracion compartida.
+- `test`: pruebas de integracion livianas con Vitest.
