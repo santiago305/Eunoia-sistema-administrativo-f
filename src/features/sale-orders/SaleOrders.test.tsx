@@ -1,9 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SaleOrders from "@/features/sale-orders/SaleOrders";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { ClientType, type SaleOrder } from "@/features/sale-orders/types/saleOrder";
+import { clearSaleOrderExportCache } from "@/features/sale-orders/utils/saleOrderExportCache";
 
 const toDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -168,6 +169,7 @@ const emptySearchState = {
 
 describe("SaleOrders", () => {
   beforeEach(() => {
+    clearSaleOrderExportCache();
     authState.isAuthenticated = false;
     authState.userId = null;
     socketHandlers.clear();
@@ -416,6 +418,10 @@ describe("SaleOrders", () => {
     );
 
     await screen.findByText("SO-1");
+    fireEvent.click(screen.getByRole("button", { name: "Columnas" }));
+    const codeColumnRow = screen.getByText("Codigo FB").closest("div")?.parentElement;
+    fireEvent.click(within(codeColumnRow as HTMLElement).getByTitle("Mostrar columna"));
+    await screen.findByText("FB-123");
 
     fireEvent.click(screen.getByText("Cliente Prueba"));
     fireEvent.click(screen.getByText("12345678"));

@@ -6,6 +6,7 @@ import type {
   SaleOrder,
   SaleOrderExportColumn,
   SaleOrderExportPreset,
+  SaleOrderEditorCatalogsResponse,
   SaleOrderSkuAttribute,
   SaleOrderSkuSnapshot,
   SaleOrderSkuUnit,
@@ -203,6 +204,16 @@ export const fetchSaleOrders = listSaleOrders;
 
 export const fetchSaleOrderById = async (id: string): Promise<SaleOrder> => {
   const response = await axiosInstance.get<SaleOrder>(API_SALE_ORDERS_GROUP.detail(id));
+  return response.data;
+};
+
+export const getSaleOrderEditorCatalogs = async (
+  companyId?: string,
+): Promise<SaleOrderEditorCatalogsResponse> => {
+  const response = await axiosInstance.get<SaleOrderEditorCatalogsResponse>(
+    API_SALE_ORDERS_GROUP.editorCatalogs,
+    { params: companyId ? { companyId } : undefined },
+  );
   return response.data;
 };
 

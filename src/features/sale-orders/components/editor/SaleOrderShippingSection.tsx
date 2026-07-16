@@ -25,6 +25,7 @@ type Props = {
     payableCost?: number;
     generatesPayable?: boolean;
   }>;
+  onSearchSubsidiaries?: (query: string) => void | Promise<void>;
 };
 
 const resolveUrl = (value?: string | null) => {
@@ -41,6 +42,7 @@ export function SaleOrderShippingSection({
   form,
   setForm,
   subsidiaryOptions,
+  onSearchSubsidiaries,
 }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const imageUrl = useMemo(
@@ -115,12 +117,13 @@ export function SaleOrderShippingSection({
         className={inputClassName}
         value={form.agencyDetail}
         options={subsidiaryOptions}
-        onChange={(agencyDetail) =>
+        onChange={(agencyDetail) => {
+          void onSearchSubsidiaries?.(agencyDetail);
           setForm((current) => ({
             ...current,
             agencyDetail,
-          }))
-        }
+          }));
+        }}
         onOptionSelect={(option) =>
           setForm((current) => {
             const subsidiary = subsidiaryOptions.find((item) => item.value === option.value);
@@ -143,7 +146,7 @@ export function SaleOrderShippingSection({
         emptyMessage="Sin agencias"
         panelWidthMode="min-trigger"
       />
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 space-y-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2 mt-3">
         <FloatingInput
           label="Tarifa cobrada al cliente"
           className={inputClassName}

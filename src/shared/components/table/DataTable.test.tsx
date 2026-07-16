@@ -420,6 +420,32 @@ describe("DataTable copy columns", () => {
     expect(onRowClick).not.toHaveBeenCalled();
   });
 
+  it("uses textContent for copy columns when innerText is unavailable", () => {
+    const onRowClick = vi.fn();
+
+    render(
+      <TooltipProvider>
+        <DataTable
+          tableId="copy-column-text-content-test"
+          data={data}
+          columns={[{ id: "name", header: "Nombre", accessorKey: "name", copy: true }]}
+          rowKey="id"
+          onRowClick={onRowClick}
+        />
+      </TooltipProvider>,
+    );
+
+    const cell = screen.getByText("Cliente demo").closest("td")!;
+
+    Object.defineProperty(cell, "innerText", {
+      configurable: true,
+      value: undefined,
+    });
+
+    expect(() => fireEvent.click(cell)).not.toThrow();
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
   it("keeps text selection disabled by default", () => {
     render(
       <TooltipProvider>

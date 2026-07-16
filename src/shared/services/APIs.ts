@@ -462,6 +462,7 @@ export const API_SALE_ORDERS_GROUP = {
   payments: (id: string) => `/sale-orders/${id}/payments`,
   paymentById: (id: string, paymentId: string) => `/sale-orders/${id}/payments/${paymentId}`,
   searchState: "/sale-orders/search-state",
+  editorCatalogs: "/sale-orders/editor-catalogs",
   statistics: "/sale-orders/statistics",
   saveSearchMetric: "/sale-orders/search-metrics",
   deleteSearchMetric: (metricId: string) => `/sale-orders/search-metrics/${metricId}`,

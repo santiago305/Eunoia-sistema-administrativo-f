@@ -153,4 +153,24 @@ describe("SaleOrderPaymentCards", () => {
     ) as Array<{ amount: number }>;
     expect(payments).toHaveLength(1);
   });
+
+  it("allows saving a payment greater than the pending balance", async () => {
+    const user = userEvent.setup();
+    render(<PaymentHarness />);
+
+    await user.click(
+      screen.getByRole("button", { name: /2026-07-06.*S\/\s?10\.00/i }),
+    );
+    await user.clear(screen.getByLabelText("Monto"));
+    await user.type(screen.getByLabelText("Monto"), "150");
+    await user.click(screen.getByRole("button", { name: "Guardar pago" }));
+
+    expect(sileoError).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Detalle de pago" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("payment-state")).toHaveTextContent('"amount":150');
+  });
 });
