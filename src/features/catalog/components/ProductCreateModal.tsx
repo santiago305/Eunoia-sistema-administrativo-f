@@ -75,6 +75,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const [recipeFailures, setRecipeFailures] = useState<string[]>([]);
     const [nonPersistedDrafts, setNonPersistedDrafts] = useState<string[]>([]);
     const [equivalenceFailures, setEquivalenceFailures] = useState<EquivalenceDraft[]>([]);
+    const [primaVariantsLoaded, setPrimaVariantsLoaded] = useState(false);
 
     const label = entityLabel ?? (productType === ProductTypes.MATERIAL ? "materia prima" : "producto");
     const isMaterial = productType === ProductTypes.MATERIAL;
@@ -132,6 +133,8 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         setPersistedSkuRowsById({});
         setPersistedRecipesBySkuId({});
         setEditedRecipesBySkuId({});
+        setPrimaVariants([]);
+        setPrimaVariantsLoaded(false);  
 
         if (isEditMode) {
             setDraft(createEmptyProductCreateDraft());
@@ -322,7 +325,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 customSku: item.sku.customSku ?? undefined,
             }));
             setPrimaVariants(normalized);
+            setPrimaVariantsLoaded(true);
         } catch {
+            setPrimaVariantsLoaded(true);
             showFeedback(errorResponse("Error al cargar materias primas"));
         } finally {
             setLoadingPrimaVariants(false);
@@ -330,9 +335,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     }, [showFeedback]);
 
     useEffect(() => {
-        if (!open || isMaterial || loadingPrimaVariants || primaVariants.length > 0) return;
+        if (!open || isMaterial || loadingPrimaVariants || primaVariantsLoaded) return;
         void loadMaterials();
-    }, [open, isMaterial, loadingPrimaVariants, primaVariants.length, loadMaterials]);
+    }, [open, isMaterial, loadingPrimaVariants, primaVariantsLoaded, loadMaterials]);
 
     useEffect(() => {
         if (!open || !isEditMode) return;
