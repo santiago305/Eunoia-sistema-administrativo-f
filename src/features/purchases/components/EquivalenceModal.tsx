@@ -74,6 +74,7 @@ export function EquivalenceModal({
   const [pendingFactor, setPendingFactor] = useState<number>(0);
   const [pendingStockUnit, setPendingStockUnit] = useState<string | null>(null);
   const [pendingPurchaseUnit, setPendingPurchaseUnit] = useState<string | null>(null);
+  const [unitsLoaded, setUnitsLoaded] = useState(false);
 
   const resetPending = () => {
     setPendingItemAfectType(AfectType.TAXED);
@@ -93,17 +94,20 @@ export function EquivalenceModal({
   }, [onClose]);
 
   const loadUnits = useCallback(async (canUpdate: () => boolean) => {
-    if (units.length > 0) return units;
+    if (unitsLoaded) return units;
     try {
       const res = await listUnits();
       const list = res ?? [];
-      if (canUpdate()) setUnits(list);
+      if (canUpdate()) {
+        setUnits(list);
+        setUnitsLoaded(true);
+      }
       return list;
     } catch {
       if (canUpdate()) showFeedback(errorResponse("Error al cargar unidades"));
       return [];
     }
-  }, [showFeedback, units]);
+  }, [showFeedback, units, unitsLoaded]);
 
   const loadEquivalences = useCallback(async (
     productId: string,
