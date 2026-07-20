@@ -266,10 +266,15 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const skuSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSearchSku = useCallback((q: string) => {
     if (skuSearchDebounceRef.current) clearTimeout(skuSearchDebounceRef.current);
+    if (!q.trim()) return;
     skuSearchDebounceRef.current = setTimeout(() => {
       void loadSkus(q);
     }, 500);
   }, [loadSkus]);
+
+  useEffect(() => () => {
+    if (skuSearchDebounceRef.current) clearTimeout(skuSearchDebounceRef.current);
+  }, []);
 
   const smartSearchColumns = useMemo(
     () =>
@@ -362,9 +367,6 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     void loadSearchState();
   }, [loadSearchState]);
 
-  useEffect(() => {
-    void loadSkus();
-  }, [loadSkus]);
   useEffect(() => {
     if (!permissions.export) {
       setExportColumns([]);

@@ -56,10 +56,16 @@ import { getInventoryMovementPermissions } from "@/features/catalog/utils/catalo
 
 function useDebouncedCallback<Args extends unknown[]>(callback: (...args: Args) => void, delay: number) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  return useCallback((...args: Args) => {
+  const debouncedCallback = useCallback((...args: Args) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => callback(...args), delay);
   }, [callback, delay]);
+
+  useEffect(() => () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+
+  return debouncedCallback;
 }
 
 type MovementRow = {
@@ -143,7 +149,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   }, [config.productType]);
 
   const handleSearchSku = useDebouncedCallback((q: string) => {
-    void loadSkus(q);
+    if (q.trim()) void loadSkus(q);
   }, 1000);
 
   const [items, setItems] = useState<InventoryLedgerMovementListItem[]>([]);
@@ -172,8 +178,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
 
   useEffect(() => {
     void loadSearchState();
-    void loadSkus();
-  }, [loadSearchState, loadSkus]);
+  }, [loadSearchState]);
 
   const loadExportColumns = useCallback(async () => {
     const response = await getInventoryLedgerExportColumns({
