@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import axiosInstance from "@/shared/common/utils/axios";
 import {
   getInventoryAlertSetting,
+  listInventory,
   listInventoryAlertSettings,
   updateInventoryAlertSetting,
 } from "./inventoryService";
@@ -100,6 +101,32 @@ describe("inventoryService alert settings", () => {
       minStockAlertQty: 4,
       alertThresholdDays: 2,
       alertEnabled: true,
+    });
+  });
+});
+
+describe("inventoryService snapshots", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("normalizes repeated warehouse and sku filters before requesting inventory", async () => {
+    vi.mocked(axiosInstance.get).mockResolvedValueOnce({ data: { items: [], total: 0, page: 1, limit: 25 } });
+
+    await listInventory({
+      warehouseId: "warehouse-a",
+      warehouseIdsIn: ["warehouse-a", " warehouse-b "],
+      skuId: "sku-a",
+      skuIdsIn: "sku-a,sku-b",
+      search: " harina ",
+      page: 1,
+      limit: 25,
+    });
+
+    expect(axiosInstance.get).toHaveBeenCalledWith("/inventory", {
+      params: expect.objectContaining({
+        warehouseIdsIn: "warehouse-a,warehouse-b",
+        skuIdsIn: "sku-a,sku-b",
+        q: "harina",
+      }),
     });
   });
 });
