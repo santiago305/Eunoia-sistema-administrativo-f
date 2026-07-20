@@ -81,7 +81,7 @@ export const getAllPaymentMethods = async (): Promise<PaymentMethod[]> => {
 export const getPaymentMethodsByCompany = async (
   companyId: string,
 ): Promise<PaymentMethodPivot[]> => {
-  const response = await axiosInstance.get(API_PAYMENT_METHODS_GROUP.byCompany(companyId));
+  const response = await axiosInstance.get(API_COMPANY_METHODS_GROUP.byCompany(companyId));
   return response.data.data as PaymentMethodPivot[];
 };
 
