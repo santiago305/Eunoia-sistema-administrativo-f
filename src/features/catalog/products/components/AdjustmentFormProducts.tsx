@@ -208,13 +208,18 @@ export default function AdjustmentFormProducts({
 
     if (skuSearchTimeoutRef.current) {
       window.clearTimeout(skuSearchTimeoutRef.current);
+      skuSearchTimeoutRef.current = null;
     }
 
-    const delay = text.trim() ? 350 : 0;
+    if (!text.trim()) {
+      setSearchResults(undefined);
+      return;
+    }
+
     skuSearchTimeoutRef.current = window.setTimeout(() => {
       skuSearchTimeoutRef.current = null;
       void searchSkus(latestSkuQueryRef.current);
-    }, delay);
+    }, 350);
   }, [searchSkus]);
 
   const addItem = (skuId: string, quantity = 1) => {
@@ -451,7 +456,6 @@ export default function AdjustmentFormProducts({
     resetForm();
     void loadWarehouses();
     latestSkuQueryRef.current = "";
-    void searchSkus("");
   }, [loadWarehouses, open, resetForm, searchSkus]);
 
   useEffect(() => {

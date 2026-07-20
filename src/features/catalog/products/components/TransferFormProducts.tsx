@@ -53,6 +53,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     const [, setQuantityTextBySkuId] = useState<Record<string, string>>({});
     const [editingQuantitySkuId, setEditingQuantitySkuId] = useState<string | null>(null);
     const seededSkuRef = useRef<string | null>(null);
+    const skuSearchRequestRef = useRef(0);
     const wasOpenRef = useRef(false);
     const [currentUserName, setCurrentUserName] = useState("-");
     const [transferCheck, setTransferCheck] = useState<{
@@ -89,6 +90,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
         setSearchResults(undefined);
         setSelectedSkus([]);
         setStockDetail(emptyStockDetail);
+        setQuery("");
     };
 
     const loadWarehouses = useCallback(async () => {
@@ -147,8 +149,8 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
         }
     };
 
-    const searchSkus = useCallback(async () => {
-        const requestQuery = query.trim();
+    const searchSkus = useCallback(async (skuQuery: string, requestId: number) => {
+        const requestQuery = skuQuery.trim();
         try {
             const res = await listSkus({
                 q: requestQuery || undefined,
@@ -158,12 +160,16 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
                 limit: 10,
             });
 
-            setSearchResults(res);
+            if (skuSearchRequestRef.current === requestId) {
+                setSearchResults(res);
+            }
         } catch {
-            setSearchResults(undefined);
-            showFeedback(errorResponse("Error al cargar SKUs"));
+            if (skuSearchRequestRef.current === requestId) {
+                setSearchResults(undefined);
+                showFeedback(errorResponse("Error al cargar SKUs"));
+            }
         }
-    }, [query, showFeedback, type]);
+    }, [showFeedback, type]);
 
     const addItem = (skuId: string, quantity = 1) => {
         const selected = (searchResults?.items ?? []).find((s) => s.sku.id === skuId) ?? selectedSkus.find((s) => s.sku.id === skuId);
@@ -422,13 +428,18 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
     };
 
     useEffect(() => {
-        const delay = query.trim() ? 350 : 0;
+        const requestId = ++skuSearchRequestRef.current;
+        if (!open || !query.trim()) {
+            setSearchResults(undefined);
+            return;
+        }
+
         const id = setTimeout(() => {
-            void searchSkus();
-        }, delay);
+            void searchSkus(query, requestId);
+        }, 350);
 
         return () => clearTimeout(id);
-    }, [query, searchSkus]);
+    }, [open, query, searchSkus]);
 
     useEffect(() => {
         const justOpened = Boolean(open) && !wasOpenRef.current;
@@ -438,8 +449,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
         seededSkuRef.current = null;
         resetForm();
         void loadWarehouses();
-        void searchSkus();
-    }, [open, loadWarehouses, searchSkus]);
+    }, [open, loadWarehouses]);
 
     useEffect(() => {
         if (!open) return;
