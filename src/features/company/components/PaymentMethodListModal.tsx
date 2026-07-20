@@ -17,6 +17,8 @@ import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { AlertModal } from "@/shared/components/components/AlertModal";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 type PaymentMethodListModalProps = {
   title: string;
@@ -36,6 +38,9 @@ export function PaymentMethodListModal({
   companyId,
 }: PaymentMethodListModalProps) {
   const { showFeedback, clearFeedback } = useFeedbackToast();
+  const { can } = usePermissions();
+  const canReadPaymentMethods = can("payment-methods.read");
+  const canManagePaymentMethods = can("payment-methods.manage");
   const [rows, setRows] = useState<PaymentMethodPivot[]>([]);
   const [allMethods, setAllMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,10 +50,12 @@ export function PaymentMethodListModal({
   const [requiresVoucher, setRequiresVoucher] = useState(true);
   const [openCreateMethod, setOpenCreateMethod] = useState(false);
   const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
+  const [pendingRemoveMethod, setPendingRemoveMethod] = useState<PaymentMethodPivot | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   const loadCompanyMethods = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!companyId) return;
+      if (!companyId || !canReadPaymentMethods) return;
       if (!options?.silent) clearFeedback();
       setLoading(true);
 
@@ -64,11 +71,12 @@ export function PaymentMethodListModal({
         setLoading(false);
       }
     },
-    [clearFeedback, companyId, showFeedback],
+    [canReadPaymentMethods, clearFeedback, companyId, showFeedback],
   );
 
   const loadAllMethods = useCallback(
     async (options?: { silent?: boolean }) => {
+      if (!canReadPaymentMethods) return;
       if (!options?.silent) clearFeedback();
 
       try {
@@ -81,7 +89,7 @@ export function PaymentMethodListModal({
         }
       }
     },
-    [clearFeedback, showFeedback],
+    [canReadPaymentMethods, clearFeedback, showFeedback],
   );
 
   useEffect(() => {
@@ -112,7 +120,7 @@ export function PaymentMethodListModal({
   }, [allMethods, selectedId]);
 
   const addMethod = useCallback(async () => {
-    if (!companyId || !selectedId || adding) return;
+    if (!companyId || !selectedId || adding || !canManagePaymentMethods) return;
 
     clearFeedback();
     setAdding(true);
@@ -135,22 +143,26 @@ export function PaymentMethodListModal({
     } finally {
       setAdding(false);
     }
-  }, [adding, clearFeedback, companyId, loadCompanyMethods, number, requiresVoucher, selectedId, showFeedback]);
+  }, [adding, canManagePaymentMethods, clearFeedback, companyId, loadCompanyMethods, number, requiresVoucher, selectedId, showFeedback]);
 
   const removeMethod = useCallback(
     async (companyMethodId?: string | null) => {
-      if (!companyMethodId) return;
+      if (!companyMethodId || !canManagePaymentMethods || removing) return;
 
       clearFeedback();
+      setRemoving(true);
       try {
         await deleteCompanyMethod(companyMethodId);
-        showFeedback(successResponse("Método eliminado"));
+        showFeedback(successResponse("Método desvinculado"));
         await loadCompanyMethods({ silent: true });
+        setPendingRemoveMethod(null);
       } catch {
-        showFeedback(errorResponse("No se pudo eliminar el método"));
+        showFeedback(errorResponse("No se pudo desvincular el método"));
+      } finally {
+        setRemoving(false);
       }
     },
-    [clearFeedback, loadCompanyMethods, showFeedback],
+    [canManagePaymentMethods, clearFeedback, loadCompanyMethods, removing, showFeedback],
   );
 
   const columns = useMemo<DataTableColumn<PaymentMethodPivot>[]>(
@@ -174,17 +186,17 @@ export function PaymentMethodListModal({
           <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Obligatorio</span>
         ) : <span className="text-black/45">No</span>,
       },
-      {
+      ...(canManagePaymentMethods ? [{
         id: "actions",
         header: "",
-        cell: (row) => (
+        cell: (row: PaymentMethodPivot) => (
           <div className="flex justify-end">
             <SystemButton
               variant="danger"
               size="custom"
               className="h-7 w-7 rounded-lg p-0"
-              onClick={() => removeMethod(row.companyMethodId)}
-              title="Eliminar método"
+              onClick={() => setPendingRemoveMethod(row)}
+              title="Desvincular método"
             >
               <Trash2 className="h-4 w-4" />
             </SystemButton>
@@ -193,9 +205,9 @@ export function PaymentMethodListModal({
         className: "text-right",
         headerClassName: "text-right",
         hideable: false,
-      },
+      }] : []),
     ],
-    [removeMethod],
+    [canManagePaymentMethods],
   );
 
   const modalClassName = ["w-full max-w-3xl", className].filter(Boolean).join(" ");
@@ -211,11 +223,11 @@ export function PaymentMethodListModal({
                 value={selectedId}
                 onChange={setSelectedId}
                 options={availableOptions}
-                onCreate={() => setOpenCreateMethod(true)}
-                onEdit={(methodId) => setEditingMethodId(methodId)}
+                onCreate={canManagePaymentMethods ? () => setOpenCreateMethod(true) : undefined}
+                onEdit={canManagePaymentMethods ? (methodId) => setEditingMethodId(methodId) : undefined}
                 className="h-10"
                 textSize="text-xs"
-                disabled={adding}
+                disabled={adding || !canManagePaymentMethods}
                 emptyLabel="Sin resultados"
               />
             </div>
@@ -226,7 +238,7 @@ export function PaymentMethodListModal({
                 name="company-payment-number"
                 value={number}
                 onChange={(event) => setNumber(event.target.value)}
-                disabled={adding}
+                disabled={adding || !canManagePaymentMethods}
                 className="h-10 text-xs"
               />
             </div>
@@ -237,7 +249,7 @@ export function PaymentMethodListModal({
                 checked={requiresVoucher}
                 onChange={(event) => setRequiresVoucher(event.target.checked)}
                 className="h-4 w-4 accent-primary"
-                disabled={adding}
+                disabled={adding || !canManagePaymentMethods}
               />
               Voucher obligatorio
             </label>
@@ -246,7 +258,7 @@ export function PaymentMethodListModal({
               size="sm"
               className="h-10 lg:min-w-[120px]"
               leftIcon={<Plus className="h-4 w-4" />}
-              disabled={!selectedId || adding}
+              disabled={!selectedId || adding || !canManagePaymentMethods}
               onClick={addMethod}
               style={{
                 backgroundColor: PRIMARY,
@@ -272,7 +284,7 @@ export function PaymentMethodListModal({
       </div>
 
       <PaymentMethodFormModal
-        open={openCreateMethod || Boolean(editingMethodId)}
+        open={canManagePaymentMethods && (openCreateMethod || Boolean(editingMethodId))}
         mode={editingMethodId ? "edit" : "create"}
         paymentMethodId={editingMethodId}
         onClose={() => {
@@ -285,6 +297,25 @@ export function PaymentMethodListModal({
         }}
         primaryColor={PRIMARY}
         entityLabel="método de pago"
+      />
+
+      <AlertModal
+        open={Boolean(pendingRemoveMethod)}
+        type="warning"
+        title="Desvincular método de pago"
+        message={
+          pendingRemoveMethod
+            ? `Estás por desvincular ${pendingRemoveMethod.name} de esta empresa. Hazlo solo si estás seguro.`
+            : ""
+        }
+        confirmText="Desvincular"
+        loading={removing}
+        onClose={() => {
+          if (!removing) setPendingRemoveMethod(null);
+        }}
+        onConfirm={() => {
+          void removeMethod(pendingRemoveMethod?.companyMethodId);
+        }}
       />
     </Modal>
   );

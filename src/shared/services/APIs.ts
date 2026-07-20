@@ -566,6 +566,7 @@ export const API_PAYMENT_METHODS_GROUP = {
 
 export const API_COMPANY_METHODS_GROUP = {
   create: "/company-methods",
+  byCompany: (companyId: string) => `/company-methods/by-company/${companyId}`,
   remove: (companyMethodId: string) => `/company-methods/${companyMethodId}`,
 };
 
