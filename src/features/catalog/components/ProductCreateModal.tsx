@@ -53,6 +53,8 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("details");
     const [units, setUnits] = useState<ListUnitResponse>();
     const [loadingUnits, setLoadingUnits] = useState(false);
+    const [unitsLoadAttempted, setUnitsLoadAttempted] = useState(false);
+    const [unitsLoadFailed, setUnitsLoadFailed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [primaVariants, setPrimaVariants] = useState<PrimaVariant[]>([]);
     const [loadingPrimaVariants, setLoadingPrimaVariants] = useState(false);
@@ -135,6 +137,8 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         setEditedRecipesBySkuId({});
         setPrimaVariants([]);
         setPrimaVariantsLoaded(false);  
+        setUnitsLoadAttempted(false);
+        setUnitsLoadFailed(false);
 
         if (isEditMode) {
             setDraft(createEmptyProductCreateDraft());
@@ -189,16 +193,26 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         });
     }, [open, isEditMode, skuRows, setDraft]);
 
-    useEffect(() => {
-        if (!open || units || loadingUnits) return;
+    const loadUnits = useCallback(async () => {
+        if (loadingUnits) return;
         setLoadingUnits(true);
-        listUnits()
-            .then((response) => setUnits(response))
-            .catch(() => {
-                showFeedback(errorResponse("Error al cargar unidades"));
-            })
-            .finally(() => setLoadingUnits(false));
-    }, [open, units, loadingUnits, showFeedback]);
+        setUnitsLoadAttempted(true);
+        setUnitsLoadFailed(false);
+        try {
+            const response = await listUnits();
+            setUnits(response);
+        } catch {
+            setUnitsLoadFailed(true);
+            showFeedback(errorResponse("Error al cargar unidades"));
+        } finally {
+            setLoadingUnits(false);
+        }
+    }, [loadingUnits, showFeedback]);
+
+    useEffect(() => {
+        if (!open || units || loadingUnits || unitsLoadAttempted) return;
+        void loadUnits();
+    }, [open, units, loadingUnits, unitsLoadAttempted, loadUnits]);
 
     const loadEquivalences = useCallback(async (id: string) => {
         setLoadingEquivalences(true);
@@ -335,9 +349,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     }, [showFeedback]);
 
     useEffect(() => {
-        if (!open || isMaterial || loadingPrimaVariants || primaVariantsLoaded) return;
+        if (!open || workspaceTab !== "recipes" || isMaterial || loadingPrimaVariants || primaVariantsLoaded) return;
         void loadMaterials();
-    }, [open, isMaterial, loadingPrimaVariants, primaVariantsLoaded, loadMaterials]);
+    }, [open, workspaceTab, isMaterial, loadingPrimaVariants, primaVariantsLoaded, loadMaterials]);
 
     useEffect(() => {
         if (!open || !isEditMode) return;
@@ -1179,6 +1193,15 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     <div className="rounded-2xl bg-white px-4 py-8 text-sm text-black/60">Cargando...</div>
                 ) : (
                     <>
+                        {unitsLoadFailed ? (
+                            <div className="flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                <span>No se pudieron cargar las unidades.</span>
+                                <SystemButton variant="outline" size="sm" onClick={() => void loadUnits()} disabled={loadingUnits}>
+                                    Reintentar unidades
+                                </SystemButton>
+                            </div>
+                        ) : null}
+
                         {workspaceTab === "details" && (
                             <ProductDetailsSection
                                 form={form}
