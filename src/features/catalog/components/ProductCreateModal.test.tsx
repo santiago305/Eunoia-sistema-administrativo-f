@@ -2,10 +2,24 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProductCreateModal } from "./ProductCreateModal";
 
-const { listSkusMock, listUnitsMock, showFeedbackMock } = vi.hoisted(() => ({
+const { createBaseProductMock, createProductSkuMock, listProductEquivalencesMock, listSkusMock, listUnitsMock, showFeedbackMock } = vi.hoisted(() => ({
+    createBaseProductMock: vi.fn(),
+    createProductSkuMock: vi.fn(),
+    listProductEquivalencesMock: vi.fn(),
     listSkusMock: vi.fn(),
     listUnitsMock: vi.fn(),
     showFeedbackMock: vi.fn(),
+}));
+
+vi.mock("@/shared/services/productService", () => ({
+    createBaseProduct: createBaseProductMock,
+    createProductSku: createProductSkuMock,
+}));
+
+vi.mock("@/shared/services/equivalenceService", () => ({
+    createProductEquivalence: vi.fn(),
+    deleteProductEquivalence: vi.fn(),
+    listProductEquivalences: listProductEquivalencesMock,
 }));
 
 vi.mock("@/shared/services/skuService", () => ({
@@ -25,10 +39,29 @@ vi.mock("@/shared/components/modales/Modal", () => ({
 }));
 
 vi.mock("./ProductCreateModalSections", () => ({
-    ProductDetailsSection: ({ onChangeFormField }: { onChangeFormField: (field: "name", value: string) => void }) => (
-        <button type="button" onClick={() => onChangeFormField("name", "Producto editado")}>
-            Cambiar nombre
-        </button>
+    ProductDetailsSection: ({
+        onChangeFormField,
+        onChangeSkuRow,
+        skuRows,
+    }: {
+        onChangeFormField: (field: "name", value: string) => void;
+        onChangeSkuRow: (id: string, field: "name", value: string) => void;
+        skuRows: Array<{ id: string }>;
+    }) => (
+        <div>
+            <button type="button" onClick={() => onChangeFormField("name", "Producto editado")}>
+                Cambiar nombre
+            </button>
+            <button
+                type="button"
+                onClick={() => {
+                    onChangeFormField("name", "Producto nuevo");
+                    onChangeSkuRow(skuRows[0].id, "name", "SKU nuevo");
+                }}
+            >
+                Preparar producto
+            </button>
+        </div>
     ),
     ProductEquivalencesSection: () => null,
     ProductRecipesSection: ({
@@ -51,6 +84,12 @@ describe("ProductCreateModal", () => {
         vi.clearAllMocks();
         listUnitsMock.mockResolvedValue([]);
         listSkusMock.mockResolvedValue({ items: [], total: 0, page: 1, limit: 20 });
+        listProductEquivalencesMock.mockResolvedValue([]);
+        createBaseProductMock.mockResolvedValue({ id: "product-1", name: "Producto nuevo", type: "PRODUCT" });
+        createProductSkuMock.mockResolvedValue({
+            sku: { id: "sku-1", productId: "product-1", backendSku: "SKU-1", name: "Producto nuevo" },
+            attributes: [],
+        });
     });
 
     it("does not load material SKUs until the recipes tab is opened", async () => {
@@ -159,5 +198,54 @@ describe("ProductCreateModal", () => {
         expect(screen.getByText("Harina integral")).toBeInTheDocument();
         expect(screen.queryByText("Harina antigua")).not.toBeInTheDocument();
         vi.useRealTimers();
+    });
+
+    it("refreshes the catalog once only after the product and its SKUs are created", async () => {
+        let resolveSku: (value: unknown) => void;
+        createProductSkuMock.mockImplementationOnce(() => new Promise((resolve) => {
+            resolveSku = resolve;
+        }));
+        const onSaved = vi.fn();
+
+        render(<ProductCreateModal open productType="PRODUCT" onClose={vi.fn()} onSaved={onSaved} />);
+        await waitFor(() => expect(listUnitsMock).toHaveBeenCalledTimes(1));
+        fireEvent.click(screen.getByRole("button", { name: "Preparar producto" }));
+        fireEvent.click(screen.getByRole("button", { name: "Guardar producto y SKUs" }));
+
+        await waitFor(() => expect(createBaseProductMock).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(createProductSkuMock).toHaveBeenCalledTimes(1));
+        expect(onSaved).not.toHaveBeenCalled();
+
+        await act(async () => {
+            resolveSku!({
+                sku: { id: "sku-1", productId: "product-1", backendSku: "SKU-1", name: "Producto nuevo" },
+                attributes: [],
+            });
+        });
+
+        await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    });
+
+    it("keeps only failed artifacts pending without recreating the product", async () => {
+        createProductSkuMock.mockRejectedValueOnce(new Error("sku error")).mockResolvedValueOnce({
+            sku: { id: "sku-1", productId: "product-1", backendSku: "SKU-1", name: "Producto nuevo" },
+            attributes: [],
+        });
+        const onSaved = vi.fn();
+
+        render(<ProductCreateModal open productType="PRODUCT" onClose={vi.fn()} onSaved={onSaved} />);
+        await waitFor(() => expect(listUnitsMock).toHaveBeenCalledTimes(1));
+        fireEvent.click(screen.getByRole("button", { name: "Preparar producto" }));
+        fireEvent.click(screen.getByRole("button", { name: "Guardar producto y SKUs" }));
+
+        await waitFor(() => expect(createProductSkuMock).toHaveBeenCalledTimes(1));
+        expect(createBaseProductMock).toHaveBeenCalledTimes(1);
+        expect(onSaved).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByRole("button", { name: "Reintentar pendientes" }));
+
+        await waitFor(() => expect(createProductSkuMock).toHaveBeenCalledTimes(2));
+        expect(createBaseProductMock).toHaveBeenCalledTimes(1);
+        await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     });
 });

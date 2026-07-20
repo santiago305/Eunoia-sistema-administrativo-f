@@ -1013,6 +1013,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
 
         resetCreateDraftState();
         showFeedback(successResponse(successMessage));
+        await onSaved?.();
         if (closeOnSuccess) {
             handleClose();
         }
@@ -1167,7 +1168,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 const createdProduct = await createBaseProduct(productPayload);
                 targetProductId = createdProduct.id;
                 setCreatedProductId(createdProduct.id);
-                await onSaved?.();
             }
 
             if (!targetProductId) return;
