@@ -7,7 +7,7 @@ export const listProductEquivalencesQuerySchema = z.object({
 export const createProductEquivalenceSchema = z.object({
   fromUnitId: z.string().uuid(),
   toUnitId: z.string().uuid(),
-  factor: z.number().min(0),
+  factor: z.number().positive().refine((value) => Number.isFinite(value), "El factor debe ser finito"),
 });
 
 
