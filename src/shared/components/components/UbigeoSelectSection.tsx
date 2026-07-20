@@ -39,6 +39,10 @@ function findByName<T extends { name: string }>(items: T[], name?: string | null
   return items.find((item) => normalizeName(item.name) === normalized) ?? null;
 }
 
+function getCatalogErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export function UbigeoSelectSection({
   value,
   onChange,
@@ -59,6 +63,11 @@ export function UbigeoSelectSection({
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingProvinces, setLoadingProvinces] = useState(false);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [catalogErrors, setCatalogErrors] = useState({
+    department: "",
+    province: "",
+    district: "",
+  });
   const hydratedDistrictRef = useRef("");
 
   const departmentOptions = useMemo(
@@ -85,6 +94,14 @@ export function UbigeoSelectSection({
         const items = await listUbigeoDepartments();
         if (!cancelled) {
           setDepartments(items);
+          setCatalogErrors((previous) => ({ ...previous, department: "" }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCatalogErrors((previous) => ({
+            ...previous,
+            department: getCatalogErrorMessage(error, "No se pudieron cargar los departamentos."),
+          }));
         }
       } finally {
         if (!cancelled) {
@@ -132,6 +149,14 @@ export function UbigeoSelectSection({
         const items = await listUbigeoProvinces({ departmentId: ids.departmentId });
         if (!cancelled) {
           setProvinces(items);
+          setCatalogErrors((previous) => ({ ...previous, province: "" }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCatalogErrors((previous) => ({
+            ...previous,
+            province: getCatalogErrorMessage(error, "No se pudieron cargar las provincias."),
+          }));
         }
       } finally {
         if (!cancelled) {
@@ -174,6 +199,14 @@ export function UbigeoSelectSection({
         const items = await listUbigeoDistricts({ provinceId: ids.provinceId });
         if (!cancelled) {
           setDistricts(items);
+          setCatalogErrors((previous) => ({ ...previous, district: "" }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCatalogErrors((previous) => ({
+            ...previous,
+            district: getCatalogErrorMessage(error, "No se pudieron cargar los distritos."),
+          }));
         }
       } finally {
         if (!cancelled) {
@@ -254,6 +287,7 @@ export function UbigeoSelectSection({
             });
             setProvinces([]);
             setDistricts([]);
+            setCatalogErrors((previous) => ({ ...previous, province: "", district: "" }));
 
             onChange({
               ubigeo: "",
@@ -269,7 +303,7 @@ export function UbigeoSelectSection({
           searchable
           searchPlaceholder="Buscar departamento..."
           emptyMessage="Sin departamentos"
-          error={errors?.department}
+          error={errors?.department ?? catalogErrors.department}
           disabled={disabled || loadingDepartments}
           className={className}
         />
@@ -289,6 +323,7 @@ export function UbigeoSelectSection({
               districtId: "",
             }));
             setDistricts([]);
+            setCatalogErrors((previous) => ({ ...previous, district: "" }));
 
             onChange({
               ubigeo: "",
@@ -304,7 +339,7 @@ export function UbigeoSelectSection({
           searchable
           searchPlaceholder="Buscar provincia..."
           emptyMessage="Sin provincias"
-          error={errors?.province}
+          error={errors?.province ?? catalogErrors.province}
           disabled={disabled || !ids.departmentId || loadingProvinces}
           className={className}
         />
@@ -337,7 +372,7 @@ export function UbigeoSelectSection({
           searchable
           searchPlaceholder="Buscar distrito..."
           emptyMessage="Sin distritos"
-          error={errors?.district}
+          error={errors?.district ?? catalogErrors.district}
           disabled={disabled || !ids.provinceId || loadingDistricts}
           className={className}
         />
