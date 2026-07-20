@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlaskConical, PackageCheck, Save, Scale } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -58,6 +58,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const [saving, setSaving] = useState(false);
     const [primaVariants, setPrimaVariants] = useState<PrimaVariant[]>([]);
     const [loadingPrimaVariants, setLoadingPrimaVariants] = useState(false);
+    const [materialSearchQuery, setMaterialSearchQuery] = useState("");
+    const [materialSearchPage, setMaterialSearchPage] = useState(1);
+    const [hasMoreMaterialResults, setHasMoreMaterialResults] = useState(false);
     const [loadingProduct, setLoadingProduct] = useState(false);
     const [loadingEquivalences, setLoadingEquivalences] = useState(false);
     const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
@@ -77,7 +80,8 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const [recipeFailures, setRecipeFailures] = useState<string[]>([]);
     const [nonPersistedDrafts, setNonPersistedDrafts] = useState<string[]>([]);
     const [equivalenceFailures, setEquivalenceFailures] = useState<EquivalenceDraft[]>([]);
-    const [primaVariantsLoaded, setPrimaVariantsLoaded] = useState(false);
+    const materialSearchControllerRef = useRef<AbortController | null>(null);
+    const materialSearchRequestRef = useRef(0);
 
     const label = entityLabel ?? (productType === ProductTypes.MATERIAL ? "materia prima" : "producto");
     const isMaterial = productType === ProductTypes.MATERIAL;
@@ -136,7 +140,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         setPersistedRecipesBySkuId({});
         setEditedRecipesBySkuId({});
         setPrimaVariants([]);
-        setPrimaVariantsLoaded(false);  
+        setMaterialSearchQuery("");
+        setMaterialSearchPage(1);
+        setHasMoreMaterialResults(false);
         setUnitsLoadAttempted(false);
         setUnitsLoadFailed(false);
 
@@ -316,15 +322,21 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             });
     }, [open, isEditMode, productId, label, clearFeedback, loadEquivalences, showFeedback]);
 
-    const loadMaterials = useCallback(async () => {
+    const loadMaterials = useCallback(async ({ query, page, append }: { query: string; page: number; append: boolean }) => {
+        materialSearchControllerRef.current?.abort();
+        const controller = new AbortController();
+        materialSearchControllerRef.current = controller;
+        const requestId = materialSearchRequestRef.current + 1;
+        materialSearchRequestRef.current = requestId;
         setLoadingPrimaVariants(true);
         try {
             const response = await listSkus({
                 productType: ProductTypes.MATERIAL,
                 isActive: true,
-                page: 1,
-                limit: 200,
-            });
+                q: query,
+                page,
+                limit: 20,
+            }, { signal: controller.signal });
             const normalized = (response.items ?? []).map((item) => ({
                 id: item.sku.id,
                 sku: item.sku.backendSku ?? undefined,
@@ -338,20 +350,59 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 attributes: Object.fromEntries(item.attributes.map((attr) => [attr.code, attr.value])),
                 customSku: item.sku.customSku ?? undefined,
             }));
-            setPrimaVariants(normalized);
-            setPrimaVariantsLoaded(true);
-        } catch {
-            setPrimaVariantsLoaded(true);
+            if (materialSearchRequestRef.current !== requestId) return;
+            setPrimaVariants((previous) =>
+                append
+                    ? Array.from(new Map([...previous, ...normalized].map((variant) => [variant.id, variant])).values())
+                    : normalized,
+            );
+            setMaterialSearchPage(page);
+            setHasMoreMaterialResults(page * 20 < response.total);
+        } catch (error) {
+            if (controller.signal.aborted || materialSearchRequestRef.current !== requestId) return;
             showFeedback(errorResponse("Error al cargar materias primas"));
         } finally {
-            setLoadingPrimaVariants(false);
+            if (materialSearchRequestRef.current === requestId) {
+                setLoadingPrimaVariants(false);
+            }
         }
     }, [showFeedback]);
 
     useEffect(() => {
-        if (!open || workspaceTab !== "recipes" || isMaterial || loadingPrimaVariants || primaVariantsLoaded) return;
-        void loadMaterials();
-    }, [open, workspaceTab, isMaterial, loadingPrimaVariants, primaVariantsLoaded, loadMaterials]);
+        if (!open || workspaceTab !== "recipes" || isMaterial) return;
+        const query = materialSearchQuery.trim();
+        if (!query) {
+            materialSearchControllerRef.current?.abort();
+            setPrimaVariants([]);
+            setMaterialSearchPage(1);
+            setHasMoreMaterialResults(false);
+            return;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            void loadMaterials({ query, page: 1, append: false });
+        }, 300);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [open, workspaceTab, isMaterial, materialSearchQuery, loadMaterials]);
+
+    useEffect(() => () => materialSearchControllerRef.current?.abort(), []);
+
+    const handleMaterialSearchChange = useCallback((query: string) => {
+        materialSearchRequestRef.current += 1;
+        materialSearchControllerRef.current?.abort();
+        setLoadingPrimaVariants(false);
+        setPrimaVariants([]);
+        setMaterialSearchPage(1);
+        setHasMoreMaterialResults(false);
+        setMaterialSearchQuery(query);
+    }, []);
+
+    const loadMoreMaterials = useCallback(() => {
+        const query = materialSearchQuery.trim();
+        if (!query || loadingPrimaVariants || !hasMoreMaterialResults) return;
+        void loadMaterials({ query, page: materialSearchPage + 1, append: true });
+    }, [materialSearchQuery, loadingPrimaVariants, hasMoreMaterialResults, materialSearchPage, loadMaterials]);
 
     useEffect(() => {
         if (!open || !isEditMode) return;
@@ -1252,6 +1303,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                                 recipeSkuOptions={recipeSkuOptions}
                                 units={units}
                                 primaVariants={primaVariants}
+                                onMaterialSearchChange={handleMaterialSearchChange}
+                                hasMoreMaterialResults={hasMoreMaterialResults}
+                                onLoadMoreMaterials={loadMoreMaterials}
                                 recipe={selectedRecipeDraft}
                                 onChangeRecipe={updateSelectedRecipeDraft}
                                 loading={loadingPrimaVariants || (isEditMode ? loadingRecipe : false)}

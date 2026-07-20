@@ -240,6 +240,9 @@ export function ProductRecipesSection({
   recipeSkuOptions,
   units,
   primaVariants,
+  onMaterialSearchChange,
+  hasMoreMaterialResults,
+  onLoadMoreMaterials,
   recipe,
   onChangeRecipe,
   loading,
@@ -261,6 +264,9 @@ export function ProductRecipesSection({
   recipeSkuOptions: SelectOption[];
   units?: ListUnitResponse;
   primaVariants: PrimaVariant[];
+  onMaterialSearchChange: (query: string) => void;
+  hasMoreMaterialResults: boolean;
+  onLoadMoreMaterials: () => void;
   recipe: RecipeDraft;
   onChangeRecipe: (next: RecipeDraft) => void;
   loading?: boolean;
@@ -319,6 +325,9 @@ export function ProductRecipesSection({
           <RecipeFormFields
             units={units}
             primaVariants={primaVariants}
+            onMaterialSearchChange={onMaterialSearchChange}
+            hasMoreMaterialResults={hasMoreMaterialResults}
+            onLoadMoreMaterials={onLoadMoreMaterials}
             recipe={recipe}
             onChange={onChangeRecipe}
             loading={loading}

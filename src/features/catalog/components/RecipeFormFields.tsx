@@ -30,6 +30,9 @@ type RecipeSkuOption = {
 type RecipeFormFieldsProps = {
   units?: ListUnitResponse;
   primaVariants: PrimaVariant[];
+  onMaterialSearchChange: (query: string) => void;
+  hasMoreMaterialResults: boolean;
+  onLoadMoreMaterials: () => void;
   recipe: RecipeDraft;
   onChange: (next: RecipeDraft) => void;
   onDeleteItem?: (itemId: string) => Promise<void>;
@@ -45,6 +48,9 @@ type RecipeFormFieldsProps = {
 export function RecipeFormFields({
   units,
   primaVariants,
+  onMaterialSearchChange,
+  hasMoreMaterialResults,
+  onLoadMoreMaterials,
   recipe,
   onChange,
   onDeleteItem,
@@ -252,6 +258,7 @@ export function RecipeFormFields({
           searchable
           searchPlaceholder="Buscar producto..."
           emptyMessage="Sin productos"
+          onSearchChange={onMaterialSearchChange}
         />
 
         <FloatingInput
@@ -317,6 +324,14 @@ export function RecipeFormFields({
           disabled={!canAddItem || Boolean(saving)}
         />
       </div>
+
+      {hasMoreMaterialResults ? (
+        <div className="flex justify-end">
+          <SystemButton variant="outline" size="sm" onClick={onLoadMoreMaterials} disabled={Boolean(loading)}>
+            Cargar más materias primas
+          </SystemButton>
+        </div>
+      ) : null}
 
       <DataTable
         tableId={tableId}

@@ -2,8 +2,8 @@ import axiosInstance from "@/shared/common/utils/axios";
 import { API_PRODUCTS_GROUP, API_SKUS_GROUP } from "@/shared/services/APIs";
 import type { ListSkusQuery, ListSkusResponse, ProductForm } from "@/features/catalog/types/product";
 
-export const listSkus = async (params: ListSkusQuery = {}): Promise<ListSkusResponse> => {
-  const response = await axiosInstance.get(API_SKUS_GROUP.base, { params });
+export const listSkus = async (params: ListSkusQuery = {}, options?: { signal?: AbortSignal }): Promise<ListSkusResponse> => {
+  const response = await axiosInstance.get(API_SKUS_GROUP.base, { params, signal: options?.signal });
   return response.data;
 };
 
