@@ -8,7 +8,7 @@ import {
   type DataTableRecentSearchItem,
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
-import { errorResponse, successResponse } from "@/shared/common/utils/response";
+import { errorResponse, infoResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -27,6 +27,7 @@ import type {
 import {
   deleteWarehouseSearchMetric,
   getWarehouseSearchState,
+  getWarehouseStockById,
   listWarehouses,
   saveWarehouseSearchMetric,
   updateWarehouseActive,
@@ -131,6 +132,7 @@ export default function Warehouses() {
     warehouseId: string;
     name: string;
   } | null>(null);
+  const [openingStockWarehouseId, setOpeningStockWarehouseId] = useState<string | null>(null);
 
   const page = paginationState.pageIndex + 1;
 
@@ -400,11 +402,25 @@ export default function Warehouses() {
     setSelectedWarehouse(null);
   }, []);
 
-  const openStockModal = useCallback((warehouse: { warehouseId: string; name: string }) => {
+  const openStockModal = useCallback(async (warehouse: { warehouseId: string; name: string }) => {
     if (!canReadWarehouses) return;
+    if (openingStockWarehouseId) return;
 
-    setStockWarehouse(warehouse);
-  }, [canReadWarehouses]);
+    setOpeningStockWarehouseId(warehouse.warehouseId);
+    try {
+      const stock = await getWarehouseStockById(warehouse.warehouseId);
+      if (stock.items.length === 0) {
+        showFeedback(infoResponse("Este almacén está sin stock"));
+        return;
+      }
+
+      setStockWarehouse(warehouse);
+    } catch {
+      showFeedback(errorResponse("No se pudo cargar el stock del almacén"));
+    } finally {
+      setOpeningStockWarehouseId(null);
+    }
+  }, [canReadWarehouses, openingStockWarehouseId, showFeedback]);
 
   const closeStockModal = useCallback(() => {
     setStockWarehouse(null);
@@ -836,7 +852,7 @@ export default function Warehouses() {
           total: serverPagination.total,
         }}
         onRowClick={(row) =>
-          openStockModal({
+          void openStockModal({
             warehouseId: row.warehouseId,
             name: row.name,
           })
