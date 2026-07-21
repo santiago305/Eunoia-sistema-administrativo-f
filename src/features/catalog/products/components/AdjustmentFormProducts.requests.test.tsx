@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ProductTypes } from "@/features/catalog/types/ProductTypes";
+import { InventoryDocumentProductType } from "@/features/catalog/types/documentInventory";
 import AdjustmentFormProducts from "./AdjustmentFormProducts";
 
 const { clearFeedbackMock, listActiveMock, listSkusMock, showFeedbackMock } = vi.hoisted(() => ({
@@ -37,7 +37,7 @@ describe("AdjustmentFormProducts request budget", () => {
     listSkusMock.mockResolvedValue({ items: [], total: 0, page: 1, limit: 10 });
   });
 
-  it.each([ProductTypes.PRODUCT, ProductTypes.MATERIAL])("does not search %s SKUs until the user types", async (type) => {
+  it.each([InventoryDocumentProductType.PRODUCT, InventoryDocumentProductType.MATERIAL])("does not search %s SKUs until the user types", async (type) => {
     render(<AdjustmentFormProducts open type={type} />);
 
     await waitFor(() => expect(listActiveMock).toHaveBeenCalledTimes(1));
