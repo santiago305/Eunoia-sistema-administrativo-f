@@ -210,14 +210,17 @@ export function PaymentMethodListModal({
     [canManagePaymentMethods],
   );
 
-  const modalClassName = ["w-full max-w-3xl", className].filter(Boolean).join(" ");
+  const modalClassName = ["w-full max-w-4xl", className].filter(Boolean).join(" ");
 
   return (
     <Modal onClose={close} title={title} className={modalClassName}>
-      <div className="space-y-3">
-        <div className="mb-3 flex flex-col gap-3 text-xs text-black/60">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(220px,1fr)_auto_auto] lg:items-end">
-            <div className="min-w-0">
+      <div className="space-y-4">
+        <section aria-label="Agregar método de pago" className="rounded-xl border border-black/10 bg-black/[0.015] p-3 text-xs text-black/60 sm:p-4">
+          <div
+            data-testid="company-payment-method-form"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(175px,auto)_auto] xl:items-end"
+          >
+            <div className="min-w-0 sm:col-span-2 xl:col-span-1">
               <PaymentMethodSelectComposed
                 label="Método de pago"
                 value={selectedId}
@@ -243,7 +246,7 @@ export function PaymentMethodListModal({
               />
             </div>
 
-            <label className="flex h-10 items-center gap-2 rounded-md border border-black/10 px-3 text-xs text-black/70">
+            <label className="flex min-h-10 items-center gap-2 rounded-md border border-black/10 px-3 py-2 text-xs text-black/70 xl:whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={requiresVoucher}
@@ -256,7 +259,7 @@ export function PaymentMethodListModal({
 
             <SystemButton
               size="sm"
-              className="h-10 lg:min-w-[120px]"
+              className="h-10 w-full sm:col-span-2 xl:col-span-1 xl:min-w-[120px] xl:w-auto"
               leftIcon={<Plus className="h-4 w-4" />}
               disabled={!selectedId || adding || !canManagePaymentMethods}
               onClick={addMethod}
@@ -268,7 +271,7 @@ export function PaymentMethodListModal({
               {adding ? "Añadiendo..." : "Añadir"}
             </SystemButton>
           </div>
-        </div>
+        </section>
 
         <DataTable
           tableId="company-methods-table"
