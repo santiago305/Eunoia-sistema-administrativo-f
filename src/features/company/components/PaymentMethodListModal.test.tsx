@@ -47,8 +47,18 @@ vi.mock("@/shared/components/table/DataTable", () => ({
 }));
 
 vi.mock("@/features/payment-methods/components/PaymentMethodSelectComposed", () => ({
-  PaymentMethodSelectComposed: ({ options }: { options: Array<{ label: string }> }) => (
-    <div data-testid="available-methods">{options.map((option) => option.label).join(",")}</div>
+  PaymentMethodSelectComposed: ({ label, options, onCreate, onEdit }: {
+    label: string;
+    options: Array<{ label: string }>;
+    onCreate?: () => void;
+    onEdit?: (methodId: string) => void;
+  }) => (
+    <div>
+      <span>{label}</span>
+      <div data-testid="available-methods">{options.map((option) => option.label).join(",")}</div>
+      {onCreate ? <button type="button" aria-label="Nuevo método" onClick={onCreate}>Nuevo</button> : null}
+      {onEdit ? <button type="button" aria-label="Editar método" onClick={() => onEdit("method-card")}>Editar</button> : null}
+    </div>
   ),
 }));
 
@@ -128,5 +138,19 @@ describe("PaymentMethodListModal", () => {
 
     await waitFor(() => expect(screen.getByTestId("company-methods-table")).toHaveTextContent(""));
     expect(screen.queryByRole("button", { name: "Desvincular método" })).not.toBeInTheDocument();
+  });
+  it("organiza los controles en una cuadrícula accesible y responsiva sin exponer la gestión global sin permiso", async () => {
+    canMock.mockImplementation((permission: string) => permission === "payment-methods.read");
+    getPaymentMethodsByCompanyMock.mockResolvedValue([]);
+
+    render(<PaymentMethodListModal title="Métodos" close={vi.fn()} companyId="company-1" />);
+
+    const form = await screen.findByTestId("company-payment-method-form");
+    expect(form).toHaveClass("grid-cols-1", "sm:grid-cols-2", "xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(175px,auto)_auto]");
+    expect(screen.getByRole("region", { name: "Agregar método de pago" })).toBeInTheDocument();
+    expect(screen.getByText("Método de pago")).toBeInTheDocument();
+    expect(screen.getByLabelText("Voucher obligatorio")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Nuevo método" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar método" })).not.toBeInTheDocument();
   });
 });
