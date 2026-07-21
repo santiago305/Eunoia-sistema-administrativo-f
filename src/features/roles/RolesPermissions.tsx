@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { isAxiosError } from "axios";
 import { RolesPermissionsHeader } from "@/features/roles/components/RolesPermissionsHeader";
 import { RoleModuleConfigPanel } from "@/features/roles/components/RoleModuleConfigPanel";
 import { RolePermissionsMatrix } from "@/features/roles/components/RolePermissionsMatrix";
@@ -34,6 +35,15 @@ import {
 } from "@/features/mail/services/messages.service";
 import { getPermissionModuleLabel } from "@/features/users/utils/permissionPresentation";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
+
+type BackendErrorPayload = { message?: string | string[] };
+
+const getSafeErrorMessage = (error: unknown, fallback: string) => {
+  if (!isAxiosError<BackendErrorPayload>(error)) return fallback;
+  const message = error.response?.data?.message;
+  const resolved = Array.isArray(message) ? message[0] : message;
+  return typeof resolved === "string" && resolved.trim() ? resolved.trim() : fallback;
+};
 
 export default function RolesPermissions() {
   const { showFeedback, clearFeedback } = useFeedbackToast();
@@ -102,8 +112,8 @@ export default function RolesPermissions() {
           setSelectedRoleId(firstRole.id);
           setSelectedRoleDescription(firstRole.description);
         }
-      } catch {
-        if (!cancelled) showFeedback(errorResponse("No se pudo cargar permisos."));
+      } catch (error) {
+        if (!cancelled) showFeedback(errorResponse(getSafeErrorMessage(error, "No se pudo cargar permisos.")));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -230,8 +240,8 @@ export default function RolesPermissions() {
     try {
       await assignPermissionsToRole(selectedRoleId, Array.from(selectedCodes));
       showFeedback(successResponse("Permisos del rol actualizados."));
-    } catch {
-      showFeedback(errorResponse("No se pudieron actualizar permisos del rol."));
+    } catch (error) {
+      showFeedback(errorResponse(getSafeErrorMessage(error, "No se pudieron actualizar permisos del rol.")));
     } finally {
       setSaving(false);
     }
@@ -271,8 +281,8 @@ export default function RolesPermissions() {
       }
       showFeedback(successResponse(result?.message || "Rol creado correctamente."));
       setCreateRoleOpen(false);
-    } catch {
-      showFeedback(errorResponse("No se pudo crear el rol."));
+    } catch (error) {
+      showFeedback(errorResponse(getSafeErrorMessage(error, "No se pudo crear el rol.")));
     } finally {
       setCreatingRole(false);
     }
@@ -289,8 +299,8 @@ export default function RolesPermissions() {
       const response = await updateRole(roleId, { description: description.trim() });
       await reloadRoles();
       showFeedback(successResponse(response?.message || "Rol actualizado correctamente."));
-    } catch {
-      showFeedback(errorResponse("No se pudo actualizar rol."));
+    } catch (error) {
+      showFeedback(errorResponse(getSafeErrorMessage(error, "No se pudo actualizar rol.")));
       throw new Error("rename_role_failed");
     } finally {
       setSavingRoleCrud(false);
@@ -315,8 +325,8 @@ export default function RolesPermissions() {
         if (fallbackRole) handleRoleChange(fallbackRole.id);
       }
       showFeedback(successResponse(response?.message || "Rol desactivado correctamente."));
-    } catch {
-      showFeedback(errorResponse("No se pudo desactivar rol."));
+    } catch (error) {
+      showFeedback(errorResponse(getSafeErrorMessage(error, "No se pudo desactivar rol.")));
       throw new Error("deactivate_role_failed");
     } finally {
       setSavingRoleCrud(false);
