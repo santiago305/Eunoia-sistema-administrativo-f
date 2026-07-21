@@ -45,13 +45,17 @@ vi.mock("@/shared/components/components/FloatingSelect", () => ({
   ),
 }));
 
-function UbigeoHarness() {
-  const [value, setValue] = useState<UbigeoSelection>({
+function UbigeoHarness({
+  initialValue = {
     ubigeo: "",
     department: "",
     province: "",
     district: "",
-  });
+  },
+}: {
+  initialValue?: UbigeoSelection;
+}) {
+  const [value, setValue] = useState<UbigeoSelection>(initialValue);
 
   return <UbigeoSelectSection value={value} onChange={setValue} />;
 }
@@ -91,6 +95,26 @@ describe("UbigeoSelectSection", () => {
     expect(province).toHaveValue("");
     expect(district).toHaveValue("");
     await waitFor(() => expect(serviceMocks.listUbigeoProvinces).toHaveBeenCalledWith({ departmentId: "04" }));
+  });
+
+  it("hidrata los selectores desde los nombres guardados cuando los IDs están vacíos", async () => {
+    render(
+      <UbigeoHarness
+        initialValue={{
+          ubigeo: "",
+          department: "Lima",
+          province: "Lima",
+          district: "Lima",
+          departmentId: "",
+          provinceId: "",
+          districtId: "",
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByLabelText("Departamento")).toHaveValue("15"));
+    await waitFor(() => expect(screen.getByLabelText("Provincia")).toHaveValue("1501"));
+    await waitFor(() => expect(screen.getByLabelText("Distrito")).toHaveValue("150101"));
   });
 
   it("muestra el error de catálogo y deja el selector disponible para reintentar", async () => {

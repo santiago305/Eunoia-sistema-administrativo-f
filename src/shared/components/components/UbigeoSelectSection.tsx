@@ -117,7 +117,7 @@ export function UbigeoSelectSection({
 
   useEffect(() => {
     const department = findByName(departments, value.department);
-    const nextDepartmentId = value.departmentId ?? department?.id ?? "";
+    const nextDepartmentId = value.departmentId || department?.id || "";
 
     setIds((prev) => {
       if (prev.departmentId === nextDepartmentId) return prev;
@@ -172,7 +172,7 @@ export function UbigeoSelectSection({
 
   useEffect(() => {
     const province = findByName(provinces, value.province);
-    const nextProvinceId = value.provinceId ?? province?.id ?? "";
+    const nextProvinceId = value.provinceId || province?.id || "";
 
     setIds((prev) => {
       if (prev.provinceId === nextProvinceId) return prev;
@@ -222,7 +222,7 @@ export function UbigeoSelectSection({
 
   useEffect(() => {
     const district = findByName(districts, value.district);
-    const nextDistrictId = value.districtId ?? value.ubigeo ?? district?.id ?? "";
+    const nextDistrictId = value.districtId || value.ubigeo || district?.id || "";
     const nextDistrict = districts.find((item) => item.id === nextDistrictId) ?? district ?? null;
 
     setIds((prev) => {
