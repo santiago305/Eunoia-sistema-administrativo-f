@@ -20,6 +20,9 @@ export type WarehouseFormState = {
   department: string;
   province: string;
   district: string;
+  departmentId: string;
+  provinceId: string;
+  districtId: string;
   address: string;
   isActive: boolean;
 };
@@ -63,6 +66,9 @@ export function WarehouseFormModal({
     department: "",
     province: "",
     district: "",
+    departmentId: "",
+    provinceId: "",
+    districtId: "",
     address: "",
     isActive: true,
   });
@@ -93,6 +99,9 @@ export function WarehouseFormModal({
         department: "",
         province: "",
         district: "",
+        departmentId: "",
+        provinceId: "",
+        districtId: "",
         address: "",
         isActive: true,
       });
@@ -116,6 +125,9 @@ export function WarehouseFormModal({
           department: warehouse.department ?? "",
           province: warehouse.province ?? "",
           district: warehouse.district ?? "",
+          departmentId: "",
+          provinceId: "",
+          districtId: "",
           address: warehouse.address ?? "",
           isActive: warehouse.isActive ?? true,
         });
@@ -188,6 +200,9 @@ export function WarehouseFormModal({
       department: next.department ?? "",
       province: next.province ?? "",
       district: next.district ?? "",
+      departmentId: next.departmentId ?? "",
+      provinceId: next.provinceId ?? "",
+      districtId: next.districtId ?? "",
     }));
   };
 
@@ -210,6 +225,9 @@ export function WarehouseFormModal({
             department: form.department,
             province: form.province,
             district: form.district,
+            departmentId: form.departmentId,
+            provinceId: form.provinceId,
+            districtId: form.districtId,
           }}
           onChange={handleUbigeoChange}
           disabled={loading}
