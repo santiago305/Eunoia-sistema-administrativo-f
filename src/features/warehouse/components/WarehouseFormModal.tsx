@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
+import { sileo } from "sileo";
 import { Modal } from "@/shared/components/modales/Modal";
 
 import {
@@ -185,6 +186,9 @@ export function WarehouseFormModal({
         });
       }
 
+      sileo.success({
+        title: mode === "edit" ? "Almacén actualizado" : "Almacén creado",
+      });
       onSaved?.();
       onClose();
     } catch (error: unknown) {
@@ -209,6 +213,16 @@ export function WarehouseFormModal({
   return (
     <Modal open={open} title={title} onClose={onClose} className="w-[500px] max-h-[500px]">
       <div className="space-y-4">
+        {mode === "edit" ? (
+          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
+            <p className="font-medium text-foreground">Ubicación</p>
+            <p className="mt-1 text-muted-foreground">
+              {[form.department, form.province, form.district].filter(Boolean).join(" · ") ||
+                "Ubicación no registrada"}
+            </p>
+          </div>
+        ) : null}
+
         <FloatingInput
           label="Nombre"
           name="warehouse-name"
