@@ -1170,8 +1170,8 @@ export default function SaleOrders() {
                         onChange: handleTableDateRangeChange,
                         label: "Fechas",
                         name: "sale-orders-range-dates",
-                        fields: TABLE_DATE_FIELD_OPTIONS,
-                        fieldValue: tableDateField,
+                        // fields: TABLE_DATE_FIELD_OPTIONS,
+                        // fieldValue: tableDateField,
                         onFieldChange: handleTableDateFieldChange,
                     }}
                     useRangeDatesForExternalExport

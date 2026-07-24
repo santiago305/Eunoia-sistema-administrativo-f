@@ -71,12 +71,12 @@ export const saleOrderImportFields: ImportField[] = [
   { 
     key: "total", 
     label: "Importe a pagar", 
-    required: true, 
     type: "number", 
     aliases: ["Importe a pagar", "importe a pagar"] },
   { 
     key: "advance", 
     label: "Total del anticipo", 
+    required: true, 
     type: "number", 
     aliases: ["Total del anticipo", "total del anticipo"] },
   { 
