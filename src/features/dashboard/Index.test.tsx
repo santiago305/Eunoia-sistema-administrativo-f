@@ -203,7 +203,7 @@ describe("Dashboard", () => {
       byWorkflow: [],
       byState: [],
       byClientType: [],
-      byBankAccount: [],
+      byPaymentDescription: [],
       totals: {
         orders: 10,
         total: 1200.5,
@@ -376,5 +376,61 @@ describe("Dashboard", () => {
     await user.click(screen.getByLabelText(/incluir cancelados: sí/i));
     await user.click(await screen.findByRole("option", { name: "No" }));
     expect(localStorage.getItem("dashboard-sale-orders-include-cancelled")).toBe("false");
+  });
+
+  it("does not render the bank account description filter as a global dashboard control", async () => {
+    vi.mocked(getSaleOrderStatistics).mockResolvedValueOnce({
+      byWorkflow: [],
+      byState: [],
+      byClientType: [],
+      byPaymentDescription: [
+        {
+          description: "ADELANTO",
+          label: "ADELANTO",
+          payments: 54,
+          collected: 2695,
+          byBankAccount: [
+            {
+              id: null,
+              label: "Sin cuenta",
+              number: null,
+              payments: 54,
+              collected: 2695,
+            },
+          ],
+        },
+        {
+          description: "Anticipo",
+          label: "Anticipo",
+          payments: 27,
+          collected: 1347.5,
+          byBankAccount: [
+            {
+              id: null,
+              label: "Sin cuenta",
+              number: null,
+              payments: 27,
+              collected: 1347.5,
+            },
+          ],
+        },
+      ],
+      totals: {
+        orders: 10,
+        total: 1200.5,
+        deliveryCostSum: 80,
+        collected: 900,
+        pending: 300.5,
+      },
+    });
+
+    render(<Dashboard />);
+
+    await waitFor(() => {
+      expect(getSaleOrderStatistics).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.queryByLabelText(/descripcion de pago/i)).not.toBeInTheDocument();
+    expect(getSaleOrderStatistics).toHaveBeenCalledTimes(1);
   });
 });

@@ -64,6 +64,21 @@ describe("saleOrderExportCache", () => {
     expect(getSaleOrderExportColumnsMock).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores old export column storage so new backend columns are loaded", async () => {
+    const oldColumns: SaleOrderExportColumn[] = [{ key: "number", label: "Numero" }];
+    const updatedColumns: SaleOrderExportColumn[] = [
+      ...oldColumns,
+      { key: "SKUS", label: "SKUS" },
+      { key: "detail", label: "Detalle" },
+    ];
+    sessionStorage.setItem("sale-orders:export-columns:v1", JSON.stringify(oldColumns));
+    getSaleOrderExportColumnsMock.mockResolvedValue(updatedColumns);
+
+    await expect(loadSaleOrderExportColumnsCached()).resolves.toEqual(updatedColumns);
+
+    expect(getSaleOrderExportColumnsMock).toHaveBeenCalledTimes(1);
+  });
+
   it("caches export presets by user", async () => {
     const userOnePresets: SaleOrderExportPreset[] = [
       { metricId: "metric-1", name: "Usuario 1", snapshot: { columns: [] } },

@@ -25,6 +25,7 @@ import {
   markAttachmentRemoved,
 } from "./saleOrderEditorForm";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
+import { PaymentDescription } from "../../types/saleOrder";
 
 type Props = {
   form: SaleOrderEditorForm;
@@ -60,6 +61,7 @@ export function SaleOrderPaymentCards({
   methodOptions: providedMethodOptions,
   bankAccountOptions: providedBankAccountOptions,
 }: Props) {
+  const [isOtherDescription, setIsOtherDescription] = useState(false);
   const shouldLoadPaymentOptions =
     providedMethodOptions === undefined || providedBankAccountOptions === undefined;
   const fallbackOptions = useSaleOrderPaymentOptions({
@@ -68,6 +70,21 @@ export function SaleOrderPaymentCards({
   const methodOptions = providedMethodOptions ?? fallbackOptions.methodOptions;
   const bankAccountOptions =
     providedBankAccountOptions ?? fallbackOptions.bankAccountOptions;
+
+  const descriptionOptions = [
+    {
+      value: PaymentDescription.ANTICIPO,
+      label: PaymentDescription.ANTICIPO,
+    },
+    {
+      value: PaymentDescription.SALDO,
+      label: PaymentDescription.SALDO,
+    },
+    {
+      value: PaymentDescription.OTROS,
+      label: PaymentDescription.OTROS,
+    },
+  ]; 
   const [modalState, setModalState] = useState<PaymentModalState | null>(null);
   const [draftPhotoUrl, setDraftPhotoUrl] = useState("");
   const money = useMemo(
@@ -308,12 +325,31 @@ export function SaleOrderPaymentCards({
                   updateDraft({ operationNumber: event.target.value })
                 }
               />
-              <FloatingInput
-                label="Descripcion"
-                name={`payment-note-${modalState.draft.clientKey}`}
-                value={modalState.draft.note ?? ""}
-                onChange={(event) => updateDraft({ note: event.target.value })}
-              />
+              {!isOtherDescription ? (
+                <FloatingSelect
+                  label="Descripción"
+                  name={`payment-description-${modalState.draft.clientKey}`}
+                  value={modalState.draft.note ?? ""}
+                  options={descriptionOptions}
+                  onChange={(note) => {
+                    if (note === PaymentDescription.OTROS) {
+                      setIsOtherDescription(true);
+                      updateDraft({ note: "" });
+                      return;
+                    }
+                    updateDraft({ note: note || null });
+                  }}
+                />
+              ) : (
+                <FloatingInput
+                  label="Descripción"
+                  name={`payment-note-${modalState.draft.clientKey}`}
+                  value={modalState.draft.note ?? ""}
+                  onChange={(event) =>
+                    updateDraft({ note: event.target.value })
+                  }
+                />
+              )}
             </div>
             <OperationImageGallery
               images={draftPhotoUrl ? [draftPhotoUrl] : []}
