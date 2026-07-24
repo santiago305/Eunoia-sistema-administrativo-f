@@ -956,14 +956,48 @@ export default function SaleOrders() {
                 id: "warehouse",
                 header: "Almacén",
                 cell: (order) => (
-                    <div className="max-w-[120px] leading-tight">
-                        <p className="line-clamp-2 text-zinc-700" title={order.warehouse?.name ?? "Sin información"}>
+                    <div className="max-w-[130px] leading-tight">
+                        <p className="text-zinc-700" title={order.warehouse?.name ?? "Sin información"}>
                             {order.warehouse?.name ?? "-"}
                         </p>
                     </div>
                 ),
                 sortable: false,
             },
+           {
+                id: "skus",
+                header: "SKUS",
+                headerClassName: centeredHeaderClassName,
+                copy: true,
+                cell: (order) => (
+                    <div className="max-w-[180px] leading-tight">
+                    <p
+                        className="whitespace-normal break-words text-zinc-700"
+                        title={order.SKUS ?? "Sin informacion"}
+                    >
+                        {order.SKUS ?? ""}
+                    </p>
+                    </div>
+                ),
+                sortable: false,
+                },
+                {
+                id: "detail",
+                header: "Detalle",
+                headerClassName: centeredHeaderClassName,
+                copy: true,
+                cell: (order) => (
+                    <div className="max-w-[150px] leading-tight">
+                    <p
+                        className="whitespace-normal break-words text-zinc-700"
+                        title={order.detail ?? "Sin informacion"}
+                    >
+                        {order.detail ?? ""}
+                    </p>
+                    </div>
+                ),
+                sortable: false,
+                },
             {
                 id: "source",
                 header: "Enganche",

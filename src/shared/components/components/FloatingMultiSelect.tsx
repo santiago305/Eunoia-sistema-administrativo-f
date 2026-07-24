@@ -537,6 +537,7 @@ export function FloatingMultiSelect({
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-controls={open ? panelId : undefined}
+          aria-labelledby={labelId}
           aria-describedby={error ? errorId : undefined}
         >
           <span
