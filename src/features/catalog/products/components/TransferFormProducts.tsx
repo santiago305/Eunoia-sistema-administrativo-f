@@ -429,14 +429,11 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
     useEffect(() => {
         const requestId = ++skuSearchRequestRef.current;
-        if (!open || !query.trim()) {
-            setSearchResults(undefined);
-            return;
-        }
+        if (!open) return;
 
         const id = setTimeout(() => {
             void searchSkus(query, requestId);
-        }, 350);
+        }, query.trim() ? 350 : 0);
 
         return () => clearTimeout(id);
     }, [open, query, searchSkus]);

@@ -21,7 +21,9 @@ export default function RowMaterial() {
         csvFileName: "materiales.csv",
         updateSuccessMessage: "Estado de material actualizado",
         updateErrorMessage: "Error al cambiar estado del material",
-        deleteMessage: "Estas por eliminar una materia prima. Hazlo solo si estas seguro.",
+        deleteMessage: "Estas por eliminar logicamente una materia prima. Ya no se mostrara en el catalogo, pero se conservara en la base de datos.",
+        deactivateMessage: "Estas por desactivar una materia prima. Podras activarla nuevamente despues.",
+        activateMessage: "Estas por activar nuevamente esta materia prima.",
         restoreMessage: "Estas por restaurar una materia prima. Hazlo solo si estas seguro.",
       }}
     />

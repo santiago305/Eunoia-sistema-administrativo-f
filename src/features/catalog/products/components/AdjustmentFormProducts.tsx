@@ -212,7 +212,7 @@ export default function AdjustmentFormProducts({
     }
 
     if (!text.trim()) {
-      setSearchResults(undefined);
+      void searchSkus("");
       return;
     }
 
@@ -455,6 +455,7 @@ export default function AdjustmentFormProducts({
     seededSkuRef.current = null;
     resetForm();
     void loadWarehouses();
+    void searchSkus("");
     latestSkuQueryRef.current = "";
   }, [loadWarehouses, open, resetForm, searchSkus]);
 

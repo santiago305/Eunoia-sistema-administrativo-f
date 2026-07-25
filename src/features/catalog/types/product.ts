@@ -25,6 +25,7 @@ export type ProductCatalogProduct = {
   brand: string | null;
   baseUnitId: string | null;
   isActive: boolean;
+  isDeleted?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

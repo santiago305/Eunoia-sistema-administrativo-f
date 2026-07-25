@@ -16,7 +16,8 @@ export const createNotificationSocket = (userId: string) => {
 
   notificationSocket = io(`${resolveSocketBaseUrl()}/notifications`, {
     withCredentials: true,
-    transports: ['websocket'],
+    transports: ['polling', 'websocket'],
+    tryAllTransports: true,
     auth: { userId },
   });
 
@@ -37,7 +38,8 @@ export const createSaleOrdersSocket = (userId: string) => {
 
   saleOrdersSocket = io(`${resolveSocketBaseUrl()}/sale-orders`, {
     withCredentials: true,
-    transports: ['websocket'],
+    transports: ['polling', 'websocket'],
+    tryAllTransports: true,
     auth: { userId },
   });
 

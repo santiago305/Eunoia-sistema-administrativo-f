@@ -144,6 +144,14 @@ export const deleteProductSearchMetric = async (
   return response.data;
 };
 
+export const deleteProduct = async (id: string): Promise<Product> => {
+  const response = await axiosInstance.patch(API_PRODUCTS_GROUP.update(id), {
+    isActive: false,
+    isDeleted: true,
+  });
+  return response.data;
+};
+
 export const getProductExportColumns = async (params: {
   type?: string;
   q?: string;

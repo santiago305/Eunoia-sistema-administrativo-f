@@ -1,6 +1,6 @@
 import type { ActionItem } from "@/shared/components/components/ActionsPopover";
 import type { Product } from "@/features/catalog/types/product";
-import { Pencil, Trash2 } from "lucide-react";
+import { Ban, Pencil, Trash2 } from "lucide-react";
 
 type Handlers = {
   openEquivalences?: (productId: string) => void | Promise<void>;
@@ -8,6 +8,7 @@ type Handlers = {
   openVariantsModal?: (productId: string) => void | Promise<void>;
   openEdit?: (product: Product) => void | Promise<void>;
   setDeletingProductId?: (productId: string) => void;
+  setDeletingProductAction?: (action: "toggle" | "delete") => void;
 };
 
 export function getDropdownItemProducts(product: Product, handlers: Handlers): ActionItem[] {
@@ -22,12 +23,23 @@ export function getDropdownItemProducts(product: Product, handlers: Handlers): A
     },
     {
       id: "toggle",
-      label: product.isActive ? "Eliminar" : "Restaurar",
-      icon: <Trash2 className="h-4 w-4" />,
-      danger: product.isActive,
-      className: product.isActive ? "text-rose-700 hover:bg-rose-50" : "text-cyan-700 hover:bg-cyan-50",
+      label: product.isActive ? "Desactivar" : "Activar",
+      icon: <Ban className="h-4 w-4" />,
+      className: product.isActive ? "text-amber-700 hover:bg-amber-50" : "text-cyan-700 hover:bg-cyan-50",
       onClick: () => {
         handlers.setDeletingProductId?.(product.id);
+        handlers.setDeletingProductAction?.("toggle");
+      },
+    },
+    {
+      id: "delete",
+      label: "Eliminar",
+      icon: <Trash2 className="h-4 w-4" />,
+      danger: true,
+      className: "text-rose-700 hover:bg-rose-50",
+      onClick: () => {
+        handlers.setDeletingProductId?.(product.id);
+        handlers.setDeletingProductAction?.("delete");
       },
     },
   ];

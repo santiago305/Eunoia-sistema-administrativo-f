@@ -28,7 +28,8 @@ describe("socket factories", () => {
 
     expect(ioMock).toHaveBeenCalledWith("http://localhost:3000/notifications", {
       withCredentials: true,
-      transports: ["websocket"],
+      transports: ["polling", "websocket"],
+      tryAllTransports: true,
       auth: { userId: "user-1" },
     });
   });
@@ -40,7 +41,8 @@ describe("socket factories", () => {
 
     expect(ioMock).toHaveBeenCalledWith("http://localhost:3000/sale-orders", {
       withCredentials: true,
-      transports: ["websocket"],
+      transports: ["polling", "websocket"],
+      tryAllTransports: true,
       auth: { userId: "user-1" },
     });
   });

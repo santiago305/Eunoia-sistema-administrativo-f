@@ -25,6 +25,7 @@ import {
     saveProductExportPreset,
     saveProductSearchMetric,
     updateProductActive,
+    updateProduct,
 } from "@/shared/services/productService";
 import type { Product, ProductCatalogProductType} from "@/features/catalog/types/product";
 import type { ProductSearchStateResponse } from "@/features/catalog/types/productSearch";
@@ -82,6 +83,8 @@ type ProductCatalogPageConfig = {
     updateSuccessMessage: string;
     updateErrorMessage: string;
     deleteMessage: string;
+    deactivateMessage: string;
+    activateMessage: string;
     restoreMessage: string;
 };
 
@@ -95,6 +98,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const [openCreate, setOpenCreate] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+    const [deletingProductAction, setDeletingProductAction] = useState<"toggle" | "delete">("toggle");
     const [selectedProductForDetails, setSelectedProductForDetails] = useState<Product | null>(null);
     const [openDetails, setOpenDetails] = useState(false);
     const limit = 25;
@@ -419,10 +423,12 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                             actions={getDropdownItemProducts(row, {
                                 openEdit,
                                 setDeletingProductId,
+                                setDeletingProductAction,
                             })
                                 .filter((action) => {
                                     if (action.id === "edit") return permissions.update;
                                     if (action.id === "toggle") return row.isActive ? permissions.delete : permissions.restore;
+                                    if (action.id === "delete") return permissions.delete;
                                     return true;
                                 })
                                 .map((action) => ({
@@ -464,14 +470,16 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         try {
             const product = products.find((p) => p.id === deletingProductId);
             if (!product) return;
-            if (product.isActive && !permissions.delete) return;
-            if (!product.isActive && !permissions.restore) return;
-            if (product) {
-            await updateProductActive(deletingProductId, {
-                isActive: !product.isActive,
-            });
-            }  
+            if (deletingProductAction === "delete") {
+                if (!permissions.delete) return;
+                await updateProduct(deletingProductId, { isActive: false, isDeleted: true });
+            } else {
+                if (product.isActive && !permissions.delete) return;
+                if (!product.isActive && !permissions.restore) return;
+                await updateProductActive(deletingProductId, { isActive: !product.isActive });
+            }
             setDeletingProductId(null);
+            setDeletingProductAction("toggle");
             showFeedback(successResponse(config.updateSuccessMessage));
             await refresh();
         } catch {
@@ -593,20 +601,25 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
 
             <AlertModal
                 open={!!deletingProductId}
-                type={deletingProduct?.isActive ? "deleted" : "restore"}
-                title="Confirmar acciÃ³n"
-                onClose={() => setDeletingProductId(null)}
+                type={deletingProductAction === "delete" ? "deleted" : deletingProduct?.isActive ? "warning" : "restore"}
+                title="Confirmar acción"
+                onClose={() => {
+                    setDeletingProductId(null);
+                    setDeletingProductAction("toggle");
+                }}
                 onConfirm={confirmDelete}
                 message={
                     <>
-                        {deletingProduct?.isActive ? (
+                        {deletingProductAction === "delete" ? (
                             <>{config.deleteMessage}</>
+                        ) : deletingProduct?.isActive ? (
+                            <>{config.deactivateMessage}</>
                         ) : (
-                            <>{config.restoreMessage}</>
+                            <>{config.activateMessage || config.restoreMessage}</>
                         )}
                     </>
                 }
-                confirmText="Confirmar"
+                confirmText={deletingProductAction === "delete" ? "Eliminar" : deletingProduct?.isActive ? "Desactivar" : "Activar"}
             />
         </PageShell>
     );

@@ -32,11 +32,11 @@ describe("TransferFormProducts request budget", () => {
     listSkusMock.mockResolvedValue({ items: [], total: 0, page: 1, limit: 10 });
   });
 
-  it.each([InventoryDocumentProductType.PRODUCT, InventoryDocumentProductType.MATERIAL])("does not search %s SKUs until the user types", async (type) => {
+  it.each([InventoryDocumentProductType.PRODUCT, InventoryDocumentProductType.MATERIAL])("loads the latest 10 %s SKUs and searches after typing", async (type) => {
     render(<TransferFormProducts open type={type} />);
 
     await waitFor(() => expect(listActiveMock).toHaveBeenCalledTimes(1));
-    expect(listSkusMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(listSkusMock).toHaveBeenCalledWith(expect.objectContaining({ q: undefined, productType: type, limit: 10 })));
 
     vi.useFakeTimers();
     fireEvent.change(screen.getByLabelText("transfer-sku"), { target: { value: "harina" } });
@@ -44,7 +44,7 @@ describe("TransferFormProducts request budget", () => {
       await vi.advanceTimersByTimeAsync(350);
     });
 
-    expect(listSkusMock).toHaveBeenCalledTimes(1);
+    expect(listSkusMock).toHaveBeenCalledTimes(2);
     expect(listSkusMock).toHaveBeenCalledWith(expect.objectContaining({ q: "harina", productType: type, limit: 10 }));
     vi.useRealTimers();
   });

@@ -21,7 +21,9 @@ export default function CatalogProducts() {
         csvFileName: "productos.csv",
         updateSuccessMessage: "Estado de producto actualizado",
         updateErrorMessage: "Error al cambiar estado del producto",
-        deleteMessage: "Estas por eliminar un producto. Hazlo solo si estas seguro.",
+        deleteMessage: "Estas por eliminar logicamente un producto. Ya no se mostrara en el catalogo, pero se conservara en la base de datos.",
+        deactivateMessage: "Estas por desactivar un producto. Podras activarlo nuevamente despues.",
+        activateMessage: "Estas por activar nuevamente este producto.",
         restoreMessage: "Estas por restaurar un producto. Hazlo solo si estas seguro.",
       }}
     />
