@@ -200,7 +200,7 @@ describe("SaleOrders", () => {
       byWorkflow: [],
       byState: [],
       byClientType: [],
-      byBankAccount: [],
+      byPaymentDescription: [],
       totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
     });
   });
@@ -224,6 +224,30 @@ describe("SaleOrders", () => {
     expect(await screen.findByRole("table")).toBeInTheDocument();
     expect(screen.getByText("SO-1")).toBeInTheDocument();
     expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
+  });
+
+  it("renders backend SKU summary and detail columns in the table", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [
+        {
+          ...buildSaleOrder("Pendiente"),
+          SKUS: "EVA01863(1);EVA02032(1)",
+          detail: "AMPOLLA1JABONCURCUMA1",
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    expect(await screen.findByText("EVA01863(1);EVA02032(1)")).toBeInTheDocument();
+    expect(screen.getByText("AMPOLLA1JABONCURCUMA1")).toBeInTheDocument();
   });
 
   it("applies the createdAt range preset from the table toolbar", async () => {
@@ -394,7 +418,7 @@ describe("SaleOrders", () => {
     await waitFor(() => expect(fetchSaleOrderByIdMock).toHaveBeenCalledWith("order-1"));
 
     await user.click(screen.getByRole("button", { name: /acciones del pedido/i }));
-    expect(screen.queryByText("Detalle")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Detalle" })).not.toBeInTheDocument();
     expect(screen.getByText("Ver PDF")).toBeInTheDocument();
     expect(screen.getByText("Factura")).toBeInTheDocument();
     expect(screen.getByText("Boleta")).toBeInTheDocument();

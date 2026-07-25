@@ -507,9 +507,18 @@ function PackRows({
           </button>
         </td>
         <td className="w-[220px] max-w-[220px] px-2 py-2 align-middle text-[10px]">
-          <span className="block truncate font-semibold">
-            {item.description}
-          </span>
+          <span className="sr-only">{item.description}</span>
+          <FloatingInput
+            label="Pack"
+            aria-label={`Descripcion del pack ${item.description}`}
+            name={`pack-description-${itemKey}`}
+            value={item.description ?? ""}
+            className="h-8 rounded-md px-2 py-1 text-xs font-semibold"
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) =>
+              onChangeItem({ ...item, description: event.target.value }, index)
+            }
+          />
           <span className="text-[10px] text-muted-foreground">
             {(item.components ?? []).length} componente(s)
           </span>

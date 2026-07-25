@@ -492,6 +492,34 @@ describe("SaleOrderItemsTable", () => {
     expect(onDelete).toHaveBeenCalledWith(packItem, 0);
   });
 
+  it("edits the pack description even when pack products are not editable", () => {
+    const onChangeItem = vi.fn();
+
+    render(
+      <SaleOrderItemsTable
+        items={[packItem]}
+        productsEditable={false}
+        onChangeItem={onChangeItem}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByRole("textbox", {
+        name: "Descripcion del pack Pack verano",
+      }),
+      { target: { value: "Pack invierno" } },
+    );
+
+    expect(onChangeItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Pack invierno",
+      }),
+      0,
+    );
+  });
+
   it("recalculates the pack when a component is edited from the subtable", () => {
     const onChangeItem = vi.fn();
 

@@ -139,6 +139,11 @@ export type SaleOrderItemComponentCommand = {
 export type SaleOrderItemCommand = Omit<SaleOrderItemInput, "components"> & {
   components?: SaleOrderItemComponentCommand[];
 };
+export enum PaymentDescription {
+  ANTICIPO = "Anticipo",
+  SALDO = "Saldo",
+  OTROS = "Otros",
+}
 
 export type SaleOrderPaymentInput = {
   id?: string;
@@ -399,6 +404,8 @@ export type SaleOrder = {
   attachments?: SaleOrderAttachment[];
   editPolicy?: SaleOrderEditPolicy;
   items?: SaleOrderItemInput[];
+  SKUS?: string | null;
+  detail?: string | null;
 };
 
 export type SaleOrderListResponse = {
@@ -552,12 +559,18 @@ export type SaleOrderStatisticsResponse = {
     label: string;
     count: number;
   }>;
-  byBankAccount: Array<{
-    id: string | null;
+  byPaymentDescription: Array<{
+    description: string | null;
     label: string;
-    number: string | null;
     payments: number;
     collected: number;
+    byBankAccount: Array<{
+      id: string | null;
+      label: string;
+      number: string | null;
+      payments: number;
+      collected: number;
+    }>;
   }>;
   totals: {
     orders: number;

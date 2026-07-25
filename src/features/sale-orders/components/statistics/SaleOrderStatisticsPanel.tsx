@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import {
   Bar,
@@ -62,11 +62,17 @@ type Props = {
 };
 
 type BankAccountChartItem = {
-  id: string | number | null;
+  id: string;
   name: string;
   collected: number;
   payments: number;
   percentage: number;
+  level: "description" | "account";
+  accounts: Array<{
+    label: string;
+    payments: number;
+    collected: number;
+  }>;
 };
 
 const CHART_COLORS = [
@@ -98,7 +104,7 @@ function isEmpty(statistics: SaleOrderStatisticsResponse) {
     statistics.byWorkflow.length === 0 &&
     statistics.byState.length === 0 &&
     statistics.byClientType.length === 0 &&
-    statistics.byBankAccount.length === 0 &&
+    statistics.byPaymentDescription.length === 0 &&
     statistics.totals.orders === 0 &&
     statistics.totals.total === 0 &&
     statistics.totals.collected === 0 &&
@@ -264,7 +270,7 @@ export function SaleOrderStatisticsPanel({
             className="xl:col-span-3"
           >
             <BankAccountBarChart
-              data={statistics.byBankAccount}
+              data={statistics.byPaymentDescription}
               height={220}
             />
           </ChartCard>
@@ -681,44 +687,145 @@ function BankAccountBarChart({
   data,
   height,
 }: {
-  data: SaleOrderStatisticsResponse["byBankAccount"];
+  data: SaleOrderStatisticsResponse["byPaymentDescription"];
   height: number;
 }) {
-  const totalCollected = data.reduce(
-    (total, item) =>
-      total + (Number(item.collected) || 0),
-    0,
+  const [selectedDescriptions, setSelectedDescriptions] = useState<string[]>([]);
+  const [activeDescriptionId, setActiveDescriptionId] = useState<string | null>(
+    null,
   );
 
-  const chartData: BankAccountChartItem[] = data
-    .map((item) => {
+  const descriptionOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: Array<{ value: string; label: string }> = [];
+
+    data.forEach((description, index) => {
+      const value = getPaymentDescriptionKey(description, index);
+
+      if (seen.has(value)) {
+        return;
+      }
+
+      seen.add(value);
+      options.push({
+        value,
+        label:
+          description.label.trim() ||
+          description.description?.trim() ||
+          "Sin descripcion",
+      });
+    });
+
+    return options;
+  }, [data]);
+
+  useEffect(() => {
+    if (selectedDescriptions.length === 0) {
+      return;
+    }
+
+    const validValues = new Set(
+      descriptionOptions.map((option) => option.value),
+    );
+    const nextDescriptions = selectedDescriptions.filter((description) =>
+      validValues.has(description),
+    );
+
+    if (nextDescriptions.length !== selectedDescriptions.length) {
+      setSelectedDescriptions(nextDescriptions);
+    }
+  }, [descriptionOptions, selectedDescriptions]);
+
+  const selectedSet = new Set(selectedDescriptions);
+  const descriptionData: BankAccountChartItem[] = data
+    .map((item, index): BankAccountChartItem | null => {
+      const value = getPaymentDescriptionKey(item, index);
+
+      if (selectedSet.size > 0 && !selectedSet.has(value)) {
+        return null;
+      }
+
       const collected = Number(item.collected) || 0;
       const payments = Number(item.payments) || 0;
 
       return {
-        id: item.id ?? null,
-        name: item.label,
+        id: value,
+        name:
+          item.label.trim() ||
+          item.description?.trim() ||
+          "Sin descripcion",
         collected,
         payments,
-        percentage:
-          totalCollected > 0
-            ? (collected / totalCollected) * 100
-            : 0,
+        percentage: 0,
+        level: "description",
+        accounts: item.byBankAccount.map((account) => ({
+          label: account.label,
+          payments: Number(account.payments) || 0,
+          collected: Number(account.collected) || 0,
+        })),
       };
     })
-    .sort((a, b) => b.collected - a.collected);
-
-  if (chartData.length === 0) {
-    return (
-      <div className="grid min-h-[100px] place-items-center text-xs text-zinc-400">
-        No existen cobros registrados en cuentas bancarias.
-      </div>
+    .filter(
+      (item): item is BankAccountChartItem =>
+        item !== null,
     );
-  }
+
+  useEffect(() => {
+    if (!activeDescriptionId) {
+      return;
+    }
+
+    const validDescription = data.some(
+      (item, index) =>
+        getPaymentDescriptionKey(item, index) === activeDescriptionId &&
+        (selectedDescriptions.length === 0 ||
+          selectedDescriptions.includes(activeDescriptionId)),
+    );
+
+    if (!validDescription) {
+      setActiveDescriptionId(null);
+    }
+  }, [activeDescriptionId, data, selectedDescriptions]);
+
+  const activeDescription =
+    descriptionData.find((item) => item.id === activeDescriptionId) ?? null;
+
+  const rawChartData: BankAccountChartItem[] = activeDescription
+    ? activeDescription.accounts.map((account, index) => ({
+        id: `${activeDescription.id}-account-${index}`,
+        name: account.label,
+        collected: account.collected,
+        payments: account.payments,
+        percentage: 0,
+        level: "account",
+        accounts: [],
+      }))
+    : descriptionData;
+
+  const valueKey = "collected";
+  const totalValue = rawChartData.reduce(
+    (total, item) => total + Number(item[valueKey]),
+    0,
+  );
+
+  const totalCollected = rawChartData.reduce(
+    (total, item) => total + item.collected,
+    0,
+  );
+
+  const chartDataWithPercentages: BankAccountChartItem[] = rawChartData
+    .map((item) => ({
+      ...item,
+      percentage:
+        totalValue > 0
+          ? (Number(item[valueKey]) / totalValue) * 100
+          : 0,
+    }))
+    .sort((a, b) => Number(b[valueKey]) - Number(a[valueKey]));
 
   const chartContentHeight = Math.max(
     110,
-    chartData.length * 36,
+    chartDataWithPercentages.length * 36,
   );
 
   const visibleHeight = Math.min(
@@ -727,108 +834,176 @@ function BankAccountBarChart({
   );
 
   return (
-    <div className="mt-0 min-w-0">
-      <div
-        style={{ height: visibleHeight }}
-        className="overflow-y-auto overflow-x-hidden scroll-area"
-      >
-        <div
-          style={{ height: chartContentHeight }}
-          className="w-full min-w-0"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{
-                top: 4,
-                right: 88,
-                left: 0,
-                bottom: 20,
-              }}
-              barCategoryGap="18%"
-            >
-              <defs>
-                <linearGradient
-                  id="bank-account-gradient"
-                  x1="0"
-                  y1="0"
-                  x2="1"
-                  y2="0"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor={
-                      BANK_ACCOUNT_COLLECTED_COLOR
-                    }
-                  />
+    <div className="mt-2 min-w-0 space-y-2">
+      {/* {descriptionOptions.length > 1 ? (
+        <FloatingMultiSelect
+          label="Descripciones de pago"
+          name="bank-account-chart-description"
+          value={selectedDescriptions}
+          options={descriptionOptions}
+          onChange={setSelectedDescriptions}
+          searchable
+          searchPlaceholder="Buscar descripcion..."
+          containerClassName="w-full sm:w-64"
+        />
+      ) : null} */}
 
-                  <stop
-                    offset="100%"
-                    stopColor="#60a5fa"
-                  />
-                </linearGradient>
-              </defs>
+      {activeDescription ? (
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <SystemButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveDescriptionId(null)}
+            className="h-7 shrink-0 rounded-sm px-2 text-[11px] text-zinc-600"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Descripciones
+          </SystemButton>
 
-              <CartesianGrid
-                horizontal={false}
-                strokeDasharray="3 3"
-                stroke="#f4f4f5"
-              />
-
-              <XAxis
-                type="number"
-                hide
-                domain={[0, "dataMax"]}
-              />
-
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={100}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-                tick={(props) => (
-                  <BankAccountAxisTick
-                    {...props}
-                    data={chartData}
-                  />
-                )}
-              />
-
-              <Tooltip
-                cursor={{
-                  fill: "#f4f4f5",
-                }}
-                content={<BankAccountTooltip />}
-              />
-
-              <Bar
-                dataKey="collected"
-                name="Cobrado"
-                fill="url(#bank-account-gradient)"
-                radius={[0, 5, 5, 0]}
-                maxBarSize={20}
-              >
-                <LabelList
-                  dataKey="collected"
-                  position="right"
-                  formatter={(value: unknown) =>
-                    formatMoney(Number(value))
-                  }
-                  style={{
-                    fill: "#52525b",
-                    fontSize: 9,
-                    fontWeight: 600,
-                  }}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <span className="min-w-0 truncate text-[11px] font-medium text-zinc-500">
+            {activeDescription.name} | {activeDescription.payments} pagos |{" "}
+            {formatMoney(totalCollected)}
+          </span>
         </div>
-      </div>
+      ) : null}
+
+      {chartDataWithPercentages.length === 0 ? (
+        <div className="grid min-h-[100px] place-items-center text-xs text-zinc-400">
+          No existen cobros registrados en cuentas bancarias.
+        </div>
+      ) : (
+        <div
+          style={{ height: visibleHeight }}
+          className="overflow-y-auto overflow-x-hidden scroll-area"
+        >
+          <div
+            style={{ height: chartContentHeight }}
+            className="w-full min-w-0"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartDataWithPercentages}
+                layout="vertical"
+                margin={{
+                  top: 4,
+                  right: 88,
+                  left: 0,
+                  bottom: 20,
+                }}
+                barCategoryGap="18%"
+              >
+                <defs>
+                  <linearGradient
+                    id="bank-account-gradient"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="0"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor={
+                        BANK_ACCOUNT_COLLECTED_COLOR
+                      }
+                    />
+
+                    <stop
+                      offset="100%"
+                      stopColor="#60a5fa"
+                    />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid
+                  horizontal={false}
+                  strokeDasharray="3 3"
+                  stroke="#f4f4f5"
+                />
+
+                <XAxis
+                  type="number"
+                  hide
+                  domain={[0, "dataMax"]}
+                />
+
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={100}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                  tick={(props) => (
+                    <BankAccountAxisTick
+                      {...props}
+                      data={chartDataWithPercentages}
+                    />
+                  )}
+                />
+
+                <Tooltip
+                  cursor={{
+                    fill: "#f4f4f5",
+                  }}
+                  content={<BankAccountTooltip />}
+                />
+
+                <Bar
+                  dataKey={valueKey}
+                  name="Cobrado"
+                  fill="url(#bank-account-gradient)"
+                  radius={[0, 5, 5, 0]}
+                  maxBarSize={20}
+                  cursor={activeDescription ? "default" : "pointer"}
+                >
+                  {chartDataWithPercentages.map((item) => (
+                    <Cell
+                      key={item.id}
+                      cursor={
+                        activeDescription
+                          ? "default"
+                          : "pointer"
+                      }
+                      aria-label={`Ver cuentas de ${item.name}`}
+                      onClick={() => {
+                        if (!activeDescription) {
+                          setActiveDescriptionId(item.id);
+                        }
+                      }}
+                    />
+                  ))}
+
+                  <LabelList
+                    dataKey={valueKey}
+                    position="right"
+                    formatter={(value: unknown) =>
+                      formatMoney(Number(value))
+                    }
+                    style={{
+                      fill: "#52525b",
+                      fontSize: 9,
+                      fontWeight: 600,
+                    }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function getPaymentDescriptionKey(
+  item: SaleOrderStatisticsResponse["byPaymentDescription"][number],
+  index: number,
+) {
+  return (
+    item.description?.trim() ||
+    item.label.trim() ||
+    `description-${index}`
   );
 }
 
