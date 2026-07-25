@@ -92,7 +92,7 @@ describe("ProductCreateModal", () => {
         });
     });
 
-    it("does not load material SKUs until the recipes tab is opened", async () => {
+    it("loads the first ten material SKUs when the recipes tab is opened", async () => {
         render(
             <ProductCreateModal
                 open
@@ -109,7 +109,17 @@ describe("ProductCreateModal", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Recetas" }));
 
-        expect(listSkusMock).not.toHaveBeenCalled();
+        await waitFor(() => expect(listSkusMock).toHaveBeenCalledTimes(1));
+        expect(listSkusMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                productType: "MATERIAL",
+                isActive: true,
+                q: "",
+                page: 1,
+                limit: 10,
+            }),
+            expect.any(Object),
+        );
     });
 
     it("does not retry units after an error until the user requests it", async () => {
@@ -146,7 +156,7 @@ describe("ProductCreateModal", () => {
 
         expect(listSkusMock).toHaveBeenCalledTimes(1);
         expect(listSkusMock).toHaveBeenCalledWith(
-            expect.objectContaining({ q: "harina integral", page: 1, limit: 20 }),
+            expect.objectContaining({ q: "harina integral", page: 1, limit: 10 }),
             expect.any(Object),
         );
         vi.useRealTimers();
@@ -180,7 +190,7 @@ describe("ProductCreateModal", () => {
 
         expect(listSkusMock).toHaveBeenCalledTimes(2);
         expect(listSkusMock).toHaveBeenLastCalledWith(
-            expect.objectContaining({ q: "harina integral", page: 1, limit: 20 }),
+            expect.objectContaining({ q: "harina integral", page: 1, limit: 10 }),
             expect.any(Object),
         );
 

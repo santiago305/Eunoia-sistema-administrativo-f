@@ -335,7 +335,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 isActive: true,
                 q: query,
                 page,
-                limit: 20,
+                limit: 10,
             }, { signal: controller.signal });
             const normalized = (response.items ?? []).map((item) => ({
                 id: item.sku.id,
@@ -357,7 +357,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     : normalized,
             );
             setMaterialSearchPage(page);
-            setHasMoreMaterialResults(page * 20 < response.total);
+            setHasMoreMaterialResults(page * 10 < response.total);
         } catch (error) {
             if (controller.signal.aborted || materialSearchRequestRef.current !== requestId) return;
             showFeedback(errorResponse("Error al cargar materias primas"));
@@ -371,14 +371,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     useEffect(() => {
         if (!open || workspaceTab !== "recipes" || isMaterial) return;
         const query = materialSearchQuery.trim();
-        if (!query) {
-            materialSearchControllerRef.current?.abort();
-            setPrimaVariants([]);
-            setMaterialSearchPage(1);
-            setHasMoreMaterialResults(false);
-            return;
-        }
-
         const timeoutId = window.setTimeout(() => {
             void loadMaterials({ query, page: 1, append: false });
         }, 300);

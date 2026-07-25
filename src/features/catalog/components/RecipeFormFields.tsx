@@ -258,7 +258,6 @@ export function RecipeFormFields({
           searchable
           searchPlaceholder="Buscar producto..."
           emptyMessage="Sin productos"
-          onSearchChange={onMaterialSearchChange}
         />
 
         <FloatingInput
@@ -298,6 +297,7 @@ export function RecipeFormFields({
           searchable
           searchPlaceholder="Buscar producto..."
           emptyMessage="Sin productos"
+          onSearchChange={onMaterialSearchChange}
         />
 
         <FloatingInput label="Unidad base" name="unit-base" value={baseUnitLabel} disabled />
