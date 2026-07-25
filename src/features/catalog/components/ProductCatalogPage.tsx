@@ -402,7 +402,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 headerClassName: "text-center [&>div]:justify-center",
                 className: "text-center",
                 cell: (row) => (
-                    <div className="flex justify-center">
+                    <div className="flex w-full justify-center">
                         <StatusPill active={row.isActive} PRIMARY={PRIMARY} />
                     </div>
                 ),
@@ -410,10 +410,11 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             {
                 id: "actions",
                 header: "Acciones",
-                headerClassName: "text-center flex justify-center",
+                headerClassName: "text-center flex w-full justify-center",
                 stopRowClick: true,
+                className: "text-center",
                 cell: (row) => (
-                    <div className="flex justify-center">
+                    <div className="flex w-full justify-center">
                         <ActionsPopover
                             actions={getDropdownItemProducts(row, {
                                 openEdit,

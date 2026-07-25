@@ -632,10 +632,11 @@ export default function Agencies() {
       {
         id: "subsidiaries",
         header: "Sucursales",
-        headerClassName:"flex justify-center",
+        headerClassName: "flex w-full justify-center text-center",
+        className: "text-center",
         cell: (row) => (
-          <div className="max-w-[260px] leading-tight text-center">
-             <span className="block text-[13px] font-semibold text-black/80">
+          <div className="flex w-full justify-center leading-tight text-center">
+            <span className="block text-[13px] font-semibold text-black/80">
               {(row.subsidiaries ?? []).length}
             </span>
           </div>

@@ -18,6 +18,7 @@ export type DataTableColumn<T> = {
     visible?: boolean;
     hideable?: boolean;
     width?: string;
+    maxWidth?: string;
     clickable?: boolean;
     onCellClick?: (row: T, index: number, event: MouseEvent<HTMLElement>) => void;
     stopRowClick?: boolean;

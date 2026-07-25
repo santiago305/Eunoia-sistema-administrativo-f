@@ -3,11 +3,20 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Check,
   CheckSquare,
+  Loader2,
   MinusSquare,
   Square,
 } from "lucide-react";
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { cn } from "@/shared/lib/utils";
 import { DataTableColumnManager } from "./DataTableColumnManager";
@@ -50,6 +59,11 @@ function compareValues(a: unknown, b: unknown) {
     sensitivity: "base",
   });
 }
+
+type CopyFeedback = {
+  key: string;
+  status: "copying" | "copied";
+};
 
 export function DataTable<T extends Record<string, unknown>>({
   data,
@@ -118,6 +132,9 @@ export function DataTable<T extends Record<string, unknown>>({
     useState<string[]>(defaultSelectedRowKeys);
   const [internalSort, setInternalSort] =
     useState<DataTableSortState>(initialSort);
+  const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
+  const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyOperationRef = useRef(0);
 
   const sort = controlledSort !== undefined ? controlledSort : internalSort;
   const activeSelectedRowKeys = selectedRowKeys ?? internalSelectedRowKeys;
@@ -222,27 +239,68 @@ export function DataTable<T extends Record<string, unknown>>({
   };
   const copyTextToClipboard = async (text: unknown) => {
     const normalized = typeof text === "string" ? text.trim() : "";
-    if (!normalized) return;
+    if (!normalized) return false;
 
     try {
       await navigator.clipboard.writeText(normalized);
+      return true;
     } catch {
       const textarea = document.createElement("textarea");
       textarea.value = normalized;
       textarea.style.position = "fixed";
       textarea.style.opacity = "0";
+      let copied = false;
       try {
         document.body.appendChild(textarea);
         textarea.select();
         if (typeof document.execCommand === "function") {
-          document.execCommand("copy");
+          copied = document.execCommand("copy");
         }
       } finally {
         if (textarea.parentNode) {
           document.body.removeChild(textarea);
         }
       }
+      return copied;
     }
+  };
+
+  const getCopyCellKey = (row: T, index: number, column: DataTableColumn<T>) =>
+    `${resolveRowKey(row, index)}:${column.id}`;
+
+  const handleCopyCell = async (
+    text: unknown,
+    row: T,
+    index: number,
+    column: DataTableColumn<T>,
+  ) => {
+    const normalized = typeof text === "string" ? text.trim() : "";
+    if (!normalized) return;
+
+    if (copyFeedbackTimerRef.current) {
+      clearTimeout(copyFeedbackTimerRef.current);
+    }
+
+    const operation = copyOperationRef.current + 1;
+    copyOperationRef.current = operation;
+    const key = getCopyCellKey(row, index, column);
+    setCopyFeedback({ key, status: "copying" });
+
+    const [copied] = await Promise.all([
+      copyTextToClipboard(normalized),
+      new Promise((resolve) => setTimeout(resolve, 220)),
+    ]);
+    if (operation !== copyOperationRef.current) return;
+
+    if (!copied) {
+      setCopyFeedback(null);
+      return;
+    }
+
+    setCopyFeedback({ key, status: "copied" });
+    copyFeedbackTimerRef.current = setTimeout(() => {
+      setCopyFeedback((current) => (current?.key === key ? null : current));
+    }, 2000);
   };
 
   const moveColumn = (columnId: string, targetColumnId: string) => {
@@ -498,6 +556,10 @@ export function DataTable<T extends Record<string, unknown>>({
           onRowClick={onRowClick}
           rowClassName={rowClassName}
           resolveRowKey={resolveRowKey}
+          copyFeedback={copyFeedback}
+          onCopyCell={(text, row, index, column) => {
+            void handleCopyCell(text, row, index, column);
+          }}
         />
       ) : null}
 
@@ -547,13 +609,17 @@ export function DataTable<T extends Record<string, unknown>>({
                     return (
                       <th
                         key={column.id}
-                        style={column.width ? { width: column.width } : undefined}
+                        style={
+                          column.width || column.maxWidth
+                            ? { width: column.width, maxWidth: column.maxWidth }
+                            : undefined
+                        }
                         className={cn(
                           "px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                           column.headerClassName,
                         )}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex w-full items-center gap-2">
                           <span>{column.header}</span>
 
                           {canSort ? (
@@ -653,10 +719,24 @@ export function DataTable<T extends Record<string, unknown>>({
                             !!column.onCellClick && column.clickable !== false;
                           const shouldStopRowClick =
                             column.stopRowClick || column.copy || isCellClickable;
+                          const copyCellKey = column.copy
+                            ? getCopyCellKey(row, index, column)
+                            : null;
+                          const isCopying =
+                            copyFeedback?.key === copyCellKey &&
+                            copyFeedback.status === "copying";
+                          const isCopied =
+                            copyFeedback?.key === copyCellKey &&
+                            copyFeedback.status === "copied";
 
                           return (
                             <td
                               key={column.id}
+                              style={
+                                column.width || column.maxWidth
+                                  ? { width: column.width, maxWidth: column.maxWidth }
+                                  : undefined
+                              }
                               onClick={
                                 shouldStopRowClick || column.copy
                                   ? (event) => {
@@ -667,7 +747,7 @@ export function DataTable<T extends Record<string, unknown>>({
                                           event.currentTarget.innerText ??
                                           event.currentTarget.textContent ??
                                           "";
-                                        void copyTextToClipboard(text);
+                                        void handleCopyCell(text, row, index, column);
                                         return;
                                       }
 
@@ -685,18 +765,39 @@ export function DataTable<T extends Record<string, unknown>>({
                                   : undefined
                               }
                               className={cn(
-                                "px-2 py-1 align-middle text-foreground",
+                                "min-w-0 overflow-hidden px-2 py-1 align-middle text-foreground",
                                 column.className,
                                 column.copy &&
-                                  "!select-text cursor-text hover:bg-blue-50 selection:bg-blue-200 selection:text-blue-950 [&_*]:!select-text [&_*]:cursor-text",
+                                  "group/copyable cursor-pointer transition-colors hover:text-primary hover:[&_*]:!text-primary",
+                                (isCopying || isCopied) &&
+                                  "text-primary [&_*]:!text-primary",
                                 isCellClickable && "cursor-pointer hover:underline",
                               )}
                             >
-                              {column.cell
-                                ? column.cell(row, index)
-                                : column.accessorKey
-                                  ? String(row[column.accessorKey] ?? "")
-                                  : null}
+                              <div
+                                className={cn(
+                                  "flex w-full min-w-0 max-w-full items-center gap-1",
+                                  column.className?.includes("text-center") && "justify-center",
+                                  column.className?.includes("text-right") && "justify-end",
+                                )}
+                              >
+                                {column.cell
+                                  ? column.cell(row, index)
+                                  : column.accessorKey
+                                    ? String(row[column.accessorKey] ?? "")
+                                    : null}
+                                {isCopying ? (
+                                  <Loader2
+                                    className="h-3 w-3 shrink-0 animate-spin"
+                                    aria-label="Copiando"
+                                  />
+                                ) : isCopied ? (
+                                  <Check
+                                    className="h-3 w-3 shrink-0"
+                                    aria-label="Copiado"
+                                  />
+                                ) : null}
+                              </div>
                             </td>
                           );
                         })}

@@ -394,7 +394,7 @@ describe("DataTable range dates", () => {
 describe("DataTable copy columns", () => {
   const data = [{ id: "1", name: "Cliente demo" }];
 
-  it("enables text selection without row click when column copy is true", () => {
+  it("copies without enabling text selection or triggering the row click", () => {
     const onRowClick = vi.fn();
 
     render(
@@ -411,8 +411,8 @@ describe("DataTable copy columns", () => {
 
     const cell = screen.getByText("Cliente demo").closest("td");
 
-    expect(cell).toHaveClass("!select-text");
-    expect(cell).toHaveClass("cursor-text");
+    expect(cell).not.toHaveClass("select-text");
+    expect(cell).toHaveClass("cursor-pointer");
 
     fireEvent.mouseDown(cell!);
     fireEvent.click(cell!);

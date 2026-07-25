@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
@@ -38,6 +38,8 @@ const DEFAULT_FORM: AgencyForm = {
   isActive: true,
   subsidiaries: [DEFAULT_SUBSIDIARY],
 };
+
+const SUBSIDIARIES_PAGE_SIZE = 20;
 
 function mapAgencyToForm(agency?: Agency | null): AgencyForm {
   if (!agency) return DEFAULT_FORM;
@@ -88,17 +90,32 @@ export function AgencyFormModal({
     control,
     name: "subsidiaries",
   });
+  const [subsidiaryPage, setSubsidiaryPage] = useState(1);
   const rows = useMemo(
     () => fields.map((field, index) => ({ ...field, rowId: field.id, index })),
     [fields],
+  );
+  const paginatedRows = useMemo(
+    () =>
+      rows.slice(
+        (subsidiaryPage - 1) * SUBSIDIARIES_PAGE_SIZE,
+        subsidiaryPage * SUBSIDIARIES_PAGE_SIZE,
+      ),
+    [rows, subsidiaryPage],
   );
   const agencyName = watch("name");
   const agencyIsActive = watch("isActive");
   useEffect(() => {
     if (!open) return;
     autoFillFirstAliasRef.current = mode === "create";
+    setSubsidiaryPage(1);
     reset(mode === "edit" ? mapAgencyToForm(agency) : DEFAULT_FORM);
   }, [agency, mode, open, reset]);
+
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(rows.length / SUBSIDIARIES_PAGE_SIZE));
+    setSubsidiaryPage((current) => Math.min(current, lastPage));
+  }, [rows.length]);
 
   useEffect(() => {
     if (!open || mode !== "create" || !autoFillFirstAliasRef.current) return;
@@ -148,7 +165,7 @@ export function AgencyFormModal({
       {
         id: "ubigeo",
         header: "Ubigeo",
-        className: "min-w-[390px]",
+        className: "min-w-[680px]",
         cell: (row) => {
           const subsidiary = watch(`subsidiaries.${row.index}`);
           const ubigeoValue: UbigeoSelection = {
@@ -174,7 +191,7 @@ export function AgencyFormModal({
                   shouldValidate: true,
                 });
               }}
-              className="h-9 text-xs"
+              className="h-10 min-w-[210px] text-xs"
             />
           );
         },
@@ -257,7 +274,6 @@ export function AgencyFormModal({
       open={open}
       title={title}
       onClose={onClose}
-      className="w-full max-w-[1400px]"
       footer={
         <div className="mt-2 flex justify-end gap-2">
           <SystemButton
@@ -318,7 +334,7 @@ export function AgencyFormModal({
         <div className="max-h-350 overflow-hidden">
           <DataTable
             tableId="agency-form-subsidiaries"
-            data={rows}
+            data={paginatedRows}
             columns={columns}
             rowKey="rowId"
             loading={false}
@@ -331,6 +347,12 @@ export function AgencyFormModal({
             maxHeight="calc(100vh - 300px)"
             emptyMessage="Agrega al menos una sucursal."
             rowClickable={false}
+            pagination={{
+              page: subsidiaryPage,
+              limit: SUBSIDIARIES_PAGE_SIZE,
+              total: rows.length,
+            }}
+            onPageChange={setSubsidiaryPage}
             rowClassName={() => "[&>td]:py-2 [&>td]:px-2"}
           />
         </div>

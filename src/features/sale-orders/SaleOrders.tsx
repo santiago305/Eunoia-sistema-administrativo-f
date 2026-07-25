@@ -809,7 +809,8 @@ export default function SaleOrders() {
 
     const centeredHeaderClassName = "text-center [&>div]:justify-center";
     const columns = useMemo<DataTableColumn<SaleOrder>[]>(
-        () => [
+        () => {
+            const baseColumns: DataTableColumn<SaleOrder>[] = [
             {
                 id: "number",
                 header: "Pedido",
@@ -819,8 +820,8 @@ export default function SaleOrders() {
                     const clientType = Object.values(ClientType).includes(rawClientType as ClientType) ? (rawClientType as ClientType) : ClientType.UNDEFINED;
                     const typeConfig = CLIENT_TYPE_CONFIG[clientType];
                     return (
-                        <div className="min-w-[50px] space-y-1 leading-tight">
-                            <p className="whitespace-nowrap text-[11px] font-semibold text-zinc-900">
+                        <div className="flex w-full min-w-0 flex-col items-center space-y-1 text-center leading-tight">
+                            <p className="w-full truncate text-center text-[11px] font-semibold text-zinc-900">
                                 {order.serie ?? "-"}-{order.correlative ?? "-"}
                             </p>
                             <span
@@ -842,8 +843,8 @@ export default function SaleOrders() {
                 header: "Creación",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="min-w-[50px] space-y-0.5 leading-tight">
-                        <div className="grid grid-cols-[50px_1fr] items-center gap-0">
+                    <div className="w-full min-w-0 space-y-0.5 leading-tight">
+                        <div className="flex w-full items-center justify-center gap-0">
                             <span className="whitespace-nowrap font-medium tabular-nums text-zinc-800">{order.createdAt ? formatDate(order.createdAt) : "-"}</span>
                         </div>
                     </div>
@@ -855,8 +856,8 @@ export default function SaleOrders() {
                 header: "Agenda",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="min-w-[50px] space-y-0.5 leading-tight">
-                        <div className="grid grid-cols-[50px_1fr] items-center gap-0">
+                    <div className="w-full min-w-0 space-y-0.5 leading-tight">
+                        <div className="flex w-full items-center justify-center gap-0">
                             <span className="whitespace-nowrap font-medium tabular-nums text-zinc-800">{order.scheduleDate ? formatDate(order.scheduleDate) : "-"}</span>
                         </div>
                     </div>
@@ -868,8 +869,8 @@ export default function SaleOrders() {
                 header: "Entrega",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="min-w-[50px] space-y-0.5 leading-tight">
-                        <div className="grid grid-cols-[50px_1fr] items-center gap-0">
+                    <div className="w-full min-w-0 space-y-0.5 leading-tight">
+                        <div className="flex w-full items-center justify-center gap-0">
                             <span className="whitespace-nowrap font-medium tabular-nums text-zinc-800">{order.deliveryDate ? formatDate(order.deliveryDate) : "-"}</span>
                         </div>
                     </div>
@@ -882,8 +883,8 @@ export default function SaleOrders() {
                 headerClassName: centeredHeaderClassName,
                 copy: true,
                 cell: (order) => (
-                    <div className="max-w-[120px]  w-[120px] space-y-0.5 leading-tight">
-                        <p className="line-clamp-2 text-zinc-700">
+                    <div className="w-full min-w-0 space-y-0.5 leading-tight">
+                        <p className="w-full truncate text-zinc-700" title={order.client?.fullName ?? "Sin información"}>
                             {order.client?.fullName ?? "-"}
                         </p>
                     </div>
@@ -892,11 +893,11 @@ export default function SaleOrders() {
             },
             {
                 id: "document",
-                header: "Documento",
+                header: "DNI",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="max-w-[120px] space-y-0.5 leading-tight">
-                        <p className="line-clamp-2 text-zinc-700" title={order.client?.docNumber ?? "Sin información"}>
+                    <div className="w-full min-w-0 space-y-0.5 leading-tight">
+                        <p className="w-full truncate text-zinc-700" title={order.client?.docNumber ?? "Sin información"}>
                             {order.client?.docNumber ?? "-"}
                         </p>                    
                     </div>
@@ -910,8 +911,8 @@ export default function SaleOrders() {
                 header: "Teléfono",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="max-w-[120px] space-y-0.5 leading-tight">
-                        <p className="line-clamp-2 text-zinc-700" title={order.client?.mainPhone ?? "Sin información"}>
+                    <div className="w-full min-w-0 space-y-0.5 leading-tight">
+                        <p className="w-full truncate text-zinc-700" title={order.client?.mainPhone ?? "Sin información"}>
                             {order.client?.mainPhone ?? "-"}
                         </p>
                     </div>
@@ -930,8 +931,8 @@ export default function SaleOrders() {
                     const district = order.client?.district?.name;
                     const location = [department, province, district].filter(Boolean).join(" / ");
                     return (
-                        <div className="w-[120px] leading-tight">
-                            <p className="text-zinc-700" title={location || "Sin ubicación"}>
+                        <div className="w-full min-w-0 leading-tight">
+                            <p className="w-full truncate text-zinc-700" title={location || "Sin ubicación"}>
                                 {location || "-"}
                             </p>
                         </div>
@@ -944,8 +945,8 @@ export default function SaleOrders() {
                 header: "Agencia/Dirección",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="w-[220px] leading-tight">
-                        <p className=" text-zinc-700" title={order.agencyDetail ?? "Sin información"}>
+                    <div className="w-full min-w-0 leading-tight">
+                        <p className="w-full truncate text-zinc-700" title={order.agencyDetail ?? "Sin información"}>
                             {order.agencyDetail ?? "-"}
                         </p>
                     </div>
@@ -955,9 +956,10 @@ export default function SaleOrders() {
             {
                 id: "warehouse",
                 header: "Almacén",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="max-w-[130px] leading-tight">
-                        <p className="text-zinc-700" title={order.warehouse?.name ?? "Sin información"}>
+                    <div className="flex w-full min-w-0 justify-center leading-tight">
+                        <p className="w-full truncate text-center text-zinc-700" title={order.warehouse?.name ?? "Sin información"}>
                             {order.warehouse?.name ?? "-"}
                         </p>
                     </div>
@@ -970,9 +972,9 @@ export default function SaleOrders() {
                 headerClassName: centeredHeaderClassName,
                 copy: true,
                 cell: (order) => (
-                    <div className="max-w-[180px] leading-tight">
+                    <div className="w-full min-w-0 leading-tight">
                     <p
-                        className="whitespace-normal break-words text-zinc-700"
+                        className="w-full truncate text-zinc-700"
                         title={order.SKUS ?? "Sin informacion"}
                     >
                         {order.SKUS ?? ""}
@@ -987,9 +989,9 @@ export default function SaleOrders() {
                 headerClassName: centeredHeaderClassName,
                 copy: true,
                 cell: (order) => (
-                    <div className="max-w-[150px] leading-tight">
+                    <div className="w-full min-w-0 leading-tight">
                     <p
-                        className="whitespace-normal break-words text-zinc-700"
+                        className="w-full truncate text-zinc-700"
                         title={order.detail ?? "Sin informacion"}
                     >
                         {order.detail ?? ""}
@@ -1002,7 +1004,7 @@ export default function SaleOrders() {
                 id: "source",
                 header: "Enganche",
                 cell: (order) => (
-                    <div className="max-w-[120px] leading-tight">
+                    <div className="w-full min-w-0 leading-tight">
                         <p className="truncate font-medium text-zinc-700" title={order.source?.name ?? "-"}>
                             {order.source?.name ?? "-"}
                         </p>
@@ -1017,8 +1019,8 @@ export default function SaleOrders() {
                 headerClassName: centeredHeaderClassName,
                 copy: true,
                 cell: (order) => (
-                    <div className="max-w-[180px] w-[130px] leading-tight">
-                        <p className="truncate font-medium text-zinc-700" title={order.advertisingCode ?? "Sin información"}>
+                    <div className="w-full min-w-0 leading-tight">
+                        <p className="w-full truncate font-medium text-zinc-700" title={order.advertisingCode ?? "Sin información"}>
                             {order.advertisingCode ?? "-"}
                         </p>
                     </div>
@@ -1033,9 +1035,9 @@ export default function SaleOrders() {
                 headerClassName: centeredHeaderClassName,
                 copy: true,
                 cell: (order) => (
-                    <div className="max-w-[180px] w-[130px] leading-tight">
-                        <p className="truncate font-medium text-zinc-700">
-                            {order.createdBy?.email ?? " "}
+                    <div className="flex w-full min-w-0 justify-center leading-tight">
+                        <p className="w-full truncate text-center font-medium text-zinc-700" title={order.createdBy?.name ?? "Sin información"}>
+                            {order.createdBy?.name ?? "-"}
                         </p>
                     </div>
                 ),
@@ -1047,9 +1049,9 @@ export default function SaleOrders() {
                 headerClassName: centeredHeaderClassName,
                 copy: true,
                 cell: (order) => (
-                    <div className="max-w-[180px] w-[130px] leading-tight">
-                        <p className="truncate font-medium text-zinc-700">
-                            {order.assignedBy?.email ?? " "}
+                    <div className="flex w-full min-w-0 justify-center leading-tight">
+                        <p className="w-full truncate text-center font-medium text-zinc-700" title={order.assignedBy?.name ?? "Sin información"}>
+                            {order.assignedBy?.name ?? "-"}
                         </p>
                     </div>
                 ),
@@ -1060,7 +1062,7 @@ export default function SaleOrders() {
                 header: "Tipo",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="max-w-[140px] space-y-1 leading-tight">
+                    <div className="w-full min-w-0 space-y-1 leading-tight">
                         <p className="truncate text-zinc-700 text-[10px]" title={order.workflow?.name ?? "Sin tipo"}>
                             {order.workflow?.name ?? "Sin tipo"}
                         </p>
@@ -1073,7 +1075,7 @@ export default function SaleOrders() {
                 header: "Estados",
                 headerClassName: centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="max-w-[140px] space-y-1 leading-tight" onClick={(event) => event.stopPropagation()}>
+                    <div className="w-full min-w-0 space-y-1 leading-tight" onClick={(event) => event.stopPropagation()}>
                         <SaleOrderStatusPopover order={order} onOrderChanged={refreshSelectedOrder} />
                     </div>
                 ),
@@ -1085,7 +1087,7 @@ export default function SaleOrders() {
                 header: "Montos",
                 headerClassName:centeredHeaderClassName,
                 cell: (order) => (
-                    <div className="min-w-[115px] space-y-0.5 leading-tight">
+                    <div className="w-full min-w-0 space-y-0.5 leading-tight">
                         <p className="flex justify-between gap-2 whitespace-nowrap">
                             <span className="text-zinc-500">Total:</span>
                             <span className="font-medium tabular-nums text-zinc-800">{formatMoney(order.total)}</span>
@@ -1109,7 +1111,7 @@ export default function SaleOrders() {
                 cell: (order) => {
                     const isPaid = Number(order.pendingAmount ?? 0) <= 0;
                     return (
-                        <div className="flex min-w-[95px] flex-col items-start gap-1">
+                        <div className="flex w-full min-w-0 flex-col items-center gap-1">
                             <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${isPaid ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
                                 {isPaid ? "Pagado" : "Pago pendiente"}
                             </span>
@@ -1125,6 +1127,7 @@ export default function SaleOrders() {
             {
                 id: "actions",
                 header: "Acciones",
+                headerClassName: centeredHeaderClassName,
                 cell: (order) => (
                     <div onClick={(event) => event.stopPropagation()} className="flex justify-center">
                         <SaleOrderActionsPopover
@@ -1138,14 +1141,21 @@ export default function SaleOrders() {
                 ),
                 pinned: "right",
                 hideable: false,
+                className: "text-center",
                 sortable: false,
                 stopRowClick: true,
             },
-        ],
+            ];
+
+            return baseColumns.map((column) => ({
+                ...column,
+                maxWidth: "150px",
+            }));
+        },
         [refreshSelectedOrder],
     );
     return (
-        <PageShell className="bg-white" scrollArea>
+        <PageShell className="bg-white" contentClassName="max-w-none" scrollArea>
             <div className="space-y-4">
                 <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
                 <SaleOrderBulkActionsBar

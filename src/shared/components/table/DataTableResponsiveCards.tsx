@@ -1,5 +1,11 @@
 import type { MouseEvent, ReactNode } from "react";
+import { Check, Loader2 } from "lucide-react";
 import type { DataTableColumn } from "./types";
+
+type CopyFeedback = {
+  key: string;
+  status: "copying" | "copied";
+};
 
 type Props<T> = {
   data: T[];
@@ -12,6 +18,13 @@ type Props<T> = {
   onRowClick?: (row: T, index: number) => void;
   rowClassName?: (row: T, index: number) => string | undefined;
   resolveRowKey: (row: T, index: number) => string;
+  copyFeedback?: CopyFeedback | null;
+  onCopyCell?: (
+    text: string,
+    row: T,
+    index: number,
+    column: DataTableColumn<T>,
+  ) => void;
 };
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -41,6 +54,8 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
   onRowClick,
   rowClassName,
   resolveRowKey,
+  copyFeedback,
+  onCopyCell,
 }: Props<T>) {
   const responsiveClassName = visibleOnDesktop ? "" : "md:hidden";
   const showSkeletonLoading = loading && data.length === 0;
@@ -95,7 +110,8 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
         const isTitleClickable =
           !!titleColumn?.onCellClick && titleColumn.clickable !== false;
         const shouldStopTitleRowClick =
-          !!titleColumn && (titleColumn.stopRowClick || isTitleClickable);
+          !!titleColumn &&
+          (titleColumn.stopRowClick || titleColumn.copy || isTitleClickable);
 
         const cardClasses = cn(
           "rounded-2xl border border-border bg-background p-4 shadow-sm",
@@ -114,11 +130,17 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
             const isColumnClickable =
               !!column.onCellClick && column.clickable !== false;
             const shouldStopRowClick =
-              column.stopRowClick || isColumnClickable;
+              column.stopRowClick || column.copy || isColumnClickable;
 
             if (!shouldStopRowClick) return;
 
             event.stopPropagation();
+
+            if (column.copy) {
+              const text = event.currentTarget.innerText ?? event.currentTarget.textContent ?? "";
+              onCopyCell?.(text, row, index, column);
+              return;
+            }
 
             if (isColumnClickable) {
               column.onCellClick?.(row, index, event);
@@ -142,10 +164,22 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
                   className={cn(
                     "mt-1 text-base font-semibold text-foreground",
                     isTitleClickable && "cursor-pointer",
-                    titleColumn.stopRowClick && "cursor-default",
+                    (titleColumn.stopRowClick || titleColumn.copy) && "cursor-default",
+                    titleColumn.copy &&
+                      "group/copyable cursor-pointer transition-colors hover:text-primary hover:[&_*]:!text-primary",
+                    titleColumn.copy &&
+                      copyFeedback?.key === `${resolveRowKey(row, index)}:${titleColumn.id}` &&
+                      "text-primary [&_*]:!text-primary",
                   )}
                 >
                   {getColumnValue(row, index, titleColumn)}
+                  {titleColumn.copy && copyFeedback?.key === `${resolveRowKey(row, index)}:${titleColumn.id}` ? (
+                    copyFeedback.status === "copying" ? (
+                      <Loader2 className="ml-1 inline h-3 w-3 animate-spin" aria-label="Copiando" />
+                    ) : (
+                      <Check className="ml-1 inline h-3 w-3" aria-label="Copiado" />
+                    )
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -155,7 +189,10 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
                 const isColumnClickable =
                   !!column.onCellClick && column.clickable !== false;
                 const shouldStopRowClick =
-                  column.stopRowClick || isColumnClickable;
+                  column.stopRowClick || column.copy || isColumnClickable;
+                const copyCellKey = `${resolveRowKey(row, index)}:${column.id}`;
+                const isCopyFeedbackVisible =
+                  column.copy && copyFeedback?.key === copyCellKey;
 
                 return (
                   <div
@@ -166,7 +203,10 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
                     className={cn(
                       "flex items-start justify-between gap-3 border-t border-border/60 pt-3 first:border-t-0 first:pt-0",
                       isColumnClickable && "cursor-pointer",
-                      column.stopRowClick && !isColumnClickable && "cursor-default",
+                      (column.stopRowClick || column.copy) && !isColumnClickable && "cursor-default",
+                      column.copy &&
+                        "group/copyable cursor-pointer transition-colors hover:text-primary hover:[&_*]:!text-primary",
+                      isCopyFeedbackVisible && "text-primary [&_*]:!text-primary",
                     )}
                   >
                     <span className="min-w-0 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
@@ -175,6 +215,13 @@ export function DataTableResponsiveCards<T extends Record<string, unknown>>({
 
                     <div className="text-right text-sm text-foreground">
                       {getColumnValue(row, index, column)}
+                      {isCopyFeedbackVisible ? (
+                        copyFeedback?.status === "copying" ? (
+                          <Loader2 className="ml-1 inline h-3 w-3 animate-spin" aria-label="Copiando" />
+                        ) : (
+                          <Check className="ml-1 inline h-3 w-3" aria-label="Copiado" />
+                        )
+                      ) : null}
                     </div>
                   </div>
                 );

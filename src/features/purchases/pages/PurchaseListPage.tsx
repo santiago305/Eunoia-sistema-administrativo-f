@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type SetStateAction } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import {
     DataTableSearchBar,
@@ -48,8 +48,9 @@ import type {
 } from "@/features/purchases/types/purchase";
 import { PurchaseOrderStatus, PurchaseOrderStatuses, VoucherDocType, VoucherDocTypes, PaymentFormTypes } from "@/features/purchases/types/purchaseEnums";
 import TimerToEnd, { formatDate } from "@/shared/components/components/TimerToEnd";
-import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
-import { AlertCircle, Calendar, Clock3, CreditCard, FileText, List, Menu, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
+import { DataTableActionsPopover } from "@/shared/components/components/DataTableActionsPopover";
+import type { ActionItem } from "@/shared/components/components/ActionsPopover";
+import { AlertCircle, Calendar, Clock3, CreditCard, FileText, List, OctagonAlert, PackageCheck, Pencil, Play, Plus, Timer, XCircle } from "lucide-react";
 import { getPurchaseOrderPdf } from "@/shared/services/pdfServices";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { PageShell } from "@/shared/layouts/PageShell";
@@ -968,7 +969,7 @@ export default function Purchases() {
 
         {
             id: "actions",
-            header: "acciones",
+            header: "Acciones",
             headerClassName: "text-center [&>div]:justify-center",
             stopRowClick: true,
             cell: (row) => {
@@ -978,7 +979,7 @@ export default function Purchases() {
                 return (
                 <div className="flex justify-center">
                     {isApprovalRejected ? (
-                        <ActionsPopover
+                        <DataTableActionsPopover
                             actions={[
                                 {
                                     id: "view-detail",
@@ -988,15 +989,9 @@ export default function Purchases() {
                                 },
                                 createHistoryAction(row.purchase),
                             ].filter(Boolean) as ActionItem[]}
-                            columns={1}
-                            compact
-                            showLabels
-                            triggerIcon={<Menu className="h-4 w-4" />}
-                            popoverClassName="min-w-35"
-                            popoverBodyClassName="p-2"
                         />
                     ) : (
-                    <ActionsPopover
+                    <DataTableActionsPopover
                         actions={[
                             (row.purchase.status === PurchaseOrderStatuses.SENT || row.purchase.status === PurchaseOrderStatuses.PARTIAL) && {
                                 id: "enter-warehouse",
@@ -1143,33 +1138,12 @@ export default function Purchases() {
                                 disabled: companyActionDisabled || (row.purchase.status === PurchaseOrderStatuses.RECEIVED && !canDeleteProcessedPurchase),
                             },
                         ].filter(Boolean) as ActionItem[]}
-                        columns={1}
-                        compact
-                        showLabels
-                        triggerIcon={<Menu className="h-4 w-4" />}
-                        popoverClassName="min-w-35"
-                        popoverBodyClassName="p-2"
-                        renderAction={(action, helpers) => (
-                            <button
-                                key={action.id}
-                                type="button"
-                                onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                                    e.stopPropagation();
-                                    helpers.onAction(action);
-                                }}
-                                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-black/80 hover:bg-black/[0.03] ${action.className ?? ""}`}
-                                disabled={action.disabled}
-                            >
-                                {action.icon}
-                                {action.label}
-                            </button>
-                        )}
                     />
                     )}
                 </div>
                 );
             },
-            className: "text-left",
+            className: "text-center",
             hideable: true,
             sortable: false,
         },

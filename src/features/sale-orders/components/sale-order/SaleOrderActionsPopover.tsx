@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { FileCheck2, FileText, Menu, ReceiptText } from "lucide-react";
+import { FileCheck2, FileText, ReceiptText } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
-import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
+import { DataTableActionsPopover } from "@/shared/components/components/DataTableActionsPopover";
+import type { ActionItem } from "@/shared/components/components/ActionsPopover";
 
 type Props = {
   order: SaleOrder;
@@ -36,17 +37,5 @@ export function SaleOrderActionsPopover({
     [onOpenPdf, order],
   );
 
-  return (
-    <ActionsPopover
-      actions={actions}
-      columns={1}
-      compact
-      showLabels
-      triggerIcon={<Menu className="h-5 w-5 text-black text-bold" />}
-      triggerVariant="subtle"
-      triggerLabel="Acciones del pedido"
-      popoverClassName="min-w-30"
-      popoverBodyClassName="p-2"
-    />
-  );
+  return <DataTableActionsPopover actions={actions} triggerLabel="Acciones del pedido" />;
 }
