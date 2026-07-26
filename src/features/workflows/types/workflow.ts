@@ -13,6 +13,8 @@ export const ACTIONS = {
   CONSUME_STOCK: "CONSUME_STOCK",
   REVERT_STOCK: "REVERT_STOCK",
   MARK_INVOICE_SENT: "MARK_INVOICE_SENT",
+  MARK_PREGUIDE: "MARK_PREGUIDE",
+  MARK_PREPARED: "MARK_PREPARED",
   ASSIGN_WAREHOUSE_BY_PROVINCE: "ASSIGN_WAREHOUSE_BY_PROVINCE",
 } as const;
 
@@ -259,3 +261,4 @@ export type WorkflowDraftValidation = {
   valid: boolean;
   errors: string[];
 };
+

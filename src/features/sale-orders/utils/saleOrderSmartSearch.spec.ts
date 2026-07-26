@@ -18,10 +18,12 @@ const searchState: SaleOrderSearchStateResponse = {
     bankAccounts: [{ id: "bank-1", label: "BCP Soles" }],
     clientTypes: [{ id: "NEW", label: "Nuevo" }],
     sources: [{ id: "source-1", label: "Facebook Ads" }],
+    preguideStatuses: [{ id: "WITH", label: "Con pregu\u00eda" }],
+    preparedStatuses: [{ id: "PENDING", label: "Sin preparar" }],
     creators: [{ id: "user-1", label: "creador@eunoia.test" }],
     assignees: [{ id: "user-2", label: "asignado@eunoia.test" }],
   },
-};
+} as SaleOrderSearchStateResponse;
 
 describe("sale order workflow and state smart filters", () => {
   it("keeps client phone and agency detail text filters", () => {
@@ -196,6 +198,67 @@ describe("sale order workflow and state smart filters", () => {
         id: "assignedBy",
         label: "Asignado a: No asignado@eunoia.test",
         removeKey: "assignedBy",
+      },
+    ]);
+  });
+
+  it("builds, sanitizes, and labels preguide and prepared status filters", () => {
+    const columns = buildSaleOrderSmartSearchColumns(searchState);
+
+    expect(columns.find((column) => column.id === "preguideStatus")).toMatchObject({
+      label: "Pregu\u00eda",
+      kind: "catalog",
+      supportsExclude: true,
+      options: searchState.catalogs.preguideStatuses,
+    });
+    expect(columns.find((column) => column.id === "preparedStatus")).toMatchObject({
+      label: "Preparado",
+      kind: "catalog",
+      supportsExclude: true,
+      options: searchState.catalogs.preparedStatuses,
+    });
+
+    const snapshot = sanitizeSaleOrderSearchSnapshot({
+      filters: [
+        {
+          field: "preguideStatus",
+          operator: "in",
+          mode: "include",
+          values: ["WITH"],
+        },
+        {
+          field: "preparedStatus",
+          operator: "in",
+          mode: "include",
+          values: ["PENDING"],
+        },
+      ],
+    } as any);
+
+    expect(snapshot.filters).toEqual([
+      {
+        field: "preguideStatus",
+        operator: "in",
+        mode: "include",
+        values: ["WITH"],
+      },
+      {
+        field: "preparedStatus",
+        operator: "in",
+        mode: "include",
+        values: ["PENDING"],
+      },
+    ]);
+    expect(buildSaleOrderSearchChips(snapshot, searchState)).toEqual([
+      {
+        id: "preguideStatus",
+        label: "Pregu\u00eda: Con pregu\u00eda",
+        removeKey: "preguideStatus",
+      },
+      {
+        id: "preparedStatus",
+        label: "Preparado: Sin preparar",
+        removeKey: "preparedStatus",
       },
     ]);
   });

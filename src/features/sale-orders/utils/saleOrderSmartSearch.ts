@@ -39,6 +39,8 @@ export const SaleOrderSearchFields = {
   AGENCY_DETAIL: "agencyDetail",
   SOURCE_ID: "sourceId",
   INVOICE_STATUS: "invoiceStatus",
+  PREGUIDE_STATUS: "preguideStatus",
+  PREPARED_STATUS: "preparedStatus",
   CREATED_BY: "createdBy",
   ASSIGNED_BY: "assignedBy",
 } as const;
@@ -90,6 +92,8 @@ const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
   agencyDetail: "Agencia",
   sourceId: "Enganche",
   invoiceStatus: "Comprobante",
+  preguideStatus: "Pregu\u00eda",
+  preparedStatus: "Preparado",
   createdBy: "Creado por",
   assignedBy: "Asignado a",
 };
@@ -107,6 +111,8 @@ const CATALOG_FIELDS = new Set<SaleOrderSearchField>([
   SaleOrderSearchFields.CLIENT_DISTRICT_ID,
   SaleOrderSearchFields.SOURCE_ID,
   SaleOrderSearchFields.INVOICE_STATUS,
+  SaleOrderSearchFields.PREGUIDE_STATUS,
+  SaleOrderSearchFields.PREPARED_STATUS,
   SaleOrderSearchFields.CREATED_BY,
   SaleOrderSearchFields.ASSIGNED_BY,
 ]);
@@ -332,13 +338,17 @@ function getRuleLabel(rule: SaleOrderSearchRule, searchState?: SaleOrderSearchSt
                   ? getCatalogLabel(values, searchState?.catalogs.bankAccounts)
                   : rule.field === SaleOrderSearchFields.CLIENT_TYPE
                     ? getCatalogLabel(values, searchState?.catalogs.clientTypes)
-                    : rule.field === SaleOrderSearchFields.SOURCE_ID
-                      ? getCatalogLabel(values, searchState?.catalogs.sources)
-                      : rule.field === SaleOrderSearchFields.CREATED_BY
-                        ? getCatalogLabel(values, searchState?.catalogs.creators)
-                        : rule.field === SaleOrderSearchFields.ASSIGNED_BY
-                          ? getCatalogLabel(values, searchState?.catalogs.assignees)
-                          : getCatalogLabel(values, undefined);
+                      : rule.field === SaleOrderSearchFields.SOURCE_ID
+                        ? getCatalogLabel(values, searchState?.catalogs.sources)
+                        : rule.field === SaleOrderSearchFields.PREGUIDE_STATUS
+                          ? getCatalogLabel(values, searchState?.catalogs.preguideStatuses)
+                          : rule.field === SaleOrderSearchFields.PREPARED_STATUS
+                            ? getCatalogLabel(values, searchState?.catalogs.preparedStatuses)
+                            : rule.field === SaleOrderSearchFields.CREATED_BY
+                              ? getCatalogLabel(values, searchState?.catalogs.creators)
+                              : rule.field === SaleOrderSearchFields.ASSIGNED_BY
+                                ? getCatalogLabel(values, searchState?.catalogs.assignees)
+                                : getCatalogLabel(values, undefined);
     if (!label) return null;
     const modePrefix = rule.mode === "exclude" ? "No" : "";
     return `${fieldLabel}: ${modePrefix ? `${modePrefix} ` : ""}${label}`.trim();
@@ -442,6 +452,8 @@ export function buildSaleOrderSmartSearchColumns(
   const districtOptions = normalizeSearchOptions(searchState?.catalogs.districts);
   const sourceOptions = normalizeSearchOptions(searchState?.catalogs.sources);
   const invoiceStatusOptions = normalizeSearchOptions(searchState?.catalogs.invoiceStatuses);
+  const preguideStatusOptions = normalizeSearchOptions(searchState?.catalogs.preguideStatuses);
+  const preparedStatusOptions = normalizeSearchOptions(searchState?.catalogs.preparedStatuses);
   const creatorOptions = normalizeSearchOptions(searchState?.catalogs.creators);
   const assigneeOptions = normalizeSearchOptions(searchState?.catalogs.assignees);
 
@@ -609,6 +621,22 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: invoiceStatusOptions,
+    },
+    {
+      id: SaleOrderSearchFields.PREGUIDE_STATUS,
+      label: "Pregu\u00eda",
+      kind: "catalog",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguna de" }],
+      supportsExclude: true,
+      options: preguideStatusOptions,
+    },
+    {
+      id: SaleOrderSearchFields.PREPARED_STATUS,
+      label: "Preparado",
+      kind: "catalog",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: preparedStatusOptions,
     },
     {
       id: SaleOrderSearchFields.BANK_ACCOUNT_ID,

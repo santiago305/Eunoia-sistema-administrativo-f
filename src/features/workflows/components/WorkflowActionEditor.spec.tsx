@@ -79,6 +79,22 @@ describe("WorkflowActionEditor", () => {
     ]);
   });
 
+
+  it("renders prepared and preguide workflow action labels", () => {
+    const catalog: ActionCatalogItem[] = [
+      { type: "MARK_PREGUIDE" as ActionCatalogItem["type"], configSchema: {} },
+      { type: "MARK_PREPARED" as ActionCatalogItem["type"], configSchema: {} },
+    ];
+    const value: WorkflowAction[] = [
+      { type: "MARK_PREGUIDE" as WorkflowAction["type"], config: {}, position: 0 },
+      { type: "MARK_PREPARED" as WorkflowAction["type"], config: {}, position: 1 },
+    ];
+
+    render(<WorkflowActionEditor catalog={catalog} value={value} onChange={vi.fn()} />);
+
+    expect(screen.getAllByText("Marcar preguia").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Marcar preparado").length).toBeGreaterThan(0);
+  });
   it("stores mode, provinces, and warehouse for province assignment", async () => {
     const onChange = vi.fn();
     const value: WorkflowAction[] = [{
@@ -209,3 +225,4 @@ describe("WorkflowActionEditor", () => {
     expect(screen.getByTestId("action-provinces-1-options")).toHaveTextContent("Arequipa");
   });
 });
+

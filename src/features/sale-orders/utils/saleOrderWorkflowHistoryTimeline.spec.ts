@@ -105,6 +105,8 @@ describe("buildSaleOrderWorkflowHistoryTimeline", () => {
 
     expect(event).toMatchObject({
       kind: "RUN_ACTIONS",
+      title: "Enviar comprobante",
+      detail: "Accion global ejecutada en Esperando",
       markerColor: "#A855F7",
       currentState: waiting,
     });

@@ -91,7 +91,7 @@ function HistoryCard({
               <ArrowRight className="h-4 w-4 shrink-0 text-zinc-500" />
             )}
             <span className="truncate text-sm font-semibold text-zinc-900">
-              {event.toState.name}
+              {event.title}
             </span>
           </div>
           <div className="mt-1 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
@@ -110,7 +110,7 @@ function HistoryCard({
       {isAction ? (
         <div className="mt-3">
           <div className="mb-2 text-[11px] font-medium text-amber-700">
-            No cambia de estado
+            {event.detail}
           </div>
           <StateBadge state={event.currentState} />
         </div>

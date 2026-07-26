@@ -24,6 +24,8 @@ export const ACTION_LABELS: Record<WorkflowActionType, string> = {
   CONSUME_STOCK: "Consumir stock",
   REVERT_STOCK: "Liberar reserva",
   MARK_INVOICE_SENT: "Marcar factura enviada",
+  MARK_PREGUIDE: "Marcar preguia",
+  MARK_PREPARED: "Marcar preparado",
   ASSIGN_WAREHOUSE_BY_PROVINCE: "Asignar almacén por provincia",
 };
 
@@ -224,3 +226,4 @@ export function WorkflowActionEditor({ catalog, value, onChange }: Props) {
     </div>
   );
 }
+
