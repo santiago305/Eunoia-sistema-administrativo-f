@@ -15,6 +15,8 @@ export type SaleOrderWorkflowHistoryTimelineEvent = {
   kind: SaleOrderWorkflowHistoryTimelineKind;
   transitionName: string;
   transitionCode: string;
+  title: string;
+  detail: string;
   executedAt: string;
   executorEmail: string | null;
   markerColor: string;
@@ -40,12 +42,18 @@ export function buildSaleOrderWorkflowHistoryTimeline(
             : "MOVE_STATE";
       const currentState =
         kind === "RUN_ACTIONS" ? item.fromState : item.toState;
+      const transitionName = item.transition.name?.trim() || "Evento del tipo";
 
       return {
         id: item.id,
         kind,
-        transitionName: item.transition.name?.trim() || "Evento del tipo",
+        transitionName,
         transitionCode: item.transition.code,
+        title: kind === "RUN_ACTIONS" ? transitionName : item.toState.name,
+        detail:
+          kind === "RUN_ACTIONS"
+            ? `Accion global ejecutada en ${currentState.name}`
+            : `${item.fromState.name} -> ${item.toState.name}`,
         executedAt: item.executedAt,
         executorEmail: item.executedByUser?.email ?? null,
         markerColor: currentState.color ?? "#64748b",

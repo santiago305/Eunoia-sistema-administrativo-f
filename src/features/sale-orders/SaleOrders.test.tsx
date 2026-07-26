@@ -121,6 +121,8 @@ const buildSaleOrder = (stateName: string): SaleOrder => ({
     isActive: true,
   },
   invoiceSend: false,
+  prepared: false,
+  preguide: false,
   subTotal: 100,
   deliveryCost: 0,
   total: 100,
@@ -226,6 +228,29 @@ describe("SaleOrders", () => {
     expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
   });
 
+
+  it("renders prepared and preguide tracking tags", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [
+        { ...buildSaleOrder("Pendiente"), id: "order-1", correlative: 1, prepared: false, preguide: false },
+        { ...buildSaleOrder("Confirmado"), id: "order-2", correlative: 2, prepared: true, preguide: true },
+      ],
+      total: 2,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    expect(await screen.findByText("Sin pregu\u00eda")).toBeInTheDocument();
+    expect(screen.getByText("Sin preparar")).toBeInTheDocument();
+    expect(screen.getByText("Con pregu\u00eda")).toBeInTheDocument();
+    expect(screen.getByText("Preparado")).toBeInTheDocument();
+  });
   it("renders backend SKU summary and detail columns in the table", async () => {
     listSaleOrdersMock.mockResolvedValue({
       items: [
@@ -764,3 +789,5 @@ describe("SaleOrders", () => {
     expect(fetchSaleOrderByIdMock).not.toHaveBeenCalled();
   });
 });
+
+

@@ -377,6 +377,8 @@ export type SaleOrder = {
     isActive: boolean;
   } | null;
   invoiceSend: boolean;
+  prepared?: boolean | null;
+  preguide?: boolean | null;
   subTotal: number;
   deliveryCost: number;
   logisticsCost?: number | null;
@@ -473,6 +475,8 @@ export type SaleOrderSearchRule = {
     | "agencyDetail"
     | "sourceId"
     | "invoiceStatus"
+    | "preguideStatus"
+    | "preparedStatus"
     | "createdBy"
     | "assignedBy";
   operator:
@@ -531,6 +535,8 @@ export type SaleOrderSearchStateResponse = {
     districts?: SaleOrderSearchOption[];
     sources?: SaleOrderSearchOption[];
     invoiceStatuses?: SaleOrderSearchOption[];
+    preguideStatuses?: SaleOrderSearchOption[];
+    preparedStatuses?: SaleOrderSearchOption[];
     creators?: SaleOrderSearchOption[];
     assignees?: SaleOrderSearchOption[];
   };
@@ -586,5 +592,6 @@ export enum ClientType {
   REPURCHASE = "REPURCHASE",
   UNDEFINED = "UNDEFINED",
 }
+
 
 

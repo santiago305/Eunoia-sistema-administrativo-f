@@ -1111,13 +1111,21 @@ export default function SaleOrders() {
                 cell: (order) => {
                     const isPaid = Number(order.pendingAmount ?? 0) <= 0;
                     return (
-                        <div className="flex w-full min-w-0 flex-col items-center gap-1">
+                        <div className="grid grid-cols-2 w-[200px] gap-1">
                             <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${isPaid ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
                                 {isPaid ? "Pagado" : "Pago pendiente"}
                             </span>
 
                             <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${order.invoiceSend ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                                {order.invoiceSend ? "Comprobante enviado" : "Sin comprobante"}
+                                {order.invoiceSend ? "Comp. enviado" : "Sin comprobante"}
+                            </span>
+
+                            <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${order.preguide === true ? "bg-sky-50 text-sky-700" : "bg-zinc-100 text-zinc-600"}`}>
+                                {order.preguide === true ? "Con preguía" : "Sin preguía"}
+                            </span>
+
+                            <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${order.prepared === true ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>
+                                {order.prepared === true ? "Preparado" : "Sin preparar"}
                             </span>
                         </div>
                     );
@@ -1335,4 +1343,5 @@ export default function SaleOrders() {
         </PageShell>
     );
 }
+
 
