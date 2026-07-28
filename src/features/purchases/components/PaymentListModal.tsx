@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { Download, FileText, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -40,6 +40,12 @@ const isImageAttachment = (attachment: PurchaseAttachment) =>
   attachment.mimeType?.startsWith("image/") ||
   /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(attachment.url);
 
+const isPdfAttachment = (attachment: PurchaseAttachment) =>
+  attachment.mimeType === "application/pdf" || /\.pdf$/i.test(`${attachment.url} ${attachment.filename} ${attachment.originalName}`);
+
+const getAttachmentName = (attachment: PurchaseAttachment) =>
+  attachment.originalName || attachment.filename || "Voucher";
+
 export type PaymentListModalProps = {
   title: string;
   close: () => void;
@@ -72,6 +78,7 @@ export function PaymentListModal({
   const [modalPayment, setModalPayment] = useState(false);
   const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
   const [previewPaymentId, setPreviewPaymentId] = useState<string | null>(null);
+  const [documentPreviewAttachment, setDocumentPreviewAttachment] = useState<PurchaseAttachment | null>(null);
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { can } = usePermissions();
   const canApprovePayment = can("payments.approve");
@@ -166,6 +173,15 @@ export function PaymentListModal({
     return map;
   }, [attachments]);
 
+  const attachmentsByPayment = useMemo(() => {
+    const map = new Map<string, PurchaseAttachment[]>();
+    attachments.forEach((attachment) => {
+      if (!attachment.paymentId || attachment.type !== PurchaseAttachmentTypes.PAYMENT_PROOF) return;
+      map.set(attachment.paymentId, [...(map.get(attachment.paymentId) ?? []), attachment]);
+    });
+    return map;
+  }, [attachments]);
+
   const previewAttachments = useMemo(
     () =>
       attachments.filter(
@@ -183,9 +199,29 @@ export function PaymentListModal({
   );
 
   const previewNames = useMemo(
-    () => previewAttachments.map((attachment) => attachment.originalName || attachment.filename || "Voucher"),
+    () => previewAttachments.map(getAttachmentName),
     [previewAttachments],
   );
+
+  const documentPreviewUrl = useMemo(
+    () => resolveAttachmentUrl(documentPreviewAttachment?.url),
+    [documentPreviewAttachment],
+  );
+  const documentPreviewName = documentPreviewAttachment ? getAttachmentName(documentPreviewAttachment) : "Voucher";
+  const isDocumentPreviewPdf = Boolean(documentPreviewAttachment && isPdfAttachment(documentPreviewAttachment));
+
+  const openPaymentEvidence = useCallback((paymentId?: string | null) => {
+    if (!paymentId) return;
+    const paymentAttachments = attachmentsByPayment.get(paymentId) ?? [];
+    const hasImage = paymentAttachments.some(isImageAttachment);
+    if (hasImage) {
+      setDocumentPreviewAttachment(null);
+      setPreviewPaymentId(paymentId);
+      return;
+    }
+    setPreviewPaymentId(null);
+    setDocumentPreviewAttachment(paymentAttachments[0] ?? null);
+  }, [attachmentsByPayment]);
 
   const handleRemove = useCallback(async (paymentId?: string | null) => {
     if (!paymentId) return;
@@ -262,7 +298,7 @@ export function PaymentListModal({
             <button
               type="button"
               disabled={!count}
-              onClick={() => row.payDocId && setPreviewPaymentId(row.payDocId)}
+              onClick={() => openPaymentEvidence(row.payDocId)}
               className="inline-flex items-center gap-1 rounded-full border border-black/10 px-2 py-0.5 text-[10px] font-medium text-black/55 transition enabled:hover:border-primary/30 enabled:hover:text-primary disabled:cursor-default"
               title={count ? "Ver voucher" : "Sin voucher"}
             >
@@ -334,7 +370,7 @@ export function PaymentListModal({
         hideable: false,
       },
     ],
-    [attachmentCountByPayment, canApprovePayment, canDeletePayments, canRejectPayment, handleRemove, loadPurchases, reloadPayments, showFeedback],
+    [attachmentCountByPayment, canApprovePayment, canDeletePayments, canRejectPayment, handleRemove, loadPurchases, openPaymentEvidence, reloadPayments, showFeedback],
   );
 
   return (
@@ -415,6 +451,38 @@ export function PaymentListModal({
         downloadUrls={previewUrls}
         fileNames={previewNames}
       />
+      <Modal
+        open={Boolean(documentPreviewAttachment && documentPreviewUrl)}
+        onClose={() => setDocumentPreviewAttachment(null)}
+        title={documentPreviewName}
+        className="w-[900px]"
+        bodyClassName="p-0"
+      >
+        {documentPreviewAttachment && documentPreviewUrl ? (
+          <div className="bg-white">
+            {isDocumentPreviewPdf ? (
+              <iframe
+                title={documentPreviewName}
+                src={documentPreviewUrl}
+                className="h-[75vh] w-full bg-white"
+              />
+            ) : (
+              <div className="flex min-h-60 flex-col items-center justify-center gap-3 p-6 text-center">
+                <FileText className="h-10 w-10 text-black/35" />
+                <p className="text-sm font-medium text-black/70">Vista previa no disponible para este archivo.</p>
+                <a
+                  href={documentPreviewUrl}
+                  download={documentPreviewName}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-black/10 px-3 text-xs font-medium text-black/75 hover:bg-black/[0.03]"
+                >
+                  <Download className="h-4 w-4" />
+                  Descargar
+                </a>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </Modal>
     </Modal>
   );
 }

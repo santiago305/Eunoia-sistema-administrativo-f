@@ -61,6 +61,7 @@ export type PurchaseOrderDetailOutput = {
   totalPaid?: number;
   totalToPay?: number;
   note?: string | null;
+  description?: string | null;
   status: PurchaseOrderStatus;
   purchaseType?: PurchaseType;
   receptionStatus?: ReceptionStatus;

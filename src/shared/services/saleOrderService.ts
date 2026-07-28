@@ -73,7 +73,10 @@ export type SaleOrderBulkActionResponse = {
   type: "success" | string;
   message: string;
   data: {
+    mode?: "state" | "global_action";
     targetStateId?: string;
+    transitionId?: string;
+    globalActionName?: string;
     requested: number;
     succeeded: number;
     failed: number;
@@ -91,6 +94,18 @@ export type BulkChangeSaleOrderStatePayload = {
   saleOrderIds: string[];
   targetStateId: string;
 };
+
+export type BulkExecuteSaleOrderWorkflowPayload =
+  | {
+      saleOrderIds: string[];
+      mode: "state";
+      targetStateId: string;
+    }
+  | {
+      saleOrderIds: string[];
+      mode: "global_action";
+      globalActionName: string;
+    };
 
 export type SaleOrderWorkflowStateReference = {
   workflowStateId: string;
@@ -128,6 +143,7 @@ export type SaleOrderWorkflowRouteFailure = {
     | "CONDITION_FAILED"
     | "ACTION_FAILED"
     | "ROUTE_INVALIDATED"
+    | "GLOBAL_ACTION_NOT_AVAILABLE"
     | "UNEXPECTED_ERROR";
   message: string;
   details?: Record<string, unknown>;
@@ -284,6 +300,16 @@ export const bulkChangeSaleOrderState = async (
 ): Promise<SaleOrderBulkActionResponse> => {
   const response = await axiosInstance.post<SaleOrderBulkActionResponse>(
     API_SALE_ORDERS_GROUP.bulkChangeState,
+    payload,
+  );
+  return response.data;
+};
+
+export const bulkExecuteSaleOrderWorkflow = async (
+  payload: BulkExecuteSaleOrderWorkflowPayload,
+): Promise<SaleOrderBulkActionResponse> => {
+  const response = await axiosInstance.post<SaleOrderBulkActionResponse>(
+    API_SALE_ORDERS_GROUP.bulkExecuteWorkflow,
     payload,
   );
   return response.data;

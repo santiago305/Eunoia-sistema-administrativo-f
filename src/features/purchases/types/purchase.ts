@@ -132,9 +132,11 @@ export type PurchaseSearchStateResponse = {
 };
 
 export type PurchaseOrderItem = {
+  clientKey?: string,
   skuId: string,
   sku?: {
     id: string,
+    productId?: string,
     backendSku?: string | null,
     customSku?: string | null,
     name?: string | null,
@@ -185,6 +187,7 @@ export type PurchaseOrder = {
   totalPaid?: number;
   totalToPay?: number;
   note?: string | null;
+  description?: string | null;
   status: PurchaseOrderStatus;
   purchaseType?: PurchaseType;
   receptionStatus?: ReceptionStatus;

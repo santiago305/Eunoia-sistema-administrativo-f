@@ -976,6 +976,44 @@ export default function Purchases() {
                 const approvalStatus = (row.purchase.approvalStatus ?? "") as string;
                 const isApprovalBlocked = approvalStatus === "PENDING" || approvalStatus === "REJECTED";
                 const isApprovalRejected = approvalStatus === "REJECTED";
+                const paymentAction =
+                    row.purchase.paymentForm !== PaymentFormTypes.CREDITO
+                        ? {
+                            id: "payment",
+                            label: "Pagos",
+                            icon: <CreditCard className="h-4 w-4 text-black/60" />,
+                            onClick: () => openPaymentFlow(row.purchase),
+                            disabled: companyActionDisabled,
+                        }
+                        : null;
+                const quotaAction =
+                    row.purchase.paymentForm === PaymentFormTypes.CREDITO
+                        ? {
+                            id: "quotas",
+                            label: "Ver cuotas",
+                            icon: <Calendar className="h-4 w-4 text-black/60" />,
+                            onClick: () => {
+                                setModalQuotaList(true);
+                                setPoId(row.purchase.poId ?? "");
+                            },
+                            disabled: companyActionDisabled,
+                        }
+                        : null;
+                const listPaymentsAction =
+                    row.purchase.paymentForm === PaymentFormTypes.CREDITO
+                        ? {
+                            id: "list-payments",
+                            label: "Listar pagos",
+                            icon: <List className="h-4 w-4 text-black/60" />,
+                            onClick: () => {
+                                setModalPaymentList(true);
+                                setPoId(row.purchase.poId ?? "");
+                                setTotalPo(row.purchase.total);
+                                setPaymentForm(row.purchase.paymentForm ?? "");
+                            },
+                            disabled: companyActionDisabled,
+                        }
+                        : null;
                 return (
                 <div className="flex justify-center">
                     {isApprovalRejected ? (
@@ -987,6 +1025,9 @@ export default function Purchases() {
                                     icon: <FileText className="h-4 w-4 text-black/60" />,
                                     onClick: () => setSelectedPurchaseRow(row),
                                 },
+                                paymentAction,
+                                quotaAction,
+                                listPaymentsAction,
                                 createHistoryAction(row.purchase),
                             ].filter(Boolean) as ActionItem[]}
                         />
@@ -1067,26 +1108,8 @@ export default function Purchases() {
                                 },
                                 disabled: companyActionDisabled,
                             },
-                            row.purchase.paymentForm !== PaymentFormTypes.CREDITO &&
-                            row.purchase.totalPaid != row.purchase.total && {
-                                id: "payment",
-                                label: "Pagos",
-                                icon: <CreditCard className="h-4 w-4 text-black/60" />,
-                                onClick: () => openPaymentFlow(row.purchase),
-                                disabled:
-                                    companyActionDisabled ||
-                                    isApprovalBlocked,
-                                hidden: isApprovalBlocked,
-                            },
-                            row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
-                                id: "quotas",
-                                label: "Ver cuotas",
-                                icon: <Calendar className="h-4 w-4 text-black/60" />,
-                                onClick: () => {
-                                    setModalQuotaList(true);
-                                    setPoId(row.purchase.poId ?? "");
-                                },
-                            },
+                            paymentAction,
+                            quotaAction,
                             {
                                 id: "open-pdf",
                                 label: "Abrir pdf",
@@ -1106,17 +1129,7 @@ export default function Purchases() {
                                     setFiscalDocumentsPoId(nextPoId);
                                 },
                             },
-                            row.purchase.paymentForm === PaymentFormTypes.CREDITO && {
-                                id: "list-payments",
-                                label: "Listar pagos",
-                                icon: <List className="h-4 w-4 text-black/60" />,
-                                onClick: () => {
-                                    setModalPaymentList(true);
-                                    setPoId(row.purchase.poId ?? "");
-                                    setTotalPo(row.purchase.total);
-                                    setPaymentForm(row.purchase.paymentForm ?? "");
-                                },
-                            },
+                            listPaymentsAction,
                             row.purchase.status === PurchaseOrderStatuses.DRAFT && {
                                 id: "edit",
                                 label: "Editar",

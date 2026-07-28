@@ -197,4 +197,20 @@ describe("PurchasePaymentModal", () => {
       expect(screen.getByRole("button", { name: "Generar Comprobante" })).not.toBeDisabled();
     });
   });
+
+  it("allows pdf payment evidence files", async () => {
+    render(<StatefulPurchasePaymentModal />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Metodo: EFECTIVO" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA - 001-222" }));
+
+    const input = await screen.findByLabelText("Comprobante de pago 1") as HTMLInputElement;
+    expect(input.accept).toContain("application/pdf");
+    expect(input.accept).toContain(".pdf");
+
+    const file = new File(["pdf"], "comprobante.pdf", { type: "application/pdf" });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(await screen.findByText("comprobante.pdf")).toBeInTheDocument();
+  });
 });

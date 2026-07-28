@@ -13,7 +13,7 @@ import {
 } from "@/features/sale-orders/types/saleOrder";
 import {
     bulkAssignSaleOrders,
-    bulkChangeSaleOrderState,
+    bulkExecuteSaleOrderWorkflow,
     deleteSaleOrderExportPreset,
     deleteSaleOrderSearchMetric,
     exportSaleOrdersExcel,
@@ -57,7 +57,7 @@ import {
     SaleOrderBulkAssignModal,
     SaleOrderBulkChangeStateModal,
     SaleOrderBulkResultModal,
-    type SaleOrderBulkChangeStateSelection,
+    type SaleOrderBulkExecuteWorkflowSelection,
 } from "./components/bulk";
 import { SaleOrderActionsPopover } from "./components/sale-order/SaleOrderActionsPopover";
 import { SaleOrderStatusPopover } from "./components/sale-order/SaleOrderStatusPopover";
@@ -772,16 +772,15 @@ export default function SaleOrders() {
     );
 
     const handleBulkChangeState = useCallback(
-        async (selection: SaleOrderBulkChangeStateSelection) => {
+        async (selection: SaleOrderBulkExecuteWorkflowSelection) => {
             const saleOrderIds = [...selection.saleOrderIds];
-            if (saleOrderIds.length === 0 || !selection.targetStateId) return;
+            if (saleOrderIds.length === 0) return;
+            if (selection.mode === "state" && !selection.targetStateId) return;
+            if (selection.mode === "global_action" && !selection.globalActionName) return;
 
             setBulkActionLoading(true);
             try {
-                const result = await bulkChangeSaleOrderState({
-                    saleOrderIds,
-                    targetStateId: selection.targetStateId,
-                });
+                const result = await bulkExecuteSaleOrderWorkflow(selection);
 
                 const failedIds = result.data.results
                     .filter((row) => row.status === "failed")
@@ -799,7 +798,7 @@ export default function SaleOrders() {
                 );
                 await loadOrders();
             } catch (error) {
-                showFeedback(errorResponse(parseApiError(error, "Error al cambiar estados de forma masiva.")));
+                showFeedback(errorResponse(parseApiError(error, "Error al ejecutar accion masiva.")));
             } finally {
                 setBulkActionLoading(false);
             }

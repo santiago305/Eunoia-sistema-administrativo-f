@@ -4,7 +4,8 @@ import { ClientType, type SaleOrder } from "@/features/sale-orders/types/saleOrd
 import { SaleOrderBulkAssignModal } from "./SaleOrderBulkAssignModal";
 import { SaleOrderBulkChangeStateModal } from "./SaleOrderBulkChangeStateModal";
 
-const { listSaleOrderStatesMock, listWorkflowsMock, listAdvisersMock, listUsersMock } = vi.hoisted(() => ({
+const { getWorkflowMock, listSaleOrderStatesMock, listWorkflowsMock, listAdvisersMock, listUsersMock } = vi.hoisted(() => ({
+    getWorkflowMock: vi.fn(),
     listSaleOrderStatesMock: vi.fn(),
     listWorkflowsMock: vi.fn(),
     listAdvisersMock: vi.fn(),
@@ -118,6 +119,7 @@ vi.mock("@/shared/hooks/useAuth", () => ({
 }));
 
 vi.mock("@/shared/services/workflowService", () => ({
+    getWorkflow: getWorkflowMock,
     listSaleOrderStates: listSaleOrderStatesMock,
     listWorkflows: listWorkflowsMock,
 }));
@@ -185,8 +187,17 @@ function buildOrder(overrides: Partial<SaleOrder>): SaleOrder {
 
 describe("SaleOrderBulkChangeStateModal", () => {
     beforeEach(() => {
+        getWorkflowMock.mockReset();
         listSaleOrderStatesMock.mockReset();
         listWorkflowsMock.mockReset();
+        listWorkflowsMock.mockResolvedValue([]);
+        getWorkflowMock.mockResolvedValue({
+            workflow: { id: "workflow-1", name: "Venta", normalizedName: "venta", description: null, isActive: true, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: null },
+            states: [],
+            transitions: [],
+            conditions: [],
+            actions: [],
+        });
     });
 
     it("uses all sale-order states for the selected-orders state filter", async () => {
@@ -210,6 +221,159 @@ describe("SaleOrderBulkChangeStateModal", () => {
 
         const currentStateFilter = screen.getByLabelText("Filtrar por estado");
         expect(currentStateFilter).toHaveTextContent("Despachado");
+    });
+
+    it("submits state mode with the selected target state", async () => {
+        const onSubmit = vi.fn();
+        listSaleOrderStatesMock.mockResolvedValue([
+            { id: "state-1", name: "Nuevo", color: "#64748b" },
+            { id: "state-2", name: "Validado", color: "#22c55e" },
+        ]);
+
+        render(
+            <SaleOrderBulkChangeStateModal
+                open
+                selectedOrders={[buildOrder({ id: "order-1", currentStateId: "state-1" })]}
+                selectedOrderIds={["order-1"]}
+                onClose={vi.fn()}
+                onSubmit={onSubmit}
+            />,
+        );
+
+        await waitFor(() => expect(listSaleOrderStatesMock).toHaveBeenCalled());
+
+        expect(screen.getByLabelText("Ejecutar por")).toHaveValue("state");
+        fireEvent.change(screen.getByLabelText("Estado destino"), { target: { value: "state-2" } });
+        fireEvent.click(screen.getByRole("button", { name: /Ejecutar/i }));
+
+        expect(onSubmit).toHaveBeenCalledWith({
+            mode: "state",
+            saleOrderIds: ["order-1"],
+            targetStateId: "state-2",
+        });
+    });
+
+    it("lists active global action transitions and submits action mode", async () => {
+        const onSubmit = vi.fn();
+        listSaleOrderStatesMock.mockResolvedValue([{ id: "state-1", name: "Nuevo", color: "#64748b" }]);
+        listWorkflowsMock.mockResolvedValue([
+            { id: "workflow-1", name: "Venta", description: null, isActive: true },
+        ]);
+        getWorkflowMock.mockResolvedValue({
+            workflow: { id: "workflow-1", name: "Venta", normalizedName: "venta", description: null, isActive: true, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: null },
+            states: [],
+            transitions: [
+                {
+                    id: "transition-action-1",
+                    workflowId: "workflow-1",
+                    fromStateId: null,
+                    toStateId: null,
+                    isGlobal: true,
+                    excludedStateIds: [],
+                    effect: "RUN_ACTIONS",
+                    purpose: "STANDARD",
+                    name: "Preparado",
+                    code: "MARK_PREPARED",
+                    isActive: true,
+                    conditions: [],
+                    actions: [],
+                },
+                {
+                    id: "transition-move-1",
+                    workflowId: "workflow-1",
+                    fromStateId: null,
+                    toStateId: "state-2",
+                    isGlobal: true,
+                    excludedStateIds: [],
+                    effect: "MOVE_STATE",
+                    purpose: "STANDARD",
+                    name: "Despachar",
+                    code: "DISPATCH",
+                    isActive: true,
+                    conditions: [],
+                    actions: [],
+                },
+            ],
+            conditions: [],
+            actions: [],
+        });
+
+        render(
+            <SaleOrderBulkChangeStateModal
+                open
+                selectedOrders={[buildOrder({ id: "order-1", currentStateId: "state-1" })]}
+                selectedOrderIds={["order-1"]}
+                onClose={vi.fn()}
+                onSubmit={onSubmit}
+            />,
+        );
+
+        await waitFor(() => expect(getWorkflowMock).toHaveBeenCalledWith("workflow-1"));
+
+        fireEvent.change(screen.getByLabelText("Ejecutar por"), { target: { value: "global_action" } });
+        expect(screen.getByLabelText("Acciones globales")).toHaveTextContent("Preparado");
+        expect(screen.getByLabelText("Acciones globales")).not.toHaveTextContent("Despachar");
+
+        fireEvent.change(screen.getByLabelText("Acciones globales"), { target: { value: "Preparado" } });
+        fireEvent.click(screen.getByRole("button", { name: /Ejecutar/i }));
+
+        expect(onSubmit).toHaveBeenCalledWith({
+            mode: "global_action",
+            saleOrderIds: ["order-1"],
+            globalActionName: "Preparado",
+        });
+    });
+
+    it("deduplicates global action options across workflows by action name", async () => {
+        const onSubmit = vi.fn();
+        listSaleOrderStatesMock.mockResolvedValue([{ id: "state-1", name: "Nuevo", color: "#64748b" }]);
+        listWorkflowsMock.mockResolvedValue([
+            { id: "workflow-1", name: "ABONADO ENVIO", description: null, isActive: true },
+            { id: "workflow-2", name: "ABONADO CE", description: null, isActive: true },
+        ]);
+        getWorkflowMock.mockImplementation((workflowId: string) =>
+            Promise.resolve({
+                workflow: { id: workflowId, name: workflowId === "workflow-1" ? "ABONADO ENVIO" : "ABONADO CE", normalizedName: workflowId, description: null, isActive: true, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: null },
+                states: [],
+                transitions: [
+                    {
+                        id: `${workflowId}-preguia`,
+                        workflowId,
+                        fromStateId: null,
+                        toStateId: null,
+                        isGlobal: true,
+                        excludedStateIds: [],
+                        effect: "RUN_ACTIONS",
+                        purpose: "STANDARD",
+                        name: workflowId === "workflow-1" ? "Preguia" : "preguia",
+                        code: `GLOBAL_ACTION_${workflowId}`,
+                        isActive: true,
+                        conditions: [],
+                        actions: [],
+                    },
+                ],
+                conditions: [],
+                actions: [],
+            }),
+        );
+
+        render(
+            <SaleOrderBulkChangeStateModal
+                open
+                selectedOrders={[buildOrder({ id: "order-1", currentStateId: "state-1" })]}
+                selectedOrderIds={["order-1"]}
+                onClose={vi.fn()}
+                onSubmit={onSubmit}
+            />,
+        );
+
+        await waitFor(() => expect(getWorkflowMock).toHaveBeenCalledTimes(2));
+
+        fireEvent.change(screen.getByLabelText("Ejecutar por"), { target: { value: "global_action" } });
+        const globalActionSelect = screen.getByLabelText("Acciones globales");
+        expect(globalActionSelect.querySelectorAll("option[value='Preguia']")).toHaveLength(1);
+        expect(globalActionSelect).not.toHaveTextContent("ABONADO CE");
+        expect(globalActionSelect).not.toHaveTextContent("ABONADO ENVIO");
     });
 
     it("filters the selected-orders list by the order current state", async () => {
