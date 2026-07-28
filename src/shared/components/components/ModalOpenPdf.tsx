@@ -1,5 +1,5 @@
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { List } from "lucide-react";
+import { ExternalLink, List } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Modal } from "../modales/Modal";
 
@@ -81,6 +81,10 @@ export function PdfViewerModal({
   if (!open) return null;
 
   const resolvedClassName = [DEFAULT_CLASSNAME, className].filter(Boolean).join(" ");
+  const openPdfInNewTab = () => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <Modal title={title} className={resolvedClassName} open={open} onClose={onClose}>
@@ -114,10 +118,17 @@ export function PdfViewerModal({
         </div>
 
         {footer ?? (
-          <div className="flex">
+          <div className="flex justify-end gap-2">
+            <SystemButton
+              variant="outline"
+              leftIcon={<ExternalLink className="h-4 w-4" />}
+              disabled={!pdfUrl}
+              onClick={openPdfInNewTab}
+            >
+              Abrir PDF
+            </SystemButton>
             <SystemButton
               leftIcon={<List className="h-4 w-4" />}
-              className="ms-auto"
               style={{
                 backgroundColor: accent,
                 borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,

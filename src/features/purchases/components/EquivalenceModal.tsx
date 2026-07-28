@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Boxes, Scale } from "lucide-react";
 import { Modal } from "@/shared/components/settings/modal";
 import { errorResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { listProductEquivalences } from "@/shared/services/equivalenceService";
 import { listUnits } from "@/shared/services/unitService";
+import { listSkus } from "@/shared/services/skuService";
 import { AfectType, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
 import type { AfectTypeType } from "@/features/purchases/types/purchaseEnums";
 import type { ProductEquivalence } from "@/features/catalog/types/equivalence";
@@ -17,26 +18,24 @@ import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
-import { buildPurchaseSkuLabel, type PurchaseSkuInfo } from "../utils/purchaseSkus";
+import { buildPurchaseSkuLabel, mapSkuToPurchaseSkuInfo, type PurchaseSkuInfo } from "../utils/purchaseSkus";
 import { PurchaseItemTypeSelect } from "./PurchaseItemTypeSelect";
 import {
   PurchaseItemTypes,
   PurchaseTypes,
-  purchaseItemTypesWithoutStock,
   type PurchaseItemType,
   type PurchaseType,
 } from "../types/purchase-classification.types";
 
 type EquivalenceModalProps = {
   open: boolean;
-  itemId: string;
-  products: PurchaseSkuInfo[];
   documentType: PurchaseOrder["documentType"];
   primaryColor: string;
-  igv: number;
+  igvPercent: number;
   setForm: Dispatch<SetStateAction<PurchaseOrder>>;
-  setItemId: Dispatch<SetStateAction<string>>;
   purchaseType: PurchaseType;
+  editingItemKey?: string | null;
+  editingItem?: PurchaseOrderItem | null;
   onClose: () => void;
 };
 
@@ -51,19 +50,62 @@ type EquivalenceRow = {
   equivalenceLabel: string;
 };
 
+const catalogProductTypeByItemType: Partial<Record<PurchaseItemType, "MATERIAL" | "PRODUCT">> = {
+  [PurchaseItemTypes.RAW_MATERIAL]: "MATERIAL",
+  [PurchaseItemTypes.PRODUCT]: "PRODUCT",
+};
+
+const createClientKey = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const getDefaultItemType = (purchaseType: PurchaseType): PurchaseItemType =>
+  purchaseType === PurchaseTypes.RAW_MATERIAL
+    ? PurchaseItemTypes.RAW_MATERIAL
+    : purchaseType === PurchaseTypes.INTERNAL_MATERIAL
+      ? PurchaseItemTypes.INTERNAL_MATERIAL
+      : purchaseType === PurchaseTypes.FIXED_ASSET
+        ? PurchaseItemTypes.FIXED_ASSET
+        : purchaseType === PurchaseTypes.SERVICE
+          ? PurchaseItemTypes.SERVICE
+          : purchaseType === PurchaseTypes.SUBSCRIPTION
+            ? PurchaseItemTypes.SUBSCRIPTION
+            : PurchaseItemTypes.PRODUCT;
+
+const sameCatalogProducts = (left: PurchaseSkuInfo[], right: PurchaseSkuInfo[]) =>
+  left.length === right.length && left.every((item, index) => item.skuId === right[index]?.skuId);
+
+const getItemKey = (item: PurchaseOrderItem, index: number) =>
+  item.skuId || item.clientKey || `item-${index}`;
+
+const getPurchaseSkuInfoFromItem = (item: PurchaseOrderItem): PurchaseSkuInfo | null => {
+  if (!item.skuId) return null;
+
+  return {
+    skuId: item.skuId,
+    productId: item.sku?.productId,
+    name: item.sku?.name ?? item.name ?? item.description ?? "SKU",
+    backendSku: item.sku?.backendSku ?? undefined,
+    customSku: item.sku?.customSku ?? null,
+    unitCode: item.equivalence || item.unitBase || undefined,
+    attributes: [],
+  };
+};
+
 export function EquivalenceModal({
   open,
-  itemId,
-  products,
   documentType,
   primaryColor,
-  igv,
+  igvPercent,
   setForm,
-  setItemId,
   purchaseType,
+  editingItemKey = null,
+  editingItem = null,
   onClose,
 }: EquivalenceModalProps) {
   const { showFeedback, clearFeedback } = useFeedbackToast();
+  const showFeedbackRef = useRef(showFeedback);
   const [loading, setLoading] = useState(false);
   const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
   const [units, setUnits] = useState<ListUnitResponse>([]);
@@ -75,6 +117,16 @@ export function EquivalenceModal({
   const [pendingStockUnit, setPendingStockUnit] = useState<string | null>(null);
   const [pendingPurchaseUnit, setPendingPurchaseUnit] = useState<string | null>(null);
   const [unitsLoaded, setUnitsLoaded] = useState(false);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogProducts, setCatalogProducts] = useState<PurchaseSkuInfo[]>([]);
+  const [selectedSkuId, setSelectedSkuId] = useState("");
+  const [manualDescription, setManualDescription] = useState("");
+  const isCatalogItemType = Boolean(catalogProductTypeByItemType[pendingItemType]);
+  const isEditMode = Boolean(editingItemKey && editingItem);
+
+  useEffect(() => {
+    showFeedbackRef.current = showFeedback;
+  }, [showFeedback]);
 
   const resetPending = () => {
     setPendingItemAfectType(AfectType.TAXED);
@@ -84,6 +136,10 @@ export function EquivalenceModal({
     setPendingFactor(0);
     setPendingStockUnit("");
     setPendingPurchaseUnit("");
+    setCatalogQuery("");
+    setCatalogProducts([]);
+    setSelectedSkuId("");
+    setManualDescription("");
   };
 
   const handleClose = useCallback(() => {
@@ -104,10 +160,10 @@ export function EquivalenceModal({
       }
       return list;
     } catch {
-      if (canUpdate()) showFeedback(errorResponse("Error al cargar unidades"));
+      if (canUpdate()) showFeedbackRef.current(errorResponse("Error al cargar unidades"));
       return [];
     }
-  }, [showFeedback, units, unitsLoaded]);
+  }, [units, unitsLoaded]);
 
   const loadEquivalences = useCallback(async (
     productId: string,
@@ -145,12 +201,57 @@ export function EquivalenceModal({
     } catch {
       if (canUpdate()) {
         setEquivalences([]);
-        showFeedback(errorResponse("Error al cargar equivalencias"));
+        showFeedbackRef.current(errorResponse("Error al cargar equivalencias"));
       }
     } finally {
       if (canUpdate()) setLoading(false);
     }
-  }, [showFeedback]);
+  }, []);
+
+  const loadCatalogProducts = useCallback(async (
+    itemType: PurchaseItemType,
+    query: string,
+    canUpdate: () => boolean,
+  ) => {
+    const productType = catalogProductTypeByItemType[itemType];
+    if (!productType) {
+      if (canUpdate()) {
+        setCatalogProducts((prev) => (prev.length > 0 ? [] : prev));
+        setSelectedSkuId("");
+      }
+      return;
+    }
+
+    try {
+      const response = await listSkus({
+        productType,
+        q: query.trim() || undefined,
+        isActive: true,
+        page: 1,
+        limit: 10,
+      });
+      if (!canUpdate()) return;
+
+      const mapped = (response.items ?? []).map(mapSkuToPurchaseSkuInfo);
+      const editingProduct = editingItem?.skuId === selectedSkuId
+        ? getPurchaseSkuInfoFromItem(editingItem)
+        : null;
+      const nextProducts =
+        editingProduct && !mapped.some((sku) => sku.skuId === editingProduct.skuId)
+          ? [editingProduct, ...mapped]
+          : mapped;
+
+      setCatalogProducts((prev) => (sameCatalogProducts(prev, nextProducts) ? prev : nextProducts));
+      if (selectedSkuId && !nextProducts.some((sku) => sku.skuId === selectedSkuId)) {
+        setSelectedSkuId("");
+      }
+    } catch {
+      if (!canUpdate()) return;
+      setCatalogProducts((prev) => (prev.length > 0 ? [] : prev));
+      setSelectedSkuId("");
+      showFeedbackRef.current(errorResponse("Error al cargar items"));
+    }
+  }, [editingItem, selectedSkuId]);
 
   const addSelectedProduct = (
     selectedItemId?: string,
@@ -165,23 +266,72 @@ export function EquivalenceModal({
       itemType?: PurchaseItemType;
     },
   ) => {
-    const finalItemId = selectedItemId ?? itemId;
-    if (!finalItemId) return;
-
     const nextQuantity = Number(opts?.quantity ?? 1);
     const quantity = Number.isFinite(nextQuantity) && nextQuantity > 0 ? nextQuantity : 1;
     const unitPrice = Math.max(0, opts?.unitPrice ?? 0);
     const afectType = opts?.afectType ?? AfectType.TAXED;
-    const equivalence = opts?.equivalence ?? "";
     const nextFactor = Number(opts?.factor ?? 1);
-    const factor = Number.isFinite(nextFactor) && nextFactor > 0 ? nextFactor : 1;
-    const unitBase = opts?.unitBase ?? "";
     const itemType = opts?.itemType ?? PurchaseItemTypes.PRODUCT;
-    const affectsStock = !purchaseItemTypesWithoutStock.includes(itemType);
+    const affectsStock = Boolean(catalogProductTypeByItemType[itemType]);
+    const equivalence = affectsStock ? (opts?.equivalence ?? "") : "NIU";
+    const factor = affectsStock && Number.isFinite(nextFactor) && nextFactor > 0 ? nextFactor : 1;
+    const unitBase = affectsStock ? (opts?.unitBase ?? "") : "NIU";
+    const finalItemId = affectsStock ? (selectedItemId ?? "") : "";
+    const description = opts?.name?.trim() ?? "";
+    const selectedProduct = affectsStock
+      ? catalogProducts.find((product) => product.skuId === finalItemId)
+      : undefined;
+    if (affectsStock && !finalItemId) return;
+    if (!affectsStock && !description) return;
 
     setForm((prev) => {
       const items = prev.items ?? [];
-      const existing = items.find((item) => item.skuId === finalItemId);
+      const existing = !isEditMode && affectsStock
+        ? items.find((item) => item.skuId === finalItemId)
+        : undefined;
+      const buildNextItem = (previous?: PurchaseOrderItem): PurchaseOrderItem => recalcItem({
+        ...previous,
+        skuId: finalItemId,
+        unitBase,
+        equivalence,
+        factor,
+        afectType,
+        quantity,
+        porcentageIgv: afectType === AfectType.TAXED ? igvPercent : 0,
+        baseWithoutIgv: 0,
+        amountIgv: 0,
+        unitValue: 0,
+        unitPrice,
+        purchaseValue: 0,
+        name: description || opts?.name,
+        description: affectsStock ? undefined : description,
+        clientKey: affectsStock ? previous?.clientKey : (previous?.clientKey ?? createClientKey()),
+        sku: selectedProduct
+          ? {
+              id: selectedProduct.skuId,
+              productId: selectedProduct.productId,
+              backendSku: selectedProduct.backendSku ?? null,
+              customSku: selectedProduct.customSku ?? null,
+              name: selectedProduct.name ?? null,
+            }
+          : affectsStock && previous?.skuId === finalItemId
+            ? previous.sku
+            : undefined,
+        itemType,
+        affectsStock,
+        generatesAsset: itemType === PurchaseItemTypes.FIXED_ASSET,
+        isService: itemType === PurchaseItemTypes.SERVICE,
+        isSubscription: itemType === PurchaseItemTypes.SUBSCRIPTION,
+      });
+
+      if (isEditMode && editingItemKey) {
+        return {
+          ...prev,
+          items: items.map((item, index) =>
+            getItemKey(item, index) === editingItemKey ? buildNextItem(item) : item,
+          ),
+        };
+      }
 
       if (existing) {
         const nextItems = items.map((item) =>
@@ -205,31 +355,16 @@ export function EquivalenceModal({
         return { ...prev, items: nextItems };
       }
 
-      const newItem: PurchaseOrderItem = recalcItem({
-        skuId: finalItemId,
-        unitBase,
-        equivalence,
-        factor,
-        afectType,
-        quantity,
-        porcentageIgv: igv * 100,
-        baseWithoutIgv: 0,
-        amountIgv: 0,
-        unitValue: 0,
-        unitPrice,
-        purchaseValue: 0,
-        name: opts?.name,
-        itemType,
-        affectsStock,
-        generatesAsset: itemType === PurchaseItemTypes.FIXED_ASSET,
-        isService: itemType === PurchaseItemTypes.SERVICE,
-        isSubscription: itemType === PurchaseItemTypes.SUBSCRIPTION,
-      });
+      const newItem: PurchaseOrderItem = {
+        ...buildNextItem(),
+        clientKey: affectsStock ? undefined : createClientKey(),
+      };
 
       return { ...prev, items: [...items, newItem] };
     });
 
-    setItemId("");
+    setSelectedSkuId("");
+    setManualDescription("");
   };
 
   useEffect(() => {
@@ -240,47 +375,69 @@ export function EquivalenceModal({
       return;
     }
 
+    if (editingItem) {
+      const nextItemType = editingItem.itemType ?? getDefaultItemType(purchaseType);
+      const description = (editingItem.name ?? editingItem.description ?? "").trim();
+      const catalogProduct = getPurchaseSkuInfoFromItem(editingItem);
+
+      setPendingItemAfectType(editingItem.afectType ?? AfectType.TAXED);
+      setPendingItemQuantity(Number(editingItem.quantity ?? 1));
+      setPendingItemUnitPrice(Number(editingItem.unitPrice ?? 0));
+      setPendingItemType(nextItemType);
+      setPendingFactor(Number(editingItem.factor ?? 1));
+      setPendingStockUnit(editingItem.equivalence ?? "NIU");
+      setPendingPurchaseUnit(editingItem.unitBase ?? "NIU");
+      setCatalogQuery(description);
+      setCatalogProducts(catalogProduct ? [catalogProduct] : []);
+      setSelectedSkuId(editingItem.skuId ?? "");
+      setManualDescription(description);
+      return;
+    }
+
+    resetPending();
+    setPendingItemType(getDefaultItemType(purchaseType));
+    setPendingStockUnit(null);
+    setPendingPurchaseUnit(null);
+  }, [editingItem, open, purchaseType]);
+
+  useEffect(() => {
+    if (!open || !isCatalogItemType) return;
+
+    let active = true;
+    const timeoutId = window.setTimeout(() => {
+      void loadCatalogProducts(pendingItemType, catalogQuery, () => active);
+    }, catalogQuery.trim() ? 350 : 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [catalogQuery, isCatalogItemType, loadCatalogProducts, open, pendingItemType]);
+
+  useEffect(() => {
+    if (!open) return;
+
     let active = true;
     const canUpdate = () => active;
 
     const run = async () => {
-      if (!itemId) {
-        if (active) handleClose();
+      const selectedProduct = catalogProducts.find((p) => p.skuId === selectedSkuId);
+      if (!isCatalogItemType || !selectedProduct) {
+        if (equivalences.length > 0) setEquivalences([]);
+        if (pendingFactor !== 0) setPendingFactor(0);
+        if (pendingStockUnit !== null) setPendingStockUnit(null);
+        if (pendingPurchaseUnit !== null) setPendingPurchaseUnit(null);
         return;
       }
-
-      const selectedProduct = products.find((p) => p.skuId === itemId);
       if (!selectedProduct) {
-        if (canUpdate()) showFeedback(errorResponse("No se encontró el producto seleccionado"));
-        if (active) handleClose();
+        if (canUpdate()) showFeedbackRef.current(errorResponse("No se encontró el producto seleccionado"));
         return;
       }
 
       if (!selectedProduct.productId) {
-        if (canUpdate()) showFeedback(errorResponse("No se encontro el producto base del SKU seleccionado"));
-        if (active) handleClose();
+        if (canUpdate()) showFeedbackRef.current(errorResponse("No se encontro el producto base del SKU seleccionado"));
         return;
       }
-
-      setPendingItemAfectType(AfectType.TAXED);
-      setPendingItemQuantity(1);
-      setPendingItemUnitPrice(0);
-      setPendingItemType(
-        purchaseType === PurchaseTypes.RAW_MATERIAL
-          ? PurchaseItemTypes.RAW_MATERIAL
-          : purchaseType === PurchaseTypes.INTERNAL_MATERIAL
-            ? PurchaseItemTypes.INTERNAL_MATERIAL
-            : purchaseType === PurchaseTypes.FIXED_ASSET
-              ? PurchaseItemTypes.FIXED_ASSET
-              : purchaseType === PurchaseTypes.SERVICE
-                ? PurchaseItemTypes.SERVICE
-                : purchaseType === PurchaseTypes.SUBSCRIPTION
-                  ? PurchaseItemTypes.SUBSCRIPTION
-                  : PurchaseItemTypes.PRODUCT,
-      );
-      setPendingFactor(0);
-      setPendingStockUnit(null);
-      setPendingPurchaseUnit(null);
 
       const unitList = await loadUnits(canUpdate);
       if (!active) return;
@@ -293,7 +450,18 @@ export function EquivalenceModal({
     return () => {
       active = false;
     };
-  }, [open, itemId, products, handleClose, loadEquivalences, loadUnits, purchaseType, showFeedback]);
+  }, [
+    catalogProducts,
+    equivalences.length,
+    isCatalogItemType,
+    loadEquivalences,
+    loadUnits,
+    open,
+    pendingFactor,
+    pendingPurchaseUnit,
+    pendingStockUnit,
+    selectedSkuId,
+  ]);
 
   const afectTypeOptions = [
     { value: AfectType.TAXED, label: "GRAVADA - OPERACION ONEROSA" },
@@ -301,6 +469,15 @@ export function EquivalenceModal({
   ];
   const buildProductLabel = (product?: PurchaseSkuInfo) =>
     product ? buildPurchaseSkuLabel(product) : "SKU";
+
+  const catalogOptions = useMemo(
+    () =>
+      catalogProducts.map((product) => ({
+        value: product.skuId,
+        label: buildPurchaseSkuLabel(product),
+      })),
+    [catalogProducts],
+  );
 
 
   const equivalenceRows = useMemo<EquivalenceRow[]>(() => {
@@ -373,12 +550,12 @@ export function EquivalenceModal({
   if (!open) return null;
 
   return (
-    <Modal onClose={handleClose} title="Agregar Producto" className="w-lg">
+    <Modal onClose={handleClose} title={isEditMode ? "Editar Producto" : "Agregar Producto"} className="w-lg">
       <div className="space-y-4">
         <div className="">
           <SectionHeaderForm icon={Boxes} title="tributación" />
 
-          <div className="mt-4 mb-3 grid grid-cols-1 gap-3 md:grid-cols-1">
+          <div className="mt-4 mb-3 grid grid-cols-1 gap-3 md:grid-cols-1"> 
             <FloatingSelect
               label="Tipo de afectación"
               name="afectType"
@@ -399,12 +576,43 @@ export function EquivalenceModal({
           <SectionHeaderForm icon={Boxes} title="Datos del producto" />
 
           <div className="mt-4 mb-3 grid grid-cols-1 gap-3 md:grid-cols-1">
-            <div className="mb-0 mt-1 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <PurchaseItemTypeSelect
-                value={pendingItemType}
-                onChange={setPendingItemType}
-              />
+            <PurchaseItemTypeSelect
+              value={pendingItemType}
+              onChange={(value) => {
+                setPendingItemType(value);
+                setCatalogQuery("");
+                setCatalogProducts([]);
+                setSelectedSkuId("");
+                setManualDescription("");
+                setEquivalences([]);
+                setPendingFactor(0);
+                setPendingStockUnit(null);
+                setPendingPurchaseUnit(null);
+              }}
+            />
 
+            {isCatalogItemType ? (
+              <FloatingSelect
+                label="Producto o descripcion"
+                name="purchase-catalog-item"
+                value={selectedSkuId}
+                onChange={setSelectedSkuId}
+                options={catalogOptions}
+                searchable
+                searchPlaceholder="Selecciona un producto"
+                emptyMessage="Sin productos"
+                onSearchChange={(text) => setCatalogQuery(text)}
+                panelWidthMode="min-trigger"
+              />
+            ) : (
+              <FloatingInput
+                label="Producto o descripcion"
+                name="purchase-manual-description"
+                value={manualDescription}
+                onChange={(event) => setManualDescription(event.target.value)}
+              />
+            )}
+            <div className="mb-0 mt-1 grid grid-cols-1 gap-3 md:grid-cols-2">
               <FloatingInput
                 label="Cantidad"
                 name="quantity"
@@ -427,6 +635,7 @@ export function EquivalenceModal({
           </div>
         </div>
 
+        {isCatalogItemType ? (
         <div className="">
           <SectionHeaderForm icon={Scale} title="Equivalencias" />
             <div className="max-h-56 overflow-auto">
@@ -452,6 +661,7 @@ export function EquivalenceModal({
               />
             </div>
         </div>
+        ) : null}
 
         <div className="mt-4 flex justify-end gap-2">
           <SystemButton variant="ghost" 
@@ -466,17 +676,25 @@ export function EquivalenceModal({
             }}
             onClick={() => {
               clearFeedback();
-              if (!itemId) return;
+              if (isCatalogItemType && !selectedSkuId) {
+                showFeedback(errorResponse("Debe seleccionar un item"));
+                return;
+              }
+              if (!isCatalogItemType && !manualDescription.trim()) {
+                showFeedback(errorResponse("Debe ingresar una descripcion"));
+                return;
+              }
 
+              const selectedProduct = catalogProducts.find((p) => p.skuId === selectedSkuId);
               const hasSelection = Boolean(pendingPurchaseUnit || pendingStockUnit);
               const hasEquivalences = equivalences.length > 0;
 
-              if (hasEquivalences && !hasSelection) {
+              if (isCatalogItemType && hasEquivalences && !hasSelection) {
                 showFeedback(errorResponse("Debe elegir una equivalencia"));
                 return;
               }
 
-              addSelectedProduct(itemId, {
+              addSelectedProduct(selectedSkuId, {
                 quantity: pendingItemQuantity,
                 unitPrice: pendingItemUnitPrice,
                 afectType:
@@ -486,14 +704,14 @@ export function EquivalenceModal({
                 equivalence: pendingStockUnit,
                 factor: pendingFactor,
                 unitBase: pendingPurchaseUnit,
-                name: buildProductLabel(products.find((p) => p.skuId === itemId)),
+                name: isCatalogItemType ? buildProductLabel(selectedProduct) : manualDescription.trim(),
                 itemType: pendingItemType,
               });
 
               handleClose();
             }}
           >
-            Agregar
+            {isEditMode ? "Actualizar" : "Agregar"}
           </SystemButton>
         </div>
       </div>

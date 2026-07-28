@@ -147,6 +147,7 @@ export const createPurchaseOrderSchema = z.object({
   purchaseValue: z.number().min(0),
   total: z.number().min(0),
   note: z.string().optional(),
+  description: z.string().optional(),
   status: purchaseStatusEnum,
   purchaseType: purchaseTypeEnum.optional(),
   receptionStatus: receptionStatusEnum.optional(),

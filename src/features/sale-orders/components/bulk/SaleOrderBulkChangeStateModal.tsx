@@ -2,19 +2,33 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Workflow, X } from "lucide-react";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import type { SaleOrderSearchRule } from "@/features/sale-orders/types/saleOrder";
-import type { SaleOrderState, Workflow as WorkflowDefinition } from "@/features/workflows/types/workflow";
+import {
+    TRANSITION_EFFECTS,
+    type SaleOrderState,
+    type SaveFullWorkflowResponse,
+    type Workflow as WorkflowDefinition,
+} from "@/features/workflows/types/workflow";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { AnimatedDateRangePicker } from "@/shared/components/components/date-picker/AnimatedDateRangePicker";
 import { getDateKey } from "@/shared/components/components/date-picker/dateUtils";
 import { Modal } from "@/shared/components/modales/Modal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
-import { listSaleOrderStates, listWorkflows } from "@/shared/services/workflowService";
+import { getWorkflow, listSaleOrderStates, listWorkflows } from "@/shared/services/workflowService";
 
-export type SaleOrderBulkChangeStateSelection = {
-    saleOrderIds: string[];
-    targetStateId: string;
-};
+type BulkExecutionMode = "state" | "global_action";
+
+export type SaleOrderBulkExecuteWorkflowSelection =
+    | {
+        mode: "state";
+        saleOrderIds: string[];
+        targetStateId: string;
+    }
+    | {
+        mode: "global_action";
+        saleOrderIds: string[];
+        globalActionName: string;
+    };
 
 export type SaleOrderBulkChangeStateModalProps = {
     open: boolean;
@@ -24,8 +38,13 @@ export type SaleOrderBulkChangeStateModalProps = {
     onClose: () => void;
     onDiscardOrder?: (saleOrderId: string) => void;
     onLoadFilteredOrders?: (input: { page: 1; limit: 100; filters: SaleOrderSearchRule[] }) => Promise<SaleOrder[]>;
-    onSubmit: (selection: SaleOrderBulkChangeStateSelection) => void | Promise<void>;
+    onSubmit: (selection: SaleOrderBulkExecuteWorkflowSelection) => void | Promise<void>;
 };
+
+const executionModeOptions = [
+    { value: "state", label: "Estado" },
+    { value: "global_action", label: "Acciones globales" },
+];
 
 function getOrderLabel(order: SaleOrder | undefined, orderId: string) {
     if (!order) return orderId.slice(0, 8);
@@ -52,11 +71,14 @@ export function SaleOrderBulkChangeStateModal({
     onSubmit,
 }: SaleOrderBulkChangeStateModalProps) {
     const [states, setStates] = useState<SaleOrderState[]>([]);
+    const [executionMode, setExecutionMode] = useState<BulkExecutionMode>("state");
     const [targetStateId, setTargetStateId] = useState("");
+    const [globalActionName, setGlobalActionName] = useState("");
     const [loadingStates, setLoadingStates] = useState(false);
     const [error, setError] = useState("");
     const [stateFilter, setStateFilter] = useState<string[]>([]);
     const [workflows, setWorkflows] = useState<Array<Pick<WorkflowDefinition, "id" | "name" | "isActive">>>([]);
+    const [workflowDetails, setWorkflowDetails] = useState<SaveFullWorkflowResponse[]>([]);
     const [workflowFilter, setWorkflowFilter] = useState<string[]>([]);
     const [range, setRange] = useState<{ startDate: Date | null; endDate: Date | null }>({ startDate: null, endDate: null });
     const [remoteOrders, setRemoteOrders] = useState<SaleOrder[]>([]);
@@ -193,16 +215,51 @@ export function SaleOrderBulkChangeStateModal({
         [states],
     );
 
+    const globalActionOptions = useMemo(
+        () => {
+            const optionsByKey = new Map<string, { value: string; label: string }>();
+
+            workflowDetails
+                .flatMap((detail) => detail.transitions ?? [])
+                .filter(
+                    (transition) =>
+                        transition.isGlobal &&
+                        transition.effect === TRANSITION_EFFECTS.RUN_ACTIONS &&
+                        transition.isActive !== false,
+                )
+                .forEach((transition) => {
+                    const label = (transition.name || transition.code || "").trim();
+                    if (!label) return;
+                    const key = label
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .toLocaleLowerCase("es");
+                    if (!optionsByKey.has(key)) {
+                        optionsByKey.set(key, { value: label, label });
+                    }
+                });
+
+            return Array.from(optionsByKey.values()).sort((a, b) => a.label.localeCompare(b.label, "es"));
+        },
+        [workflowDetails],
+    );
+
+    const selectedExecutionValue = executionMode === "state" ? targetStateId : globalActionName;
+    const canSubmit = executableSaleOrderIds.length > 0 && Boolean(selectedExecutionValue) && !loading && !loadingStates;
+
     useEffect(() => {
         if (!open) {
             requestIdRef.current += 1;
+            setExecutionMode("state");
             setTargetStateId("");
+            setGlobalActionName("");
             setError("");
             setStateFilter([]);
             setWorkflowFilter([]);
             setRange({ startDate: null, endDate: null });
             setRemoteOrders([]);
             setHasRemoteSearch(false);
+            setWorkflowDetails([]);
             return;
         }
 
@@ -218,12 +275,21 @@ export function SaleOrderBulkChangeStateModal({
                     listWorkflows(),
                 ]);
                 if (requestId !== requestIdRef.current) return;
+                const workflowList = Array.isArray(workflowsResponse) ? workflowsResponse : [];
                 setStates(statesResponse);
-                setWorkflows(Array.isArray(workflowsResponse) ? workflowsResponse : []);
+                setWorkflows(workflowList);
+                const detailedWorkflows = await Promise.all(
+                    workflowList
+                        .filter((workflow) => workflow.id && workflow.isActive !== false)
+                        .map((workflow) => getWorkflow(workflow.id)),
+                );
+                if (requestId !== requestIdRef.current) return;
+                setWorkflowDetails(detailedWorkflows);
             } catch (loadError) {
                 if (requestId !== requestIdRef.current) return;
                 setStates([]);
                 setWorkflows([]);
+                setWorkflowDetails([]);
                 setError(parseApiError(loadError, "No se pudieron cargar los catalogos."));
             } finally {
                 if (requestId === requestIdRef.current) {
@@ -234,6 +300,14 @@ export function SaleOrderBulkChangeStateModal({
 
         void loadCatalogs();
     }, [open]);
+
+    useEffect(() => {
+        if (executionMode === "state") {
+            setGlobalActionName("");
+            return;
+        }
+        setTargetStateId("");
+    }, [executionMode]);
 
     const toggleStateFilter = (value: string) => {
         setStateFilter((current) => {
@@ -290,10 +364,23 @@ export function SaleOrderBulkChangeStateModal({
     }, [onLoadFilteredOrders, open, range.endDate, range.startDate, remoteFilters]);
 
     const submit = () => {
-        if (!targetStateId || loading || loadingStates || executableSaleOrderIds.length === 0) return;
+        if (loading || loadingStates || executableSaleOrderIds.length === 0) return;
+
+        if (executionMode === "state") {
+            if (!targetStateId) return;
+            void onSubmit({
+                mode: "state",
+                saleOrderIds: executableSaleOrderIds,
+                targetStateId,
+            });
+            return;
+        }
+
+        if (!globalActionName) return;
         void onSubmit({
+            mode: "global_action",
             saleOrderIds: executableSaleOrderIds,
-            targetStateId,
+            globalActionName,
         });
     };
 
@@ -306,7 +393,7 @@ export function SaleOrderBulkChangeStateModal({
                 if (loading) return;
                 onClose();
             }}
-            className="w-180"
+            className="w-195"
             closeButtonClassName="rounded-sm"
             bodyClassName="px-4 py-4"
             footer={
@@ -447,28 +534,54 @@ export function SaleOrderBulkChangeStateModal({
                         </div>
                     ) : null}
 
-                    <FloatingSelect
-                        label="Estado destino"
-                        name="bulk-target-state"
-                        value={targetStateId}
-                        options={stateOptions}
-                        onChange={setTargetStateId}
-                        disabled={loading || loadingStates || stateOptions.length === 0}
-                        searchable
-                        panelWidthMode="min-trigger"
-                        emptyMessage="Sin estados"
-                    />
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <FloatingSelect
+                            label="Ejecutar por"
+                            name="bulk-execution-mode"
+                            value={executionMode}
+                            options={executionModeOptions}
+                            onChange={(value) => setExecutionMode(value as BulkExecutionMode)}
+                            disabled={loading}
+                            panelWidthMode="min-trigger"
+                        />
+
+                        {executionMode === "state" ? (
+                            <FloatingSelect
+                                label="Estado destino"
+                                name="bulk-target-state"
+                                value={targetStateId}
+                                options={stateOptions}
+                                onChange={setTargetStateId}
+                                disabled={loading || loadingStates || stateOptions.length === 0}
+                                searchable
+                                panelWidthMode="min-trigger"
+                                emptyMessage="Sin estados"
+                            />
+                        ) : (
+                            <FloatingSelect
+                                label="Acciones globales"
+                                name="bulk-global-action"
+                                value={globalActionName}
+                                options={globalActionOptions}
+                                onChange={setGlobalActionName}
+                                disabled={loading || loadingStates || globalActionOptions.length === 0}
+                                searchable
+                                panelWidthMode="min-trigger"
+                                emptyMessage="Sin acciones globales"
+                            />
+                        )}
+                    </div>
 
                     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <SystemButton
                             size="sm"
                             className="rounded-md"
                             leftIcon={<Workflow className="h-4 w-4" />}
-                            disabled={!targetStateId || loading || loadingStates}
+                            disabled={!canSubmit}
                             loading={loading}
                             onClick={submit}
                         >
-                            Cambiar estado
+                            {loading ? "Ejecutando..." : "Ejecutar"}
                         </SystemButton>
                     </div>
                 </div>

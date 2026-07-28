@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useRef, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -11,6 +11,7 @@ import {
 import { listSuppliers } from "@/shared/services/supplierService";
 import { errorResponse } from "@/shared/common/utils/response";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { FloatingDateTimePicker } from "@/shared/components/components/date-picker/FloatingDateTimePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -34,6 +35,7 @@ import { PurchaseItemsSection } from "./components/PurchaseItemsSection";
 import { PurchasePaymentModal } from "./components/PurchasePaymentModal";
 import { PurchaseTypeSelect } from "./components/PurchaseTypeSelect";
 import { ModalNavegate } from "./components/ModalNavegate";
+import { SaleOrderEditorSection } from "@/features/sale-orders/components/editor/SaleOrderEditorSection";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
   buildEmptyForm,
@@ -51,8 +53,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getById } from "@/shared/services/purchaseService";
 import { SupplierOption } from "../providers/types/supplier";
 import { WarehouseSelectOption } from "../warehouse/types/warehouse";
-import { listSkus } from "@/shared/services/skuService";
-import type { ListSkusResponse } from "@/features/catalog/types/product";
 import {
   buildPurchaseSkuLabel,
   mapSkuToPurchaseSkuInfo,
@@ -66,7 +66,6 @@ import {
   PurchaseItemTypes,
   PurchaseTypes,
   purchaseItemTypeLabels,
-  purchaseTypesWithoutStock,
   type PurchaseType,
 } from "./types/purchase-classification.types";
 import { getPurchaseCreateErrorMessage } from "./utils/purchaseCreateFeedback";
@@ -76,7 +75,7 @@ import {
 } from "./utils/purchasePaymentEvidence";
 
 const PRIMARY = "hsl(var(--primary))";
-const IGV = 0.18;
+const DEFAULT_IGV_PERCENT = 18;
 
 const toLocalDateTimeString = (date: Date) => {
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -90,13 +89,14 @@ const parseDateValue = (value?: string | null) => {
 };
 
 const getIgvRate = (item?: Partial<PurchaseOrderItem>) => {
-  const rate = Number(item?.porcentageIgv ?? IGV);
-  return Number.isFinite(rate) && rate > 0 ? rate : IGV;
+  const percent = Number(item?.porcentageIgv ?? DEFAULT_IGV_PERCENT);
+  const safePercent = Number.isFinite(percent) && percent >= 0 ? percent : DEFAULT_IGV_PERCENT;
+  return safePercent / 100;
 };
 
-const splitTotalWithIgv = (totalWithIgv: number, igvRate = IGV) => {
+const splitTotalWithIgv = (totalWithIgv: number, igvRate = DEFAULT_IGV_PERCENT / 100) => {
   const safeTotal = normalizeMoney(totalWithIgv);
-  const safeRate = Number.isFinite(igvRate) && igvRate > 0 ? igvRate : IGV;
+  const safeRate = Number.isFinite(igvRate) && igvRate >= 0 ? igvRate : DEFAULT_IGV_PERCENT / 100;
 
   // Fórmula correcta cuando el precio/total ingresado YA incluye IGV:
   // subtotal = total / 1.18
@@ -125,7 +125,12 @@ const recalcItem = (item: PurchaseOrderItem): PurchaseOrderItem => {
   const unitPriceWithIgv = normalizePrice(item.unitPrice ?? 0);
   const igvRate = getIgvRate(item);
   const totalWithIgv = normalizeMoney(quantity * unitPriceWithIgv);
-  const { subtotalWithoutIgv, amountIgv } = splitTotalWithIgv(totalWithIgv, igvRate);
+  const { subtotalWithoutIgv, amountIgv } = item.afectType === AfectType.TAXED
+    ? splitTotalWithIgv(totalWithIgv, igvRate)
+    : {
+        subtotalWithoutIgv: totalWithIgv,
+        amountIgv: 0,
+      };
   const unitValueWithoutIgv = quantity > 0 ? normalizePrice(subtotalWithoutIgv / quantity) : 0;
 
   return {
@@ -136,10 +141,24 @@ const recalcItem = (item: PurchaseOrderItem): PurchaseOrderItem => {
     baseWithoutIgv: subtotalWithoutIgv,
     purchaseValue: subtotalWithoutIgv,
     amountIgv,
-    porcentageIgv: igvRate,
-    afectType: AfectType.TAXED,
+    porcentageIgv: item.afectType === AfectType.TAXED ? Number(item.porcentageIgv ?? DEFAULT_IGV_PERCENT) : 0,
   };
 };
+
+const getItemKey = (item: PurchaseOrderItem, index: number) =>
+  item.skuId || item.clientKey || `item-${index}`;
+
+const itemAffectsStock = (item: PurchaseOrderItem) =>
+  item.affectsStock ?? Boolean(item.skuId);
+
+const purchaseTypeRequiresWarehouse = (
+  purchaseType: PurchaseType,
+  items: PurchaseOrderItem[] = [],
+) =>
+  purchaseType === PurchaseTypes.INVENTORY ||
+  purchaseType === PurchaseTypes.RAW_MATERIAL ||
+  (purchaseType === PurchaseTypes.MIXED && items.some(itemAffectsStock));
+
 type PurchaseItemRow = {
   id: string;
   skuId: string;
@@ -158,6 +177,7 @@ type PurchaseCreateLocalProps = {
   inModal?: boolean;
   poIdOverride?: string;
   onClose?: () => void;
+  onFooterChange?: (footer: ReactNode | null) => void;
   onSaved?: (poId: string) => void | Promise<void>;
 };
 
@@ -165,6 +185,7 @@ export default function PurchaseCreateLocal({
   inModal = false,
   poIdOverride,
   onClose,
+  onFooterChange,
   onSaved,
 }: PurchaseCreateLocalProps) {
   const showFeedbackRef = useRef((msg: { type?: string; message?: string }) => {
@@ -176,8 +197,6 @@ export default function PurchaseCreateLocal({
   const companyActionDisabled = !hasCompany;
 
   const [products, setProducts] = useState<PurchaseSkuInfo[]>([]);
-  const [searchResults, setSearchResults] = useState<ListSkusResponse>();
-  const [itemId, setItemId] = useState("");
   const [supplierOptions, setSupplierOptions] = useState<SupplierOption[]>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<WarehouseSelectOption[]>([]);
 
@@ -187,18 +206,22 @@ export default function PurchaseCreateLocal({
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [openNavigateModal, setOpenNavigateModal] = useState(false);
   const [lastSavedPoId, setLastSavedPoId] = useState("");
+  const [editingItemKey, setEditingItemKey] = useState<string | null>(null);
   const [paymentDraftForm, setPaymentDraftForm] = useState<PurchaseOrder | null>(null);
 
-  const [productQuery, setProductQuery] = useState("");
   const [supplierQuery, setSupplierQuery] = useState("");
   const [appliedSupplierSearch, setAppliedSupplierSearch] = useState("");
 
   const [form, setForm] = useState<PurchaseOrder>(() => buildEmptyForm());
+  const [igvPercent, setIgvPercent] = useState(DEFAULT_IGV_PERCENT);
   const [documentNumberError, setDocumentNumberError] = useState<string | null>(null);
   const { poId: routePoId } = useParams<{ poId: string }>();
   const effectivePoId = poIdOverride ?? routePoId;
   const isEdit = Boolean(effectivePoId);
-  const requiresWarehouse = !purchaseTypesWithoutStock.includes((form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType);
+  const requiresWarehouse = purchaseTypeRequiresWarehouse(
+    (form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType,
+    form.items ?? [],
+  );
 
   const ringStyle = {
     "--tw-ring-color": `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
@@ -215,35 +238,15 @@ export default function PurchaseCreateLocal({
     { value: CurrencyTypes.USD, label: "USD ($)" },
   ];
 
-  const searchMaterialSkus = useCallback(async (query: string) => {
-    const normalizedQuery = query.trim();
-    try {
-      const response = await listSkus({
-        q: normalizedQuery || undefined,
-        isActive: true,
-        page: 1,
-        limit: 10,
-      });
+  const handleClosePayment = useCallback(() => {
+    setPaymentDraftForm(null);
+    setOpenPaymentModal(false);
+  }, []);
 
-      const mapped = (response.items ?? []).map(mapSkuToPurchaseSkuInfo);
-      setSearchResults(response);
-      setProducts((prev) => mergePurchaseSkus(prev, mapped));
-    } catch {
-      setSearchResults(undefined);
-      if (!isEdit) setProducts([]);
-      showFeedbackRef.current(errorResponse("Error al cargar SKUs de materia prima"));
-    }
-  }, [isEdit]);
-
-  
-    const handleClosePayment = useCallback(()=>{
-        setPaymentDraftForm(null);
-        setOpenPaymentModal(false)
-    },[])
-
-    const handleCloseEquivalence = useCallback(()=>{
-        setOpenEquivalence(false)
-    },[])
+  const handleCloseEquivalence = useCallback(() => {
+    setOpenEquivalence(false);
+    setEditingItemKey(null);
+  }, []);
   const loadSuppliers = useCallback(async (appliedSearch: string) => {
     try {
       const res = await listSuppliers({
@@ -284,22 +287,11 @@ export default function PurchaseCreateLocal({
     }
   }, []);
 
-  const productOptions = useMemo(
-    () =>
-      (searchResults?.items ?? [])
-        .map(mapSkuToPurchaseSkuInfo)
-        .map((sku) => ({
-          value: sku.skuId,
-          label: buildPurchaseSkuLabel(sku),
-        })),
-    [searchResults],
-  );
-
-  const updateItem = (itemIdToUpdate: string, patch: Partial<PurchaseOrderItem>) => {
+  const updateItem = useCallback((itemIdToUpdate: string, patch: Partial<PurchaseOrderItem>) => {
     setForm((prev) => ({
       ...prev,
-      items: (prev.items ?? []).map((item) => {
-        if (item.skuId !== itemIdToUpdate) return item;
+      items: (prev.items ?? []).map((item, index) => {
+        if (getItemKey(item, index) !== itemIdToUpdate) return item;
 
         const normalizedPatch: Partial<PurchaseOrderItem> = { ...patch };
 
@@ -314,14 +306,14 @@ export default function PurchaseCreateLocal({
         return recalcItem({ ...item, ...normalizedPatch });
       }),
     }));
-  };
+  }, []);
 
-  const removeItem = (itemIdToRemove: string) => {
+  const removeItem = useCallback((itemIdToRemove: string) => {
     setForm((prev) => ({
       ...prev,
-      items: (prev.items ?? []).filter((item) => item.skuId !== itemIdToRemove),
+      items: (prev.items ?? []).filter((item, index) => getItemKey(item, index) !== itemIdToRemove),
     }));
-  };
+  }, []);
 
   const totals = useMemo(() => {
     const items = form.items ?? [];
@@ -329,7 +321,12 @@ export default function PurchaseCreateLocal({
     return items.reduce(
       (acc, item) => {
         const lineTotal = getItemTotalWithIgv(item);
-        const { subtotalWithoutIgv, amountIgv } = splitTotalWithIgv(lineTotal, getIgvRate(item));
+        const { subtotalWithoutIgv, amountIgv } = item.afectType === AfectType.TAXED
+          ? splitTotalWithIgv(lineTotal, getIgvRate(item))
+          : {
+              subtotalWithoutIgv: lineTotal,
+              amountIgv: 0,
+            };
 
         acc.totalPrice = normalizeMoney(acc.totalPrice + lineTotal);
         acc.totalValue = normalizeMoney(acc.totalValue + subtotalWithoutIgv);
@@ -354,14 +351,14 @@ export default function PurchaseCreateLocal({
     totals.totalPrice === 0;
 
   const itemRows = useMemo<PurchaseItemRow[]>(() => {
-    return (form.items ?? []).map((item) => {
+    return (form.items ?? []).map((item, index) => {
       const product = products.find((p) => p.skuId === item.skuId);
 
       return {
-        id: item.skuId,
+        id: getItemKey(item, index),
         skuId: item.skuId,
         sku: product?.backendSku ?? product?.customSku ?? "-",
-        name: item.name ?? "-",
+        name: item.name ?? item.description ?? "-",
         unit: item.unitBase ?? "-",
         equivalence: item.equivalence,
         factor: Number(item.factor ?? 1),
@@ -373,9 +370,27 @@ export default function PurchaseCreateLocal({
     });
   }, [form.items, products]);
 
+  const editingItem = useMemo(
+    () =>
+      editingItemKey
+        ? (form.items ?? []).find((item, index) => getItemKey(item, index) === editingItemKey) ?? null
+        : null,
+    [editingItemKey, form.items],
+  );
+
+  const openCreateItemModal = useCallback(() => {
+    setEditingItemKey(null);
+    setOpenEquivalence(true);
+  }, []);
+
+  const openEditItemModal = useCallback((itemId: string) => {
+    setEditingItemKey(itemId);
+    setOpenEquivalence(true);
+  }, []);
+
   const resetForm = () => {
     setForm(buildEmptyForm());
-    setItemId("");
+    setIgvPercent(DEFAULT_IGV_PERCENT);
   };
 
   const setPaymentDraftFormValue: Dispatch<SetStateAction<PurchaseOrder>> = useCallback(
@@ -390,7 +405,10 @@ export default function PurchaseCreateLocal({
 
   const savePurchase = async (overrideForm?: PurchaseOrder) => {
     const currentForm = overrideForm ?? form;
-    const currentRequiresWarehouse = !purchaseTypesWithoutStock.includes((currentForm.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType);
+    const currentRequiresWarehouse = purchaseTypeRequiresWarehouse(
+      (currentForm.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType,
+      currentForm.items ?? [],
+    );
     if (!currentForm.items?.length || !currentForm.serie.trim() || !currentForm.supplierId || (currentRequiresWarehouse && !currentForm.warehouseId)) return;
     if (documentNumberError) {
       sileo.error({ title: "Número de orden ya registrado" });
@@ -413,6 +431,7 @@ export default function PurchaseCreateLocal({
       purchaseValue: normalizeMoney(currentForm.purchaseValue),
       total: normalizeMoney(currentForm.total),
       note: currentForm.note?.trim() || undefined,
+      description: currentForm.description?.trim() || undefined,
       status: currentForm.status,
       purchaseType: currentForm.purchaseType,
       receptionStatus: currentForm.receptionStatus,
@@ -430,14 +449,14 @@ export default function PurchaseCreateLocal({
         const resolvedFactor = Number(calculatedItem.factor ?? 1);
 
         return {
-          skuId: calculatedItem.skuId,
+          skuId: calculatedItem.skuId || undefined,
           itemType: calculatedItem.itemType ?? PurchaseItemTypes.PRODUCT,
           internalMaterialId: calculatedItem.internalMaterialId ?? undefined,
           assetCategoryId: calculatedItem.assetCategoryId ?? undefined,
           serviceName: calculatedItem.serviceName ?? undefined,
-          description: calculatedItem.description ?? undefined,
-          warehouseId: calculatedItem.warehouseId ?? (currentForm.warehouseId || undefined),
-          affectsStock: calculatedItem.affectsStock ?? true,
+          description: calculatedItem.description?.trim() || calculatedItem.name?.trim() || undefined,
+          warehouseId: calculatedItem.warehouseId ?? (calculatedItem.affectsStock ? (currentForm.warehouseId || undefined) : undefined),
+          affectsStock: calculatedItem.affectsStock ?? Boolean(calculatedItem.skuId),
           generatesAsset: calculatedItem.generatesAsset ?? false,
           isService: calculatedItem.isService ?? false,
           isSubscription: calculatedItem.isSubscription ?? false,
@@ -446,7 +465,7 @@ export default function PurchaseCreateLocal({
           factor: Number.isFinite(resolvedFactor) && resolvedFactor > 0 ? resolvedFactor : 1,
           afectType: calculatedItem.afectType,
           quantity: normalizeQuantity(calculatedItem.quantity),
-          porcentageIgv: calculatedItem.porcentageIgv ?? IGV,
+          porcentageIgv: calculatedItem.porcentageIgv ?? DEFAULT_IGV_PERCENT,
           baseWithoutIgv: normalizeMoney(calculatedItem.baseWithoutIgv),
           amountIgv: normalizeMoney(calculatedItem.amountIgv),
           unitValue: normalizePrice(calculatedItem.unitValue),
@@ -531,6 +550,56 @@ export default function PurchaseCreateLocal({
     }
   };
 
+  const savePurchaseRef = useRef(savePurchase);
+
+  useEffect(() => {
+    savePurchaseRef.current = savePurchase;
+  });
+
+  const openPaymentDraft = useCallback(() => {
+    setPaymentDraftForm(() => {
+      const shouldInit = !isEdit;
+      return {
+        ...form,
+        paymentForm: shouldInit ? PaymentFormTypes.CONTADO : form.paymentForm,
+        creditDays: shouldInit ? 0 : form.creditDays,
+        numQuotas: shouldInit ? 0 : form.numQuotas,
+        quotas: shouldInit ? [] : form.quotas,
+        payments: form.payments ?? [],
+      };
+    });
+    setOpenPaymentModal(true);
+  }, [form, isEdit]);
+
+  const renderPurchaseActions = useCallback(
+    () => (
+        <div className="flex justify-end gap-2">        
+        <SystemButton
+          disabled={saveDisabled}
+          onClick={() => void savePurchaseRef.current()}
+        >
+          {isEdit ? "Actualizar compra" : "Crear compra"}
+        </SystemButton>
+        <SystemButton
+          variant="outline"
+          disabled={saveDisabled}
+          onClick={openPaymentDraft}
+        >
+          Agregar Pago
+        </SystemButton>
+      </div>
+    ),
+    [isEdit, openPaymentDraft, saveDisabled],
+  );
+
+  useEffect(() => {
+    if (!inModal || !onFooterChange) return;
+
+    onFooterChange(renderPurchaseActions());
+
+    return () => onFooterChange(null);
+  }, [inModal, onFooterChange, renderPurchaseActions]);
+
   useEffect(() => {
     const serie = form.serie?.trim();
     const correlative = Number(form.correlative ?? 0);
@@ -568,21 +637,24 @@ export default function PurchaseCreateLocal({
       setForm((prev) => ({
         ...prev,
         ...data,
-        items: (data.items ?? []).map((item) => {
+        description: data.description ?? "",
+        items: (data.items ?? []).map((item, index) => {
           const { sku, ...rest } = item;
           const skuEntity = sku?.sku;
           const skuId = sku?.sku.id ?? "";
           const skuInfo = sku ? mapSkuToPurchaseSkuInfo(sku) : undefined;
           const resolvedName =
-            skuInfo ? buildPurchaseSkuLabel(skuInfo) : (skuEntity?.name ?? rest.name ?? "SKU");
+            skuInfo ? buildPurchaseSkuLabel(skuInfo) : (skuEntity?.name ?? rest.name ?? rest.description ?? "SKU");
 
           return recalcItem({
             ...rest,
+            clientKey: typeof rest.clientKey === "string" ? rest.clientKey : (skuId ? undefined : `manual-${index}`),
             skuId,
             name: resolvedName,
             sku: skuEntity
               ? {
                   id: skuEntity.id,
+                  productId: skuEntity.productId,
                   backendSku: skuEntity.backendSku ?? null,
                   customSku: skuEntity.customSku ?? null,
                   name: skuEntity.name ?? null,
@@ -606,14 +678,6 @@ export default function PurchaseCreateLocal({
 
   useEffect(() => {
     const id = setTimeout(() => {
-      void searchMaterialSkus(productQuery);
-    }, productQuery.trim() ? 350 : 0);
-
-    return () => clearTimeout(id);
-  }, [productQuery, searchMaterialSkus]);
-
-  useEffect(() => {
-    const id = setTimeout(() => {
       setAppliedSupplierSearch(supplierQuery);
     }, 500);
 
@@ -623,6 +687,18 @@ export default function PurchaseCreateLocal({
   useEffect(() => {
     void loadSuppliers(appliedSupplierSearch);
   }, [appliedSupplierSearch, loadSuppliers]);
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      items: (prev.items ?? []).map((item) =>
+        recalcItem({
+          ...item,
+          porcentageIgv: item.afectType === AfectType.TAXED ? igvPercent : 0,
+        }),
+      ),
+    }));
+  }, [igvPercent]);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -656,6 +732,7 @@ export default function PurchaseCreateLocal({
             {row.name}
           </span>
         ),
+        onCellClick: (row) => openEditItemModal(row.id),
         headerClassName: "text-left",
         sortable: false,
       },
@@ -664,6 +741,7 @@ export default function PurchaseCreateLocal({
         header: "Tipo",
         accessorKey: "itemType",
         className: "text-black/70",
+        onCellClick: (row) => openEditItemModal(row.id),
         headerClassName: "text-left",
         sortable: false,
       },
@@ -675,6 +753,7 @@ export default function PurchaseCreateLocal({
             {row.equivalence} x {row.factor}
           </span>
         ),
+        onCellClick: (row) => openEditItemModal(row.id),
         headerClassName: "text-left",
         sortable: false,
       },
@@ -685,17 +764,17 @@ export default function PurchaseCreateLocal({
           <div className="w-24">
             <FloatingInput
               label="Cant."
-              name={`quantity-${row.skuId}`}
+              name={`quantity-${row.id}`}
               type="number"
               min={0}
               step="0.001"
               value={String(row.quantity)}
               onChange={(e) =>
-                updateItem(row.skuId, {
+                updateItem(row.id, {
                   quantity: parseDecimalInput(e.target.value),
                 })
               }
-              className="h-9 text-xs"
+              className="h-8 text-xs"
             />
           </div>
         ),
@@ -710,17 +789,17 @@ export default function PurchaseCreateLocal({
           <div className="w-24">
             <FloatingInput
               label="P. unit"
-              name={`unit-price-${row.skuId}`}
+              name={`unit-price-${row.id}`}
               type="number"
               min={0}
               step="0.0001"
               value={String(row.unitPrice)}
               onChange={(e) =>
-                updateItem(row.skuId, {
+                updateItem(row.id, {
                   unitPrice: parseDecimalInput(e.target.value),
                 })
               }
-              className="h-9 text-xs text-right"
+              className="h-8 text-xs text-right"
             />
           </div>
         ),
@@ -736,7 +815,7 @@ export default function PurchaseCreateLocal({
           <div className="w-28">
             <FloatingInput
               label="Total"
-              name={`total-price-${row.skuId}`}
+              name={`total-price-${row.id}`}
               type="number"
               min={0}
               step="0.01"
@@ -746,9 +825,9 @@ export default function PurchaseCreateLocal({
                 const nextUnitPrice =
                   row.quantity > 0 ? normalizePrice(nextTotal / row.quantity) : 0;
 
-                updateItem(row.skuId, { unitPrice: nextUnitPrice });
+                updateItem(row.id, { unitPrice: nextUnitPrice });
               }}
-              className="h-9 text-xs text-right"
+              className="h-8 text-xs text-right"
             />
           </div>
         ),
@@ -767,7 +846,7 @@ export default function PurchaseCreateLocal({
               size="icon"
               className="h-8 w-8"
               title="Eliminar"
-              onClick={() => removeItem(row.skuId)}
+              onClick={() => removeItem(row.id)}
             >
               <Trash2 className="h-4 w-4" />
             </SystemButton>
@@ -779,7 +858,7 @@ export default function PurchaseCreateLocal({
         sortable: false,
       },
     ];
-  }, []);
+  }, [openEditItemModal, removeItem, updateItem]);
 
   const content = (
     <>
@@ -789,265 +868,266 @@ export default function PurchaseCreateLocal({
             inModal ? "h-[80vh]" : "h-[calc(100vh-64px)]"
           }`}
         >
-          <PurchaseItemsSection
-            itemId={itemId}
-            productOptions={productOptions}
-            itemRows={itemRows}
-            itemColumns={itemColumns}
-            totalValueLabel={money(totals.totalValue, currency)}
-            totalPriceLabel={money(totals.totalPrice, currency)}
-            igvPercent={Math.round(IGV * 100)}
-            onSelectItem={(value) => {
-              setItemId(value);
-              setOpenEquivalence(Boolean(value));
-            }}
-            onSearchProduct={setProductQuery}
-          />
-
-          <aside className="overflow-hidden flex flex-col border-0 border-black/10 lg:border-l">
-
-            <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
-              <PurchaseTypeSelect
-                value={(form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType}
-                onChange={(purchaseType) => {
-                  const noStock = purchaseTypesWithoutStock.includes(purchaseType);
-                  setForm((prev) => ({
-                    ...prev,
-                    purchaseType,
-                    warehouseId: noStock ? "" : prev.warehouseId,
-                    requiresReceipt: !noStock,
-                    requiresStockEntry: !noStock,
-                    requiresAssetCreation: purchaseType === PurchaseTypes.FIXED_ASSET,
-                  }));
-                }}
+          <div className="flex flex-col gap-3">
+            <SaleOrderEditorSection
+              title="Items"
+              bodyClassName="max-h-[380px] min-h-[140px] py-4"
+              actions={
+                <SystemButton
+                  type="button"
+                  size="sm"
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  onClick={openCreateItemModal}
+                >
+                  Agregar
+                </SystemButton>
+              }
+            >
+              <PurchaseItemsSection
+                itemRows={itemRows}
+                itemColumns={itemColumns}
               />
+            </SaleOrderEditorSection>
+            <div className="min-w-0 grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <SaleOrderEditorSection title="Resumen">
+                <dl className="grid gap-2 text-xs">
+                  <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                    <dt className="text-muted-foreground">Items</dt>
+                    <dd className="font-semibold tabular-nums">{itemRows.length}</dd>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                    <dt className="text-muted-foreground">Sub total</dt>
+                    <dd className="font-semibold tabular-nums">{money(totals.totalValue, currency)}</dd>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] items-center gap-2 rounded-lg bg-background/80 px-3 py-2">
+                    <FloatingInput
+                      label="IGV %"
+                      name="purchase-igv-percent"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={String(igvPercent)}
+                      onChange={(event) => setIgvPercent(Math.max(0, parseDecimalInput(event.target.value)))}
+                      className="h-9 text-xs"
+                    />
+                    <dd className="text-right font-semibold tabular-nums">{money(totals.totalIgv, currency)}</dd>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-background px-3 py-2">
+                    <dt className="text-muted-foreground">Total</dt>
+                    <dd className="text-sm font-semibold tabular-nums">{money(totals.totalPrice, currency)}</dd>
+                  </div>
+                </dl>
+              </SaleOrderEditorSection>
 
-              <div className="grid grid-cols-2 gap-3">
-                <FloatingSelect
-                  label="Tipo"
-                  name="document-type"
-                  value={form.documentType}
-                  onChange={(value) =>
+              <SaleOrderEditorSection title="Descripcion">
+                <FloatingTextarea
+                  label="Descripcion de compra"
+                  name="purchase-description"
+                  rows={3}
+                  value={form.description ?? ""}
+                  onChange={(event) =>
                     setForm((prev) => ({
                       ...prev,
-                      documentType: value as PurchaseOrder["documentType"],
-                    }))
-                  }
-                  options={documentTypeOptions}
-                />
-
-                <FloatingSelect
-                  label="Moneda"
-                  name="currency"
-                  value={form.currency}
-                  onChange={(value) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      currency: value as CurrencyType,
-                    }))
-                  }
-                  options={currencyOptions}
-                  disabled
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <FloatingInput
-                  label="Serie"
-                  name="serie"
-                  value={form.serie}
-                  error={documentNumberError ?? undefined}
-                  onChange={(e) => setForm((prev) => ({ ...prev, serie: e.target.value }))}
-                />
-
-                <FloatingInput
-                  label="Número"
-                  name="correlative"
-                  type="number"
-                  value={form.correlative ? String(form.correlative) : ""}
-                  error={documentNumberError ?? undefined}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      correlative: Number(e.target.value || 0),
+                      description: event.target.value,
                     }))
                   }
                 />
-              </div>
+              </SaleOrderEditorSection>
+            </div>
+          </div>
+          <SaleOrderEditorSection title="Datos de compra">      
+            <aside className="overflow-hidden flex flex-col">    
+              <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-5">
+                <PurchaseTypeSelect
+                  value={(form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType}
+                  onChange={(purchaseType) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      purchaseType,
+                      warehouseId: purchaseTypeRequiresWarehouse(purchaseType, prev.items ?? []) ? prev.warehouseId : "",
+                      requiresReceipt: purchaseTypeRequiresWarehouse(purchaseType, prev.items ?? []),
+                      requiresStockEntry: purchaseTypeRequiresWarehouse(purchaseType, prev.items ?? []),
+                      requiresAssetCreation: purchaseType === PurchaseTypes.FIXED_ASSET,
+                    }));
+                  }}
+                />
 
-              <div className="space-y-1">
-                <div className="grid grid-cols-[1fr_auto] gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <FloatingSelect
-                    label="Almacén"
-                    name="warehouse"
-                    value={form.warehouseId}
-                    onChange={(value) => {
+                    label="Tipo"
+                    name="document-type"
+                    value={form.documentType}
+                    onChange={(value) =>
                       setForm((prev) => ({
                         ...prev,
-                        warehouseId: value,
-                      }));
-                    }}
-                    options={warehouseOptions}
-                    searchable
-                    searchPlaceholder="Buscar almacén..."
-                    emptyMessage="Sin almacenes"
-                    disabled={!requiresWarehouse}
+                        documentType: value as PurchaseOrder["documentType"],
+                      }))
+                    }
+                    options={documentTypeOptions}
                   />
 
-                  <SystemButton
-                    size="icon"
-                    className="h-10 w-10"
-                    style={{
-                      backgroundColor: PRIMARY,
-                      borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                    }}
-                    title="Agregar almacén"
-                    onClick={() => setOpenCreateWarehouse(true)}
-                    disabled={companyActionDisabled || !requiresWarehouse}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </SystemButton>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="grid grid-cols-[1fr_auto] gap-2">
                   <FloatingSelect
-                    label="Proveedor"
-                    name="supplier"
-                    value={form.supplierId}
-                    onChange={(value) => {
-                      const selected = supplierOptions.find((s) => s.value === value);
+                    label="Moneda"
+                    name="currency"
+                    value={form.currency}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        currency: value as CurrencyType,
+                      }))
+                    }
+                    options={currencyOptions}
+                    disabled
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <FloatingInput
+                    label="Serie"
+                    name="serie"
+                    value={form.serie}
+                    error={documentNumberError ?? undefined}
+                    onChange={(e) => setForm((prev) => ({ ...prev, serie: e.target.value }))}
+                  />
+
+                  <FloatingInput
+                    label="Número"
+                    name="correlative"
+                    type="number"
+                    value={form.correlative ? String(form.correlative) : ""}
+                    error={documentNumberError ?? undefined}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        correlative: Number(e.target.value || 0),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <FloatingSelect
+                      label="Almacén"
+                      name="warehouse"
+                      value={form.warehouseId}
+                      onChange={(value) => {
+                        setForm((prev) => ({
+                          ...prev,
+                          warehouseId: value,
+                        }));
+                      }}
+                      options={warehouseOptions}
+                      searchable
+                      searchPlaceholder="Buscar almacén..."
+                      emptyMessage="Sin almacenes"
+                      disabled={!requiresWarehouse}
+                    />
+
+                    <SystemButton
+                      size="icon"
+                      className="h-10 w-10"
+                      style={{
+                        backgroundColor: PRIMARY,
+                        borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                      }}
+                      title="Agregar almacén"
+                      onClick={() => setOpenCreateWarehouse(true)}
+                      disabled={companyActionDisabled || !requiresWarehouse}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </SystemButton>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <FloatingSelect
+                      label="Proveedor"
+                      name="supplier"
+                      value={form.supplierId}
+                      onChange={(value) => {
+                        const selected = supplierOptions.find((s) => s.value === value);
+                        const leadDays = selected?.days ?? 0;
+
+                        setForm((prev) => ({
+                          ...prev,
+                          supplierId: value,
+                          expectedAt: addDaysToIsoDate(leadDays),
+                        }));
+                      }}
+                      options={supplierOptions}
+                      searchable
+                      searchPlaceholder="Buscar proveedor..."
+                      emptyMessage="Sin proveedores"
+                      onSearchChange={(text) => setSupplierQuery(text)}
+                    />
+
+                    <SystemButton
+                      size="icon"
+                      className="h-10 w-10"
+                      style={{
+                        backgroundColor: PRIMARY,
+                        borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
+                      }}
+                      title="Agregar proveedor"
+                      onClick={() => setOpenCreate(true)}
+                      disabled={companyActionDisabled}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </SystemButton>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <FloatingDateTimePicker
+                    label="Fecha de emisión"
+                    name="date-issue"
+                    value={parseDateValue(form.dateIssue)}
+                    onChange={(date) => {
+                      const nextDate = date ? toLocalDateTimeString(date) : "";
+                      const selected = supplierOptions.find((s) => s.value === form.supplierId);
                       const leadDays = selected?.days ?? 0;
 
+                      setForm((prev) => {
+                        const creditDays = Math.max(0, prev.creditDays ?? 0);
+                        const numQuotas = clampQuotas(creditDays, prev.numQuotas ?? 0);
+
+                        return {
+                          ...prev,
+                          dateIssue: nextDate,
+                          expectedAt: addDaysToIsoDateFrom(nextDate, leadDays),
+                          quotas:
+                            prev.paymentForm === PaymentFormTypes.CREDITO
+                              ? buildQuotas(nextDate, creditDays, numQuotas, totals.totalPrice)
+                              : (prev.quotas ?? []),
+                        };
+                      });
+                    }}
+                    clearable={false}
+                  />
+                  <FloatingDateTimePicker
+                    label="Fecha de ingreso"
+                    name="expected-at"
+                    value={parseDateValue(form.expectedAt)}
+                    onChange={(date) =>
                       setForm((prev) => ({
                         ...prev,
-                        supplierId: value,
-                        expectedAt: addDaysToIsoDate(leadDays),
-                      }));
-                    }}
-                    options={supplierOptions}
-                    searchable
-                    searchPlaceholder="Buscar proveedor..."
-                    emptyMessage="Sin proveedores"
-                    onSearchChange={(text) => setSupplierQuery(text)}
+                        expectedAt: date ? toLocalDateTimeString(date) : "",
+                      }))
+                    }
                   />
-
-                  <SystemButton
-                    size="icon"
-                    className="h-10 w-10"
-                    style={{
-                      backgroundColor: PRIMARY,
-                      borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                    }}
-                    title="Agregar proveedor"
-                    onClick={() => setOpenCreate(true)}
-                    disabled={companyActionDisabled}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </SystemButton>
                 </div>
+
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <FloatingDateTimePicker
-                  label="Fecha de emisión"
-                  name="date-issue"
-                  value={parseDateValue(form.dateIssue)}
-                  onChange={(date) => {
-                    const nextDate = date ? toLocalDateTimeString(date) : "";
-                    const selected = supplierOptions.find((s) => s.value === form.supplierId);
-                    const leadDays = selected?.days ?? 0;
-
-                    setForm((prev) => {
-                      const creditDays = Math.max(0, prev.creditDays ?? 0);
-                      const numQuotas = clampQuotas(creditDays, prev.numQuotas ?? 0);
-
-                      return {
-                        ...prev,
-                        dateIssue: nextDate,
-                        expectedAt: addDaysToIsoDateFrom(nextDate, leadDays),
-                        quotas:
-                          prev.paymentForm === PaymentFormTypes.CREDITO
-                            ? buildQuotas(nextDate, creditDays, numQuotas, totals.totalPrice)
-                            : (prev.quotas ?? []),
-                      };
-                    });
-                  }}
-                  clearable={false}
-                />
-                <FloatingDateTimePicker
-                  label="Fecha de ingreso"
-                  name="expected-at"
-                  value={parseDateValue(form.expectedAt)}
-                  onChange={(date) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      expectedAt: date ? toLocalDateTimeString(date) : "",
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="rounded-sm border border-black/10 bg-black/[0.02] p-3 mt-2">
-                <p className="text-xs font-semibold text-black">Resumen</p>
-                <div className="mt-2 space-y-1 text-[11px] text-black/70">
-                  <div className="flex items-center justify-between">
-                    <span>Items</span>
-                    <span className="font-semibold tabular-nums">{itemRows.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Sub total</span>
-                    <span className="font-semibold tabular-nums">{money(totals.totalValue, currency)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>IGV ({Math.round(IGV * 100)}%)</span>
-                    <span className="font-semibold tabular-nums">{money(totals.totalIgv, currency)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Total</span>
-                    <span className="font-semibold tabular-nums">{money(totals.totalPrice, currency)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3">
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <SystemButton
-                  className="w-full"
-                  disabled={saveDisabled}
-                  onClick={() => void savePurchase()}
-                >
-                  {isEdit ? "Actualizar compra" : "Crear compra"}
-                </SystemButton>
-                <SystemButton
-                  className="w-full"
-                  variant="outline"
-                  disabled={saveDisabled}
-                  onClick={() => {
-                    setPaymentDraftForm(() => {
-                      const shouldInit = !isEdit;
-                      return {
-                        ...form,
-                        paymentForm: shouldInit ? PaymentFormTypes.CONTADO : form.paymentForm,
-                        creditDays: shouldInit ? 0 : form.creditDays,
-                        numQuotas: shouldInit ? 0 : form.numQuotas,
-                        quotas: shouldInit ? [] : form.quotas,
-                        payments: form.payments ?? [],
-                      };
-                    });
-                    setOpenPaymentModal(true);
-                  }}
-                >
-                  Agregar Pago
-                </SystemButton>
-              </div>
-            </div>
-          </aside>
+              {!inModal || !onFooterChange ? (
+                <div className="p-3">{renderPurchaseActions()}</div>
+              ) : null}
+            </aside>
+          </SaleOrderEditorSection>      
         </div>
       </div>
-
       {openCreate && (
         <SupplierFormModal
           open={openCreate}
@@ -1071,15 +1151,14 @@ export default function PurchaseCreateLocal({
 
       <EquivalenceModal
         open={openEquivalences}
-        itemId={itemId}
-        products={products}
         documentType={form.documentType}
         primaryColor={PRIMARY}
-        igv={IGV}
-          setForm={setForm}
-          setItemId={setItemId}
-          purchaseType={(form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType}
-          onClose={handleCloseEquivalence}
+        igvPercent={igvPercent}
+        setForm={setForm}
+        purchaseType={(form.purchaseType ?? PurchaseTypes.INVENTORY) as PurchaseType}
+        editingItemKey={editingItemKey}
+        editingItem={editingItem}
+        onClose={handleCloseEquivalence}
       />
 
       {openPaymentModal && (

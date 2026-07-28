@@ -14,7 +14,7 @@ import {
   ReceptionStatuses,
 } from "@/features/purchases/types/purchase-classification.types";
 
-const IGV_FACTOR = new Big("1.18");
+const DEFAULT_IGV_PERCENT = 18;
 
 const MONEY_SCALE = 2;
 const PRICE_SCALE = 4;
@@ -58,16 +58,28 @@ export const parseDecimalInput = (value: string | number | null | undefined) => 
   }
 };
 
+export const normalizeIgvPercent = (value: string | number | null | undefined) => {
+  const parsed = parseDecimalInput(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return DEFAULT_IGV_PERCENT;
+  return parsed;
+};
+
+const igvFactorFromPercent = (percent: number) => new Big(1).plus(new Big(percent).div(100));
+
 export const money = (n: number, currency: CurrencyType) => {
   const symbol = currency === "PEN" ? "S/" : "$";
   return `${symbol} ${roundMoneyBig(toBig(n)).toFixed(2)}`;
 };
 
-export const unitValueFromPrice = (unitPrice: number, afectType: AfectTypeType) => {
+export const unitValueFromPrice = (
+  unitPrice: number,
+  afectType: AfectTypeType,
+  igvPercent = DEFAULT_IGV_PERCENT,
+) => {
   const safeUnitPrice = roundPriceBig(toBig(unitPrice));
 
   if (afectType === AfectType.TAXED) {
-    return toNumber(roundPriceBig(safeUnitPrice.div(IGV_FACTOR)));
+    return toNumber(roundPriceBig(safeUnitPrice.div(igvFactorFromPercent(normalizeIgvPercent(igvPercent)))));
   }
 
   return toNumber(safeUnitPrice);
@@ -86,7 +98,8 @@ export const recalcItem = (item: PurchaseOrderItem): PurchaseOrderItem => {
   const totalPrice = roundMoneyBig(quantity.times(unitPrice));
 
   if (item.afectType === AfectType.TAXED) {
-    const purchaseValue = roundMoneyBig(totalPrice.div(IGV_FACTOR));
+    const igvPercent = normalizeIgvPercent(item.porcentageIgv);
+    const purchaseValue = roundMoneyBig(totalPrice.div(igvFactorFromPercent(igvPercent)));
     const amountIgv = roundMoneyBig(totalPrice.minus(purchaseValue));
     const unitValue = quantity.gt(0)
       ? roundPriceBig(purchaseValue.div(quantity))
@@ -99,7 +112,7 @@ export const recalcItem = (item: PurchaseOrderItem): PurchaseOrderItem => {
       unitValue: toNumber(unitValue),      // 4 decimales
       baseWithoutIgv: toNumber(purchaseValue),
       amountIgv: toNumber(amountIgv),
-      porcentageIgv: 18,
+      porcentageIgv: igvPercent,
       purchaseValue: toNumber(purchaseValue),
       name:item.name
     };
@@ -267,6 +280,7 @@ export const buildEmptyForm = (): PurchaseOrder => ({
   purchaseValue: 0,
   total: 0,
   note: "",
+  description: "",
   status: PurchaseOrderStatuses.DRAFT,
   purchaseType: PurchaseTypes.RAW_MATERIAL,
   receptionStatus: ReceptionStatuses.PENDING,

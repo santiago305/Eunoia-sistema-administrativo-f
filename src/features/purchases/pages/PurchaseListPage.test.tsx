@@ -110,10 +110,10 @@ vi.mock("@/shared/components/table/DataTable", () => ({
 }));
 
 vi.mock("@/shared/components/components/ActionsPopover", () => ({
-    ActionsPopover: ({ actions }: { actions: Array<{ id: string; label: string; hidden?: boolean; onClick?: () => void }> }) => (
+    ActionsPopover: ({ actions }: { actions: Array<{ id: string; label: string; hidden?: boolean; disabled?: boolean; onClick?: () => void }> }) => (
         <div data-testid="actions-popover">
             {actions.filter((action) => !action.hidden).map((action) => (
-                <button key={action.id} type="button" onClick={action.onClick}>
+                <button key={action.id} type="button" disabled={action.disabled} onClick={action.onClick}>
                     {action.label}
                 </button>
             ))}
@@ -449,6 +449,69 @@ describe("PurchaseListPage", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Ver cuotas" }));
         expect(screen.getByTestId("quota-list-modal")).toBeInTheDocument();
+    });
+
+    it("keeps payment and quota actions available from the popover regardless of payment or approval state", async () => {
+        listPurchaseOrdersMock.mockResolvedValueOnce({
+            items: [
+                {
+                    poId: "po-paid-pending",
+                    serie: "F001",
+                    correlative: "1",
+                    supplierName: "Proveedor pagado",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    approvalStatus: "PENDING",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    total: 100,
+                    totalPaid: 100,
+                    totalToPay: 0,
+                    paymentForm: "CONTADO",
+                },
+                {
+                    poId: "po-credit-rejected",
+                    serie: "F001",
+                    correlative: "2",
+                    supplierName: "Proveedor credito rechazado",
+                    warehouseName: "Almacen",
+                    purchaseType: "INVENTORY",
+                    status: "DRAFT",
+                    approvalStatus: "REJECTED",
+                    documentType: "FACTURA",
+                    dateIssue: "2026-06-27T10:00:00.000Z",
+                    expectedAt: "2026-06-27T10:00:00.000Z",
+                    total: 200,
+                    totalPaid: 0,
+                    totalToPay: 200,
+                    paymentForm: "CREDITO",
+                },
+            ],
+            total: 2,
+            page: 1,
+            limit: 25,
+        });
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        const paymentsButton = await screen.findByRole("button", { name: "Pagos" });
+        expect(paymentsButton).toBeEnabled();
+        fireEvent.click(paymentsButton);
+        expect(screen.getByTestId("payment-list-modal")).toHaveAttribute("data-credit", "false");
+
+        const quotaButton = screen.getByRole("button", { name: "Ver cuotas" });
+        expect(quotaButton).toBeEnabled();
+        fireEvent.click(quotaButton);
+        expect(screen.getByTestId("quota-list-modal")).toBeInTheDocument();
+
+        const listPaymentsButton = screen.getByRole("button", { name: "Listar pagos" });
+        expect(listPaymentsButton).toBeEnabled();
     });
 
     it("asks for the payment form before opening payments when the purchase has no payment form", async () => {
