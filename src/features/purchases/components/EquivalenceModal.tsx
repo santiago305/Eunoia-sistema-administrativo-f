@@ -568,7 +568,7 @@ export function EquivalenceModal({
               options={afectTypeOptions}
               placeholder="Seleccionar tipo de afectación"
               searchable={false}
-              disabled={documentType === VoucherDocTypes.NOTA_VENTA}
+              disabled={true  }
             />
           </div>
         </div>
