@@ -20,6 +20,7 @@ import type {
 
 export const SaleOrderSearchFields = {
   NUMBER: "number",
+  LOTES: "lotes",
   CLIENT_ID: "clientId",
   WAREHOUSE_ID: "warehouseId",
   PAYMENT_STATUS: "paymentStatus",
@@ -73,6 +74,7 @@ type SaleOrderSearchOperatorOption = SmartSearchOperatorOption<SaleOrderSearchOp
 
 const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
   number: "Número",
+  lotes: "Lote",
   clientId: "Cliente",
   warehouseId: "Almacén",
   paymentStatus: "Estado de pago",
@@ -125,6 +127,7 @@ const DATE_FIELDS = new Set<SaleOrderSearchField>([
 
 const TEXT_FIELDS = new Set<SaleOrderSearchField>([
   SaleOrderSearchFields.NUMBER,
+  SaleOrderSearchFields.LOTES,
   SaleOrderSearchFields.ADVERTISING_CODE,
   SaleOrderSearchFields.OBSERVATION,
   SaleOrderSearchFields.CLIENT_PHONE,
@@ -498,6 +501,17 @@ export function buildSaleOrderSmartSearchColumns(
         { id: SaleOrderSearchOperators.EQ, label: "Es igual a" },
       ],
       placeholder: "Ej. S01-123",
+    },
+    {
+      id: SaleOrderSearchFields.LOTES,
+      label: "Lote",
+      kind: "text",
+      description: "Filtra por lote de importacion.",
+      operators: [
+        { id: SaleOrderSearchOperators.CONTAINS, label: "Contiene" },
+        { id: SaleOrderSearchOperators.EQ, label: "Es igual a" },
+      ],
+      placeholder: "Ej. 3",
     },
     {
       id: SaleOrderSearchFields.WORKFLOW_ID,

@@ -7,6 +7,8 @@ import type {
   SaleOrderExportColumn,
   SaleOrderExportPreset,
   SaleOrderEditorCatalogsResponse,
+  SaleOrderImportLote,
+  SaleOrderImportLoteAudit,
   SaleOrderSkuAttribute,
   SaleOrderSkuSnapshot,
   SaleOrderSkuUnit,
@@ -192,6 +194,31 @@ export const previewSaleOrdersJsonImport = async (
   const response = await axiosInstance.post<SaleOrderJsonImportPreviewResponse>(
     API_SALE_ORDERS_GROUP.importPreview,
     rows,
+  );
+  return response.data;
+};
+
+export const listSaleOrderImportLotes = async (): Promise<SaleOrderImportLote[]> => {
+  const response = await axiosInstance.get<SaleOrderImportLote[]>(API_SALE_ORDERS_GROUP.importLotes);
+  return response.data;
+};
+
+export const setSaleOrderImportLoteActive = async (
+  id: string,
+  isActive: boolean,
+): Promise<SaleOrderImportLote> => {
+  const response = await axiosInstance.patch<SaleOrderImportLote>(
+    API_SALE_ORDERS_GROUP.importLoteActive(id),
+    { isActive },
+  );
+  return response.data;
+};
+
+export const listSaleOrderImportLoteAudit = async (
+  id: string,
+): Promise<SaleOrderImportLoteAudit[]> => {
+  const response = await axiosInstance.get<SaleOrderImportLoteAudit[]>(
+    API_SALE_ORDERS_GROUP.importLoteAudit(id),
   );
   return response.data;
 };

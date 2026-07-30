@@ -10,8 +10,8 @@ let exportColumnsRequest: Promise<SaleOrderExportColumn[]> | null = null;
 const exportPresetsCache = new Map<string, SaleOrderExportPreset[]>();
 const exportPresetsRequests = new Map<string, Promise<SaleOrderExportPreset[]>>();
 
-const EXPORT_COLUMNS_STORAGE_KEY = "sale-orders:export-columns:v2";
-const EXPORT_PRESETS_STORAGE_PREFIX = "sale-orders:export-presets:v1:";
+const EXPORT_COLUMNS_STORAGE_KEY = "sale-orders:export-columns:v3";
+const EXPORT_PRESETS_STORAGE_PREFIX = "sale-orders:export-presets:v3:";
 
 const getPresetCacheKey = (userId?: string | null) => userId?.trim() || null;
 const getPresetStorageKey = (cacheKey: string) => `${EXPORT_PRESETS_STORAGE_PREFIX}${encodeURIComponent(cacheKey)}`;

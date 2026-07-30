@@ -67,6 +67,28 @@ export type SaleOrdersUpdatedPayload = {
   statistics?: SaleOrderStatisticsResponse;
 };
 
+export type SaleOrderImportLote = {
+  id: string;
+  lote: number;
+  createdAt: string;
+  createdBy: { id: string; name: string | null; email: string | null };
+  isActive: boolean;
+};
+
+export type SaleOrderImportLoteAudit = {
+  id: string;
+  loteId: string;
+  createdAt: string;
+  executedBy: { id: string; name: string | null; email: string | null };
+  actionExecution: "delete" | "restore";
+};
+
+export type SaleOrderLotesUpdatedPayload = {
+  lote?: SaleOrderImportLote;
+  saleOrderIds?: string[];
+  source?: string;
+};
+
 export type SaleOrderSkuSnapshot = {
   id: string;
   productId?: string | null;
@@ -286,6 +308,7 @@ export type SaleOrderJsonImportPreviewResponse = {
   processedRows: number;
   importedRows: number;
   failedRows: number;
+  lote?: SaleOrderImportLote | null;
   rows: Array<{
     rowNumber: number;
     clientId: string;
@@ -396,6 +419,7 @@ export type SaleOrder = {
   assignedBy?: { id: string; name: string; email: string } | null;
   agencyDetail?: string | null;
   isActive: boolean;
+  lotes?: number | null;
   createdAt: string;
   updatedAt: string | null;
   totalPaid: number;
@@ -456,6 +480,7 @@ export type SaleOrderSearchRuleMode = "include" | "exclude";
 export type SaleOrderSearchRule = {
   field:
     | "number"
+    | "lotes"
     | "clientId"
     | "warehouseId"
     | "paymentStatus"
