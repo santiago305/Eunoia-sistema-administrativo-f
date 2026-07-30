@@ -31,13 +31,24 @@ describe("sale order workflow and state smart filters", () => {
       filters: [
         { field: "clientPhone", operator: "contains", value: "987" },
         { field: "agencyDetail", operator: "eq", value: "Olva Miraflores" },
+        { field: "lotes", operator: "contains", value: " 3 " },
       ],
     });
 
     expect(snapshot.filters).toEqual([
       { field: "clientPhone", operator: "contains", value: "987" },
       { field: "agencyDetail", operator: "eq", value: "Olva Miraflores" },
+      { field: "lotes", operator: "contains", value: "3" },
     ]);
+  });
+
+  it("builds the lote smart text field", () => {
+    const columns = buildSaleOrderSmartSearchColumns(searchState);
+
+    expect(columns.find((column) => column.id === "lotes")).toMatchObject({
+      label: "Lote",
+      kind: "text",
+    });
   });
 
   it("builds workflow and state catalog fields", () => {

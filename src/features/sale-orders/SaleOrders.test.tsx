@@ -228,6 +228,27 @@ describe("SaleOrders", () => {
     expect(getSaleOrderStatisticsMock).not.toHaveBeenCalled();
   });
 
+  it("does not render inactive sale orders returned by the API", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [
+        { ...buildSaleOrder("Pendiente"), id: "order-1", correlative: 1, isActive: true },
+        { ...buildSaleOrder("Anulado"), id: "order-2", correlative: 2, isActive: false },
+      ],
+      total: 2,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    expect(await screen.findByText("SO-1")).toBeInTheDocument();
+    expect(screen.queryByText("SO-2")).not.toBeInTheDocument();
+  });
+
 
   it("renders prepared and preguide tracking tags", async () => {
     listSaleOrdersMock.mockResolvedValue({

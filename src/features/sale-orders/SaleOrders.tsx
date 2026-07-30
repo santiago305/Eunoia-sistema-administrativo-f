@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Sheet, Workflow } from "lucide-react";
+import { Boxes, Plus, Sheet, Workflow } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
     ClientType,
@@ -9,6 +9,7 @@ import {
     type SaleOrderSearchRule,
     type SaleOrderSearchSnapshot,
     type SaleOrderSearchStateResponse,
+    type SaleOrderLotesUpdatedPayload,
     type SaleOrdersUpdatedPayload,
 } from "@/features/sale-orders/types/saleOrder";
 import {
@@ -45,6 +46,7 @@ import {
 } from "@/features/sale-orders/utils/saleOrderSmartSearch";
 import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
 import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
+import { SaleOrderImportLotesModal } from "@/features/sale-orders/components/SaleOrderImportLotesModal";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { createSaleOrdersSocket } from "@/shared/lib/socket";
@@ -165,6 +167,8 @@ export default function SaleOrders() {
     const [pdfOrderId, setPdfOrderId] = useState<string | null>(null);
     const [importLoading, setImportLoading] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
+    const [importLotesOpen, setImportLotesOpen] = useState(false);
+    const [importLotesRefreshKey, setImportLotesRefreshKey] = useState(0);
     const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
     const [bulkChangeStateOpen, setBulkChangeStateOpen] = useState(false);
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -337,7 +341,7 @@ export default function SaleOrders() {
                 q: executedSnapshot.q,
                 filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
             });
-            const items = res.items ?? [];
+            const items = (res.items ?? []).filter((order) => order.isActive !== false);
             const nextTotal = res.total ?? 0;
             const nextPage = res.page ?? page;
             const nextLimit = res.limit ?? paginationState.pageSize;
@@ -371,6 +375,12 @@ export default function SaleOrders() {
     const syncRealtimeSaleOrder = useCallback(
         (updatedOrder: SaleOrder | null | undefined) => {
             if (!updatedOrder?.id) return;
+
+            if (updatedOrder.isActive === false) {
+                setOrders((currentOrders) => currentOrders.filter((order) => order.id !== updatedOrder.id));
+                updateSelectedOrder((current) => (current?.id === updatedOrder.id ? null : current));
+                return;
+            }
 
             const mergeOrder = (currentOrder: SaleOrder | null | undefined) => {
                 if (!currentOrder) return updatedOrder;
@@ -483,9 +493,15 @@ export default function SaleOrders() {
                 void loadOrders();
             }
         };
+        const onSaleOrderLotesUpdated = (_payload: SaleOrderLotesUpdatedPayload) => {
+            setImportLotesRefreshKey((current) => current + 1);
+            void loadOrders();
+        };
         socket.on("sale-orders.updated", onSaleOrdersUpdated);
+        socket.on("sale-order-lotes.updated", onSaleOrderLotesUpdated);
         return () => {
             socket.off("sale-orders.updated", onSaleOrdersUpdated);
+            socket.off("sale-order-lotes.updated", onSaleOrderLotesUpdated);
         };
     }, [isAuthenticated, hasExecutedSearchCriteria, loadOrders, refreshSelectedOrderDetail, syncRealtimeSaleOrder, userId]);
 
@@ -507,7 +523,8 @@ export default function SaleOrders() {
         setImportLoading(true);
         try {
             const response = await previewSaleOrdersJsonImport(sanitizeSaleOrderImportRows(data));
-            const baseMessage = `Importados: ${response.importedRows}. Fallidos: ${response.failedRows}.`;
+            const loteMessage = response.lote ? ` Lote: ${response.lote.lote}.` : "";
+            const baseMessage = `Importados: ${response.importedRows}. Fallidos: ${response.failedRows}.${loteMessage}`;
             const errorDetails = response.errors
                 .slice(0, 3)
                 .map((error) => `Fila ${error.rowNumber}: ${error.message}`)
@@ -810,6 +827,19 @@ export default function SaleOrders() {
     const columns = useMemo<DataTableColumn<SaleOrder>[]>(
         () => {
             const baseColumns: DataTableColumn<SaleOrder>[] = [
+            {
+                id: "lote",
+                header: "Lote",
+                headerClassName: centeredHeaderClassName,
+                cell: (order) => (
+                    <div className="flex w-full min-w-0 flex-col items-center gap-1 text-center leading-tight">
+                        <span className="rounded-sm bg-zinc-100 px-2 py-1 text-[10px] font-semibold tabular-nums text-zinc-700">
+                            {order.lotes ?? "-"}
+                        </span>
+                    </div>
+                ),
+                sortable: false,
+            },
             {
                 id: "number",
                 header: "Pedido",
@@ -1192,6 +1222,9 @@ export default function SaleOrders() {
                             <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Tipos"
                                 leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
                             </SystemButton>
+                            <SystemButton size="icon" variant="outline" className="rounded-md h-11 shadow" tooltip="Lotes"
+                                leftIcon={<Boxes className="h-4 w-4" />} onClick={() => setImportLotesOpen(true)} title="Lotes importados">
+                            </SystemButton>
                             <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Importar"
                             leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle ?? "Importar pedidos"}>
                             </SystemButton>
@@ -1296,6 +1329,15 @@ export default function SaleOrders() {
                 }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />
+            <SaleOrderImportLotesModal
+                open={importLotesOpen}
+                refreshKey={importLotesRefreshKey}
+                onClose={() => setImportLotesOpen(false)}
+                onChanged={async (lote) => {
+                    showFeedbackRef.current(successResponse(lote.isActive ? "Lote restaurado." : "Lote eliminado."));
+                    await loadOrders();
+                }}
+            />
             <SaleOrderBulkAssignModal
                 open={bulkAssignOpen}
                 selectedOrders={selectedSaleOrders}
