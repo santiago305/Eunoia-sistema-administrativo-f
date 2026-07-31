@@ -9,7 +9,6 @@ import {
     type SaleOrderSearchRule,
     type SaleOrderSearchSnapshot,
     type SaleOrderSearchStateResponse,
-    type SaleOrderLotesUpdatedPayload,
     type SaleOrdersUpdatedPayload,
 } from "@/features/sale-orders/types/saleOrder";
 import {
@@ -518,7 +517,7 @@ export default function SaleOrders() {
                 void loadOrders();
             }
         };
-        const onSaleOrderLotesUpdated = (_payload: SaleOrderLotesUpdatedPayload) => {
+        const onSaleOrderLotesUpdated = () => {
             setImportLotesRefreshKey((current) => current + 1);
             void loadOrders();
         };

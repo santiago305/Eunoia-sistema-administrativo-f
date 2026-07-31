@@ -120,7 +120,7 @@ export function SaleOrderShippingSection({
         ) : null}
       </div>
     }>
-      {tracking ? <SaleOrderTrackingCell order={{ preguide: tracking.preguide, prepared: tracking.prepared } as any} canUpdatePreguide={canUpdatePreguide} canUpdatePrepared={canUpdatePrepared} onChange={(field, value) => onTrackingChange?.(field, value) ?? Promise.resolve()} /> : null}
+      {tracking ? <SaleOrderTrackingCell order={tracking} canUpdatePreguide={canUpdatePreguide} canUpdatePrepared={canUpdatePrepared} onChange={(field, value) => onTrackingChange?.(field, value) ?? Promise.resolve()} /> : null}
       <FloatingSuggestInput
         label="Agencia/Dirección"
         name="sale-order-subsidiary"

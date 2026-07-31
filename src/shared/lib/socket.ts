@@ -32,7 +32,8 @@ export const closeNotificationSocket = () => {
   notificationSocket = null;
 };
 
-export const createSaleOrdersSocket = (_userId?: string) => {
+export const createSaleOrdersSocket = (userId?: string) => {
+  void userId;
   if (saleOrdersSocket) return saleOrdersSocket;
 
   saleOrdersSocket = io(`${resolveSocketBaseUrl()}/sale-orders`, {

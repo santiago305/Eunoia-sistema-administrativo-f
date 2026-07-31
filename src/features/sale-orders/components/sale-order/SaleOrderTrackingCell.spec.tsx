@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SaleOrderTrackingCell } from "./SaleOrderTrackingCell";
 
-const order = { preguide: false, prepared: false } as any;
+const order = { preguide: false, prepared: false };
 describe("SaleOrderTrackingCell", () => {
   it("shows only controls for granted tracking permissions", () => {
     render(<SaleOrderTrackingCell order={order} canUpdatePreguide canUpdatePrepared={false} onChange={vi.fn()} />);
