@@ -125,6 +125,7 @@ export function WorkflowActionEditor({ catalog, value, onChange }: Props) {
             );
             const availableProvinceOptions = provinceOptions.filter(
               (province) =>
+                config.mode === "EXCLUDE" ||
                 selectedProvinceSet.has(province.value) ||
                 !provinceIdsUsedBySiblingActions.has(province.value),
             );

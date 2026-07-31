@@ -260,7 +260,7 @@ describe("WorkflowActionEditor", () => {
     ]);
   });
 
-  it("hides provinces already assigned in sibling warehouse assignment actions", async () => {
+  it("hides provinces already assigned in sibling include warehouse assignment actions", async () => {
     const value: WorkflowAction[] = [
       {
         type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
@@ -289,6 +289,36 @@ describe("WorkflowActionEditor", () => {
     expect(screen.getByTestId("action-provinces-0-options")).toHaveTextContent("Lima");
     expect(screen.getByTestId("action-provinces-0-options")).toHaveTextContent("Arequipa");
     expect(screen.getByTestId("action-provinces-1-options")).not.toHaveTextContent("Lima");
+    expect(screen.getByTestId("action-provinces-1-options")).toHaveTextContent("Arequipa");
+  });
+
+  it("allows excluded province actions to select provinces already used by siblings", async () => {
+    const value: WorkflowAction[] = [
+      {
+        type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
+        config: { mode: "INCLUDE", provinceIds: ["1501"], warehouseId: "warehouse-1" },
+        position: 0,
+      },
+      {
+        type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE,
+        config: { mode: "EXCLUDE", provinceIds: [], warehouseId: "" },
+        position: 1,
+      },
+    ];
+
+    render(
+      <WorkflowActionEditor
+        catalog={provinceAssignmentCatalog}
+        value={value}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("action-provinces-1-options")).toHaveTextContent("Lima"),
+    );
+
+    expect(screen.getByTestId("action-provinces-1-options")).toHaveTextContent("Lima");
     expect(screen.getByTestId("action-provinces-1-options")).toHaveTextContent("Arequipa");
   });
 });
