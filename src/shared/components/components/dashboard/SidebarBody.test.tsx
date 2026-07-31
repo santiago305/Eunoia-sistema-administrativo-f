@@ -33,7 +33,7 @@ vi.mock("@/features/mail/context/MailDashboardProvider", () => ({
 }));
 
 vi.mock("@/shared/hooks/usePermissions", () => ({
-  usePermissions: () => ({ can: vi.fn(() => false) }),
+  usePermissions: () => ({ can: (permission: string) => authState.permissions.includes(permission) }),
 }));
 
 vi.mock("@/features/mail/services/messages.service", () => ({
@@ -109,5 +109,16 @@ describe("SidebarBody purchase dashboard permissions", () => {
     expect(within(purchaseSection).queryByTestId("sidebar-parent-/compras/dashboard")).toBeNull();
     expect(within(purchaseSection).queryByTestId("sidebar-child-/compras")).toBeNull();
     expect(within(purchaseSection).getByTestId("sidebar-child-/compras/recurrentes")).toBeDefined();
+  });
+
+  it("hides Pedidos when the page permission is missing", () => {
+    renderSidebar();
+    expect(screen.queryByTestId("sidebar-item-Pedidos")).toBeNull();
+  });
+
+  it("shows Pedidos only with page and list permissions", () => {
+    authState.permissions = ["page.sale-orders.view", "sale_orders.view"];
+    renderSidebar();
+    expect(screen.getByTestId("sidebar-item-Pedidos")).toBeDefined();
   });
 });
