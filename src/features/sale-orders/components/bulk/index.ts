@@ -5,3 +5,4 @@ export {
     type SaleOrderBulkExecuteWorkflowSelection,
 } from "./SaleOrderBulkChangeStateModal";
 export { SaleOrderBulkResultModal } from "./SaleOrderBulkResultModal";
+export { SaleOrderBulkTrackingModal } from "./SaleOrderBulkTrackingModal";

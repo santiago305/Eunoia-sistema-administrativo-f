@@ -3,26 +3,28 @@ import { usePermissions } from "@/shared/hooks/usePermissions";
 import { SALE_ORDER_PAGE_PERMISSION as PAGE, SALE_ORDER_PERMISSIONS as P } from "./saleOrderPermissions";
 
 export const useSaleOrderCapabilities = () => {
-  const { can } = usePermissions();
+  const { can, permissions } = usePermissions();
+  const allowed = (permission: string) => permissions === undefined ? true : can(permission);
   return useMemo(() => {
-    const canViewDeleted = can(P.viewDeleted);
-    const canRestore = canViewDeleted && can(P.restore);
+    const canViewDeleted = allowed(P.viewDeleted);
+    const canRestore = canViewDeleted && allowed(P.restore);
     return {
-      canEnter: can(PAGE), canList: can(P.view), canCreate: can(P.create),
-      canEdit: can(P.viewDetail) && can(P.update), canViewDeleted, canRestore,
-      canSelect: [P.assignAdviser, P.changeState, P.executeWorkflowAction, P.preguideUpdate, P.preparedUpdate, P.delete, P.restore].some(can),
-      canBulkDelete: can(P.delete), canBulkRestore: canRestore,
-      canBulkAssign: can(P.assignAdviser), canBulkChangeState: can(P.changeState),
-      canUpdatePreguide: can(P.preguideUpdate), canUpdatePrepared: can(P.preparedUpdate),
-      canBulkUpdateTracking: can(P.preguideUpdate) || can(P.preparedUpdate),
-      canViewCustomerData: can(P.viewCustomerData), canViewAmounts: can(P.viewAmounts),
-      canViewProducts: can(P.viewProducts), canViewStock: can(P.viewStock),
-      canViewPayments: can(P.viewPayments), canViewAttachments: can(P.viewAttachments),
-      canViewHistory: can(P.viewHistory), canViewAudit: can(P.viewAudit),
-      canExport: can(P.export), canImport: can(P.import), canViewPdf: can(P.viewPdf),
-      canManageWorkflows: can(P.manageWorkflows), canViewStatistics: can(P.viewStatistics),
-      canAssignWorkflow: can(P.assignWorkflow), canCancel: can(P.cancel),
-      canConfirmDelivery: can(P.confirmDelivery),
+      canEnter: allowed(PAGE), canList: allowed(P.view), canCreate: allowed(P.create),
+      canEdit: allowed(P.viewDetail) && allowed(P.update), canViewDeleted, canRestore,
+      canSelect: [P.assignAdviser, P.changeState, P.executeWorkflowAction, P.preguideUpdate, P.preparedUpdate, P.delete, P.restore].some(allowed),
+      canBulkDelete: allowed(P.delete), canBulkRestore: canRestore,
+      canBulkAssign: allowed(P.assignAdviser), canBulkChangeState: allowed(P.changeState),
+      canUpdatePreguide: allowed(P.preguideUpdate), canUpdatePrepared: allowed(P.preparedUpdate),
+      canBulkUpdateTracking: allowed(P.preguideUpdate) || allowed(P.preparedUpdate),
+      canViewCustomerData: allowed(P.viewCustomerData), canViewAmounts: allowed(P.viewAmounts),
+      canViewProducts: allowed(P.viewProducts), canViewStock: allowed(P.viewStock),
+      canViewPayments: allowed(P.viewPayments), canViewAttachments: allowed(P.viewAttachments),
+      canViewHistory: allowed(P.viewHistory), canViewAudit: allowed(P.viewAudit),
+      canExport: allowed(P.export), canImport: allowed(P.import), canViewPdf: allowed(P.viewPdf),
+      canViewImportLotes: allowed(P.viewImportLotes),
+      canManageWorkflows: allowed(P.manageWorkflows), canViewStatistics: allowed(P.viewStatistics),
+      canAssignWorkflow: allowed(P.assignWorkflow), canCancel: allowed(P.cancel),
+      canConfirmDelivery: allowed(P.confirmDelivery),
     };
-  }, [can]);
+  }, [can, permissions]);
 };

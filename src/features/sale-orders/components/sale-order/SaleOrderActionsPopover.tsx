@@ -9,6 +9,10 @@ type Props = {
   onOpenPdf: (order: SaleOrder) => void;
   onToggleActive?: (order: SaleOrder) => void;
   onOpenAudit?: (order: SaleOrder) => void;
+  canViewPdf?: boolean;
+  canDelete?: boolean;
+  canRestore?: boolean;
+  canViewAudit?: boolean;
 };
 
 export function SaleOrderActionsPopover({
@@ -16,15 +20,21 @@ export function SaleOrderActionsPopover({
   onOpenPdf,
   onToggleActive,
   onOpenAudit,
+  canViewPdf = true,
+  canDelete = true,
+  canRestore = true,
+  canViewAudit = true,
 }: Props) {
   const actions = useMemo<ActionItem[]>(
     () => {
-      const baseActions: ActionItem[] = [{
+      const baseActions: ActionItem[] = [];
+      if (canViewPdf) baseActions.push({
         id: "pdf",
         label: "Ver PDF",
         icon: <FileText className="h-4 w-4" />,
         onClick: () => onOpenPdf(order),
-      },
+      });
+      baseActions.push(
       {
         id: "invoice",
         label: "Factura",
@@ -36,9 +46,10 @@ export function SaleOrderActionsPopover({
         label: "Boleta",
         icon: <ReceiptText className="h-4 w-4" />,
         disabled: true,
-      }];
+      },
+      );
 
-      if (onToggleActive) {
+      if (onToggleActive && (order.isActive ? canDelete : canRestore)) {
         baseActions.push({
           id: order.isActive ? "delete" : "restore",
           label: order.isActive ? "Eliminar" : "Restaurar",
@@ -48,7 +59,7 @@ export function SaleOrderActionsPopover({
         });
       }
 
-      if (onOpenAudit) {
+      if (onOpenAudit && canViewAudit) {
         baseActions.push({
           id: "audit",
           label: "Auditoria",
@@ -59,7 +70,7 @@ export function SaleOrderActionsPopover({
 
       return baseActions;
     },
-    [onOpenAudit, onOpenPdf, onToggleActive, order],
+    [canDelete, canRestore, canViewAudit, canViewPdf, onOpenAudit, onOpenPdf, onToggleActive, order],
   );
 
   return <DataTableActionsPopover actions={actions} triggerLabel="Acciones del pedido" />;

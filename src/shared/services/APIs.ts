@@ -449,6 +449,8 @@ export const API_SALE_ORDERS_GROUP = {
   importLoteActive: (id: string) => `/sale-orders/import-lotes/${id}/active`,
   importLoteAudit: (id: string) => `/sale-orders/import-lotes/${id}/audit`,
   active: (id: string) => `/sale-orders/${id}/active`,
+  tracking: (id: string) => `/sale-orders/${id}/tracking`,
+  bulkTracking: "/sale-orders/bulk/tracking",
   bulkActive: "/sale-orders/bulk/active",
   audit: (id: string) => `/sale-orders/${id}/audit`,
   list: "/sale-orders",

@@ -93,6 +93,9 @@ export type BulkAssignSaleOrdersPayload = {
   assignedBy: string | null;
 };
 
+export type SaleOrderTrackingPayload = { preguide?: boolean; prepared?: boolean };
+export type BulkSaleOrderTrackingPayload = { saleOrderIds: string[]; preguide?: boolean; prepared?: boolean };
+
 export type BulkChangeSaleOrderStatePayload = {
   saleOrderIds: string[];
   targetStateId: string;
@@ -242,6 +245,16 @@ export const bulkSetSaleOrdersActive = async (
     API_SALE_ORDERS_GROUP.bulkActive,
     payload,
   );
+  return response.data;
+};
+
+export const setSaleOrderTracking = async (id: string, payload: SaleOrderTrackingPayload): Promise<SaleOrder> => {
+  const response = await axiosInstance.patch<SaleOrder>(API_SALE_ORDERS_GROUP.tracking(id), payload);
+  return response.data;
+};
+
+export const bulkSetSaleOrdersTracking = async (payload: BulkSaleOrderTrackingPayload): Promise<SaleOrderBulkActionResponse> => {
+  const response = await axiosInstance.patch<SaleOrderBulkActionResponse>(API_SALE_ORDERS_GROUP.bulkTracking, payload);
   return response.data;
 };
 

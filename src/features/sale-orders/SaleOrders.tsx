@@ -27,6 +27,8 @@ import {
     saveSaleOrderExportPreset,
     saveSaleOrderSearchMetric,
     setSaleOrderActive,
+    setSaleOrderTracking,
+    bulkSetSaleOrdersTracking,
     type SaleOrderBulkActionResponse,
 } from "@/shared/services/saleOrderService";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
@@ -62,10 +64,14 @@ import {
     SaleOrderBulkAssignModal,
     SaleOrderBulkChangeStateModal,
     SaleOrderBulkResultModal,
+    SaleOrderBulkTrackingModal,
     type SaleOrderBulkExecuteWorkflowSelection,
 } from "./components/bulk";
 import { SaleOrderActionsPopover } from "./components/sale-order/SaleOrderActionsPopover";
 import { SaleOrderStatusPopover } from "./components/sale-order/SaleOrderStatusPopover";
+import { SaleOrderTrackingCell } from "./components/sale-order/SaleOrderTrackingCell";
+import { useSaleOrderCapabilities } from "./permissions/useSaleOrderCapabilities";
+import { buildSaleOrderDeletionCopy } from "./permissions/saleOrderDeletionCopy";
 import { optionalSaleOrderImportFields, saleOrderImportFields } from "./types/saleImporter";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -154,6 +160,7 @@ export default function SaleOrders() {
     const companyActionTitle = hasCompany ? undefined : "Primero registra la empresa.";
 
     const { isAuthenticated, userId } = useAuth();
+    const capabilities = useSaleOrderCapabilities();
 
     const [modalState, setModalState] = useState<SaleOrderModalState>({ open: false });
     const modalStateRef = useRef<SaleOrderModalState>({ open: false });
@@ -176,6 +183,7 @@ export default function SaleOrders() {
     const [importLotesRefreshKey, setImportLotesRefreshKey] = useState(0);
     const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
     const [bulkChangeStateOpen, setBulkChangeStateOpen] = useState(false);
+    const [bulkTrackingOpen, setBulkTrackingOpen] = useState(false);
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
     const [activeActionLoading, setActiveActionLoading] = useState(false);
     const [bulkResult, setBulkResult] = useState<SaleOrderBulkActionResponse | null>(null);
@@ -330,12 +338,12 @@ export default function SaleOrders() {
     }, [modalState]);
 
     useEffect(() => {
-        void loadExportColumns();
-    }, [loadExportColumns]);
+        if (capabilities.canExport) void loadExportColumns();
+    }, [capabilities.canExport, loadExportColumns]);
 
     useEffect(() => {
-        void loadExportPresets();
-    }, [loadExportPresets]);
+        if (capabilities.canExport) void loadExportPresets();
+    }, [capabilities.canExport, loadExportPresets]);
 
     const updateUx = async () => {
         await loadOrders();
@@ -487,7 +495,7 @@ export default function SaleOrders() {
     }, [orders]);
 
     useEffect(() => {
-        if (!isAuthenticated || !userId) return;
+        if (!isAuthenticated || !userId || !capabilities.canList) return;
         const socket = createSaleOrdersSocket(userId);
         if (!socket) return;
         const onSaleOrdersUpdated = (payload: SaleOrdersUpdatedPayload) => {
@@ -520,7 +528,7 @@ export default function SaleOrders() {
             socket.off("sale-orders.updated", onSaleOrdersUpdated);
             socket.off("sale-order-lotes.updated", onSaleOrderLotesUpdated);
         };
-    }, [isAuthenticated, hasExecutedSearchCriteria, loadOrders, refreshSelectedOrderDetail, syncRealtimeSaleOrder, userId]);
+    }, [capabilities.canList, isAuthenticated, hasExecutedSearchCriteria, loadOrders, refreshSelectedOrderDetail, syncRealtimeSaleOrder, userId]);
 
     useEffect(() => {
         void loadSearchState();
@@ -871,6 +879,20 @@ export default function SaleOrders() {
         }
     }, [loadOrders, selectedSaleOrderIds, showDeletedOrders, showFeedback]);
 
+    const handleTrackingChange = useCallback(async (order: SaleOrder, field: "preguide" | "prepared", value: boolean) => {
+        const previous = order[field];
+        setOrders((current) => current.map((item) => item.id === order.id ? { ...item, [field]: value } : item));
+        try { await setSaleOrderTracking(order.id, { [field]: value }); }
+        catch (error) { setOrders((current) => current.map((item) => item.id === order.id ? { ...item, [field]: previous } : item)); showFeedback(errorResponse(parseApiError(error, "No se pudo actualizar el seguimiento."))); }
+    }, [showFeedback]);
+
+    const handleBulkTracking = useCallback(async (payload: { preguide?: boolean; prepared?: boolean }) => {
+        setBulkActionLoading(true);
+        try { await bulkSetSaleOrdersTracking({ saleOrderIds: selectedSaleOrderIds, ...payload }); setBulkTrackingOpen(false); setSelectedSaleOrderIds([]); await loadOrders(); showFeedback(successResponse("Seguimiento actualizado.")); }
+        catch (error) { showFeedback(errorResponse(parseApiError(error, "No se pudo actualizar el seguimiento."))); }
+        finally { setBulkActionLoading(false); }
+    }, [loadOrders, selectedSaleOrderIds, showFeedback]);
+
     const handleConfirmSaleOrderToggle = useCallback(async () => {
         if (!pendingSaleOrderToggle) return;
         const nextActive = !pendingSaleOrderToggle.isActive;
@@ -1213,13 +1235,7 @@ export default function SaleOrders() {
                                 {order.invoiceSend ? "Comp. enviado" : "Sin comprobante"}
                             </span>
 
-                            <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${order.preguide === true ? "bg-sky-50 text-sky-700" : "bg-zinc-100 text-zinc-600"}`}>
-                                {order.preguide === true ? "Con preguía" : "Sin preguía"}
-                            </span>
-
-                            <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${order.prepared === true ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>
-                                {order.prepared === true ? "Preparado" : "Sin preparar"}
-                            </span>
+                            <SaleOrderTrackingCell order={order} canUpdatePreguide={!showDeletedOrders && capabilities.canUpdatePreguide} canUpdatePrepared={!showDeletedOrders && capabilities.canUpdatePrepared} onChange={(field, value) => handleTrackingChange(order, field, value)} />
                         </div>
                     );
                 },
@@ -1239,6 +1255,10 @@ export default function SaleOrders() {
                             }}
                             onToggleActive={(selected) => setPendingSaleOrderToggle(selected)}
                             onOpenAudit={(selected) => setAuditOrder(selected)}
+                            canViewPdf={capabilities.canViewPdf}
+                            canDelete={capabilities.canBulkDelete}
+                            canRestore={capabilities.canRestore}
+                            canViewAudit={capabilities.canViewAudit}
                         />
                     </div>
                 ),
@@ -1255,7 +1275,7 @@ export default function SaleOrders() {
                 maxWidth: "150px",
             }));
         },
-        [refreshSelectedOrder],
+        [capabilities.canUpdatePrepared, capabilities.canUpdatePreguide, handleTrackingChange, refreshSelectedOrder, showDeletedOrders],
     );
     return (
         <PageShell className="bg-white" contentClassName="max-w-none" scrollArea>
@@ -1266,9 +1286,15 @@ export default function SaleOrders() {
                     disabled={bulkActionLoading}
                     onOpenAssign={() => setBulkAssignOpen(true)}
                     onOpenChangeState={() => setBulkChangeStateOpen(true)}
+                    onOpenTracking={() => setBulkTrackingOpen(true)}
                     onOpenToggleActive={() => setBulkActiveConfirmOpen(true)}
                     onClearSelection={() => setSelectedSaleOrderIds([])}
                     restoreMode={showDeletedOrders}
+                    canAssign={capabilities.canBulkAssign}
+                    canChangeState={capabilities.canBulkChangeState}
+                    canTracking={!showDeletedOrders && capabilities.canBulkUpdateTracking}
+                    canDelete={capabilities.canBulkDelete}
+                    canRestore={capabilities.canBulkRestore}
                 />
                 <DataTable
                     tableId="sale-orders-list"
@@ -1277,7 +1303,7 @@ export default function SaleOrders() {
                     columns={columns}
                     rowKey="id"
                     loading={loading}
-                    selectableRows
+                    selectableRows={capabilities.canSelect}
                     selectedRowKeys={selectedSaleOrderIds}
                     onSelectedRowKeysChange={(keys) => setSelectedSaleOrderIds(keys)}
                     emptyMessage="No hay pedidos con los filtros actuales."
@@ -1287,7 +1313,7 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
-                            <label className="inline-flex h-11 items-center gap-2 rounded-md border
+                            {capabilities.canViewDeleted ? <label className="inline-flex h-11 items-center gap-2 rounded-md border
                             border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 shadow cursor-pointer">
                                 <Checkbox
                                     checked={showDeletedOrders}
@@ -1295,17 +1321,17 @@ export default function SaleOrders() {
                                     aria-label="Eliminados"
                                     tooltip="Ver pedidos eliminados"
                                 />
-                            </label>
-                            <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Tipos"
+                            </label> : null}
+                            {capabilities.canManageWorkflows ? <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Tipos"
                                 leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
-                            </SystemButton>
-                            <SystemButton size="icon" variant="outline" className="rounded-md h-11 shadow" tooltip="Lotes"
+                            </SystemButton> : null}
+                            {capabilities.canViewImportLotes ? <SystemButton size="icon" variant="outline" className="rounded-md h-11 shadow" tooltip="Lotes"
                                 leftIcon={<Boxes className="h-4 w-4" />} onClick={() => setImportLotesOpen(true)} title="Lotes importados">
-                            </SystemButton>
-                            <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Importar"
+                            </SystemButton> : null}
+                            {capabilities.canImport ? <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Importar"
                             leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle ?? "Importar pedidos"}>
-                            </SystemButton>
-                            {exportColumns.length ? (
+                            </SystemButton> : null}
+                            {capabilities.canExport && exportColumns.length ? (
                                 <ExportPopover
                                     buttonLabel=""
                                     buttonSize="icon"
@@ -1320,9 +1346,9 @@ export default function SaleOrders() {
                                     onExport={handleExport}
                                 />
                             ) : null}
-                            <SystemButton size="icon" className="rounded-md h-11 shadow" tooltip="Nuevo pedido"
+                            {capabilities.canCreate ? <SystemButton size="icon" className="rounded-md h-11 shadow" tooltip="Nuevo pedido"
                             leftIcon={<Plus className="h-4 w-4" />} onClick={openModal} disabled={companyActionDisabled} title={companyActionTitle ?? "Nuevo pedido"}>
-                            </SystemButton>
+                            </SystemButton> : null}
                         </>
                     }
                     rangeDates={{
@@ -1439,6 +1465,14 @@ export default function SaleOrders() {
                 onLoadFilteredOrders={loadBulkFilteredOrders}
                 onSubmit={handleBulkChangeState}
             />
+            <SaleOrderBulkTrackingModal
+                open={bulkTrackingOpen}
+                selectedCount={selectedSaleOrderIds.length}
+                canUpdatePreguide={capabilities.canUpdatePreguide}
+                canUpdatePrepared={capabilities.canUpdatePrepared}
+                onClose={() => setBulkTrackingOpen(false)}
+                onSubmit={handleBulkTracking}
+            />
             <SaleOrderBulkResultModal
                 open={Boolean(bulkResult)}
                 result={bulkResult}
@@ -1454,7 +1488,7 @@ export default function SaleOrders() {
                 message={
                     showDeletedOrders
                         ? `Se restauraran ${selectedSaleOrderIds.length} pedido(s).`
-                        : `Se eliminaran ${selectedSaleOrderIds.length} pedido(s). Podras restaurarlos desde Eliminados.`
+                        : buildSaleOrderDeletionCopy({ count: selectedSaleOrderIds.length, canViewDeleted: capabilities.canViewDeleted, canRestore: capabilities.canRestore })
                 }
                 confirmText={showDeletedOrders ? "Restaurar" : "Eliminar"}
                 loading={bulkActionLoading}
@@ -1467,7 +1501,7 @@ export default function SaleOrders() {
                 title={pendingSaleOrderToggle?.isActive ? "Eliminar pedido" : "Restaurar pedido"}
                 message={
                     pendingSaleOrderToggle?.isActive
-                        ? "Se eliminaran los pedidos, esta seguro?"
+                        ? buildSaleOrderDeletionCopy({ count: 1, canViewDeleted: capabilities.canViewDeleted, canRestore: capabilities.canRestore })
                         : "El pedido volvera a la lista principal."
                 }
                 confirmText={pendingSaleOrderToggle?.isActive ? "Eliminar" : "Restaurar"}
