@@ -43,7 +43,6 @@ describe("socket factories", () => {
       withCredentials: true,
       transports: ["polling", "websocket"],
       tryAllTransports: true,
-      auth: { userId: "user-1" },
     });
   });
 });

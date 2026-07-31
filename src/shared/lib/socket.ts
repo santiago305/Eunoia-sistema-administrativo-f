@@ -32,15 +32,13 @@ export const closeNotificationSocket = () => {
   notificationSocket = null;
 };
 
-export const createSaleOrdersSocket = (userId: string) => {
-  if (!userId) return null;
+export const createSaleOrdersSocket = (_userId?: string) => {
   if (saleOrdersSocket) return saleOrdersSocket;
 
   saleOrdersSocket = io(`${resolveSocketBaseUrl()}/sale-orders`, {
     withCredentials: true,
     transports: ['polling', 'websocket'],
     tryAllTransports: true,
-    auth: { userId },
   });
 
   return saleOrdersSocket;
