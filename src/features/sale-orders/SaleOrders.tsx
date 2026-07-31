@@ -1467,7 +1467,7 @@ export default function SaleOrders() {
                 title={pendingSaleOrderToggle?.isActive ? "Eliminar pedido" : "Restaurar pedido"}
                 message={
                     pendingSaleOrderToggle?.isActive
-                        ? "El pedido quedara oculto de la lista principal y podra restaurarse luego."
+                        ? "Se eliminaran los pedidos, esta seguro?"
                         : "El pedido volvera a la lista principal."
                 }
                 confirmText={pendingSaleOrderToggle?.isActive ? "Eliminar" : "Restaurar"}
