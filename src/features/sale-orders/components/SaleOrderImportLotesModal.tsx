@@ -211,7 +211,7 @@ export function SaleOrderImportLotesModal({ open, refreshKey = 0, onClose, onCha
         title={pendingLoteToggle?.isActive ? "Eliminar lote" : "Restaurar lote"}
         message={
           pendingLoteToggle?.isActive
-            ? `Se ocultaran los pedidos del lote ${pendingLoteToggle.lote}. Podras restaurarlos luego.`
+            ? `Se eliminaran los pedidos del lote, esta seguro?`
             : `Se restauraran los pedidos del lote ${pendingLoteToggle?.lote}.`
         }
         confirmText={pendingLoteToggle?.isActive ? "Eliminar" : "Restaurar"}
