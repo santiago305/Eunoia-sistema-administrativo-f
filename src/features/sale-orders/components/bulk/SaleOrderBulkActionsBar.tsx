@@ -1,4 +1,4 @@
-import { RefreshCcw, UserCheck, Workflow, X } from "lucide-react";
+import { RefreshCcw, RotateCcw, Trash2, UserCheck, Workflow, X } from "lucide-react";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 
 export type SaleOrderBulkActionsBarProps = {
@@ -6,7 +6,9 @@ export type SaleOrderBulkActionsBarProps = {
     disabled?: boolean;
     onOpenAssign: () => void;
     onOpenChangeState: () => void;
+    onOpenToggleActive: () => void;
     onClearSelection: () => void;
+    restoreMode?: boolean;
 };
 
 export function SaleOrderBulkActionsBar({
@@ -14,7 +16,9 @@ export function SaleOrderBulkActionsBar({
     disabled = false,
     onOpenAssign,
     onOpenChangeState,
+    onOpenToggleActive,
     onClearSelection,
+    restoreMode = false,
 }: SaleOrderBulkActionsBarProps) {
     if (selectedCount <= 0) return null;
 
@@ -50,6 +54,17 @@ export function SaleOrderBulkActionsBar({
                     onClick={onOpenChangeState}
                 >
                     Cambiar estado
+                </SystemButton>
+
+                <SystemButton
+                    size="sm"
+                    variant={restoreMode ? "success" : "danger"}
+                    className="rounded-md"
+                    leftIcon={restoreMode ? <RotateCcw className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
+                    disabled={disabled}
+                    onClick={onOpenToggleActive}
+                >
+                    {restoreMode ? "Restaurar pedidos" : "Eliminar pedidos"}
                 </SystemButton>
 
                 <SystemButton

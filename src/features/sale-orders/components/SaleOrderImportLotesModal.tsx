@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { History, LoaderCircle, PackageOpen, RotateCcw, Trash2 } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { AlertModal } from "@/shared/components/components/AlertModal";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
@@ -34,6 +35,7 @@ export function SaleOrderImportLotesModal({ open, refreshKey = 0, onClose, onCha
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [historyLote, setHistoryLote] = useState<SaleOrderImportLote | null>(null);
+  const [pendingLoteToggle, setPendingLoteToggle] = useState<SaleOrderImportLote | null>(null);
   const orderedItems = useMemo(() => [...items].sort((a, b) => b.lote - a.lote), [items]);
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export function SaleOrderImportLotesModal({ open, refreshKey = 0, onClose, onCha
       setItems([]);
       setError("");
       setSavingId(null);
+      setPendingLoteToggle(null);
       return;
     }
 
@@ -77,6 +80,11 @@ export function SaleOrderImportLotesModal({ open, refreshKey = 0, onClose, onCha
       setSavingId(null);
     }
   }, [onChanged]);
+
+  const confirmPendingLoteToggle = useCallback(() => {
+    if (!pendingLoteToggle) return;
+    void toggleActive(pendingLoteToggle).finally(() => setPendingLoteToggle(null));
+  }, [pendingLoteToggle, toggleActive]);
 
   const columns = useMemo<DataTableColumn<SaleOrderImportLote>[]>(() => [
     {
@@ -121,7 +129,7 @@ export function SaleOrderImportLotesModal({ open, refreshKey = 0, onClose, onCha
             className="h-8 w-8 rounded-md"
             tooltip={item.isActive ? "Eliminar lote" : "Restaurar lote"}
             disabled={savingId === item.id}
-            onClick={() => void toggleActive(item)}
+            onClick={() => setPendingLoteToggle(item)}
           >
             {item.isActive ? <Trash2 className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
           </SystemButton>
@@ -194,6 +202,20 @@ export function SaleOrderImportLotesModal({ open, refreshKey = 0, onClose, onCha
         open={Boolean(historyLote)}
         lote={historyLote}
         onClose={() => setHistoryLote(null)}
+      />
+      <AlertModal
+        open={Boolean(pendingLoteToggle)}
+        onClose={() => setPendingLoteToggle(null)}
+        onConfirm={confirmPendingLoteToggle}
+        type={pendingLoteToggle?.isActive ? "warning" : "restore"}
+        title={pendingLoteToggle?.isActive ? "Eliminar lote" : "Restaurar lote"}
+        message={
+          pendingLoteToggle?.isActive
+            ? `Se ocultaran los pedidos del lote ${pendingLoteToggle.lote}. Podras restaurarlos luego.`
+            : `Se restauraran los pedidos del lote ${pendingLoteToggle?.lote}.`
+        }
+        confirmText={pendingLoteToggle?.isActive ? "Eliminar" : "Restaurar"}
+        loading={Boolean(savingId)}
       />
     </>
   );

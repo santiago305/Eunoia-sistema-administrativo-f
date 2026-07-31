@@ -31,6 +31,10 @@ export enum SaleOrderRealtimeSourceEnum {
   PAYMENT_CREATED = "payment-created",
   PAYMENT_DELETED = "payment-deleted",
   AUTOMATIC_WORKFLOW = "automatic-workflow",
+  SALE_ORDER_DELETED = "sale-order-deleted",
+  SALE_ORDER_RESTORED = "sale-order-restored",
+  SALE_ORDERS_BULK_DELETED = "sale-orders-bulk-deleted",
+  SALE_ORDERS_BULK_RESTORED = "sale-orders-bulk-restored",
 }
 
 export type SaleOrderRealtimeSource =
@@ -43,7 +47,11 @@ export type SaleOrderRealtimeSource =
   | "delivery-confirmed"
   | "payment-created"
   | "payment-deleted"
-  | "automatic-workflow";
+  | "automatic-workflow"
+  | "sale-order-deleted"
+  | "sale-order-restored"
+  | "sale-orders-bulk-deleted"
+  | "sale-orders-bulk-restored";
 
 export type SaleOrderAutomaticWorkflowTrigger =
   | "sale-order-created"
@@ -78,6 +86,14 @@ export type SaleOrderImportLote = {
 export type SaleOrderImportLoteAudit = {
   id: string;
   loteId: string;
+  createdAt: string;
+  executedBy: { id: string; name: string | null; email: string | null };
+  actionExecution: "delete" | "restore";
+};
+
+export type SaleOrderAudit = {
+  id: string;
+  saleOrderId: string;
   createdAt: string;
   executedBy: { id: string; name: string | null; email: string | null };
   actionExecution: "delete" | "restore";
@@ -571,6 +587,7 @@ export type SaleOrderStatisticsParams = {
   q?: string;
   filters?: SaleOrderSearchRule[];
   includeCancelled?: boolean;
+  isActive?: boolean;
 };
 
 export type SaleOrderStatisticsResponse = {

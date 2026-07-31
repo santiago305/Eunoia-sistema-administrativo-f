@@ -1,6 +1,7 @@
 import type {
   ActionCatalogItem,
   AssignWarehouseByProvinceConfig,
+  AssignWarehouseByWorkflowConfig,
   WorkflowAction,
   WorkflowActionType,
 } from "@/features/workflows/types/workflow";
@@ -10,6 +11,7 @@ import { FloatingMultiSelect } from "@/shared/components/components/FloatingMult
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { listAllUbigeoProvinces } from "@/shared/services/ubigeoService";
 import { listAllActiveWarehouses } from "@/shared/services/warehouseServices";
+import { listWorkflows } from "@/shared/services/workflowService";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -27,19 +29,22 @@ export const ACTION_LABELS: Record<WorkflowActionType, string> = {
   MARK_PREGUIDE: "Marcar preguia",
   MARK_PREPARED: "Marcar preparado",
   ASSIGN_WAREHOUSE_BY_PROVINCE: "Asignar almacén por provincia",
+  ASSIGN_WAREHOUSE_BY_WORKFLOW: "Asignar almacen por flujo",
 };
 
 export function WorkflowActionEditor({ catalog, value, onChange }: Props) {
   const [provinceOptions, setProvinceOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [warehouseOptions, setWarehouseOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [workflowOptions, setWorkflowOptions] = useState<Array<{ value: string; label: string }>>([]);
 
   useEffect(() => {
     let active = true;
-    void Promise.allSettled([listAllUbigeoProvinces(), listAllActiveWarehouses()])
-      .then(([provincesResult, warehousesResult]) => {
+    void Promise.allSettled([listAllUbigeoProvinces(), listAllActiveWarehouses(), listWorkflows()])
+      .then(([provincesResult, warehousesResult, workflowsResult]) => {
         if (!active) return;
         const provinces = provincesResult.status === "fulfilled" ? provincesResult.value : [];
         const warehouses = warehousesResult.status === "fulfilled" ? warehousesResult.value : [];
+        const workflows = workflowsResult.status === "fulfilled" ? workflowsResult.value : [];
 
         setProvinceOptions(
           provinces
@@ -49,6 +54,12 @@ export function WorkflowActionEditor({ catalog, value, onChange }: Props) {
         setWarehouseOptions(
           warehouses
             .map((warehouse) => ({ value: warehouse.warehouseId, label: warehouse.name }))
+            .sort((left, right) => left.label.localeCompare(right.label, "es")),
+        );
+        setWorkflowOptions(
+          workflows
+            .filter((workflow) => workflow.isActive !== false)
+            .map((workflow) => ({ value: workflow.id, label: workflow.name }))
             .sort((left, right) => left.label.localeCompare(right.label, "es")),
         );
       });
@@ -87,6 +98,8 @@ export function WorkflowActionEditor({ catalog, value, onChange }: Props) {
                 config:
                   selected === ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE
                     ? { mode: "INCLUDE", provinceIds: [], warehouseId: "" }
+                    : selected === ACTIONS.ASSIGN_WAREHOUSE_BY_WORKFLOW
+                      ? { workflowId: "", warehouseId: "" }
                     : {},
                 position: index,
               };
@@ -185,6 +198,40 @@ export function WorkflowActionEditor({ catalog, value, onChange }: Props) {
                 <FloatingSelect
                   label="Almacén"
                   name={`action-warehouse-${index}`}
+                  value={config.warehouseId ?? ""}
+                  options={warehouseOptions}
+                  onChange={(warehouseId) => updateConfig({ warehouseId })}
+                />
+              </div>
+            );
+          })() : null}
+          {action.type === ACTIONS.ASSIGN_WAREHOUSE_BY_WORKFLOW ? (() => {
+            const config = action.config as AssignWarehouseByWorkflowConfig;
+            const updateConfig = (patch: Partial<AssignWarehouseByWorkflowConfig>) => {
+              const next = [...value];
+              next[index] = {
+                ...action,
+                config: {
+                  workflowId: config.workflowId ?? "",
+                  warehouseId: config.warehouseId ?? "",
+                  ...patch,
+                },
+              };
+              onChange(next);
+            };
+
+            return (
+              <div className="mt-2 grid gap-2">
+                <FloatingSelect
+                  label="Flujo"
+                  name={`action-workflow-${index}`}
+                  value={config.workflowId ?? ""}
+                  options={workflowOptions}
+                  onChange={(workflowId) => updateConfig({ workflowId })}
+                />
+                <FloatingSelect
+                  label="Almacen"
+                  name={`action-workflow-warehouse-${index}`}
                   value={config.warehouseId ?? ""}
                   options={warehouseOptions}
                   onChange={(warehouseId) => updateConfig({ warehouseId })}

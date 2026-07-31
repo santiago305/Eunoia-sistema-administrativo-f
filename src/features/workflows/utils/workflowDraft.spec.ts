@@ -139,6 +139,8 @@ describe("mapWorkflowToDraft", () => {
           purpose: TRANSITION_PURPOSES.STANDARD,
           name: "Validar entrega",
           code: "DELIVERY_DECISION",
+          positionX: -120,
+          positionY: 90,
           isActive: true,
           autoTrigger: true,
           priority: 2,
@@ -158,6 +160,8 @@ describe("mapWorkflowToDraft", () => {
       priority: 2,
       elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
       elseToStateClientId: "state-state-3",
+      positionX: -120,
+      positionY: 90,
     });
     expect(transition.actions.map((action) => action.type)).toEqual([
       "RESERVE_STOCK",
@@ -248,6 +252,8 @@ describe("buildFullWorkflowRequest", () => {
           purpose: TRANSITION_PURPOSES.STANDARD,
           effect: TRANSITION_EFFECTS.MOVE_STATE,
           elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
+          positionX: 320,
+          positionY: 180,
           isActive: true,
           autoTrigger: true,
           priority: 1,
@@ -267,6 +273,8 @@ describe("buildFullWorkflowRequest", () => {
       priority: 1,
       elseEffect: TRANSITION_EFFECTS.MOVE_STATE,
       elseToStateRef: "state-3",
+      positionX: 320,
+      positionY: 180,
       actions: [{ type: "RESERVE_STOCK", config: {}, position: 0 }],
       elseActions: [{ type: "REVERT_STOCK", config: {}, position: 0 }],
     });
@@ -498,6 +506,67 @@ describe("validateWorkflowDraft", () => {
 
     expect(validation.errors).toContain(
       "La condicion de campo obligatorio requiere un campo seleccionado.",
+    );
+  });
+
+  it("requires a selected workflow and warehouse for workflow warehouse assignment actions", () => {
+    const validation = validateWorkflowDraft({
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [
+        {
+          clientId: "state-1",
+          saleOrderStateId: "global-1",
+          name: "Creado",
+          code: "CREATED",
+          color: null,
+          positionX: 0,
+          positionY: 0,
+          isInitial: true,
+          isFinal: false,
+          isActive: true,
+        },
+        {
+          clientId: "state-2",
+          saleOrderStateId: "global-2",
+          name: "Listo",
+          code: "READY",
+          color: null,
+          positionX: 200,
+          positionY: 0,
+          isInitial: false,
+          isFinal: true,
+          isActive: true,
+        },
+      ],
+      transitions: [
+        {
+          clientId: "transition-1",
+          name: "Crear",
+          code: "CREATE",
+          fromStateClientId: "state-1",
+          toStateClientId: "state-2",
+          elseToStateClientId: null,
+          isGlobal: false,
+          excludedStateClientIds: [],
+          purpose: TRANSITION_PURPOSES.STANDARD,
+          effect: TRANSITION_EFFECTS.MOVE_STATE,
+          elseEffect: null,
+          isActive: true,
+          autoTrigger: false,
+          priority: 0,
+          conditions: [],
+          actions: [
+            { type: "ASSIGN_WAREHOUSE_BY_WORKFLOW" as any, config: { workflowId: "", warehouseId: "" }, position: 0 },
+          ],
+          elseActions: [],
+        },
+      ],
+    });
+
+    expect(validation.errors).toContain(
+      "La accion de asignacion de almacen por flujo requiere un flujo y un almacen seleccionados.",
     );
   });
 });

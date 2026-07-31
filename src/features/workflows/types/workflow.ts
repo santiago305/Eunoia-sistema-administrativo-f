@@ -16,6 +16,7 @@ export const ACTIONS = {
   MARK_PREGUIDE: "MARK_PREGUIDE",
   MARK_PREPARED: "MARK_PREPARED",
   ASSIGN_WAREHOUSE_BY_PROVINCE: "ASSIGN_WAREHOUSE_BY_PROVINCE",
+  ASSIGN_WAREHOUSE_BY_WORKFLOW: "ASSIGN_WAREHOUSE_BY_WORKFLOW",
 } as const;
 
 export const TRANSITION_PURPOSES = {
@@ -33,6 +34,10 @@ export type WorkflowActionType = (typeof ACTIONS)[keyof typeof ACTIONS];
 export type AssignWarehouseByProvinceConfig = {
   mode: "INCLUDE" | "EXCLUDE";
   provinceIds: string[];
+  warehouseId: string;
+};
+export type AssignWarehouseByWorkflowConfig = {
+  workflowId: string;
   warehouseId: string;
 };
 export type WorkflowTransitionPurpose =
@@ -94,6 +99,8 @@ export type WorkflowTransition = {
   actions: WorkflowAction[];
   sourceHandle?: string | null;
   targetHandle?: string | null;
+  positionX?: number | null;
+  positionY?: number | null;
 };
 
 export type Workflow = {
@@ -196,6 +203,8 @@ export type SaveFullWorkflowRequest = {
     purpose: WorkflowTransitionPurpose;
     sourceHandle?: string | null;
     targetHandle?: string | null;
+    positionX?: number | null;
+    positionY?: number | null;
     isActive?: boolean;
     autoTrigger?: boolean;
     priority?: number;
