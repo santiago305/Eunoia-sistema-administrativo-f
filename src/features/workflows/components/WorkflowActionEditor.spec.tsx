@@ -8,6 +8,7 @@ type SelectOption = { value: string; label: string };
 const serviceMocks = vi.hoisted(() => ({
   listAllUbigeoProvinces: vi.fn(),
   listAllActiveWarehouses: vi.fn(),
+  listWorkflows: vi.fn(),
 }));
 
 vi.mock("@/shared/services/ubigeoService", () => ({
@@ -16,6 +17,10 @@ vi.mock("@/shared/services/ubigeoService", () => ({
 
 vi.mock("@/shared/services/warehouseServices", () => ({
   listAllActiveWarehouses: serviceMocks.listAllActiveWarehouses,
+}));
+
+vi.mock("@/shared/services/workflowService", () => ({
+  listWorkflows: serviceMocks.listWorkflows,
 }));
 
 vi.mock("@/shared/components/components/FloatingSelect", () => ({
@@ -68,6 +73,9 @@ describe("WorkflowActionEditor", () => {
   const provinceAssignmentCatalog: ActionCatalogItem[] = [
     { type: ACTIONS.ASSIGN_WAREHOUSE_BY_PROVINCE, configSchema: {} },
   ];
+  const workflowAssignmentCatalog: ActionCatalogItem[] = [
+    { type: ACTIONS.ASSIGN_WAREHOUSE_BY_WORKFLOW, configSchema: {} },
+  ];
 
   beforeEach(() => {
     serviceMocks.listAllUbigeoProvinces.mockResolvedValue([
@@ -76,6 +84,9 @@ describe("WorkflowActionEditor", () => {
     ]);
     serviceMocks.listAllActiveWarehouses.mockResolvedValue([
       { warehouseId: "warehouse-1", name: "Principal" },
+    ]);
+    serviceMocks.listWorkflows.mockResolvedValue([
+      { id: "workflow-1", name: "Abonado", isActive: true },
     ]);
   });
 
@@ -133,6 +144,62 @@ describe("WorkflowActionEditor", () => {
     expect(onChange).toHaveBeenLastCalledWith([
       expect.objectContaining({
         config: { mode: "INCLUDE", provinceIds: [], warehouseId: "warehouse-1" },
+      }),
+    ]);
+  });
+
+  it("stores the workflow and warehouse for workflow assignment", async () => {
+    const onChange = vi.fn();
+    const value: WorkflowAction[] = [{
+      type: ACTIONS.ASSIGN_WAREHOUSE_BY_WORKFLOW,
+      config: { workflowId: "", warehouseId: "" },
+      position: 0,
+    }];
+
+    render(
+      <WorkflowActionEditor
+        catalog={workflowAssignmentCatalog}
+        value={value}
+        onChange={onChange}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Flujo")).toHaveTextContent("Abonado"),
+    );
+
+    fireEvent.change(screen.getByLabelText("Flujo"), { target: { value: "workflow-1" } });
+    expect(onChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        config: { workflowId: "workflow-1", warehouseId: "" },
+      }),
+    ]);
+  });
+
+  it("keeps the selected workflow when storing the warehouse for workflow assignment", async () => {
+    const onChange = vi.fn();
+    const value: WorkflowAction[] = [{
+      type: ACTIONS.ASSIGN_WAREHOUSE_BY_WORKFLOW,
+      config: { workflowId: "workflow-1", warehouseId: "" },
+      position: 0,
+    }];
+
+    render(
+      <WorkflowActionEditor
+        catalog={workflowAssignmentCatalog}
+        value={value}
+        onChange={onChange}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Almacen")).toHaveTextContent("Principal"),
+    );
+
+    fireEvent.change(screen.getByLabelText("Almacen"), { target: { value: "warehouse-1" } });
+    expect(onChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        config: { workflowId: "workflow-1", warehouseId: "warehouse-1" },
       }),
     ]);
   });

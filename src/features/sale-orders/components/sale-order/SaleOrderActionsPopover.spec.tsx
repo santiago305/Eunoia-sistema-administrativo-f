@@ -61,4 +61,35 @@ describe("SaleOrderActionsPopover", () => {
     await userEvent.click(screen.getByRole("button", { name: "Ver PDF" }));
     expect(onOpenPdf).toHaveBeenCalledWith(order);
   });
+
+  it("shows logical delete and audit actions for active orders", async () => {
+    render(
+      <SaleOrderActionsPopover
+        order={{ ...order, isActive: true } as SaleOrder}
+        onOpenPdf={onOpenPdf}
+        onToggleActive={vi.fn()}
+        onOpenAudit={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
+
+    expect(screen.getByRole("button", { name: "Eliminar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Auditoria" })).toBeInTheDocument();
+  });
+
+  it("shows restore action for inactive orders", async () => {
+    render(
+      <SaleOrderActionsPopover
+        order={{ ...order, isActive: false } as SaleOrder}
+        onOpenPdf={onOpenPdf}
+        onToggleActive={vi.fn()}
+        onOpenAudit={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "abrir acciones" }));
+
+    expect(screen.getByRole("button", { name: "Restaurar" })).toBeInTheDocument();
+  });
 });

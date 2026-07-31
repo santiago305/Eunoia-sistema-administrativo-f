@@ -15,6 +15,7 @@ import {
 import {
     bulkAssignSaleOrders,
     bulkExecuteSaleOrderWorkflow,
+    bulkSetSaleOrdersActive,
     deleteSaleOrderExportPreset,
     deleteSaleOrderSearchMetric,
     exportSaleOrdersExcel,
@@ -25,6 +26,7 @@ import {
     previewSaleOrdersJsonImport,
     saveSaleOrderExportPreset,
     saveSaleOrderSearchMetric,
+    setSaleOrderActive,
     type SaleOrderBulkActionResponse,
 } from "@/shared/services/saleOrderService";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
@@ -47,6 +49,7 @@ import {
 import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
 import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
 import { SaleOrderImportLotesModal } from "@/features/sale-orders/components/SaleOrderImportLotesModal";
+import { SaleOrderAuditHistoryModal } from "@/features/sale-orders/components/SaleOrderAuditHistoryModal";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { createSaleOrdersSocket } from "@/shared/lib/socket";
@@ -67,6 +70,8 @@ import { optionalSaleOrderImportFields, saleOrderImportFields } from "./types/sa
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { AlertModal } from "@/shared/components/components/AlertModal";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { formatDate } from "@/shared/utils/formatDate";
 import { getDateKey, parseDateOnly } from "@/shared/components/components/date-picker/dateUtils";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
@@ -172,8 +177,13 @@ export default function SaleOrders() {
     const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
     const [bulkChangeStateOpen, setBulkChangeStateOpen] = useState(false);
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
+    const [activeActionLoading, setActiveActionLoading] = useState(false);
     const [bulkResult, setBulkResult] = useState<SaleOrderBulkActionResponse | null>(null);
     const [selectedSaleOrderIds, setSelectedSaleOrderIds] = useState<string[]>([]);
+    const [showDeletedOrders, setShowDeletedOrders] = useState(false);
+    const [bulkActiveConfirmOpen, setBulkActiveConfirmOpen] = useState(false);
+    const [pendingSaleOrderToggle, setPendingSaleOrderToggle] = useState<SaleOrder | null>(null);
+    const [auditOrder, setAuditOrder] = useState<SaleOrder | null>(null);
     const DEFAULT_LIMIT = 25;
     const [serverPagination, setServerPagination] = useState({
         total: 0,
@@ -244,6 +254,11 @@ export default function SaleOrders() {
         () => orders.filter((order) => selectedSaleOrderIds.includes(order.id)),
         [orders, selectedSaleOrderIds],
     );
+
+    useEffect(() => {
+        setSelectedSaleOrderIds([]);
+        setPaginationState((current) => ({ ...current, pageIndex: 0 }));
+    }, [showDeletedOrders]);
 
     useEffect(() => {
         setTableDateDraftRange(tableDateRuleRange);
@@ -340,8 +355,10 @@ export default function SaleOrders() {
                 limit: paginationState.pageSize,
                 q: executedSnapshot.q,
                 filters: executedSnapshot.filters.length ? executedSnapshot.filters : undefined,
+                isActive: showDeletedOrders ? false : true,
             });
-            const items = (res.items ?? []).filter((order) => order.isActive !== false);
+            const expectedActive = !showDeletedOrders;
+            const items = (res.items ?? []).filter((order) => order.isActive === expectedActive);
             const nextTotal = res.total ?? 0;
             const nextPage = res.page ?? page;
             const nextLimit = res.limit ?? paginationState.pageSize;
@@ -370,13 +387,13 @@ export default function SaleOrders() {
         } finally {
             setLoading(false);
         }
-    }, [clearFeedback, executedSnapshot, hasExecutedSearchCriteria, loadSearchState, page, paginationState.pageSize]);
+    }, [clearFeedback, executedSnapshot, hasExecutedSearchCriteria, loadSearchState, page, paginationState.pageSize, showDeletedOrders]);
 
     const syncRealtimeSaleOrder = useCallback(
         (updatedOrder: SaleOrder | null | undefined) => {
             if (!updatedOrder?.id) return;
 
-            if (updatedOrder.isActive === false) {
+            if (updatedOrder.isActive !== !showDeletedOrders) {
                 setOrders((currentOrders) => currentOrders.filter((order) => order.id !== updatedOrder.id));
                 updateSelectedOrder((current) => (current?.id === updatedOrder.id ? null : current));
                 return;
@@ -411,7 +428,7 @@ export default function SaleOrders() {
                 return editingOrderId === updatedOrder.id ? updatedOrder : current;
             });
         },
-        [updateSelectedOrder],
+        [showDeletedOrders, updateSelectedOrder],
     );
 
     const refreshSelectedOrder = useCallback(
@@ -782,10 +799,11 @@ export default function SaleOrders() {
                 page: input.page,
                 limit: input.limit,
                 filters: input.filters.length ? input.filters : undefined,
+                isActive: showDeletedOrders ? false : true,
             });
             return response.items ?? [];
         },
-        [],
+        [showDeletedOrders],
     );
 
     const handleBulkChangeState = useCallback(
@@ -822,6 +840,52 @@ export default function SaleOrders() {
         },
         [loadOrders, showFeedback],
     );
+
+    const handleBulkToggleActive = useCallback(async () => {
+        const saleOrderIds = [...selectedSaleOrderIds];
+        if (saleOrderIds.length === 0) return;
+
+        const nextActive = showDeletedOrders;
+        setBulkActionLoading(true);
+        try {
+            const result = await bulkSetSaleOrdersActive({
+                saleOrderIds,
+                isActive: nextActive,
+            });
+            const failedIds = result.data.results
+                .filter((row) => row.status === "failed")
+                .map((row) => row.saleOrderId);
+            setBulkResult(result);
+            showFeedback(
+                result.data.failed > 0
+                    ? errorResponse(buildBulkActionFeedback(result))
+                    : successResponse(buildBulkActionFeedback(result)),
+            );
+            setBulkActiveConfirmOpen(false);
+            setSelectedSaleOrderIds((current) => current.filter((saleOrderId) => failedIds.includes(saleOrderId)));
+            await loadOrders();
+        } catch (error) {
+            showFeedback(errorResponse(parseApiError(error, showDeletedOrders ? "Error al restaurar pedidos." : "Error al eliminar pedidos.")));
+        } finally {
+            setBulkActionLoading(false);
+        }
+    }, [loadOrders, selectedSaleOrderIds, showDeletedOrders, showFeedback]);
+
+    const handleConfirmSaleOrderToggle = useCallback(async () => {
+        if (!pendingSaleOrderToggle) return;
+        const nextActive = !pendingSaleOrderToggle.isActive;
+        setActiveActionLoading(true);
+        try {
+            await setSaleOrderActive(pendingSaleOrderToggle.id, nextActive);
+            showFeedback(successResponse(nextActive ? "Pedido restaurado." : "Pedido eliminado."));
+            setPendingSaleOrderToggle(null);
+            await loadOrders();
+        } catch (error) {
+            showFeedback(errorResponse(parseApiError(error, nextActive ? "Error al restaurar pedido." : "Error al eliminar pedido.")));
+        } finally {
+            setActiveActionLoading(false);
+        }
+    }, [loadOrders, pendingSaleOrderToggle, showFeedback]);
 
     const centeredHeaderClassName = "text-center [&>div]:justify-center";
     const columns = useMemo<DataTableColumn<SaleOrder>[]>(
@@ -1173,6 +1237,8 @@ export default function SaleOrders() {
                                 setPdfOrderId(selected.id);
                                 setPdfOpen(true);
                             }}
+                            onToggleActive={(selected) => setPendingSaleOrderToggle(selected)}
+                            onOpenAudit={(selected) => setAuditOrder(selected)}
                         />
                     </div>
                 ),
@@ -1200,7 +1266,9 @@ export default function SaleOrders() {
                     disabled={bulkActionLoading}
                     onOpenAssign={() => setBulkAssignOpen(true)}
                     onOpenChangeState={() => setBulkChangeStateOpen(true)}
+                    onOpenToggleActive={() => setBulkActiveConfirmOpen(true)}
                     onClearSelection={() => setSelectedSaleOrderIds([])}
+                    restoreMode={showDeletedOrders}
                 />
                 <DataTable
                     tableId="sale-orders-list"
@@ -1219,6 +1287,15 @@ export default function SaleOrders() {
                     paddingTablePaginated="py-0"
                     toolbarActions={
                         <>
+                            <label className="inline-flex h-11 items-center gap-2 rounded-md border
+                            border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 shadow cursor-pointer">
+                                <Checkbox
+                                    checked={showDeletedOrders}
+                                    onCheckedChange={(checked) => setShowDeletedOrders(checked === true)}
+                                    aria-label="Eliminados"
+                                    tooltip="Ver pedidos eliminados"
+                                />
+                            </label>
                             <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Tipos"
                                 leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
                             </SystemButton>
@@ -1367,6 +1444,39 @@ export default function SaleOrders() {
                 result={bulkResult}
                 knownOrders={orders}
                 onClose={() => setBulkResult(null)}
+            />
+            <AlertModal
+                open={bulkActiveConfirmOpen}
+                onClose={() => setBulkActiveConfirmOpen(false)}
+                onConfirm={handleBulkToggleActive}
+                type={showDeletedOrders ? "restore" : "warning"}
+                title={showDeletedOrders ? "Restaurar pedidos" : "Eliminar pedidos"}
+                message={
+                    showDeletedOrders
+                        ? `Se restauraran ${selectedSaleOrderIds.length} pedido(s).`
+                        : `Se eliminaran ${selectedSaleOrderIds.length} pedido(s). Podras restaurarlos desde Eliminados.`
+                }
+                confirmText={showDeletedOrders ? "Restaurar" : "Eliminar"}
+                loading={bulkActionLoading}
+            />
+            <AlertModal
+                open={Boolean(pendingSaleOrderToggle)}
+                onClose={() => setPendingSaleOrderToggle(null)}
+                onConfirm={handleConfirmSaleOrderToggle}
+                type={pendingSaleOrderToggle?.isActive ? "warning" : "restore"}
+                title={pendingSaleOrderToggle?.isActive ? "Eliminar pedido" : "Restaurar pedido"}
+                message={
+                    pendingSaleOrderToggle?.isActive
+                        ? "El pedido quedara oculto de la lista principal y podra restaurarse luego."
+                        : "El pedido volvera a la lista principal."
+                }
+                confirmText={pendingSaleOrderToggle?.isActive ? "Eliminar" : "Restaurar"}
+                loading={activeActionLoading}
+            />
+            <SaleOrderAuditHistoryModal
+                open={Boolean(auditOrder)}
+                order={auditOrder}
+                onClose={() => setAuditOrder(null)}
             />
             <ExcelImportModal<SaleOrderJsonImportRow>
                 open={importOpen}

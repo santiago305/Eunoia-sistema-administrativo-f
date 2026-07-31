@@ -212,6 +212,8 @@ export function mapWorkflowToDraft(workflow: Workflow): WorkflowDraft {
       elseActions,
       sourceHandle: transition.sourceHandle,
       targetHandle: transition.targetHandle,
+      positionX: transition.positionX ?? null,
+      positionY: transition.positionY ?? null,
       isSystem: transition.purpose === TRANSITION_PURPOSES.CANCEL,
       };
     }),
@@ -264,6 +266,8 @@ export function buildFullWorkflowRequest(draft: WorkflowDraft): SaveFullWorkflow
         purpose: transition.purpose,
         sourceHandle: transition.isGlobal ? null : transition.sourceHandle,
         targetHandle: transition.isGlobal ? null : transition.targetHandle,
+        positionX: transition.positionX ?? null,
+        positionY: transition.positionY ?? null,
         isActive: transition.isActive,
         autoTrigger: transition.autoTrigger,
         priority: transition.priority,
@@ -453,6 +457,20 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
     )
   ) {
     errors.push("La condicion de campo obligatorio requiere un campo seleccionado.");
+  }
+  const hasInvalidWorkflowWarehouseAssignment = draft.transitions.some((transition) =>
+    [...transition.actions, ...transition.elseActions].some((action) => {
+      if (action.type !== "ASSIGN_WAREHOUSE_BY_WORKFLOW") return false;
+      return (
+        typeof action.config?.workflowId !== "string" ||
+        !action.config.workflowId.trim() ||
+        typeof action.config?.warehouseId !== "string" ||
+        !action.config.warehouseId.trim()
+      );
+    }),
+  );
+  if (hasInvalidWorkflowWarehouseAssignment) {
+    errors.push("La accion de asignacion de almacen por flujo requiere un flujo y un almacen seleccionados.");
   }
   return { valid: errors.length === 0, errors };
 }

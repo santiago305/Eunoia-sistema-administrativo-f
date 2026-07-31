@@ -9,6 +9,7 @@ import type {
   SaleOrderEditorCatalogsResponse,
   SaleOrderImportLote,
   SaleOrderImportLoteAudit,
+  SaleOrderAudit,
   SaleOrderSkuAttribute,
   SaleOrderSkuSnapshot,
   SaleOrderSkuUnit,
@@ -223,11 +224,42 @@ export const listSaleOrderImportLoteAudit = async (
   return response.data;
 };
 
+export const setSaleOrderActive = async (
+  id: string,
+  isActive: boolean,
+): Promise<SaleOrderBulkActionResponse> => {
+  const response = await axiosInstance.patch<SaleOrderBulkActionResponse>(
+    API_SALE_ORDERS_GROUP.active(id),
+    { isActive },
+  );
+  return response.data;
+};
+
+export const bulkSetSaleOrdersActive = async (
+  payload: { saleOrderIds: string[]; isActive: boolean },
+): Promise<SaleOrderBulkActionResponse> => {
+  const response = await axiosInstance.patch<SaleOrderBulkActionResponse>(
+    API_SALE_ORDERS_GROUP.bulkActive,
+    payload,
+  );
+  return response.data;
+};
+
+export const listSaleOrderAudit = async (
+  id: string,
+): Promise<SaleOrderAudit[]> => {
+  const response = await axiosInstance.get<SaleOrderAudit[]>(
+    API_SALE_ORDERS_GROUP.audit(id),
+  );
+  return response.data;
+};
+
 export const listSaleOrders = async (params: {
   q?: string;
   page?: number;
   limit?: number;
   filters?: unknown[] | string;
+  isActive?: boolean;
 }): Promise<SaleOrderListResponse> => {
   const requestParams = {
     ...params,
@@ -427,6 +459,7 @@ export const getSaleOrderStatistics = async (
         q,
         filters,
         includeCancelled: params.includeCancelled ?? false,
+        isActive: params.isActive ?? true,
       },
     },
   );

@@ -46,6 +46,29 @@ vi.mock("@/shared/components/components/SystemButton", () => ({
   ),
 }));
 
+vi.mock("@/shared/components/components/AlertModal", () => ({
+  AlertModal: ({
+    open,
+    title,
+    message,
+    confirmText,
+    onConfirm,
+  }: {
+    open: boolean;
+    title?: string;
+    message?: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <section role="alertdialog">
+        {title ? <h2>{title}</h2> : null}
+        {message ? <p>{message}</p> : null}
+        <button type="button" onClick={onConfirm}>{confirmText ?? "Confirmar"}</button>
+      </section>
+    ) : null,
+}));
+
 vi.mock("@/shared/components/table/DataTable", () => ({
   DataTable: ({
     data,
@@ -116,7 +139,7 @@ describe("SaleOrderImportLotesModal", () => {
     listAuditMock.mockResolvedValue([]);
   });
 
-  it("lists lotes and toggles an active lote to inactive", async () => {
+  it("asks confirmation before toggling an active lote to inactive", async () => {
     const onChanged = vi.fn();
     render(
       <SaleOrderImportLotesModal
@@ -129,15 +152,16 @@ describe("SaleOrderImportLotesModal", () => {
     expect(await screen.findByText("5")).toBeInTheDocument();
     expect(screen.getByTestId("sale-order-import-lotes-table")).toBeInTheDocument();
     expect(screen.getByText("ana@example.test")).toBeInTheDocument();
-    expect(screen.getByText("Ana")).toBeInTheDocument();
-    expect(screen.getByText("Activo")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Eliminar lote" }));
+
+    expect(setActiveMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Eliminar lote");
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
 
     await waitFor(() => {
       expect(setActiveMock).toHaveBeenCalledWith("lote-1", false);
     });
-    expect(await screen.findByText("Inactivo")).toBeInTheDocument();
     expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({ id: "lote-1", isActive: false }));
   });
 
