@@ -63,3 +63,6 @@ args:
 - `src/features`: pantallas y logica por modulo.
 - `src/shared`: componentes, servicios, hooks y configuracion compartida.
 - `test`: pruebas de integracion livianas con Vitest.
+## Permisos de Pedidos
+
+La interfaz de Pedidos consume la matriz backend y oculta rutas, columnas, controles y acciones según permisos. El seguimiento usa `sale_orders.preguide.update` y `sale_orders.prepared.update`; restaurar requiere `sale_orders.view_deleted` y `sale_orders.restore`. La referencia completa está en `../Eunoia-sistema-administrativo-b/docs/sale-orders-role-matrix.md`.

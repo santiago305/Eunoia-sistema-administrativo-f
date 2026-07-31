@@ -4,7 +4,7 @@ import { useSaleOrderCapabilities } from "./useSaleOrderCapabilities";
 
 const permissions = vi.hoisted(() => ({ current: [] as string[] }));
 vi.mock("@/shared/hooks/usePermissions", () => ({
-  usePermissions: () => ({ can: (permission: string) => permissions.current.includes(permission) }),
+  usePermissions: () => ({ permissions: permissions.current, can: (permission: string) => permissions.current.includes(permission) }),
 }));
 
 describe("useSaleOrderCapabilities", () => {
