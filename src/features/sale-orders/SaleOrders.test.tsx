@@ -49,6 +49,8 @@ const {
   getSaleOrderStatisticsMock,
   listSaleOrdersMock,
   saveSaleOrderExportPresetMock,
+  setSaleOrderTrackingMock,
+  bulkSetSaleOrdersTrackingMock,
 } = vi.hoisted(() => ({
   deleteSaleOrderExportPresetMock: vi.fn(),
   exportSaleOrdersExcelMock: vi.fn(),
@@ -65,6 +67,8 @@ const {
   }),
   listSaleOrdersMock: vi.fn(),
   saveSaleOrderExportPresetMock: vi.fn(),
+  setSaleOrderTrackingMock: vi.fn(),
+  bulkSetSaleOrdersTrackingMock: vi.fn(),
 }));
 
 vi.mock("@/shared/services/saleOrderService", async () => {
@@ -84,6 +88,8 @@ vi.mock("@/shared/services/saleOrderService", async () => {
     getSaleOrderStatistics: getSaleOrderStatisticsMock,
     getAvailableSaleOrderTransitions: getAvailableSaleOrderTransitionsMock,
     saveSaleOrderExportPreset: saveSaleOrderExportPresetMock,
+    setSaleOrderTracking: setSaleOrderTrackingMock,
+    bulkSetSaleOrdersTracking: bulkSetSaleOrdersTrackingMock,
   };
 });
 
@@ -186,6 +192,8 @@ describe("SaleOrders", () => {
     listSaleOrdersMock.mockReset();
     getSaleOrderSearchStateMock.mockReset();
     getSaleOrderStatisticsMock.mockReset();
+    setSaleOrderTrackingMock.mockReset();
+    bulkSetSaleOrdersTrackingMock.mockReset();
     listSaleOrdersMock.mockResolvedValue({
       items: [],
       total: 0,
@@ -204,6 +212,12 @@ describe("SaleOrders", () => {
       byClientType: [],
       byPaymentDescription: [],
       totals: { orders: 0, total: 0, collected: 0, pending: 0, deliveryCostSum: 0 },
+    });
+    setSaleOrderTrackingMock.mockResolvedValue({});
+    bulkSetSaleOrdersTrackingMock.mockResolvedValue({
+      type: "success",
+      message: "Seguimiento actualizado",
+      data: { requested: 1, succeeded: 1, failed: 0, partiallyCompleted: false, results: [] },
     });
   });
 
@@ -271,6 +285,64 @@ describe("SaleOrders", () => {
     expect(screen.getByText("Sin preparar")).toBeInTheDocument();
     expect(screen.getByText("Con pregu\u00eda")).toBeInTheDocument();
     expect(screen.getByText("Preparado")).toBeInTheDocument();
+  });
+
+  it("persists a clicked tracking tag after the consolidated delay", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [buildSaleOrder("Pendiente")],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /sin preguía/i }));
+
+    await waitFor(() => {
+      expect(setSaleOrderTrackingMock).toHaveBeenCalledWith("order-1", { preguide: true });
+    });
+  });
+
+  it("bulk updates only selected orders that match tracking filters", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [
+        { ...buildSaleOrder("Pendiente"), id: "order-1", correlative: 1, preguide: false },
+        { ...buildSaleOrder("Confirmado"), id: "order-2", correlative: 2, preguide: true },
+      ],
+      total: 2,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    const firstRow = (await screen.findByText("SO-1")).closest("tr");
+    const secondRow = screen.getByText("SO-2").closest("tr");
+    fireEvent.click(within(firstRow!).getAllByRole("button")[0]);
+    fireEvent.click(within(secondRow!).getAllByRole("button")[0]);
+    fireEvent.click(await screen.findByRole("button", { name: "Seguimiento" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /filtrar por preguía/i }));
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Sin preguía" }));
+    fireEvent.click(screen.getByRole("button", { name: /resultado de preguía/i }));
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Con preguía" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ejecutar" }));
+
+    await waitFor(() => {
+      expect(bulkSetSaleOrdersTrackingMock).toHaveBeenCalledWith({
+        saleOrderIds: ["order-1"],
+        preguide: true,
+      });
+    });
   });
   it("renders backend SKU summary and detail columns in the table", async () => {
     listSaleOrdersMock.mockResolvedValue({

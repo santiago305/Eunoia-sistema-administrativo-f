@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SaleOrderShippingSection } from "./SaleOrderShippingSection";
@@ -184,3 +184,29 @@ describe("SaleOrderShippingSection agency detail", () => {
   });
 });
 
+describe("SaleOrderShippingSection tracking layout", () => {
+  it("places tracking in its own grid cell beside the agency field", () => {
+    render(
+      <SaleOrderShippingSection
+        form={buildEmptySaleOrderEditorForm()}
+        setForm={vi.fn()}
+        subsidiaryOptions={[]}
+        tracking={{ preguide: false, prepared: false }}
+        canUpdatePreguide
+        canUpdatePrepared
+        onTrackingChange={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    const primaryGrid = screen.getByTestId("sale-order-shipping-primary-grid");
+    const agencyCell = screen.getByTestId("sale-order-shipping-agency");
+    const trackingCell = screen.getByTestId("sale-order-shipping-tracking");
+
+    expect(primaryGrid.children[0]).toBe(agencyCell);
+    expect(primaryGrid.children[1]).toBe(trackingCell);
+    expect(within(agencyCell).getByText("Agencia/Dirección")).toBeInTheDocument();
+    expect(within(trackingCell).getByText("Seguimiento del envío")).toBeInTheDocument();
+    expect(within(trackingCell).getByRole("button", { name: /sin preguía/i })).toBeInTheDocument();
+    expect(within(trackingCell).getByRole("button", { name: /sin preparar/i })).toBeInTheDocument();
+  });
+});

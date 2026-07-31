@@ -120,42 +120,68 @@ export function SaleOrderShippingSection({
         ) : null}
       </div>
     }>
-      {tracking ? <SaleOrderTrackingCell order={tracking} canUpdatePreguide={canUpdatePreguide} canUpdatePrepared={canUpdatePrepared} onChange={(field, value) => onTrackingChange?.(field, value) ?? Promise.resolve()} /> : null}
-      <FloatingSuggestInput
-        label="Agencia/Dirección"
-        name="sale-order-subsidiary"
-        className={inputClassName}
-        value={form.agencyDetail}
-        options={subsidiaryOptions}
-        onChange={(agencyDetail) => {
-          void onSearchSubsidiaries?.(agencyDetail);
-          setForm((current) => ({
-            ...current,
-            agencyDetail,
-          }));
-        }}
-        onOptionSelect={(option) =>
-          setForm((current) => {
-            const subsidiary = subsidiaryOptions.find((item) => item.value === option.value);
-            const chargedCost = Math.max(0, Number(subsidiary?.cost ?? 0));
-            const payableCost = Math.max(
-              0,
-              Number(subsidiary?.payableCost ?? chargedCost),
-            );
-            return {
-              ...current,
-              agencyDetail: option.label,
-              sendAddress: subsidiary?.address ?? current.sendAddress,
-              deliveryCost: chargedCost,
-              logisticsCost: payableCost,
-              logisticsGeneratesPayable: Boolean(subsidiary?.generatesPayable),
-            };
-          })
-        }
-        searchPlaceholder="Selecciona una agencia"
-        emptyMessage="Sin agencias"
-        panelWidthMode="min-trigger"
-      />
+      <div
+        data-testid="sale-order-shipping-primary-grid"
+        className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)]"
+      >
+        <div
+          data-testid="sale-order-shipping-agency"
+          className={tracking ? "min-w-0" : "min-w-0 lg:col-span-2"}
+        >
+          <FloatingSuggestInput
+            label="Agencia/Dirección"
+            name="sale-order-subsidiary"
+            className={inputClassName}
+            value={form.agencyDetail}
+            options={subsidiaryOptions}
+            onChange={(agencyDetail) => {
+              void onSearchSubsidiaries?.(agencyDetail);
+              setForm((current) => ({
+                ...current,
+                agencyDetail,
+              }));
+            }}
+            onOptionSelect={(option) =>
+              setForm((current) => {
+                const subsidiary = subsidiaryOptions.find((item) => item.value === option.value);
+                const chargedCost = Math.max(0, Number(subsidiary?.cost ?? 0));
+                const payableCost = Math.max(
+                  0,
+                  Number(subsidiary?.payableCost ?? chargedCost),
+                );
+                return {
+                  ...current,
+                  agencyDetail: option.label,
+                  sendAddress: subsidiary?.address ?? current.sendAddress,
+                  deliveryCost: chargedCost,
+                  logisticsCost: payableCost,
+                  logisticsGeneratesPayable: Boolean(subsidiary?.generatesPayable),
+                };
+              })
+            }
+            searchPlaceholder="Selecciona una agencia"
+            emptyMessage="Sin agencias"
+            panelWidthMode="min-trigger"
+          />
+        </div>
+        {tracking ? (
+          <div
+            data-testid="sale-order-shipping-tracking"
+            className="min-w-0 rounded-lg border border-border bg-background px-3 py-2"
+          >
+            <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
+              Seguimiento del envío
+            </p>
+            <SaleOrderTrackingCell
+              order={tracking}
+              canUpdatePreguide={canUpdatePreguide}
+              canUpdatePrepared={canUpdatePrepared}
+              onChange={(field, value) => onTrackingChange?.(field, value) ?? Promise.resolve()}
+              variant="editor"
+            />
+          </div>
+        ) : null}
+      </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2 mt-3">
         <FloatingInput
           label="Tarifa cobrada al cliente"

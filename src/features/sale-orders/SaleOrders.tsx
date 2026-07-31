@@ -64,6 +64,7 @@ import {
     SaleOrderBulkChangeStateModal,
     SaleOrderBulkResultModal,
     SaleOrderBulkTrackingModal,
+    type SaleOrderBulkTrackingSelection,
     type SaleOrderBulkExecuteWorkflowSelection,
 } from "./components/bulk";
 import { SaleOrderActionsPopover } from "./components/sale-order/SaleOrderActionsPopover";
@@ -879,18 +880,21 @@ export default function SaleOrders() {
     }, [loadOrders, selectedSaleOrderIds, showDeletedOrders, showFeedback]);
 
     const handleTrackingChange = useCallback(async (order: SaleOrder, field: "preguide" | "prepared", value: boolean) => {
-        const previous = order[field];
-        setOrders((current) => current.map((item) => item.id === order.id ? { ...item, [field]: value } : item));
-        try { await setSaleOrderTracking(order.id, { [field]: value }); }
-        catch (error) { setOrders((current) => current.map((item) => item.id === order.id ? { ...item, [field]: previous } : item)); showFeedback(errorResponse(parseApiError(error, "No se pudo actualizar el seguimiento."))); }
+        try {
+            await setSaleOrderTracking(order.id, { [field]: value });
+            setOrders((current) => current.map((item) => item.id === order.id ? { ...item, [field]: value } : item));
+        } catch (error) {
+            showFeedback(errorResponse(parseApiError(error, "No se pudo actualizar el seguimiento.")));
+            throw error;
+        }
     }, [showFeedback]);
 
-    const handleBulkTracking = useCallback(async (payload: { preguide?: boolean; prepared?: boolean }) => {
+    const handleBulkTracking = useCallback(async ({ saleOrderIds, ...change }: SaleOrderBulkTrackingSelection) => {
         setBulkActionLoading(true);
-        try { await bulkSetSaleOrdersTracking({ saleOrderIds: selectedSaleOrderIds, ...payload }); setBulkTrackingOpen(false); setSelectedSaleOrderIds([]); await loadOrders(); showFeedback(successResponse("Seguimiento actualizado.")); }
+        try { await bulkSetSaleOrdersTracking({ saleOrderIds, ...change }); setBulkTrackingOpen(false); setSelectedSaleOrderIds([]); await loadOrders(); showFeedback(successResponse("Seguimiento actualizado.")); }
         catch (error) { showFeedback(errorResponse(parseApiError(error, "No se pudo actualizar el seguimiento."))); }
         finally { setBulkActionLoading(false); }
-    }, [loadOrders, selectedSaleOrderIds, showFeedback]);
+    }, [loadOrders, showFeedback]);
 
     const handleConfirmSaleOrderToggle = useCallback(async () => {
         if (!pendingSaleOrderToggle) return;
@@ -1467,7 +1471,8 @@ export default function SaleOrders() {
             />
             <SaleOrderBulkTrackingModal
                 open={bulkTrackingOpen}
-                selectedCount={selectedSaleOrderIds.length}
+                selectedOrders={selectedSaleOrders}
+                loading={bulkActionLoading}
                 canUpdatePreguide={capabilities.canUpdatePreguide}
                 canUpdatePrepared={capabilities.canUpdatePrepared}
                 onClose={() => setBulkTrackingOpen(false)}

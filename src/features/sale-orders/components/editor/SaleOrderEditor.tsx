@@ -128,11 +128,9 @@ export function SaleOrderEditor({
   useEffect(() => setTracking({ preguide: order?.preguide === true, prepared: order?.prepared === true }), [order?.id, order?.preguide, order?.prepared]);
   const handleTrackingChange = useCallback(async (field: "preguide" | "prepared", value: boolean) => {
     if (!order?.id) return;
-    const previous = tracking[field];
+    await setSaleOrderTracking(order.id, { [field]: value });
     setTracking((current) => ({ ...current, [field]: value }));
-    try { await setSaleOrderTracking(order.id, { [field]: value }); }
-    catch { setTracking((current) => ({ ...current, [field]: previous })); }
-  }, [order?.id, tracking]);
+  }, [order?.id]);
 
   useEffect(() => {
     const next =
