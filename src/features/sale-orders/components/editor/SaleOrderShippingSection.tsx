@@ -13,6 +13,7 @@ import {
 import type { SaleOrderEditorForm } from "./saleOrderEditorForm";
 import { markAttachmentRemoved } from "./saleOrderEditorForm";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
+import { SaleOrderTrackingCell } from "../sale-order/SaleOrderTrackingCell";
 
 type Props = {
   form: SaleOrderEditorForm;
@@ -26,6 +27,10 @@ type Props = {
     generatesPayable?: boolean;
   }>;
   onSearchSubsidiaries?: (query: string) => void | Promise<void>;
+  tracking?: { preguide: boolean; prepared: boolean };
+  canUpdatePreguide?: boolean;
+  canUpdatePrepared?: boolean;
+  onTrackingChange?: (field: "preguide" | "prepared", value: boolean) => Promise<void>;
 };
 
 const resolveUrl = (value?: string | null) => {
@@ -43,6 +48,10 @@ export function SaleOrderShippingSection({
   setForm,
   subsidiaryOptions,
   onSearchSubsidiaries,
+  tracking,
+  canUpdatePreguide = false,
+  canUpdatePrepared = false,
+  onTrackingChange,
 }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const imageUrl = useMemo(
@@ -111,6 +120,7 @@ export function SaleOrderShippingSection({
         ) : null}
       </div>
     }>
+      {tracking ? <SaleOrderTrackingCell order={{ preguide: tracking.preguide, prepared: tracking.prepared } as any} canUpdatePreguide={canUpdatePreguide} canUpdatePrepared={canUpdatePrepared} onChange={(field, value) => onTrackingChange?.(field, value) ?? Promise.resolve()} /> : null}
       <FloatingSuggestInput
         label="Agencia/Dirección"
         name="sale-order-subsidiary"

@@ -1,6 +1,7 @@
 import { skuStock } from "@/features/catalog/types/documentInventory";
 import { InventorySnapshotOutput } from "@/features/catalog/types/inventory";
 import { listInventory } from "./inventoryService";
+import { ProductTypes } from "@/features/catalog/types/ProductTypes";
 
 
 type StockMap = Record<string, skuStock | null>;
@@ -101,6 +102,7 @@ export const getSaleOrderStocksBySkuIds = async ({
     limit: Math.max(normalizedSkuIds.length, 1),
     warehouseId,
     skuIdsIn: normalizedSkuIds,
+    productType: ProductTypes.PRODUCT,
   })
     .then((response) => {
       const value = toStockMap(warehouseId, normalizedSkuIds, response.items ?? []);

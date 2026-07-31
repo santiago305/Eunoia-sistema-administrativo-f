@@ -30,6 +30,7 @@ import { SaleOrderClientSection } from "./SaleOrderClientSection";
 import { SaleOrderInformationSection } from "./SaleOrderInformationSection";
 import { SaleOrderPaymentCards } from "./SaleOrderPaymentCards";
 import { SaleOrderShippingSection } from "./SaleOrderShippingSection";
+import { setSaleOrderTracking } from "@/shared/services/saleOrderService";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 import {
   buildEmptySaleOrderEditorForm,
@@ -52,6 +53,8 @@ type Props = {
   onSaved: (saleOrderId: string) => void | Promise<void>;
   onDirtyChange?: (dirty: boolean) => void;
   onFooterChange?: (footer: ReactNode | null) => void;
+  readOnly?: boolean;
+  trackingCapabilities?: { canUpdatePreguide: boolean; canUpdatePrepared: boolean };
 };
 
 const comparable = (form: SaleOrderEditorForm) =>
@@ -76,6 +79,8 @@ export function SaleOrderEditor({
   onSaved,
   onDirtyChange,
   onFooterChange,
+  readOnly = false,
+  trackingCapabilities = { canUpdatePreguide: true, canUpdatePrepared: true },
 }: Props) {
   const { company } = useCompany();
   const companyId = company?.companyId ?? "";
@@ -118,6 +123,16 @@ export function SaleOrderEditor({
   >([]);
   const initialSnapshot = useRef("");
   const itemsSectionRef = useRef<SaleOrderItemsSectionHandle>(null);
+  const [tracking, setTracking] = useState({ preguide: order?.preguide === true, prepared: order?.prepared === true });
+
+  useEffect(() => setTracking({ preguide: order?.preguide === true, prepared: order?.prepared === true }), [order?.id, order?.preguide, order?.prepared]);
+  const handleTrackingChange = useCallback(async (field: "preguide" | "prepared", value: boolean) => {
+    if (!order?.id) return;
+    const previous = tracking[field];
+    setTracking((current) => ({ ...current, [field]: value }));
+    try { await setSaleOrderTracking(order.id, { [field]: value }); }
+    catch { setTracking((current) => ({ ...current, [field]: previous })); }
+  }, [order?.id, tracking]);
 
   useEffect(() => {
     const next =
@@ -388,6 +403,7 @@ export function SaleOrderEditor({
 
   const footerActions = useMemo(
     () => (
+      readOnly ? <div className="flex justify-end"><SystemButton type="button" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={onCancel}>Cerrar</SystemButton></div> : (
       <div className="flex justify-end gap-2">
         <SystemButton
           type="button"
@@ -411,9 +427,9 @@ export function SaleOrderEditor({
               ? "Actualizar pedido"
               : "Crear pedido"}
         </SystemButton>
-      </div>
+      </div>)
     ),
-    [mode, onCancel, save, saving, validationMessage],
+    [mode, onCancel, readOnly, save, saving, validationMessage],
   );
 
   useEffect(() => {
@@ -434,7 +450,7 @@ export function SaleOrderEditor({
           Stock reservado. Los productos, cantidades y almacén están bloqueados.
         </div>
       ) : null}
-      <div className="grid flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(360px,1fr)]">
+      <fieldset disabled={readOnly} className="grid flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(360px,1fr)]">
         <div className="space-y-3">
           <SaleOrderEditorSection
             title="Packs"
@@ -573,9 +589,13 @@ export function SaleOrderEditor({
             setForm={setForm}
             subsidiaryOptions={subsidiaryOptions}
             onSearchSubsidiaries={setSubsidiarySearchQuery}
+            tracking={tracking}
+            canUpdatePreguide={Boolean(order?.isActive !== false && trackingCapabilities.canUpdatePreguide)}
+            canUpdatePrepared={Boolean(order?.isActive !== false && trackingCapabilities.canUpdatePrepared)}
+            onTrackingChange={handleTrackingChange}
           />
         </aside>
-      </div>
+      </fieldset>
     </div>
   );
 }

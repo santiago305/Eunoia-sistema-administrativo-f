@@ -17,6 +17,7 @@ type Props = {
   onClose: () => void;
   onSaved?: (saleOrderId: string) => void | Promise<void>;
   onOrderChanged?: () => void | Promise<void>;
+  capabilities?: { canEdit: boolean; canUpdatePreguide: boolean; canUpdatePrepared: boolean };
 };
 
 export function SaleOrderDetailsModal({
@@ -26,15 +27,18 @@ export function SaleOrderDetailsModal({
   onClose,
   onSaved,
   onOrderChanged,
+  capabilities: providedCapabilities,
 }: Props) {
   const [dirty, setDirty] = useState(false);
   const [showCloseAlert, setShowCloseAlert] = useState(false);
   const [editorFooter, setEditorFooter] = useState<ReactNode | null>(null);
+  const capabilities = providedCapabilities ?? { canEdit: true, canUpdatePreguide: true, canUpdatePrepared: true };
+  const readOnly = mode === "edit" && Boolean(order) && (!capabilities.canEdit || order?.isActive === false);
   const title = useMemo(() => {
     if (mode === "create") return "Nuevo pedido";
     if (!order) return "Editar pedido";
-    return `Editar ${order.serie ?? "-"}-${order.correlative ?? "-"} (Creado por ${order.createdBy?.name ?? "desconocido"})`;
-  }, [mode, order]);
+    return `${readOnly ? "Detalle" : "Editar"} ${order.serie ?? "-"}-${order.correlative ?? "-"} (Creado por ${order.createdBy?.name ?? "desconocido"})`;
+  }, [mode, order, readOnly]);
 
   useEffect(() => {
     if (open) {
@@ -85,6 +89,8 @@ export function SaleOrderDetailsModal({
           onDirtyChange={setDirty}
           onFooterChange={setEditorFooter}
           onSaved={handleSaved}
+          readOnly={readOnly}
+          trackingCapabilities={{ canUpdatePreguide: capabilities.canUpdatePreguide, canUpdatePrepared: capabilities.canUpdatePrepared }}
         />
       </Modal>
 

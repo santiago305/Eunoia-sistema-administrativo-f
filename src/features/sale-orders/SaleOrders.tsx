@@ -1430,6 +1430,7 @@ export default function SaleOrders() {
                     closeModal();
                     await loadOrders();
                 }}
+                capabilities={{ canEdit: capabilities.canEdit, canUpdatePreguide: capabilities.canUpdatePreguide, canUpdatePrepared: capabilities.canUpdatePrepared }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />
             <SaleOrderImportLotesModal
