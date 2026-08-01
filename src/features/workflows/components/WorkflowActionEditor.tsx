@@ -27,7 +27,9 @@ export const ACTION_LABELS: Record<WorkflowActionType, string> = {
   REVERT_STOCK: "Liberar reserva",
   MARK_INVOICE_SENT: "Marcar factura enviada",
   MARK_PREGUIDE: "Marcar preguia",
+  UNMARK_PREGUIDE: "Quitar preguía",
   MARK_PREPARED: "Marcar preparado",
+  UNMARK_PREPARED: "Marcar sin preparar",
   ASSIGN_WAREHOUSE_BY_PROVINCE: "Asignar almacén por provincia",
   ASSIGN_WAREHOUSE_BY_WORKFLOW: "Asignar almacen por flujo",
 };

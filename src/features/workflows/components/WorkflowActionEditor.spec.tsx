@@ -89,22 +89,26 @@ describe("WorkflowActionEditor", () => {
       { id: "workflow-1", name: "Abonado", isActive: true },
     ]);
   });
-
-
-  it("renders prepared and preguide workflow action labels", () => {
+  it("renders positive and inverse tracking workflow action labels", () => {
     const catalog: ActionCatalogItem[] = [
-      { type: "MARK_PREGUIDE" as ActionCatalogItem["type"], configSchema: {} },
-      { type: "MARK_PREPARED" as ActionCatalogItem["type"], configSchema: {} },
+      { type: "MARK_PREGUIDE", configSchema: {} },
+      { type: "MARK_PREPARED", configSchema: {} },
+      { type: "UNMARK_PREGUIDE", configSchema: {} },
+      { type: "UNMARK_PREPARED", configSchema: {} },
     ];
     const value: WorkflowAction[] = [
-      { type: "MARK_PREGUIDE" as WorkflowAction["type"], config: {}, position: 0 },
-      { type: "MARK_PREPARED" as WorkflowAction["type"], config: {}, position: 1 },
+      { type: "MARK_PREGUIDE", config: {}, position: 0 },
+      { type: "MARK_PREPARED", config: {}, position: 1 },
+      { type: "UNMARK_PREGUIDE", config: {}, position: 2 },
+      { type: "UNMARK_PREPARED", config: {}, position: 3 },
     ];
 
     render(<WorkflowActionEditor catalog={catalog} value={value} onChange={vi.fn()} />);
 
     expect(screen.getAllByText("Marcar preguia").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Marcar preparado").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Quitar preguía").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Marcar sin preparar").length).toBeGreaterThan(0);
   });
   it("stores mode, provinces, and warehouse for province assignment", async () => {
     const onChange = vi.fn();
