@@ -132,17 +132,22 @@ function TrackingTag({
         ? FileClock
         : PackageOpen;
   const className = cn(
-    "inline-flex items-center justify-center gap-1.5 rounded-full border font-semibold transition-colors duration-200",
-    variant === "editor" ? "min-h-9 px-3 py-1.5 text-xs" : "min-h-7 px-2 py-1 text-[10px]",
+    "inline-flex items-center transition-colors duration-200",
+    variant === "editor"
+      ? "min-h-9 justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold"
+      : "rounded-sm px-1.5 py-0.5 text-[9px] font-medium",
     displayed
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : "border-amber-200 bg-amber-50 text-amber-700",
+    saving && "opacity-70",
     allowed && "cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-1",
   );
 
   const content = (
     <>
-      <Icon className={cn("h-3.5 w-3.5 shrink-0", saving && "animate-spin")} aria-hidden="true" />
+      {variant === "editor" ? (
+        <Icon className={cn("h-3.5 w-3.5 shrink-0", saving && "animate-spin")} aria-hidden="true" />
+      ) : null}
       <span>{text}</span>
     </>
   );
@@ -179,8 +184,7 @@ export function SaleOrderTrackingCell({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-1.5",
-        variant === "editor" ? "w-full" : "w-[220px]",
+        variant === "editor" ? "grid w-full grid-cols-2 gap-1.5" : "contents",
       )}
       onClick={(event) => event.stopPropagation()}
     >

@@ -37,6 +37,27 @@ describe("SaleOrderTrackingCell", () => {
     expect(screen.getByText("Sin preparar").closest("button")).toBeNull();
   });
 
+  it("uses the same compact table slots as the other tracking statuses", () => {
+    render(
+      <SaleOrderTrackingCell
+        order={order}
+        canUpdatePreguide
+        canUpdatePrepared
+        onChange={vi.fn()}
+      />,
+    );
+
+    const preguide = screen.getByRole("button", { name: /sin preguía/i });
+    const prepared = screen.getByRole("button", { name: /sin preparar/i });
+
+    expect(preguide.parentElement).toHaveClass("contents");
+    expect(preguide).toHaveClass("rounded-sm", "px-1.5", "py-0.5", "text-[9px]", "font-medium");
+    expect(prepared).toHaveClass("rounded-sm", "px-1.5", "py-0.5", "text-[9px]", "font-medium");
+    expect(preguide).not.toHaveClass("rounded-full");
+    expect(preguide.querySelector("svg")).toBeNull();
+    expect(prepared.querySelector("svg")).toBeNull();
+  });
+
   it("sends one request with the last value from a rapid click burst", async () => {
     const onChange = vi.fn().mockResolvedValue(undefined);
     render(
