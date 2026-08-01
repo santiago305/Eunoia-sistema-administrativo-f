@@ -28,9 +28,6 @@ type Props = {
   }>;
   onSearchSubsidiaries?: (query: string) => void | Promise<void>;
   tracking?: { preguide: boolean; prepared: boolean };
-  canUpdatePreguide?: boolean;
-  canUpdatePrepared?: boolean;
-  onTrackingChange?: (field: "preguide" | "prepared", value: boolean) => Promise<void>;
 };
 
 const resolveUrl = (value?: string | null) => {
@@ -49,9 +46,6 @@ export function SaleOrderShippingSection({
   subsidiaryOptions,
   onSearchSubsidiaries,
   tracking,
-  canUpdatePreguide = false,
-  canUpdatePrepared = false,
-  onTrackingChange,
 }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const imageUrl = useMemo(
@@ -174,9 +168,6 @@ export function SaleOrderShippingSection({
             </p>
             <SaleOrderTrackingCell
               order={tracking}
-              canUpdatePreguide={canUpdatePreguide}
-              canUpdatePrepared={canUpdatePrepared}
-              onChange={(field, value) => onTrackingChange?.(field, value) ?? Promise.resolve()}
               variant="editor"
             />
           </div>

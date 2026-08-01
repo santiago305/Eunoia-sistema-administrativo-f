@@ -19,8 +19,6 @@ export const SALE_ORDER_PERMISSIONS = {
   assignWorkflow: "sale_orders.assign_workflow",
   changeState: "sale_orders.change_state",
   executeWorkflowAction: "sale_orders.execute_workflow_action",
-  preguideUpdate: "sale_orders.preguide.update",
-  preparedUpdate: "sale_orders.prepared.update",
   cancel: "sale_orders.cancel",
   confirmDelivery: "sale_orders.confirm_delivery",
   viewHistory: "sale_orders.view_history",

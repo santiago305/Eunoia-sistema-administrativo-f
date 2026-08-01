@@ -192,9 +192,6 @@ describe("SaleOrderShippingSection tracking layout", () => {
         setForm={vi.fn()}
         subsidiaryOptions={[]}
         tracking={{ preguide: false, prepared: false }}
-        canUpdatePreguide
-        canUpdatePrepared
-        onTrackingChange={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -206,7 +203,8 @@ describe("SaleOrderShippingSection tracking layout", () => {
     expect(primaryGrid.children[1]).toBe(trackingCell);
     expect(within(agencyCell).getByText("Agencia/Dirección")).toBeInTheDocument();
     expect(within(trackingCell).getByText("Seguimiento del envío")).toBeInTheDocument();
-    expect(within(trackingCell).getByRole("button", { name: /sin preguía/i })).toBeInTheDocument();
-    expect(within(trackingCell).getByRole("button", { name: /sin preparar/i })).toBeInTheDocument();
+    expect(within(trackingCell).getByText("Sin preguía")).toBeInTheDocument();
+    expect(within(trackingCell).getByText("Sin preparar")).toBeInTheDocument();
+    expect(within(trackingCell).queryAllByRole("button")).toHaveLength(0);
   });
 });

@@ -30,7 +30,6 @@ import { SaleOrderClientSection } from "./SaleOrderClientSection";
 import { SaleOrderInformationSection } from "./SaleOrderInformationSection";
 import { SaleOrderPaymentCards } from "./SaleOrderPaymentCards";
 import { SaleOrderShippingSection } from "./SaleOrderShippingSection";
-import { setSaleOrderTracking } from "@/shared/services/saleOrderService";
 import { SaleOrderDirectSkuSelect } from "./SaleOrderDirectSkuSelect";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 import {
@@ -55,7 +54,6 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   onFooterChange?: (footer: ReactNode | null) => void;
   readOnly?: boolean;
-  trackingCapabilities?: { canUpdatePreguide: boolean; canUpdatePrepared: boolean };
 };
 
 const comparable = (form: SaleOrderEditorForm) =>
@@ -81,7 +79,6 @@ export function SaleOrderEditor({
   onDirtyChange,
   onFooterChange,
   readOnly = false,
-  trackingCapabilities = { canUpdatePreguide: true, canUpdatePrepared: true },
 }: Props) {
   const { company } = useCompany();
   const companyId = company?.companyId ?? "";
@@ -124,15 +121,6 @@ export function SaleOrderEditor({
   >([]);
   const initialSnapshot = useRef("");
   const itemsSectionRef = useRef<SaleOrderItemsSectionHandle>(null);
-  const [tracking, setTracking] = useState({ preguide: order?.preguide === true, prepared: order?.prepared === true });
-
-  useEffect(() => setTracking({ preguide: order?.preguide === true, prepared: order?.prepared === true }), [order?.id, order?.preguide, order?.prepared]);
-  const handleTrackingChange = useCallback(async (field: "preguide" | "prepared", value: boolean) => {
-    if (!order?.id) return;
-    await setSaleOrderTracking(order.id, { [field]: value });
-    setTracking((current) => ({ ...current, [field]: value }));
-  }, [order?.id]);
-
   useEffect(() => {
     const next =
       mode === "edit" && order
@@ -602,10 +590,10 @@ export function SaleOrderEditor({
             setForm={setForm}
             subsidiaryOptions={subsidiaryOptions}
             onSearchSubsidiaries={setSubsidiarySearchQuery}
-            tracking={tracking}
-            canUpdatePreguide={Boolean(order?.isActive !== false && trackingCapabilities.canUpdatePreguide)}
-            canUpdatePrepared={Boolean(order?.isActive !== false && trackingCapabilities.canUpdatePrepared)}
-            onTrackingChange={handleTrackingChange}
+            tracking={order ? {
+              preguide: order.preguide === true,
+              prepared: order.prepared === true,
+            } : undefined}
           />
         </aside>
       </fieldset>

@@ -26,8 +26,6 @@ import {
     saveSaleOrderExportPreset,
     saveSaleOrderSearchMetric,
     setSaleOrderActive,
-    setSaleOrderTracking,
-    bulkSetSaleOrdersTracking,
     type SaleOrderBulkActionResponse,
 } from "@/shared/services/saleOrderService";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
@@ -63,8 +61,6 @@ import {
     SaleOrderBulkAssignModal,
     SaleOrderBulkChangeStateModal,
     SaleOrderBulkResultModal,
-    SaleOrderBulkTrackingModal,
-    type SaleOrderBulkTrackingSelection,
     type SaleOrderBulkExecuteWorkflowSelection,
 } from "./components/bulk";
 import { SaleOrderActionsPopover } from "./components/sale-order/SaleOrderActionsPopover";
@@ -183,7 +179,6 @@ export default function SaleOrders() {
     const [importLotesRefreshKey, setImportLotesRefreshKey] = useState(0);
     const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
     const [bulkChangeStateOpen, setBulkChangeStateOpen] = useState(false);
-    const [bulkTrackingOpen, setBulkTrackingOpen] = useState(false);
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
     const [activeActionLoading, setActiveActionLoading] = useState(false);
     const [bulkResult, setBulkResult] = useState<SaleOrderBulkActionResponse | null>(null);
@@ -879,23 +874,6 @@ export default function SaleOrders() {
         }
     }, [loadOrders, selectedSaleOrderIds, showDeletedOrders, showFeedback]);
 
-    const handleTrackingChange = useCallback(async (order: SaleOrder, field: "preguide" | "prepared", value: boolean) => {
-        try {
-            await setSaleOrderTracking(order.id, { [field]: value });
-            setOrders((current) => current.map((item) => item.id === order.id ? { ...item, [field]: value } : item));
-        } catch (error) {
-            showFeedback(errorResponse(parseApiError(error, "No se pudo actualizar el seguimiento.")));
-            throw error;
-        }
-    }, [showFeedback]);
-
-    const handleBulkTracking = useCallback(async ({ saleOrderIds, ...change }: SaleOrderBulkTrackingSelection) => {
-        setBulkActionLoading(true);
-        try { await bulkSetSaleOrdersTracking({ saleOrderIds, ...change }); setBulkTrackingOpen(false); setSelectedSaleOrderIds([]); await loadOrders(); showFeedback(successResponse("Seguimiento actualizado.")); }
-        catch (error) { showFeedback(errorResponse(parseApiError(error, "No se pudo actualizar el seguimiento."))); }
-        finally { setBulkActionLoading(false); }
-    }, [loadOrders, showFeedback]);
-
     const handleConfirmSaleOrderToggle = useCallback(async () => {
         if (!pendingSaleOrderToggle) return;
         const nextActive = !pendingSaleOrderToggle.isActive;
@@ -1238,7 +1216,7 @@ export default function SaleOrders() {
                                 {order.invoiceSend ? "Comp. enviado" : "Sin comprobante"}
                             </span>
 
-                            <SaleOrderTrackingCell order={order} canUpdatePreguide={!showDeletedOrders && capabilities.canUpdatePreguide} canUpdatePrepared={!showDeletedOrders && capabilities.canUpdatePrepared} onChange={(field, value) => handleTrackingChange(order, field, value)} />
+                            <SaleOrderTrackingCell order={order} />
                         </div>
                     );
                 },
@@ -1278,7 +1256,7 @@ export default function SaleOrders() {
                 maxWidth: "150px",
             }));
         },
-        [capabilities.canUpdatePrepared, capabilities.canUpdatePreguide, handleTrackingChange, refreshSelectedOrder, showDeletedOrders],
+        [capabilities.canBulkDelete, capabilities.canRestore, capabilities.canViewAudit, capabilities.canViewPdf, refreshSelectedOrder],
     );
     return (
         <PageShell className="bg-white" contentClassName="max-w-none" scrollArea>
@@ -1289,13 +1267,11 @@ export default function SaleOrders() {
                     disabled={bulkActionLoading}
                     onOpenAssign={() => setBulkAssignOpen(true)}
                     onOpenChangeState={() => setBulkChangeStateOpen(true)}
-                    onOpenTracking={() => setBulkTrackingOpen(true)}
                     onOpenToggleActive={() => setBulkActiveConfirmOpen(true)}
                     onClearSelection={() => setSelectedSaleOrderIds([])}
                     restoreMode={showDeletedOrders}
                     canAssign={capabilities.canBulkAssign}
                     canChangeState={capabilities.canBulkChangeState}
-                    canTracking={!showDeletedOrders && capabilities.canBulkUpdateTracking}
                     canDelete={capabilities.canBulkDelete}
                     canRestore={capabilities.canBulkRestore}
                 />
@@ -1433,7 +1409,7 @@ export default function SaleOrders() {
                     closeModal();
                     await loadOrders();
                 }}
-                capabilities={{ canEdit: capabilities.canEdit, canUpdatePreguide: capabilities.canUpdatePreguide, canUpdatePrepared: capabilities.canUpdatePrepared }}
+                capabilities={{ canEdit: capabilities.canEdit }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />
             <SaleOrderImportLotesModal
@@ -1468,15 +1444,6 @@ export default function SaleOrders() {
                 }
                 onLoadFilteredOrders={loadBulkFilteredOrders}
                 onSubmit={handleBulkChangeState}
-            />
-            <SaleOrderBulkTrackingModal
-                open={bulkTrackingOpen}
-                selectedOrders={selectedSaleOrders}
-                loading={bulkActionLoading}
-                canUpdatePreguide={capabilities.canUpdatePreguide}
-                canUpdatePrepared={capabilities.canUpdatePrepared}
-                onClose={() => setBulkTrackingOpen(false)}
-                onSubmit={handleBulkTracking}
             />
             <SaleOrderBulkResultModal
                 open={Boolean(bulkResult)}

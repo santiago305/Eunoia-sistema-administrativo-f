@@ -49,4 +49,19 @@ describe("SaleOrderBulkActionsBar", () => {
 
     expect(screen.getByRole("button", { name: "Restaurar pedidos" })).toBeInTheDocument();
   });
+
+  it("does not expose a separate tracking action", () => {
+    render(
+      <SaleOrderBulkActionsBar
+        selectedCount={1}
+        onOpenAssign={vi.fn()}
+        onOpenChangeState={vi.fn()}
+        onOpenToggleActive={vi.fn()}
+        onClearSelection={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Seguimiento" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar estado" })).toBeInTheDocument();
+  });
 });

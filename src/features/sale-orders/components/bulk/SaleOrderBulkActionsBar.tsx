@@ -1,4 +1,4 @@
-import { RefreshCcw, RotateCcw, Trash2, UserCheck, Workflow, X, Truck } from "lucide-react";
+import { RefreshCcw, RotateCcw, Trash2, UserCheck, Workflow, X } from "lucide-react";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 
 export type SaleOrderBulkActionsBarProps = {
@@ -11,10 +11,8 @@ export type SaleOrderBulkActionsBarProps = {
     restoreMode?: boolean;
     canAssign?: boolean;
     canChangeState?: boolean;
-    canTracking?: boolean;
     canDelete?: boolean;
     canRestore?: boolean;
-    onOpenTracking?: () => void;
 };
 
 export function SaleOrderBulkActionsBar({
@@ -27,10 +25,8 @@ export function SaleOrderBulkActionsBar({
     restoreMode = false,
     canAssign = true,
     canChangeState = true,
-    canTracking = false,
     canDelete = true,
     canRestore = true,
-    onOpenTracking,
 }: SaleOrderBulkActionsBarProps) {
     if (selectedCount <= 0) return null;
 
@@ -66,10 +62,6 @@ export function SaleOrderBulkActionsBar({
                     onClick={onOpenChangeState}
                 >
                     Cambiar estado
-                </SystemButton> : null}
-
-                {canTracking ? <SystemButton size="sm" variant="outline" className="rounded-md" leftIcon={<Truck className="h-4 w-4" />} disabled={disabled} onClick={onOpenTracking}>
-                    Seguimiento
                 </SystemButton> : null}
 
                 {(restoreMode ? canRestore : canDelete) ? <SystemButton
