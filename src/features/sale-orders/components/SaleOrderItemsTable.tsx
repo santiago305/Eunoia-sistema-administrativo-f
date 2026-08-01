@@ -372,8 +372,8 @@ export function SaleOrderItemsTable({
       <div className="max-h-[380px] overflow-auto scrollbar-panel">
         <table className="w-full table-fixed text-xs">
           <colgroup>
-            <col className="w-12" />
-            <col className="w-[120px]" />
+            <col className="w-9" />
+            <col className="w-[240px]" />
             <col className="w-[80px]" />
             <col className="w-[82px]" />
             <col className="w-[80px]" />
@@ -389,12 +389,12 @@ export function SaleOrderItemsTable({
                 className="w-12 px-2 py-2"
               />
               <HeaderCell>Pack</HeaderCell>
-              <HeaderCell>Cantidad</HeaderCell>
+              <HeaderCell>Cant.</HeaderCell>
               <HeaderCell>Precio base</HeaderCell>
               <HeaderCell>Precio u.</HeaderCell>
               <HeaderCell>Total</HeaderCell>
               <HeaderCell>Stock</HeaderCell>
-              <HeaderCell>Reservado</HeaderCell>
+              <HeaderCell>Reserv.</HeaderCell>
               <HeaderCell className="text-center">Acciones</HeaderCell>
             </tr>
           </thead>

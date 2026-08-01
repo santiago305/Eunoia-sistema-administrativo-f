@@ -31,6 +31,7 @@ import { SaleOrderInformationSection } from "./SaleOrderInformationSection";
 import { SaleOrderPaymentCards } from "./SaleOrderPaymentCards";
 import { SaleOrderShippingSection } from "./SaleOrderShippingSection";
 import { setSaleOrderTracking } from "@/shared/services/saleOrderService";
+import { SaleOrderDirectSkuSelect } from "./SaleOrderDirectSkuSelect";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 import {
   buildEmptySaleOrderEditorForm,
@@ -314,6 +315,16 @@ export function SaleOrderEditor({
       .finally(() => setCatalogLoading(false));
   }, []);
 
+  const addDirectSkuItem = useCallback(
+    (item: SaleOrderEditorForm["items"][number]) => {
+      setForm((current) => ({
+        ...current,
+        items: [...current.items, item],
+      }));
+    },
+    [],
+  );
+
   const validationMessage = useMemo(() => {
     if (!form.workflowId) return "Selecciona el tipo de pedido.";
     if (!form.items.length) return "Añade al menos un producto o pack.";
@@ -450,14 +461,18 @@ export function SaleOrderEditor({
           Stock reservado. Los productos, cantidades y almacén están bloqueados.
         </div>
       ) : null}
-      <fieldset disabled={readOnly} className="grid flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(360px,1fr)]">
+      <fieldset disabled={readOnly} className="grid flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,2.20fr)_minmax(360px,1fr)]">
         <div className="space-y-3">
           <SaleOrderEditorSection
             title="Packs"
             requiredIndicator
             bodyClassName="max-h-[500px] min-h-[180px] py-4 overflow-hidden"
             actions={
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <SaleOrderDirectSkuSelect
+                  disabled={!form.editPolicy.productsEditable}
+                  onAddItem={addDirectSkuItem}
+                />
                 <SystemButton
                   size="sm"
                   leftIcon={<Plus className="h-4 w-4" />}

@@ -85,7 +85,57 @@ vi.mock("../modal-create/SaleOrderItemsSection", () => ({
   }) => (
     <div data-testid="items-section">
       items:{form.items.length}
+      {form.items.map((item, index) => (
+        <output key={index} data-testid={`sale-order-item-${index}`}>
+          {[
+            `description:${item.description}`,
+            `pack:${item.referencePackId ?? "none"}`,
+            `component:${item.components?.[0]?.referencePackItemId ?? "none"}`,
+            `sku:${item.components?.[0]?.skuId ?? ""}`,
+          ].join("|")}
+        </output>
+      ))}
     </div>
+  ),
+}));
+
+vi.mock("./SaleOrderDirectSkuSelect", () => ({
+  SaleOrderDirectSkuSelect: ({
+    disabled,
+    onAddItem,
+  }: {
+    disabled: boolean;
+    onAddItem: (item: SaleOrderEditorForm["items"][number]) => void;
+  }) => (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() =>
+        onAddItem({
+          quantity: 1,
+          basePrice: 12.5,
+          unitPrice: 12.5,
+          total: 12.5,
+          description: "JABON AZUFRE AZUFRE -10017 (EVA01893)",
+          referencePackId: undefined,
+          components: [
+            {
+              skuId: "sku-1",
+              skuLabel: "JABON AZUFRE AZUFRE -10017 (EVA01893)",
+              skuCode: "10017",
+              skuImage: "/uploads/sku.webp",
+              quantity: 1,
+              basePrice: 12.5,
+              unitPrice: 12.5,
+              total: 12.5,
+              referencePackItemId: undefined,
+            },
+          ],
+        })
+      }
+    >
+      Producto directo
+    </button>
   ),
 }));
 
@@ -425,5 +475,29 @@ describe("SaleOrderEditor catalog loading", () => {
     expect(files.paymentPhotos.get("payment-1")?.name).toBe("payment.webp");
     expect(editingId).toBeNull();
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("order-99"));
+  });
+
+  it("adds a direct SKU item from the Packs header without pack references", async () => {
+    render(<EditorHarness />);
+
+    await waitFor(() =>
+      expect(getSaleOrderEditorCatalogsMock).toHaveBeenCalledWith("company-1"),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Producto directo" }));
+
+    expect(screen.getByTestId("items-section")).toHaveTextContent("items:1");
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "description:JABON AZUFRE AZUFRE -10017 (EVA01893)",
+    );
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "pack:none",
+    );
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "component:none",
+    );
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "sku:sku-1",
+    );
   });
 });

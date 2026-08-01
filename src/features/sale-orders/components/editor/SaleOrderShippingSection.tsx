@@ -156,7 +156,7 @@ export function SaleOrderShippingSection({
         emptyMessage="Sin agencias"
         panelWidthMode="min-trigger"
       />
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2 mt-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 space-y-2 mt-3">
         <FloatingInput
           label="Tarifa cobrada al cliente"
           className={inputClassName}
