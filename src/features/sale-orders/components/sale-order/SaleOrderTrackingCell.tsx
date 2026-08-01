@@ -2,7 +2,7 @@ import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { cn } from "@/shared/lib/utils";
 
 type Props = {
-  order: Pick<SaleOrder, "preguide" | "prepared">;
+  order: Pick<SaleOrder, "preguide" | "prepared" | "trackingCapabilities">;
   variant?: "table" | "editor";
 };
 
@@ -40,18 +40,22 @@ function TrackingStatus({
 export function SaleOrderTrackingCell({ order, variant = "table" }: Props) {
   return (
     <div className={cn(variant === "editor" ? "grid w-full grid-cols-2 gap-1.5" : "contents")}>
-      <TrackingStatus
-        active={order.preguide === true}
-        activeLabel="Con preguía"
-        inactiveLabel="Sin preguía"
-        variant={variant}
-      />
-      <TrackingStatus
-        active={order.prepared === true}
-        activeLabel="Preparado"
-        inactiveLabel="Sin preparar"
-        variant={variant}
-      />
+      {order.trackingCapabilities?.preguide === true && (
+        <TrackingStatus
+          active={order.preguide === true}
+          activeLabel="Con preguía"
+          inactiveLabel="Sin preguía"
+          variant={variant}
+        />
+      )}
+      {order.trackingCapabilities?.prepared === true && (
+        <TrackingStatus
+          active={order.prepared === true}
+          activeLabel="Preparado"
+          inactiveLabel="Sin preparar"
+          variant={variant}
+        />
+      )}
     </div>
   );
 }

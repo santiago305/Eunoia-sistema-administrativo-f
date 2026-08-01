@@ -111,6 +111,11 @@ const buildSaleOrder = (stateName: string): SaleOrder => ({
   workflowId: "workflow-1",
   currentStateId: `state-${stateName}`,
   workflow: { id: "workflow-1", name: "Flujo venta", description: null, isActive: true },
+  trackingCapabilities: {
+    invoice: true,
+    preguide: true,
+    prepared: true,
+  },
   currentState: {
     id: `state-${stateName}`,
     name: stateName,
@@ -271,6 +276,35 @@ describe("SaleOrders", () => {
     expect(screen.getByText("Sin preparar")).toBeInTheDocument();
     expect(screen.getByText("Con pregu\u00eda")).toBeInTheDocument();
     expect(screen.getByText("Preparado")).toBeInTheDocument();
+  });
+
+  it("always renders payment and hides tracking badges disabled by the workflow", async () => {
+    listSaleOrdersMock.mockResolvedValue({
+      items: [
+        {
+          ...buildSaleOrder("Pendiente"),
+          trackingCapabilities: {
+            invoice: false,
+            preguide: false,
+            prepared: false,
+          },
+        } as SaleOrder,
+      ],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    render(
+      <TooltipProvider>
+        <SaleOrders />
+      </TooltipProvider>,
+    );
+
+    expect(await screen.findByText("Pago pendiente")).toBeInTheDocument();
+    expect(screen.queryByText("Sin comprobante")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sin preguía")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sin preparar")).not.toBeInTheDocument();
   });
 
   it("renders tracking tags without direct mutation controls", async () => {

@@ -1212,9 +1212,11 @@ export default function SaleOrders() {
                                 {isPaid ? "Pagado" : "Pago pendiente"}
                             </span>
 
-                            <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${order.invoiceSend ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                                {order.invoiceSend ? "Comp. enviado" : "Sin comprobante"}
-                            </span>
+                            {order.trackingCapabilities?.invoice === true && (
+                                <span className={`inline-flex rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${order.invoiceSend ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                    {order.invoiceSend ? "Comp. enviado" : "Sin comprobante"}
+                                </span>
+                            )}
 
                             <SaleOrderTrackingCell order={order} />
                         </div>

@@ -406,6 +406,11 @@ export type SaleOrder = {
   workflowId: string | null;
   currentStateId: string | null;
   workflow: { id: string; name: string; description: string | null; isActive: boolean } | null;
+  trackingCapabilities?: {
+    invoice: boolean;
+    preguide: boolean;
+    prepared: boolean;
+  };
   currentState: {
     id: string;
     name: string;
