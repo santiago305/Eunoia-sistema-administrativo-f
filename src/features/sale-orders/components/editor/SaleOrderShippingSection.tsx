@@ -13,7 +13,6 @@ import {
 import type { SaleOrderEditorForm } from "./saleOrderEditorForm";
 import { markAttachmentRemoved } from "./saleOrderEditorForm";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
-import { SaleOrderTrackingCell } from "../sale-order/SaleOrderTrackingCell";
 
 type Props = {
   form: SaleOrderEditorForm;
@@ -27,7 +26,6 @@ type Props = {
     generatesPayable?: boolean;
   }>;
   onSearchSubsidiaries?: (query: string) => void | Promise<void>;
-  tracking?: { preguide: boolean; prepared: boolean };
 };
 
 const resolveUrl = (value?: string | null) => {
@@ -45,7 +43,6 @@ export function SaleOrderShippingSection({
   setForm,
   subsidiaryOptions,
   onSearchSubsidiaries,
-  tracking,
 }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const imageUrl = useMemo(
@@ -116,11 +113,11 @@ export function SaleOrderShippingSection({
     }>
       <div
         data-testid="sale-order-shipping-primary-grid"
-        className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)]"
+        className="grid grid-cols-1 gap-3"
       >
         <div
           data-testid="sale-order-shipping-agency"
-          className={tracking ? "min-w-0" : "min-w-0 lg:col-span-2"}
+          className="min-w-0"
         >
           <FloatingSuggestInput
             label="Agencia/Dirección"
@@ -158,20 +155,6 @@ export function SaleOrderShippingSection({
             panelWidthMode="min-trigger"
           />
         </div>
-        {tracking ? (
-          <div
-            data-testid="sale-order-shipping-tracking"
-            className="min-w-0 rounded-lg border border-border bg-background px-3 py-2"
-          >
-            <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
-              Seguimiento del envío
-            </p>
-            <SaleOrderTrackingCell
-              order={tracking}
-              variant="editor"
-            />
-          </div>
-        ) : null}
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2 mt-3">
         <FloatingInput

@@ -590,10 +590,6 @@ export function SaleOrderEditor({
             setForm={setForm}
             subsidiaryOptions={subsidiaryOptions}
             onSearchSubsidiaries={setSubsidiarySearchQuery}
-            tracking={order ? {
-              preguide: order.preguide === true,
-              prepared: order.prepared === true,
-            } : undefined}
           />
         </aside>
       </fieldset>

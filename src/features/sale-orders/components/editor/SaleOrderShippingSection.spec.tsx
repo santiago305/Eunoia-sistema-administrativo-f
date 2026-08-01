@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SaleOrderShippingSection } from "./SaleOrderShippingSection";
@@ -185,26 +185,19 @@ describe("SaleOrderShippingSection agency detail", () => {
 });
 
 describe("SaleOrderShippingSection tracking layout", () => {
-  it("places tracking in its own grid cell beside the agency field", () => {
+  it("does not expose tracking inside the shipping section", () => {
     render(
       <SaleOrderShippingSection
         form={buildEmptySaleOrderEditorForm()}
         setForm={vi.fn()}
         subsidiaryOptions={[]}
+        // @ts-expect-error tracking is intentionally no longer part of shipping
         tracking={{ preguide: false, prepared: false }}
       />,
     );
 
-    const primaryGrid = screen.getByTestId("sale-order-shipping-primary-grid");
-    const agencyCell = screen.getByTestId("sale-order-shipping-agency");
-    const trackingCell = screen.getByTestId("sale-order-shipping-tracking");
-
-    expect(primaryGrid.children[0]).toBe(agencyCell);
-    expect(primaryGrid.children[1]).toBe(trackingCell);
-    expect(within(agencyCell).getByText("Agencia/Dirección")).toBeInTheDocument();
-    expect(within(trackingCell).getByText("Seguimiento del envío")).toBeInTheDocument();
-    expect(within(trackingCell).getByText("Sin preguía")).toBeInTheDocument();
-    expect(within(trackingCell).getByText("Sin preparar")).toBeInTheDocument();
-    expect(within(trackingCell).queryAllByRole("button")).toHaveLength(0);
+    expect(screen.queryByTestId("sale-order-shipping-tracking")).not.toBeInTheDocument();
+    expect(screen.queryByText("Seguimiento del envío")).not.toBeInTheDocument();
+    expect(screen.getByText("Agencia/Dirección")).toBeInTheDocument();
   });
 });
