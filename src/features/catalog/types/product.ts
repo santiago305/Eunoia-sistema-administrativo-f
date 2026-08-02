@@ -137,6 +137,7 @@ export type ListSkusQuery = {
   q?: string;
   page?: number;
   limit?: number;
+  hasStockItem?: boolean;
 };
 export type ProductCreateModalProps = {
   open: boolean;

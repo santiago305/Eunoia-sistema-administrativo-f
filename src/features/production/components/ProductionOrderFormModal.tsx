@@ -144,10 +144,11 @@ export function ProductionOrderFormModal({
         q: normalizedQuery,
         productType: ProductTypes.PRODUCT,
         isActive: true,
+        hasStockItem: true,
         page: 1,
         limit: 10,
       });
-      setSearchResults((res ?? []).filter((item) => Boolean(item.stockItemId)));
+      setSearchResults(res ?? []);
     } catch {
       setSearchResults([]);
       showFeedback(errorResponse("Error al cargar SKUs terminados"));

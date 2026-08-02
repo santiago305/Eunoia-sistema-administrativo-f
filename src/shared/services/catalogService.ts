@@ -53,6 +53,7 @@ export const searchProductAndVariant = async (params: {
   productType?: ProductType;
   productId?: string;
   isActive?: boolean;
+  hasStockItem?: boolean;
   page?: number;
   limit?: number;
 }): Promise<CatalogSearchSkuResult[]> => {
@@ -61,6 +62,7 @@ export const searchProductAndVariant = async (params: {
     productType: params.productType,
     productId: params.productId,
     isActive: params.isActive,
+    hasStockItem: params.hasStockItem,
     page: params.page,
     limit: params.limit,
   });
