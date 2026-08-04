@@ -2,6 +2,7 @@ import type {
   AccessPermissionItem,
   UserPermissionOverride,
 } from "@/shared/services/accessControlService";
+import { formatDisplayLabel } from "@/shared/utils/formatDisplayLabel";
 
 export type PermissionState = "inherited" | "granted" | "denied" | "none";
 
@@ -73,12 +74,7 @@ const ACTION_LABELS: Record<string, string> = {
 const normalizeModuleKey = (module?: string | null) => module?.trim() || "general";
 
 const prettifyCodePart = (value: string) =>
-  value
-    .replace(/^page\./, "")
-    .replace(/[._-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  formatDisplayLabel(value.replace(/^page\./, ""));
 
 export const getPermissionModuleLabel = (module?: string | null) => {
   const key = normalizeModuleKey(module);

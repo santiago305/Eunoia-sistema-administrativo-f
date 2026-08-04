@@ -1,6 +1,7 @@
 import { ROLE_LABELS, type Role } from "@/features/users/types/roles.types";
 import { getPermissionLabel, getPermissionModuleLabel } from "@/features/users/utils/permissionPresentation";
 import type { AccessPermissionItem } from "@/shared/services/accessControlService";
+import { formatDisplayLabel } from "@/shared/utils/formatDisplayLabel";
 import type { PermissionModuleGroup, PermissionSubgroup } from "@/features/roles/types/rolesPermissions.types";
 
 export const MODULE_LABEL_KEYS = [
@@ -316,9 +317,7 @@ export const groupByModule = (permissions: AccessPermissionItem[]): PermissionMo
 
 export const getRoleLabel = (role: string) =>
   ROLE_LABELS[role as Role] ??
-  role
-    .replace(/[._-]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  formatDisplayLabel(role);
 
 export const getPercent = (current: number, total: number) => {
   if (!total) return 0;

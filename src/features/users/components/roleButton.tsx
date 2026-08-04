@@ -1,5 +1,6 @@
 import { Crown, MonitorCog, ShieldCheck, ShoppingCart, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { formatDisplayLabel } from "@/shared/utils/formatDisplayLabel";
 
 type Role = { id: string; description: string };
 
@@ -23,9 +24,7 @@ const ICONS: Record<RoleDesc, LucideIcon> = {
 
 const getRoleLabel = (description: string) =>
     LABELS[description as RoleDesc] ??
-    description
-        .replace(/[._-]+/g, " ")
-        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    formatDisplayLabel(description);
 
 export const RolePicker = ({ roles, value, onChange, error }: { roles: Role[]; value: string; onChange: (id: string) => void; error?: string }) => {
     const visibleRoles = roles

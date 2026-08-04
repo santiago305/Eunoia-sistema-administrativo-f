@@ -1,6 +1,7 @@
 import { ROLE_LABELS } from "../types/roles.types";
 import type { UserApiListItem } from "@/shared/services/userService";
 import type { Role, User } from "../types/users.types";
+import { formatDisplayLabel } from "@/shared/utils/formatDisplayLabel";
 
 export const MASTER_ROLE_DESCRIPTION = "super_administrator";
 
@@ -48,9 +49,7 @@ export function getRoleLabel(role: string | null | undefined) {
 
   return (
     ROLE_LABELS[normalized as Role] ??
-    normalized
-      .replace(/[._-]+/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase())
+    formatDisplayLabel(normalized)
   );
 }
 
