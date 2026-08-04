@@ -276,6 +276,7 @@ export const API_SKUS_GROUP = {
   base: "/skus",
   byId: (id: string) => `/skus/${id}`,
   update: (id: string) => `/skus/${id}`,
+  delete: (id: string) => `/skus/${id}`,
 };
 
 export const API_SUPPLIERS_GROUP = {

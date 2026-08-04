@@ -6,7 +6,7 @@ import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { getApiErrorMessage } from "@/shared/common/utils/apiError";
 import { listUnits } from "@/shared/services/unitService";
-import { createBaseProduct, createProductSku, getCatalogProductById, updateProduct, updateProductSku } from "@/shared/services/productService";
+import { createBaseProduct, createProductSku, deleteProductSku, getCatalogProductById, updateProduct, updateProductSku } from "@/shared/services/productService";
 import { createProductEquivalence, deleteProductEquivalence, listProductEquivalences } from "@/shared/services/equivalenceService";
 import { createSkuRecipe, deleteSkuRecipeItem, getSkuRecipe, updateSkuRecipe } from "@/shared/services/productRecipeService";
 import { listSkus } from "@/shared/services/skuService";
@@ -66,6 +66,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const [equivalences, setEquivalences] = useState<ProductEquivalence[]>([]);
     const [skus, setSkus] = useState<ProductSkuWithAttributes[]>([]);
     const [persistedSkuRowsById, setPersistedSkuRowsById] = useState<Record<string, ProductSkuDraft>>({});
+    const [deletedSkuIds, setDeletedSkuIds] = useState<string[]>([]);
     const [loadingRecipe, setLoadingRecipe] = useState(false);
     const [savingRecipe, setSavingRecipe] = useState(false);
     const [persistedRecipesBySkuId, setPersistedRecipesBySkuId] = useState<Record<string, RecipeDraft>>({});
@@ -137,6 +138,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         setEquivalences([]);
         setSkus([]);
         setPersistedSkuRowsById({});
+        setDeletedSkuIds([]);
         setPersistedRecipesBySkuId({});
         setEditedRecipesBySkuId({});
         setPrimaVariants([]);
@@ -312,6 +314,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 setSkus(sortedSkus);
                 setSkuRows(nextSkuRows);
                 setPersistedSkuRowsById(mapSkuDraftRowsById(nextSkuRows));
+                setDeletedSkuIds([]);
                 await loadEquivalences(product.id);
             })
             .catch(() => {
@@ -462,7 +465,11 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const removeSkuRow = (id: string) => {
-        setSkuRows((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+        if (skuRows.length === 1) return;
+        if (persistedSkuRowsById[id]) {
+            setDeletedSkuIds((current) => (current.includes(id) ? current : [...current, id]));
+        }
+        setSkuRows((prev) => prev.filter((row) => row.id !== id));
         setDraft((prev) => {
             if (!prev.recipesBySku[id]) return prev;
             const nextRecipes = { ...prev.recipesBySku };
@@ -762,6 +769,19 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             changedSkuRows,
             failedSkuIds,
         };
+    };
+
+    const persistDeletedSkus = async () => {
+        const failedSkuIds: string[] = [];
+        for (const skuId of deletedSkuIds) {
+            try {
+                await deleteProductSku(skuId);
+            } catch {
+                failedSkuIds.push(skuId);
+            }
+        }
+        setDeletedSkuIds(failedSkuIds);
+        return { failedSkuIds };
     };
 
     const persistEditModeDraftSkusAndRecipes = async () => {
@@ -1130,6 +1150,20 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 const focusSkuId = failedRecipeSkuIds[0];
                 if (focusSkuId) setSelectedSkuId(`sku:${focusSkuId}`);
                 setWorkspaceTab("recipes");
+                return;
+            }
+
+            const { failedSkuIds: failedDeletedSkuIds } = await persistDeletedSkus();
+            if (failedDeletedSkuIds.length > 0) {
+                const failedLabels = failedDeletedSkuIds
+                    .map((skuId) => persistedSkuRowsById[skuId]?.name || skuId)
+                    .join(", ");
+                showFeedback(
+                    errorResponse(
+                        `Se actualizó ${label}, pero no se pudieron eliminar estas variantes: ${failedLabels}.`,
+                    ),
+                );
+                setWorkspaceTab("details");
                 return;
             }
 

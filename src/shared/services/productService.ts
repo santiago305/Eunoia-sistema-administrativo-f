@@ -49,6 +49,10 @@ export const updateProductSku = async (
   return response.data;
 };
 
+export const deleteProductSku = async (skuId: string): Promise<void> => {
+  await axiosInstance.delete(API_SKUS_GROUP.delete(skuId));
+};
+
 export const getProductInventoryDetail = async (
   id: string,
   type: string,
