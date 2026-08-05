@@ -26,6 +26,11 @@ export const buildRecipeRowId = () => {
   return `recipe-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+export const mergePrimaVariants = (current: PrimaVariant[], incoming: PrimaVariant[]) =>
+  Array.from(
+    new Map([...current, ...incoming].map((variant) => [variant.id, variant])).values(),
+  );
+
 export const getPrimaUnitId = (prima?: PrimaVariant) => prima?.unit?.id ?? prima?.baseUnitId ?? "";
 
 export const getPrimaUnitName = (prima?: PrimaVariant) => prima?.unit?.name ?? prima?.unitName ?? "SIN UNIDAD DE MEDIDA";

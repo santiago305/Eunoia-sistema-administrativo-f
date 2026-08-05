@@ -45,7 +45,7 @@ import {
     formatFailedSkuLabels,
 } from "../utils/productCreateModal.helpers";
 import { ProductWorkspaceTabs } from "./ComponentSetion";
-import { createEmptyRecipeDraft, RecipeDraft } from "./recipeFormFields.helpers";
+import { createEmptyRecipeDraft, mergePrimaVariants, RecipeDraft } from "./recipeFormFields.helpers";
 const DEFAULT_DRAFT: ProductCreateDraft = createEmptyProductCreateDraft();
 
 export function ProductCreateModal({ open, mode = "create", productId, productType, primaryColor = DEFAULT_PRIMARY, entityLabel, onClose, onSaved, permissions }: ProductCreateModalProps) {
@@ -325,7 +325,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             });
     }, [open, isEditMode, productId, label, clearFeedback, loadEquivalences, showFeedback]);
 
-    const loadMaterials = useCallback(async ({ query, page, append }: { query: string; page: number; append: boolean }) => {
+    const loadMaterials = useCallback(async ({ query, page }: { query: string; page: number }) => {
         materialSearchControllerRef.current?.abort();
         const controller = new AbortController();
         materialSearchControllerRef.current = controller;
@@ -354,11 +354,9 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                 customSku: item.sku.customSku ?? undefined,
             }));
             if (materialSearchRequestRef.current !== requestId) return;
-            setPrimaVariants((previous) =>
-                append
-                    ? Array.from(new Map([...previous, ...normalized].map((variant) => [variant.id, variant])).values())
-                    : normalized,
-            );
+            // Keep previously loaded/selected materials available so recipe rows
+            // can continue resolving their labels while a different search runs.
+            setPrimaVariants((previous) => mergePrimaVariants(previous, normalized));
             setMaterialSearchPage(page);
             setHasMoreMaterialResults(page * 10 < response.total);
         } catch (error) {
@@ -375,7 +373,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         if (!open || workspaceTab !== "recipes" || isMaterial) return;
         const query = materialSearchQuery.trim();
         const timeoutId = window.setTimeout(() => {
-            void loadMaterials({ query, page: 1, append: false });
+            void loadMaterials({ query, page: 1 });
         }, 300);
 
         return () => window.clearTimeout(timeoutId);
@@ -387,7 +385,6 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         materialSearchRequestRef.current += 1;
         materialSearchControllerRef.current?.abort();
         setLoadingPrimaVariants(false);
-        setPrimaVariants([]);
         setMaterialSearchPage(1);
         setHasMoreMaterialResults(false);
         setMaterialSearchQuery(query);
@@ -396,7 +393,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const loadMoreMaterials = useCallback(() => {
         const query = materialSearchQuery.trim();
         if (!query || loadingPrimaVariants || !hasMoreMaterialResults) return;
-        void loadMaterials({ query, page: materialSearchPage + 1, append: true });
+        void loadMaterials({ query, page: materialSearchPage + 1 });
     }, [materialSearchQuery, loadingPrimaVariants, hasMoreMaterialResults, materialSearchPage, loadMaterials]);
 
     useEffect(() => {
