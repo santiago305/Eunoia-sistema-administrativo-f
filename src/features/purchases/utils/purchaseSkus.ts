@@ -1,4 +1,5 @@
 import type { ProductSkuAttribute, ProductSkuWithAttributes } from "@/features/catalog/types/product";
+import { buildSkuDisplayLabel, formatSkuAttributes } from "@/features/catalog/utils/skuLabel";
 
 export type PurchaseSkuInfo = {
   skuId: string;
@@ -12,18 +13,9 @@ export type PurchaseSkuInfo = {
 };
 
 export const formatSkuAttrs = (attrs?: ProductSkuAttribute[]) =>
-  (attrs ?? [])
-    .map((attr) => (attr.value ?? "").trim())
-    .filter(Boolean)
-    .join(" ");
+  formatSkuAttributes(attrs);
 
-export const buildPurchaseSkuLabel = (sku: PurchaseSkuInfo) => {
-  const attrsText = formatSkuAttrs(sku.attributes);
-  const skuPart = sku.backendSku ? ` -${sku.backendSku}` : "";
-  const customPart = sku.customSku ? ` (${sku.customSku})` : "";
-  const attrsPart = attrsText ? ` ${attrsText}` : "";
-  return `${sku.name}${attrsPart}${skuPart}${customPart}`.trim();
-};
+export const buildPurchaseSkuLabel = (sku: PurchaseSkuInfo) => buildSkuDisplayLabel(sku);
 
 export const mapSkuToPurchaseSkuInfo = (row: ProductSkuWithAttributes): PurchaseSkuInfo => ({
   skuId: row.sku.id,

@@ -226,7 +226,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         const res = await listSkus({ limit: 20, q, productType: config.productType });
         const options = (res.items ?? []).map((item: ProductSkuWithAttributes) => ({
           id: item.sku.id,
-          label: item.sku.name || item.sku.backendSku,
+        label: buildSkuLabelFromItem({ skuItem: item, fallbackName: item.sku.backendSku }),
         }));
 
         setSkuOptions((prev) => {
@@ -481,7 +481,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         params.set("skuId", row.sku.sku.id);
         if (row.sku.sku.name?.trim()) params.set("skuName", row.sku.sku.name.trim());
         if (row.sku.sku.backendSku?.trim()) params.set("backendSku", row.sku.sku.backendSku.trim());
-        if (row.sku.sku.customSku?.trim()) params.set("customSku", row.sku.sku.customSku.trim());
+          if (row.sku.sku.customSku?.trim()) params.set("customSku", row.sku.sku.customSku.trim());
+          if (row.sku.attributes?.length) params.set("skuAttributes", JSON.stringify(row.sku.attributes));
         navigate(`${config.routes.transfer}?${params.toString()}`);
       },
     },
@@ -497,7 +498,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         params.set("skuId", row.sku.sku.id);
         if (row.sku.sku.name?.trim()) params.set("skuName", row.sku.sku.name.trim());
         if (row.sku.sku.backendSku?.trim()) params.set("backendSku", row.sku.sku.backendSku.trim());
-        if (row.sku.sku.customSku?.trim()) params.set("customSku", row.sku.sku.customSku.trim());
+          if (row.sku.sku.customSku?.trim()) params.set("customSku", row.sku.sku.customSku.trim());
+          if (row.sku.attributes?.length) params.set("skuAttributes", JSON.stringify(row.sku.attributes));
         navigate(`${config.routes.adjustments}?${params.toString()}`);
       },
     },

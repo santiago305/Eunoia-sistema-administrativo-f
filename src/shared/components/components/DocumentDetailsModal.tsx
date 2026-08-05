@@ -23,6 +23,7 @@ import type {
   InventoryDocumentDetail,
   InventoryDocumentDetailItem,
 } from "@/shared/components/components/types/documentInventoryDetails";
+import { buildSkuDisplayLabel } from "@/features/catalog/utils/skuLabel";
 
 const docTypeLabels: Record<DocType, string> = {
   [DocType.ADJUSTMENT]: "Ajuste",
@@ -129,18 +130,20 @@ const buildNumero = (document?: InventoryDocument | null) => {
 };
 
 const getItemLabel = (item: InventoryDocumentDetailItem) => {
+  const nestedSku = item.sku?.sku;
+  const sku = nestedSku ?? item.sku;
+  if (sku) {
+    return buildSkuDisplayLabel({
+      name: item.name ?? sku.name,
+      attributes: item.attributes ?? item.sku?.attributes ?? nestedSku?.attributes,
+    }, "Item");
+  }
+
   return (
     item.name ??
-    item.sku?.name ??
-    item.sku?.sku?.name ??
     item.backendSku ??
     item.customSku ??
-    item.sku?.backendSku ??
-    item.sku?.customSku ??
-    item.sku?.sku?.backendSku ??
-    item.sku?.sku?.customSku ??
     item.skuId ??
-    item.sku?.id ??
     "Item"
   );
 };

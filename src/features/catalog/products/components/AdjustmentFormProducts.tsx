@@ -36,6 +36,7 @@ export type AdjustmentFormProductsProps = {
     name?: string;
     backendSku?: string;
     customSku?: string | null;
+    attributes?: Array<{ code: string; name?: string | null; value: string }>;
   } | null;
 };
 
@@ -509,7 +510,7 @@ export default function AdjustmentFormProducts({
       await Promise.all(
         items.map(async (item) => {
           const skuData = selectedSkus.find((s) => s.sku.id === item.skuId);
-          const skuLabel = skuData?.sku.name || skuData?.sku.backendSku || item.skuId;
+        const skuLabel = skuData ? buildSkuLabelWithAttributes(skuData) : item.skuId;
           const qty = Number(item.quantity) || 0;
 
           if (qty === 0) {
@@ -577,7 +578,7 @@ export default function AdjustmentFormProducts({
             backendSku: initialSku.backendSku ?? "",
             customSku: initialSku.customSku ?? null,
           },
-          attributes: [],
+        attributes: initialSku.attributes ?? [],
           unit: null,
         },
       ];

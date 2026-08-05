@@ -10,15 +10,18 @@ export type InventoryDocumentDetailItem = {
     name?: string | null;
     backendSku?: string | null;
     customSku?: string | null;
+    attributes?: Array<{ code: string; name?: string | null; value: string }>;
     sku?: {
       name?: string | null;
       backendSku?: string | null;
       customSku?: string | null;
+      attributes?: Array<{ code: string; name?: string | null; value: string }>;
     } | null;
   } | null;
   name?: string | null;
   backendSku?: string | null;
   customSku?: string | null;
+  attributes?: Array<{ code: string; name?: string | null; value: string }>;
   unitName?: string | null;
   unit?: {
     name?: string | null;

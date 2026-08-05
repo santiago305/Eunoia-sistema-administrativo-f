@@ -507,7 +507,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
             await Promise.all(
                 (form.items ?? []).map(async (item) => {
                     const skuData = selectedSkus.find((s) => s.sku.id === item.skuId);
-                    const skuLabel = skuData?.sku.name || skuData?.sku.backendSku || item.skuId;
+      const skuLabel = skuData ? buildSkuLabelWithAttributes(skuData) : item.skuId;
                     const qty = Number(item.quantity) || 0;
 
                     if (qty <= 0) {
@@ -580,7 +580,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
                         backendSku: initialSku.backendSku ?? "",
                         customSku: initialSku.customSku ?? null,
                     },
-                    attributes: [],
+        attributes: initialSku.attributes ?? [],
                     unit: null,
                 },
             ];

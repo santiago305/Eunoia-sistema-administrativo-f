@@ -1,11 +1,17 @@
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
+import { buildPurchaseSkuLabel, mapSkuToPurchaseSkuInfo } from "@/features/purchases/utils/purchaseSkus";
 
 type Props = {
   detail: PurchaseOrderDetailOutput;
 };
 
-const itemName = (item: NonNullable<PurchaseOrderDetailOutput["items"]>[number]) =>
-  item.name || item.serviceName || item.description || item.sku?.sku?.name || item.sku?.sku?.customSku || item.sku?.sku?.backendSku || "Item";
+export const purchaseDetailItemName = (item: NonNullable<PurchaseOrderDetailOutput["items"]>[number]) => {
+  if (item.sku?.sku) {
+    return buildPurchaseSkuLabel(mapSkuToPurchaseSkuInfo(item.sku));
+  }
+
+  return item.name || item.serviceName || item.description || "Item";
+};
 
 export function PurchaseItemsTab({ detail }: Props) {
   const items = detail.items ?? [];
@@ -21,7 +27,9 @@ export function PurchaseItemsTab({ detail }: Props) {
       {items.length ? items.map((item, index) => (
         <div key={item.poItemId ?? index} className="grid grid-cols-[1fr_96px_120px_120px] gap-3 border-b border-black/5 px-3 py-2 text-sm last:border-b-0">
           <div className="min-w-0">
-            <p className="truncate font-medium text-black">{itemName(item)}</p>
+            <p className="truncate font-medium text-black" title={purchaseDetailItemName(item)}>
+              {purchaseDetailItemName(item)}
+            </p>
             <p className="text-xs text-black/50">{item.itemType ?? "PRODUCT"} · {item.unitBase || "und"}</p>
           </div>
           <span className="text-right tabular-nums text-black/70">{Number(item.quantity ?? 0).toLocaleString("es-PE")}</span>

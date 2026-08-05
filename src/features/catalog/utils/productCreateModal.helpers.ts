@@ -7,6 +7,7 @@ import type {
 import type { CreateSkuRecipeDto } from "@/features/catalog/types/productRecipe";
 import type { ProductSkuDraft } from "../components/ProductSkuTable";
 import type { RecipeDraft } from "../components/recipeFormFields.helpers";
+import { buildSkuDisplayLabel } from "./skuLabel";
 
 export const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
@@ -77,25 +78,12 @@ export const buildSkuLabelFromItem = ({
   fallbackName:string;
   withCode?: boolean;
 }) => {
-  const baseName = skuItem.sku.name.trim()?? fallbackName;
-  const attrMap = new Map(skuItem.attributes.map((attr) => [attr.code, attr.value]));
-  const attributes = [
-    attrMap.get("presentation"),
-    attrMap.get("variant"),
-    attrMap.get("color"),
-  ]
-    .map((value) => (value ?? "").trim())
-    .filter(Boolean)
-    .join(" ");
-  if (!withCode) {
-    return `${baseName} ${attributes}`.trim();
-  }
-  const skuCode = skuItem.sku.customSku
-    ? `(${skuItem.sku.customSku})`
-    : skuItem.sku.backendSku
-      ? `- ${skuItem.sku.backendSku}`
-      : "";
-  return `${baseName} ${attributes} ${skuCode}`.trim();
+  return buildSkuDisplayLabel({
+    name: skuItem.sku.name || fallbackName,
+    backendSku: withCode ? skuItem.sku.backendSku : null,
+    customSku: withCode ? skuItem.sku.customSku : null,
+    attributes: skuItem.attributes,
+  }, fallbackName);
 };
 
 export const buildDraftSkuLabel = ({

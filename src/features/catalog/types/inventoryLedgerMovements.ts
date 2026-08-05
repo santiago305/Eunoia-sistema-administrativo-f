@@ -14,6 +14,7 @@ export type InventoryLedgerMovementListItem = {
     backendSku: string;
     customSku: string | null;
     name: string;
+    attributes?: Array<{ code: string; name?: string | null; value: string }>;
   };
   product: {
     id: string;

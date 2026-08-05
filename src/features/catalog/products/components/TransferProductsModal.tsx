@@ -12,6 +12,7 @@ type Props = {
         name?: string;
         backendSku?: string;
         customSku?: string | null;
+        attributes?: Array<{ code: string; name?: string | null; value: string }>;
     } | null;
 };
 

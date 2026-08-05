@@ -133,7 +133,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
       const res = await listSkus({ limit: 20, q, productType: config.productType });
       const opts = (res.items ?? []).map((item: ProductSkuWithAttributes) => ({
         id: item.sku.id,
-        label: item.sku.name || item.sku.backendSku,
+        label: buildSkuLabelFromItem({ skuItem: item, fallbackName: item.sku.backendSku }),
       }));
       setSkuOptions((prev) => {
         const next = [...prev];
@@ -419,7 +419,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           : "-";
         const documentNumber = "-";
         const skuLabel = buildSkuLabelFromItem({
-          skuItem: { sku: item.sku, attributes: [] },
+        skuItem: { sku: item.sku, attributes: item.sku.attributes ?? [] },
           fallbackName: item.sku.name || "-",
           withCode: false,
         });

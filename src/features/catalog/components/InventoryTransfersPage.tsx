@@ -63,6 +63,7 @@ import {
 import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { getTransferPermissions } from "@/features/catalog/utils/catalogPermissions";
+import { parseSkuLabelAttributes } from "@/features/catalog/utils/skuLabel";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
@@ -225,6 +226,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     name?: string;
     backendSku?: string;
     customSku?: string | null;
+    attributes?: Array<{ code: string; name?: string | null; value: string }>;
   } | null>(null);
   const prefillHandledRef = useRef(false);
 
@@ -241,6 +243,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       name: searchParams.get("skuName")?.trim() || undefined,
       backendSku: searchParams.get("backendSku")?.trim() || undefined,
       customSku: searchParams.get("customSku")?.trim() || undefined,
+      attributes: parseSkuLabelAttributes(searchParams.get("skuAttributes")),
     });
     setOpenTransferModal(true);
   }, [permissions.create, searchParams]);

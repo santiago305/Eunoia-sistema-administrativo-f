@@ -1,5 +1,6 @@
 import { InventoryDocumentProductType, type skuStock } from "./documentInventory";
 import type { ProductSkuWithAttributes } from "./product";
+import { buildSkuDisplayLabel } from "../utils/skuLabel";
 
 export type TransferItem = {
   skuId: string;
@@ -54,6 +55,7 @@ export type TransferProductsProps = {
     name?: string;
     backendSku?: string;
     customSku?: string | null;
+    attributes?: Array<{ code: string; name?: string | null; value: string }>;
   } | null;
 };
 
@@ -94,18 +96,7 @@ export const buildSkuLabel = (item: ProductSkuWithAttributes) => {
 };
 
 export const buildSkuLabelWithAttributes = (item: ProductSkuWithAttributes) => {
-  const attrs = Object.fromEntries(
-    (item.attributes ?? []).map((attr) => [attr.code, attr.value]),
-  ) as Record<string, string>;
-  const presentation = attrs.presentation ?? "";
-  const variantLabel = attrs.variant ?? "";
-  const color = attrs.color ?? "";
-  const skuLabel = item.sku.backendSku ? ` - ${item.sku.backendSku}` : "";
-  const customSku = item.sku.customSku ?? "-";
-
-  return `${item.sku.name ?? "Producto"} ${presentation} ${variantLabel} ${color}${skuLabel} (${customSku})`
-    .trim()
-    .replace(/\s+/g, " ");
+  return buildSkuDisplayLabel({ ...item.sku, attributes: item.attributes }, "Producto");
 };
 
 export const buildStockSummary = (
