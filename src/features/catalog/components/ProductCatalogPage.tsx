@@ -21,13 +21,14 @@ import {
     getProductExportColumns,
     getProductExportPresets,
     getProductSearchState,
+    getProductPackImpact,
     listCatalogProducts,
     saveProductExportPreset,
     saveProductSearchMetric,
     updateProductActive,
     updateProduct,
 } from "@/shared/services/productService";
-import type { Product, ProductCatalogProductType} from "@/features/catalog/types/product";
+import type { Product, ProductCatalogProductType, ProductPackImpact } from "@/features/catalog/types/product";
 import type { ProductSearchStateResponse } from "@/features/catalog/types/productSearch";
 import { getDropdownItemProducts } from "../data/getDropdownItemProducts";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
@@ -99,6 +100,10 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [deletingProductAction, setDeletingProductAction] = useState<"toggle" | "delete">("toggle");
+    const [packImpact, setPackImpact] = useState<ProductPackImpact | null>(null);
+    const [loadingPackImpact, setLoadingPackImpact] = useState(false);
+    const [packImpactError, setPackImpactError] = useState(false);
+    const [deletingProductLoading, setDeletingProductLoading] = useState(false);
     const [selectedProductForDetails, setSelectedProductForDetails] = useState<Product | null>(null);
     const [openDetails, setOpenDetails] = useState(false);
     const limit = 25;
@@ -353,6 +358,34 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
         [products, deletingProductId],
     );
 
+    useEffect(() => {
+        if (!deletingProductId || deletingProductAction !== "delete" || config.productType !== "PRODUCT") {
+            setPackImpact(null);
+            setPackImpactError(false);
+            return;
+        }
+        let cancelled = false;
+        setLoadingPackImpact(true);
+        setPackImpactError(false);
+        getProductPackImpact(deletingProductId)
+            .then((impact) => {
+                if (!cancelled) setPackImpact(impact);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setPackImpact(null);
+                    setPackImpactError(true);
+                    showFeedback(errorResponse("No se pudo verificar en qué packs se usa el producto."));
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingPackImpact(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [config.productType, deletingProductAction, deletingProductId, showFeedback]);
+
     const startCreate = () => {
         if (!permissions.create) return;
         setEditingProductId(null);
@@ -466,13 +499,20 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
 
     const confirmDelete = async () => {
         if (!deletingProductId) return;
+        if (loadingPackImpact || deletingProductLoading) return;
+        if (config.productType === "PRODUCT" && deletingProductAction === "delete" && packImpactError) return;
         clearFeedback();
+        setDeletingProductLoading(true);
         try {
             const product = products.find((p) => p.id === deletingProductId);
             if (!product) return;
             if (deletingProductAction === "delete") {
                 if (!permissions.delete) return;
-                await updateProduct(deletingProductId, { isActive: false, isDeleted: true });
+                await updateProduct(deletingProductId, {
+                    isActive: false,
+                    isDeleted: true,
+                    removeFromPacks: config.productType === "PRODUCT",
+                });
             } else {
                 if (product.isActive && !permissions.delete) return;
                 if (!product.isActive && !permissions.restore) return;
@@ -480,10 +520,14 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             }
             setDeletingProductId(null);
             setDeletingProductAction("toggle");
+            setPackImpact(null);
+            setPackImpactError(false);
             showFeedback(successResponse(config.updateSuccessMessage));
             await refresh();
         } catch {
             showFeedback(errorResponse(config.updateErrorMessage));
+        } finally {
+            setDeletingProductLoading(false);
         }
     };
 
@@ -606,12 +650,33 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 onClose={() => {
                     setDeletingProductId(null);
                     setDeletingProductAction("toggle");
+                    setPackImpact(null);
+                    setPackImpactError(false);
                 }}
                 onConfirm={confirmDelete}
                 message={
                     <>
                         {deletingProductAction === "delete" ? (
-                            <>{config.deleteMessage}</>
+                            <div className="space-y-2">
+                                <p>{config.deleteMessage}</p>
+                                 {loadingPackImpact ? (
+                                     <p className="text-xs">Verificando packs relacionados…</p>
+                                 ) : packImpactError ? (
+                                     <p className="font-semibold">No se pudo verificar el impacto. Cierra el aviso e intenta nuevamente antes de eliminar.</p>
+                                 ) : packImpact?.packs.length ? (
+                                    <>
+                                        <p className="font-semibold">
+                                            También se retirará de {packImpact.packs.length} pack{packImpact.packs.length === 1 ? "" : "s"} activo{packImpact.packs.length === 1 ? "" : "s"}:
+                                        </p>
+                                        <ul className="list-disc space-y-1 pl-5">
+                                            {packImpact.packs.map((pack) => (
+                                                <li key={pack.id}>{pack.description}</li>
+                                            ))}
+                                        </ul>
+                                        <p className="text-xs">Los pedidos anteriores conservarán sus productos, cantidades y precios originales.</p>
+                                    </>
+                                ) : null}
+                            </div>
                         ) : deletingProduct?.isActive ? (
                             <>{config.deactivateMessage}</>
                         ) : (
@@ -619,7 +684,9 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                         )}
                     </>
                 }
-                confirmText={deletingProductAction === "delete" ? "Eliminar" : deletingProduct?.isActive ? "Desactivar" : "Activar"}
+                 confirmText={deletingProductAction === "delete" ? "Eliminar" : deletingProduct?.isActive ? "Desactivar" : "Activar"}
+                 hideConfirm={config.productType === "PRODUCT" && deletingProductAction === "delete" && packImpactError}
+                 loading={loadingPackImpact || deletingProductLoading}
             />
         </PageShell>
     );

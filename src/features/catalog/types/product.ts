@@ -17,6 +17,12 @@ export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 
 export type ProductCatalogProductType = "MATERIAL" | "PRODUCT";
 
+export type ProductPackImpact = {
+  productId: string;
+  productName: string;
+  packs: Array<{ id: string; description: string; affectedItems: number }>;
+};
+
 export type ProductCatalogProduct = {
   id: string;
   name: string;

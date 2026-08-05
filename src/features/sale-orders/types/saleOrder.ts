@@ -162,6 +162,7 @@ export type SaleOrderItemInput = {
   total: number;
   description: string;
   referencePackId?: string;
+  packNameSnapshot?: string | null;
   components?: SaleOrderItemComponentInput[];
 };
 

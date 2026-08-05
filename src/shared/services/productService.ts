@@ -89,6 +89,11 @@ export const updateProduct = async (id: string, payload: UpdateProductDto): Prom
   return response.data;
 };
 
+export const getProductPackImpact = async (id: string): Promise<import("@/features/catalog/types/product").ProductPackImpact> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.packImpact(id));
+  return response.data;
+};
+
 export const updateProductActive = async (
   id: string,
   payload: UpdateProductActiveDto

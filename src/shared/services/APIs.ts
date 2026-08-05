@@ -226,6 +226,7 @@ export const API_PRODUCTS_GROUP = {
   byIdP: (id: string) => `/products/${id}`,
   update: (id: string) => `/products/${id}`,
   updateActive: (id: string) => `/products/${id}`,
+  packImpact: (id: string) => `/products/${id}/pack-impact`,
   createSku: (id: string) => `/products/${id}/skus`,
   searchState: "/products/search-state",
   saveSearchMetric: "/products/search-metrics",

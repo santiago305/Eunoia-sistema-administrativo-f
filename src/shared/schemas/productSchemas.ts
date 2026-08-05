@@ -23,6 +23,7 @@ export const updateProductSchema = z.object({
   brand: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   isDeleted: z.boolean().optional(),
+  removeFromPacks: z.boolean().optional(),
   barcode: z.string().optional().nullable(),
   customSku: z.string().optional().nullable(),
   price: z.number().optional(),
