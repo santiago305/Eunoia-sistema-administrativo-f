@@ -130,9 +130,11 @@ export function ProductionOrderFormModal({
           label: warehouse.name,
         })) ?? [],
       );
+      return res ?? [];
     } catch {
       setWarehouseOptions([]);
       showFeedback(errorResponse("Error al cargar almacenes"));
+      return [];
     }
   }, [showFeedback]);
 
@@ -491,14 +493,23 @@ export function ProductionOrderFormModal({
   useEffect(() => {
     if (!open) return;
 
-    void loadWarehouses();
-
     if (mode === "edit" && productionId) {
+      void loadWarehouses();
       void loadOrder(productionId);
       return;
     }
 
     resetForm();
+    void loadWarehouses().then((warehouses) => {
+      const productionDefault = warehouses.find((warehouse) => warehouse.isProductionDefault && warehouse.isActive);
+      if (!productionDefault) return;
+      setForm((current) => ({
+        ...current,
+        fromWarehouseId: current.fromWarehouseId || productionDefault.warehouseId,
+        toWarehouseId: current.toWarehouseId || productionDefault.warehouseId,
+      }));
+      void loadSeries(productionDefault.warehouseId);
+    });
   }, [loadOrder, loadWarehouses, mode, open, productionId, resetForm]);
 
   useEffect(() => {

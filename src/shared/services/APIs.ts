@@ -248,6 +248,7 @@ export const API_WAREHOUSES_GROUP = {
   getStock: (id: string) => `/warehouses/${id}/stock`,
   update: (id: string) => `/warehouses/${id}`,
   updateActive: (id: string) => `/warehouses/${id}/active`,
+  setProductionDefault: (id: string) => `/warehouses/${id}/production-default`,
 };
 
 export const API_LOCATIONS_GROUP = {

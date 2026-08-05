@@ -90,6 +90,7 @@ export type Warehouse = {
   district: string;
   address?: string | null;
   isActive: boolean;
+  isProductionDefault: boolean;
   createdAt: string;
   updatedAt?: string | null;
 };
@@ -102,6 +103,7 @@ export type WarehouseListItem = {
   district: string;
   address?: string;
   isActive: boolean;
+  isProductionDefault: boolean;
   createdAt: string;
 };
 

@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, useRef, type MouseEvent } from "react";
-import { Boxes, Menu, Pencil, Plus, Trash2 } from "lucide-react";
+import { Boxes, Menu, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -30,6 +30,7 @@ import {
   getWarehouseStockById,
   listWarehouses,
   saveWarehouseSearchMetric,
+  setProductionDefaultWarehouse,
   updateWarehouseActive,
 } from "@/shared/services/warehouseServices";
 import {
@@ -475,6 +476,20 @@ export default function Warehouses() {
     }
   }, [canDeleteWarehouses, deletingWarehouseId, warehouses, showFeedback]);
 
+  const setAsProductionDefault = useCallback(async (warehouse: Warehouse) => {
+    if (!canUpdateWarehouses || !warehouse.isActive || warehouse.isProductionDefault) return;
+    try {
+      await setProductionDefaultWarehouse(warehouse.warehouseId);
+      setWarehouses((current) => current.map((item) => ({
+        ...item,
+        isProductionDefault: item.warehouseId === warehouse.warehouseId,
+      })));
+      showFeedback(successResponse(`${warehouse.name} es ahora el almacen predeterminado para produccion`));
+    } catch {
+      showFeedback(errorResponse("No se pudo establecer el almacen predeterminado para produccion"));
+    }
+  }, [canUpdateWarehouses, showFeedback]);
+
   const warehousePendingToggle = useMemo(
     () =>
       deletingWarehouseId
@@ -503,7 +518,9 @@ export default function Warehouses() {
         id: "name",
         header: "Almacen",
         accessorKey: "name",
-        cell: (row) => <span className="font-medium text-black">{row.name}</span>,
+        cell: (row) => <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-black">{row.name}</span>
+          {row.isProductionDefault ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800">
+            <Star className="h-3 w-3" aria-hidden="true" />Produccion</span> : null}</div>,
         className: "text-black/70",
         cardTitle: true,
       },
@@ -574,6 +591,13 @@ export default function Warehouses() {
                   ...(canUpdateWarehouses
                     ? [
                     {
+                      id: "production-default",
+                      label: row.isProductionDefault ? "Predeterminado de produccion" : "Usar en produccion",
+                      icon: <Star className={`h-4 w-4 ${row.isProductionDefault ? "fill-amber-400 text-amber-500" : "text-black/60"}`} />,
+                      onClick: () => void setAsProductionDefault(row),
+                      disabled: companyActionDisabled || !row.isActive || row.isProductionDefault,
+                    },
+                    {
                       id: "edit",
                       label: "Detalles",
                       icon: <Pencil className="h-4 w-4 text-black/60" />,
@@ -629,7 +653,7 @@ export default function Warehouses() {
         sortable: false,
       },
     ],
-    [canDeleteWarehouses, canReadWarehouses, canUpdateWarehouses, companyActionDisabled, formatDate, openLocationsModal, startEdit],
+    [canDeleteWarehouses, canReadWarehouses, canUpdateWarehouses, companyActionDisabled, formatDate, openLocationsModal, setAsProductionDefault, startEdit],
   );
 
   const smartSearchColumns = useMemo(

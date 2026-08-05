@@ -32,6 +32,11 @@ export const updateWarehouseActive = async (
   return response.data;
 };
 
+export const setProductionDefaultWarehouse = async (id: string): Promise<Warehouse> => {
+  const response = await axiosInstance.patch(API_WAREHOUSES_GROUP.setProductionDefault(id));
+  return response.data;
+};
+
 export const listWarehouses = async (params: ListWarehousesQuery): Promise<WarehouseListResponse> => {
   const requestParams = {
     ...params,
@@ -99,8 +104,7 @@ export const listAllActiveWarehouses = async () => {
 };
 
 export const listActive = async (): Promise<Warehouse[]> => {
-  const response = await listActiveWarehouses({ page: 1, limit: 20 });
-  return response.items ?? [];
+  return listAllActiveWarehouses();
 };
 
 export const getWarehouseById = async (id: string): Promise<Warehouse> => {
