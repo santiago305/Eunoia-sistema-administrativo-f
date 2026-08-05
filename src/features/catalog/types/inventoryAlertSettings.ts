@@ -6,8 +6,25 @@ export type InventoryAlertSetting = {
   alertThresholdDays: number;
   alertEnabled: boolean;
   isDefault: boolean;
+  productType?: "PRODUCT" | "MATERIAL";
+  historyDays: number;
+  coverageDays: number;
+  evaluation?: InventoryAlertEvaluation;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type InventoryAlertLevel = "NORMAL" | "PREVENTIVE" | "WARNING" | "URGENT" | "CRITICAL";
+
+export type InventoryAlertEvaluation = {
+  history: Array<{ day: string; consumption: number }>;
+  totalConsumption: number;
+  averageDailyConsumption: number;
+  availableStock: number;
+  requiredStock: number;
+  coverageDays: number | null;
+  shortage: number;
+  level: InventoryAlertLevel;
 };
 
 export type ListInventoryAlertSettingsQuery = {
@@ -20,4 +37,6 @@ export type UpdateInventoryAlertSettingPayload = {
   minStockAlertQty?: number | null;
   alertThresholdDays?: number;
   alertEnabled?: boolean;
+  historyDays?: number;
+  coverageDays?: number;
 };

@@ -15,6 +15,7 @@ import type {
 import type { ProductCatalogProductType } from "@/features/catalog/types/product";
 import type {
   InventoryAlertSetting,
+  InventoryAlertLevel,
   ListInventoryAlertSettingsQuery,
   UpdateInventoryAlertSettingPayload,
 } from "@/features/catalog/types/inventoryAlertSettings";
@@ -153,7 +154,11 @@ export const deleteInventoryExportPreset = async (params: {
 
 type InventoryAlertSettingApi = Partial<Record<keyof InventoryAlertSetting, unknown>>;
 
-const normalizeInventoryAlertSetting = (setting: InventoryAlertSettingApi): InventoryAlertSetting => ({
+const normalizeInventoryAlertSetting = (setting: InventoryAlertSettingApi): InventoryAlertSetting => {
+  const raw = setting as Record<string, unknown>;
+  const policy = raw.policy && typeof raw.policy === "object" ? raw.policy as Record<string, unknown> : {};
+  const history = Array.isArray(raw.history) ? raw.history : [];
+  return ({
   id: typeof setting?.id === "string" ? setting.id : null,
   stockItemId: String(setting?.stockItemId ?? ""),
   warehouseId: typeof setting?.warehouseId === "string" ? setting.warehouseId : null,
@@ -162,11 +167,28 @@ const normalizeInventoryAlertSetting = (setting: InventoryAlertSettingApi): Inve
       ? null
       : Number(setting.minStockAlertQty),
   alertThresholdDays: Number(setting?.alertThresholdDays ?? 3),
-  alertEnabled: Boolean(setting?.alertEnabled ?? true),
+  alertEnabled: Boolean(setting?.alertEnabled ?? policy.alertEnabled ?? true),
   isDefault: Boolean(setting?.isDefault ?? false),
+  productType: setting?.productType === "PRODUCT" || setting?.productType === "MATERIAL" ? setting.productType
+    : policy.productType === "PRODUCT" || policy.productType === "MATERIAL" ? policy.productType : undefined,
+  historyDays: Number(setting?.historyDays ?? policy.historyDays ?? 3),
+  coverageDays: Number(setting?.coverageDays ?? policy.coverageDays ?? setting?.alertThresholdDays ?? 3),
+  evaluation: history.length > 0 || typeof raw.averageDailyConsumption === "number"
+    ? {
+        history: history.map((value) => { const entry = value as Record<string, unknown>; return { day: String(entry.day), consumption: Number(entry.consumption ?? 0) }; }),
+        totalConsumption: Number(raw.totalConsumption ?? 0),
+        averageDailyConsumption: Number(raw.averageDailyConsumption ?? 0),
+        availableStock: Number(raw.availableStock ?? 0),
+        requiredStock: Number(raw.requiredStock ?? 0),
+        coverageDays: raw.coverageDays === null ? null : Number(raw.coverageDays ?? 0),
+        shortage: Number(raw.shortage ?? 0),
+        level: (raw.level ?? "NORMAL") as InventoryAlertLevel,
+      }
+    : undefined,
   createdAt: typeof setting?.createdAt === "string" ? setting.createdAt : undefined,
   updatedAt: typeof setting?.updatedAt === "string" ? setting.updatedAt : undefined,
-});
+  });
+};
 
 export const listInventoryAlertSettings = async (
   params: ListInventoryAlertSettingsQuery = {},

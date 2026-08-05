@@ -24,11 +24,13 @@ import {
   getInventoryExportPresets,
   getInventorySearchState,
   getSkuStockSnapshots,
+  getInventoryAlertSetting,
   listInventory,
   saveInventoryExportPreset,
   saveInventorySearchMetric,
   type SkuStockForecast,
 } from "@/shared/services/inventoryService";
+import type { InventoryAlertEvaluation } from "@/features/catalog/types/inventoryAlertSettings";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import type { Warehouse } from "@/features/warehouse/types/warehouse";
@@ -129,6 +131,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [forecastLoading, setForecastLoading] = useState(false);
   const [alertSettingsOpen, setAlertSettingsOpen] = useState(false);
   const [alertSettingsTarget, setAlertSettingsTarget] = useState<InventorySnapshotRow | null>(null);
+  const [alertEvaluations, setAlertEvaluations] = useState<Record<string, InventoryAlertEvaluation>>({});
   const forecastRequestRef = useRef(0);
   const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
   const realtimeRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -520,6 +523,24 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     void loadWarehouses();
   }, [loadWarehouses]);
 
+  useEffect(() => {
+    if (!permissions.alertSettings || inventoryRows.length === 0) {
+      setAlertEvaluations({});
+      return;
+    }
+    let active = true;
+    void Promise.all(inventoryRows.map(async (row) => {
+      try {
+        const setting = await getInventoryAlertSetting(row.stockItemId, { warehouseId: row.warehouseId });
+        return setting.evaluation ? [`${row.stockItemId}:${row.warehouseId}`, setting.evaluation] as const : null;
+      } catch { return null; }
+    })).then((entries) => {
+      if (!active) return;
+      setAlertEvaluations(Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null)));
+    });
+    return () => { active = false; };
+  }, [inventoryRows, permissions.alertSettings]);
+
   // Referencia para evitar dobles peticiones consecutivas o loops
   const fetchLockRef = useRef(false);
 
@@ -702,6 +723,20 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         cell: (row) => formatQuantityWithUnit(row.available, row.sku.unit?.code),
       },
       {
+        id: "alert",
+        header: "Alerta",
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
+        cell: (row) => {
+          const evaluation = alertEvaluations[`${row.stockItemId}:${row.warehouseId}`];
+          if (!evaluation || evaluation.level === "NORMAL") return <span className="text-xs text-zinc-400">Normal</span>;
+          const styles = evaluation.level === "CRITICAL" ? "bg-red-50 text-red-700" : evaluation.level === "URGENT"
+            ? "bg-orange-50 text-orange-800" : evaluation.level === "WARNING" ? "bg-amber-50 text-amber-800" : "bg-sky-50 text-sky-700";
+          const labels = { PREVENTIVE: "Preventiva", WARNING: "Reposicion", URGENT: "Urgente", CRITICAL: "Sin stock", NORMAL: "Normal" };
+          return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${styles}`}>{labels[evaluation.level]}</span>;
+        },
+      },
+      {
         id: "actions",
         header: "Acciones",
         headerClassName: "text-center [&>div]:justify-center",
@@ -737,7 +772,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         ),
       },
     ],
-    [buildInventoryActions, config.itemLabel],
+    [alertEvaluations, buildInventoryActions, config.itemLabel],
   );
 
   return (
