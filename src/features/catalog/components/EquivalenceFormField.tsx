@@ -46,7 +46,7 @@ export function EquivalenceFormFields({
   PRIMARY: string;
   readOnly?: boolean;
 }) {
-  const [toUnitId, setToUnitId] = useState("");
+  const [fromUnitId, setFromUnitId] = useState("");
   const [factor, setFactor] = useState("1");
 
   const unitOptions = useMemo(
@@ -62,17 +62,20 @@ export function EquivalenceFormFields({
 
   const baseUnitLabel = useMemo(
     () =>
-      (units ?? []).find((u) => u.id === baseUnitId)?.name ??
+      (() => {
+        const unit = (units ?? []).find((u) => u.id === baseUnitId);
+        return unit ? `${unit.name} (${unit.code})` : null;
+      })() ??
       (baseUnitId ? baseUnitId : "Sin unidad base"),
     [units, baseUnitId],
   );
 
   const handleCreate = useCallback(async () => {
-    if (!baseUnitId || !toUnitId || !factor || Number(factor) <= 0) return;
+    if (!baseUnitId || !fromUnitId || !factor || Number(factor) <= 0) return;
 
     const payload = {
-      fromUnitId: baseUnitId,
-      toUnitId,
+      fromUnitId,
+      toUnitId: baseUnitId,
       factor: Number(factor),
     };
 
@@ -83,9 +86,9 @@ export function EquivalenceFormFields({
       await onCreated?.();
     }
 
-    setToUnitId("");
+    setFromUnitId("");
     setFactor("1");
-  }, [baseUnitId, factor, onCreateEquivalence, onCreated, productId, toUnitId]);
+  }, [baseUnitId, factor, fromUnitId, onCreateEquivalence, onCreated, productId]);
 
   const deleteEquivalence = useCallback(
     async (id: string) => {
@@ -167,7 +170,7 @@ export function EquivalenceFormFields({
   }, [deleteEquivalence, readOnly]);
 
   const canPersist = Boolean(onCreateEquivalence || productId);
-  const canCreate = Boolean(baseUnitId && toUnitId && Number(factor) > 0 && canPersist && !readOnly);
+  const canCreate = Boolean(baseUnitId && fromUnitId && Number(factor) > 0 && canPersist && !readOnly);
   const resolvedTableId = tableId ?? (productId ? `product-equivalences-${productId}` : "product-equivalences-draft");
 
   return (
@@ -177,27 +180,27 @@ export function EquivalenceFormFields({
           <SectionHeaderForm icon={Scale} title="Nueva equivalencia" />
 
           <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_100px] ">
-            <FloatingInput label="Unidad origen" value={baseUnitLabel} name="origin" disabled />
+            <FloatingSelect
+              label="Unidad de compra (origen)"
+              name="origin"
+              value={fromUnitId}
+              onChange={(value) => setFromUnitId(value)}
+              options={unitOptions}
+              searchable
+              searchPlaceholder="Buscar unidad..."
+              emptyMessage="Sin unidades de medida"
+            />
 
             <FloatingInput
               label="Factor de conversión"
               type="number"
               name="factor"
               value={factor}
-              min={1}
+              min={0.000001}
               onChange={(e) => setFactor(e.target.value)}
             />
 
-            <FloatingSelect
-              label="Unidad destino"
-              name="destino"
-              value={toUnitId}
-              onChange={(value) => setToUnitId(value)}
-              options={unitOptions}
-              searchable
-              searchPlaceholder="Buscar unidad..."
-              emptyMessage="Sin unidades de medida"
-            />
+            <FloatingInput label="Unidad base (destino)" value={baseUnitLabel} name="destination" disabled />
 
             <SystemButton
               leftIcon={<Plus className="h-4 w-4" />}
@@ -213,7 +216,7 @@ export function EquivalenceFormFields({
             </SystemButton>
           </div>
           <p className="text-xs text-black/55">
-            La conversión se guarda como: cantidad destino = cantidad origen × factor.
+            La compra se convierte a inventario como: cantidad en unidad base = cantidad comprada × factor.
           </p>
         </>
       ) : null}
