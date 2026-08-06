@@ -69,6 +69,7 @@ import {
   type ProductionSearchFilterKey,
   upsertProductionSearchRule,
 } from "@/features/production/utils/productionSmartSearch";
+import { buildProductionItemSummaryLabel } from "@/features/production/utils/productionSkus";
 
 const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
@@ -106,6 +107,7 @@ type ProductionRow = {
   usuario: string;
   almacenOrigen: string;
   almacenDestino: string;
+  itemSummary: ProductionOrder["itemSummary"];
   estado?: ProductionStatus;
   tiempoProduccion?: ProductionStatus;
   termino: string;
@@ -626,6 +628,7 @@ export default function Production() {
       usuario: canViewProductionCreatorInfo ? order.createdByName ?? order.createdBy ?? "-" : "-",
       almacenOrigen: order.fromWarehouse?.name ?? "-",
       almacenDestino: order.toWarehouse?.name ?? "-",
+      itemSummary: order.itemSummary,
       estado: order.status ?? ProductionStatus.DRAFT,
       tiempoProduccion: order.status ?? ProductionStatus.DRAFT,
       termino: formatDateTime(order.manufactureDate),
@@ -669,6 +672,35 @@ export default function Production() {
         id: "almacenDestino",
         header: "Almacen destino",
         accessorKey: "almacenDestino",
+        sortable: false,
+      },
+      {
+        id: "itemSummary",
+        header: "SKUs",
+        cell: (row) => {
+          const visibleItems = row.itemSummary?.items?.slice(0, 2) ?? [];
+          const remaining = Math.max(0, (row.itemSummary?.total ?? visibleItems.length) - visibleItems.length);
+
+          if (!visibleItems.length) return <span className="text-black/40">-</span>;
+
+          return (
+            <div className="w-[210px] max-w-[210px] space-y-0.5 text-black/70">
+              {visibleItems.map((item, index) => {
+                const itemLabel = buildProductionItemSummaryLabel(item);
+                return (
+                  <div key={`${item.skuId ?? item.name}-${index}`} className="truncate" title={itemLabel}>
+                    {itemLabel}
+                  </div>
+                );
+              })}
+              {remaining > 0 ? (
+                <div className="text-[11px] font-medium text-primary">
+                  +{remaining} {remaining === 1 ? "producto más" : "productos más"}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
         sortable: false,
       },
       {

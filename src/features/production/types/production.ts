@@ -186,6 +186,21 @@ export type ProductionOrder = {
   serie?: ProductionOrderSerie | null;
   history?: ProductionHistorySummary;
   pendingApproval?: ProductionApprovalRequest | null;
+  itemSummary?: ProductionOrderItemSummary;
+};
+
+export type ProductionOrderItemSummaryEntry = {
+  skuId?: string;
+  name: string;
+  backendSku?: string;
+  customSku?: string;
+  attributeName?: string;
+  attributeValue?: string;
+};
+
+export type ProductionOrderItemSummary = {
+  total: number;
+  items: ProductionOrderItemSummaryEntry[];
 };
 
 export type ProductionApprovalAction = "PRODUCTION_START" | "PRODUCTION_CLOSE";
