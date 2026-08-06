@@ -17,3 +17,10 @@ export const uploadProductionImageProdution = async (
   const response = await axiosInstance.patch(`/production-orders/${productionId}/image-prodution`, formData);
   return response.data;
 };
+
+export const skipProductionEvidence = async (
+  productionId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(`/production-orders/${productionId}/skip-evidence`);
+  return response.data;
+};

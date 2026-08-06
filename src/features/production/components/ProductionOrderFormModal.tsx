@@ -23,6 +23,7 @@ import type {
 } from "@/features/production/types/production";
 import { ProductTypes, type ProductType } from "@/features/catalog/types/ProductTypes";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
+import { buildSkuDisplayLabel } from "@/features/catalog/utils/skuLabel";
 
 type ProductionOrderFormModalProps = {
   open: boolean;
@@ -86,6 +87,14 @@ type ProductionItemRow = AddProductionOrderItemDto & {
   };
   customSku?: string;
 };
+
+const buildProductionSkuLabel = (product: Pick<CatalogSearchSkuResult, "productName" | "sku" | "customSku" | "attributes">) =>
+  buildSkuDisplayLabel({
+    name: product.productName,
+    backendSku: product.sku,
+    customSku: product.customSku,
+    attributes: Object.entries(product.attributes ?? {}).map(([code, value]) => ({ code, value })),
+  });
 
 export function ProductionOrderFormModal({
   open,
@@ -333,9 +342,21 @@ export function ProductionOrderFormModal({
         id: "product",
         header: "Producto",
         cell: (row) => (
-          <span className="text-black/70">
-            {`${row.productName ? `${row.productName}` : ""} ${row.attributes?.presentation ?? ""} ${row.attributes?.variant ?? ""} ${row.attributes?.color ?? ""} (${row.sku ?? "-"})`}
-          </span>
+          <div className="max-w-[320px] text-black/70">
+            <span className="block truncate" title={buildProductionSkuLabel({
+              productName: row.productName ?? "SKU",
+              sku: row.sku,
+              customSku: row.customSku,
+              attributes: row.attributes ?? {},
+            })}>
+              {buildProductionSkuLabel({
+                productName: row.productName ?? "SKU",
+                sku: row.sku,
+                customSku: row.customSku,
+                attributes: row.attributes ?? {},
+              })}
+            </span>
+          </div>
         ),
         headerClassName: "text-left w-[170px]",
         className: "text-black/70",
@@ -548,7 +569,7 @@ export function ProductionOrderFormModal({
                     value=""
                     options={(searchResults ?? []).map((product) => ({
                       value: product.itemId ?? product.id ?? "",
-                      label: `${product.productName ?? "SKU"} ${product.attributes?.presentation ?? ""} ${product.attributes?.variant ?? ""} ${product.attributes?.color ?? ""}${product.sku ? ` - ${product.sku}` : ""}${product.customSku ? ` (${product.customSku})` : ""}`,
+                      label: buildProductionSkuLabel(product),
                     }))}
                     onChange={(value) => {
                       if (!value) return;

@@ -180,6 +180,7 @@ export type ProductionOrder = {
   createdAt?: string;
   updatedAt?: string;
   imageProdution?: string[];
+  evidenceStatus?: "PENDING" | "UPLOADED" | "SKIPPED";
   items?: ProductionOrderItem[];
   fromWarehouse?: ProductionOrderWarehouse | null;
   toWarehouse?: ProductionOrderWarehouse | null;

@@ -16,6 +16,7 @@ import {
 import { getProductInventoryDetail } from "@/shared/services/productService";
 import { Modal } from "@/shared/components/modales/Modal";
 import { CHART_COLORS } from "@/shared/utils/chartColors";
+import { buildSkuDisplayLabel } from "@/features/catalog/utils/skuLabel";
 
 interface ProductDetailsModalProps {
   open: boolean;
@@ -50,6 +51,10 @@ function SkuInventoryChart({ sku }: { sku: ProductSkuDetail }) {
   const positiveTotal = useMemo(() => {
     return chartData.reduce((acc, item) => acc + item.value, 0);
   }, [chartData]);
+  const skuLabel = buildSkuDisplayLabel({
+    name: sku.name,
+    attributes: sku.attributes,
+  });
 
   if (chartData.length === 0) {
     return (
@@ -63,7 +68,7 @@ function SkuInventoryChart({ sku }: { sku: ProductSkuDetail }) {
     <div className="flex w-[240px] shrink-0 flex-col">
       <div className="mb-2 text-center">
         <p className="text-[10px] uppercase tracking-wider text-zinc-500">
-          {sku.name}
+          <span className="block truncate" title={skuLabel}>{skuLabel}</span>
         </p>
       </div>
 

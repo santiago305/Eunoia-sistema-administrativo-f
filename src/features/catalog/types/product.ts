@@ -112,6 +112,7 @@ export interface ProductSkuDetail {
   id: string;
   sku: string;
   name: string;
+  attributes?: ProductCatalogSkuAttribute[];
   total: number;
   inventory: ProductSkuInventory[];
 }

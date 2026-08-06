@@ -58,7 +58,7 @@ import { AlertModal } from "@/shared/components/components/AlertModal";
 import { ExtraTimeModal } from "@/features/production/components/ExtraTimeModal";
 import { ProductionCompletionPhotoModal } from "@/features/production/components/ProductionCompletionPhotoModal";
 import { ProductionHistoryModal } from "@/features/production/components/ProductionHistoryModal";
-import { addProductionExtraTime, uploadProductionImageProdution } from "@/features/production/utils/productionActions";
+import { addProductionExtraTime, skipProductionEvidence, uploadProductionImageProdution } from "@/features/production/utils/productionActions";
 import {
   buildProductionSearchChips,
   buildProductionSmartSearchColumns,
@@ -582,13 +582,21 @@ export default function Production() {
 
   const handleSkipCompletedPhoto = useCallback(async () => {
     const productionId = completedPhotoOrder?.productionId ?? completedPhotoOrder?.id;
-    if (productionId) {
+    if (!productionId) return;
+    setCompletedPhotoLoading(true);
+    try {
+      const response = await skipProductionEvidence(productionId);
       skippedPhotoRef.current.add(productionId);
       markPhotoPromptSkipped(productionId);
+      setCompletedPhotoOrder(null);
+      showFeedback(successResponse(response.message ?? "Produccion ingresada sin foto"));
+      await loadOrders();
+    } catch (error) {
+      showFeedback(errorResponse(getApiErrorMessage(error, "No se pudo omitir la foto de produccion")));
+    } finally {
+      setCompletedPhotoLoading(false);
     }
-    setCompletedPhotoOrder(null);
-    showFeedback(successResponse("Producción ingresada sin foto. Se puede subir luego desde detalle (admin)."));
-  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, markPhotoPromptSkipped, showFeedback]);
+  }, [completedPhotoOrder?.id, completedPhotoOrder?.productionId, loadOrders, markPhotoPromptSkipped, showFeedback]);
 
   useEffect(() => {
     void loadOrders();
@@ -609,6 +617,7 @@ export default function Production() {
       return (
         order.status === ProductionStatus.COMPLETED &&
         (!order.imageProdution || order.imageProdution.length === 0) &&
+        (order.evidenceStatus ?? "PENDING") === "PENDING" &&
         !!productionId &&
         !skippedPhotoRef.current.has(productionId) &&
         !isPhotoPromptSkipped(productionId)
