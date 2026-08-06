@@ -75,6 +75,21 @@ const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 10;
 const PHOTO_MODAL_SKIP_KEY = "production-photo-modal-skipped";
 
+const parseStockError = (message: string) => {
+  const match = message.match(
+    /^Stock insuficiente para (.+?)\. Requerido: (.+?)\. Stock: (.+?)\. Reservado: (.+?)\. Disponible: (.+?)\. Almacén de origen: (.+?)\.$/,
+  );
+  if (!match) return null;
+  return {
+    material: match[1],
+    required: match[2],
+    stock: match[3],
+    reserved: match[4],
+    available: match[5],
+    warehouse: match[6],
+  };
+};
+
 type ProductionApprovalUiAction =
   | "request-start"
   | "approve-start"
@@ -355,11 +370,39 @@ export default function Production() {
     } catch (error) {
       const message = getApiErrorMessage(error, "Error al iniciar la orden");
       const warehouseName = pendingStartOrder?.fromWarehouse?.name;
-      showFeedback(errorResponse(
-        warehouseName && message.toLowerCase().includes("stock")
-          ? `${message} Almacén de origen: ${warehouseName}.`
-          : message,
-      ));
+      const completeMessage = warehouseName && message.toLowerCase().includes("stock")
+        ? `${message} Almacén de origen: ${warehouseName}.`
+        : message;
+      const stockError = parseStockError(completeMessage);
+
+      if (stockError) {
+        const rows = [
+          ["Requerido", stockError.required],
+          ["Stock", stockError.stock],
+          ["Reservado", stockError.reserved],
+          ["Disponible", stockError.available],
+          ["Almacén", stockError.warehouse],
+        ];
+        showFeedback({
+          type: "error",
+          title: "Stock insuficiente",
+          message: (
+            <div className="mt-1 min-w-[260px] space-y-2 text-xs">
+              <p className="font-semibold text-foreground">{stockError.material}</p>
+              <div className="space-y-1 border-t border-black/10 pt-2">
+                {rows.map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="text-right font-medium text-foreground">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ),
+        });
+      } else {
+        showFeedback(errorResponse(completeMessage));
+      }
     } finally {
       setSubmittingAction(null);
     }

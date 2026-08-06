@@ -1,15 +1,16 @@
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 import { sileo } from "sileo";
 
 export type FeedbackType = "error" | "success" | "warning" | "info";
 export type FeedbackMessage = {
   type: FeedbackType;
-  message: string;
+  message: ReactNode;
+  title?: string;
 };
 
 export const useFeedbackToast = () => {
   const showFeedback = useCallback((msg: FeedbackMessage) => {
-    const title = msg.type === "success" ? "Exito" : msg.type === "error" ? "Error" : "Aviso";
+    const title = msg.title ?? (msg.type === "success" ? "Exito" : msg.type === "error" ? "Error" : "Aviso");
     switch (msg.type) {
       case "error":
         sileo.error({ title, description: msg.message });
