@@ -165,6 +165,20 @@ export type PurchaseOrderItem = {
   isSubscription?: boolean;
 };
 
+export type PurchaseOrderItemSummaryEntry = {
+  skuId?: string;
+  name: string;
+  backendSku?: string;
+  customSku?: string;
+  attributeName?: string;
+  attributeValue?: string;
+};
+
+export type PurchaseOrderItemSummary = {
+  total: number;
+  items: PurchaseOrderItemSummaryEntry[];
+};
+
 export type PurchaseOrder = {
   poId?: string;
   supplierId: string;
@@ -208,6 +222,7 @@ export type PurchaseOrder = {
   updatedAt?: string;
   imageProdution?: string[];
   items?: PurchaseOrderItem[];
+  itemSummary?: PurchaseOrderItemSummary;
   payments?: Payment[];
   quotas?: CreditQuota[];
 };

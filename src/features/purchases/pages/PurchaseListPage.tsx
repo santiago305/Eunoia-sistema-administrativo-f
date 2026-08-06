@@ -83,6 +83,7 @@ import { PurchaseTypesInfoModal } from "@/features/purchases/components/Purchase
 import { PurchaseFiscalDocumentsModal } from "@/features/purchases/components/documents/PurchaseFiscalDocumentsModal";
 import { uploadPaymentEvidenceFiles } from "@/features/purchases/utils/purchasePaymentEvidence";
 import { PurchaseHistoryTimelineModal } from "@/features/purchases/components/timeline/PurchaseHistoryTimelineModal";
+import { buildPurchaseItemSummaryLabel } from "@/features/purchases/utils/purchaseSkus";
 
 const PRIMARY = "hsl(var(--primary))";
 const PHOTO_MODAL_SKIP_KEY = "purchase-photo-modal-skipped";
@@ -835,6 +836,43 @@ export default function Purchases() {
             ),
             headerClassName: "text-left",
             className: "text-black/70",
+            hideable: true,
+            sortable: false,
+        },
+        {
+            id: "itemSummary",
+            header: "Productos comprados",
+            cell: (row) => {
+                const summary = row.purchase.itemSummary;
+                const visibleItems = summary?.items?.slice(0, 2) ?? [];
+                const remaining = Math.max(0, (summary?.total ?? visibleItems.length) - visibleItems.length);
+
+                if (!visibleItems.length) return <span className="text-black/40">-</span>;
+
+                return (
+                    <div className="max-w-[230px] space-y-0.5 text-black/70">
+                        {visibleItems.map((item, index) => {
+                            const itemLabel = buildPurchaseItemSummaryLabel(item);
+                            return (
+                                <div
+                                    key={`${item.skuId ?? item.name}-${index}`}
+                                    className="truncate"
+                                    title={itemLabel}
+                                >
+                                    <span aria-hidden="true">- </span>{itemLabel}
+                                </div>
+                            );
+                        })}
+                        {remaining > 0 ? (
+                            <div className="text-[11px] font-medium text-primary">
+                                +{remaining} {remaining === 1 ? "producto m\u00e1s" : "productos m\u00e1s"}
+                            </div>
+                        ) : null}
+                    </div>
+                );
+            },
+            headerClassName: "text-left",
+            className: "text-left",
             hideable: true,
             sortable: false,
         },

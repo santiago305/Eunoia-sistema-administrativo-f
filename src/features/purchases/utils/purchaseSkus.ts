@@ -1,5 +1,6 @@
 import type { ProductSkuAttribute, ProductSkuWithAttributes } from "@/features/catalog/types/product";
 import { buildSkuDisplayLabel, formatSkuAttributes } from "@/features/catalog/utils/skuLabel";
+import type { PurchaseOrderItemSummaryEntry } from "@/features/purchases/types/purchase";
 
 export type PurchaseSkuInfo = {
   skuId: string;
@@ -33,5 +34,15 @@ export const mergePurchaseSkus = (current: PurchaseSkuInfo[], incoming: Purchase
   current.forEach((item) => map.set(item.skuId, item));
   incoming.forEach((item) => map.set(item.skuId, item));
   return Array.from(map.values());
+};
+
+export const buildPurchaseItemSummaryLabel = (item: PurchaseOrderItemSummaryEntry) => {
+  const name = item.name?.trim() || "Articulo";
+  const attribute = item.attributeValue?.trim();
+  const skuCode = item.customSku?.trim() || item.backendSku?.trim();
+
+  if (attribute) return `${name} - ${attribute}`;
+  if (skuCode) return `${name} - ${skuCode}`;
+  return name;
 };
 

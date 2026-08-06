@@ -309,6 +309,43 @@ describe("PurchaseListPage", () => {
         });
     });
 
+    it("shows at most two purchased products and the remaining count", async () => {
+        listPurchaseOrdersMock.mockResolvedValueOnce({
+            items: [{
+                poId: "po-products",
+                serie: "F001",
+                correlative: 1,
+                supplierName: "Proveedor",
+                warehouseName: "Almacen",
+                purchaseType: "INVENTORY",
+                status: "DRAFT",
+                documentType: "FACTURA",
+                dateIssue: "2026-06-27T10:00:00.000Z",
+                total: 100,
+                itemSummary: {
+                    total: 5,
+                    items: [
+                        { skuId: "sku-1", name: "Jabon", attributeName: "Variante", attributeValue: "Curcuma" },
+                        { skuId: "sku-2", name: "Jabon", attributeName: "Variante", attributeValue: "Azufre" },
+                    ],
+                },
+            }],
+            total: 1,
+            page: 1,
+            limit: 25,
+        });
+
+        render(
+            <MemoryRouter>
+                <Purchases />
+            </MemoryRouter>,
+        );
+
+        expect(await screen.findByText(/Jabon.*Curcuma/)).toBeInTheDocument();
+        expect(screen.getByText(/Jabon.*Azufre/)).toBeInTheDocument();
+        expect(screen.getByText("+3 productos m\u00e1s")).toBeInTheDocument();
+    });
+
     it("shows fiscal documents action only for received purchases", async () => {
         listPurchaseOrdersMock.mockResolvedValueOnce({
             items: [
