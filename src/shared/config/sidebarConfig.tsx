@@ -128,7 +128,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
             },
             {
                 label: "Inventario",
-                href: RoutesPaths.rowMaterialDocuments,
+                href: RoutesPaths.rowMaterialInventory,
             },
         ],
     },

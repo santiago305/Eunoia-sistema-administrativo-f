@@ -439,7 +439,9 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         page?: number;
       };
 
-      const items = res.items ?? [];
+      const items = (res.items ?? []).filter(
+        (item): item is InventorySnapshotRow => Boolean(item?.sku?.sku?.id),
+      );
       setInventoryRows(items);
       setInventoryTotal(res.total ?? items.length);
       
@@ -804,7 +806,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
                 data={inventoryRows}
                 columns={columns}
                 rowKey={(row, index) =>
-                  `${row.sku.sku.id}-${row.warehouseId}-${index}`
+                  `${row.stockItemId || row.sku.sku.id}-${row.warehouseId}-${index}`
                 }
                 loading={loading}
                 emptyMessage="No hay registros con los filtros actuales."

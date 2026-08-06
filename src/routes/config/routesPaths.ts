@@ -35,6 +35,7 @@ export const RoutesPaths = {
   //materia prima
   rowMaterial:'/materia-prima',
   rowVariant:'/materia-prima/variantes',
+  rowMaterialInventory: "/materia-prima/inventario",
   rowMaterialDocuments: "/materia-prima/documentos",
   rowMaterialAdjustments: "/materia-prima/ajustes",
   rowMaterialTransfer: "/materia-prima/transfer",

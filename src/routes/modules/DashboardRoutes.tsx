@@ -160,8 +160,15 @@ export const dashboardRoutes: RouteObject[] = [
                 element: withRouteGuard(RoutesPaths.rowMaterial, <RowMaterial />),
             },
             {
+                path: RoutesPaths.rowMaterialInventory,
+                element: withRouteGuard(RoutesPaths.rowMaterialInventory, <RowMaterialDocuments />),
+            },
+            {
                 path: RoutesPaths.rowMaterialDocuments,
-                element: withRouteGuard(RoutesPaths.rowMaterialDocuments, <RowMaterialDocuments />),
+                element: withRouteGuard(
+                    RoutesPaths.rowMaterialDocuments,
+                    <Navigate to={RoutesPaths.rowMaterialInventory} replace />,
+                ),
             },
             {
                 path: RoutesPaths.rowMaterialAdjustments,

@@ -22,4 +22,12 @@ describe("sidebarConfig", () => {
   it("uses Compras as the purchase dashboard header title", () => {
     expect(getSidebarTitleByPath(RoutesPaths.purchaseDashboard)).toBe("Compras");
   });
+
+  it("uses the inventory route for the raw-material sidebar entry", () => {
+    const suppliesSection = getSidebarItems().find((item) => item.label === "Suministros");
+    const inventoryItem = suppliesSection?.children?.find((item) => item.label === "Inventario");
+
+    expect(inventoryItem?.href).toBe("/materia-prima/inventario");
+    expect(getSidebarTitleByPath(RoutesPaths.rowMaterialInventory)).toBe("Inventario");
+  });
 });

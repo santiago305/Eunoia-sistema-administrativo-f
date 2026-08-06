@@ -32,7 +32,13 @@ vi.mock("framer-motion", () => ({ useReducedMotion: () => true }));
 vi.mock("@/shared/layouts/PageShell", () => ({ PageShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/shared/components/components/PageTitle", () => ({ PageTitle: () => null }));
 vi.mock("@/shared/components/components/PageActionsRow", () => ({ PageActionsRow: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
-vi.mock("@/shared/components/table/DataTable", () => ({ DataTable: () => null }));
+vi.mock("@/shared/components/table/DataTable", () => ({
+  DataTable: ({ data, rowKey }: { data: Array<Record<string, unknown>>; rowKey: (row: Record<string, unknown>, index: number) => string }) => (
+    <div data-testid="inventory-table">
+      {data.map((row, index) => <div key={rowKey(row, index)} data-testid="inventory-row" />)}
+    </div>
+  ),
+}));
 vi.mock("@/shared/components/table/search", () => ({ DataTableSearchBar: () => null, DataTableSearchChips: () => null }));
 vi.mock("@/features/catalog/components/InventorySmartSearchPanel", () => ({ InventorySmartSearchPanel: () => null }));
 vi.mock("@/features/catalog/components/InventoryForecastModal", () => ({ InventoryForecastModal: () => null }));
@@ -50,5 +56,28 @@ describe("InventoryStockPage request budget", () => {
 
     await waitFor(() => expect(listInventoryMock).toHaveBeenCalledTimes(1));
     expect(listSkusMock).not.toHaveBeenCalled();
+  });
+
+  it("ignores incomplete inventory rows instead of crashing the table", async () => {
+    listInventoryMock.mockResolvedValueOnce({
+      items: [
+        { stockItemId: "orphan", sku: null, warehouseId: "warehouse-1" },
+        {
+          stockItemId: "stock-1",
+          sku: { sku: { id: "sku-1", name: "Producto" }, attributes: [] },
+          warehouseId: "warehouse-1",
+          warehouseName: "Central",
+          onHand: 10,
+          reserved: 0,
+          available: 10,
+        },
+      ],
+      total: 2,
+      page: 1,
+    });
+
+    const { findAllByTestId } = render(<InventoryStockPage config={{ productType: "PRODUCT", pageTitle: "Stock", headingTitle: "Stock", itemLabel: "Producto", tableId: "stock", searchLabel: "Buscar", searchName: "stock", routes: { kardex: "/k", transfer: "/t", adjustments: "/a" } }} />);
+
+    await expect(findAllByTestId("inventory-row")).resolves.toHaveLength(1);
   });
 });
