@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CurrencyTypes, PaymentFormTypes, PaymentTypes, PurchaseOrderStatuses, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
+import { AfectType, CurrencyTypes, PaymentFormTypes, PaymentTypes, PurchaseOrderStatuses, VoucherDocTypes } from "@/features/purchases/types/purchaseEnums";
 import type { PurchaseAttachment } from "@/features/purchases/types/purchase-attachment.types";
 import type { PurchaseOrderDetailOutput } from "@/features/purchases/types/itemPurchaseEdit";
 import type { SummaryPurchase } from "@/features/purchases/types/purchaseDetails";
@@ -58,7 +58,12 @@ describe("purchase details mapper", () => {
           unitBase: "GRAMOS",
           equivalence: "1",
           factor: 1,
+          afectType: AfectType.EXEMPT,
           quantity: 10,
+          porcentageIgv: 0,
+          baseWithoutIgv: 20,
+          amountIgv: 0,
+          unitValue: 2,
           unitPrice: 2,
           purchaseValue: 20,
           sku: {
