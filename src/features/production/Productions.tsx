@@ -688,6 +688,7 @@ export default function Production() {
         id: "tiempoProduccion",
         header: "T. Produccion",
         headerClassName: "text-center [&>div]:justify-center",
+        className: "text-center",
         cell: (row) => {
           const order = row.original;
 
@@ -731,6 +732,7 @@ export default function Production() {
         id: "actions",
         header: "Acciones",
         headerClassName: "text-center [&>div]:justify-center",
+        className: "text-center",
         stopRowClick: true,
         cell: (row) => {
           const order = row.original;

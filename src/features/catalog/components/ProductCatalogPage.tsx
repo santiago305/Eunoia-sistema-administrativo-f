@@ -447,7 +447,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
             {
                 id: "actions",
                 header: "Acciones",
-                headerClassName: "text-center flex w-full justify-center",
+                headerClassName: "text-center [&>div]:justify-center",
                 stopRowClick: true,
                 className: "text-center",
                 cell: (row) => (
