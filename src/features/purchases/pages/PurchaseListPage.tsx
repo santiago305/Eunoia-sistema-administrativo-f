@@ -841,7 +841,7 @@ export default function Purchases() {
         },
         {
             id: "itemSummary",
-            header: "Productos comprados",
+            header: "SKUs",
             cell: (row) => {
                 const summary = row.purchase.itemSummary;
                 const visibleItems = summary?.items?.slice(0, 2) ?? [];
@@ -850,7 +850,7 @@ export default function Purchases() {
                 if (!visibleItems.length) return <span className="text-black/40">-</span>;
 
                 return (
-                    <div className="max-w-[230px] space-y-0.5 text-black/70">
+                    <div className="w-[210px] max-w-[210px] space-y-0.5 text-black/70">
                         {visibleItems.map((item, index) => {
                             const itemLabel = buildPurchaseItemSummaryLabel(item);
                             return (
@@ -859,7 +859,7 @@ export default function Purchases() {
                                     className="truncate"
                                     title={itemLabel}
                                 >
-                                    <span aria-hidden="true">- </span>{itemLabel}
+                                    {itemLabel}
                                 </div>
                             );
                         })}
@@ -871,8 +871,8 @@ export default function Purchases() {
                     </div>
                 );
             },
-            headerClassName: "text-left",
-            className: "text-left",
+            headerClassName: "w-[210px] max-w-[210px] text-left",
+            className: "w-[210px] max-w-[210px] text-left",
             hideable: true,
             sortable: false,
         },

@@ -341,8 +341,8 @@ describe("PurchaseListPage", () => {
             </MemoryRouter>,
         );
 
-        expect(await screen.findByText(/Jabon.*Curcuma/)).toBeInTheDocument();
-        expect(screen.getByText(/Jabon.*Azufre/)).toBeInTheDocument();
+        expect(await screen.findByText("Jabon Curcuma")).toBeInTheDocument();
+        expect(screen.getByText("Jabon Azufre")).toBeInTheDocument();
         expect(screen.getByText("+3 productos m\u00e1s")).toBeInTheDocument();
     });
 

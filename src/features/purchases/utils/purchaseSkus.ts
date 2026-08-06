@@ -41,8 +41,8 @@ export const buildPurchaseItemSummaryLabel = (item: PurchaseOrderItemSummaryEntr
   const attribute = item.attributeValue?.trim();
   const skuCode = item.customSku?.trim() || item.backendSku?.trim();
 
-  if (attribute) return `${name} - ${attribute}`;
-  if (skuCode) return `${name} - ${skuCode}`;
+  if (attribute) return `${name} ${attribute}`;
+  if (skuCode) return `${name} ${skuCode}`;
   return name;
 };
 
