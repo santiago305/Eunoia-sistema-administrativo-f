@@ -310,6 +310,7 @@ export const API_PURCHASE_GROUP = {
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
   requestProcessing: (id: string) => `/purchases/orders/${id}/request-processing`,
   validateNumber: "/purchases/orders/validate-number",
+  nextCorrelative: "/purchases/orders/next-correlative",
   approveProcessing: (id: string) => `/purchases/orders/${id}/approve-processing`,
   rejectProcessing: (id: string) => `/purchases/orders/${id}/reject-processing`,
   approveCreationWithPayment: (id: string) => `/purchases/orders/${id}/approve-creation-with-payment`,

@@ -54,6 +54,7 @@ vi.mock("@/shared/services/skuService", () => ({
 
 vi.mock("@/shared/services/purchaseService", () => ({
   createPurchaseOrder: vi.fn(),
+  getNextPurchaseOrderCorrelative: vi.fn().mockResolvedValue({ correlative: 15 }),
   getById: vi.fn(),
   updatePurchaseOrder: vi.fn(),
   validatePurchaseOrderNumber: vi.fn().mockResolvedValue({ exists: false }),
@@ -438,7 +439,7 @@ describe("Purchase form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
     fireEvent.click(screen.getByRole("button", { name: "Agregar descripcion" }));
     fireEvent.change(screen.getByLabelText("Serie"), { target: { value: "F001" } });
-    fireEvent.change(screen.getByLabelText(/N.mero/i), { target: { value: "15" } });
+    await waitFor(() => expect(screen.getByLabelText(/^N.mero$/i)).toHaveValue("15"));
     fireEvent.click(screen.getByRole("button", { name: "Crear compra" }));
 
     await waitFor(() => {
@@ -479,7 +480,7 @@ describe("Purchase form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
     fireEvent.click(screen.getByRole("button", { name: "Agregar descripcion" }));
     fireEvent.change(screen.getByLabelText("Serie"), { target: { value: "F001" } });
-    fireEvent.change(screen.getByLabelText(/N.mero/i), { target: { value: "15" } });
+    await waitFor(() => expect(screen.getByLabelText(/^N.mero$/i)).toHaveValue("15"));
     fireEvent.click(screen.getByRole("button", { name: "Crear compra" }));
 
     await waitFor(() => {

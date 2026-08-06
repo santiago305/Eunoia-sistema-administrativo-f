@@ -143,11 +143,20 @@ export const requestProcessingPurchaseOrder = async (
 };
 
 export const validatePurchaseOrderNumber = async (params: {
+  documentType?: string;
   serie: string;
   correlative: number;
   excludePoId?: string;
 }): Promise<{ exists: boolean }> => {
   const response = await axiosInstance.get(API_PURCHASE_GROUP.validateNumber, { params });
+  return response.data;
+};
+
+export const getNextPurchaseOrderCorrelative = async (params: {
+  documentType: string;
+  serie: string;
+}): Promise<{ correlative: number }> => {
+  const response = await axiosInstance.get(API_PURCHASE_GROUP.nextCorrelative, { params });
   return response.data;
 };
 

@@ -24,6 +24,7 @@ import { SupplierFormModal } from "../providers/components/SupplierFormModal";
 import { WarehouseFormModal } from "../warehouse/components/WarehouseFormModal";
 import {
   createPurchaseOrder,
+  getNextPurchaseOrderCorrelative,
   listPayments as listPurchasePayments,
   updatePurchaseOrder,
   validatePurchaseOrderNumber,
@@ -215,6 +216,8 @@ export default function PurchaseCreateLocal({
   const [form, setForm] = useState<PurchaseOrder>(() => buildEmptyForm());
   const [igvPercent, setIgvPercent] = useState(DEFAULT_IGV_PERCENT);
   const [documentNumberError, setDocumentNumberError] = useState<string | null>(null);
+  const [automaticNumberError, setAutomaticNumberError] = useState<string | null>(null);
+  const [isLoadingCorrelative, setIsLoadingCorrelative] = useState(false);
   const { poId: routePoId } = useParams<{ poId: string }>();
   const effectivePoId = poIdOverride ?? routePoId;
   const isEdit = Boolean(effectivePoId);
@@ -345,6 +348,8 @@ export default function PurchaseCreateLocal({
     !form.items?.length ||
     !form.serie.trim() ||
     Boolean(documentNumberError) ||
+    Boolean(automaticNumberError) ||
+    isLoadingCorrelative ||
     !form.supplierId ||
     !form.correlative ||
     (requiresWarehouse && !form.warehouseId) ||
@@ -611,6 +616,7 @@ export default function PurchaseCreateLocal({
     const timeoutId = setTimeout(async () => {
       try {
         const response = await validatePurchaseOrderNumber({
+          documentType: form.documentType,
           serie,
           correlative,
           excludePoId: effectivePoId,
@@ -622,7 +628,46 @@ export default function PurchaseCreateLocal({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [effectivePoId, form.correlative, form.serie]);
+  }, [effectivePoId, form.correlative, form.documentType, form.serie]);
+
+  useEffect(() => {
+    if (isEdit) return;
+
+    const serie = form.serie?.trim();
+    if (!serie || !form.documentType) {
+      setIsLoadingCorrelative(false);
+      setAutomaticNumberError(null);
+      setForm((prev) => (prev.correlative ? { ...prev, correlative: 0 } : prev));
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingCorrelative(true);
+    setAutomaticNumberError(null);
+    setForm((prev) => (prev.correlative ? { ...prev, correlative: 0 } : prev));
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await getNextPurchaseOrderCorrelative({
+          documentType: form.documentType,
+          serie,
+        });
+        if (cancelled) return;
+
+        setForm((prev) => ({ ...prev, correlative: response.correlative }));
+      } catch {
+        if (cancelled) return;
+        setAutomaticNumberError("No se pudo calcular el siguiente número. Intenta nuevamente.");
+      } finally {
+        if (!cancelled) setIsLoadingCorrelative(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [form.documentType, form.serie, isEdit]);
 
   const loadPurchase = useCallback(async (poId: string) => {
     try {
@@ -991,11 +1036,13 @@ export default function PurchaseCreateLocal({
                   />
 
                   <FloatingInput
-                    label="Número"
+                    label={isLoadingCorrelative ? "Número (calculando...)" : "Número"}
                     name="correlative"
                     type="number"
                     value={form.correlative ? String(form.correlative) : ""}
-                    error={documentNumberError ?? undefined}
+                    error={automaticNumberError ?? documentNumberError ?? undefined}
+                    readOnly={!isEdit}
+                    aria-describedby={!isEdit ? "purchase-correlative-help" : undefined}
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,
@@ -1004,6 +1051,11 @@ export default function PurchaseCreateLocal({
                     }
                   />
                 </div>
+                {!isEdit ? (
+                  <p id="purchase-correlative-help" className="-mt-2 text-xs text-muted-foreground">
+                    Se asigna automáticamente según el tipo de documento y la serie.
+                  </p>
+                ) : null}
 
                 <div className="space-y-1">
                   <div className="grid grid-cols-[1fr_auto] gap-2">
