@@ -95,6 +95,7 @@ function sanitizeRule(
       return {
         field: InventorySearchFields.SKU,
         operator: "IN",
+        mode: rule.mode === "exclude" ? "exclude" : "include",
         values,
       };
     }
@@ -341,6 +342,7 @@ export function buildInventorySmartSearchColumns(
       kind: "catalog",
       description: "Selecciona uno o varios productos.",
       operators: IN_OPERATOR_OPTIONS,
+      supportsExclude: true,
       options: catalogs?.skus ?? [],
       onSearch: options?.onSearchSku,
     },
