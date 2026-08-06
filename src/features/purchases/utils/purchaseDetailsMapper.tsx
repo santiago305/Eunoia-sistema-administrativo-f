@@ -6,6 +6,10 @@ import type { CreditQuota, Payment } from "@/features/purchases/types/purchase";
 import type { PurchaseAttachment } from "@/features/purchases/types/purchase-attachment.types";
 import type { PaymentFormType, PaymentType, PurchaseOrderStatus } from "@/features/purchases/types/purchaseEnums";
 import type { SummaryPurchase } from "@/features/purchases/types/purchaseDetails";
+import {
+  buildPurchaseSkuLabel,
+  mapSkuToPurchaseSkuInfo,
+} from "@/features/purchases/utils/purchaseSkus";
 import type {
   DetailField,
   DetailListItem,
@@ -91,11 +95,12 @@ const isImageAttachment = (attachment: PurchaseAttachment) =>
   );
 
 const getItemLabel = (item: PurchaseOrderItemEditOutput) => {
+  if (item.sku?.sku) {
+    return buildPurchaseSkuLabel(mapSkuToPurchaseSkuInfo(item.sku));
+  }
+
   return (
     item.name ??
-    item.sku?.sku?.name ??
-    item.sku?.sku?.backendSku ??
-    item.sku?.sku?.customSku ??
     item.skuId ??
     "Item"
   );

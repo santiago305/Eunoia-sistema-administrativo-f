@@ -49,6 +49,50 @@ const attachment = (paymentId: string, filename: string): PurchaseAttachment => 
 });
 
 describe("purchase details mapper", () => {
+  it("shows the complete SKU label in the purchase details modal", () => {
+    const detail: PurchaseOrderDetailOutput = {
+      ...purchase,
+      items: [
+        {
+          poItemId: "item-1",
+          unitBase: "GRAMOS",
+          equivalence: "1",
+          factor: 1,
+          quantity: 10,
+          unitPrice: 2,
+          purchaseValue: 20,
+          sku: {
+            sku: {
+              id: "sku-1",
+              productId: "product-1",
+              name: "Arcilla",
+              backendSku: "SKU-00021",
+              customSku: "ARC-ROS-1KG",
+            },
+            attributes: [
+              { code: "variant", name: "Variante", value: "Rosada" },
+              { code: "presentation", name: "Presentacion", value: "Bolsa 1 kg" },
+            ],
+          },
+        },
+      ],
+    } as PurchaseOrderDetailOutput;
+
+    const config = buildPurchaseExtendedDetailsConfig({
+      purchase,
+      detail,
+      canViewPayments: false,
+      paymentProofAttachments: [],
+      canAdminUploadMissingPhoto: false,
+      uploadingPhoto: false,
+      onUploadImage: () => undefined,
+    });
+
+    expect(config.items[0]?.label).toBe(
+      "Arcilla Bolsa 1 kg Rosada - SKU-00021 (ARC-ROS-1KG)",
+    );
+  });
+
   it("keeps each payment proof image attached to its own payment", () => {
     const detail: PurchaseOrderDetailOutput = {
       ...purchase,
