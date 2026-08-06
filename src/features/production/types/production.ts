@@ -119,7 +119,7 @@ export type ProductionOrderItem = {
       baseUnitId?: string | null;
       unitName?: string | null;
       unitCode?: string | null;
-      attributes?: Record<string, unknown> | null;
+      attributes?: Record<string, unknown> | Array<{ code: string; value: string }> | null;
       isActive?: boolean | null;
       type?: string | null;
       createdAt?: string;
@@ -136,7 +136,7 @@ export type ProductionOrderItem = {
       barcode?: string | null;
       price?: number | null;
       cost?: number | null;
-      attributes?: Record<string, unknown> | null;
+      attributes?: Record<string, unknown> | Array<{ code: string; value: string }> | null;
       isActive?: boolean | null;
       type?: string | null;
       createdAt?: string;
@@ -152,7 +152,7 @@ export type ProductionOrderItem = {
       unitName?: string | null;
       sku?: string | null;
       barcode?: string | null;
-      attributes?: Record<string, unknown> | null;
+      attributes?: Record<string, unknown> | Array<{ code: string; value: string }> | null;
       price?: number | null;
       cost?: number | null;
       isActive?: boolean | null;

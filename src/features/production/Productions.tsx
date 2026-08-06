@@ -353,7 +353,13 @@ export default function Production() {
       setPendingStartOrder(null);
       await loadOrders();
     } catch (error) {
-      showFeedback(errorResponse(getApiErrorMessage(error, "Error al iniciar la orden")));
+      const message = getApiErrorMessage(error, "Error al iniciar la orden");
+      const warehouseName = pendingStartOrder?.fromWarehouse?.name;
+      showFeedback(errorResponse(
+        warehouseName && message.toLowerCase().includes("stock")
+          ? `${message} Almacén de origen: ${warehouseName}.`
+          : message,
+      ));
     } finally {
       setSubmittingAction(null);
     }

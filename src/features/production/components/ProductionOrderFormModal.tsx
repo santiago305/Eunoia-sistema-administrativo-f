@@ -56,13 +56,19 @@ const buildEmptyForm = (): CreateProductionOrderDto => ({
   items: [],
 });
 
-function toSkuAttributes(attributes?: Record<string, unknown> | null) {
+function toSkuAttributes(
+  attributes?: Record<string, unknown> | Array<{ code: string; value: string }> | null,
+): Record<string, string> {
+  const entries = Array.isArray(attributes)
+    ? attributes.map((attribute) => [attribute.code, attribute.value] as const)
+    : Object.entries(attributes ?? {});
+
   return Object.fromEntries(
-    Object.entries({
-      presentation: typeof attributes?.presentation === "string" ? attributes.presentation : undefined,
-      variant: typeof attributes?.variant === "string" ? attributes.variant : undefined,
-      color: typeof attributes?.color === "string" ? attributes.color : undefined,
-    }).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    entries.filter(
+      (entry): entry is readonly [string, string] =>
+        typeof entry[0] === "string" && Boolean(entry[0].trim()) &&
+        typeof entry[1] === "string" && Boolean(entry[1].trim()),
+    ),
   );
 }
 
@@ -80,11 +86,7 @@ type ProductionItemRow = AddProductionOrderItemDto & {
   sku?: string;
   productName?: string;
   unitName?: string;
-  attributes?: {
-    presentation?: string;
-    variant?: string;
-    color?: string;
-  };
+  attributes?: Record<string, string>;
   customSku?: string;
 };
 
