@@ -114,7 +114,7 @@ export function EquivalenceFormFields({
         return {
           id: eq.id,
           unitName: `${fromLabel} → ${toLabel}`,
-          description: `1 ${fromLabel} = ${eq.factor} ${toLabel}`,
+          description: `${eq.factor} ${fromLabel} = 1 ${toLabel}`,
         };
       }),
     [equivalences, units],
