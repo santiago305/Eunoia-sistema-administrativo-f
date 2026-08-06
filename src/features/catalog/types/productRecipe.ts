@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createSkuRecipeSchema } from "@/shared/schemas/productRecipeSchema";
+import type { ProductSkuWithAttributes } from "@/features/catalog/types/product";
 
 export type CreateSkuRecipeDto = z.infer<typeof createSkuRecipeSchema>;
 
@@ -19,6 +20,7 @@ export type ProductCatalogRecipeItem = {
   materialSkuId: string;
   quantity: number;
   unitId: string;
+  materialSku?: ProductSkuWithAttributes | null;
 };
 
 export type ProductCatalogRecipeResponse = {

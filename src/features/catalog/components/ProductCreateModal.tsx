@@ -45,7 +45,7 @@ import {
     formatFailedSkuLabels,
 } from "../utils/productCreateModal.helpers";
 import { ProductWorkspaceTabs } from "./ComponentSetion";
-import { createEmptyRecipeDraft, mergePrimaVariants, RecipeDraft } from "./recipeFormFields.helpers";
+import { createEmptyRecipeDraft, getRecipeMaterialVariants, mergePrimaVariants, RecipeDraft } from "./recipeFormFields.helpers";
 const DEFAULT_DRAFT: ProductCreateDraft = createEmptyProductCreateDraft();
 
 export function ProductCreateModal({ open, mode = "create", productId, productType, primaryColor = DEFAULT_PRIMARY, entityLabel, onClose, onSaved, permissions }: ProductCreateModalProps) {
@@ -252,6 +252,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
 
     const applyRecipeResponseToState = (skuId: string, response?: RecipeResponse | null) => {
         const nextDraft = mapRecipeResponseToDraft(response);
+        setPrimaVariants((previous) => mergePrimaVariants(previous, getRecipeMaterialVariants(response)));
         setPersistedRecipesBySkuId((prev) => ({ ...prev, [skuId]: nextDraft }));
         setEditedRecipesBySkuId((prev) => ({ ...prev, [skuId]: nextDraft }));
     };
@@ -261,6 +262,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
         try {
             const response = await getSkuRecipe(skuId);
             const nextDraft = mapRecipeResponseToDraft(response);
+            setPrimaVariants((previous) => mergePrimaVariants(previous, getRecipeMaterialVariants(response)));
             setPersistedRecipesBySkuId((prev) => ({ ...prev, [skuId]: nextDraft }));
             setEditedRecipesBySkuId((prev) => (prev[skuId] ? prev : { ...prev, [skuId]: nextDraft }));
         } catch (error) {

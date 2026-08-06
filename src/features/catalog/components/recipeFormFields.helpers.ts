@@ -1,4 +1,5 @@
 import type { PrimaVariant } from "@/features/catalog/types/variant";
+import type { RecipeResponse } from "@/features/catalog/types/productRecipe";
 
 export type RecipeDraftItem = {
   id: string;
@@ -30,6 +31,28 @@ export const mergePrimaVariants = (current: PrimaVariant[], incoming: PrimaVaria
   Array.from(
     new Map([...current, ...incoming].map((variant) => [variant.id, variant])).values(),
   );
+
+export const getRecipeMaterialVariants = (response?: RecipeResponse | null): PrimaVariant[] =>
+  (response?.items ?? []).flatMap((item) => {
+    const material = item.materialSku;
+    if (!material?.sku?.id) return [];
+
+    return [{
+      id: material.sku.id,
+      sku: material.sku.backendSku ?? undefined,
+      productName: material.sku.name ?? "",
+      productDescription: "",
+      unitName: material.unit?.name ?? "",
+      unitCode: material.unit?.code ?? "",
+      baseUnitId: material.unit?.id ?? "",
+      unit: material.unit ?? undefined,
+      isActive: material.sku.isActive ?? true,
+      attributes: Object.fromEntries(
+        (material.attributes ?? []).map((attribute) => [attribute.code, attribute.value]),
+      ),
+      customSku: material.sku.customSku ?? undefined,
+    }];
+  });
 
 export const getPrimaUnitId = (prima?: PrimaVariant) => prima?.unit?.id ?? prima?.baseUnitId ?? "";
 

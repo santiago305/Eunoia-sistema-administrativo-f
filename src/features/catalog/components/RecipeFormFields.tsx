@@ -76,17 +76,26 @@ export function RecipeFormFields({
     setUnitId(getPrimaUnitId(selected));
   }, [materialSkuId, activePrimaVariants]);
 
-  const primaVariantOptions = useMemo(
-    () =>
-      activePrimaVariants.map((variant) => ({
+  const mapPrimaVariantOption = useCallback(
+    (variant: PrimaVariant, showInactive = false) => ({
         value: variant.id ?? "",
         label: `${variant.productName ?? "Producto"} ${variant.attributes?.presentation ?? ""} ${
           variant.attributes?.variant ?? ""
         } ${variant.attributes?.color ?? ""} ${variant.sku ? ` - ${variant.sku}` : ""} ${
           variant.customSku ? `(${variant.customSku})` : ""
-        }`.trim(),
-      })),
-    [activePrimaVariants],
+        }${showInactive && variant.isActive === false ? " (Inactivo)" : ""}`.trim(),
+      }),
+    [],
+  );
+
+  const primaVariantOptions = useMemo(
+    () => activePrimaVariants.map((variant) => mapPrimaVariantOption(variant)),
+    [activePrimaVariants, mapPrimaVariantOption],
+  );
+
+  const recipePrimaVariantOptions = useMemo(
+    () => (primaVariants ?? []).map((variant) => mapPrimaVariantOption(variant, true)),
+    [primaVariants, mapPrimaVariantOption],
   );
 
   const selectedPrimaVariant = useMemo(
@@ -152,7 +161,7 @@ export function RecipeFormFields({
             name={`recipe-material-${row.id}`}
             value={row.materialSkuId}
             onChange={(value) => updateItem(row.id, { materialSkuId: value })}
-            options={primaVariantOptions}
+            options={recipePrimaVariantOptions}
             searchable
             searchPlaceholder="Buscar producto..."
             emptyMessage="Sin productos"
@@ -221,7 +230,7 @@ export function RecipeFormFields({
         sortable: false,
       },
     ],
-    [primaVariantOptions, unitOptions, removeItem, saving, updateItem],
+    [recipePrimaVariantOptions, unitOptions, removeItem, saving, updateItem],
   );
 
   const canAddItem = Boolean(materialSkuId && unitId && Number(quantity) > 0);
