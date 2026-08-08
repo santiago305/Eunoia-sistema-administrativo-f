@@ -4,7 +4,7 @@ const uuidSchema = z.string().uuid();
 
 export const directionSchema = z.enum(["IN", "OUT"]);
 export const referenceTypeSchema = z.enum(["PURCHASE", "PRODUCTION"]);
-export const productCatalogProductTypeSchema = z.enum(["MATERIAL", "PRODUCT"]);
+export const productCatalogProductTypeSchema = z.enum(["MATERIAL", "PRODUCT", "SUPPLY"]);
 
 export const apiErrorResponseSchema = z.object({
   type: z.string(),

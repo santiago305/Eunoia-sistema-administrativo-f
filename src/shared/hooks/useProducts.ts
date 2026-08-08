@@ -4,6 +4,7 @@ import {
   createProduct,
   listCatalogMaterials,
   listCatalogProducts,
+  listCatalogSupplies,
   listProductsFlat,
   listProducts,
   updateProduct,
@@ -35,7 +36,7 @@ const buildQuery = (params: ListProductsQuery & { name?: string }) => {
 
 type UseProductsOptions = {
   flat?: boolean;
-  mode?: "default" | "product" | "material";
+  mode?: "default" | "product" | "material" | "supply";
 };
 
 export function useProducts(
@@ -64,6 +65,8 @@ export function useProducts(
           ? await listCatalogProducts(query)
           : mode === "material"
             ? await listCatalogMaterials(query)
+            : mode === "supply"
+              ? await listCatalogSupplies(query)
             : useFlatList
               ? await listProductsFlat(query)
               : await listProducts(query);
@@ -97,6 +100,8 @@ export function useProducts(
             ? await listCatalogProducts({ ...query, page: 1 })
             : mode === "material"
               ? await listCatalogMaterials({ ...query, page: 1 })
+              : mode === "supply"
+                ? await listCatalogSupplies({ ...query, page: 1 })
               : useFlatList
                 ? await listProductsFlat({ ...query, page: 1 })
                 : await listProducts({ ...query, page: 1 });

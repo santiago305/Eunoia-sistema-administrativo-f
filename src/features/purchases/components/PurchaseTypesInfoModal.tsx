@@ -15,6 +15,7 @@ type PurchaseTypesInfoModalProps = {
 const purchaseTypeIcons: Record<PurchaseType, typeof Package> = {
   INVENTORY: Package,
   RAW_MATERIAL: PackageOpen,
+  SUPPLY: Box,
   INTERNAL_MATERIAL: Box,
   FIXED_ASSET: BriefcaseBusiness,
   SERVICE: Hammer,

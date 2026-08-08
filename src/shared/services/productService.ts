@@ -204,7 +204,7 @@ export const exportProductExcel = async (payload: ListProductsQuery & {
   });
   const disposition = response.headers["content-disposition"] as string | undefined;
   const match = disposition?.match(/filename="?([^"]+)"?/i);
-  const prefix = payload.type === ProductTypes.MATERIAL ? "materia-prima" : "productos";
+  const prefix = payload.type === ProductTypes.MATERIAL ? "materia-prima" : payload.type === ProductTypes.SUPPLY ? "insumos" : "productos";
   const filename = match?.[1] ?? `${prefix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
   return { blob: response.data as Blob, filename };
 };
@@ -216,6 +216,18 @@ export const listCatalogMaterials = async (
     params: {
       ...params,
       type: ProductTypes.MATERIAL,
+    },
+  });
+  return normalizeProductList(response.data);
+};
+
+export const listCatalogSupplies = async (
+  params: Omit<ListProductsQuery, "type">,
+): Promise<ProductListResponse> => {
+  const response = await axiosInstance.get(API_PRODUCTS_GROUP.items, {
+    params: {
+      ...params,
+      type: ProductTypes.SUPPLY,
     },
   });
   return normalizeProductList(response.data);

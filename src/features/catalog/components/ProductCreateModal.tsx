@@ -84,8 +84,10 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const materialSearchControllerRef = useRef<AbortController | null>(null);
     const materialSearchRequestRef = useRef(0);
 
-    const label = entityLabel ?? (productType === ProductTypes.MATERIAL ? "materia prima" : "producto");
+    const label = entityLabel ?? (productType === ProductTypes.MATERIAL ? "materia prima" : productType === ProductTypes.SUPPLY ? "insumo" : "producto");
     const isMaterial = productType === ProductTypes.MATERIAL;
+    const isSupply = productType === ProductTypes.SUPPLY;
+    const isInput = isMaterial || isSupply;
     const isEditMode = mode === "edit";
     const effectivePermissions = permissions ?? {
         create: true,
@@ -372,14 +374,14 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     }, [showFeedback]);
 
     useEffect(() => {
-        if (!open || workspaceTab !== "recipes" || isMaterial) return;
+        if (!open || workspaceTab !== "recipes" || isInput) return;
         const query = materialSearchQuery.trim();
         const timeoutId = window.setTimeout(() => {
             void loadMaterials({ query, page: 1 });
         }, 300);
 
         return () => window.clearTimeout(timeoutId);
-    }, [open, workspaceTab, isMaterial, materialSearchQuery, loadMaterials]);
+    }, [open, workspaceTab, isInput, materialSearchQuery, loadMaterials]);
 
     useEffect(() => () => materialSearchControllerRef.current?.abort(), []);
 
@@ -450,8 +452,8 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     const tabs = useMemo(() => [
         { id: "details" as WorkspaceTab, label: "Producto", icon: PackageCheck },
         ...(effectivePermissions.manageEquivalences ? [{ id: "equivalences" as WorkspaceTab, label: "Equivalencias", icon: Scale }] : []),
-        ...(!isMaterial && effectivePermissions.manageRecipes ? [{ id: "recipes" as WorkspaceTab, label: "Recetas", icon: FlaskConical }] : []),
-    ], [effectivePermissions.manageEquivalences, effectivePermissions.manageRecipes, isMaterial]);
+        ...(!isInput && effectivePermissions.manageRecipes ? [{ id: "recipes" as WorkspaceTab, label: "Recetas", icon: FlaskConical }] : []),
+    ], [effectivePermissions.manageEquivalences, effectivePermissions.manageRecipes, isInput]);
 
     useEffect(() => {
         if (!tabs.some((tab) => tab.id === workspaceTab)) {
@@ -716,7 +718,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
 
         const skuPayloads = buildCreateSkuPayloads({
             skuRows,
-            isMaterial,
+            isMaterial: isInput,
             fallbackName: form.name,
         });
         const createdSkus: Array<{
@@ -809,7 +811,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                     row.color.trim(),
             );
 
-        const defaultFlags = isMaterial
+        const defaultFlags = isInput
             ? {
                   isSellable: false,
                   isPurchasable: true,
@@ -924,7 +926,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     };
 
     const persistEditedRecipes = async () => {
-        if (isMaterial) {
+        if (isInput) {
             return { updatedSkuIds: [] as string[], failedSkuIds: [] as string[], notFoundSkuIds: [] as string[] };
         }
 
@@ -1011,7 +1013,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
             if (nextFailedDraftId) {
                 setSelectedSkuId(nextFailedDraftId);
             }
-            if (!isMaterial && failedRecipeIds.length > 0) {
+        if (!isInput && failedRecipeIds.length > 0) {
                 setWorkspaceTab("recipes");
             } else if (nextNonPersistedDrafts.length > 0) {
                 setWorkspaceTab("details");
@@ -1313,7 +1315,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
                             />
                         )}
 
-                        {workspaceTab === "recipes" && !isMaterial && (
+                    {workspaceTab === "recipes" && !isInput && (
                             <ProductRecipesSection
                                 isEditMode={isEditMode}
                                 selectedSkuIsDraft={selectedSkuIsDraft}

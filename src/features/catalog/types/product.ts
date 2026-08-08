@@ -15,7 +15,7 @@ export type UpdateProductDto = z.infer<typeof updateProductSchema>;
 export type UpdateProductActiveDto = z.infer<typeof updateProductActiveSchema>;
 export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 
-export type ProductCatalogProductType = "MATERIAL" | "PRODUCT";
+export type ProductCatalogProductType = "MATERIAL" | "PRODUCT" | "SUPPLY";
 
 export type ProductPackImpact = {
   productId: string;

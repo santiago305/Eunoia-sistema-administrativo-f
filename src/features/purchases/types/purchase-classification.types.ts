@@ -1,6 +1,7 @@
 export const PurchaseTypes = {
   INVENTORY: "INVENTORY",
   RAW_MATERIAL: "RAW_MATERIAL",
+  SUPPLY: "SUPPLY",
   INTERNAL_MATERIAL: "INTERNAL_MATERIAL",
   FIXED_ASSET: "FIXED_ASSET",
   SERVICE: "SERVICE",
@@ -13,6 +14,7 @@ export type PurchaseType = typeof PurchaseTypes[keyof typeof PurchaseTypes];
 export const PurchaseItemTypes = {
   PRODUCT: "PRODUCT",
   RAW_MATERIAL: "RAW_MATERIAL",
+  SUPPLY: "SUPPLY",
   INTERNAL_MATERIAL: "INTERNAL_MATERIAL",
   FIXED_ASSET: "FIXED_ASSET",
   SERVICE: "SERVICE",
@@ -43,6 +45,7 @@ export type PurchasePaymentStatus = typeof PurchasePaymentStatuses[keyof typeof 
 export const purchaseTypeLabels: Record<PurchaseType, string> = {
   INVENTORY: "Producto",
   RAW_MATERIAL: "Materia prima",
+  SUPPLY: "Insumos",
   INTERNAL_MATERIAL: "Material interno",
   FIXED_ASSET: "Activo fijo",
   SERVICE: "Servicio",
@@ -60,6 +63,11 @@ export const purchaseTypeDescriptions: Record<PurchaseType, { summary: string; d
     summary: "Insumos para fabricar productos.",
     detail: "Usa este tipo cuando compras materia prima que luego produccion transforma en productos terminados para el stock de venta.",
     example: "Ejemplo: telas, insumos, ingredientes, empaques base o componentes de fabricacion.",
+  },
+  SUPPLY: {
+    summary: "Insumos operativos con control de stock.",
+    detail: "Usa este tipo cuando compras insumos catalogados que ingresan a almacen y se controlan por SKU, sin formar parte de recetas ni ventas.",
+    example: "Ejemplo: empaques de despacho, etiquetas, materiales de limpieza o suministros operativos.",
   },
   INTERNAL_MATERIAL: {
     summary: "Materiales para uso de la empresa.",
@@ -91,6 +99,7 @@ export const purchaseTypeDescriptions: Record<PurchaseType, { summary: string; d
 export const purchaseItemTypeLabels: Record<PurchaseItemType, string> = {
   PRODUCT: "Producto",
   RAW_MATERIAL: "Materia prima",
+  SUPPLY: "Insumo",
   INTERNAL_MATERIAL: "Material interno",
   FIXED_ASSET: "Activo fijo",
   SERVICE: "Servicio",

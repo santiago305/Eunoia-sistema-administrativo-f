@@ -50,9 +50,10 @@ type EquivalenceRow = {
   equivalenceLabel: string;
 };
 
-const catalogProductTypeByItemType: Partial<Record<PurchaseItemType, "MATERIAL" | "PRODUCT">> = {
+const catalogProductTypeByItemType: Partial<Record<PurchaseItemType, "MATERIAL" | "PRODUCT" | "SUPPLY">> = {
   [PurchaseItemTypes.RAW_MATERIAL]: "MATERIAL",
   [PurchaseItemTypes.PRODUCT]: "PRODUCT",
+  [PurchaseItemTypes.SUPPLY]: "SUPPLY",
 };
 
 const createClientKey = () =>
@@ -63,6 +64,8 @@ const createClientKey = () =>
 const getDefaultItemType = (purchaseType: PurchaseType): PurchaseItemType =>
   purchaseType === PurchaseTypes.RAW_MATERIAL
     ? PurchaseItemTypes.RAW_MATERIAL
+    : purchaseType === PurchaseTypes.SUPPLY
+      ? PurchaseItemTypes.SUPPLY
     : purchaseType === PurchaseTypes.INTERNAL_MATERIAL
       ? PurchaseItemTypes.INTERNAL_MATERIAL
       : purchaseType === PurchaseTypes.FIXED_ASSET

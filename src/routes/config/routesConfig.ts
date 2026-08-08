@@ -55,6 +55,11 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.rowMaterialAdjustments, name: "rowMaterialAdjustments", isProtected: true, permissionsAllowed: ["page.material-adjustments.view"] },
   { path: RoutesPaths.rowMaterialTransfer, name: "rowMaterialTransfer", isProtected: true, permissionsAllowed: ["page.material-transfers.view"] },
   { path: RoutesPaths.KardexPrima, name: "kardexPrima", isProtected: true, permissionsAllowed: ["page.material-movements.view"] },
+  { path: RoutesPaths.supplies, name: "supplies", isProtected: true, permissionsAllowed: ["page.supplies.view"] },
+  { path: RoutesPaths.supplyInventory, name: "supplyInventory", isProtected: true, permissionsAllowed: ["page.supply-inventory.view"] },
+  { path: RoutesPaths.supplyTransfers, name: "supplyTransfers", isProtected: true, permissionsAllowed: ["page.supply-transfers.view"] },
+  { path: RoutesPaths.supplyAdjustments, name: "supplyAdjustments", isProtected: true, permissionsAllowed: ["page.supply-adjustments.view"] },
+  { path: RoutesPaths.supplyKardex, name: "supplyKardex", isProtected: true, permissionsAllowed: ["page.supply-movements.view"] },
 
   { path: RoutesPaths.providers, name: "providers", isProtected: true, permissionsAllowed: ["page.suppliers.view"] },
   { path: RoutesPaths.clients, name: "clients", isProtected: true, permissionsAllowed: ["clients.read"] },

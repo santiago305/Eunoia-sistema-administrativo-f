@@ -42,6 +42,13 @@ export const RoutesPaths = {
   rowMaterialSummary:'/materia-prima/resumen',
   KardexPrima:'/materia-prima/kardex',
 
+  // insumos
+  supplies: '/insumos',
+  supplyInventory: '/insumos/inventario',
+  supplyTransfers: '/insumos/transferencias',
+  supplyAdjustments: '/insumos/ajustes',
+  supplyKardex: '/insumos/kardex',
+
   
   //provedores
   providers:'/contactos/proveedores',

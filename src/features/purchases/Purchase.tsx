@@ -158,6 +158,7 @@ const purchaseTypeRequiresWarehouse = (
 ) =>
   purchaseType === PurchaseTypes.INVENTORY ||
   purchaseType === PurchaseTypes.RAW_MATERIAL ||
+  purchaseType === PurchaseTypes.SUPPLY ||
   (purchaseType === PurchaseTypes.MIXED && items.some(itemAffectsStock));
 
 type PurchaseItemRow = {

@@ -3,6 +3,7 @@ import { DocStatus, DocType } from "@/features/warehouse/types/warehouse";
 export enum InventoryDocumentProductType {
   MATERIAL = "MATERIAL",
   PRODUCT = "PRODUCT",
+  SUPPLY = "SUPPLY",
 }
 
 export type InventoryDocumentWarehouseRef = {

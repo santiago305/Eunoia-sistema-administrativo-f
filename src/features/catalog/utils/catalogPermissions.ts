@@ -36,6 +36,12 @@ export type InventoryDocumentPermissions = {
 const isMaterialType = (productType: ProductCatalogProductType | InventoryDocumentProductType | string) =>
   productType === ProductTypes.MATERIAL || productType === InventoryDocumentProductType.MATERIAL;
 
+const permissionType = (productType: ProductCatalogProductType | InventoryDocumentProductType | string) => {
+  if (isMaterialType(productType)) return "materials";
+  if (productType === ProductTypes.SUPPLY || productType === InventoryDocumentProductType.SUPPLY) return "supplies";
+  return "products";
+};
+
 const canWithLegacy = (can: PermissionChecker, permission: string, legacyPermission: string) =>
   can(permission) || can(legacyPermission);
 
@@ -43,7 +49,7 @@ export const getProductCatalogPermissions = (
   productType: ProductCatalogProductType,
   can: PermissionChecker,
 ): ProductCatalogPermissions => {
-  const prefix = isMaterialType(productType) ? "materials" : "products";
+  const prefix = permissionType(productType);
 
   return {
     viewDetail: canWithLegacy(can, `${prefix}.view_detail`, "catalog.read"),
@@ -63,19 +69,19 @@ export const getInventoryPermissions = (
   productType: ProductCatalogProductType,
   can: PermissionChecker,
 ): InventoryPermissions => {
-  const isMaterial = isMaterialType(productType);
+  const type = permissionType(productType);
 
   return {
-    export: can(isMaterial ? "inventory.materials.export" : "inventory.products.export"),
+    export: can(`inventory.${type}.export`),
     forecast: canWithLegacy(can, "inventory.forecast.view", "catalog.read"),
     realtime: canWithLegacy(can, "inventory.realtime.view", "catalog.read"),
     viewMovements: canWithLegacy(
       can,
-      isMaterial ? "inventory-ledger.materials.view" : "inventory-ledger.products.view",
+      `inventory-ledger.${type}.view`,
       "catalog.read",
     ),
-    createTransfer: can(isMaterial ? "transfers.materials.create" : "transfers.products.create"),
-    createAdjustment: can(isMaterial ? "adjustments.materials.create" : "adjustments.products.create"),
+    createTransfer: can(`transfers.${type}.create`),
+    createAdjustment: can(`adjustments.${type}.create`),
     alertSettings: can("inventory-alerts.configure"),
   };
 };
@@ -84,14 +90,14 @@ export const getInventoryMovementPermissions = (
   productType: ProductCatalogProductType,
   can: PermissionChecker,
 ) => ({
-  export: can(isMaterialType(productType) ? "inventory-ledger.materials.export" : "inventory-ledger.products.export"),
+  export: can(`inventory-ledger.${permissionType(productType)}.export`),
 });
 
 export const getTransferPermissions = (
   productType: InventoryDocumentProductType,
   can: PermissionChecker,
 ): InventoryDocumentPermissions => {
-  const prefix = isMaterialType(productType) ? "transfers.materials" : "transfers.products";
+  const prefix = `transfers.${permissionType(productType)}`;
 
   return {
     create: can(`${prefix}.create`),
@@ -104,7 +110,7 @@ export const getAdjustmentPermissions = (
   productType: InventoryDocumentProductType,
   can: PermissionChecker,
 ): InventoryDocumentPermissions => {
-  const prefix = isMaterialType(productType) ? "adjustments.materials" : "adjustments.products";
+  const prefix = `adjustments.${permissionType(productType)}`;
 
   return {
     create: can(`${prefix}.create`),

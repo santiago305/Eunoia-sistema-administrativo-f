@@ -169,8 +169,8 @@ const normalizeInventoryAlertSetting = (setting: InventoryAlertSettingApi): Inve
   alertThresholdDays: Number(setting?.alertThresholdDays ?? 3),
   alertEnabled: Boolean(setting?.alertEnabled ?? policy.alertEnabled ?? true),
   isDefault: Boolean(setting?.isDefault ?? false),
-  productType: setting?.productType === "PRODUCT" || setting?.productType === "MATERIAL" ? setting.productType
-    : policy.productType === "PRODUCT" || policy.productType === "MATERIAL" ? policy.productType : undefined,
+  productType: setting?.productType === "PRODUCT" || setting?.productType === "MATERIAL" || setting?.productType === "SUPPLY" ? setting.productType
+    : policy.productType === "PRODUCT" || policy.productType === "MATERIAL" || policy.productType === "SUPPLY" ? policy.productType : undefined,
   historyDays: Number(setting?.historyDays ?? policy.historyDays ?? 3),
   coverageDays: Number(setting?.coverageDays ?? policy.coverageDays ?? setting?.alertThresholdDays ?? 3),
   evaluation: history.length > 0 || typeof raw.averageDailyConsumption === "number"

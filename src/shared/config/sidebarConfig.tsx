@@ -107,7 +107,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         ],
     },
     {
-        label: "Suministros",
+        label: "Materias primas",
         icon: <IconRowMaterial className="text-sidebar-foreground" />,
         children: [
             {
@@ -130,6 +130,17 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 label: "Inventario",
                 href: RoutesPaths.rowMaterialInventory,
             },
+        ],
+    },
+    {
+        label: "Insumos",
+        icon: <IconRowMaterial className="text-sidebar-foreground" />,
+        children: [
+            { label: "Insumos", href: RoutesPaths.supplies },
+            { label: "Transferencias", href: RoutesPaths.supplyTransfers },
+            { label: "Ajustes", href: RoutesPaths.supplyAdjustments },
+            { label: "Movimientos", href: RoutesPaths.supplyKardex },
+            { label: "Inventario", href: RoutesPaths.supplyInventory },
         ],
     },
     {

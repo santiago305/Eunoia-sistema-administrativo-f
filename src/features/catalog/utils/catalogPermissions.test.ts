@@ -92,6 +92,31 @@ describe("catalog permission matrix", () => {
     expect(permissions.manageRecipes).toBe(false);
   });
 
+  it("maps supplies to independent permissions and never enables recipes", () => {
+    const permissions = getProductCatalogPermissions(
+      ProductTypes.SUPPLY,
+      checker(["supplies.create", "supplies.update", "supplies.equivalences.manage", "products.recipes.manage"]),
+    );
+
+    expect(permissions).toMatchObject({
+      create: true,
+      update: true,
+      createSku: true,
+      updateSku: true,
+      manageEquivalences: true,
+      manageRecipes: false,
+    });
+
+    expect(getTransferPermissions(
+      InventoryDocumentProductType.SUPPLY,
+      checker(["transfers.supplies.create"]),
+    ).create).toBe(true);
+    expect(getAdjustmentPermissions(
+      InventoryDocumentProductType.SUPPLY,
+      checker(["adjustments.supplies.export"]),
+    ).export).toBe(true);
+  });
+
   it("maps inventory and movement exports by product type", () => {
     const productInventory = getInventoryPermissions(
       ProductTypes.PRODUCT,

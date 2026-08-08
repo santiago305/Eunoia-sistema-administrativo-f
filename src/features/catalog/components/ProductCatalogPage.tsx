@@ -70,7 +70,7 @@ type CatalogListFn = typeof listCatalogProducts;
 type ProductCatalogPageConfig = {
     productType: ProductCatalogProductType;
     pageTitle: string;
-    mode: "product" | "material";
+    mode: "product" | "material" | "supply";
     listAll: CatalogListFn;
     headingTitle: string;
     tableId: string;

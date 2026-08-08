@@ -6,7 +6,7 @@ export type InventoryAlertSetting = {
   alertThresholdDays: number;
   alertEnabled: boolean;
   isDefault: boolean;
-  productType?: "PRODUCT" | "MATERIAL";
+  productType?: "PRODUCT" | "MATERIAL" | "SUPPLY";
   historyDays: number;
   coverageDays: number;
   evaluation?: InventoryAlertEvaluation;

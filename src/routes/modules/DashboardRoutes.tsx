@@ -61,6 +61,11 @@ const KardexPrima = lazy(() => import("@/features/catalog/raw-material/KardexPri
 const KardexFinished = lazy(() => import("@/features/catalog/products/KardexFinished"));
 const TransferRowMaterial = lazy(() => import("@/features/catalog/raw-material/TransferRowMaterial"));
 const CatalogInventory = lazy(() => import("@/features/catalog/products/Inventory"));
+const Supplies = lazy(() => import("@/features/catalog/supplies/Supplies"));
+const SupplyInventory = lazy(() => import("@/features/catalog/supplies/SupplyInventory"));
+const SupplyTransfers = lazy(() => import("@/features/catalog/supplies/SupplyTransfers"));
+const SupplyAdjustments = lazy(() => import("@/features/catalog/supplies/SupplyAdjustments"));
+const SupplyKardex = lazy(() => import("@/features/catalog/supplies/SupplyKardex"));
 
 const withRouteGuard = (path: string, element: ReactElement) => {
     const routeMeta = getRouteMetaByPath(path);
@@ -297,6 +302,26 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.rowMaterialTransfer,
                 element: withCompanyRouteGuard(RoutesPaths.rowMaterialTransfer, <TransferRowMaterial />),
+            },
+            {
+                path: RoutesPaths.supplies,
+                element: withRouteGuard(RoutesPaths.supplies, <Supplies />),
+            },
+            {
+                path: RoutesPaths.supplyInventory,
+                element: withRouteGuard(RoutesPaths.supplyInventory, <SupplyInventory />),
+            },
+            {
+                path: RoutesPaths.supplyTransfers,
+                element: withCompanyRouteGuard(RoutesPaths.supplyTransfers, <SupplyTransfers />),
+            },
+            {
+                path: RoutesPaths.supplyAdjustments,
+                element: withRouteGuard(RoutesPaths.supplyAdjustments, <SupplyAdjustments />),
+            },
+            {
+                path: RoutesPaths.supplyKardex,
+                element: withRouteGuard(RoutesPaths.supplyKardex, <SupplyKardex />),
             },
         ],
     },
