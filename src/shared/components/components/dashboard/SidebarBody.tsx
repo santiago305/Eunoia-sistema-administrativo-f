@@ -52,6 +52,28 @@ const canAccessHref = (
   return true;
 };
 
+const filterSidebarItems = (
+  items: SidebarItem[],
+  role: string | null,
+  permissions: string[],
+  isSuperAdmin: boolean,
+): SidebarItem[] =>
+  items.flatMap((item) => {
+    const children = item.children
+      ? filterSidebarItems(item.children, role, permissions, isSuperAdmin)
+      : undefined;
+    const hasVisibleHref = canAccessHref(item.href, role, permissions, isSuperAdmin);
+    const nextItem = {
+      ...item,
+      href: hasVisibleHref ? item.href : undefined,
+      children,
+    };
+
+    const isLocalAction = Boolean(item.isComposeAction || item.isCreateLabelAction);
+    if (!nextItem.href && !children?.length && !isLocalAction) return [];
+    return [nextItem];
+  });
+
 const SidebarBody = () => {
   const { userRole, permissions, isSuperAdmin } = useAuth();
   const { isCollapsed, isMobile } = useSidebarContext();
@@ -76,26 +98,7 @@ const SidebarBody = () => {
       ? getMailSidebarItems(notificationCounts, mailLabels, canCreateLabel)
       : getSidebarItems();
 
-    const filtered = sourceItems
-      .map((item): SidebarItem => {
-        const children = item.children?.filter((child) =>
-          canAccessHref(child.href, userRole, permissions, isSuperAdmin)
-        );
-        const hasVisibleHref = canAccessHref(item.href, userRole, permissions, isSuperAdmin);
-
-        return { ...item, href: hasVisibleHref ? item.href : undefined, children };
-      })
-      .filter((item) => {
-        const hasVisibleChildren = Boolean(item.children?.length);
-        const hasVisibleHref = Boolean(item.href);
-
-        // Un item sin href se muestra si es accion local (ej: Redactar) o tiene hijos visibles.
-        if (!item.href) return Boolean(item.isComposeAction) || hasVisibleChildren;
-
-        return hasVisibleHref || hasVisibleChildren;
-      });
-
-    return filtered;
+    return filterSidebarItems(sourceItems, userRole, permissions, isSuperAdmin);
   }, [canCreateLabel, isSuperAdmin, isNotifications, mailLabels, notificationCounts, permissions, userRole]);
 
   const handleSaveOwnQuota = async () => {

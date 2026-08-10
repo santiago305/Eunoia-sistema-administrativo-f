@@ -5,8 +5,7 @@ import {
     IconAccounts,
     IconHome,
     IconProduction,
-    IconPurchase, 
-    IconRowMaterial, 
+    IconPurchase,
     IconSaleOrder, 
     IconStock, IconUsers, 
     IconWarehouse 
@@ -77,70 +76,40 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         ],
     },
     {
-        label: "Catalogo",
+        label: "Catálogo",
         icon: <IconStock className="text-sidebar-foreground" />,
         children: [
             {
                 label: "Productos",
-                href: RoutesPaths.catalogProducts,
+                children: [
+                    { label: "Productos", href: RoutesPaths.catalogProducts },
+                    { label: "Packs", href: RoutesPaths.catalogPacks },
+                    { label: "Transferencias", href: RoutesPaths.catalogTransferences },
+                    { label: "Ajustes", href: RoutesPaths.catalogAdjustments },
+                    { label: "Movimientos", href: RoutesPaths.KardexFinished },
+                    { label: "Inventario", href: RoutesPaths.catalogInventory },
+                ],
             },
             {
-                label: "Packs",
-                href: RoutesPaths.catalogPacks,
+                label: "Materias primas",
+                children: [
+                    { label: "Materias primas", href: RoutesPaths.rowMaterial },
+                    { label: "Transferencias", href: RoutesPaths.rowMaterialTransfer },
+                    { label: "Ajustes", href: RoutesPaths.rowMaterialAdjustments },
+                    { label: "Movimientos", href: RoutesPaths.KardexPrima },
+                    { label: "Inventario", href: RoutesPaths.rowMaterialInventory },
+                ],
             },
             {
-                label: "Transferencias",
-                href: RoutesPaths.catalogTransferences,
+                label: "Insumos",
+                children: [
+                    { label: "Insumos", href: RoutesPaths.supplies },
+                    { label: "Transferencias", href: RoutesPaths.supplyTransfers },
+                    { label: "Ajustes", href: RoutesPaths.supplyAdjustments },
+                    { label: "Movimientos", href: RoutesPaths.supplyKardex },
+                    { label: "Inventario", href: RoutesPaths.supplyInventory },
+                ],
             },
-            {
-                label: "Ajustes",
-                href: RoutesPaths.catalogAdjustments,
-            },
-            {
-                label: "Movimientos",
-                href: RoutesPaths.KardexFinished,
-            },
-            {
-                label: "Inventario",
-                href: RoutesPaths.catalogInventory,
-            },
-        ],
-    },
-    {
-        label: "Materias primas",
-        icon: <IconRowMaterial className="text-sidebar-foreground" />,
-        children: [
-            {
-                label: "Materias Primas",
-                href: RoutesPaths.rowMaterial,
-            },
-            {
-                label: "Transferencias",
-                href: RoutesPaths.rowMaterialTransfer,
-            },
-            {
-                label: "Ajustes",
-                href: RoutesPaths.rowMaterialAdjustments,
-            },
-            {
-                label: "Movimientos",
-                href: RoutesPaths.KardexPrima,
-            },
-            {
-                label: "Inventario",
-                href: RoutesPaths.rowMaterialInventory,
-            },
-        ],
-    },
-    {
-        label: "Insumos",
-        icon: <IconRowMaterial className="text-sidebar-foreground" />,
-        children: [
-            { label: "Insumos", href: RoutesPaths.supplies },
-            { label: "Transferencias", href: RoutesPaths.supplyTransfers },
-            { label: "Ajustes", href: RoutesPaths.supplyAdjustments },
-            { label: "Movimientos", href: RoutesPaths.supplyKardex },
-            { label: "Inventario", href: RoutesPaths.supplyInventory },
         ],
     },
     {

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import SidebarItem from "./SidebarItem";
@@ -58,5 +59,28 @@ describe("SidebarItem mail actions", () => {
       "href",
       "/email/sent/thread-1?labelId=old&createLabel=1",
     );
+  });
+});
+
+describe("SidebarItem nested navigation", () => {
+  it("expands a third navigation level and exposes its links", async () => {
+    const user = userEvent.setup();
+    renderSidebarItem(
+      {
+        label: "Catálogo",
+        children: [
+          {
+            label: "Productos",
+            children: [{ label: "Packs", href: "/catalogo/packs" }],
+          },
+        ],
+      },
+      "/dashboard",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Catálogo" }));
+    await user.click(screen.getByRole("button", { name: "Productos" }));
+
+    expect(screen.getByRole("link", { name: "Packs" })).toHaveAttribute("href", "/catalogo/packs");
   });
 });

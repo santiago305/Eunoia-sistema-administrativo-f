@@ -42,6 +42,130 @@ const isLinkActive = (href: string | undefined, pathname: string, search: string
   return query === (search.startsWith("?") ? search.slice(1) : search);
 };
 
+const hasActiveItem = (
+  item: SidebarItemType,
+  pathname: string,
+  search: string,
+  resolveHref: (item: SidebarItemType) => string | undefined,
+): boolean =>
+  isLinkActive(resolveHref(item), pathname, search) ||
+  Boolean(item.children?.some((child) => hasActiveItem(child, pathname, search, resolveHref)));
+
+interface NestedSidebarItemProps {
+  item: SidebarItemType;
+  pathname: string;
+  search: string;
+  resolveHref: (item: SidebarItemType) => string | undefined;
+  canManageLabels: boolean;
+  requestDeleteLabel: (event: React.MouseEvent, labelId?: string) => void;
+  onNavigate?: () => void;
+  compact?: boolean;
+}
+
+const NestedSidebarItem = ({
+  item,
+  pathname,
+  search,
+  resolveHref,
+  canManageLabels,
+  requestDeleteLabel,
+  onNavigate,
+  compact = false,
+}: NestedSidebarItemProps) => {
+  const href = resolveHref(item);
+  const hasChildren = Boolean(item.children?.length);
+  const isActive = isLinkActive(href, pathname, search);
+  const isBranchActive = hasActiveItem(item, pathname, search, resolveHref);
+  const [isOpen, setIsOpen] = useState(isBranchActive);
+
+  if (hasChildren) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setIsOpen((current) => !current)}
+          aria-expanded={isOpen}
+          className={cn(
+            "flex w-full items-center rounded-lg text-left transition-colors duration-200",
+            compact ? "min-h-[34px] px-3 py-1.5 text-[13px]" : "min-h-8 px-2.5 py-1.5 text-[12px]",
+            isBranchActive
+              ? "bg-primary/8 font-medium text-primary"
+              : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+          )}
+        >
+          <span className="flex-1 truncate">{item.label}</span>
+          <IconChevronRight
+            className={cn("size-3.5 shrink-0 transition-transform duration-200", isOpen && "rotate-90")}
+          />
+        </button>
+
+        <div
+          className={cn(
+            "overflow-hidden transition-[max-height,opacity] duration-200 ease-out",
+            isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0",
+          )}
+        >
+          <div className="relative ml-3 mt-1 space-y-1 pl-3">
+            <div className="absolute bottom-1 left-0 top-1 w-px rounded-full bg-border/70" />
+            {item.children?.map((child, index) => (
+              <NestedSidebarItem
+                key={`${child.href ?? child.label}-${index}`}
+                item={child}
+                pathname={pathname}
+                search={search}
+                resolveHref={resolveHref}
+                canManageLabels={canManageLabels}
+                requestDeleteLabel={requestDeleteLabel}
+                onNavigate={onNavigate}
+                compact={compact}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to={href || "#"}
+      onClick={onNavigate}
+      className={cn(
+        "group/child flex items-center rounded-lg transition-all duration-200",
+        compact ? "min-h-[34px] px-3 py-1.5 text-[13px]" : "min-h-8 px-2.5 py-1.5 text-[12px]",
+        isActive
+          ? "bg-primary/8 font-medium text-primary"
+          : compact
+          ? "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+          : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+      )}
+    >
+      {item.icon && isValidElement(item.icon)
+        ? cloneElement(item.icon as ReactElement<{ className?: string }>, {
+            className: cn(
+              "mr-2 size-[16px] shrink-0",
+              isActive ? "text-primary" : "text-sidebar-foreground/80",
+            ),
+          })
+        : null}
+      <span className="flex-1 truncate">{item.label}</span>
+      {item.isCustomLabel && canManageLabels ? (
+        <button
+          type="button"
+          onClick={(event) => requestDeleteLabel(event, item.labelId)}
+          className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded opacity-0 transition group-hover/child:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+          title="Eliminar etiqueta"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      ) : null}
+      {typeof item.badgeCount === "number" ? (
+        <span className="ml-2 text-[11px] text-sidebar-muted">{item.badgeCount}</span>
+      ) : null}
+    </Link>
+  );
+};
+
 const SidebarItemComponent = ({ item }: SidebarItemProps) => {
   const { isCollapsed, isMobile } = useSidebarContext();
   const { permissions } = useAuth();
@@ -62,8 +186,8 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
   const hasChildren = !!item.children?.length;
   const isActive = isLinkActive(itemHref, location.pathname, location.search);
-  const isChildActive = item.children?.some(
-    (child) => isLinkActive(resolveItemHref(child), location.pathname, location.search)
+  const isChildActive = item.children?.some((child) =>
+    hasActiveItem(child, location.pathname, location.search, resolveItemHref)
   );
 
   // Solo abre inicialmente si algún hijo está activo.
@@ -158,14 +282,6 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
     isSidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
   );
 
-  const childLinkClass = (active?: boolean) =>
-    cn(
-      "group/child flex min-h-8 items-center rounded-lg px-2.5 py-1.5 text-[12px] transition-all duration-200",
-      active
-        ? "bg-primary/8 text-primary font-medium"
-        : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-    );
-
   const caret = (
     <span
       className={cn(
@@ -230,7 +346,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
               </p>
             </div>
 
-            <div className="space-y-0.5">
+            <div className="max-h-[min(80vh,48rem)] space-y-0.5 overflow-y-auto">
               {itemHref && (
                 <Link
                   to={itemHref}
@@ -247,26 +363,18 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
               )}
 
               {item.children?.map((child, index) => {
-                const childHref = resolveItemHref(child);
-                const childActive = isLinkActive(childHref, location.pathname, location.search);
-
                 return (
-                  <Link
+                  <NestedSidebarItem
                     key={`${child.href ?? child.label}-${index}`}
-                    to={childHref || "#"}
-                    onClick={() => setPopoverOpen(false)}
-                    className={cn(
-                      "flex min-h-[34px] items-center rounded-xl px-3 py-1.5 text-[13px] transition-all duration-200",
-                      childActive
-                        ? "bg-primary/9 text-primary font-medium shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
-                        : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
-                    )}
-                  >
-                    <span className="truncate">{child.label}</span>
-                    {typeof child.badgeCount === "number" ? (
-                      <span className="ml-2 text-[11px] text-sidebar-muted">{child.badgeCount}</span>
-                    ) : null}
-                  </Link>
+                    item={child}
+                    pathname={location.pathname}
+                    search={location.search}
+                    resolveHref={resolveItemHref}
+                    canManageLabels={canManageLabels}
+                    requestDeleteLabel={requestDeleteLabel}
+                    onNavigate={() => setPopoverOpen(false)}
+                    compact
+                  />
                 );
               })}
             </div>
@@ -352,7 +460,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
         <div
           className={cn(
             "overflow-hidden transition-[max-height,opacity] duration-200 ease-out",
-            isOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+            isOpen ? "max-h-[60rem] opacity-100" : "max-h-0 opacity-0"
           )}
         >
           <div className="relative ml-5 mt-1 pl-4">
@@ -360,47 +468,16 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
 
             <div className="space-y-1">
               {item.children?.map((child, index) => {
-                const childHref = resolveItemHref(child);
-                const childActive = isLinkActive(childHref, location.pathname, location.search);
-
                 return (
-                  <Link
+                  <NestedSidebarItem
                     key={`${child.href ?? child.label}-${index}`}
-                    to={childHref || "#"}
-                    className={childLinkClass(childActive)}
-                  >
-                    {child.icon && isValidElement(child.icon)
-                      ? cloneElement(child.icon as ReactElement<{ className?: string }>, {
-                          className: cn(
-                            "mr-2 size-[16px] shrink-0",
-                            childActive
-                              ? "text-primary"
-                              : "text-sidebar-foreground/80 group-hover/child:text-sidebar-foreground"
-                          ),
-                        })
-                      : null}
-                    <span
-                      className={cn(
-                        "flex-1 truncate",
-                        childActive ? "text-primary" : ""
-                      )}
-                    >
-                      {child.label}
-                    </span>
-                    {child.isCustomLabel && canManageLabels ? (
-                      <button
-                        type="button"
-                        onClick={(event) => requestDeleteLabel(event, child.labelId)}
-                        className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded opacity-0 transition group-hover/child:opacity-100 hover:bg-destructive/10 hover:text-destructive"
-                        title="Eliminar etiqueta"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    ) : null}
-                    {typeof child.badgeCount === "number" ? (
-                      <span className="ml-2 text-[11px] text-sidebar-muted">{child.badgeCount}</span>
-                    ) : null}
-                  </Link>
+                    item={child}
+                    pathname={location.pathname}
+                    search={location.search}
+                    resolveHref={resolveItemHref}
+                    canManageLabels={canManageLabels}
+                    requestDeleteLabel={requestDeleteLabel}
+                  />
                 );
               })}
             </div>
