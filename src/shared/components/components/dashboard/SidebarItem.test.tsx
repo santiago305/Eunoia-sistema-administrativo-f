@@ -71,6 +71,7 @@ describe("SidebarItem nested navigation", () => {
         children: [
           {
             label: "Productos",
+            href: "/catalogo/productos",
             children: [{ label: "Packs", href: "/catalogo/packs" }],
           },
         ],
@@ -79,7 +80,11 @@ describe("SidebarItem nested navigation", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Catálogo" }));
-    await user.click(screen.getByRole("button", { name: "Productos" }));
+    expect(screen.getByRole("link", { name: "Productos" })).toHaveAttribute(
+      "href",
+      "/catalogo/productos",
+    );
+    await user.click(screen.getByRole("button", { name: /submenú de Productos/ }));
 
     expect(screen.getByRole("link", { name: "Packs" })).toHaveAttribute("href", "/catalogo/packs");
   });

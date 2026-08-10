@@ -79,25 +79,47 @@ const NestedSidebarItem = ({
   const [isOpen, setIsOpen] = useState(isBranchActive);
 
   if (hasChildren) {
+    const branchClassName = cn(
+      "flex w-full items-center rounded-lg transition-colors duration-200",
+      isBranchActive
+        ? "bg-primary/8 font-medium text-primary"
+        : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+    );
+    const branchMainClassName = cn(
+      "flex min-w-0 flex-1 items-center text-left",
+      compact ? "min-h-[34px] px-3 py-1.5 text-[13px]" : "min-h-8 px-2.5 py-1.5 text-[12px]",
+    );
+
     return (
       <div>
-        <button
-          type="button"
-          onClick={() => setIsOpen((current) => !current)}
-          aria-expanded={isOpen}
-          className={cn(
-            "flex w-full items-center rounded-lg text-left transition-colors duration-200",
-            compact ? "min-h-[34px] px-3 py-1.5 text-[13px]" : "min-h-8 px-2.5 py-1.5 text-[12px]",
-            isBranchActive
-              ? "bg-primary/8 font-medium text-primary"
-              : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+        <div className={branchClassName}>
+          {href ? (
+            <Link to={href} onClick={onNavigate} className={branchMainClassName}>
+              <span className="flex-1 truncate">{item.label}</span>
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsOpen((current) => !current)}
+              aria-expanded={isOpen}
+              className={branchMainClassName}
+            >
+              <span className="flex-1 truncate">{item.label}</span>
+            </button>
           )}
-        >
-          <span className="flex-1 truncate">{item.label}</span>
-          <IconChevronRight
-            className={cn("size-3.5 shrink-0 transition-transform duration-200", isOpen && "rotate-90")}
-          />
-        </button>
+
+          <button
+            type="button"
+            onClick={() => setIsOpen((current) => !current)}
+            aria-expanded={isOpen}
+            aria-label={`${isOpen ? "Ocultar" : "Mostrar"} submenú de ${item.label}`}
+            className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-black/5"
+          >
+            <IconChevronRight
+              className={cn("size-3.5 shrink-0 transition-transform duration-200", isOpen && "rotate-90")}
+            />
+          </button>
+        </div>
 
         <div
           className={cn(
