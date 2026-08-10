@@ -177,7 +177,34 @@ describe("saleOrderEditorForm", () => {
         12,
         7,
       ),
-    ).toEqual({ subTotal: 80, deliveryCost: 12, discount: 7, total: 85 });
+    ).toEqual({
+      subTotal: 80,
+      deliveryCost: 12,
+      discount: 7,
+      discountValue: 7,
+      discountType: "FIXED",
+      igv: 85 * 18 / 118,
+      total: 85,
+    });
+  });
+
+  it("calculates percentage discounts and extracts included IGV", () => {
+    expect(
+      calculateSaleOrderTotals(
+        [{ total: 80 }],
+        20,
+        20,
+        "PERCENTAGE",
+      ),
+    ).toEqual({
+      subTotal: 80,
+      deliveryCost: 20,
+      discount: 20,
+      discountValue: 20,
+      discountType: "PERCENTAGE",
+      igv: 80 * 18 / 118,
+      total: 80,
+    });
   });
 
   it("builds stable client and payment commands", () => {

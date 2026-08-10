@@ -22,6 +22,7 @@ describe("SaleOrderTotalsSection", () => {
     expect(screen.getByText("Tarifa").nextElementSibling).toHaveTextContent("10.00");
     expect(screen.getByText("Descuento").nextElementSibling).toHaveTextContent("-S/");
     expect(screen.getByText("Descuento").nextElementSibling).toHaveTextContent("15.00");
+    expect(screen.getByText("IGV (18%) incluido").nextElementSibling).toHaveTextContent("17.54");
     expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("115.00");
   });
 

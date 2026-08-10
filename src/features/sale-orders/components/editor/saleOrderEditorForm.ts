@@ -66,6 +66,7 @@ export type SaleOrderEditorForm = {
   logisticsCost: number;
   logisticsGeneratesPayable: boolean;
   discount: number;
+  discountType: "FIXED" | "PERCENTAGE";
   note: string;
   advertisingCode: string;
   observation: string;
@@ -123,6 +124,7 @@ export function buildEmptySaleOrderEditorForm(): SaleOrderEditorForm {
     logisticsCost: 0,
     logisticsGeneratesPayable: false,
     discount: 0,
+    discountType: "FIXED",
     note: "",
     advertisingCode: "",
     observation: "",
@@ -146,18 +148,28 @@ export function calculateSaleOrderTotals(
   items: Array<{ total?: number | null }>,
   deliveryCost: number,
   discount: number,
+  discountType: SaleOrderEditorForm["discountType"] = "FIXED",
 ) {
   const subTotal = items.reduce(
     (sum, item) => sum + Number(item.total ?? 0),
     0,
   );
   const normalizedDelivery = Math.max(0, Number(deliveryCost || 0));
-  const normalizedDiscount = Math.max(0, Number(discount || 0));
+  const discountBase = subTotal + normalizedDelivery;
+  const normalizedDiscountValue = Math.max(0, Number(discount || 0));
+  const normalizedDiscount =
+    discountType === "PERCENTAGE"
+      ? Math.min(discountBase, discountBase * Math.min(100, normalizedDiscountValue) / 100)
+      : normalizedDiscountValue;
+  const total = Math.max(0, discountBase - normalizedDiscount);
   return {
     subTotal,
     deliveryCost: normalizedDelivery,
     discount: normalizedDiscount,
-    total: Math.max(0, subTotal + normalizedDelivery - normalizedDiscount),
+    discountValue: normalizedDiscountValue,
+    discountType,
+    igv: total * 18 / 118,
+    total,
   };
 }
 
@@ -221,6 +233,7 @@ export function mapSaleOrderToEditorForm(
     logisticsCost: Number(order.logisticsCost ?? order.deliveryCost ?? 0),
     logisticsGeneratesPayable: Boolean(order.logisticsGeneratesPayable),
     discount: Number(order.discount ?? 0),
+    discountType: "FIXED",
     note: order.note ?? "",
     advertisingCode: order.advertisingCode ?? "",
     observation: order.observation ?? "",
@@ -275,6 +288,12 @@ export function markAttachmentRemoved(
 export function toSaveSaleOrderWithClientDto(
   form: SaleOrderEditorForm,
 ): SaveSaleOrderWithClientDto {
+  const totals = calculateSaleOrderTotals(
+    form.items,
+    form.deliveryCost,
+    form.discount,
+    form.discountType,
+  );
   const clientData: CreateClientBody = {
     type: form.clientData.type,
     fullName: form.clientData.fullName.trim(),
@@ -329,7 +348,7 @@ export function toSaveSaleOrderWithClientDto(
     deliveryDate: form.deliveryDate || undefined,
     deliveryCost: Math.max(0, Number(form.deliveryCost || 0)),
     logisticsCost: Math.max(0, Number(form.logisticsCost || 0)),
-    discount: Math.max(0, Number(form.discount || 0)),
+    discount: totals.discount,
     note: form.note.trim() || undefined,
     advertisingCode: form.advertisingCode.trim() || null,
     observation: form.observation.trim() || null,

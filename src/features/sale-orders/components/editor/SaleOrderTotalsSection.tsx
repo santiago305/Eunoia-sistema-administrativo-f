@@ -16,6 +16,7 @@ export function SaleOrderTotalsSection({ form }: Props) {
     form.items,
     form.deliveryCost,
     form.discount,
+    form.discountType,
   );
 
   return (
@@ -34,6 +35,10 @@ export function SaleOrderTotalsSection({ form }: Props) {
           <dd className="tabular-nums text-rose-600">
             -{money.format(totals.discount)}
           </dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">IGV (18%) incluido</dt>
+          <dd className="tabular-nums">{money.format(totals.igv)}</dd>
         </div>
         <div className="flex justify-between rounded-lg bg-muted/60 px-2 py-2 text-base font-semibold">
           <dt>Total</dt>

@@ -112,6 +112,7 @@ export function SaleOrderPaymentCards({
       form.items,
       form.deliveryCost,
       form.discount,
+      form.discountType,
     ).total;
     const paid = form.payments.reduce(
       (sum, payment) => sum + Number(payment.amount || 0),
@@ -203,7 +204,7 @@ export function SaleOrderPaymentCards({
         </SystemButton>
       }
     >
-      <div className="space-y-3 max-h-40 overflow-scroll scroll-area">
+      <div className="scroll-area max-h-40 space-y-3 overflow-y-auto overflow-x-hidden">
         {form.payments.map((payment, index) => (
           <div
             key={payment.clientKey}

@@ -370,23 +370,12 @@ export function SaleOrderItemsTable({
   return (
     <div className="overflow-hidden rounded-sm border border-border/70 bg-background shadow-sm">
       <div className="max-h-[380px] overflow-auto scrollbar-panel">
-        <table className="w-full table-fixed text-xs">
-          <colgroup>
-            <col className="w-9" />
-            <col className="w-[240px]" />
-            <col className="w-[80px]" />
-            <col className="w-[82px]" />
-            <col className="w-[80px]" />
-            <col className="w-[80px]" />
-            <col className="w-[50px]" />
-            <col className="w-[84px]" />
-            <col className="w-16" />
-          </colgroup>
+        <table className="w-full text-xs">
           <thead className="sticky top-0 z-10 bg-background">
             <tr className="border-b border-border/70 bg-muted/40">
               <th
                 aria-label="Expandir componentes"
-                className="w-12 px-2 py-2"
+                className="px-2 py-2"
               />
               <HeaderCell>Pack</HeaderCell>
               <HeaderCell>Cant.</HeaderCell>
@@ -394,7 +383,7 @@ export function SaleOrderItemsTable({
               <HeaderCell>Precio u.</HeaderCell>
               <HeaderCell>Total</HeaderCell>
               <HeaderCell>Stock</HeaderCell>
-              <HeaderCell>Reserv.</HeaderCell>
+              <HeaderCell>Reservado</HeaderCell>
               <HeaderCell className="text-center">Acciones</HeaderCell>
             </tr>
           </thead>
@@ -490,7 +479,7 @@ function PackRows({
   return (
     <>
       <tr className="border-b border-border/60 transition-colors hover:bg-muted/20">
-        <td className="w-12 px-2 py-2 align-middle">
+        <td className="px-2 py-2 align-middle">
           <button
             type="button"
             aria-expanded={expanded}
@@ -506,7 +495,7 @@ function PackRows({
             />
           </button>
         </td>
-        <td className="w-[220px] max-w-[220px] px-2 py-2 align-middle text-[10px]">
+        <td className="px-2 py-2 align-middle text-[10px]">
           <span className="sr-only">{item.description}</span>
           <FloatingInput
             label="Pack"
@@ -640,14 +629,6 @@ function ComponentsSubtable({
     <>
       <div className="w-fit max-w-full overflow-hidden rounded-sm border border-border/60 bg-background">
         <table className="w-full text-xs">
-        <colgroup>
-          <col className="w-[276px]" />
-          <col className="w-[108px]" />
-          <col className="w-[108px]" />
-          <col className="w-[108px]" />
-          <col className="w-[108px]" />
-          <col className="w-[72px]" />
-        </colgroup>
         <thead>
           <tr className="border-b border-border/60 bg-muted/30">
             <SubHeaderCell ariaLabel="Producto">
@@ -912,7 +893,7 @@ function SubHeaderCell({
 }
 
 function EditableNumberCell({ children }: { children: React.ReactNode }) {
-  return <td className="w-28 px-1.5 py-2 align-middle">{children}</td>;
+  return <td className="px-1.5 py-2 align-middle">{children}</td>;
 }
 
 function CompactFloatingNumberInput({

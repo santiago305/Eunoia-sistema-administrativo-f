@@ -10,6 +10,7 @@ import {
 import { sileo } from "sileo";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { FloatingSuggestOption } from "@/shared/components/components/FloatingSuggestInput";
 import { getClientById, listClients } from "@/shared/services/clientService";
@@ -344,8 +345,9 @@ export function SaleOrderEditor({
         form.items,
         form.deliveryCost,
         form.discount,
+        form.discountType,
       ),
-    [form.deliveryCost, form.discount, form.items],
+    [form.deliveryCost, form.discount, form.discountType, form.items],
   );
 
   const totalPaid = useMemo(
@@ -452,7 +454,7 @@ export function SaleOrderEditor({
           <SaleOrderEditorSection
             title="Packs"
             requiredIndicator
-            bodyClassName="max-h-[500px] min-h-[180px] py-4 overflow-hidden"
+            bodyClassName="max-h-[500px] py-4 overflow-hidden"
             actions={
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <SaleOrderDirectSkuSelect
@@ -479,25 +481,44 @@ export function SaleOrderEditor({
             />
           </SaleOrderEditorSection>
           <div className="min-w-0 space-y-3">
-            <div className="grid grid-cols-1 gap-3 max-h-164 overflow-scroll scroll-area lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div>
                 <SaleOrderEditorSection title="Resumen">
                   <dl className="grid gap-2 text-xs">
-                     <div className="rounded-lg bg-background/80 px-3 py-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(110px,0.65fr)] gap-2 rounded-lg bg-background/80 px-3 py-2">
                       <FloatingInput
                         label="Descuento"
                         name="sale-order-discount"
                         type="number"
                         min={0}
+                        max={form.discountType === "PERCENTAGE" ? 100 : undefined}
                         step="0.01"
                         value={String(form.discount ?? 0)}
                         onChange={(event) =>
                           setForm((current) => ({
                             ...current,
-                            discount: Math.max(
-                              0,
-                              normalizeMoney(parseDecimalInput(event.target.value)),
+                            discount: Math.min(
+                              current.discountType === "PERCENTAGE" ? 100 : Number.MAX_SAFE_INTEGER,
+                              Math.max(0, normalizeMoney(parseDecimalInput(event.target.value))),
                             ),
+                          }))
+                        }
+                      />
+                      <FloatingSelect
+                        label="Tipo"
+                        name="sale-order-discount-type"
+                        value={form.discountType}
+                        options={[
+                          { value: "FIXED", label: "Soles" },
+                          { value: "PERCENTAGE", label: "Porcentaje" },
+                        ]}
+                        onChange={(discountType) =>
+                          setForm((current) => ({
+                            ...current,
+                            discountType: discountType as SaleOrderEditorForm["discountType"],
+                            discount: discountType === "PERCENTAGE"
+                              ? Math.min(100, current.discount)
+                              : current.discount,
                           }))
                         }
                       />
@@ -512,6 +533,18 @@ export function SaleOrderEditor({
                       <dt className="text-muted-foreground">Tarifa</dt>
                       <dd className="font-semibold tabular-nums">
                         {money.format(totals.deliveryCost)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">Descuento aplicado</dt>
+                      <dd className="font-semibold tabular-nums text-rose-600">
+                        -{money.format(totals.discount)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
+                      <dt className="text-muted-foreground">IGV (18%) incluido</dt>
+                      <dd className="font-semibold tabular-nums">
+                        {money.format(totals.igv)}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-background px-3 py-2">
