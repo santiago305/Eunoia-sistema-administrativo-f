@@ -44,6 +44,7 @@ import { ProductSmartSearchPanel } from "./ProductSmartSearchPanel";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { getProductCatalogPermissions } from "../utils/catalogPermissions";
 import { WorkflowSupplyRecipesModal } from "../supplies/WorkflowSupplyRecipesModal";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import {
     buildProductSearchChips,
     buildProductSmartSearchColumns,
@@ -598,15 +599,20 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 }
                 toolbarActions={
                     config.mode === "supply" ? (
-                        <SystemButton
-                            variant="outline"
-                            size="sm"
-                            leftIcon={<FlaskConical className="h-4 w-4" />}
-                            onClick={() => setOpenWorkflowSupplyRecipes(true)}
-                            disabled={companyActionDisabled}
-                        >
-                            Recetas por flujo
-                        </SystemButton>
+                        <Tooltip delayDuration={0}>
+                            <TooltipTrigger asChild>
+                                <button
+                                    type="button"
+                                    onClick={() => setOpenWorkflowSupplyRecipes(true)}
+                                    disabled={companyActionDisabled}
+                                    aria-label="Recetas por flujo"
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border/70 bg-background text-foreground shadow-sm transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <FlaskConical className="h-4 w-4" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">Recetas por flujo</TooltipContent>
+                        </Tooltip>
                     ) : null
                 }
                 hoverable={false}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FlaskConical, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { Modal } from '@/shared/components/modales/Modal';
 import { SystemButton } from '@/shared/components/components/SystemButton';
+import { FloatingSelect } from '@/shared/components/components/FloatingSelect';
 import { useFeedbackToast } from '@/shared/hooks/useFeedbackToast';
 import { errorResponse, successResponse } from '@/shared/common/utils/response';
 import { listWorkflows } from '@/shared/services/workflowService';
@@ -116,6 +117,10 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
       })),
     [supplies],
   );
+  const workflowOptions = useMemo(
+    () => workflows.map((workflow) => ({ value: workflow.id, label: workflow.name })),
+    [workflows],
+  );
 
   const updateItem = (key: string, patch: Partial<DraftItem>) => {
     setItems((current) =>
@@ -209,33 +214,20 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
         </div>
       }
     >
-      <div className="grid min-h-[30rem] md:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="border-b border-border bg-muted/25 p-3 md:border-b-0 md:border-r">
-          <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Flujos activos
-          </p>
-          <div className="space-y-1">
-            {workflows.map((workflow) => (
-              <button
-                key={workflow.id}
-                type="button"
-                onClick={() => setSelectedWorkflowId(workflow.id)}
-                className={`w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
-                  workflow.id === selectedWorkflowId
-                    ? 'bg-primary/10 font-medium text-primary'
-                    : 'text-foreground hover:bg-muted'
-                }`}
-              >
-                <span className="block truncate">{workflow.name}</span>
-              </button>
-            ))}
-            {!loadingCatalogs && !workflows.length ? (
-              <p className="px-2 py-6 text-center text-xs text-muted-foreground">No hay flujos activos.</p>
-            ) : null}
-          </div>
-        </aside>
+      <div className="min-h-[30rem] p-4">
+        <section className="mx-auto min-w-0 max-w-4xl space-y-4">
+          <FloatingSelect
+            label="Flujo del pedido"
+            name="workflow-supply-recipe-flow"
+            value={selectedWorkflowId}
+            onChange={setSelectedWorkflowId}
+            options={workflowOptions}
+            searchable
+            searchPlaceholder="Buscar flujo..."
+            emptyMessage="No hay flujos activos"
+            disabled={loadingCatalogs || saving}
+          />
 
-        <section className="min-w-0 space-y-4 p-4">
           {busy ? (
             <div className="flex h-72 items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> Cargando receta...
