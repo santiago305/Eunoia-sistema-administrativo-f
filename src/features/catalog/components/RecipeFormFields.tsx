@@ -43,6 +43,14 @@ type RecipeFormFieldsProps = {
   recipeSkuOptions: RecipeSkuOption[];
   onSelectSku: (skuId: string) => void;
   selectedSkuId: string;
+  ingredientLabel?: string;
+  recipeSearchPlaceholder?: string;
+  ingredientSearchPlaceholder?: string;
+  recipeEmptyMessage?: string;
+  ingredientEmptyMessage?: string;
+  emptyTableMessage?: string;
+  loadMoreLabel?: string;
+  showYield?: boolean;
 };
 
 export function RecipeFormFields({
@@ -61,6 +69,14 @@ export function RecipeFormFields({
   recipeSkuOptions,
   onSelectSku,
   selectedSkuId,
+  ingredientLabel = "Materia prima",
+  recipeSearchPlaceholder = "Buscar producto...",
+  ingredientSearchPlaceholder = "Buscar producto...",
+  recipeEmptyMessage = "Sin productos",
+  ingredientEmptyMessage = "Sin productos",
+  emptyTableMessage = "No hay recetas registradas.",
+  loadMoreLabel = "Cargar más materias primas",
+  showYield = true,
 }: RecipeFormFieldsProps) {
   const [materialSkuId, setMaterialSkuId] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -154,17 +170,17 @@ export function RecipeFormFields({
     () => [
       {
         id: "prima",
-        header: "Materia prima",
+        header: ingredientLabel,
         cell: (row) => (
           <FloatingSelect
-            label="Materia prima"
+            label={ingredientLabel}
             name={`recipe-material-${row.id}`}
             value={row.materialSkuId}
             onChange={(value) => updateItem(row.id, { materialSkuId: value })}
             options={recipePrimaVariantOptions}
             searchable
-            searchPlaceholder="Buscar producto..."
-            emptyMessage="Sin productos"
+            searchPlaceholder={ingredientSearchPlaceholder}
+            emptyMessage={ingredientEmptyMessage}
           />
         ),
         hideable: false,
@@ -230,7 +246,7 @@ export function RecipeFormFields({
         sortable: false,
       },
     ],
-    [recipePrimaVariantOptions, unitOptions, removeItem, saving, updateItem],
+    [ingredientEmptyMessage, ingredientLabel, ingredientSearchPlaceholder, recipePrimaVariantOptions, unitOptions, removeItem, saving, updateItem],
   );
 
   const canAddItem = Boolean(materialSkuId && unitId && Number(quantity) > 0);
@@ -257,7 +273,7 @@ export function RecipeFormFields({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 pt-3 md:grid-cols-[1.8fr_1fr_0.65fr]">
+      <div className={`grid grid-cols-1 gap-3 pt-3 ${showYield ? "md:grid-cols-[1.8fr_1fr_0.65fr]" : "md:grid-cols-[1.8fr_1fr]"}`}>
         <FloatingSelect
           label=""
           name="selectedSku"
@@ -265,8 +281,8 @@ export function RecipeFormFields({
           onChange={onSelectSku}
           options={recipeSkuOptions}
           searchable
-          searchPlaceholder="Buscar producto..."
-          emptyMessage="Sin productos"
+          searchPlaceholder={recipeSearchPlaceholder}
+          emptyMessage={recipeEmptyMessage}
         />
 
         <FloatingInput
@@ -281,7 +297,7 @@ export function RecipeFormFields({
           }
         />
 
-        <FloatingInput
+        {showYield ? <FloatingInput
           label="Rendimiento"
           type="number"
           name="yield"
@@ -293,19 +309,19 @@ export function RecipeFormFields({
               yieldQuantity: event.target.value,
             })
           }
-        />
+        /> : null}
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.8fr_1fr_0.5fr_45px]">
         <FloatingSelect
-          label="Materia prima"
+          label={ingredientLabel}
           name="materia-prima"
           value={materialSkuId}
           onChange={(value) => setMaterialSkuId(value)}
           options={primaVariantOptions}
           searchable
-          searchPlaceholder="Buscar producto..."
-          emptyMessage="Sin productos"
+          searchPlaceholder={ingredientSearchPlaceholder}
+          emptyMessage={ingredientEmptyMessage}
           onSearchChange={onMaterialSearchChange}
         />
 
@@ -337,7 +353,7 @@ export function RecipeFormFields({
       {hasMoreMaterialResults ? (
         <div className="flex justify-end">
           <SystemButton variant="outline" size="sm" onClick={onLoadMoreMaterials} disabled={Boolean(loading)}>
-            Cargar más materias primas
+            {loadMoreLabel}
           </SystemButton>
         </div>
       ) : null}
@@ -348,7 +364,7 @@ export function RecipeFormFields({
         columns={columns}
         rowKey="id"
         loading={loading}
-        emptyMessage="No hay recetas registradas."
+        emptyMessage={emptyTableMessage}
         hoverable={false}
         animated={false}
         className="text-xs"
