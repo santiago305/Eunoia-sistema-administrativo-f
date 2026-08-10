@@ -81,8 +81,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         children: [
             {
                 label: "Productos",
+                href: RoutesPaths.catalogProducts,
                 children: [
-                    { label: "Productos", href: RoutesPaths.catalogProducts },
                     { label: "Packs", href: RoutesPaths.catalogPacks },
                     { label: "Transferencias", href: RoutesPaths.catalogTransferences },
                     { label: "Ajustes", href: RoutesPaths.catalogAdjustments },
@@ -92,8 +92,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
             },
             {
                 label: "Materias primas",
+                href: RoutesPaths.rowMaterial,
                 children: [
-                    { label: "Materias primas", href: RoutesPaths.rowMaterial },
                     { label: "Transferencias", href: RoutesPaths.rowMaterialTransfer },
                     { label: "Ajustes", href: RoutesPaths.rowMaterialAdjustments },
                     { label: "Movimientos", href: RoutesPaths.KardexPrima },
@@ -102,8 +102,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
             },
             {
                 label: "Insumos",
+                href: RoutesPaths.supplies,
                 children: [
-                    { label: "Insumos", href: RoutesPaths.supplies },
                     { label: "Transferencias", href: RoutesPaths.supplyTransfers },
                     { label: "Ajustes", href: RoutesPaths.supplyAdjustments },
                     { label: "Movimientos", href: RoutesPaths.supplyKardex },
