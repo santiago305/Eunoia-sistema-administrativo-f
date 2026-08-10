@@ -368,7 +368,7 @@ export function RecipeFormFields({
         hoverable={false}
         animated={false}
         className="text-xs"
-        tableClassName="text-xs"
+        tableClassName="text-xs [&_tbody_td]:p-1"
         maxHeight="300px"
       />
     </div>

@@ -120,7 +120,7 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
   };
   return <Modal open={open} onClose={close} preventClose={saving} title="Recetas de insumos por flujo"
     description="Prepara varias recetas y guárdalas juntas. Al cerrar se descartarán los cambios no guardados."
-    className="w-[min(56rem,calc(100vw-2rem))]" footer={<div className="flex items-center justify-between gap-3">
+    className="w-auto" footer={<div className="flex items-center justify-between gap-3">
       <span className="text-xs text-muted-foreground">{dirtyWorkflowIds.length ? `${dirtyWorkflowIds.length} flujo(s) con cambios pendientes` : 'Sin cambios pendientes'}</span>
       <div className="flex items-center gap-2"><SystemButton variant="outline" size="sm" onClick={close} disabled={saving}>
         {dirtyWorkflowIds.length ? 'Cerrar y descartar' : 'Cerrar'}

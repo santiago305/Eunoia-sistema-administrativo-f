@@ -1263,7 +1263,7 @@ export function ProductCreateModal({ open, mode = "create", productId, productTy
     if (!open) return null;
 
     return (
-        <Modal title={isEditMode ? `Editar ${label}` : `Nuevo ${label}`} onClose={handleClose} open={open}>
+        <Modal title={isEditMode ? `Editar ${label}` : `Nuevo ${label}`} onClose={handleClose} open={open} className="w-auto">
             <div className="space-y-4">
                 <ProductWorkspaceTabs tabs={tabs} activeTab={workspaceTab} primaryColor={primaryColor} onChange={setWorkspaceTab} />
 
