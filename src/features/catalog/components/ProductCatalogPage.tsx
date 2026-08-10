@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Menu, Plus } from "lucide-react";
+import { FlaskConical, Menu, Plus } from "lucide-react";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
@@ -43,6 +43,7 @@ import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { ProductSmartSearchPanel } from "./ProductSmartSearchPanel";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { getProductCatalogPermissions } from "../utils/catalogPermissions";
+import { WorkflowSupplyRecipesModal } from "../supplies/WorkflowSupplyRecipesModal";
 import {
     buildProductSearchChips,
     buildProductSmartSearchColumns,
@@ -97,6 +98,7 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     const companyActionDisabled = !hasCompany;
 
     const [openCreate, setOpenCreate] = useState(false);
+    const [openWorkflowSupplyRecipes, setOpenWorkflowSupplyRecipes] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [deletingProductAction, setDeletingProductAction] = useState<"toggle" | "delete">("toggle");
@@ -594,6 +596,19 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                         />
                     </DataTableSearchBar>
                 }
+                toolbarActions={
+                    config.mode === "supply" ? (
+                        <SystemButton
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<FlaskConical className="h-4 w-4" />}
+                            onClick={() => setOpenWorkflowSupplyRecipes(true)}
+                            disabled={companyActionDisabled}
+                        >
+                            Recetas por flujo
+                        </SystemButton>
+                    ) : null
+                }
                 hoverable={false}
                 animated={false}
                 tableClassName="text-[11px]"
@@ -620,6 +635,14 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                 onSaved={refresh}
                 permissions={permissions}
             />
+
+            {config.mode === "supply" ? (
+                <WorkflowSupplyRecipesModal
+                    open={openWorkflowSupplyRecipes}
+                    canManage={permissions.update}
+                    onClose={() => setOpenWorkflowSupplyRecipes(false)}
+                />
+            ) : null}
 
             <ProductDetailsModal
                 open={openDetails}

@@ -281,6 +281,10 @@ export const API_SKUS_GROUP = {
   delete: (id: string) => `/skus/${id}`,
 };
 
+export const API_WORKFLOW_SUPPLY_RECIPES_GROUP = {
+  byWorkflow: (workflowId: string) => `/workflow-supply-recipes/${workflowId}`,
+};
+
 export const API_SUPPLIERS_GROUP = {
   base: "/suppliers",
   create: "/suppliers",
