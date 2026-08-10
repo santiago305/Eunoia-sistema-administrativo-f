@@ -158,7 +158,7 @@ export function SaleOrderShippingSection({
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 space-y-2 mt-3">
         <FloatingInput
-          label="Tarifa cobrada al cliente"
+              label="Tarifa"
           className={inputClassName}
           name="sale-order-delivery-charge"
           value={form.deliveryCost}
@@ -171,7 +171,7 @@ export function SaleOrderShippingSection({
           }
         />
         <FloatingInput
-          label="Costo a pagar a agencia"
+              label="Costo agencia"
           className={inputClassName}
           name="sale-order-logistics-cost"
           value={form.logisticsCost}

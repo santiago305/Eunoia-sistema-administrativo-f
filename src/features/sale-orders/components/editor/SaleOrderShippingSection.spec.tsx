@@ -169,8 +169,8 @@ describe("SaleOrderShippingSection agency detail", () => {
     const user = userEvent.setup();
     render(<ShippingHarness />);
 
-    expect(screen.getByLabelText("Tarifa cobrada al cliente")).toBeInTheDocument();
-    expect(screen.getByLabelText("Costo a pagar a agencia")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tarifa")).toBeInTheDocument();
+    expect(screen.getByLabelText("Costo agencia")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "select-Olva Miraflores" }));
 

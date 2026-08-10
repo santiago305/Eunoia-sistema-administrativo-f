@@ -243,7 +243,7 @@ export function ClientFormFields({
         }`}
       >
         <FloatingSelect
-          label="Tipo de cliente"
+          label="Tipo"
           name="client-type"
           value={form.type}
           options={CLIENT_TYPE_OPTIONS}
@@ -253,7 +253,7 @@ export function ClientFormFields({
         />
 
         <FloatingSelect
-          label="Tipo de documento"
+          label="Tipo de doc"
           name="client-doc-type"
           value={form.docType}
           options={docTypeOptions}
@@ -286,7 +286,7 @@ export function ClientFormFields({
       <div className={`mt-2 grid grid-cols-1 gap-3 ${fullNameOptions ? "md:grid-cols-2" : ""}`}>
         {fullNameOptions ? (
           <FloatingSuggestInput
-            label="Nombre completo"
+            label="Nombre"
             name="client-full-name"
             value={form.fullName}
             options={fullNameOptions}
@@ -303,7 +303,7 @@ export function ClientFormFields({
           />
         ) : (
           <FloatingInput
-            label="Nombre completo"
+            label="Nombre"
             name="client-full-name"
             value={form.fullName}
             onChange={(event) => updateField("fullName", event.target.value)}
