@@ -178,6 +178,25 @@ export type SaleOrderItemComponentCommand = {
 export type SaleOrderItemCommand = Omit<SaleOrderItemInput, "components"> & {
   components?: SaleOrderItemComponentCommand[];
 };
+
+export type SaleOrderSupplyInput = {
+  id?: string;
+  supplySkuId: string;
+  quantity: number;
+  unitId: string;
+  referenceRecipeItemId?: string | null;
+  supplyName?: string;
+  skuName?: string;
+  backendSku?: string;
+  customSku?: string | null;
+  unitName?: string;
+  unitCode?: string;
+};
+
+export type SaleOrderSupplyCommand = Pick<
+  SaleOrderSupplyInput,
+  "supplySkuId" | "quantity" | "unitId" | "referenceRecipeItemId"
+>;
 export enum PaymentDescription {
   ANTICIPO = "Anticipo",
   SALDO = "Saldo",
@@ -257,6 +276,7 @@ export type SaveSaleOrderWithClientDto = {
   sendAddress?: string | null;
   assignedBy?: string | null;
   items: SaleOrderItemCommand[];
+  supplies?: SaleOrderSupplyCommand[];
   payments?: UnifiedSaleOrderPaymentInput[];
   removedAttachmentIds?: string[];
 };
@@ -452,6 +472,7 @@ export type SaleOrder = {
   attachments?: SaleOrderAttachment[];
   editPolicy?: SaleOrderEditPolicy;
   items?: SaleOrderItemInput[];
+  supplies?: SaleOrderSupplyInput[];
   SKUS?: string | null;
   detail?: string | null;
 };

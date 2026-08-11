@@ -7,9 +7,11 @@ import type {
 
 export const getWorkflowSupplyRecipe = async (
   workflowId: string,
+  options?: { signal?: AbortSignal },
 ): Promise<WorkflowSupplyRecipe | null> => {
   const response = await axiosInstance.get<WorkflowSupplyRecipe | null>(
     API_WORKFLOW_SUPPLY_RECIPES_GROUP.byWorkflow(workflowId),
+    { signal: options?.signal },
   );
   return response.data;
 };

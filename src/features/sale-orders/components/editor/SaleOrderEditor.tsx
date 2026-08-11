@@ -33,6 +33,10 @@ import { SaleOrderPaymentCards } from "./SaleOrderPaymentCards";
 import { SaleOrderShippingSection } from "./SaleOrderShippingSection";
 import { SaleOrderDirectSkuSelect } from "./SaleOrderDirectSkuSelect";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
+import { SaleOrderSuppliesSection } from "./SaleOrderSuppliesSection";
+import { getWorkflowSupplyRecipe } from "@/shared/services/workflowSupplyRecipeService";
+import { isValidRecipeQuantity } from "@/features/catalog/components/recipeFormFields.helpers";
+import { mapRecipeToSaleOrderSupplies } from "./saleOrderSupplies.helpers";
 import {
   buildEmptySaleOrderEditorForm,
   calculateSaleOrderTotals,
@@ -90,6 +94,8 @@ export function SaleOrderEditor({
   );
   const [saving, setSaving] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [supplyRecipeLoading, setSupplyRecipeLoading] = useState(false);
+  const [supplyRecipeError, setSupplyRecipeError] = useState<string | null>(null);
   const [clientOptions, setClientOptions] = useState<FloatingSuggestOption[]>(
     [],
   );
@@ -122,15 +128,29 @@ export function SaleOrderEditor({
   >([]);
   const initialSnapshot = useRef("");
   const itemsSectionRef = useRef<SaleOrderItemsSectionHandle>(null);
+  const supplyRecipeRequestRef = useRef(0);
+  const supplyRecipeAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     const next =
       mode === "edit" && order
         ? mapSaleOrderToEditorForm(order)
         : buildEmptySaleOrderEditorForm();
     setForm(next);
+    supplyRecipeRequestRef.current += 1;
+    supplyRecipeAbortRef.current?.abort();
+    setSupplyRecipeLoading(false);
+    setSupplyRecipeError(null);
     initialSnapshot.current = comparable(next);
     onDirtyChange?.(false);
   }, [mode, onDirtyChange, order]);
+
+  useEffect(
+    () => () => {
+      supplyRecipeRequestRef.current += 1;
+      supplyRecipeAbortRef.current?.abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     onDirtyChange?.(
@@ -312,9 +332,56 @@ export function SaleOrderEditor({
     [],
   );
 
+  const loadSuppliesForWorkflow = useCallback(async (workflowId: string) => {
+    const requestId = ++supplyRecipeRequestRef.current;
+    supplyRecipeAbortRef.current?.abort();
+    if (!workflowId) {
+      setSupplyRecipeLoading(false);
+      setSupplyRecipeError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    supplyRecipeAbortRef.current = controller;
+    setSupplyRecipeLoading(true);
+    setSupplyRecipeError(null);
+    try {
+      const recipe = await getWorkflowSupplyRecipe(workflowId, {
+        signal: controller.signal,
+      });
+      if (requestId !== supplyRecipeRequestRef.current) return;
+      setForm((current) =>
+        current.workflowId === workflowId
+          ? { ...current, supplies: mapRecipeToSaleOrderSupplies(recipe) }
+          : current,
+      );
+    } catch {
+      if (controller.signal.aborted || requestId !== supplyRecipeRequestRef.current) return;
+      setSupplyRecipeError(
+        "No se pudo cargar la receta del tipo de pedido. La lista permanece vacía.",
+      );
+    } finally {
+      if (requestId === supplyRecipeRequestRef.current) setSupplyRecipeLoading(false);
+    }
+  }, []);
+
+  const changeWorkflow = useCallback(
+    (workflowId: string) => {
+      if (workflowId === form.workflowId) return;
+      setForm((current) => ({ ...current, workflowId, supplies: [] }));
+      void loadSuppliesForWorkflow(workflowId);
+    },
+    [form.workflowId, loadSuppliesForWorkflow],
+  );
+
   const validationMessage = useMemo(() => {
     if (!form.workflowId) return "Selecciona el tipo de pedido.";
     if (!form.items.length) return "Añade al menos un producto o pack.";
+    if (supplyRecipeLoading) return "Espera mientras se cargan los insumos.";
+    if (supplyRecipeError) return "Reintenta la carga de insumos antes de guardar.";
+    if (form.supplies.some((supply) => !isValidRecipeQuantity(supply.quantity))) {
+      return "Cada insumo debe tener una cantidad mayor a cero y máximo 2 decimales.";
+    }
     if (!form.clientData.fullName.trim()) return "Ingresa el nombre del cliente.";
     if (
       form.clientData.docType !== "NONE" &&
@@ -337,7 +404,7 @@ export function SaleOrderEditor({
       return "Completa el método y monto de cada pago.";
     }
     return null;
-  }, [form]);
+  }, [form, supplyRecipeError, supplyRecipeLoading]);
 
   const totals = useMemo(
     () =>
@@ -480,6 +547,21 @@ export function SaleOrderEditor({
               showActions={false}
             />
           </SaleOrderEditorSection>
+          <SaleOrderEditorSection title="Insumos">
+            <SaleOrderSuppliesSection
+              supplies={form.supplies}
+              onChange={(supplies) =>
+                setForm((current) => ({ ...current, supplies }))
+              }
+              disabled={!form.editPolicy.productsEditable}
+              loading={supplyRecipeLoading}
+              error={supplyRecipeError}
+              onRetry={() => {
+                setForm((current) => ({ ...current, supplies: [] }));
+                void loadSuppliesForWorkflow(form.workflowId);
+              }}
+            />
+          </SaleOrderEditorSection>
           <div className="min-w-0 space-y-3">
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div>
@@ -616,6 +698,10 @@ export function SaleOrderEditor({
                   ? current
                   : [...current, adviser],
               )
+            }
+            onWorkflowChange={changeWorkflow}
+            workflowChangeDisabled={
+              !form.editPolicy.productsEditable || supplyRecipeLoading
             }
           />
           <SaleOrderShippingSection

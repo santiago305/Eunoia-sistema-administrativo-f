@@ -9,8 +9,10 @@ import type {
   SaleOrderAttachment,
   SaleOrderEditPolicy,
   SaleOrderItemInput,
+  SaleOrderSupplyInput,
   SaveSaleOrderWithClientDto,
 } from "../../types/saleOrder";
+import { formatRecipeQuantity } from "@/features/catalog/components/recipeFormFields.helpers";
 import {
   normalizeSaleOrderItems,
   toSaleOrderItemCommands,
@@ -52,6 +54,10 @@ export type SaleOrderEditorPayment = {
   existingAttachmentId?: string | null;
 };
 
+export type SaleOrderEditorSupply = Omit<SaleOrderSupplyInput, "quantity"> & {
+  quantity: string;
+};
+
 export type SaleOrderEditorForm = {
   clientMode: "existing" | "create" | "update";
   selectedClientId: string;
@@ -76,6 +82,7 @@ export type SaleOrderEditorForm = {
   assignedBy: string;
   reserveBool: boolean | null;
   items: SaleOrderItemInput[];
+  supplies: SaleOrderEditorSupply[];
   payments: SaleOrderEditorPayment[];
   shippingPhoto: File | null;
   existingShippingPhotoUrl: string | null;
@@ -134,6 +141,7 @@ export function buildEmptySaleOrderEditorForm(): SaleOrderEditorForm {
     assignedBy: "",
     reserveBool: null,
     items: [],
+    supplies: [],
     payments: [],
     shippingPhoto: null,
     existingShippingPhotoUrl: null,
@@ -243,6 +251,10 @@ export function mapSaleOrderToEditorForm(
     assignedBy: order.assignedBy?.id ?? "",
     reserveBool: order.reserveBool ?? null,
     items: normalizeSaleOrderItems(order.items ?? []),
+    supplies: (order.supplies ?? []).map((supply) => ({
+      ...supply,
+      quantity: formatRecipeQuantity(supply.quantity),
+    })),
     payments: (order.payments ?? []).map((payment) => {
       const attachment = proofByPaymentId.get(payment.id);
       return {
@@ -357,6 +369,12 @@ export function toSaveSaleOrderWithClientDto(
     sendAddress: form.sendAddress.trim() || null,
     assignedBy: form.assignedBy || null,
     items: toSaleOrderItemCommands(form.items),
+    supplies: form.supplies.map((supply) => ({
+      supplySkuId: supply.supplySkuId,
+      quantity: Number(supply.quantity),
+      unitId: supply.unitId,
+      referenceRecipeItemId: supply.referenceRecipeItemId ?? undefined,
+    })),
     payments: form.payments.map((payment) => ({
       id: payment.id,
       clientKey: payment.clientKey,

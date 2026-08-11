@@ -23,6 +23,8 @@ type Props = {
   sourceOptions: Array<{ value: string; label: string }>;
   adviserOptions: AdviserOption[];
   onAdviserCreated: (adviser: AdviserOption) => void;
+  onWorkflowChange?: (workflowId: string) => void;
+  workflowChangeDisabled?: boolean;
 };
 
 export function SaleOrderInformationSection({
@@ -33,6 +35,8 @@ export function SaleOrderInformationSection({
   sourceOptions,
   adviserOptions,
   onAdviserCreated,
+  onWorkflowChange,
+  workflowChangeDisabled = false,
 }: Props) {
   const { permissions = [] } = useAuth();
   const canAssignRoles =
@@ -99,10 +103,12 @@ export function SaleOrderInformationSection({
           value={form.workflowId}
           options={workflowOptions}
           requiredIndicator
-          onChange={(workflowId) =>
-            setForm((current) => ({ ...current, workflowId }))
-          }
+          onChange={(workflowId) => {
+            if (onWorkflowChange) onWorkflowChange(workflowId);
+            else setForm((current) => ({ ...current, workflowId }));
+          }}
           searchable
+          disabled={workflowChangeDisabled}
         />
         <FloatingSelect
           label="Almacén"
