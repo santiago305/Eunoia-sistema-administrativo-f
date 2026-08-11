@@ -11,6 +11,8 @@ import {
   buildRecipeRowId,
   getPrimaUnitId,
   getPrimaUnitName,
+  isValidRecipeQuantity,
+  normalizeRecipeQuantityInput,
   type RecipeDraft,
   type RecipeDraftItem,
 } from "./recipeFormFields.helpers";
@@ -194,10 +196,13 @@ export function RecipeFormFields({
             label="Cantidad"
             type="number"
             name={`recipe-qty-${row.id}`}
-            min="0"
+            min="0.01"
             step="0.01"
             value={row.quantity}
-            onChange={(event) => updateItem(row.id, { quantity: event.target.value })}
+            onChange={(event) => {
+              const nextQuantity = normalizeRecipeQuantityInput(event.target.value);
+              if (nextQuantity !== null) updateItem(row.id, { quantity: nextQuantity });
+            }}
             className="text-black/90"
           />
         ),
@@ -249,7 +254,7 @@ export function RecipeFormFields({
     [ingredientEmptyMessage, ingredientLabel, ingredientSearchPlaceholder, recipePrimaVariantOptions, unitOptions, removeItem, saving, updateItem],
   );
 
-  const canAddItem = Boolean(materialSkuId && unitId && Number(quantity) > 0);
+  const canAddItem = Boolean(materialSkuId && unitId && isValidRecipeQuantity(quantity));
 
   const handleAddItem = useCallback(async () => {
     if (!canAddItem) return;
@@ -333,9 +338,12 @@ export function RecipeFormFields({
           name="cantidad"
           className="text-black/90"
           value={quantity}
-          min="0"
-          step="1"
-          onChange={(event) => setQuantity(event.target.value)}
+          min="0.01"
+          step="0.01"
+          onChange={(event) => {
+            const nextQuantity = normalizeRecipeQuantityInput(event.target.value);
+            if (nextQuantity !== null) setQuantity(nextQuantity);
+          }}
         />
 
         <SystemButton

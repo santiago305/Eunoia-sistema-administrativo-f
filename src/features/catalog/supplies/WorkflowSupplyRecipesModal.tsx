@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Save } from 'lucide-react';
 import { Modal } from '@/shared/components/modales/Modal';
 import { SystemButton } from '@/shared/components/components/SystemButton';
 import { RecipeFormFields } from '@/features/catalog/components/RecipeFormFields';
-import { createEmptyRecipeDraft, type RecipeDraft } from '@/features/catalog/components/recipeFormFields.helpers';
+import {
+  createEmptyRecipeDraft,
+  formatRecipeQuantity,
+  isValidRecipeQuantity,
+  mergePrimaVariants,
+  type RecipeDraft,
+} from '@/features/catalog/components/recipeFormFields.helpers';
 import { useFeedbackToast } from '@/shared/hooks/useFeedbackToast';
 import { errorResponse, successResponse } from '@/shared/common/utils/response';
 import { listWorkflows } from '@/shared/services/workflowService';
@@ -12,37 +18,79 @@ import { listUnits } from '@/shared/services/unitService';
 import { getWorkflowSupplyRecipe, saveWorkflowSupplyRecipe } from '@/shared/services/workflowSupplyRecipeService';
 import { ProductTypes } from '@/features/catalog/types/ProductTypes';
 import type { Workflow } from '@/features/workflows/types/workflow';
-import type { ProductSkuWithAttributes } from '@/features/catalog/types/product';
 import type { ListUnitResponse } from '@/features/catalog/types/unit';
 import type { PrimaVariant } from '@/features/catalog/types/variant';
 
 type Props = { open: boolean; canManage: boolean; onClose: () => void };
 
+const SUPPLY_PAGE_SIZE = 10;
+const SUPPLY_SEARCH_DELAY_MS = 300;
+
+const mapSupplyVariant = (item: Awaited<ReturnType<typeof listSkus>>['items'][number]): PrimaVariant => ({
+  id: item.sku.id, sku: item.sku.backendSku, customSku: item.sku.customSku ?? undefined,
+  productName: item.sku.name, productDescription: '', baseUnitId: item.unit?.id ?? '',
+  unitName: item.unit?.name ?? '', unitCode: item.unit?.code ?? '', unit: item.unit ?? undefined,
+  isActive: item.sku.isActive !== false, type: ProductTypes.SUPPLY,
+  attributes: Object.fromEntries((item.attributes ?? []).map((attribute) => [attribute.code, attribute.value])),
+});
+
 export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) {
   const { showFeedback } = useFeedbackToast();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [supplies, setSupplies] = useState<ProductSkuWithAttributes[]>([]);
+  const [supplyResults, setSupplyResults] = useState<PrimaVariant[]>([]);
+  const [recipeSupplyVariants, setRecipeSupplyVariants] = useState<PrimaVariant[]>([]);
   const [units, setUnits] = useState<ListUnitResponse>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState('');
   const [drafts, setDrafts] = useState<Record<string, RecipeDraft>>({});
   const [dirtyWorkflowIds, setDirtyWorkflowIds] = useState<string[]>([]);
   const [loadingCatalogs, setLoadingCatalogs] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(false);
+  const [loadingSupplies, setLoadingSupplies] = useState(false);
+  const [supplySearchQuery, setSupplySearchQuery] = useState('');
+  const [supplySearchPage, setSupplySearchPage] = useState(1);
+  const [hasMoreSupplyResults, setHasMoreSupplyResults] = useState(false);
   const [saving, setSaving] = useState(false);
+  const supplyRequestRef = useRef(0);
+  const supplyAbortRef = useRef<AbortController | null>(null);
+
+  const loadSupplies = useCallback(async (query: string, page: number) => {
+    const requestId = ++supplyRequestRef.current;
+    supplyAbortRef.current?.abort();
+    const controller = new AbortController();
+    supplyAbortRef.current = controller;
+    setLoadingSupplies(true);
+    try {
+      const response = await listSkus(
+        { productType: ProductTypes.SUPPLY, isActive: true, page, limit: SUPPLY_PAGE_SIZE, q: query },
+        { signal: controller.signal },
+      );
+      if (requestId !== supplyRequestRef.current) return;
+      const incoming = (response.items ?? []).map(mapSupplyVariant);
+      setSupplyResults((current) => page === 1 ? incoming : mergePrimaVariants(current, incoming));
+      setSupplySearchPage(page);
+      setHasMoreSupplyResults(page * SUPPLY_PAGE_SIZE < response.total);
+    } catch {
+      if (!controller.signal.aborted && requestId === supplyRequestRef.current) {
+        showFeedback(errorResponse('No se pudieron cargar los insumos'));
+      }
+    } finally {
+      if (requestId === supplyRequestRef.current) setLoadingSupplies(false);
+    }
+  }, [showFeedback]);
 
   useEffect(() => {
     if (!open) return;
-    setDrafts({}); setDirtyWorkflowIds([]);
+    setDrafts({}); setDirtyWorkflowIds([]); setSupplyResults([]); setRecipeSupplyVariants([]);
+    setSupplySearchQuery(''); setSupplySearchPage(1); setHasMoreSupplyResults(false);
     setSelectedWorkflowId(''); setLoadingCatalogs(true);
     let active = true;
     void Promise.all([
       listWorkflows(),
-      listSkus({ productType: ProductTypes.SUPPLY, isActive: true, page: 1, limit: 100 }),
       listUnits(),
-    ]).then(([workflowRows, supplyRows, unitRows]) => {
+    ]).then(([workflowRows, unitRows]) => {
       if (!active) return;
       const activeWorkflows = workflowRows.filter((workflow) => workflow.isActive);
-      setWorkflows(activeWorkflows); setSupplies(supplyRows.items ?? []); setUnits(unitRows ?? []);
+      setWorkflows(activeWorkflows); setUnits(unitRows ?? []);
       setSelectedWorkflowId(activeWorkflows[0]?.id ?? '');
     }).catch(() => active && showFeedback(errorResponse('No se pudieron cargar los flujos o insumos')))
       .finally(() => active && setLoadingCatalogs(false));
@@ -50,13 +98,34 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
   }, [open, showFeedback]);
 
   useEffect(() => {
+    if (!open) return;
+    const timeoutId = window.setTimeout(
+      () => void loadSupplies(supplySearchQuery, 1),
+      supplySearchQuery ? SUPPLY_SEARCH_DELAY_MS : 0,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [loadSupplies, open, supplySearchQuery]);
+
+  useEffect(() => () => {
+    supplyRequestRef.current += 1;
+    supplyAbortRef.current?.abort();
+  }, []);
+
+  useEffect(() => {
     if (!open || !selectedWorkflowId || drafts[selectedWorkflowId]) return;
     let active = true; setLoadingRecipe(true);
     void getWorkflowSupplyRecipe(selectedWorkflowId).then((recipe) => {
       if (!active) return;
+      if (recipe) {
+        setRecipeSupplyVariants((current) => mergePrimaVariants(current, recipe.items.map((item) => ({
+          id: item.supplySkuId, sku: item.backendSku, productName: item.supplyName || item.skuName,
+          productDescription: '', baseUnitId: item.unitId, unitName: item.unitName,
+          unitCode: item.unitCode, isActive: true, type: ProductTypes.SUPPLY, attributes: {},
+        }))));
+      }
       setDrafts((current) => ({ ...current, [selectedWorkflowId]: recipe ? {
         yieldQuantity: '1', notes: recipe.notes ?? '', items: recipe.items.map((item) => ({
-          id: item.id, materialSkuId: item.supplySkuId, quantity: String(item.quantity), unitId: item.unitId,
+          id: item.id, materialSkuId: item.supplySkuId, quantity: formatRecipeQuantity(item.quantity), unitId: item.unitId,
         })),
       } : createEmptyRecipeDraft() }));
     }).catch(() => active && showFeedback(errorResponse('No se pudo cargar la receta del flujo')))
@@ -65,13 +134,10 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
   }, [drafts, open, selectedWorkflowId, showFeedback]);
 
   const workflowOptions = useMemo(() => workflows.map((flow) => ({ value: flow.id, label: flow.name })), [workflows]);
-  const supplyVariants = useMemo<PrimaVariant[]>(() => supplies.map((item) => ({
-    id: item.sku.id, sku: item.sku.backendSku, customSku: item.sku.customSku ?? undefined,
-    productName: item.sku.name, productDescription: '', baseUnitId: item.unit?.id ?? '',
-    unitName: item.unit?.name ?? '', unitCode: item.unit?.code ?? '', unit: item.unit ?? undefined,
-    isActive: item.sku.isActive !== false, type: ProductTypes.SUPPLY,
-    attributes: Object.fromEntries((item.attributes ?? []).map((attribute) => [attribute.code, attribute.value])),
-  })), [supplies]);
+  const supplyVariants = useMemo(
+    () => mergePrimaVariants(recipeSupplyVariants, supplyResults),
+    [recipeSupplyVariants, supplyResults],
+  );
   const selectedDraft = drafts[selectedWorkflowId] ?? createEmptyRecipeDraft();
 
   const updateSelectedDraft = (next: RecipeDraft) => {
@@ -84,7 +150,7 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
     if (!dirtyWorkflowIds.length) return;
     const invalidId = dirtyWorkflowIds.find((id) => {
       const draft = drafts[id];
-      return !draft?.items.length || draft.items.some((item) => !item.materialSkuId || !item.unitId || Number(item.quantity) <= 0)
+      return !draft?.items.length || draft.items.some((item) => !item.materialSkuId || !item.unitId || !isValidRecipeQuantity(item.quantity))
         || new Set(draft.items.map((item) => item.materialSkuId)).size !== draft.items.length;
     });
     if (invalidId) {
@@ -102,7 +168,7 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
           items: draft.items.map((item) => ({ supplySkuId: item.materialSkuId, quantity: Number(item.quantity), unitId: item.unitId })),
         });
         savedDrafts[workflowId] = { yieldQuantity: '1', notes: saved.notes ?? '', items: saved.items.map((item) => ({
-          id: item.id, materialSkuId: item.supplySkuId, quantity: String(item.quantity), unitId: item.unitId,
+          id: item.id, materialSkuId: item.supplySkuId, quantity: formatRecipeQuantity(item.quantity), unitId: item.unitId,
         })) };
       } catch { failed.push(workflowId); }
     }
@@ -116,6 +182,8 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
     setDrafts({});
     setDirtyWorkflowIds([]);
     setSelectedWorkflowId('');
+    supplyRequestRef.current += 1;
+    supplyAbortRef.current?.abort();
     onClose();
   };
   return <Modal open={open} onClose={close} preventClose={saving} title="Recetas de insumos por flujo"
@@ -128,13 +196,13 @@ export function WorkflowSupplyRecipesModal({ open, canManage, onClose }: Props) 
         <SystemButton variant="primary" size="sm" leftIcon={<Save className="h-4 w-4" />} loading={saving} onClick={saveAll}
           disabled={!canManage || loadingCatalogs || loadingRecipe || !dirtyWorkflowIds.length}>Guardar recetas</SystemButton></div>
     </div>}>
-    <RecipeFormFields units={units} primaVariants={supplyVariants} onMaterialSearchChange={() => undefined}
-      hasMoreMaterialResults={false} onLoadMoreMaterials={() => undefined} recipe={selectedDraft}
-      onChange={updateSelectedDraft} loading={loadingCatalogs || loadingRecipe} saving={saving || !canManage}
+    <RecipeFormFields units={units} primaVariants={supplyVariants} onMaterialSearchChange={setSupplySearchQuery}
+      hasMoreMaterialResults={hasMoreSupplyResults} onLoadMoreMaterials={() => void loadSupplies(supplySearchQuery, supplySearchPage + 1)} recipe={selectedDraft}
+      onChange={updateSelectedDraft} loading={loadingCatalogs || loadingRecipe || loadingSupplies} saving={saving || !canManage}
       tableId="workflow-supply-recipes-table" recipeSkuOptions={workflowOptions} onSelectSku={setSelectedWorkflowId}
       selectedSkuId={selectedWorkflowId} ingredientLabel="Insumo" recipeSearchPlaceholder="Buscar flujo..."
       ingredientSearchPlaceholder="Buscar insumo..." recipeEmptyMessage="Sin flujos activos"
-      ingredientEmptyMessage="Sin insumos" emptyTableMessage="No hay insumos agregados a esta receta."
+      ingredientEmptyMessage={loadingSupplies ? 'Cargando insumos...' : 'Sin insumos'} emptyTableMessage="No hay insumos agregados a esta receta."
       loadMoreLabel="Cargar más insumos" showYield={false} />
   </Modal>;
 }

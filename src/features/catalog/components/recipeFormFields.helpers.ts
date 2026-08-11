@@ -27,6 +27,25 @@ export const buildRecipeRowId = () => {
   return `recipe-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+export const normalizeRecipeQuantityInput = (value: string): string | null => {
+  const normalized = value.replace(",", ".");
+  if (normalized === "") return "";
+  return /^\d+(?:\.\d{0,2})?$/.test(normalized) ? normalized : null;
+};
+
+export const roundRecipeQuantity = (value: string | number) =>
+  Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
+export const formatRecipeQuantity = (value: string | number) =>
+  String(roundRecipeQuantity(value));
+
+export const isValidRecipeQuantity = (value: string | number) => {
+  const quantity = Number(value);
+  return Number.isFinite(quantity)
+    && quantity >= 0.01
+    && Math.abs(quantity - roundRecipeQuantity(quantity)) < 1e-9;
+};
+
 export const mergePrimaVariants = (current: PrimaVariant[], incoming: PrimaVariant[]) =>
   Array.from(
     new Map([...current, ...incoming].map((variant) => [variant.id, variant])).values(),
