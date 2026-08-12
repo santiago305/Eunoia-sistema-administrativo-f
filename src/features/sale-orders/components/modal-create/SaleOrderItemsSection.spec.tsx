@@ -87,7 +87,7 @@ function ItemsHarness() {
 }
 
 describe("SaleOrderItemsSection external actions", () => {
-  it("renders standardized details for pack items only", () => {
+  it("renders products directly and keeps component details for packs", () => {
     const form: ItemsForm = {
       items: [
         {
@@ -111,7 +111,15 @@ describe("SaleOrderItemsSection external actions", () => {
           quantity: 1,
           unitPrice: 10,
           total: 10,
-          components: [],
+          components: [
+            {
+              skuId: "sku-product",
+              skuLabel: "Producto individual",
+              quantity: 1,
+              unitPrice: 10,
+              total: 10,
+            },
+          ],
         },
       ],
       deliveryCost: 0,
@@ -128,9 +136,18 @@ describe("SaleOrderItemsSection external actions", () => {
     );
 
     expect(screen.getByText("Polo azul")).toBeInTheDocument();
+    expect(screen.getByText("Producto individual")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: /componentes.*Producto individual/i,
+      }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getAllByRole("columnheader", { name: "Producto" }),
     ).not.toHaveLength(0);
+    expect(
+      screen.getByRole("region", { name: "Productos y packs" }),
+    ).toBeInTheDocument();
   });
 
   it("opens the SKU image preview from a component row", async () => {

@@ -132,13 +132,21 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
     );
 
     return (
-        <section className="overflow-hidden flex flex-col">
+        <section
+            aria-label="Productos y packs"
+            className="overflow-hidden flex flex-col"
+        >
             {showActions ? (
                 <div className="px-3 sm:px-4 flex items-center justify-end gap-2">
                     <SystemButton variant="motion" leftIcon={<Bike className="h-4 w-4" />} onClick={openTarifaModal}>
                         Tarifa
                     </SystemButton>
-                    <SystemButton leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate} disabled={!productsEditable}>
+                    <SystemButton
+                        leftIcon={<Plus className="h-4 w-4" />}
+                        onClick={openCreate}
+                        disabled={!productsEditable}
+                        title="Agregar un pack registrado o una agrupación personalizada"
+                    >
                         Agregar Pack
                     </SystemButton>
                 </div>

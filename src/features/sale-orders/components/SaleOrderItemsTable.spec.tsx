@@ -76,6 +76,50 @@ const packItem: SaleOrderItemInput = {
   ],
 };
 
+const productItem: SaleOrderItemInput = {
+  id: "item-product",
+  description: "Producto individual",
+  quantity: 2,
+  basePrice: 15,
+  unitPrice: 10,
+  total: 20,
+  components: [
+    {
+      skuId: "sku-product",
+      skuLabel: "Jabón individual",
+      skuCode: "JAB-001",
+      quantity: 2,
+      basePrice: 15,
+      unitPrice: 10,
+      total: 20,
+    },
+  ],
+};
+
+const unknownPackItem: SaleOrderItemInput = {
+  id: "item-unknown",
+  description: "Combo importado",
+  quantity: 1,
+  unitPrice: 25,
+  total: 25,
+  components: [
+    {
+      skuId: "sku-a",
+      skuLabel: "Producto A",
+      quantity: 1,
+      unitPrice: 10,
+      total: 10,
+    },
+    {
+      skuId: "sku-b",
+      skuLabel: "Producto B",
+      quantity: 1,
+      unitPrice: 15,
+      total: 15,
+    },
+  ],
+};
+
 describe("SaleOrderItemsTable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -92,9 +136,11 @@ describe("SaleOrderItemsTable", () => {
       />,
     );
 
-    expect(screen.getByRole("columnheader", { name: "Pack" })).toBeInTheDocument();
     expect(
-      screen.getByRole("columnheader", { name: "Expandir componentes" }),
+      screen.getByRole("columnheader", { name: "Producto / Pack" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Mostrar componentes de packs" }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("columnheader", { name: "Precio base" })).toHaveLength(2);
     expect(screen.getByRole("columnheader", { name: "Reservado" })).toBeInTheDocument();
@@ -107,6 +153,107 @@ describe("SaleOrderItemsTable", () => {
     expect(screen.getByRole("columnheader", { name: "Producto" })).toBeInTheDocument();
     expect(screen.getByText("Polo azul")).toBeInTheDocument();
     expect(screen.getByText("Gorra roja")).toBeInTheDocument();
+  });
+
+  it("renders an independent product directly without a fake pack subtable", () => {
+    const onChangeItem = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <SaleOrderItemsTable
+        items={[productItem]}
+        productsEditable
+        onChangeItem={onChangeItem}
+        onDelete={onDelete}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Producto")).toBeInTheDocument();
+    expect(screen.getByText("Jabón individual")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /componentes.*Producto individual/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Producto" })).not.toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByRole("spinbutton", {
+        name: "Cantidad del producto Jabón individual",
+      }),
+      { target: { value: "3" } },
+    );
+    expect(onChangeItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantity: 3,
+        total: 30,
+        components: [
+          expect.objectContaining({ quantity: 3, total: 30 }),
+        ],
+      }),
+      0,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Eliminar producto Jabón individual",
+      }),
+    );
+    expect(onDelete).toHaveBeenCalledWith(productItem, 0);
+  });
+
+  it("labels unmatched multi-SKU compositions as unknown packs", () => {
+    render(
+      <SaleOrderItemsTable
+        items={[unknownPackItem]}
+        productsEditable
+        onChangeItem={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("Pack desconocido").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("textbox", {
+        name: "Descripción del pack desconocido Combo importado",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Producto A")).toBeInTheDocument();
+    expect(screen.getByText("Producto B")).toBeInTheDocument();
+  });
+
+  it("recognizes a historical pack by its saved snapshot", () => {
+    render(
+      <SaleOrderItemsTable
+        items={[
+          {
+            ...unknownPackItem,
+            packNameSnapshot: "Pack histórico",
+          },
+        ]}
+        productsEditable
+        onChangeItem={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("Pack").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Pack desconocido")).not.toBeInTheDocument();
+  });
+
+  it("uses a product-and-pack empty state", () => {
+    render(
+      <SaleOrderItemsTable
+        items={[]}
+        productsEditable
+        onChangeItem={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("No hay productos ni packs.")).toBeInTheDocument();
   });
 
 
@@ -126,7 +273,7 @@ describe("SaleOrderItemsTable", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Adicionar producto a Pack verano",
+        name: "Añadir producto al pack Pack verano",
       }),
     );
     await user.click(
@@ -209,14 +356,14 @@ describe("SaleOrderItemsTable", () => {
     expect(screen.getByText("Polo azul")).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", {
-        name: "Contraer componentes de Pack verano",
+        name: "Contraer componentes del pack Pack verano",
       }),
     );
     expect(screen.queryByText("Polo azul")).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", {
-        name: "Desplegar componentes de Pack verano",
+        name: "Desplegar componentes del pack Pack verano",
       }),
     );
     expect(screen.getByText("Polo azul")).toBeInTheDocument();
@@ -507,7 +654,7 @@ describe("SaleOrderItemsTable", () => {
 
     fireEvent.change(
       screen.getByRole("textbox", {
-        name: "Descripcion del pack Pack verano",
+        name: "Descripción del pack Pack verano",
       }),
       { target: { value: "Pack invierno" } },
     );

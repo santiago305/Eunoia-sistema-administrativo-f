@@ -36,6 +36,59 @@ vi.mock("@/shared/services/skuService", () => ({
 }));
 
 describe("SaleOrderItemEditorModal - add catalog SKU", () => {
+    it.each([
+        {
+            expected: "Producto independiente",
+            value: {
+                description: "Producto A",
+                quantity: 1,
+                unitPrice: 10,
+                total: 10,
+                components: [{ skuId: "sku-1", quantity: 1, unitPrice: 10, total: 10 }],
+            },
+        },
+        {
+            expected: "Pack desconocido",
+            value: {
+                description: "Agrupación manual",
+                quantity: 1,
+                unitPrice: 20,
+                total: 20,
+                components: [
+                    { skuId: "sku-1", quantity: 1, unitPrice: 10, total: 10 },
+                    { skuId: "sku-2", quantity: 1, unitPrice: 10, total: 10 },
+                ],
+            },
+        },
+        {
+            expected: "Pack registrado",
+            value: {
+                description: "Pack X",
+                referencePackId: "pack-1",
+                quantity: 1,
+                unitPrice: 20,
+                total: 20,
+                components: [
+                    { skuId: "sku-1", quantity: 1, unitPrice: 10, total: 10 },
+                    { skuId: "sku-2", quantity: 1, unitPrice: 10, total: 10 },
+                ],
+            },
+        },
+    ])("identifies the editor item as $expected", ({ expected, value }) => {
+        render(
+            <SaleOrderItemEditorModal
+                open
+                title="Editar"
+                value={value}
+                onChange={vi.fn()}
+                onClose={() => {}}
+                onConfirm={() => {}}
+            />,
+        );
+
+        expect(screen.getByTestId("sale-order-item-presentation")).toHaveTextContent(expected);
+    });
+
     it("debounces pack searches and only requests the latest query", async () => {
         vi.mocked(listPacks).mockClear();
 
@@ -207,7 +260,7 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
             />,
         );
 
-        await user.click(screen.getByTitle("Agregar SKU"));
+        await user.click(screen.getByTitle("Añadir producto"));
 
         const dialog = screen.getByRole("dialog", { name: "Agregar SKU" });
 
@@ -795,6 +848,53 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
                 components: [],
                 unitPrice: 0,
                 total: 0,
+            }),
+        );
+    });
+
+    it("detaches catalog references when a registered pack becomes manual", () => {
+        const onChange = vi.fn();
+        render(
+            <SaleOrderItemEditorModal
+                open
+                title="Editar"
+                value={{
+                    description: "Pack X",
+                    referencePackId: "pack-1",
+                    packNameSnapshot: "Pack X",
+                    quantity: 1,
+                    unitPrice: 20,
+                    total: 20,
+                    components: [
+                        {
+                            skuId: "sku-1",
+                            quantity: 1,
+                            unitPrice: 20,
+                            total: 20,
+                            referencePackItemId: "pack-item-1",
+                        },
+                    ],
+                }}
+                onChange={onChange}
+                onClose={() => {}}
+                onConfirm={() => {}}
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText("Descripción"), {
+            target: { value: "Agrupación manual" },
+        });
+
+        expect(onChange).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                description: "Agrupación manual",
+                referencePackId: undefined,
+                packNameSnapshot: null,
+                components: [
+                    expect.objectContaining({
+                        referencePackItemId: undefined,
+                    }),
+                ],
             }),
         );
     });

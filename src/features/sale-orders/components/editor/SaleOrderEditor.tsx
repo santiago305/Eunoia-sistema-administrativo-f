@@ -598,7 +598,7 @@ export function SaleOrderEditor({
       <fieldset disabled={readOnly} className="grid flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,2.20fr)_minmax(360px,1fr)]">
         <div className="space-y-3">
           <SaleOrderEditorSection
-            title="Packs"
+            title="Productos y packs"
             requiredIndicator
             bodyClassName="max-h-[500px] py-4 overflow-hidden"
             actions={

@@ -99,6 +99,37 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     const [skuMetaById, setSkuMetaById] = useState<Record<string, { label: string; price?: number }>>({});
 
     const isEditing = Boolean(value.components?.length);
+    const itemPresentation = useMemo(() => {
+        if (value.referencePackId) {
+            return {
+                label: "Pack registrado",
+                description: "La composición pertenece al catálogo; los cambios se guardarán solamente en este pedido.",
+            };
+        }
+        if (value.packNameSnapshot) {
+            return {
+                label: "Pack histórico",
+                description: "Se conserva la composición guardada aunque el pack del catálogo ya no esté disponible.",
+            };
+        }
+        const componentCount = value.components?.length ?? 0;
+        if (componentCount === 1) {
+            return {
+                label: "Producto independiente",
+                description: "Al contener un solo SKU se mostrará como producto, no como pack.",
+            };
+        }
+        if (componentCount >= 2) {
+            return {
+                label: "Pack desconocido",
+                description: "Es una agrupación personalizada para este pedido y no modifica el catálogo de packs.",
+            };
+        }
+        return {
+            label: value.description.trim() ? "Agrupación en preparación" : "Sin selección",
+            description: "Selecciona un pack registrado o escribe una descripción y añade productos para crear una agrupación personalizada.",
+        };
+    }, [value.components?.length, value.description, value.packNameSnapshot, value.referencePackId]);
 
     useEffect(() => {
         if (!open) return;
@@ -375,7 +406,16 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
     return (
         <Modal open={open} onClose={onClose} title={title} className="max-w-4xl max-h-160" bodyClassName="p-4">
             <div className="space-y-4">
-                    <div className="bg-gray-100/80 p-5 rounded-xl space-y-5">
+                    <div className="bg-muted/40 p-5 rounded-xl space-y-5">
+                        <div
+                            role="status"
+                            aria-live="polite"
+                            data-testid="sale-order-item-presentation"
+                            className="rounded-lg border border-border bg-background px-3 py-2"
+                        >
+                            <p className="text-xs font-semibold text-foreground">{itemPresentation.label}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{itemPresentation.description}</p>
+                        </div>
                         <FloatingSuggestInput
                             label="Descripción"
                             name="item-description"
@@ -386,7 +426,12 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                     ...value,
                                     description: text,
                                     referencePackId: undefined,
+                                    packNameSnapshot: null,
                                     basePrice: undefined,
+                                    components: (value.components ?? []).map((component) => ({
+                                        ...component,
+                                        referencePackItemId: undefined,
+                                    })),
                                 });
                             }}
                             onOptionSelect={(option) => {
@@ -395,6 +440,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                     ...value,
                                     description: option.label,
                                     referencePackId: option.value || undefined,
+                                    packNameSnapshot: option.value ? option.label : null,
                                     components: [],
                                     basePrice: undefined,
                                     unitPrice: 0,
@@ -402,8 +448,8 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                 });
                             }}
                             options={packOptions}
-                            searchPlaceholder="Selecciona un pack o escribe una descripción"
-                            emptyMessage="Sin packs"
+                            searchPlaceholder="Busca un pack o escribe una agrupación"
+                            emptyMessage="No se encontraron packs"
                             panelWidthMode="min-trigger"
                         />
 
@@ -508,10 +554,10 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                             />
                         </div>
 
-                    <div className="rounded-xl bg-white p-3 text-sm shadow-inherit">
+                    <div className="rounded-xl bg-background p-3 text-sm shadow-inherit">
                         <div className="flex">
-                            <div className="font-semibold p-2">Adicionar</div>
-                            <SystemButton size="sm" leftIcon={<Plus className="h-4 w-4" />} aria-label="Agregar SKU" title="Agregar SKU" onClick={() => setOpenAddSku(true)} />
+                            <div className="font-semibold p-2">Productos incluidos</div>
+                            <SystemButton size="sm" leftIcon={<Plus className="h-4 w-4" />} aria-label="Añadir producto" title="Añadir producto" onClick={() => setOpenAddSku(true)} />
                         </div>
 
                         <div className="mt-2 space-y-2">

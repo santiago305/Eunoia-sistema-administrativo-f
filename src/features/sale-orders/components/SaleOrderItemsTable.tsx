@@ -264,6 +264,71 @@ const getSkuLabel = (component: SaleOrderItemComponentInput) =>
       component.skuId ||
       "SKU";
 
+type SaleOrderItemKind = "PRODUCT" | "PACK" | "UNKNOWN_PACK";
+
+const getSaleOrderItemKind = (
+  item: SaleOrderItemInput,
+): SaleOrderItemKind => {
+  const components = item.components ?? [];
+  if (
+    !item.referencePackId &&
+    !item.packNameSnapshot &&
+    components.length === 1
+  ) {
+    return "PRODUCT";
+  }
+  if (item.referencePackId || item.packNameSnapshot) return "PACK";
+  return "UNKNOWN_PACK";
+};
+
+const updateIndependentProductQuantity = (
+  item: SaleOrderItemInput,
+  quantity: number,
+) => {
+  const component = item.components?.[0];
+  if (!component) return item;
+  const total = calcTotal(quantity, component.unitPrice);
+  return {
+    ...item,
+    quantity,
+    unitPrice: component.unitPrice,
+    total,
+    components: [{ ...component, quantity, total }],
+  };
+};
+
+const updateIndependentProductUnitPrice = (
+  item: SaleOrderItemInput,
+  unitPrice: number,
+) => {
+  const component = item.components?.[0];
+  if (!component) return item;
+  const total = calcTotal(component.quantity, unitPrice);
+  return {
+    ...item,
+    quantity: component.quantity,
+    unitPrice,
+    total,
+    components: [{ ...component, unitPrice, total }],
+  };
+};
+
+const updateIndependentProductTotal = (
+  item: SaleOrderItemInput,
+  total: number,
+) => {
+  const component = item.components?.[0];
+  if (!component) return item;
+  const unitPrice = calcUnitPrice(component.quantity, total);
+  return {
+    ...item,
+    quantity: component.quantity,
+    unitPrice,
+    total,
+    components: [{ ...component, unitPrice, total }],
+  };
+};
+
 export function SaleOrderItemsTable({
   items,
   warehouseId,
@@ -374,10 +439,10 @@ export function SaleOrderItemsTable({
           <thead className="sticky top-0 z-10 bg-background">
             <tr className="border-b border-border/70 bg-muted/40">
               <th
-                aria-label="Expandir componentes"
+                aria-label="Mostrar componentes de packs"
                 className="px-2 py-2"
               />
-              <HeaderCell>Pack</HeaderCell>
+              <HeaderCell>Producto / Pack</HeaderCell>
               <HeaderCell>Cant.</HeaderCell>
               <HeaderCell>Precio base</HeaderCell>
               <HeaderCell>Precio u.</HeaderCell>
@@ -395,7 +460,7 @@ export function SaleOrderItemsTable({
                   colSpan={9}
                   className="px-4 py-12 text-center text-sm text-muted-foreground"
                 >
-                  No hay packs disponibles.
+                  No hay productos ni packs.
                 </td>
               </tr>
             ) : (
@@ -403,6 +468,36 @@ export function SaleOrderItemsTable({
                 const itemKey = getItemKey(item, index);
                 const expanded = !collapsedItems.includes(itemKey);
                 const components = item.components ?? [];
+                const itemKind = getSaleOrderItemKind(item);
+                if (itemKind === "PRODUCT") {
+                  const component = components[0];
+                  if (!component) return null;
+                  const skuId = getSkuId(component);
+                  const stock = skuId ? stocksBySkuId[skuId] : null;
+                  return (
+                    <ProductRow
+                      key={itemKey}
+                      item={item}
+                      itemKey={itemKey}
+                      index={index}
+                      component={component}
+                      stockLabel={resolveComponentStockLabel({
+                        warehouseId,
+                        loadingStock,
+                        stockStatus,
+                        available: stock?.available,
+                      })}
+                      reservedLabel={resolveReserveLabel(
+                        reserveBool,
+                        stockStatus,
+                      )}
+                      productsEditable={productsEditable}
+                      onChangeItem={onChangeItem}
+                      onDelete={onDelete}
+                      onOpenDetail={onOpenDetail}
+                    />
+                  );
+                }
                 const flags = getPackStockFlags(
                   components,
                   warehouseId,
@@ -416,6 +511,7 @@ export function SaleOrderItemsTable({
                   <PackRows
                     key={itemKey}
                     item={item}
+                    itemKind={itemKind}
                     itemKey={itemKey}
                     index={index}
                     expanded={expanded}
@@ -441,8 +537,123 @@ export function SaleOrderItemsTable({
   );
 }
 
+function ProductRow({
+  item,
+  itemKey,
+  index,
+  component,
+  stockLabel,
+  reservedLabel,
+  productsEditable,
+  onChangeItem,
+  onDelete,
+  onOpenDetail,
+}: {
+  item: SaleOrderItemInput;
+  itemKey: string;
+  index: number;
+  component: SaleOrderItemComponentInput;
+  stockLabel: string;
+  reservedLabel: string;
+  productsEditable: boolean;
+  onChangeItem: Props["onChangeItem"];
+  onDelete: Props["onDelete"];
+  onOpenDetail: Props["onOpenDetail"];
+}) {
+  const skuLabel = getSkuLabel(component);
+
+  return (
+    <tr className="border-b border-border/60 transition-colors hover:bg-muted/20">
+      <td className="px-2 py-2 align-middle" aria-hidden="true" />
+      <SkuCell
+        component={component}
+        badge="Producto"
+        onOpenImage={() => onOpenDetail(item, index, component)}
+      />
+      <EditableNumberCell>
+        <CompactFloatingNumberInput
+          label="Cantidad"
+          ariaLabel={`Cantidad del producto ${skuLabel}`}
+          name={`product-quantity-${itemKey}`}
+          value={component.quantity}
+          step="0.001"
+          readOnly={!productsEditable}
+          onValueChange={(quantity) =>
+            onChangeItem(
+              updateIndependentProductQuantity(item, quantity),
+              index,
+            )
+          }
+        />
+      </EditableNumberCell>
+      <EditableNumberCell>
+        <CompactFloatingNumberInput
+          label="Precio base"
+          ariaLabel={`Precio base del producto ${skuLabel}`}
+          name={`product-base-price-${itemKey}`}
+          value={
+            component.basePrice ??
+            component.sku?.price ??
+            item.basePrice ??
+            component.unitPrice
+          }
+          readOnly
+        />
+      </EditableNumberCell>
+      <EditableNumberCell>
+        <CompactFloatingNumberInput
+          label="Precio unit."
+          ariaLabel={`Precio unitario del producto ${skuLabel}`}
+          name={`product-unit-price-${itemKey}`}
+          value={component.unitPrice}
+          readOnly={!productsEditable}
+          onValueChange={(unitPrice) =>
+            onChangeItem(
+              updateIndependentProductUnitPrice(item, unitPrice),
+              index,
+            )
+          }
+        />
+      </EditableNumberCell>
+      <EditableNumberCell>
+        <CompactFloatingNumberInput
+          label="Total"
+          ariaLabel={`Total del producto ${skuLabel}`}
+          name={`product-total-${itemKey}`}
+          value={component.total}
+          readOnly={!productsEditable}
+          onValueChange={(total) =>
+            onChangeItem(updateIndependentProductTotal(item, total), index)
+          }
+        />
+      </EditableNumberCell>
+      <StatusCell testId={`product-stock-${item.id ?? itemKey}`}>
+        {stockLabel}
+      </StatusCell>
+      <StatusCell testId={`product-reserved-${item.id ?? itemKey}`}>
+        {reservedLabel}
+      </StatusCell>
+      <td className="px-2 py-2 align-middle">
+        <div className="flex justify-center gap-2">
+          <ActionButton
+            action="Eliminar producto"
+            item={item}
+            targetLabel={skuLabel}
+            danger
+            disabled={!productsEditable}
+            onClick={() => onDelete(item, index)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </ActionButton>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function PackRows({
   item,
+  itemKind,
   itemKey,
   index,
   expanded,
@@ -459,6 +670,7 @@ function PackRows({
   onOpenDetail,
 }: {
   item: SaleOrderItemInput;
+  itemKind: Exclude<SaleOrderItemKind, "PRODUCT">;
   itemKey: string;
   index: number;
   expanded: boolean;
@@ -475,6 +687,8 @@ function PackRows({
   onOpenDetail: Props["onOpenDetail"];
 }) {
   const action = expanded ? "Contraer" : "Desplegar";
+  const itemTypeLabel = itemKind === "PACK" ? "Pack" : "Pack desconocido";
+  const accessibleItemType = itemTypeLabel.toLocaleLowerCase("es-PE");
 
   return (
     <>
@@ -483,7 +697,7 @@ function PackRows({
           <button
             type="button"
             aria-expanded={expanded}
-            aria-label={`${action} componentes de ${item.description}`}
+            aria-label={`${action} componentes del ${accessibleItemType} ${item.description}`}
             onClick={onToggle}
             className="inline-flex h-9 w-9 items-center justify-center rounded-sm transition-colors hover:bg-muted/50"
           >
@@ -497,9 +711,10 @@ function PackRows({
         </td>
         <td className="px-2 py-2 align-middle text-[10px]">
           <span className="sr-only">{item.description}</span>
+          <ItemTypeBadge kind={itemKind} />
           <FloatingInput
-            label="Pack"
-            aria-label={`Descripcion del pack ${item.description}`}
+            label={itemTypeLabel}
+            aria-label={`Descripción del ${accessibleItemType} ${item.description}`}
             name={`pack-description-${itemKey}`}
             value={item.description ?? ""}
             className="h-8 rounded-md px-2 py-1 text-xs font-semibold"
@@ -509,13 +724,13 @@ function PackRows({
             }
           />
           <span className="text-[10px] text-muted-foreground">
-            {(item.components ?? []).length} componente(s)
+            {(item.components ?? []).length} producto(s)
           </span>
         </td>
         <EditableNumberCell>
           <CompactFloatingNumberInput
             label="Cantidad"
-            ariaLabel={`Cantidad del pack ${item.description}`}
+            ariaLabel={`Cantidad del ${accessibleItemType} ${item.description}`}
             name={`pack-quantity-${itemKey}`}
             value={item.quantity}
             step="0.001"
@@ -528,7 +743,7 @@ function PackRows({
         <EditableNumberCell>
           <CompactFloatingNumberInput
             label="Precio base"
-            ariaLabel={`Precio base del pack ${item.description}`}
+            ariaLabel={`Precio base del ${accessibleItemType} ${item.description}`}
             name={`pack-base-price-${itemKey}`}
             value={item.basePrice ?? item.unitPrice}
             readOnly
@@ -537,7 +752,7 @@ function PackRows({
         <EditableNumberCell>
           <CompactFloatingNumberInput
             label="Precio unit."
-            ariaLabel={`Precio unitario del pack ${item.description}`}
+            ariaLabel={`Precio unitario del ${accessibleItemType} ${item.description}`}
             name={`pack-unit-price-${itemKey}`}
             value={item.unitPrice}
             readOnly={!productsEditable}
@@ -549,7 +764,7 @@ function PackRows({
         <EditableNumberCell>
           <CompactFloatingNumberInput
             label="Total"
-            ariaLabel={`Total del pack ${item.description}`}
+            ariaLabel={`Total del ${accessibleItemType} ${item.description}`}
             name={`pack-total-${itemKey}`}
             value={item.total}
             readOnly={!productsEditable}
@@ -624,6 +839,9 @@ function ComponentsSubtable({
 }) {
   const [openAddSku, setOpenAddSku] = useState(false);
   const components = item.components ?? [];
+  const itemKind = getSaleOrderItemKind(item);
+  const containerLabel =
+    itemKind === "PACK" ? "pack" : "pack desconocido";
 
   return (
     <>
@@ -639,12 +857,12 @@ function ComponentsSubtable({
                   variant="outline"
                   className="h-6 rounded-md px-2 text-[10px] normal-case tracking-normal"
                   leftIcon={<Plus className="h-3.5 w-3.5" />}
-                  aria-label={`Adicionar producto a ${item.description}`}
-                  title={`Adicionar producto a ${item.description}`}
+                  aria-label={`Añadir producto al ${containerLabel} ${item.description}`}
+                  title={`Añadir producto al ${containerLabel} ${item.description}`}
                   disabled={!productsEditable}
                   onClick={() => setOpenAddSku(true)}
                 >
-                  Adicionar
+                  Añadir
                 </SystemButton>
               </div>
             </SubHeaderCell>
@@ -662,7 +880,7 @@ function ComponentsSubtable({
                 colSpan={6}
                 className="px-3 py-5 text-center text-muted-foreground"
               >
-                Este pack no tiene componentes SKU.
+                Esta agrupación no tiene productos.
               </td>
             </tr>
           ) : (
@@ -896,6 +1114,26 @@ function EditableNumberCell({ children }: { children: React.ReactNode }) {
   return <td className="px-1.5 py-2 align-middle">{children}</td>;
 }
 
+function ItemTypeBadge({
+  kind,
+}: {
+  kind: Exclude<SaleOrderItemKind, "PRODUCT">;
+}) {
+  const unknown = kind === "UNKNOWN_PACK";
+  return (
+    <span
+      className={cn(
+        "mb-1 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
+        unknown
+          ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+          : "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-200",
+      )}
+    >
+      {unknown ? "Pack desconocido" : "Pack"}
+    </span>
+  );
+}
+
 function CompactFloatingNumberInput({
   label,
   ariaLabel,
@@ -950,9 +1188,11 @@ function StatusCell({
 
 function SkuCell({
   component,
+  badge,
   onOpenImage,
 }: {
   component: SaleOrderItemComponentInput;
+  badge?: "Producto";
   onOpenImage: () => void;
 }) {
   const label = getSkuLabel(component);
@@ -980,6 +1220,11 @@ function SkuCell({
           )}
         </button>
         <div className="min-w-0">
+          {badge ? (
+            <span className="mb-1 inline-flex rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">
+              {badge}
+            </span>
+          ) : null}
           <p className="truncate font-semibold">{label}</p>
         </div>
       </div>
@@ -990,6 +1235,7 @@ function SkuCell({
 function ActionButton({
   action,
   item,
+  targetLabel,
   danger = false,
   disabled,
   onClick,
@@ -997,6 +1243,7 @@ function ActionButton({
 }: {
   action: string;
   item: SaleOrderItemInput;
+  targetLabel?: string;
   danger?: boolean;
   disabled: boolean;
   onClick: () => void;
@@ -1007,8 +1254,8 @@ function ActionButton({
       size="icon"
       variant={danger ? "danger" : "outline"}
       className="h-9 w-9"
-      title={`${action} ${item.description}`}
-      aria-label={`${action} ${item.description}`}
+      title={`${action} ${targetLabel ?? item.description}`}
+      aria-label={`${action} ${targetLabel ?? item.description}`}
       disabled={disabled}
       onClick={onClick}
     >
