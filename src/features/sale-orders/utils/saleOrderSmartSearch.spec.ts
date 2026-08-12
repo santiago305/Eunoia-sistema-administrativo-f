@@ -4,6 +4,7 @@ import {
   buildSaleOrderSearchChips,
   buildSaleOrderSmartSearchColumns,
   sanitizeSaleOrderSearchSnapshot,
+  upsertSaleOrderUbigeoSearchRule,
 } from "./saleOrderSmartSearch";
 
 const searchState: SaleOrderSearchStateResponse = {
@@ -26,6 +27,46 @@ const searchState: SaleOrderSearchStateResponse = {
 } as SaleOrderSearchStateResponse;
 
 describe("sale order workflow and state smart filters", () => {
+  it("chains department, province and district options and clears descendants", () => {
+    const ubigeoState = {
+      ...searchState,
+      catalogs: {
+        ...searchState.catalogs,
+        departments: [{ id: "20", label: "Piura" }, { id: "15", label: "Lima" }],
+        provinces: [
+          { id: "2001", label: "Piura", departmentId: "20" },
+          { id: "1501", label: "Lima", departmentId: "15" },
+        ],
+        districts: [
+          { id: "200101", label: "Piura", provinceId: "2001" },
+          { id: "150101", label: "Lima", provinceId: "1501" },
+        ],
+      },
+    } as SaleOrderSearchStateResponse;
+    const departmentSnapshot = upsertSaleOrderUbigeoSearchRule(
+      { filters: [] },
+      { field: "clientDepartmentId", operator: "in", values: ["20"] },
+    );
+    const departmentColumns = buildSaleOrderSmartSearchColumns(ubigeoState, departmentSnapshot);
+    expect(departmentColumns.find((column) => column.id === "clientProvinceId")?.options)
+      .toEqual([{ id: "2001", label: "Piura", departmentId: "20" }]);
+    expect(departmentColumns.find((column) => column.id === "clientDistrictId")?.options).toEqual([]);
+
+    const provinceSnapshot = upsertSaleOrderUbigeoSearchRule(
+      departmentSnapshot,
+      { field: "clientProvinceId", operator: "in", values: ["2001"] },
+    );
+    expect(buildSaleOrderSmartSearchColumns(ubigeoState, provinceSnapshot)
+      .find((column) => column.id === "clientDistrictId")?.options)
+      .toEqual([{ id: "200101", label: "Piura", provinceId: "2001" }]);
+
+    const changedDepartment = upsertSaleOrderUbigeoSearchRule(
+      provinceSnapshot,
+      { field: "clientDepartmentId", operator: "in", values: ["15"] },
+    );
+    expect(changedDepartment.filters.map((rule) => rule.field)).toEqual(["clientDepartmentId"]);
+  });
+
   it("keeps client phone and agency detail text filters", () => {
     const snapshot = sanitizeSaleOrderSearchSnapshot({
       filters: [

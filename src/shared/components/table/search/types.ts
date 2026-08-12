@@ -8,6 +8,8 @@ export type DataTableSearchOption = {
   id: string;
   label: string;
   keywords?: string[];
+  departmentId?: string;
+  provinceId?: string;
 };
 
 export type DataTableSearchSnapshot<TFilterKey extends string = string> = {

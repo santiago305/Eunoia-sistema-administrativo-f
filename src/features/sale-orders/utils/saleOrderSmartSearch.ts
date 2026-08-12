@@ -281,6 +281,21 @@ export function upsertSaleOrderSearchRule(snapshot: SaleOrderSearchSnapshot, rul
   });
 }
 
+export function upsertSaleOrderUbigeoSearchRule(
+  snapshot: SaleOrderSearchSnapshot,
+  rule: SaleOrderSearchRule,
+) {
+  let normalized = upsertSaleOrderSearchRule(snapshot, rule);
+  const keysToRemove =
+    rule.field === SaleOrderSearchFields.CLIENT_DEPARTMENT_ID
+      ? [SaleOrderSearchFields.CLIENT_PROVINCE_ID, SaleOrderSearchFields.CLIENT_DISTRICT_ID]
+      : rule.field === SaleOrderSearchFields.CLIENT_PROVINCE_ID
+        ? [SaleOrderSearchFields.CLIENT_DISTRICT_ID]
+        : [];
+  for (const key of keysToRemove) normalized = removeSaleOrderSearchKey(normalized, key);
+  return normalized;
+}
+
 export function removeSaleOrderSearchKey(snapshot: SaleOrderSearchSnapshot, key: "q" | SaleOrderSearchFilterKey) {
   const normalized = sanitizeSaleOrderSearchSnapshot(snapshot);
   if (key === "q") return sanitizeSaleOrderSearchSnapshot({ ...normalized, q: undefined });
@@ -341,6 +356,12 @@ function getRuleLabel(rule: SaleOrderSearchRule, searchState?: SaleOrderSearchSt
                   ? getCatalogLabel(values, searchState?.catalogs.bankAccounts)
                   : rule.field === SaleOrderSearchFields.CLIENT_TYPE
                     ? getCatalogLabel(values, searchState?.catalogs.clientTypes)
+                    : rule.field === SaleOrderSearchFields.CLIENT_DEPARTMENT_ID
+                      ? getCatalogLabel(values, searchState?.catalogs.departments)
+                      : rule.field === SaleOrderSearchFields.CLIENT_PROVINCE_ID
+                        ? getCatalogLabel(values, searchState?.catalogs.provinces)
+                        : rule.field === SaleOrderSearchFields.CLIENT_DISTRICT_ID
+                          ? getCatalogLabel(values, searchState?.catalogs.districts)
                       : rule.field === SaleOrderSearchFields.SOURCE_ID
                         ? getCatalogLabel(values, searchState?.catalogs.sources)
                         : rule.field === SaleOrderSearchFields.PREGUIDE_STATUS
@@ -442,6 +463,7 @@ export function getSaleOrderSearchRuleSummary(
 
 export function buildSaleOrderSmartSearchColumns(
   searchState?: SaleOrderSearchStateResponse | null,
+  snapshot?: SaleOrderSearchSnapshot | null,
 ): SaleOrderSmartSearchColumn[] {
   const paymentStatusOptions = normalizeSearchOptions(searchState?.catalogs.paymentStatuses);
   const clientOptions = normalizeSearchOptions(searchState?.catalogs.clients);
@@ -451,8 +473,20 @@ export function buildSaleOrderSmartSearchColumns(
   const bankAccountOptions = normalizeSearchOptions(searchState?.catalogs.bankAccounts);
   const clientTypeOptions = normalizeSearchOptions(searchState?.catalogs.clientTypes);
   const departmentOptions = normalizeSearchOptions(searchState?.catalogs.departments);
-  const provinceOptions = normalizeSearchOptions(searchState?.catalogs.provinces);
-  const districtOptions = normalizeSearchOptions(searchState?.catalogs.districts);
+  const selectedDepartmentIds = new Set(
+    findSaleOrderSearchRule(snapshot ?? { filters: [] }, SaleOrderSearchFields.CLIENT_DEPARTMENT_ID)?.values ?? [],
+  );
+  const selectedProvinceIds = new Set(
+    findSaleOrderSearchRule(snapshot ?? { filters: [] }, SaleOrderSearchFields.CLIENT_PROVINCE_ID)?.values ?? [],
+  );
+  const allProvinceOptions = normalizeSearchOptions(searchState?.catalogs.provinces);
+  const provinceOptions = selectedDepartmentIds.size
+    ? allProvinceOptions.filter((option) => option.departmentId && selectedDepartmentIds.has(option.departmentId))
+    : [];
+  const districtOptions = selectedProvinceIds.size
+    ? normalizeSearchOptions(searchState?.catalogs.districts)
+        .filter((option) => option.provinceId && selectedProvinceIds.has(option.provinceId))
+    : [];
   const sourceOptions = normalizeSearchOptions(searchState?.catalogs.sources);
   const invoiceStatusOptions = normalizeSearchOptions(searchState?.catalogs.invoiceStatuses);
   const preguideStatusOptions = normalizeSearchOptions(searchState?.catalogs.preguideStatuses);
@@ -575,6 +609,9 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguna de" }],
       supportsExclude: true,
       options: provinceOptions,
+      description: selectedDepartmentIds.size
+        ? "Muestra solo provincias de los departamentos seleccionados."
+        : "Selecciona primero un departamento.",
     },
     {
       id: SaleOrderSearchFields.CLIENT_DISTRICT_ID,
@@ -583,6 +620,9 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: districtOptions,
+      description: selectedProvinceIds.size
+        ? "Muestra solo distritos de las provincias seleccionadas."
+        : "Selecciona primero una provincia.",
     },
     {
       id: SaleOrderSearchFields.WAREHOUSE_ID,

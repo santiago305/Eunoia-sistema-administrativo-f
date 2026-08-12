@@ -42,6 +42,7 @@ import {
     SaleOrderSearchOperators,
     sanitizeSaleOrderSearchSnapshot,
     upsertSaleOrderSearchRule,
+    upsertSaleOrderUbigeoSearchRule,
     type SaleOrderSearchFilters,
     type SaleOrderSearchFilterKey,
 } from "@/features/sale-orders/utils/saleOrderSmartSearch";
@@ -222,7 +223,10 @@ export default function SaleOrders() {
         [appliedSearchText, searchFilters],
     );
     const hasExecutedSearchCriteria = useMemo(() => hasSaleOrderSearchCriteria(executedSnapshot), [executedSnapshot]);
-    const smartSearchColumns = useMemo(() => buildSaleOrderSmartSearchColumns(searchState), [searchState]);
+    const smartSearchColumns = useMemo(
+        () => buildSaleOrderSmartSearchColumns(searchState, draftSnapshot),
+        [draftSnapshot, searchState],
+    );
     const recentSearches = useMemo<DataTableRecentSearchItem<SaleOrderSearchSnapshot>[]>(
         () =>
             (searchState?.recent ?? []).map((item) => ({
@@ -562,7 +566,7 @@ export default function SaleOrders() {
         (rule: SaleOrderSearchRule) => {
             startTransition(() => {
                 setSearchFilters((current: SaleOrderSearchFilters) => {
-                    const next = upsertSaleOrderSearchRule(
+                    const next = upsertSaleOrderUbigeoSearchRule(
                         sanitizeSaleOrderSearchSnapshot({
                             q: searchText,
                             filters: current,

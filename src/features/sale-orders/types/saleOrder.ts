@@ -516,6 +516,8 @@ export type SaleOrderSearchOption = {
   value?: string;
   label: string;
   keywords?: string[];
+  departmentId?: string;
+  provinceId?: string;
 };
 
 export type SaleOrderSearchRuleMode = "include" | "exclude";
