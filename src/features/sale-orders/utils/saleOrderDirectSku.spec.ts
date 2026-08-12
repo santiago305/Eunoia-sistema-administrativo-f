@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildSaleOrderItemFromSku } from "./saleOrderDirectSku";
 
 describe("buildSaleOrderItemFromSku", () => {
-  it("creates a pack-shaped sale order item from a product SKU without pack references", () => {
+  it("always creates a direct SKU as one independent product without pack references", () => {
     const item = buildSaleOrderItemFromSku({
       sku: {
         id: "sku-1",
@@ -71,6 +71,9 @@ describe("buildSaleOrderItemFromSku", () => {
         },
       ],
     });
+    expect(item.components).toHaveLength(1);
+    expect(item.referencePackId).toBeUndefined();
+    expect(item.packNameSnapshot).toBeUndefined();
   });
 
   it("falls back to zero price and safe text when optional SKU fields are missing", () => {

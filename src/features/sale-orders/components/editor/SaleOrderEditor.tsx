@@ -18,6 +18,7 @@ import type { AdviserOption } from "@/shared/services/adviserService";
 import { listSubsidiaries } from "@/shared/services/agencyService";
 import {
   getSaleOrderEditorCatalogs,
+  matchSaleOrderProductPack,
   saveSaleOrderWithClient,
 } from "@/shared/services/saleOrderService";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
@@ -45,6 +46,10 @@ import {
   type SaleOrderEditorForm,
 } from "./saleOrderEditorForm";
 import { normalizeMoney, parseDecimalInput } from "@/shared/utils/functionPurchases";
+import {
+  getIndependentProductMatchCandidate,
+  groupIndependentProductsAsMatchedPack,
+} from "@/features/sale-orders/utils/saleOrderProductGrouping";
 import {
   buildSaleOrderBankAccountOptions,
   buildSaleOrderPaymentMethodOptions,
@@ -93,6 +98,7 @@ export function SaleOrderEditor({
       : buildEmptySaleOrderEditorForm(),
   );
   const [saving, setSaving] = useState(false);
+  const [matchingProductPack, setMatchingProductPack] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [supplyRecipeLoading, setSupplyRecipeLoading] = useState(false);
   const [supplyRecipeError, setSupplyRecipeError] = useState<string | null>(null);
@@ -130,6 +136,9 @@ export function SaleOrderEditor({
   const itemsSectionRef = useRef<SaleOrderItemsSectionHandle>(null);
   const supplyRecipeRequestRef = useRef(0);
   const supplyRecipeAbortRef = useRef<AbortController | null>(null);
+  const productItemsRef = useRef(form.items);
+  const productPackMatchRequestRef = useRef(0);
+  const productPackMatchBusyRef = useRef(false);
   useEffect(() => {
     const next =
       mode === "edit" && order
@@ -140,14 +149,24 @@ export function SaleOrderEditor({
     supplyRecipeAbortRef.current?.abort();
     setSupplyRecipeLoading(false);
     setSupplyRecipeError(null);
+    productItemsRef.current = next.items;
+    productPackMatchRequestRef.current += 1;
+    productPackMatchBusyRef.current = false;
+    setMatchingProductPack(false);
     initialSnapshot.current = comparable(next);
     onDirtyChange?.(false);
   }, [mode, onDirtyChange, order]);
+
+  useEffect(() => {
+    productItemsRef.current = form.items;
+  }, [form.items]);
 
   useEffect(
     () => () => {
       supplyRecipeRequestRef.current += 1;
       supplyRecipeAbortRef.current?.abort();
+      productPackMatchRequestRef.current += 1;
+      productPackMatchBusyRef.current = false;
     },
     [],
   );
@@ -323,11 +342,70 @@ export function SaleOrderEditor({
   }, []);
 
   const addDirectSkuItem = useCallback(
-    (item: SaleOrderEditorForm["items"][number]) => {
+    async (item: SaleOrderEditorForm["items"][number]) => {
+      if (productPackMatchBusyRef.current) return;
+
+      const nextItems = [...productItemsRef.current, item];
+      productItemsRef.current = nextItems;
       setForm((current) => ({
         ...current,
         items: [...current.items, item],
       }));
+
+      const candidate = getIndependentProductMatchCandidate(nextItems);
+      if (!candidate) return;
+
+      const requestId = ++productPackMatchRequestRef.current;
+      productPackMatchBusyRef.current = true;
+      setMatchingProductPack(true);
+      try {
+        const match = await matchSaleOrderProductPack(candidate.composition);
+        if (requestId !== productPackMatchRequestRef.current) return;
+
+        if (match.status === "UNIQUE") {
+          const groupedItems = groupIndependentProductsAsMatchedPack(
+            productItemsRef.current,
+            match,
+          );
+          if (groupedItems !== productItemsRef.current) {
+            productItemsRef.current = groupedItems;
+            setForm((current) => {
+              const currentItems = groupIndependentProductsAsMatchedPack(
+                current.items,
+                match,
+              );
+              return currentItems === current.items
+                ? current
+                : { ...current, items: currentItems };
+            });
+            const packLabel = /^pack\b/i.test(match.pack.description.trim())
+              ? match.pack.description.trim()
+              : `Pack ${match.pack.description.trim()}`;
+            sileo.success({
+              title: `Los productos se agruparon como ${packLabel}.`,
+            });
+          }
+          return;
+        }
+
+        if (match.status === "AMBIGUOUS") {
+          sileo.error({
+            title:
+              "Hay varios packs con esta composición. Los productos permanecen independientes; selecciona el pack manualmente.",
+          });
+        }
+      } catch {
+        if (requestId !== productPackMatchRequestRef.current) return;
+        sileo.error({
+          title:
+            "El producto fue agregado, pero no se pudo verificar si forma un pack. Puedes dejarlo independiente o seleccionar el pack manualmente.",
+        });
+      } finally {
+        if (requestId === productPackMatchRequestRef.current) {
+          productPackMatchBusyRef.current = false;
+          setMatchingProductPack(false);
+        }
+      }
     },
     [],
   );
@@ -377,6 +455,7 @@ export function SaleOrderEditor({
   const validationMessage = useMemo(() => {
     if (!form.workflowId) return "Selecciona el tipo de pedido.";
     if (!form.items.length) return "Añade al menos un producto o pack.";
+    if (matchingProductPack) return "Espera mientras se verifica el pack.";
     if (supplyRecipeLoading) return "Espera mientras se cargan los insumos.";
     if (supplyRecipeError) return "Reintenta la carga de insumos antes de guardar.";
     if (form.supplies.some((supply) => !isValidRecipeQuantity(supply.quantity))) {
@@ -404,7 +483,7 @@ export function SaleOrderEditor({
       return "Completa el método y monto de cada pago.";
     }
     return null;
-  }, [form, supplyRecipeError, supplyRecipeLoading]);
+  }, [form, matchingProductPack, supplyRecipeError, supplyRecipeLoading]);
 
   const totals = useMemo(
     () =>
@@ -525,14 +604,23 @@ export function SaleOrderEditor({
             actions={
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <SaleOrderDirectSkuSelect
-                  disabled={!form.editPolicy.productsEditable}
+                  disabled={
+                    !form.editPolicy.productsEditable || matchingProductPack
+                  }
                   onAddItem={addDirectSkuItem}
                 />
                 <SystemButton
                   size="sm"
                   leftIcon={<Plus className="h-4 w-4" />}
                   onClick={() => itemsSectionRef.current?.openCreate()}
-                  disabled={!form.editPolicy.productsEditable}
+                  disabled={
+                    !form.editPolicy.productsEditable || matchingProductPack
+                  }
+                  title={
+                    matchingProductPack
+                      ? "Espera mientras se verifica el pack."
+                      : undefined
+                  }
                 >
                   Agregar Pack
                 </SystemButton>

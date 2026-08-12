@@ -1,11 +1,16 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SaleOrderEditor } from "./SaleOrderEditor";
 import type { SaleOrderEditorForm } from "./saleOrderEditorForm";
+import type {
+  SaleOrder,
+  SaleOrderPackMatchResponse,
+} from "../../types/saleOrder";
 
 const {
   getSaleOrderEditorCatalogsMock,
+  matchSaleOrderProductPackMock,
   saveSaleOrderWithClientMock,
   listClientsMock,
   listActiveWarehousesMock,
@@ -15,8 +20,11 @@ const {
   listAdvisersMock,
   getPaymentMethodsByCompanyMock,
   listCompanyPaymentAccountsByCompanyMock,
+  sileoErrorMock,
+  sileoSuccessMock,
 } = vi.hoisted(() => ({
   getSaleOrderEditorCatalogsMock: vi.fn(),
+  matchSaleOrderProductPackMock: vi.fn(),
   saveSaleOrderWithClientMock: vi.fn(),
   listClientsMock: vi.fn(),
   listActiveWarehousesMock: vi.fn(),
@@ -26,12 +34,14 @@ const {
   listAdvisersMock: vi.fn(),
   getPaymentMethodsByCompanyMock: vi.fn(),
   listCompanyPaymentAccountsByCompanyMock: vi.fn(),
+  sileoErrorMock: vi.fn(),
+  sileoSuccessMock: vi.fn(),
 }));
 
 vi.mock("sileo", () => ({
   sileo: {
-    error: vi.fn(),
-    success: vi.fn(),
+    error: sileoErrorMock,
+    success: sileoSuccessMock,
   },
 }));
 
@@ -41,6 +51,7 @@ vi.mock("@/shared/hooks/useCompany", () => ({
 
 vi.mock("@/shared/services/saleOrderService", () => ({
   getSaleOrderEditorCatalogs: getSaleOrderEditorCatalogsMock,
+  matchSaleOrderProductPack: matchSaleOrderProductPackMock,
   saveSaleOrderWithClient: saveSaleOrderWithClientMock,
 }));
 
@@ -92,6 +103,7 @@ vi.mock("../modal-create/SaleOrderItemsSection", () => ({
             `pack:${item.referencePackId ?? "none"}`,
             `component:${item.components?.[0]?.referencePackItemId ?? "none"}`,
             `sku:${item.components?.[0]?.skuId ?? ""}`,
+            `components:${item.components?.length ?? 0}`,
           ].join("|")}
         </output>
       ))}
@@ -107,35 +119,65 @@ vi.mock("./SaleOrderDirectSkuSelect", () => ({
     disabled: boolean;
     onAddItem: (item: SaleOrderEditorForm["items"][number]) => void;
   }) => (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() =>
-        onAddItem({
-          quantity: 1,
-          basePrice: 12.5,
-          unitPrice: 12.5,
-          total: 12.5,
-          description: "JABON AZUFRE AZUFRE -10017 (EVA01893)",
-          referencePackId: undefined,
-          components: [
-            {
-              skuId: "sku-1",
-              skuLabel: "JABON AZUFRE AZUFRE -10017 (EVA01893)",
-              skuCode: "10017",
-              skuImage: "/uploads/sku.webp",
-              quantity: 1,
-              basePrice: 12.5,
-              unitPrice: 12.5,
-              total: 12.5,
-              referencePackItemId: undefined,
-            },
-          ],
-        })
-      }
-    >
-      Producto directo
-    </button>
+    <>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() =>
+          onAddItem({
+            quantity: 1,
+            basePrice: 12.5,
+            unitPrice: 12.5,
+            total: 12.5,
+            description: "JABON AZUFRE AZUFRE -10017 (EVA01893)",
+            referencePackId: undefined,
+            components: [
+              {
+                skuId: "sku-1",
+                skuLabel: "JABON AZUFRE AZUFRE -10017 (EVA01893)",
+                skuCode: "10017",
+                skuImage: "/uploads/sku.webp",
+                quantity: 1,
+                basePrice: 12.5,
+                unitPrice: 12.5,
+                total: 12.5,
+                referencePackItemId: undefined,
+              },
+            ],
+          })
+        }
+      >
+        Producto directo
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() =>
+          onAddItem({
+            quantity: 2,
+            basePrice: 7.25,
+            unitPrice: 7.25,
+            total: 14.5,
+            description: "CREMA FACIAL -10018",
+            referencePackId: undefined,
+            components: [
+              {
+                skuId: "sku-2",
+                skuLabel: "CREMA FACIAL -10018",
+                skuCode: "10018",
+                quantity: 2,
+                basePrice: 7.25,
+                unitPrice: 7.25,
+                total: 14.5,
+                referencePackItemId: undefined,
+              },
+            ],
+          })
+        }
+      >
+        Producto directo alterno
+      </button>
+    </>
   ),
 }));
 
@@ -275,9 +317,59 @@ vi.mock("./SaleOrderPaymentCards", () => ({
 const noopCancel = () => undefined;
 const noopSaved = () => undefined;
 
+const uniquePackMatch: SaleOrderPackMatchResponse = {
+  status: "UNIQUE",
+  composition: [
+    { skuId: "sku-1", quantity: 1 },
+    { skuId: "sku-2", quantity: 2 },
+  ],
+  matches: [{ id: "pack-1", description: "Pack Facial", total: 30 }],
+  pack: {
+    id: "pack-1",
+    description: "Pack Facial",
+    total: 30,
+    components: [
+      {
+        id: "pack-item-1",
+        skuId: "sku-1",
+        quantity: 1,
+        price: 15,
+        lineTotal: 15,
+      },
+      {
+        id: "pack-item-2",
+        skuId: "sku-2",
+        quantity: 2,
+        price: 7.5,
+        lineTotal: 15,
+      },
+    ],
+  },
+};
+
 describe("SaleOrderEditor catalog loading", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+    matchSaleOrderProductPackMock.mockImplementation(
+      async (composition: SaleOrderPackMatchResponse["composition"]) => ({
+        status: "NONE",
+        composition,
+        matches: [],
+      }),
+    );
     getSaleOrderEditorCatalogsMock.mockResolvedValue({
       clients: [{ id: "client-initial", fullName: "Cliente Inicial", docNumber: "87654321" }],
       warehouses: [{ warehouseId: "warehouse-1", name: "Principal" }],
@@ -499,5 +591,206 @@ describe("SaleOrderEditor catalog loading", () => {
     expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
       "sku:sku-1",
     );
+    expect(matchSaleOrderProductPackMock).not.toHaveBeenCalled();
+  });
+
+  it("groups independent products when a unique pack is completed", async () => {
+    matchSaleOrderProductPackMock.mockResolvedValue(uniquePackMatch);
+    render(<EditorHarness />);
+
+    await waitFor(() =>
+      expect(getSaleOrderEditorCatalogsMock).toHaveBeenCalledWith("company-1"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Producto directo" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Producto directo alterno" }),
+    );
+
+    await waitFor(() =>
+      expect(matchSaleOrderProductPackMock).toHaveBeenCalledWith([
+        { skuId: "sku-1", quantity: 1 },
+        { skuId: "sku-2", quantity: 2 },
+      ]),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("items-section")).toHaveTextContent("items:1"),
+    );
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "description:Pack Facial",
+    );
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "pack:pack-1",
+    );
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "component:pack-item-1",
+    );
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "components:2",
+    );
+    expect(sileoSuccessMock).toHaveBeenCalledWith({
+      title: "Los productos se agruparon como Pack Facial.",
+    });
+  });
+
+  it("keeps manually added products independent when no pack matches", async () => {
+    render(<EditorHarness />);
+
+    await waitFor(() =>
+      expect(getSaleOrderEditorCatalogsMock).toHaveBeenCalledWith("company-1"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Producto directo" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Producto directo alterno" }),
+    );
+
+    await waitFor(() =>
+      expect(matchSaleOrderProductPackMock).toHaveBeenCalledTimes(1),
+    );
+    expect(screen.getByTestId("items-section")).toHaveTextContent("items:2");
+    expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+      "pack:none",
+    );
+    expect(screen.getByTestId("sale-order-item-1")).toHaveTextContent(
+      "pack:none",
+    );
+    expect(sileoErrorMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps products independent and informs when matching is ambiguous", async () => {
+    matchSaleOrderProductPackMock.mockResolvedValue({
+      status: "AMBIGUOUS",
+      composition: uniquePackMatch.composition,
+      matches: [
+        { id: "pack-1", description: "Pack Facial", total: 30 },
+        { id: "pack-2", description: "Pack Facial 2", total: 30 },
+      ],
+    });
+    render(<EditorHarness />);
+
+    await waitFor(() =>
+      expect(getSaleOrderEditorCatalogsMock).toHaveBeenCalledWith("company-1"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Producto directo" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Producto directo alterno" }),
+    );
+
+    await waitFor(() =>
+      expect(sileoErrorMock).toHaveBeenCalledWith({
+        title:
+          "Hay varios packs con esta composición. Los productos permanecen independientes; selecciona el pack manualmente.",
+      }),
+    );
+    expect(screen.getByTestId("items-section")).toHaveTextContent("items:2");
+  });
+
+  it("blocks repeated product additions while pack matching is pending", async () => {
+    let resolveMatch!: (value: SaleOrderPackMatchResponse) => void;
+    matchSaleOrderProductPackMock.mockImplementation(
+      () =>
+        new Promise<SaleOrderPackMatchResponse>((resolve) => {
+          resolveMatch = resolve;
+        }),
+    );
+    render(<EditorHarness />);
+
+    await waitFor(() =>
+      expect(getSaleOrderEditorCatalogsMock).toHaveBeenCalledWith("company-1"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Producto directo" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Producto directo alterno" }),
+    );
+
+    await waitFor(() =>
+      expect(matchSaleOrderProductPackMock).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      screen.getByRole("button", { name: "Producto directo" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Producto directo alterno" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Agregar Pack" })).toBeDisabled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Producto directo alterno" }),
+    );
+    expect(matchSaleOrderProductPackMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("items-section")).toHaveTextContent("items:2");
+
+    await act(async () => {
+      resolveMatch({
+        status: "NONE",
+        composition: uniquePackMatch.composition,
+        matches: [],
+      });
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Producto directo" }),
+      ).not.toBeDisabled(),
+    );
+  });
+
+  it("groups products in an existing editable order", async () => {
+    matchSaleOrderProductPackMock.mockResolvedValue(uniquePackMatch);
+    const existingOrder = {
+      id: "order-1",
+      items: [
+        {
+          id: "item-1",
+          quantity: 1,
+          basePrice: 12.5,
+          unitPrice: 12.5,
+          total: 12.5,
+          description: "JABON AZUFRE",
+          components: [
+            {
+              id: "component-1",
+              skuId: "sku-1",
+              quantity: 1,
+              basePrice: 12.5,
+              unitPrice: 12.5,
+              total: 12.5,
+            },
+          ],
+        },
+      ],
+      payments: [],
+      supplies: [],
+      attachments: [],
+      createdAt: "2026-08-10T10:00:00.000Z",
+      editPolicy: {
+        stockStatus: "NONE",
+        productsEditable: true,
+        warehouseEditable: true,
+        isFinal: false,
+        reason: null,
+      },
+    } as unknown as SaleOrder;
+
+    render(
+      <SaleOrderEditor
+        mode="edit"
+        order={existingOrder}
+        onCancel={noopCancel}
+        onSaved={noopSaved}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("items-section")).toHaveTextContent("items:1"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Producto directo alterno" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("sale-order-item-0")).toHaveTextContent(
+        "pack:pack-1",
+      ),
+    );
+    expect(screen.getByTestId("items-section")).toHaveTextContent("items:1");
   });
 });
