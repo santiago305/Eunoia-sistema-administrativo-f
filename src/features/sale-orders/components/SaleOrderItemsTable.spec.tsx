@@ -176,18 +176,18 @@ describe("SaleOrderItemsTable", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Producto" })).not.toBeInTheDocument();
 
-    fireEvent.change(
-      screen.getByRole("spinbutton", {
-        name: "Cantidad del producto Jabón individual",
-      }),
-      { target: { value: "3" } },
-    );
+    const quantityInput = screen.getByRole("spinbutton", {
+      name: "Cantidad del producto Jabón individual",
+    });
+    expect(quantityInput).toHaveAttribute("step", "0.01");
+
+    fireEvent.change(quantityInput, { target: { value: "3.456" } });
     expect(onChangeItem).toHaveBeenCalledWith(
       expect.objectContaining({
-        quantity: 3,
-        total: 30,
+        quantity: 3.46,
+        total: 34.6,
         components: [
-          expect.objectContaining({ quantity: 3, total: 30 }),
+          expect.objectContaining({ quantity: 3.46, total: 34.6 }),
         ],
       }),
       0,

@@ -459,10 +459,10 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                 name="item-qty"
                                 type="number"
                                 min={0}
-                                step="0.001"
+                                step="0.01"
                                 value={String(value.quantity)}
                                 onChange={(e) => {
-                                    const quantity = parseDecimalInput(e.target.value);
+                                    const quantity = roundMoney(parseDecimalInput(e.target.value));
                                     const total = calcTotal(quantity, value.unitPrice);
                                     if (componentRows.length > 0) {
                                         const components = buildComponentsFromQuantity(quantity, total);
@@ -501,7 +501,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                 step="0.01"
                                 value={String(value.unitPrice)}
                                 onChange={(e) => {
-                                    const unitPrice = parseDecimalInput(e.target.value);
+                                    const unitPrice = roundMoney(parseDecimalInput(e.target.value));
                                     const total = calcTotal(value.quantity, unitPrice);
                                     if (componentRows.length > 0) {
                                         const components = buildComponentsFromTotal(total);
@@ -529,7 +529,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                 step="0.01"
                                 value={String(value.total)}
                                 onChange={(e) => {
-                                    const total = parseDecimalInput(e.target.value);
+                                    const total = roundMoney(parseDecimalInput(e.target.value));
                                     const unitPrice = calcUnitPrice(value.quantity, total);
 
                                     if (componentRows.length > 0) {
@@ -579,10 +579,10 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                             name={`pack-sku-qty-${row.skuId}`}
                                             type="number"
                                             min={0}
-                                            step="0.001"
+                                            step="0.01"
                                             value={String(currentQty)}
                                             onChange={(e) => {
-                                                const quantity = parseDecimalInput(e.target.value);
+                                                const quantity = roundMoney(parseDecimalInput(e.target.value));
                                                 const total = calcTotal(quantity, currentUnitPrice);
 
                                                 const nextComponent: SaleOrderItemComponentInput = {
@@ -621,7 +621,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                             step="0.01"
                                             value={String(currentUnitPrice)}
                                             onChange={(e) => {
-                                                const unitPrice = parseDecimalInput(e.target.value);
+                                                const unitPrice = roundMoney(parseDecimalInput(e.target.value));
                                                 const total = calcTotal(currentQty, unitPrice);
 
                                                 const nextComponent: SaleOrderItemComponentInput = {
@@ -650,7 +650,7 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                                             step="0.01"
                                             value={String(currentTotal)}
                                             onChange={(e) => {
-                                                const total = parseDecimalInput(e.target.value);
+                                                const total = roundMoney(parseDecimalInput(e.target.value));
                                                 const unitPrice = calcUnitPrice(currentQty, total);
 
                                                 const nextComponent: SaleOrderItemComponentInput = {
@@ -697,14 +697,15 @@ export function SaleOrderItemEditorModal({ open, title, value, onChange, onClose
                         setSkuMetaById((prev) => ({ ...prev, [skuId]: { label, price: basePrice } }));
                         setExcludedSkuIds((prev) => prev.filter((id) => id !== skuId));
 
-                        const total = calcTotal(quantity, unitPrice);
+                        const normalizedQuantity = roundMoney(quantity);
+                        const total = calcTotal(normalizedQuantity, unitPrice);
 
                         const nextComponent: SaleOrderItemComponentInput = {
                             skuId,
                             skuLabel: label,
                             skuCode: skuId,
                             skuImage: skuImage ?? null,
-                            quantity,
+                            quantity: normalizedQuantity,
                             basePrice,
                             unitPrice,
                             total,

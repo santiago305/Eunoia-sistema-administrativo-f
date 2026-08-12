@@ -30,7 +30,7 @@ type SkuData = {
 const formatStock = (value?: number | null) => {
   if (value == null) return "-";
   if (!Number.isFinite(value)) return String(value);
-  return value.toLocaleString("es-PE", { maximumFractionDigits: 3 });
+  return value.toLocaleString("es-PE", { maximumFractionDigits: 2 });
 };
 
 const formatSkuAttrs = (attributes?: Array<{ value?: string | null }> | null) => {
@@ -362,7 +362,7 @@ export function SaleOrderItemComponentsStockModal({ open, onClose, warehouseId, 
                             <div>
                               <p className="text-[10px] uppercase tracking-wide text-black/35">Cant.</p>
                               <p className="text-sm font-semibold text-black/80 tabular-nums">
-                                {Number(component.quantity ?? 0).toLocaleString("es-PE", { maximumFractionDigits: 3 })}
+                        {Number(component.quantity ?? 0).toLocaleString("es-PE", { maximumFractionDigits: 2 })}
                               </p>
                             </div>
 

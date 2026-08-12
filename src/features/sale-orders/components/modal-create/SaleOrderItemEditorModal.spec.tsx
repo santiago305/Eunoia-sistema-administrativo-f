@@ -442,19 +442,20 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
             'input[name="item-qty"]',
         ) as HTMLInputElement;
 
-        fireEvent.change(quantityInput, { target: { value: "3" } });
+        expect(quantityInput).toHaveAttribute("step", "0.01");
+        fireEvent.change(quantityInput, { target: { value: "3.456" } });
 
         expect(onChange).toHaveBeenLastCalledWith(
             expect.objectContaining({
-                quantity: 3,
+                quantity: 3.46,
                 unitPrice: 20,
-                total: 60,
+                total: 69.2,
                 components: [
                     expect.objectContaining({
                         skuId: "sku-1",
-                        quantity: 3,
+                        quantity: 3.46,
                         unitPrice: 20,
-                        total: 60,
+                        total: 69.2,
                     }),
                 ],
             }),

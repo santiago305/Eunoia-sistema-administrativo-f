@@ -237,7 +237,7 @@ const upsertComponent = (
 
 const formatQuantity = (value?: number | null) =>
   Number(value ?? 0).toLocaleString("es-PE", {
-    maximumFractionDigits: 3,
+    maximumFractionDigits: 2,
   });
 
 const getItemKey = (item: SaleOrderItemInput, index: number) =>
@@ -576,7 +576,7 @@ function ProductRow({
           ariaLabel={`Cantidad del producto ${skuLabel}`}
           name={`product-quantity-${itemKey}`}
           value={component.quantity}
-          step="0.001"
+          step="0.01"
           readOnly={!productsEditable}
           onValueChange={(quantity) =>
             onChangeItem(
@@ -733,7 +733,7 @@ function PackRows({
             ariaLabel={`Cantidad del ${accessibleItemType} ${item.description}`}
             name={`pack-quantity-${itemKey}`}
             value={item.quantity}
-            step="0.001"
+            step="0.01"
             readOnly={!productsEditable}
             onValueChange={(quantity) =>
               onChangeItem(updatePackQuantity(item, quantity), index)
@@ -910,7 +910,7 @@ function ComponentsSubtable({
                       ariaLabel={`Cantidad de ${skuLabel}`}
                       name={`component-quantity-${itemIndex}-${componentIndex}`}
                       value={component.quantity}
-                      step="0.001"
+                      step="0.01"
                       readOnly={!productsEditable}
                       onValueChange={(quantity) =>
                         onChangeItem(
@@ -1165,7 +1165,7 @@ function CompactFloatingNumberInput({
         className="h-9 rounded-md px-2 py-1 text-xs"
         onClick={(event) => event.stopPropagation()}
         onChange={(event) =>
-          onValueChange?.(parseDecimalInput(event.target.value))
+          onValueChange?.(roundMoney(parseDecimalInput(event.target.value)))
         }
       />
     </div>

@@ -36,6 +36,9 @@ const buildSkuLabel = (item: ProductSkuWithAttributes) => {
   return `${name}${attrsPart}${skuPart}${customPart}`.trim();
 };
 
+const roundToTwoDecimals = (value: number) =>
+  Math.round((Number(value) || 0) * 100) / 100;
+
 type SkuOption = { value: string; label: string; price?: number; skuImage?: string | null };
 
 export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
@@ -99,10 +102,10 @@ export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
   }, [open, priceText, selectedOption?.price, skuId]);
 
   const submit = () => {
-    const quantity = parseDecimalInput(quantityText);
+    const quantity = roundToTwoDecimals(parseDecimalInput(quantityText));
     const basePrice = Number(selectedOption?.price ?? 0);
-    const unitPrice = parseDecimalInput(
-      priceText || String(basePrice),
+    const unitPrice = roundToTwoDecimals(
+      parseDecimalInput(priceText || String(basePrice)),
     );
     if (!skuId) return;
     if (quantity <= 0) return;
@@ -153,7 +156,7 @@ export function SaleOrderAddSkuModal({ open, onClose, onAdd }: Props) {
             name="sale-order-add-sku-qty"
             type="number"
             min={0}
-            step="0.001"
+            step="0.01"
             value={quantityText}
             onChange={(e) => setQuantityText(e.target.value)}
           />
