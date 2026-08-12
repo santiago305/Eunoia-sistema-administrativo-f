@@ -1,12 +1,19 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import type { SaleOrderItemInput } from "@/features/sale-orders/types/saleOrder";
 import { getSaleOrderStocksBySkuIds } from "@/shared/services/saleOrderStockService";
+import { getPackById, listPacks } from "@/shared/services/packService";
 import { SaleOrderItemsTable } from "./SaleOrderItemsTable";
 
 vi.mock("@/shared/services/saleOrderStockService", () => ({
   getSaleOrderStocksBySkuIds: vi.fn(),
+}));
+
+vi.mock("@/shared/services/packService", () => ({
+  listPacks: vi.fn(),
+  getPackById: vi.fn(),
 }));
 
 vi.mock(
@@ -123,6 +130,22 @@ const unknownPackItem: SaleOrderItemInput = {
 describe("SaleOrderItemsTable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(listPacks).mockResolvedValue({
+      items: [
+        {
+          pack: {
+            packId: "pack-1",
+            description: "Pack verano",
+            total: 40,
+            isActive: true,
+          },
+          items: [],
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
   });
 
   it("renders a pack table followed by its SKU component subtable", () => {
@@ -201,7 +224,7 @@ describe("SaleOrderItemsTable", () => {
     expect(onDelete).toHaveBeenCalledWith(productItem, 0);
   });
 
-  it("labels unmatched multi-SKU compositions as unknown packs", () => {
+  it("shows imported unmatched compositions as an unknown pack option without a badge", () => {
     render(
       <SaleOrderItemsTable
         items={[unknownPackItem]}
@@ -212,14 +235,104 @@ describe("SaleOrderItemsTable", () => {
       />,
     );
 
-    expect(screen.getAllByText("Pack desconocido").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Pack desconocido")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("textbox", {
-        name: "Descripción del pack desconocido Combo importado",
-      }),
+      screen.getByRole("button", { name: "Pack: Desconocido" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Producto A")).toBeInTheDocument();
     expect(screen.getByText("Producto B")).toBeInTheDocument();
+  });
+
+  it("keeps a searched pack selected even when it is outside the latest ten", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listPacks).mockImplementation(async ({ q }) => ({
+      items: q
+        ? [
+            {
+              pack: {
+                packId: "pack-found",
+                description: "Pack encontrado",
+                total: 25,
+                isActive: true,
+              },
+              items: [],
+            },
+          ]
+        : [
+            {
+              pack: {
+                packId: "pack-recent",
+                description: "Pack reciente",
+                total: 10,
+                isActive: true,
+              },
+              items: [],
+            },
+          ],
+      total: 1,
+      page: 1,
+      limit: 10,
+    }));
+    vi.mocked(getPackById).mockResolvedValue({
+      pack: {
+        packId: { value: "pack-found" },
+        description: "Pack encontrado",
+        total: 25,
+        isActive: true,
+      },
+      items: [
+        {
+          id: "pack-item-found",
+          skuId: "sku-found",
+          quantity: 1,
+          price: 25,
+          lineTotal: 25,
+          sku: null,
+        },
+      ],
+    });
+
+    function Harness() {
+      const [item, setItem] = useState(unknownPackItem);
+
+      return (
+        <SaleOrderItemsTable
+          items={[item]}
+          productsEditable
+          onChangeItem={(nextItem) => setItem(nextItem)}
+          onDelete={vi.fn()}
+          onOpenDetail={vi.fn()}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Pack: Desconocido" }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Buscar Pack" }),
+      "encontrado",
+    );
+
+    const option = await screen.findByRole(
+      "option",
+      { name: "Pack encontrado" },
+      { timeout: 1_000 },
+    );
+    fireEvent.mouseDown(option);
+
+    expect(
+      await screen.findByRole("button", { name: "Pack: Pack encontrado" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Pack: Pack encontrado" }),
+    );
+    expect(
+      screen.getByRole("option", { name: "Pack encontrado" }),
+    ).toHaveAttribute("aria-selected", "true");
   });
 
   it("recognizes a historical pack by its saved snapshot", () => {
@@ -639,7 +752,7 @@ describe("SaleOrderItemsTable", () => {
     expect(onDelete).toHaveBeenCalledWith(packItem, 0);
   });
 
-  it("edits the pack description even when pack products are not editable", () => {
+  it("disables the pack selector when order products are not editable", () => {
     const onChangeItem = vi.fn();
 
     render(
@@ -652,19 +765,10 @@ describe("SaleOrderItemsTable", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: "Descripción del pack Pack verano",
-      }),
-      { target: { value: "Pack invierno" } },
-    );
-
-    expect(onChangeItem).toHaveBeenCalledWith(
-      expect.objectContaining({
-        description: "Pack invierno",
-      }),
-      0,
-    );
+    expect(
+      screen.getByRole("button", { name: "Pack: Pack verano" }),
+    ).toBeDisabled();
+    expect(onChangeItem).not.toHaveBeenCalled();
   });
 
   it("recalculates the pack when a component is edited from the subtable", () => {

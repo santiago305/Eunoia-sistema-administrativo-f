@@ -8,12 +8,15 @@ import type {
 } from "@/features/sale-orders/types/saleOrder";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { cn } from "@/shared/lib/utils";
 import { deriveSkuPresentation } from "@/features/sale-orders/utils/skuPresentation";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { getSaleOrderStocksBySkuIds } from "@/shared/services/saleOrderStockService";
+import { getPackById, listPacks } from "@/shared/services/packService";
 import { SaleOrderAddSkuModal } from "@/features/sale-orders/components/modal-create/SaleOrderAddSkuModal";
+import { buildSkuLabelFromDetailItem } from "@/features/catalog/packs/Packs";
 
 type Props = {
   items: SaleOrderItemInput[];
@@ -266,6 +269,14 @@ const getSkuLabel = (component: SaleOrderItemComponentInput) =>
 
 type SaleOrderItemKind = "PRODUCT" | "PACK" | "UNKNOWN_PACK";
 
+type PackSelectOption = {
+  value: string;
+  label: string;
+};
+
+const UNKNOWN_PACK_OPTION_VALUE = "__unknown_pack__";
+const HISTORICAL_PACK_OPTION_VALUE = "__historical_pack__";
+
 const getSaleOrderItemKind = (
   item: SaleOrderItemInput,
 ): SaleOrderItemKind => {
@@ -344,6 +355,53 @@ export function SaleOrderItemsTable({
     Record<string, skuStock | null>
   >({});
   const [loadingStock, setLoadingStock] = useState(false);
+  const [recentPackOptions, setRecentPackOptions] = useState<PackSelectOption[]>(
+    [],
+  );
+  const hasSelectablePacks = items.some(
+    (item) => getSaleOrderItemKind(item) !== "PRODUCT",
+  );
+
+  useEffect(() => {
+    if (!hasSelectablePacks) {
+      setRecentPackOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRecentPacks = async () => {
+      try {
+        const response = await listPacks({
+          page: 1,
+          limit: 10,
+          isActive: "true",
+        });
+
+        if (!cancelled) {
+          setRecentPackOptions(
+            (response.items ?? [])
+              .map((entry) => ({
+                value:
+                  typeof entry.pack.packId === "string"
+                    ? entry.pack.packId
+                    : entry.pack.packId?.value ?? "",
+                label: entry.pack.description,
+              }))
+              .filter((option) => option.value),
+          );
+        }
+      } catch {
+        if (!cancelled) setRecentPackOptions([]);
+      }
+    };
+
+    void loadRecentPacks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSelectablePacks]);
 
   const skuIdsKey = useMemo(
     () =>
@@ -522,6 +580,7 @@ export function SaleOrderItemsTable({
                     loadingStock={loadingStock}
                     stockStatus={stockStatus}
                     productsEditable={productsEditable}
+                    recentPackOptions={recentPackOptions}
                     onToggle={() => toggleItem(itemKey)}
                     onChangeItem={onChangeItem}
                     onDelete={onDelete}
@@ -664,6 +723,7 @@ function PackRows({
   loadingStock,
   stockStatus,
   productsEditable,
+  recentPackOptions,
   onToggle,
   onChangeItem,
   onDelete,
@@ -681,14 +741,14 @@ function PackRows({
   loadingStock: boolean;
   stockStatus: SaleOrderEditPolicy["stockStatus"];
   productsEditable: boolean;
+  recentPackOptions: PackSelectOption[];
   onToggle: () => void;
   onChangeItem: Props["onChangeItem"];
   onDelete: Props["onDelete"];
   onOpenDetail: Props["onOpenDetail"];
 }) {
   const action = expanded ? "Contraer" : "Desplegar";
-  const itemTypeLabel = itemKind === "PACK" ? "Pack" : "Pack desconocido";
-  const accessibleItemType = itemTypeLabel.toLocaleLowerCase("es-PE");
+  const accessibleItemType = "pack";
 
   return (
     <>
@@ -710,18 +770,13 @@ function PackRows({
           </button>
         </td>
         <td className="px-2 py-2 align-middle text-[10px]">
-          <span className="sr-only">{item.description}</span>
-          <ItemTypeBadge kind={itemKind} />
-          <FloatingInput
-            label={itemTypeLabel}
-            aria-label={`Descripción del ${accessibleItemType} ${item.description}`}
-            name={`pack-description-${itemKey}`}
-            value={item.description ?? ""}
-            className="h-8 rounded-md px-2 py-1 text-xs font-semibold"
-            onClick={(event) => event.stopPropagation()}
-            onChange={(event) =>
-              onChangeItem({ ...item, description: event.target.value }, index)
-            }
+          <SaleOrderPackSelect
+            item={item}
+            itemKind={itemKind}
+            itemKey={itemKey}
+            recentOptions={recentPackOptions}
+            disabled={!productsEditable}
+            onChange={(nextItem) => onChangeItem(nextItem, index)}
           />
           <span className="text-[10px] text-muted-foreground">
             {(item.components ?? []).length} producto(s)
@@ -839,9 +894,7 @@ function ComponentsSubtable({
 }) {
   const [openAddSku, setOpenAddSku] = useState(false);
   const components = item.components ?? [];
-  const itemKind = getSaleOrderItemKind(item);
-  const containerLabel =
-    itemKind === "PACK" ? "pack" : "pack desconocido";
+  const containerLabel = "pack";
 
   return (
     <>
@@ -1114,23 +1167,179 @@ function EditableNumberCell({ children }: { children: React.ReactNode }) {
   return <td className="px-1.5 py-2 align-middle">{children}</td>;
 }
 
-function ItemTypeBadge({
-  kind,
+function SaleOrderPackSelect({
+  item,
+  itemKind,
+  itemKey,
+  recentOptions,
+  disabled,
+  onChange,
 }: {
-  kind: Exclude<SaleOrderItemKind, "PRODUCT">;
+  item: SaleOrderItemInput;
+  itemKind: Exclude<SaleOrderItemKind, "PRODUCT">;
+  itemKey: string;
+  recentOptions: PackSelectOption[];
+  disabled: boolean;
+  onChange: (item: SaleOrderItemInput) => void;
 }) {
-  const unknown = kind === "UNKNOWN_PACK";
+  const [query, setQuery] = useState("");
+  const [searchOptions, setSearchOptions] =
+    useState<PackSelectOption[]>(recentOptions);
+  const [pendingOption, setPendingOption] =
+    useState<PackSelectOption | null>(null);
+  const [selectionError, setSelectionError] = useState("");
+
+  useEffect(() => {
+    if (!query.trim()) setSearchOptions(recentOptions);
+  }, [query, recentOptions]);
+
+  useEffect(() => {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) return;
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      const searchPacks = async () => {
+        try {
+          const response = await listPacks({
+            q: normalizedQuery,
+            page: 1,
+            limit: 10,
+            isActive: "true",
+          });
+
+          if (!cancelled) {
+            setSearchOptions(
+              (response.items ?? [])
+                .map((entry) => ({
+                  value:
+                    typeof entry.pack.packId === "string"
+                      ? entry.pack.packId
+                      : entry.pack.packId?.value ?? "",
+                  label: entry.pack.description,
+                }))
+                .filter((option) => option.value),
+            );
+          }
+        } catch {
+          if (!cancelled) setSearchOptions([]);
+        }
+      };
+
+      void searchPacks();
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [query]);
+
+  const currentOption = useMemo<PackSelectOption>(() => {
+    if (itemKind === "UNKNOWN_PACK") {
+      return { value: UNKNOWN_PACK_OPTION_VALUE, label: "Desconocido" };
+    }
+
+    return {
+      value: item.referencePackId ?? HISTORICAL_PACK_OPTION_VALUE,
+      label: item.packNameSnapshot?.trim() || item.description?.trim() || "Pack",
+    };
+  }, [item.description, item.packNameSnapshot, item.referencePackId, itemKind]);
+
+  const options = useMemo(() => {
+    const candidates = [
+      ...(itemKind === "UNKNOWN_PACK"
+        ? [{ value: UNKNOWN_PACK_OPTION_VALUE, label: "Desconocido" }]
+        : []),
+      pendingOption,
+      currentOption,
+      ...searchOptions,
+    ].filter((option): option is PackSelectOption => Boolean(option?.value));
+
+    return Array.from(
+      new Map(candidates.map((option) => [option.value, option])).values(),
+    );
+  }, [currentOption, itemKind, pendingOption, searchOptions]);
+
+  const handleChange = async (packId: string) => {
+    if (
+      packId === UNKNOWN_PACK_OPTION_VALUE ||
+      packId === HISTORICAL_PACK_OPTION_VALUE ||
+      packId === item.referencePackId
+    ) {
+      return;
+    }
+
+    const selectedOption = options.find((option) => option.value === packId);
+    if (!selectedOption) return;
+
+    setPendingOption(selectedOption);
+    setSelectionError("");
+
+    try {
+      const detail = await getPackById(packId);
+      const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+      const description =
+        String(detail.pack.description ?? "").trim() || selectedOption.label;
+      const components: SaleOrderItemComponentInput[] = (detail.items ?? []).map(
+        (row) => {
+          const componentQuantity = roundMoney(
+            (Number(row.quantity) || 0) * quantity,
+          );
+          const unitPrice = Number(row.price ?? row.sku?.price ?? 0);
+
+          return {
+            skuId: row.skuId,
+            skuLabel: buildSkuLabelFromDetailItem(row),
+            skuCode: row.sku
+              ? `${row.sku.backendSku ?? ""}${row.sku.customSku ?? ""}${row.skuId}`
+              : row.skuId,
+            skuImage: row.sku?.image ?? null,
+            quantity: componentQuantity,
+            basePrice: unitPrice,
+            unitPrice,
+            total: calcTotal(componentQuantity, unitPrice),
+            referencePackItemId: row.id,
+          };
+        },
+      );
+      const total = sumComponentsTotal(components);
+
+      onChange({
+        ...item,
+        description,
+        referencePackId: packId,
+        packNameSnapshot: description,
+        quantity,
+        basePrice: Number(detail.pack.total ?? 0),
+        unitPrice: calcUnitPrice(quantity, total),
+        total,
+        components,
+      });
+      setPendingOption(null);
+    } catch {
+      setPendingOption(null);
+      setSelectionError("No se pudo cargar el pack. Intenta nuevamente.");
+    }
+  };
+
   return (
-    <span
-      className={cn(
-        "mb-1 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
-        unknown
-          ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
-          : "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-200",
-      )}
-    >
-      {unknown ? "Pack desconocido" : "Pack"}
-    </span>
+    <FloatingSelect
+      label="Pack"
+      name={`pack-select-${itemKey}`}
+      value={pendingOption?.value ?? currentOption.value}
+      options={options}
+      onChange={(packId) => void handleChange(packId)}
+      onSearchChange={setQuery}
+      resetSearchOnClose
+      searchable
+      searchPlaceholder="Buscar pack..."
+      emptyMessage="No se encontraron packs"
+      disabled={disabled || Boolean(pendingOption)}
+      error={selectionError || undefined}
+      panelWidthMode="min-trigger"
+      className="h-8 rounded-md px-2 py-1 text-xs font-semibold"
+    />
   );
 }
 

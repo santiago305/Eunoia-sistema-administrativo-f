@@ -32,6 +32,7 @@ type FloatingSelectProps = {
   emptyMessage?: string;
   onSearchChange?: (value: string) => void;
   preserveSearchOnClose?: boolean;
+  resetSearchOnClose?: boolean;
   panelWidthMode?: "trigger" | "min-trigger";
 };
 
@@ -52,6 +53,7 @@ export function FloatingSelect({
   emptyMessage = "Sin resultados",
   onSearchChange,
   preserveSearchOnClose = false,
+  resetSearchOnClose = false,
   panelWidthMode = "trigger",
 }: FloatingSelectProps) {
   const [open, setOpen] = useState(false);
@@ -71,9 +73,10 @@ export function FloatingSelect({
     setOpen(false);
     if (!preserveSearchOnClose) {
       setQuery("");
+      if (resetSearchOnClose) onSearchChange?.("");
     }
     setActiveIndex(-1);
-  }, [preserveSearchOnClose]);
+  }, [onSearchChange, preserveSearchOnClose, resetSearchOnClose]);
 
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value),

@@ -123,10 +123,7 @@ export function SaleOrderSuppliesSection({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          La lista pertenece solo a este pedido. Agregar el mismo insumo aumenta su cantidad.
-        </p>
+      <div className="flex justify-end">
         <SaleOrderSupplySelect
           disabled={disabled || loading || Boolean(error)}
           onAdd={(supply) =>
