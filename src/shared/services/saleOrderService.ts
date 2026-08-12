@@ -17,6 +17,8 @@ import type {
   SaleOrderJsonImportRow,
   SaleOrderListResponse,
   SaleOrderPayment,
+  SaleOrderPackMatchComponentInput,
+  SaleOrderPackMatchResponse,
   SaleOrderSearchSnapshot,
   SaleOrderSearchStateResponse,
   SaleOrderStatisticsParams,
@@ -92,7 +94,6 @@ export type BulkAssignSaleOrdersPayload = {
   saleOrderIds: string[];
   assignedBy: string | null;
 };
-
 
 export type BulkChangeSaleOrderStatePayload = {
   saleOrderIds: string[];
@@ -185,8 +186,23 @@ export const getSaleOrderItemComponents = async (
   return response.data;
 };
 
-export const createSaleOrder = async (payload: CreateSaleOrderCommandDto): Promise<CreateSaleOrderResponse> => {
-  const response = await axiosInstance.post<CreateSaleOrderResponse>(API_SALE_ORDERS_GROUP.create, payload);
+export const createSaleOrder = async (
+  payload: CreateSaleOrderCommandDto,
+): Promise<CreateSaleOrderResponse> => {
+  const response = await axiosInstance.post<CreateSaleOrderResponse>(
+    API_SALE_ORDERS_GROUP.create,
+    payload,
+  );
+  return response.data;
+};
+
+export const matchSaleOrderProductPack = async (
+  components: SaleOrderPackMatchComponentInput[],
+): Promise<SaleOrderPackMatchResponse> => {
+  const response = await axiosInstance.post<SaleOrderPackMatchResponse>(
+    API_SALE_ORDERS_GROUP.matchProductPack,
+    { components },
+  );
   return response.data;
 };
 
@@ -200,8 +216,12 @@ export const previewSaleOrdersJsonImport = async (
   return response.data;
 };
 
-export const listSaleOrderImportLotes = async (): Promise<SaleOrderImportLote[]> => {
-  const response = await axiosInstance.get<SaleOrderImportLote[]>(API_SALE_ORDERS_GROUP.importLotes);
+export const listSaleOrderImportLotes = async (): Promise<
+  SaleOrderImportLote[]
+> => {
+  const response = await axiosInstance.get<SaleOrderImportLote[]>(
+    API_SALE_ORDERS_GROUP.importLotes,
+  );
   return response.data;
 };
 
@@ -236,9 +256,10 @@ export const setSaleOrderActive = async (
   return response.data;
 };
 
-export const bulkSetSaleOrdersActive = async (
-  payload: { saleOrderIds: string[]; isActive: boolean },
-): Promise<SaleOrderBulkActionResponse> => {
+export const bulkSetSaleOrdersActive = async (payload: {
+  saleOrderIds: string[];
+  isActive: boolean;
+}): Promise<SaleOrderBulkActionResponse> => {
   const response = await axiosInstance.patch<SaleOrderBulkActionResponse>(
     API_SALE_ORDERS_GROUP.bulkActive,
     payload,
@@ -272,14 +293,19 @@ export const listSaleOrders = async (params: {
           : undefined,
   };
 
-  const response = await axiosInstance.get<SaleOrderListResponse>(API_SALE_ORDERS_GROUP.list, { params: requestParams });
+  const response = await axiosInstance.get<SaleOrderListResponse>(
+    API_SALE_ORDERS_GROUP.list,
+    { params: requestParams },
+  );
   return response.data;
 };
 
 export const fetchSaleOrders = listSaleOrders;
 
 export const fetchSaleOrderById = async (id: string): Promise<SaleOrder> => {
-  const response = await axiosInstance.get<SaleOrder>(API_SALE_ORDERS_GROUP.detail(id));
+  const response = await axiosInstance.get<SaleOrder>(
+    API_SALE_ORDERS_GROUP.detail(id),
+  );
   return response.data;
 };
 
@@ -293,13 +319,24 @@ export const getSaleOrderEditorCatalogs = async (
   return response.data;
 };
 
-export const updateSaleOrder = async (id: string, payload: CreateSaleOrderCommandDto): Promise<CreateSaleOrderResponse> => {
-  const response = await axiosInstance.patch<CreateSaleOrderResponse>(API_SALE_ORDERS_GROUP.update(id), payload);
+export const updateSaleOrder = async (
+  id: string,
+  payload: CreateSaleOrderCommandDto,
+): Promise<CreateSaleOrderResponse> => {
+  const response = await axiosInstance.patch<CreateSaleOrderResponse>(
+    API_SALE_ORDERS_GROUP.update(id),
+    payload,
+  );
   return response.data;
 };
 
-export const deleteSaleOrder = async (id: string): Promise<{ type?: string; message?: string }> => {
-  const response = await axiosInstance.delete<{ type?: string; message?: string }>(API_SALE_ORDERS_GROUP.detail(id));
+export const deleteSaleOrder = async (
+  id: string,
+): Promise<{ type?: string; message?: string }> => {
+  const response = await axiosInstance.delete<{
+    type?: string;
+    message?: string;
+  }>(API_SALE_ORDERS_GROUP.detail(id));
   return response.data;
 };
 
@@ -310,17 +347,25 @@ export const saveSaleOrderWithClient = async (
 ): Promise<CreateSaleOrderResponse & { clientId: string }> => {
   const body = buildSaleOrderUnifiedRequest({ data: payload, ...files });
   const response = saleOrderId
-    ? await axiosInstance.patch<
-        CreateSaleOrderResponse & { clientId: string }
-      >(API_SALE_ORDERS_GROUP.updateWithClient(saleOrderId), body)
-    : await axiosInstance.post<
-        CreateSaleOrderResponse & { clientId: string }
-      >(API_SALE_ORDERS_GROUP.createWithClient, body);
+    ? await axiosInstance.patch<CreateSaleOrderResponse & { clientId: string }>(
+        API_SALE_ORDERS_GROUP.updateWithClient(saleOrderId),
+        body,
+      )
+    : await axiosInstance.post<CreateSaleOrderResponse & { clientId: string }>(
+        API_SALE_ORDERS_GROUP.createWithClient,
+        body,
+      );
   return response.data;
 };
 
-export const assignSaleOrderWorkflow = async (saleOrderId: string, workflowId: string) => {
-  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.assignWorkflow(saleOrderId), { workflowId });
+export const assignSaleOrderWorkflow = async (
+  saleOrderId: string,
+  workflowId: string,
+) => {
+  const response = await axiosInstance.post(
+    API_SALE_ORDERS_GROUP.assignWorkflow(saleOrderId),
+    { workflowId },
+  );
   return response.data;
 };
 
@@ -338,10 +383,13 @@ export const changeSaleOrderState = async (
   transitionId: string,
   metadata: Record<string, unknown> = {},
 ): Promise<ChangeSaleOrderStateResponse> => {
-  const response = await axiosInstance.post<ChangeSaleOrderStateResponse>(API_SALE_ORDERS_GROUP.changeState(saleOrderId), {
-    transitionId,
-    metadata,
-  });
+  const response = await axiosInstance.post<ChangeSaleOrderStateResponse>(
+    API_SALE_ORDERS_GROUP.changeState(saleOrderId),
+    {
+      transitionId,
+      metadata,
+    },
+  );
   return response.data;
 };
 
@@ -384,8 +432,12 @@ export const getSaleOrderWorkflowHistory = async (
   return response.data;
 };
 
-export const listSaleOrderPayments = async (saleOrderId: string): Promise<SaleOrderPayment[]> => {
-  const response = await axiosInstance.get<SaleOrderPayment[]>(API_SALE_ORDERS_GROUP.payments(saleOrderId));
+export const listSaleOrderPayments = async (
+  saleOrderId: string,
+): Promise<SaleOrderPayment[]> => {
+  const response = await axiosInstance.get<SaleOrderPayment[]>(
+    API_SALE_ORDERS_GROUP.payments(saleOrderId),
+  );
   return response.data;
 };
 
@@ -393,27 +445,46 @@ export const createSaleOrderPayment = async (
   saleOrderId: string,
   payload: CreateSaleOrderPaymentDto,
 ): Promise<{ paymentId: string }> => {
-  const response = await axiosInstance.post<{ paymentId: string }>(API_SALE_ORDERS_GROUP.payments(saleOrderId), payload);
+  const response = await axiosInstance.post<{ paymentId: string }>(
+    API_SALE_ORDERS_GROUP.payments(saleOrderId),
+    payload,
+  );
   return response.data;
 };
 
-export const deleteSaleOrderPayment = async (saleOrderId: string, paymentId: string): Promise<{ deleted: true }> => {
-  const response = await axiosInstance.delete<{ deleted: true }>(API_SALE_ORDERS_GROUP.paymentById(saleOrderId, paymentId));
+export const deleteSaleOrderPayment = async (
+  saleOrderId: string,
+  paymentId: string,
+): Promise<{ deleted: true }> => {
+  const response = await axiosInstance.delete<{ deleted: true }>(
+    API_SALE_ORDERS_GROUP.paymentById(saleOrderId, paymentId),
+  );
   return response.data;
 };
 
-export const getSaleOrderSearchState = async (): Promise<SaleOrderSearchStateResponse> => {
-  const response = await axiosInstance.get<SaleOrderSearchStateResponse>(API_SALE_ORDERS_GROUP.searchState);
+export const getSaleOrderSearchState =
+  async (): Promise<SaleOrderSearchStateResponse> => {
+    const response = await axiosInstance.get<SaleOrderSearchStateResponse>(
+      API_SALE_ORDERS_GROUP.searchState,
+    );
+    return response.data;
+  };
+
+export const getSaleOrderExportColumns = async (): Promise<
+  SaleOrderExportColumn[]
+> => {
+  const response = await axiosInstance.get<SaleOrderExportColumn[]>(
+    API_SALE_ORDERS_GROUP.exportColumns,
+  );
   return response.data;
 };
 
-export const getSaleOrderExportColumns = async (): Promise<SaleOrderExportColumn[]> => {
-  const response = await axiosInstance.get<SaleOrderExportColumn[]>(API_SALE_ORDERS_GROUP.exportColumns);
-  return response.data;
-};
-
-export const getSaleOrderExportPresets = async (): Promise<SaleOrderExportPreset[]> => {
-  const response = await axiosInstance.get<SaleOrderExportPreset[]>(API_SALE_ORDERS_GROUP.exportPresets);
+export const getSaleOrderExportPresets = async (): Promise<
+  SaleOrderExportPreset[]
+> => {
+  const response = await axiosInstance.get<SaleOrderExportPreset[]>(
+    API_SALE_ORDERS_GROUP.exportPresets,
+  );
   return response.data;
 };
 
@@ -422,12 +493,19 @@ export const saveSaleOrderExportPreset = async (payload: {
   columns: SaleOrderExportColumn[];
   useDateRange?: boolean;
 }): Promise<{ metricId: string }> => {
-  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.exportPresets, payload);
+  const response = await axiosInstance.post(
+    API_SALE_ORDERS_GROUP.exportPresets,
+    payload,
+  );
   return response.data;
 };
 
-export const deleteSaleOrderExportPreset = async (metricId: string): Promise<boolean> => {
-  const response = await axiosInstance.delete(API_SALE_ORDERS_GROUP.deleteExportPreset(metricId));
+export const deleteSaleOrderExportPreset = async (
+  metricId: string,
+): Promise<boolean> => {
+  const response = await axiosInstance.delete(
+    API_SALE_ORDERS_GROUP.deleteExportPreset(metricId),
+  );
   return response.data;
 };
 
@@ -437,12 +515,19 @@ export const exportSaleOrdersExcel = async (payload: {
   filters?: Record<string, unknown>[];
   useDateRange?: boolean;
 }): Promise<{ blob: Blob; filename: string }> => {
-  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.exportExcel, payload, {
-    responseType: "blob",
-  });
-  const disposition = response.headers["content-disposition"] as string | undefined;
+  const response = await axiosInstance.post(
+    API_SALE_ORDERS_GROUP.exportExcel,
+    payload,
+    {
+      responseType: "blob",
+    },
+  );
+  const disposition = response.headers["content-disposition"] as
+    | string
+    | undefined;
   const match = disposition?.match(/filename="?([^"]+)"?/i);
-  const filename = match?.[1] ?? `pedidos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const filename =
+    match?.[1] ?? `pedidos-${new Date().toISOString().slice(0, 10)}.xlsx`;
   return { blob: response.data as Blob, filename };
 };
 
@@ -471,17 +556,27 @@ export const saveSaleOrderSearchMetric = async (
   name: string,
   snapshot: SaleOrderSearchSnapshot,
 ): Promise<{ type: string; message: string }> => {
-  const response = await axiosInstance.post(API_SALE_ORDERS_GROUP.saveSearchMetric, { name, snapshot });
+  const response = await axiosInstance.post(
+    API_SALE_ORDERS_GROUP.saveSearchMetric,
+    { name, snapshot },
+  );
   return response.data;
 };
 
-export const deleteSaleOrderSearchMetric = async (metricId: string): Promise<{ type: string; message: string }> => {
-  const response = await axiosInstance.delete(API_SALE_ORDERS_GROUP.deleteSearchMetric(metricId));
+export const deleteSaleOrderSearchMetric = async (
+  metricId: string,
+): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.delete(
+    API_SALE_ORDERS_GROUP.deleteSearchMetric(metricId),
+  );
   return response.data;
 };
 export const getSaleOrderPdf = async (id: string): Promise<Blob> => {
-  const response = await axiosInstance.get(API_SALE_ORDERS_GROUP.saleOrderPdf(id), {
-    responseType: "blob",
-  });
+  const response = await axiosInstance.get(
+    API_SALE_ORDERS_GROUP.saleOrderPdf(id),
+    {
+      responseType: "blob",
+    },
+  );
   return response.data;
 };

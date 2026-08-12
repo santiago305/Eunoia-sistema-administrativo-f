@@ -179,6 +179,45 @@ export type SaleOrderItemCommand = Omit<SaleOrderItemInput, "components"> & {
   components?: SaleOrderItemComponentCommand[];
 };
 
+export type SaleOrderPackMatchComponentInput = {
+  skuId: string;
+  quantity: number;
+};
+
+export type SaleOrderPackMatchSummary = {
+  id: string;
+  description: string;
+  total: number;
+};
+
+export type SaleOrderMatchedPackComponent = {
+  id: string;
+  skuId: string;
+  quantity: number;
+  price: number;
+  lineTotal: number;
+};
+
+export type SaleOrderPackMatchResponse =
+  | {
+      status: "NONE";
+      composition: SaleOrderPackMatchComponentInput[];
+      matches: [];
+    }
+  | {
+      status: "AMBIGUOUS";
+      composition: SaleOrderPackMatchComponentInput[];
+      matches: SaleOrderPackMatchSummary[];
+    }
+  | {
+      status: "UNIQUE";
+      composition: SaleOrderPackMatchComponentInput[];
+      matches: [SaleOrderPackMatchSummary];
+      pack: SaleOrderPackMatchSummary & {
+        components: SaleOrderMatchedPackComponent[];
+      };
+    };
+
 export type SaleOrderSupplyInput = {
   id?: string;
   supplySkuId: string;
@@ -303,7 +342,7 @@ export type CreateSaleOrderDto = {
   observation?: string | null;
   items: SaleOrderItemInput[];
   payments: SaleOrderPaymentInput[];
-  currentState?:string | null;
+  currentState?: string | null;
 };
 
 export type CreateSaleOrderCommandDto = Omit<CreateSaleOrderDto, "items"> & {
@@ -384,16 +423,16 @@ export type SaleOrder = {
   id: string;
   serie: string | null;
   correlative: number | null;
-  client: { 
+  client: {
     id: string;
     type: ClientType;
     docType: ClientDocType;
     fullName: string;
     docNumber: string;
     address?: string | null;
-    reference?: string,
-    count?:number,
-    mainPhone?: string | null; 
+    reference?: string;
+    count?: number;
+    mainPhone?: string | null;
     telephones?: Array<{
       id: string;
       number: string;
@@ -417,8 +456,8 @@ export type SaleOrder = {
       name: string;
       provinceId: string;
     } | null;
-    isActive:boolean;
-   } | null;
+    isActive: boolean;
+  } | null;
   warehouse: { id: string; name: string } | null;
   source: { id: string; name: string; detail?: string | null } | null;
   createdBy: { id: string; name: string; email: string } | null;
@@ -426,7 +465,12 @@ export type SaleOrder = {
   deliveryDate: string | null;
   workflowId: string | null;
   currentStateId: string | null;
-  workflow: { id: string; name: string; description: string | null; isActive: boolean } | null;
+  workflow: {
+    id: string;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+  } | null;
   trackingCapabilities?: {
     invoice: boolean;
     preguide: boolean;
@@ -465,7 +509,7 @@ export type SaleOrder = {
   createdAt: string;
   updatedAt: string | null;
   totalPaid: number;
-  reserveBool?:boolean | null;
+  reserveBool?: boolean | null;
   pendingAmount: number;
   paymentStatus: SaleOrderPaymentStatus;
   payments: SaleOrderPayment[];
@@ -487,7 +531,12 @@ export type SaleOrderListResponse = {
 export type SaleOrderEditorCatalogsResponse = {
   clients: Array<{ id: string; fullName: string; docNumber?: string | null }>;
   warehouses: Array<{ warehouseId: string; name: string }>;
-  subsidiaries: Array<{ id: string; alias: string; address?: string | null; basePrice?: number | null }>;
+  subsidiaries: Array<{
+    id: string;
+    alias: string;
+    address?: string | null;
+    basePrice?: number | null;
+  }>;
   sources: Array<{ id: string; name: string }>;
   workflows: Array<{ id: string; name: string; isActive: boolean }>;
   advisers: Array<{ id: string; name: string; email: string }>;
@@ -663,6 +712,3 @@ export enum ClientType {
   REPURCHASE = "REPURCHASE",
   UNDEFINED = "UNDEFINED",
 }
-
-
-

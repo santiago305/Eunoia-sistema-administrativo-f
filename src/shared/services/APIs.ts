@@ -1,12 +1,11 @@
-﻿
-/**
+﻿/**
  * Grupo de rutas para la autenticaciÃ³n.
  */
 export const API_AUTH_GROUP = {
-  authentication: '/auth/login',
-  logout: '/auth/logout',
-  refreshToken: '/auth/refresh',
-  userAuth: '/auth/me',
+  authentication: "/auth/login",
+  logout: "/auth/logout",
+  refreshToken: "/auth/refresh",
+  userAuth: "/auth/me",
 };
 
 /**
@@ -14,9 +13,9 @@ export const API_AUTH_GROUP = {
  */
 export const API_USERS_GROUP = {
   list: "/users",
-  createUser: '/users/create',
-  countByRole: '/users/count-by-role',
-  findOwnUser: '/users/me',
+  createUser: "/users/create",
+  countByRole: "/users/count-by-role",
+  findOwnUser: "/users/me",
   updateUserRole: (id: string) => `/users/${id}/role`,
   updateManagementScope: (id: string) => `/users/${id}/management-scope`,
   deleteUser: (id: string) => `/users/delete/${id}`,
@@ -25,13 +24,18 @@ export const API_USERS_GROUP = {
 
 export const API_ACCESS_CONTROL_GROUP = {
   listPermissions: "/access-control/permissions",
-  effectivePermissionsByUser: (id: string) => `/access-control/users/${id}/effective-permissions`,
-  grantablePermissionsByUser: (id: string) => `/access-control/users/${id}/grantable-permissions`,
-  setUserPreferredHomePath: (id: string) => `/access-control/users/${id}/preferred-home`,
-  setUserPermissionOverride: (id: string) => `/access-control/users/${id}/permissions`,
+  effectivePermissionsByUser: (id: string) =>
+    `/access-control/users/${id}/effective-permissions`,
+  grantablePermissionsByUser: (id: string) =>
+    `/access-control/users/${id}/grantable-permissions`,
+  setUserPreferredHomePath: (id: string) =>
+    `/access-control/users/${id}/preferred-home`,
+  setUserPermissionOverride: (id: string) =>
+    `/access-control/users/${id}/permissions`,
   removeUserPermissionOverride: (id: string, permissionCode: string) =>
     `/access-control/users/${id}/permissions/${encodeURIComponent(permissionCode)}`,
-  rolePermissionsByRole: (roleId: string) => `/access-control/roles/${roleId}/permissions`,
+  rolePermissionsByRole: (roleId: string) =>
+    `/access-control/roles/${roleId}/permissions`,
 };
 
 export const API_PROFILE_GROUP = {
@@ -71,7 +75,8 @@ export const clientRoutes = {
   telephoneMain: (id: string) => `/clients/telephones/${id}/main`,
   searchState: "/clients/search-state",
   searchMetrics: "/clients/search-metrics",
-  searchMetricDetail: (metricId: string) => `/clients/search-metrics/${metricId}`,
+  searchMetricDetail: (metricId: string) =>
+    `/clients/search-metrics/${metricId}`,
 };
 export const packRoutes = {
   list: "/packs",
@@ -106,10 +111,12 @@ export const agencyRoutes = {
   importCreate: "/agencies/import-create",
   searchState: "/agencies/search-state",
   searchMetrics: "/agencies/search-metrics",
-  searchMetricDetail: (metricId: string) => `/agencies/search-metrics/${metricId}`,
+  searchMetricDetail: (metricId: string) =>
+    `/agencies/search-metrics/${metricId}`,
   exportColumns: "/agencies/export-columns",
   exportPresets: "/agencies/export-presets",
-  deleteExportPreset: (metricId: string) => `/agencies/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/agencies/export-presets/${metricId}`,
   exportExcel: "/agencies/export-excel",
 };
 
@@ -121,9 +128,9 @@ export const sourceRoutes = {
   active: (id: string) => `/sources/${id}/active`,
   searchState: "/sources/search-state",
   searchMetrics: "/sources/search-metrics",
-  searchMetricDetail: (metricId: string) => `/sources/search-metrics/${metricId}`,
+  searchMetricDetail: (metricId: string) =>
+    `/sources/search-metrics/${metricId}`,
 };
-
 
 export const API_UBIGEO_GROUP = {
   departments: "/ubigeo/departments",
@@ -146,7 +153,8 @@ export const API_SESSIONS_GROUP = {
 
 export const API_NOTIFICATION_MESSAGES_GROUP = {
   listModuleLabelConfigs: "/mail/module-label-configs",
-  upsertModuleLabelConfig: (moduleKey: string) => `/mail/module-label-configs/${moduleKey}`,
+  upsertModuleLabelConfig: (moduleKey: string) =>
+    `/mail/module-label-configs/${moduleKey}`,
   listMessages: "/mail/messages",
   countMessages: "/mail/messages/count",
   countSidebarMessages: "/mail/messages/sidebar-counts",
@@ -165,7 +173,8 @@ export const API_NOTIFICATION_MESSAGES_GROUP = {
   scheduleMessage: "/mail/messages/scheduled",
   rescheduleMessage: (id: string) => `/mail/messages/${id}/schedule`,
   cancelScheduledMessage: (id: string) => `/mail/messages/${id}/schedule`,
-  sendScheduledMessageNow: (id: string) => `/mail/messages/${id}/schedule/send-now`,
+  sendScheduledMessageNow: (id: string) =>
+    `/mail/messages/${id}/schedule/send-now`,
   markMessageRead: (id: string) => `/mail/messages/${id}/read`,
   markMessageUnread: (id: string) => `/mail/messages/${id}/unread`,
   starMessage: (id: string) => `/mail/messages/${id}/star`,
@@ -190,9 +199,9 @@ export const API_NOTIFICATION_MESSAGES_GROUP = {
   updateLabel: (id: string) => `/mail/labels/${id}`,
   deleteLabel: (id: string) => `/mail/labels/${id}`,
   assignLabelToMessage: (messageId: string, labelId: string) =>
-   `/mail/messages/${messageId}/labels/${labelId}`,
+    `/mail/messages/${messageId}/labels/${labelId}`,
   removeLabelFromMessage: (messageId: string, labelId: string) =>
-   `/mail/messages/${messageId}/labels/${labelId}`,
+    `/mail/messages/${messageId}/labels/${labelId}`,
   listSearchHistory: "/mail/search-history",
   saveSearchHistory: "/mail/search-history",
   deleteSearchHistory: (id: string) => `/mail/search-history/${id}`,
@@ -207,7 +216,8 @@ export const API_SECURITY_GROUP = {
   activeBans: "/security/active-bans",
   historyByIp: (ip: string) => `/security/history/${encodeURIComponent(ip)}`,
   blacklist: "/security/blacklist",
-  removeBlacklist: (ip: string) => `/security/blacklist/remove/${encodeURIComponent(ip)}`,
+  removeBlacklist: (ip: string) =>
+    `/security/blacklist/remove/${encodeURIComponent(ip)}`,
   activitySeries: "/security/activity-series",
   reasonDistribution: "/security/reason-distribution",
   reasons: "/security/reasons",
@@ -230,10 +240,12 @@ export const API_PRODUCTS_GROUP = {
   createSku: (id: string) => `/products/${id}/skus`,
   searchState: "/products/search-state",
   saveSearchMetric: "/products/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/products/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/products/search-metrics/${metricId}`,
   exportColumns: "/products/export-columns",
   exportPresets: "/products/export-presets",
-  deleteExportPreset: (metricId: string) => `/products/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/products/export-presets/${metricId}`,
   exportExcel: "/products/export-excel",
 };
 
@@ -243,7 +255,8 @@ export const API_WAREHOUSES_GROUP = {
   list: "/warehouses",
   searchState: "/warehouses/search-state",
   saveSearchMetric: "/warehouses/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/warehouses/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/warehouses/search-metrics/${metricId}`,
   getById: (id: string) => `/warehouses/${id}`,
   getStock: (id: string) => `/warehouses/${id}/stock`,
   update: (id: string) => `/warehouses/${id}`,
@@ -271,7 +284,8 @@ export const API_PRODUCT_EQUIVALENCES_GROUP = {
 
 export const API_PRODUCT_RECIPES_GROUP = {
   bySku: (skuId: string) => `/skus/${skuId}/recipe`,
-  deleteItem: (skuId: string, itemId: string) => `/skus/${skuId}/recipe/items/${itemId}`,
+  deleteItem: (skuId: string, itemId: string) =>
+    `/skus/${skuId}/recipe/items/${itemId}`,
 };
 
 export const API_SKUS_GROUP = {
@@ -291,7 +305,8 @@ export const API_SUPPLIERS_GROUP = {
   list: "/suppliers",
   searchState: "/suppliers/search-state",
   saveSearchMetric: "/suppliers/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/suppliers/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/suppliers/search-metrics/${metricId}`,
   byId: (id: string) => `/suppliers/${id}`,
   update: (id: string) => `/suppliers/${id}`,
   updateActive: (id: string) => `/suppliers/${id}/active`,
@@ -303,22 +318,28 @@ export const API_PURCHASE_GROUP = {
   list: "/purchases/orders",
   searchState: "/purchases/orders/search-state",
   saveSearchMetric: "/purchases/orders/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/purchases/orders/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/purchases/orders/search-metrics/${metricId}`,
   exportColumns: "/purchases/orders/export-columns",
   exportPresets: "/purchases/orders/export-presets",
-  deleteExportPreset: (metricId: string) => `/purchases/orders/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/purchases/orders/export-presets/${metricId}`,
   exportExcel: "/purchases/orders/export-excel",
   update: (id: string) => `/purchases/orders/${id}`,
   setSent: (id: string) => `/purchases/orders/${id}/sent`,
   setCancel: (id: string) => `/purchases/orders/${id}/cancel`,
   enterPurchase: (id: string) => `/purchases/orders/${id}/run-expected`,
-  requestProcessing: (id: string) => `/purchases/orders/${id}/request-processing`,
+  requestProcessing: (id: string) =>
+    `/purchases/orders/${id}/request-processing`,
   validateNumber: "/purchases/orders/validate-number",
   nextCorrelative: "/purchases/orders/next-correlative",
-  approveProcessing: (id: string) => `/purchases/orders/${id}/approve-processing`,
+  approveProcessing: (id: string) =>
+    `/purchases/orders/${id}/approve-processing`,
   rejectProcessing: (id: string) => `/purchases/orders/${id}/reject-processing`,
-  approveCreationWithPayment: (id: string) => `/purchases/orders/${id}/approve-creation-with-payment`,
-  rejectCreationWithPayment: (id: string) => `/purchases/orders/${id}/reject-creation-with-payment`,
+  approveCreationWithPayment: (id: string) =>
+    `/purchases/orders/${id}/approve-creation-with-payment`,
+  rejectCreationWithPayment: (id: string) =>
+    `/purchases/orders/${id}/reject-creation-with-payment`,
   confirmReception: (id: string) => `/purchases/orders/${id}/confirm-reception`,
   getById: (poId: string) => `/purchases/orders/${poId}`,
   purchaseHistory: (poId: string) => `/purchases/orders/${poId}/history`,
@@ -331,9 +352,10 @@ export const API_PURCHASE_DASHBOARD_GROUP = {
   byType: "/purchases/dashboard/by-type",
   byStatus: "/purchases/dashboard/by-status",
   topItems: "/purchases/dashboard/top-items",
-    searchState: "/purchases/dashboard/search-state",
+  searchState: "/purchases/dashboard/search-state",
   saveSearchMetric: "/purchases/dashboard/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/purchases/dashboard/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/purchases/dashboard/search-metrics/${metricId}`,
   topSuppliers: "/purchases/dashboard/top-suppliers",
   monthlySpending: "/purchases/dashboard/monthly-spending",
   upcomingPayments: "/purchases/dashboard/upcoming-payments",
@@ -360,10 +382,12 @@ export const API_PRODUCTION_ORDERS_GROUP = {
   list: "/production-orders",
   searchState: "/production-orders/search-state",
   saveSearchMetric: "/production-orders/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/production-orders/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/production-orders/search-metrics/${metricId}`,
   exportColumns: "/production-orders/export-columns",
   exportPresets: "/production-orders/export-presets",
-  deleteExportPreset: (metricId: string) => `/production-orders/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/production-orders/export-presets/${metricId}`,
   exportExcel: "/production-orders/export-excel",
   byId: (id: string) => `/production-orders/${id}`,
   update: (id: string) => `/production-orders/${id}`,
@@ -385,17 +409,19 @@ export const API_PAYMENT_GROUP = {
   list: "/payments",
   searchState: "/payments/search-state",
   saveSearchMetric: "/payments/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/payments/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/payments/search-metrics/${metricId}`,
   exportColumns: "/payments/export-columns",
   exportPresets: "/payments/export-presets",
-  deleteExportPreset: (metricId: string) => `/payments/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/payments/export-presets/${metricId}`,
   exportExcel: "/payments/export-excel",
   byId: (id: string) => `/payments/${id}`,
   listByPo: (id: string) => `/payments/get-by-po/${id}`,
   approve: (id: string) => `/payments/${id}/approve`,
   reject: (id: string) => `/payments/${id}/reject`,
   remove: (id: string) => `/payments/${id}`,
-}
+};
 
 export const API_INCOME_GROUP = {
   list: "/income",
@@ -418,21 +444,26 @@ export const API_RECURRING_PURCHASES_GROUP = {
   update: (id: string) => `/recurring-purchases/${id}`,
   searchState: "/recurring-purchases/search-state",
   saveSearchMetric: "/recurring-purchases/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/recurring-purchases/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/recurring-purchases/search-metrics/${metricId}`,
   exportColumns: "/recurring-purchases/export-columns",
   exportPresets: "/recurring-purchases/export-presets",
-  deleteExportPreset: (metricId: string) => `/recurring-purchases/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/recurring-purchases/export-presets/${metricId}`,
   exportExcel: "/recurring-purchases/export-excel",
   pause: (id: string) => `/recurring-purchases/${id}/pause`,
   resume: (id: string) => `/recurring-purchases/${id}/resume`,
   cancel: (id: string) => `/recurring-purchases/${id}/cancel`,
-  generateCurrentPayable: (id: string) => `/recurring-purchases/${id}/generate-current-payable`,
-  registerPayment: (id: string) => `/recurring-purchases/${id}/register-payment`,
+  generateCurrentPayable: (id: string) =>
+    `/recurring-purchases/${id}/generate-current-payable`,
+  registerPayment: (id: string) =>
+    `/recurring-purchases/${id}/register-payment`,
 };
 
 export const API_COMPANY_PAYMENT_ACCOUNTS_GROUP = {
   create: "/company-payment-accounts",
-  byCompany: (companyId: string) => `/company-payment-accounts/by-company/${companyId}`,
+  byCompany: (companyId: string) =>
+    `/company-payment-accounts/by-company/${companyId}`,
   update: (id: string) => `/company-payment-accounts/${id}`,
   setActive: (id: string) => `/company-payment-accounts/${id}/active`,
 };
@@ -452,6 +483,7 @@ export const API_SALE_ORDERS_GROUP = {
   base: "/sale-orders",
   create: "/sale-orders",
   createWithClient: "/sale-orders/with-client",
+  matchProductPack: "/sale-orders/products/match-pack",
   importPreview: "/sale-orders/import-preview",
   importLotes: "/sale-orders/import-lotes",
   importLoteActive: (id: string) => `/sale-orders/import-lotes/${id}/active`,
@@ -462,25 +494,29 @@ export const API_SALE_ORDERS_GROUP = {
   list: "/sale-orders",
   exportColumns: "/sale-orders/export-columns",
   exportPresets: "/sale-orders/export-presets",
-  deleteExportPreset: (metricId: string) => `/sale-orders/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/sale-orders/export-presets/${metricId}`,
   exportExcel: "/sale-orders/export-excel",
   detail: (id: string) => `/sale-orders/${id}`,
   update: (id: string) => `/sale-orders/${id}`,
   updateWithClient: (id: string) => `/sale-orders/${id}/with-client`,
   assignWorkflow: (id: string) => `/sale-orders/${id}/assign-workflow`,
-  availableTransitions: (id: string) => `/sale-orders/${id}/available-transitions`,
+  availableTransitions: (id: string) =>
+    `/sale-orders/${id}/available-transitions`,
   changeState: (id: string) => `/sale-orders/${id}/change-state`,
   bulkAssignedBy: "/sale-orders/bulk/assigned-by",
   bulkChangeState: "/sale-orders/bulk/change-state",
   bulkExecuteWorkflow: "/sale-orders/bulk/execute-workflow",
   history: (id: string) => `/sale-orders/${id}/history`,
   payments: (id: string) => `/sale-orders/${id}/payments`,
-  paymentById: (id: string, paymentId: string) => `/sale-orders/${id}/payments/${paymentId}`,
+  paymentById: (id: string, paymentId: string) =>
+    `/sale-orders/${id}/payments/${paymentId}`,
   searchState: "/sale-orders/search-state",
   editorCatalogs: "/sale-orders/editor-catalogs",
   statistics: "/sale-orders/statistics",
   saveSearchMetric: "/sale-orders/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/sale-orders/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/sale-orders/search-metrics/${metricId}`,
   saleOrderPdf: (id: string) => `/pdf-generated/sale-orders/${id}/pdf`,
   itemComponents: (itemId: string) => `/sale-orders/items/${itemId}/components`,
 };
@@ -502,7 +538,7 @@ export const API_WORKFLOWS_GROUP = {
 };
 export const API_IMPORTS_GROUP = {
   saleOrders: "/imports/orders/create",
-}
+};
 
 export const API_KARDEX_GROUP = {
   list: "/stock-items/ledger/by-sku",
@@ -511,10 +547,12 @@ export const API_KARDEX_GROUP = {
   exportColumns: "/inventory-ledger/export-columns",
   exportExcel: "/inventory-ledger/export-excel",
   exportPresets: "/inventory-ledger/export-presets",
-  deleteExportPreset: (metricId: string) => `/inventory-ledger/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/inventory-ledger/export-presets/${metricId}`,
   searchState: "/inventory-ledger/search-state",
   saveSearchMetric: "/inventory-ledger/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/inventory-ledger/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/inventory-ledger/search-metrics/${metricId}`,
 };
 
 export const API_INVENTORY_GROUP = {
@@ -522,10 +560,12 @@ export const API_INVENTORY_GROUP = {
   exportColumns: "/inventory/export-columns",
   exportExcel: "/inventory/export-excel",
   exportPresets: "/inventory/export-presets",
-  deleteExportPreset: (metricId: string) => `/inventory/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/inventory/export-presets/${metricId}`,
   searchState: "/inventory/search-state",
   saveSearchMetric: "/inventory/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/inventory/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/inventory/search-metrics/${metricId}`,
   availableStockSkus: "/available-stock/skus",
   skuStockSnapshots: (skuId: string) => `/skus/${skuId}/stock/snapshots`,
   getStockQuery: (params: {
@@ -546,10 +586,9 @@ export const API_INVENTORY_GROUP = {
 
 export const API_INVENTORY_ALERT_SETTINGS_GROUP = {
   list: "/inventory-alert-settings",
-  byStockItem: (stockItemId: string) => `/inventory-alert-settings/${stockItemId}`,
+  byStockItem: (stockItemId: string) =>
+    `/inventory-alert-settings/${stockItemId}`,
 };
-
-
 
 export const API_DOCUMENT_INVENTORY_GROUP = {
   movementCreated: "/stock-items/movements/create",
@@ -560,10 +599,12 @@ export const API_DOCUMENT_INVENTORY_GROUP = {
   exportColumns: "/inventory-documents/export-columns",
   exportExcel: "/inventory-documents/export-excel",
   exportPresets: "/inventory-documents/export-presets",
-  deleteExportPreset: (metricId: string) => `/inventory-documents/export-presets/${metricId}`,
+  deleteExportPreset: (metricId: string) =>
+    `/inventory-documents/export-presets/${metricId}`,
   searchState: "/inventory-documents/search-state",
   saveSearchMetric: "/inventory-documents/search-metrics",
-  deleteSearchMetric: (metricId: string) => `/inventory-documents/search-metrics/${metricId}`,
+  deleteSearchMetric: (metricId: string) =>
+    `/inventory-documents/search-metrics/${metricId}`,
   getStock: "/skus/get-stock",
 };
 
@@ -574,7 +615,8 @@ export const API_PAYMENT_METHODS_GROUP = {
   listAll: "/payment-methods/records",
   byId: (id: string) => `/payment-methods/${id}`,
   byCompany: (companyId: string) => `/payment-methods/by-company/${companyId}`,
-  bySupplier: (supplierId: string) => `/payment-methods/by-supplier/${supplierId}`,
+  bySupplier: (supplierId: string) =>
+    `/payment-methods/by-supplier/${supplierId}`,
   update: (id: string) => `/payment-methods/${id}`,
   setActive: (id: string) => `/payment-methods/${id}/active`,
 };
@@ -587,8 +629,8 @@ export const API_COMPANY_METHODS_GROUP = {
 
 export const API_SUPPLIER_METHODS_GROUP = {
   create: "/supplier-methods",
-  listBySupplier: (supplierId: string) => `/supplier-methods/by-supplier/${supplierId}`,
+  listBySupplier: (supplierId: string) =>
+    `/supplier-methods/by-supplier/${supplierId}`,
   byId: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
   remove: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
 };
-
