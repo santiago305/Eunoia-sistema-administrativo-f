@@ -547,7 +547,7 @@ export function SaleOrderEditor({
               showActions={false}
             />
           </SaleOrderEditorSection>
-          <SaleOrderEditorSection title="Insumos">
+          <SaleOrderEditorSection title="Insumos" collapsible defaultCollapsed>
             <SaleOrderSuppliesSection
               supplies={form.supplies}
               onChange={(supplies) =>
