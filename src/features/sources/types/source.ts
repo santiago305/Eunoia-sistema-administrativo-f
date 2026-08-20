@@ -11,3 +11,29 @@ export type SourceForm = {
   isActive: boolean;
 };
 
+export type SourceRecognitionCode = {
+  id: string;
+  sourceId: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SourceRecognitionCodesResponse = {
+  items: SourceRecognitionCode[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type SaveSourceRecognitionCodeInput = {
+  code: string;
+  description?: string | null;
+  isActive?: boolean;
+  replaceDeleted?: boolean;
+};
+

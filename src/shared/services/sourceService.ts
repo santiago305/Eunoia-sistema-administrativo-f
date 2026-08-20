@@ -3,6 +3,11 @@ import type { Paginated } from "@/features/clients/types/clientApi";
 import type { SourceDetail, SourceListItem, CreateSourceBody, UpdateSourceBody, SourcesListQuery } from "@/features/sources/types/sourceApi";
 import type { SourceSearchSnapshot, SourceSearchStateResponse } from "@/features/sources/types/sourceSearch";
 import { sourceRoutes } from "./APIs";
+import type {
+  SaveSourceRecognitionCodeInput,
+  SourceRecognitionCode,
+  SourceRecognitionCodesResponse,
+} from "@/features/sources/types/source";
 
 export const listSources = async (params: SourcesListQuery): Promise<Paginated<SourceListItem>> => {
   const requestParams = {
@@ -39,6 +44,50 @@ export const updateSource = async (id: string, payload: UpdateSourceBody): Promi
 
 export const updateSourceActive = async (id: string, payload: { isActive: boolean }): Promise<{ message: string }> => {
   const response = await axiosInstance.patch<{ message: string }>(sourceRoutes.active(id), payload);
+  return response.data;
+};
+
+export const listSourceRecognitionCodes = async (
+  sourceId: string,
+  params: { page?: number; limit?: number; q?: string },
+): Promise<SourceRecognitionCodesResponse> => {
+  const response = await axiosInstance.get<SourceRecognitionCodesResponse>(
+    sourceRoutes.recognitionCodes(sourceId),
+    { params },
+  );
+  return response.data;
+};
+
+export const createSourceRecognitionCode = async (
+  sourceId: string,
+  payload: SaveSourceRecognitionCodeInput,
+): Promise<SourceRecognitionCode> => {
+  const response = await axiosInstance.post<SourceRecognitionCode>(
+    sourceRoutes.recognitionCodes(sourceId),
+    payload,
+  );
+  return response.data;
+};
+
+export const updateSourceRecognitionCode = async (
+  sourceId: string,
+  codeId: string,
+  payload: SaveSourceRecognitionCodeInput,
+): Promise<SourceRecognitionCode> => {
+  const response = await axiosInstance.patch<SourceRecognitionCode>(
+    sourceRoutes.recognitionCode(sourceId, codeId),
+    payload,
+  );
+  return response.data;
+};
+
+export const deleteSourceRecognitionCode = async (
+  sourceId: string,
+  codeId: string,
+): Promise<{ id: string; deleted: boolean }> => {
+  const response = await axiosInstance.delete<{ id: string; deleted: boolean }>(
+    sourceRoutes.recognitionCode(sourceId, codeId),
+  );
   return response.data;
 };
 

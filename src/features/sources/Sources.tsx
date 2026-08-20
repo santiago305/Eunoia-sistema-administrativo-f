@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { Menu, Pencil, Plus, Trash2 } from "lucide-react";
+import { Menu, Pencil, Plus, ScanLine, Trash2 } from "lucide-react";
 import { isAxiosError } from "axios";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
@@ -21,6 +21,7 @@ import { PageShell } from "@/shared/layouts/PageShell";
 import { SourceFormModal } from "@/features/sources/components/SourceFormModal";
 import { SourceSmartSearchPanel } from "@/features/sources/components/SourceSmartSearchPanel";
 import { ModalDetailSource } from "@/features/sources/components/ModalDetailSource";
+import { SourceRecognitionCodesModal } from "@/features/sources/components/SourceRecognitionCodesModal";
 import type { Source, SourceForm } from "@/features/sources/types/source";
 import type { SourceDetail, SourceListItem } from "@/features/sources/types/sourceApi";
 import type { SourceSearchRule, SourceSearchSnapshot, SourceSearchStateResponse } from "@/features/sources/types/sourceSearch";
@@ -83,6 +84,8 @@ export default function Sources() {
 
   const { can } = usePermissions();
   const canManageSources = can("sources.manage");
+  const canViewRecognitionCodes = can("sources.recognition_codes.view");
+  const canManageRecognitionCodes = can("sources.recognition_codes.manage");
 
   const [items, setItems] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
@@ -115,6 +118,7 @@ export default function Sources() {
   const [editingSource, setEditingSource] = useState<Source | null>(null);
   const [editingLoading, setEditingLoading] = useState(false);
   const [detailSourceId, setDetailSourceId] = useState<string | null>(null);
+  const [recognitionSource, setRecognitionSource] = useState<Source | null>(null);
 
   const [toggleSourceId, setToggleSourceId] = useState<string | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
@@ -441,6 +445,13 @@ export default function Sources() {
           <ActionsPopover
             actions={[
               {
+                id: "recognition-codes",
+                label: "Códigos",
+                icon: <ScanLine className="h-4 w-4 text-black/60" />,
+                hidden: !canViewRecognitionCodes,
+                onClick: () => setRecognitionSource(row),
+              },
+              {
                 id: "edit",
                 label: "Editar",
                 icon: <Pencil className="h-4 w-4 text-black/60" />,
@@ -488,7 +499,7 @@ export default function Sources() {
         showInCards: false,
       },
     ],
-    [canManageSources],
+    [canManageSources, canViewRecognitionCodes],
   );
 
   const actionTitle = canManageSources ? undefined : "Sin permisos para gestionar enganches.";
@@ -606,6 +617,13 @@ export default function Sources() {
       />
 
       <ModalDetailSource open={Boolean(detailSourceId)} sourceId={detailSourceId} onClose={() => setDetailSourceId(null)} />
+
+      <SourceRecognitionCodesModal
+        open={Boolean(recognitionSource) && canViewRecognitionCodes}
+        source={recognitionSource}
+        canManage={canManageRecognitionCodes}
+        onClose={() => setRecognitionSource(null)}
+      />
     </PageShell>
   );
 }

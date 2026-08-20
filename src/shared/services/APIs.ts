@@ -126,6 +126,9 @@ export const sourceRoutes = {
   detail: (id: string) => `/sources/${id}`,
   update: (id: string) => `/sources/${id}`,
   active: (id: string) => `/sources/${id}/active`,
+  recognitionCodes: (id: string) => `/sources/${id}/recognition-codes`,
+  recognitionCode: (id: string, codeId: string) =>
+    `/sources/${id}/recognition-codes/${codeId}`,
   searchState: "/sources/search-state",
   searchMetrics: "/sources/search-metrics",
   searchMetricDetail: (metricId: string) =>
