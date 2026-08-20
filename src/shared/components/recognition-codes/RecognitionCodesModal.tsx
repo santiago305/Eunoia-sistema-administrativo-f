@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AxiosError } from "axios";
-import { Edit3, LoaderCircle, Menu, Plus, Save, Trash2, X } from "lucide-react";
+import { Edit3, LoaderCircle, Plus, Save, Trash2, X } from "lucide-react";
 import { AlertModal } from "@/shared/components/components/AlertModal";
-import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
+import { DataTableActionsPopover } from "@/shared/components/components/DataTableActionsPopover";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -224,7 +224,7 @@ export function RecognitionCodesModal<TItem extends RecognitionCodeItem>({
       visible: canManage,
       cell: (item) => (
         <div className="flex justify-center">
-          <ActionsPopover
+          <DataTableActionsPopover
             actions={[
               {
                 id: "edit",
@@ -241,12 +241,7 @@ export function RecognitionCodesModal<TItem extends RecognitionCodeItem>({
                 onClick: () => setPendingDelete(item),
               },
             ]}
-            columns={1}
-            compact
-            showLabels
-            triggerIcon={<Menu className="h-4 w-4" />}
-            popoverClassName="min-w-32"
-            popoverBodyClassName="p-2"
+            triggerLabel={`Acciones del código ${item.code}`}
           />
         </div>
       ),
