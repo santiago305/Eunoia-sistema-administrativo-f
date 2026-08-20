@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Plus, Sheet, Workflow } from "lucide-react";
+import { Boxes, Plus, ScanLine, Sheet, Workflow } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
     ClientType,
@@ -49,6 +49,7 @@ import {
 import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchItem, type DataTableSavedSearchItem } from "@/shared/components/table/search";
 import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
 import { SaleOrderImportLotesModal } from "@/features/sale-orders/components/SaleOrderImportLotesModal";
+import { SaleOrderSkuRecognitionCodesModal } from "@/features/sale-orders/components/SaleOrderSkuRecognitionCodesModal";
 import { SaleOrderAuditHistoryModal } from "@/features/sale-orders/components/SaleOrderAuditHistoryModal";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
@@ -177,6 +178,7 @@ export default function SaleOrders() {
     const [importLoading, setImportLoading] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [importLotesOpen, setImportLotesOpen] = useState(false);
+    const [skuRecognitionCodesOpen, setSkuRecognitionCodesOpen] = useState(false);
     const [importLotesRefreshKey, setImportLotesRefreshKey] = useState(0);
     const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
     const [bulkChangeStateOpen, setBulkChangeStateOpen] = useState(false);
@@ -1317,6 +1319,9 @@ export default function SaleOrders() {
                             {capabilities.canViewImportLotes ? <SystemButton size="icon" variant="outline" className="rounded-md h-11 shadow" tooltip="Lotes"
                                 leftIcon={<Boxes className="h-4 w-4" />} onClick={() => setImportLotesOpen(true)} title="Lotes importados">
                             </SystemButton> : null}
+                            {capabilities.canViewSkuRecognitionCodes ? <SystemButton size="icon" variant="outline" className="rounded-md h-11 shadow" tooltip="Códigos"
+                                leftIcon={<ScanLine className="h-4 w-4" />} onClick={() => setSkuRecognitionCodesOpen(true)} title="Códigos de reconocimiento">
+                            </SystemButton> : null}
                             {capabilities.canImport ? <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Importar"
                             leftIcon={<Sheet className="h-4 w-4" />} onClick={() => setImportOpen(true)} disabled={importLoading} title={companyActionTitle ?? "Importar pedidos"}>
                             </SystemButton> : null}
@@ -1430,6 +1435,11 @@ export default function SaleOrders() {
                     showFeedbackRef.current(successResponse(lote.isActive ? "Lote restaurado." : "Lote eliminado."));
                     await loadOrders();
                 }}
+            />
+            <SaleOrderSkuRecognitionCodesModal
+                open={skuRecognitionCodesOpen}
+                canManage={capabilities.canManageSkuRecognitionCodes}
+                onClose={() => setSkuRecognitionCodesOpen(false)}
             />
             <SaleOrderBulkAssignModal
                 open={bulkAssignOpen}

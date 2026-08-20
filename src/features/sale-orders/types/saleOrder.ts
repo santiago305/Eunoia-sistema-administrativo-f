@@ -712,3 +712,28 @@ export enum ClientType {
   REPURCHASE = "REPURCHASE",
   UNDEFINED = "UNDEFINED",
 }
+
+export type SaleOrderSkuRecognitionCode = {
+  id: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SaleOrderSkuRecognitionCodesResponse = {
+  items: SaleOrderSkuRecognitionCode[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type SaveSaleOrderSkuRecognitionCodeInput = {
+  code: string;
+  description?: string | null;
+  isActive?: boolean;
+  replaceDeleted?: boolean;
+};

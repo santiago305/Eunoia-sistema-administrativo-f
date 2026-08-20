@@ -485,6 +485,8 @@ export const API_SALE_ORDERS_GROUP = {
   createWithClient: "/sale-orders/with-client",
   matchProductPack: "/sale-orders/products/match-pack",
   importPreview: "/sale-orders/import-preview",
+  skuRecognitionCodes: "/sale-orders/sku-recognition-codes",
+  skuRecognitionCode: (id: string) => `/sale-orders/sku-recognition-codes/${id}`,
   importLotes: "/sale-orders/import-lotes",
   importLoteActive: (id: string) => `/sale-orders/import-lotes/${id}/active`,
   importLoteAudit: (id: string) => `/sale-orders/import-lotes/${id}/audit`,

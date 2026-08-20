@@ -33,6 +33,8 @@ export const SALE_ORDER_PERMISSIONS = {
   import: "sale_orders.import",
   viewImportLotes: "sale_orders.import_lotes.view",
   manageImportLotes: "sale_orders.import_lotes.manage",
+  viewSkuRecognitionCodes: "sale_orders.sku_recognition_codes.view",
+  manageSkuRecognitionCodes: "sale_orders.sku_recognition_codes.manage",
   export: "sale_orders.export",
   viewPdf: "sale_orders.pdf.view",
   viewWorkflows: "sale_orders.workflows.view",

@@ -25,6 +25,9 @@ import type {
   SaleOrderStatisticsResponse,
   SaveSaleOrderWithClientDto,
   SaveSaleOrderWithClientFiles,
+  SaleOrderSkuRecognitionCode,
+  SaleOrderSkuRecognitionCodesResponse,
+  SaveSaleOrderSkuRecognitionCodeInput,
 } from "@/features/sale-orders/types/saleOrder";
 import { buildSaleOrderUnifiedRequest } from "@/features/sale-orders/utils/saleOrderUnifiedRequest";
 import type {
@@ -212,6 +215,46 @@ export const previewSaleOrdersJsonImport = async (
   const response = await axiosInstance.post<SaleOrderJsonImportPreviewResponse>(
     API_SALE_ORDERS_GROUP.importPreview,
     rows,
+  );
+  return response.data;
+};
+
+export const listSaleOrderSkuRecognitionCodes = async (params: {
+  page: number;
+  limit?: number;
+  q?: string;
+}): Promise<SaleOrderSkuRecognitionCodesResponse> => {
+  const response = await axiosInstance.get<SaleOrderSkuRecognitionCodesResponse>(
+    API_SALE_ORDERS_GROUP.skuRecognitionCodes,
+    { params },
+  );
+  return response.data;
+};
+
+export const createSaleOrderSkuRecognitionCode = async (
+  input: SaveSaleOrderSkuRecognitionCodeInput,
+): Promise<SaleOrderSkuRecognitionCode> => {
+  const response = await axiosInstance.post<SaleOrderSkuRecognitionCode>(
+    API_SALE_ORDERS_GROUP.skuRecognitionCodes,
+    input,
+  );
+  return response.data;
+};
+
+export const updateSaleOrderSkuRecognitionCode = async (
+  id: string,
+  input: SaveSaleOrderSkuRecognitionCodeInput,
+): Promise<SaleOrderSkuRecognitionCode> => {
+  const response = await axiosInstance.patch<SaleOrderSkuRecognitionCode>(
+    API_SALE_ORDERS_GROUP.skuRecognitionCode(id),
+    input,
+  );
+  return response.data;
+};
+
+export const deleteSaleOrderSkuRecognitionCode = async (id: string) => {
+  const response = await axiosInstance.delete<{ id: string; deleted: true }>(
+    API_SALE_ORDERS_GROUP.skuRecognitionCode(id),
   );
   return response.data;
 };
