@@ -551,7 +551,11 @@ export default function SaleOrders() {
             const baseMessage = `Importados: ${response.importedRows}. Fallidos: ${response.failedRows}.${loteMessage}`;
             const errorDetails = response.errors
                 .slice(0, 3)
-                .map((error) => `Fila ${error.rowNumber}: ${error.message}`)
+                .map((error) =>
+                    new RegExp(`\\bfila\\s+${error.rowNumber}\\b`, "i").test(error.message)
+                        ? error.message
+                        : `Fila ${error.rowNumber}: ${error.message}`,
+                )
                 .join(" ");
             showFeedbackRef.current(response.failedRows > 0 ? errorResponse(errorDetails ? `${baseMessage} ${errorDetails}` : baseMessage) : successResponse(baseMessage));
             await updateUx();
