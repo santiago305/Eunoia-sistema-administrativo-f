@@ -15,7 +15,6 @@ export type SourceRecognitionCode = {
   id: string;
   sourceId: string;
   code: string;
-  description: string | null;
   isActive: boolean;
   isDeleted: boolean;
   createdAt: string;
@@ -32,7 +31,6 @@ export type SourceRecognitionCodesResponse = {
 
 export type SaveSourceRecognitionCodeInput = {
   code: string;
-  description?: string | null;
   isActive?: boolean;
   replaceDeleted?: boolean;
 };

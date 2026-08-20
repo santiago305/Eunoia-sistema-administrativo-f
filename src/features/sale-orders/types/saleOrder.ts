@@ -716,7 +716,6 @@ export enum ClientType {
 export type SaleOrderSkuRecognitionCode = {
   id: string;
   code: string;
-  description: string | null;
   isActive: boolean;
   isDeleted: boolean;
   createdAt: string;
@@ -733,7 +732,6 @@ export type SaleOrderSkuRecognitionCodesResponse = {
 
 export type SaveSaleOrderSkuRecognitionCodeInput = {
   code: string;
-  description?: string | null;
   isActive?: boolean;
   replaceDeleted?: boolean;
 };
