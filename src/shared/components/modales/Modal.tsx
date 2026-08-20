@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { type ReactNode, type RefObject, useCallback, useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { dispatchCloseAllFloatingSelects } from "../components/floatingSelectEvents";
 import { UI_LAYERS } from "../ui/layers";
 import { cn } from "@/shared/lib/utils";
@@ -207,7 +208,7 @@ export function Modal({
     }
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0" style={{ zIndex: UI_LAYERS.modalOverlay }}>
@@ -318,4 +319,10 @@ export function Modal({
       )}
     </AnimatePresence>
   );
+
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(modalContent, document.body);
 }

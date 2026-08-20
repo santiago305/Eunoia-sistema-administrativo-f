@@ -254,6 +254,11 @@ export function Popover({
   });
 
   const canClose = !preventClose;
+  const effectiveZIndex = anchorRef.current?.closest(
+    '[role="dialog"][aria-modal="true"]',
+  )
+    ? Math.max(zIndex, UI_LAYERS.modalPopover)
+    : zIndex;
 
   const [position, setPosition] = useState<PositionState>({
     top: 0,
@@ -596,7 +601,7 @@ export function Popover({
             position: "fixed",
             top: position.top,
             left: position.left,
-            zIndex,
+            zIndex: effectiveZIndex,
             visibility: position.ready ? "visible" : "hidden",
           }}
         >
