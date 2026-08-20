@@ -69,7 +69,7 @@ export const saleOrderImportFields: ImportField[] = [
     transform: normalizePeruvianMobile,
     validate: (value) =>
       /^9\d{8}$/.test(String(value ?? ""))
-        ? undefined
+        ? null
         : "El teléfono debe tener 9 dígitos y comenzar con 9.",
     aliases: ["telefono", "teléfono","Telefono","Teléfono",
       "Número de teléfono", "número de teléfono", "Numero de telefono", "numero de telefono"] },
