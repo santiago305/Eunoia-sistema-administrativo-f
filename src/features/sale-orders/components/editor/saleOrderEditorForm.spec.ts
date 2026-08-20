@@ -3,6 +3,7 @@ import type { SaleOrder } from "../../types/saleOrder";
 import {
   buildEmptySaleOrderEditorForm,
   calculateSaleOrderTotals,
+  getSaleOrderEditorSnapshot,
   mapSaleOrderToEditorForm,
   markAttachmentRemoved,
   toSaveSaleOrderWithClientDto,
@@ -224,6 +225,145 @@ describe("saleOrderEditorForm", () => {
       expect.objectContaining({ basePrice: 30 }),
     );
     expect(payload).not.toHaveProperty("createdAt");
+  });
+
+  it("detects changes in every editable section", () => {
+    const form = mapSaleOrderToEditorForm(order);
+    const initial = getSaleOrderEditorSnapshot(form);
+    const replacementPhoto = {
+      name: "proof.webp",
+      size: 250,
+      type: "image/webp",
+      lastModified: 1234,
+    } as File;
+    const changes = [
+      { ...form, items: [{ ...form.items[0], quantity: 3 }] },
+      {
+        ...form,
+        clientData: { ...form.clientData, fullName: "Ana Perez Actualizada" },
+      },
+      {
+        ...form,
+        clientData: {
+          ...form.clientData,
+          telephonesReplace: [
+            ...form.clientData.telephonesReplace,
+            { number: "988888888", isMain: false, isActive: true },
+          ],
+        },
+      },
+      {
+        ...form,
+        payments: [{ ...form.payments[0], amount: 35 }],
+      },
+      { ...form, agencyDetail: "Nueva agencia" },
+      { ...form, deliveryCost: 18 },
+      { ...form, logisticsCost: 11 },
+      { ...form, logisticsGeneratesPayable: true },
+      { ...form, sendDate: "2026-08-30" },
+      { ...form, sendCode: "ENV-200" },
+      { ...form, sendAddress: "Av. Nueva 123" },
+      { ...form, workflowId: "workflow-2" },
+      { ...form, warehouseId: "warehouse-2" },
+      { ...form, sourceId: "source-2" },
+      { ...form, assignedBy: "adviser-2" },
+      { ...form, scheduleDate: "2026-08-25" },
+      { ...form, deliveryDate: "2026-08-29" },
+      { ...form, discount: 7 },
+      { ...form, discountType: "PERCENTAGE" as const },
+      { ...form, note: "Nota actualizada" },
+      { ...form, advertisingCode: "ADS-2" },
+      { ...form, observation: "Observación actualizada" },
+      { ...form, shippingPhoto: replacementPhoto },
+      {
+        ...form,
+        supplies: [
+          { supplySkuId: "supply-1", quantity: "2", unitId: "unit-1" },
+        ],
+      },
+      {
+        ...form,
+        payments: [{ ...form.payments[0], photo: replacementPhoto }],
+      },
+      { ...form, removedAttachmentIds: ["attachment-1"] },
+    ];
+
+    for (const changedForm of changes) {
+      expect(getSaleOrderEditorSnapshot(changedForm)).not.toBe(initial);
+    }
+  });
+
+  it("includes client, payment, delivery and general changes in the save payload", () => {
+    const form = mapSaleOrderToEditorForm(order);
+    const payload = toSaveSaleOrderWithClientDto({
+      ...form,
+      workflowId: "workflow-2",
+      warehouseId: "warehouse-2",
+      agencyDetail: "Olva Centro",
+      sourceId: "source-2",
+      scheduleDate: "2026-08-25",
+      deliveryDate: "2026-08-29",
+      deliveryCost: 18,
+      logisticsCost: 11,
+      discount: 7,
+      note: "Nota actualizada",
+      advertisingCode: "ADS-2",
+      observation: "Observación actualizada",
+      sendDate: "2026-08-30",
+      sendCode: "ENV-200",
+      sendAddress: "Av. Nueva 123",
+      assignedBy: "adviser-2",
+      clientData: {
+        ...form.clientData,
+        fullName: "Ana Perez Actualizada",
+        address: "Jr. Actualizado 456",
+      },
+      payments: [
+        {
+          ...form.payments[0],
+          amount: 35,
+          operationNumber: "OP-200",
+          note: "Pago actualizado",
+        },
+      ],
+    });
+
+    expect(payload).toEqual(
+      expect.objectContaining({
+        workflowId: "workflow-2",
+        warehouseId: "warehouse-2",
+        agencyDetail: "Olva Centro",
+        sourceId: "source-2",
+        scheduleDate: "2026-08-25",
+        deliveryDate: "2026-08-29",
+        deliveryCost: 18,
+        logisticsCost: 11,
+        discount: 7,
+        note: "Nota actualizada",
+        advertisingCode: "ADS-2",
+        observation: "Observación actualizada",
+        sendDate: "2026-08-30",
+        sendCode: "ENV-200",
+        sendAddress: "Av. Nueva 123",
+        assignedBy: "adviser-2",
+      }),
+    );
+    expect(payload.client).toEqual(
+      expect.objectContaining({
+        mode: "update",
+        data: expect.objectContaining({
+          fullName: "Ana Perez Actualizada",
+          address: "Jr. Actualizado 456",
+        }),
+      }),
+    );
+    expect(payload.payments?.[0]).toEqual(
+      expect.objectContaining({
+        amount: 35,
+        operationNumber: "OP-200",
+        note: "Pago actualizado",
+      }),
+    );
   });
 
   it("maps and saves agencyDetail as free text without agencySubsidiaryId", () => {

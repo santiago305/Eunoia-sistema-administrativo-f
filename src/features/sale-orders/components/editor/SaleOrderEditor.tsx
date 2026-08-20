@@ -41,6 +41,7 @@ import { mapRecipeToSaleOrderSupplies } from "./saleOrderSupplies.helpers";
 import {
   buildEmptySaleOrderEditorForm,
   calculateSaleOrderTotals,
+  getSaleOrderEditorSnapshot,
   mapSaleOrderToEditorForm,
   toSaveSaleOrderWithClientDto,
   type SaleOrderEditorForm,
@@ -65,16 +66,6 @@ type Props = {
   onFooterChange?: (footer: ReactNode | null) => void;
   readOnly?: boolean;
 };
-
-const comparable = (form: SaleOrderEditorForm) =>
-  JSON.stringify({
-    ...form,
-    shippingPhoto: form.shippingPhoto?.name ?? null,
-    payments: form.payments.map((payment) => ({
-      ...payment,
-      photo: payment.photo?.name ?? null,
-    })),
-  });
 
 const money = new Intl.NumberFormat("es-PE", {
   style: "currency",
@@ -141,7 +132,7 @@ export function SaleOrderEditor({
   const productPackMatchBusyRef = useRef(false);
   const isDirty =
     Boolean(initialSnapshot.current) &&
-    comparable(form) !== initialSnapshot.current;
+    getSaleOrderEditorSnapshot(form) !== initialSnapshot.current;
   useEffect(() => {
     const next =
       mode === "edit" && order
@@ -156,7 +147,7 @@ export function SaleOrderEditor({
     productPackMatchRequestRef.current += 1;
     productPackMatchBusyRef.current = false;
     setMatchingProductPack(false);
-    initialSnapshot.current = comparable(next);
+    initialSnapshot.current = getSaleOrderEditorSnapshot(next);
     onDirtyChange?.(false);
   }, [mode, onDirtyChange, order]);
 
@@ -530,7 +521,7 @@ export function SaleOrderEditor({
         },
         mode === "edit" ? order?.id : null,
       );
-      initialSnapshot.current = comparable(form);
+      initialSnapshot.current = getSaleOrderEditorSnapshot(form);
       onDirtyChange?.(false);
       sileo.success({
         title:

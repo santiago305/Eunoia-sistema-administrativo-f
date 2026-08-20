@@ -92,6 +92,27 @@ export type SaleOrderEditorForm = {
   editPolicy: SaleOrderEditPolicy;
 };
 
+const fileSnapshot = (file?: File | null) =>
+  file
+    ? {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      }
+    : null;
+
+export function getSaleOrderEditorSnapshot(form: SaleOrderEditorForm): string {
+  return JSON.stringify({
+    ...form,
+    shippingPhoto: fileSnapshot(form.shippingPhoto),
+    payments: form.payments.map((payment) => ({
+      ...payment,
+      photo: fileSnapshot(payment.photo),
+    })),
+  });
+}
+
 const editablePolicy: SaleOrderEditPolicy = {
   stockStatus: "NONE",
   productsEditable: true,
