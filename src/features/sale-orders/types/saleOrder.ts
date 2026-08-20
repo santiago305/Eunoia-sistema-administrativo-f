@@ -298,7 +298,7 @@ export type UnifiedSaleOrderPaymentInput = {
 
 export type SaveSaleOrderWithClientDto = {
   client: SaleOrderClientCommand;
-  workflowId: string;
+  workflowId?: string;
   warehouseId?: string;
   agencyDetail?: string;
   sourceId?: string;

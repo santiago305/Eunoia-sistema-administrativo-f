@@ -1,5 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useState, type ReactNode } from "react";
+import {
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SaleOrderEditor } from "./SaleOrderEditor";
 import type { SaleOrderEditorForm } from "./saleOrderEditorForm";
@@ -91,8 +96,10 @@ vi.mock("@/shared/services/companyPaymentAccountService", () => ({
 vi.mock("../modal-create/SaleOrderItemsSection", () => ({
   SaleOrderItemsSection: ({
     form,
+    setForm,
   }: {
     form: SaleOrderEditorForm;
+    setForm: Dispatch<SetStateAction<SaleOrderEditorForm>>;
   }) => (
     <div data-testid="items-section">
       items:{form.items.length}
@@ -107,6 +114,49 @@ vi.mock("../modal-create/SaleOrderItemsSection", () => ({
           ].join("|")}
         </output>
       ))}
+      <button
+        type="button"
+        onClick={() =>
+          setForm((current) => ({
+            ...current,
+            items: current.items.map((item, index) =>
+              index === 0
+                ? {
+                    ...item,
+                    quantity: Number(item.quantity) + 1,
+                    total: (Number(item.quantity) + 1) * Number(item.unitPrice),
+                  }
+                : item,
+            ),
+          }))
+        }
+      >
+        aumentar primera cantidad
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setForm((current) => ({
+            ...current,
+            items: current.items.map((item, index) =>
+              index === 0
+                ? {
+                    ...item,
+                    description: "Pack reconocido",
+                    referencePackId: "pack-1",
+                    packNameSnapshot: "Pack reconocido",
+                    components: (item.components ?? []).map((component) => ({
+                      ...component,
+                      referencePackItemId: "pack-item-1",
+                    })),
+                  }
+                : item,
+            ),
+          }))
+        }
+      >
+        reconocer primer pack
+      </button>
     </div>
   ),
 }));
@@ -499,6 +549,182 @@ describe("SaleOrderEditor catalog loading", () => {
     expect(saveButton).toBeDisabled();
     expect(saveButton).toHaveAttribute("title", "Selecciona el tipo de pedido.");
     expect(saveSaleOrderWithClientMock).not.toHaveBeenCalled();
+  });
+
+  it("enables updating an existing order after increasing an item quantity", async () => {
+    const existingOrder = {
+      id: "order-edit-1",
+      workflow: { id: "workflow-1", name: "Venta" },
+      warehouse: { id: "warehouse-1", name: "Principal" },
+      client: {
+        id: "client-1",
+        type: "NEW",
+        fullName: "Ana Perez",
+        docType: "DNI",
+        docNumber: "12345678",
+        departmentId: "15",
+        provinceId: "1501",
+        districtId: "150101",
+        isActive: true,
+        telephones: [],
+      },
+      items: [
+        {
+          id: "item-1",
+          description: "Producto individual",
+          quantity: 1,
+          unitPrice: 20,
+          total: 20,
+          components: [],
+        },
+      ],
+      supplies: [],
+      payments: [],
+      attachments: [],
+      editPolicy: {
+        stockStatus: "NONE",
+        productsEditable: true,
+        warehouseEditable: true,
+        isFinal: false,
+        reason: null,
+      },
+    } as unknown as SaleOrder;
+
+    function EditHarness() {
+      const [footer, setFooter] = useState<ReactNode | null>(null);
+      const [dirty, setDirty] = useState(false);
+
+      return (
+        <>
+          <SaleOrderEditor
+            mode="edit"
+            order={existingOrder}
+            onCancel={noopCancel}
+            onSaved={noopSaved}
+            onDirtyChange={setDirty}
+            onFooterChange={setFooter}
+          />
+          <output data-testid="edit-dirty">{dirty ? "dirty" : "clean"}</output>
+          <div data-testid="edit-footer">{footer}</div>
+        </>
+      );
+    }
+
+    render(<EditHarness />);
+
+    const updateButton = await screen.findByRole("button", {
+      name: "Actualizar pedido",
+    });
+    await waitFor(() => {
+      expect(updateButton).toBeDisabled();
+      expect(updateButton).toHaveAttribute(
+        "title",
+        "Modifica algún dato del pedido para actualizarlo.",
+      );
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "aumentar primera cantidad" }),
+    );
+
+    await waitFor(() => {
+      expect(updateButton).not.toBeDisabled();
+      expect(screen.getByTestId("edit-dirty")).toHaveTextContent("dirty");
+    });
+  });
+
+  it("saves a recognized pack in a legacy imported order without workflow", async () => {
+    saveSaleOrderWithClientMock.mockResolvedValue({
+      orderId: "legacy-order-1",
+      serie: "PE",
+      correlative: 28,
+    });
+    const legacyOrder = {
+      id: "legacy-order-1",
+      workflow: null,
+      workflowId: null,
+      client: {
+        id: "client-1",
+        type: "NEW",
+        fullName: "Cliente importado",
+        docType: "NONE",
+        docNumber: "",
+        departmentId: "15",
+        provinceId: "1501",
+        districtId: "150101",
+        isActive: true,
+        telephones: [],
+      },
+      items: [
+        {
+          id: "unknown-item-1",
+          description: "Pack desconocido",
+          quantity: 1,
+          unitPrice: 20,
+          total: 20,
+          components: [
+            {
+              id: "component-1",
+              skuId: "sku-1",
+              quantity: 1,
+              unitPrice: 20,
+              total: 20,
+            },
+          ],
+        },
+      ],
+      supplies: [],
+      payments: [],
+      attachments: [],
+      editPolicy: {
+        stockStatus: "NONE",
+        productsEditable: true,
+        warehouseEditable: true,
+        isFinal: false,
+        reason: null,
+      },
+    } as unknown as SaleOrder;
+
+    function LegacyEditHarness() {
+      const [footer, setFooter] = useState<ReactNode | null>(null);
+      return (
+        <>
+          <SaleOrderEditor
+            mode="edit"
+            order={legacyOrder}
+            onCancel={noopCancel}
+            onSaved={noopSaved}
+            onFooterChange={setFooter}
+          />
+          <div>{footer}</div>
+        </>
+      );
+    }
+
+    render(<LegacyEditHarness />);
+    const updateButton = await screen.findByRole("button", {
+      name: "Actualizar pedido",
+    });
+    expect(updateButton).toBeDisabled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "reconocer primer pack" }),
+    );
+    await waitFor(() => expect(updateButton).not.toBeDisabled());
+    fireEvent.click(updateButton);
+
+    await waitFor(() =>
+      expect(saveSaleOrderWithClientMock).toHaveBeenCalledTimes(1),
+    );
+    const [payload, , editingId] = saveSaleOrderWithClientMock.mock.calls[0];
+    expect(editingId).toBe("legacy-order-1");
+    expect(payload.workflowId).toBeUndefined();
+    expect(payload.items[0]).toEqual(
+      expect.objectContaining({
+        referencePackId: "pack-1",
+        packNameSnapshot: "Pack reconocido",
+      }),
+    );
   });
 
   it("saves a complete create form with shipping and payment photos", async () => {

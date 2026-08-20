@@ -352,7 +352,7 @@ export function toSaveSaleOrderWithClientDto(
 
   return {
     client,
-    workflowId: form.workflowId,
+    workflowId: form.workflowId || undefined,
     warehouseId: form.warehouseId || undefined,
     agencyDetail: form.agencyDetail.trim() || undefined,
     sourceId: form.sourceId || undefined,

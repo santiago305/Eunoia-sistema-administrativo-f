@@ -139,6 +139,9 @@ export function SaleOrderEditor({
   const productItemsRef = useRef(form.items);
   const productPackMatchRequestRef = useRef(0);
   const productPackMatchBusyRef = useRef(false);
+  const isDirty =
+    Boolean(initialSnapshot.current) &&
+    comparable(form) !== initialSnapshot.current;
   useEffect(() => {
     const next =
       mode === "edit" && order
@@ -172,11 +175,8 @@ export function SaleOrderEditor({
   );
 
   useEffect(() => {
-    onDirtyChange?.(
-      Boolean(initialSnapshot.current) &&
-        comparable(form) !== initialSnapshot.current,
-    );
-  }, [form, onDirtyChange]);
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -453,7 +453,9 @@ export function SaleOrderEditor({
   );
 
   const validationMessage = useMemo(() => {
-    if (!form.workflowId) return "Selecciona el tipo de pedido.";
+    if (mode === "create" && !form.workflowId) {
+      return "Selecciona el tipo de pedido.";
+    }
     if (!form.items.length) return "Añade al menos un producto o pack.";
     if (matchingProductPack) return "Espera mientras se verifica el pack.";
     if (supplyRecipeLoading) return "Espera mientras se cargan los insumos.";
@@ -483,7 +485,7 @@ export function SaleOrderEditor({
       return "Completa el método y monto de cada pago.";
     }
     return null;
-  }, [form, matchingProductPack, supplyRecipeError, supplyRecipeLoading]);
+  }, [form, matchingProductPack, mode, supplyRecipeError, supplyRecipeLoading]);
 
   const totals = useMemo(
     () =>
@@ -546,6 +548,12 @@ export function SaleOrderEditor({
     }
   }, [form, mode, onDirtyChange, onSaved, order?.id, validationMessage]);
 
+  const saveDisabledMessage =
+    validationMessage ??
+    (mode === "edit" && !isDirty
+      ? "Modifica algún dato del pedido para actualizarlo."
+      : null);
+
   const footerActions = useMemo(
     () => (
       readOnly ? <div className="flex justify-end"><SystemButton type="button" variant="outline" leftIcon={<X className="h-4 w-4" />} onClick={onCancel}>Cerrar</SystemButton></div> : (
@@ -563,8 +571,8 @@ export function SaleOrderEditor({
           type="button"
           leftIcon={<Save className="h-4 w-4" />}
           onClick={() => void save()}
-          disabled={saving || Boolean(validationMessage)}
-          title={validationMessage ?? undefined}
+          disabled={saving || Boolean(saveDisabledMessage)}
+          title={saveDisabledMessage ?? undefined}
         >
           {saving
             ? "Guardando..."
@@ -574,7 +582,7 @@ export function SaleOrderEditor({
         </SystemButton>
       </div>)
     ),
-    [mode, onCancel, readOnly, save, saving, validationMessage],
+    [mode, onCancel, readOnly, save, saveDisabledMessage, saving],
   );
 
   useEffect(() => {
