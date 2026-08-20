@@ -19,7 +19,9 @@ export function sheetToRows(workbook: ExcelWorkbook, sheetName: string): ExcelRo
 
   return XLSX.utils.sheet_to_json<ExcelRow>(sheet, {
     defval: "",
-    raw: false,
+    // Preserve real Excel date cells as Date instances. Formatting them here
+    // turns the same date into locale-dependent strings such as 8/20/26.
+    raw: true,
   });
 }
 
@@ -79,6 +81,11 @@ export function validateRows(
 
       if (!isEmpty(value) && field.type === "number" && !isValidNumber(value)) {
         errors.push({ rowIndex, fieldKey: field.key, message: `${field.label} debe ser un número válido.` });
+        return;
+      }
+
+      if (!isEmpty(value) && field.type === "date" && !isValidDateInput(value)) {
+        errors.push({ rowIndex, fieldKey: field.key, message: `${field.label} debe ser una fecha válida.` });
         return;
       }
 
@@ -143,16 +150,85 @@ function toBoolean(value: unknown): unknown {
 }
 
 function toDateInputValue(value: unknown): unknown {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (value instanceof Date) {
+    return isValidDate(value)
+      ? formatDateParts(value.getFullYear(), value.getMonth() + 1, value.getDate())
+      : value;
+  }
+
+  if (typeof value === "number") {
+    return excelSerialToDate(value) ?? value;
+  }
 
   const text = String(value).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const isoMatch = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:$|[T\s])/);
+  if (isoMatch) {
+    return formatValidDateParts(Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3])) ?? text;
+  }
 
-  const dayFirstMatch = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (!dayFirstMatch) return text;
+  const separatedMatch = text.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})(?:$|[T\s,])/);
+  if (separatedMatch) {
+    let first = Number(separatedMatch[1]);
+    let second = Number(separatedMatch[2]);
+    const year = normalizeYear(Number(separatedMatch[3]));
 
-  const [, day, month, year] = dayFirstMatch;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    // Peru uses day/month. If the second part cannot be a month, the source
+    // is the common Excel month/day format and the parts must be swapped.
+    if (second > 12 && first <= 12) {
+      [first, second] = [second, first];
+    }
+
+    return formatValidDateParts(year, second, first) ?? text;
+  }
+
+  if (/^\d+(?:\.\d+)?$/.test(text)) {
+    return excelSerialToDate(Number(text)) ?? text;
+  }
+
+  return text;
+}
+
+function normalizeYear(year: number): number {
+  if (year >= 100) return year;
+  return year >= 70 ? 1900 + year : 2000 + year;
+}
+
+function excelSerialToDate(serial: number): string | null {
+  if (!Number.isFinite(serial) || serial < 1 || serial > 2_958_465) return null;
+
+  const utcMilliseconds = Date.UTC(1899, 11, 30) + Math.floor(serial) * 86_400_000;
+  const date = new Date(utcMilliseconds);
+  return formatDateParts(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+}
+
+function formatValidDateParts(year: number, month: number, day: number): string | null {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() + 1 !== month
+    || date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return formatDateParts(year, month, day);
+}
+
+function formatDateParts(year: number, month: number, day: number): string {
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function isValidDate(value: Date): boolean {
+  return Number.isFinite(value.getTime());
+}
+
+function isValidDateInput(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return Boolean(
+    match
+    && formatValidDateParts(Number(match[1]), Number(match[2]), Number(match[3])) === value,
+  );
 }
 
 function isEmpty(value: unknown): boolean {
