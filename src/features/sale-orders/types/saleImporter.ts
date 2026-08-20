@@ -1,6 +1,19 @@
 import { ImportField } from "@/shared/components/importer";
 import { SaleOrderJsonImportRow } from "./saleOrder";
 
+export const normalizePeruvianMobile = (value: unknown) => {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  const withoutCountryCode = digits.startsWith("0051")
+    ? digits.slice(4)
+    : digits.startsWith("51")
+      ? digits.slice(2)
+      : digits;
+
+  return /^9\d{8}$/.test(withoutCountryCode)
+    ? withoutCountryCode
+    : String(value ?? "").trim();
+};
+
 export const saleOrderImportFields: ImportField[] = [
   { 
     key: "workflowName", 
@@ -35,7 +48,7 @@ export const saleOrderImportFields: ImportField[] = [
   { 
     key: "recipientName", 
     label: "Destinatario", 
-    required: true, 
+    required: true,
     aliases: ["destinatario", "Destinatario", "Nombre del destinario", 
       "nombre del destinatario"] },
   { 
@@ -52,7 +65,12 @@ export const saleOrderImportFields: ImportField[] = [
   { 
     key: "phone", 
     label: "Telefono", 
-    required: true, 
+    required: true,
+    transform: normalizePeruvianMobile,
+    validate: (value) =>
+      /^9\d{8}$/.test(String(value ?? ""))
+        ? undefined
+        : "El teléfono debe tener 9 dígitos y comenzar con 9.",
     aliases: ["telefono", "teléfono","Telefono","Teléfono",
       "Número de teléfono", "número de teléfono", "Numero de telefono", "numero de telefono"] },
   { 
