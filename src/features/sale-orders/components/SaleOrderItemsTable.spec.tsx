@@ -282,11 +282,19 @@ describe("SaleOrderItemsTable", () => {
       },
       items: [
         {
-          id: "pack-item-found",
-          skuId: "sku-found",
+          id: "pack-item-a",
+          skuId: "sku-a",
           quantity: 1,
-          price: 25,
-          lineTotal: 25,
+          price: 10,
+          lineTotal: 10,
+          sku: null,
+        },
+        {
+          id: "pack-item-b",
+          skuId: "sku-b",
+          quantity: 1,
+          price: 15,
+          lineTotal: 15,
           sku: null,
         },
       ],
@@ -322,6 +330,10 @@ describe("SaleOrderItemsTable", () => {
       { timeout: 1_000 },
     );
     fireEvent.mouseDown(option);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Aplicar pack y sobrantes" }),
+    );
 
     expect(
       await screen.findByRole("button", { name: "Pack: Pack encontrado" }),

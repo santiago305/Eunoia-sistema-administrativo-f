@@ -16,7 +16,11 @@ import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { getSaleOrderStocksBySkuIds } from "@/shared/services/saleOrderStockService";
 import { getPackById, listPacks } from "@/shared/services/packService";
 import { SaleOrderAddSkuModal } from "@/features/sale-orders/components/modal-create/SaleOrderAddSkuModal";
-import { buildSkuLabelFromDetailItem } from "@/features/catalog/packs/Packs";
+import { AlertModal } from "@/shared/components/components/AlertModal";
+import {
+  buildPackDecomposition,
+  type PackDecompositionProposal,
+} from "@/features/sale-orders/utils/saleOrderPackDecomposition";
 
 type Props = {
   items: SaleOrderItemInput[];
@@ -25,6 +29,7 @@ type Props = {
   stockStatus?: SaleOrderEditPolicy["stockStatus"];
   productsEditable: boolean;
   onChangeItem: (item: SaleOrderItemInput, index: number) => void;
+  onReplaceItem?: (index: number, replacements: SaleOrderItemInput[]) => void;
   onDelete: (item: SaleOrderItemInput, index: number) => void;
   onOpenDetail: (
     item: SaleOrderItemInput,
@@ -347,9 +352,15 @@ export function SaleOrderItemsTable({
   stockStatus = "NONE",
   productsEditable,
   onChangeItem,
+  onReplaceItem,
   onDelete,
   onOpenDetail,
 }: Props) {
+  const replaceItem =
+    onReplaceItem ??
+    ((index: number, replacements: SaleOrderItemInput[]) => {
+      if (replacements[0]) onChangeItem(replacements[0], index);
+    });
   const [collapsedItems, setCollapsedItems] = useState<string[]>([]);
   const [stocksBySkuId, setStocksBySkuId] = useState<
     Record<string, skuStock | null>
@@ -583,6 +594,7 @@ export function SaleOrderItemsTable({
                     recentPackOptions={recentPackOptions}
                     onToggle={() => toggleItem(itemKey)}
                     onChangeItem={onChangeItem}
+                    onReplaceItem={replaceItem}
                     onDelete={onDelete}
                     onOpenDetail={onOpenDetail}
                   />
@@ -726,6 +738,7 @@ function PackRows({
   recentPackOptions,
   onToggle,
   onChangeItem,
+  onReplaceItem,
   onDelete,
   onOpenDetail,
 }: {
@@ -744,6 +757,7 @@ function PackRows({
   recentPackOptions: PackSelectOption[];
   onToggle: () => void;
   onChangeItem: Props["onChangeItem"];
+  onReplaceItem: NonNullable<Props["onReplaceItem"]>;
   onDelete: Props["onDelete"];
   onOpenDetail: Props["onOpenDetail"];
 }) {
@@ -776,7 +790,7 @@ function PackRows({
             itemKey={itemKey}
             recentOptions={recentPackOptions}
             disabled={!productsEditable}
-            onChange={(nextItem) => onChangeItem(nextItem, index)}
+            onReplace={(replacements) => onReplaceItem(index, replacements)}
           />
           <span className="text-[10px] text-muted-foreground">
             {(item.components ?? []).length} producto(s)
@@ -1173,14 +1187,14 @@ function SaleOrderPackSelect({
   itemKey,
   recentOptions,
   disabled,
-  onChange,
+  onReplace,
 }: {
   item: SaleOrderItemInput;
   itemKind: Exclude<SaleOrderItemKind, "PRODUCT">;
   itemKey: string;
   recentOptions: PackSelectOption[];
   disabled: boolean;
-  onChange: (item: SaleOrderItemInput) => void;
+  onReplace: (items: SaleOrderItemInput[]) => void;
 }) {
   const [query, setQuery] = useState("");
   const [searchOptions, setSearchOptions] =
@@ -1188,6 +1202,8 @@ function SaleOrderPackSelect({
   const [pendingOption, setPendingOption] =
     useState<PackSelectOption | null>(null);
   const [selectionError, setSelectionError] = useState("");
+  const [proposal, setProposal] =
+    useState<PackDecompositionProposal | null>(null);
 
   useEffect(() => {
     if (!query.trim()) setSearchOptions(recentOptions);
@@ -1278,45 +1294,13 @@ function SaleOrderPackSelect({
 
     try {
       const detail = await getPackById(packId);
-      const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
-      const description =
-        String(detail.pack.description ?? "").trim() || selectedOption.label;
-      const components: SaleOrderItemComponentInput[] = (detail.items ?? []).map(
-        (row) => {
-          const componentQuantity = roundMoney(
-            (Number(row.quantity) || 0) * quantity,
-          );
-          const unitPrice = Number(row.price ?? row.sku?.price ?? 0);
-
-          return {
-            skuId: row.skuId,
-            skuLabel: buildSkuLabelFromDetailItem(row),
-            skuCode: row.sku
-              ? `${row.sku.backendSku ?? ""}${row.sku.customSku ?? ""}${row.skuId}`
-              : row.skuId,
-            skuImage: row.sku?.image ?? null,
-            quantity: componentQuantity,
-            basePrice: unitPrice,
-            unitPrice,
-            total: calcTotal(componentQuantity, unitPrice),
-            referencePackItemId: row.id,
-          };
-        },
-      );
-      const total = sumComponentsTotal(components);
-
-      onChange({
-        ...item,
-        description,
-        referencePackId: packId,
-        packNameSnapshot: description,
-        quantity,
-        basePrice: Number(detail.pack.total ?? 0),
-        unitPrice: calcUnitPrice(quantity, total),
-        total,
-        components,
-      });
-      setPendingOption(null);
+      const result = buildPackDecomposition(item, detail);
+      if (!result.ok) {
+        setSelectionError(result.message);
+        setPendingOption(null);
+        return;
+      }
+      setProposal(result.proposal);
     } catch {
       setPendingOption(null);
       setSelectionError("No se pudo cargar el pack. Intenta nuevamente.");
@@ -1324,6 +1308,7 @@ function SaleOrderPackSelect({
   };
 
   return (
+    <>
     <FloatingSelect
       label="Pack"
       name={`pack-select-${itemKey}`}
@@ -1340,6 +1325,48 @@ function SaleOrderPackSelect({
       panelWidthMode="min-trigger"
       className="h-8 rounded-md px-2 py-1 text-xs font-semibold"
     />
+    <AlertModal
+      open={Boolean(proposal)}
+      type="info"
+      title="Confirmar separación del pack"
+      confirmText="Aplicar pack y sobrantes"
+      onClose={() => {
+        setProposal(null);
+        setPendingOption(null);
+      }}
+      onConfirm={() => {
+        if (!proposal) return;
+        onReplace(proposal.replacements);
+        setProposal(null);
+        setPendingOption(null);
+      }}
+      message={proposal ? (
+        <div className="space-y-2">
+          <p>
+            Se aplicará <strong>{proposal.packItem.description} x{proposal.packQuantity}</strong>{" "}
+            por S/ {proposal.packItem.total.toFixed(2)}.
+          </p>
+          {proposal.leftoverItems.length ? (
+            <div>
+              <p className="font-semibold">Productos que quedarán separados:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {proposal.leftoverItems.map((leftover, index) => (
+                  <li key={`${leftover.description}-${index}`}>
+                    {leftover.description} x{leftover.quantity} — S/ {leftover.total.toFixed(2)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p>No quedarán productos sobrantes.</p>
+          )}
+          <p className="font-semibold">
+            El total original de S/ {item.total.toFixed(2)} se conservará.
+          </p>
+        </div>
+      ) : null}
+    />
+    </>
   );
 }
 

@@ -171,6 +171,16 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
                             ),
                         }));
                     }}
+                    onReplaceItem={(index, replacements) => {
+                        startTransition(() =>
+                            setForm((previous) => ({
+                                ...previous,
+                                items: (previous.items ?? []).flatMap((item, itemIndex) =>
+                                    itemIndex === index ? replacements : [item],
+                                ),
+                            })),
+                        );
+                    }}
                     onDelete={(_, index) => {
                         startTransition(() =>
                             setForm((previous) => ({
