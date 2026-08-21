@@ -626,6 +626,35 @@ export function SaleOrderEditor({
           Stock reservado. Los productos, cantidades y almacén están bloqueados.
         </div>
       ) : null}
+      {canCorrectTotal && !readOnly ? (
+        <div className="mx-4 mt-3 flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-blue-950 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Corrección del importe</p>
+            <p className="text-xs text-blue-800">
+              Disponible aunque el pedido esté entregado. Analiza el saldo,
+              devuelve el estado y restaura el stock cuando corresponda.
+            </p>
+          </div>
+          <SystemButton
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-blue-300 bg-white"
+            leftIcon={<PencilLine className="h-4 w-4" />}
+            onClick={() => {
+              if (isDirty) {
+                sileo.error({
+                  title:
+                    "Guarda o descarta los otros cambios antes de corregir el importe.",
+                });
+                return;
+              }
+              setCorrectTotalOpen(true);
+            }}
+          >
+            Corregir importe
+          </SystemButton>
+        </div>
+      ) : null}
       <fieldset disabled={readOnly} className="grid flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,2.20fr)_minmax(360px,1fr)]">
         <div className="space-y-3">
           <SaleOrderEditorSection
@@ -750,25 +779,8 @@ export function SaleOrderEditor({
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-background px-3 py-2">
                       <dt className="text-muted-foreground">Total</dt>
-                      <dd className="flex items-center gap-2 text-sm font-semibold tabular-nums">
-                        <span>{money.format(totals.total)}</span>
-                        {canCorrectTotal ? (
-                          <SystemButton
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2"
-                            leftIcon={<PencilLine className="h-3.5 w-3.5" />}
-                            disabled={isDirty}
-                            tooltip={
-                              isDirty
-                                ? "Guarda o descarta los cambios actuales antes de corregir el total."
-                                : "Analizar pagos, estado y stock al corregir el total."
-                            }
-                            onClick={() => setCorrectTotalOpen(true)}
-                          >
-                            Corregir
-                          </SystemButton>
-                        ) : null}
+                      <dd className="text-sm font-semibold tabular-nums">
+                        {money.format(totals.total)}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
