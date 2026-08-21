@@ -24,4 +24,14 @@ describe("sale order phone import", () => {
       expect(autoMapColumns(saleOrderImportFields, [header]).total).toBe(header);
     },
   );
+
+  it("requires an imported order total greater than zero", () => {
+    const totalField = saleOrderImportFields.find(
+      (field) => field.key === "total",
+    );
+
+    expect(totalField?.required).toBe(true);
+    expect(totalField?.validate?.(0, {})).toContain("mayor a 0");
+    expect(totalField?.validate?.(100, {})).toBeNull();
+  });
 });

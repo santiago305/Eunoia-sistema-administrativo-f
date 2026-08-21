@@ -504,6 +504,7 @@ export const API_SALE_ORDERS_GROUP = {
   exportExcel: "/sale-orders/export-excel",
   detail: (id: string) => `/sale-orders/${id}`,
   update: (id: string) => `/sale-orders/${id}`,
+  correctTotal: (id: string) => `/sale-orders/${id}/correct-total`,
   updateWithClient: (id: string) => `/sale-orders/${id}/with-client`,
   assignWorkflow: (id: string) => `/sale-orders/${id}/assign-workflow`,
   availableTransitions: (id: string) =>

@@ -1,4 +1,4 @@
-import { Plus, Save, X } from "lucide-react";
+import { PencilLine, Plus, Save, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -17,6 +17,7 @@ import { getClientById, listClients } from "@/shared/services/clientService";
 import type { AdviserOption } from "@/shared/services/adviserService";
 import { listSubsidiaries } from "@/shared/services/agencyService";
 import {
+  correctSaleOrderTotal,
   getSaleOrderEditorCatalogs,
   matchSaleOrderProductPack,
   saveSaleOrderWithClient,
@@ -35,6 +36,7 @@ import { SaleOrderShippingSection } from "./SaleOrderShippingSection";
 import { SaleOrderDirectSkuSelect } from "./SaleOrderDirectSkuSelect";
 import { SaleOrderEditorSection } from "./SaleOrderEditorSection";
 import { SaleOrderSuppliesSection } from "./SaleOrderSuppliesSection";
+import { CorrectSaleOrderTotalModal } from "./CorrectSaleOrderTotalModal";
 import { getWorkflowSupplyRecipe } from "@/shared/services/workflowSupplyRecipeService";
 import { isValidRecipeQuantity } from "@/features/catalog/components/recipeFormFields.helpers";
 import { mapRecipeToSaleOrderSupplies } from "./saleOrderSupplies.helpers";
@@ -89,6 +91,8 @@ export function SaleOrderEditor({
       : buildEmptySaleOrderEditorForm(),
   );
   const [saving, setSaving] = useState(false);
+  const [correctingTotal, setCorrectingTotal] = useState(false);
+  const [correctTotalOpen, setCorrectTotalOpen] = useState(false);
   const [matchingProductPack, setMatchingProductPack] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [supplyRecipeLoading, setSupplyRecipeLoading] = useState(false);
@@ -498,6 +502,34 @@ export function SaleOrderEditor({
     [form.payments],
   );
   const pendingAmount = Math.max(0, totals.total - totalPaid);
+  const canCorrectTotal =
+    mode === "edit" &&
+    Boolean(order) &&
+    Boolean(order?.workflowId && order.currentStateId);
+
+  const applyTotalCorrection = useCallback(
+    async (total: number) => {
+      if (!order) return;
+      setCorrectingTotal(true);
+      try {
+        const result = await correctSaleOrderTotal(order.id, total);
+        setCorrectTotalOpen(false);
+        sileo.success({
+          title: result.stateChanged
+            ? `Total corregido. El pedido volvió a ${result.currentState.name}.`
+            : "Total del pedido corregido correctamente.",
+        });
+        await onSaved(order.id);
+      } catch (error) {
+        sileo.error({
+          title: parseApiError(error, "No se pudo corregir el total del pedido."),
+        });
+      } finally {
+        setCorrectingTotal(false);
+      }
+    },
+    [onSaved, order],
+  );
 
   const save = useCallback(async () => {
     if (validationMessage) {
@@ -718,8 +750,25 @@ export function SaleOrderEditor({
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-background px-3 py-2">
                       <dt className="text-muted-foreground">Total</dt>
-                      <dd className="text-sm font-semibold tabular-nums">
-                        {money.format(totals.total)}
+                      <dd className="flex items-center gap-2 text-sm font-semibold tabular-nums">
+                        <span>{money.format(totals.total)}</span>
+                        {canCorrectTotal ? (
+                          <SystemButton
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2"
+                            leftIcon={<PencilLine className="h-3.5 w-3.5" />}
+                            disabled={isDirty}
+                            tooltip={
+                              isDirty
+                                ? "Guarda o descarta los cambios actuales antes de corregir el total."
+                                : "Analizar pagos, estado y stock al corregir el total."
+                            }
+                            onClick={() => setCorrectTotalOpen(true)}
+                          >
+                            Corregir
+                          </SystemButton>
+                        ) : null}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-background/80 px-3 py-2">
@@ -799,6 +848,15 @@ export function SaleOrderEditor({
           />
         </aside>
       </fieldset>
+      {order ? (
+        <CorrectSaleOrderTotalModal
+          open={correctTotalOpen}
+          order={order}
+          loading={correctingTotal}
+          onClose={() => setCorrectTotalOpen(false)}
+          onConfirm={applyTotalCorrection}
+        />
+      ) : null}
     </div>
   );
 }

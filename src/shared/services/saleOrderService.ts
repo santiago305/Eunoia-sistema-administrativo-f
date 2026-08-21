@@ -51,6 +51,19 @@ export type ChangeSaleOrderStateResponse = {
   warnings: string[];
 };
 
+export type CorrectSaleOrderTotalResponse = {
+  saleOrderId: string;
+  previousTotal: number;
+  total: number;
+  totalPaid: number;
+  pendingAmount: number;
+  paymentStatus: "PAID" | "PENDING";
+  previousState: { id: string; code: string; name: string };
+  currentState: { id: string; code: string; name: string };
+  stateChanged: boolean;
+  stockRestoredAndReserved: boolean;
+};
+
 export type SaleOrderBulkActionSuccessRow = {
   saleOrderId: string;
   status: "success";
@@ -398,6 +411,17 @@ export const saveSaleOrderWithClient = async (
         API_SALE_ORDERS_GROUP.createWithClient,
         body,
       );
+  return response.data;
+};
+
+export const correctSaleOrderTotal = async (
+  saleOrderId: string,
+  total: number,
+): Promise<CorrectSaleOrderTotalResponse> => {
+  const response = await axiosInstance.patch<CorrectSaleOrderTotalResponse>(
+    API_SALE_ORDERS_GROUP.correctTotal(saleOrderId),
+    { total },
+  );
   return response.data;
 };
 

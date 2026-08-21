@@ -89,7 +89,10 @@ export const saleOrderImportFields: ImportField[] = [
   { 
     key: "total", 
     label: "Importe a pagar", 
-    type: "number", 
+    type: "number",
+    required: true,
+    validate: (value) =>
+      Number(value) > 0 ? null : "El importe a pagar debe ser mayor a 0.",
     aliases: [
       "Importe a pagar",
       "importe a pagar",
