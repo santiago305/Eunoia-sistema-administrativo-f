@@ -161,12 +161,13 @@ function toDateInputValue(value: unknown): unknown {
   }
 
   const text = String(value).trim();
-  const isoMatch = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:$|[T\s])/);
+  const dateText = stripLeadingTime(text);
+  const isoMatch = dateText.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:$|[T\s])/);
   if (isoMatch) {
     return formatValidDateParts(Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3])) ?? text;
   }
 
-  const separatedMatch = text.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})(?:$|[T\s,])/);
+  const separatedMatch = dateText.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})(?:$|[T\s,])/);
   if (separatedMatch) {
     let first = Number(separatedMatch[1]);
     let second = Number(separatedMatch[2]);
@@ -181,11 +182,16 @@ function toDateInputValue(value: unknown): unknown {
     return formatValidDateParts(year, second, first) ?? text;
   }
 
-  if (/^\d+(?:\.\d+)?$/.test(text)) {
-    return excelSerialToDate(Number(text)) ?? text;
+  if (/^\d+(?:\.\d+)?$/.test(dateText)) {
+    return excelSerialToDate(Number(dateText)) ?? text;
   }
 
   return text;
+}
+
+function stripLeadingTime(value: string): string {
+  const match = value.match(/^(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\s+(.+)$/);
+  return match?.[1]?.trim() || value;
 }
 
 function normalizeYear(year: number): number {
