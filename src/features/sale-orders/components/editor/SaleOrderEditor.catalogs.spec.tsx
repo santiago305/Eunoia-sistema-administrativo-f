@@ -633,6 +633,81 @@ describe("SaleOrderEditor catalog loading", () => {
     });
   });
 
+  it("allows correcting products and packs in a finalized consumed order", async () => {
+    const finalizedOrder = {
+      id: "order-final-1",
+      workflow: { id: "workflow-1", name: "ABONADO CE" },
+      warehouse: { id: "warehouse-1", name: "Principal" },
+      client: {
+        id: "client-1",
+        type: "NEW",
+        fullName: "Ana Perez",
+        docType: "DNI",
+        docNumber: "12345678",
+        departmentId: "15",
+        provinceId: "1501",
+        districtId: "150101",
+        isActive: true,
+        telephones: [],
+      },
+      items: [
+        {
+          id: "item-1",
+          description: "Producto individual",
+          quantity: 1,
+          unitPrice: 20,
+          total: 20,
+          components: [],
+        },
+      ],
+      supplies: [],
+      payments: [{ id: "payment-1", method: "EFECTIVO", amount: 20 }],
+      attachments: [],
+      editPolicy: {
+        stockStatus: "CONSUMED",
+        productsEditable: true,
+        warehouseEditable: false,
+        isFinal: true,
+        reason: "Pedido finalizado · Stock consumido",
+      },
+    } as unknown as SaleOrder;
+
+    function FinalizedHarness() {
+      const [footer, setFooter] = useState<ReactNode | null>(null);
+      return (
+        <>
+          <SaleOrderEditor
+            mode="edit"
+            order={finalizedOrder}
+            onCancel={noopCancel}
+            onSaved={noopSaved}
+            onFooterChange={setFooter}
+          />
+          <div>{footer}</div>
+        </>
+      );
+    }
+
+    render(<FinalizedHarness />);
+
+    expect(
+      await screen.findByText(/Edición de corrección:/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Producto directo" }),
+    ).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Agregar Pack" })).not.toBeDisabled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "aumentar primera cantidad" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Actualizar pedido" }),
+      ).not.toBeDisabled(),
+    );
+  });
+
   it("saves a recognized pack in a legacy imported order without workflow", async () => {
     saveSaleOrderWithClientMock.mockResolvedValue({
       orderId: "legacy-order-1",

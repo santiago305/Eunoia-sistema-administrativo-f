@@ -618,12 +618,17 @@ export function SaleOrderEditor({
 
   return (
     <div className="flex min-h-full flex-col">
-      {form.editPolicy.stockStatus === "RESERVED" ? (
+      {mode === "edit" &&
+      (form.editPolicy.isFinal ||
+        form.editPolicy.stockStatus === "RESERVED" ||
+        form.editPolicy.stockStatus === "CONSUMED") ? (
         <div
           role="status"
           className="mx-4 mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
         >
-          Stock reservado. Los productos, cantidades y almacén están bloqueados.
+          Edición de corrección: puedes cambiar precios, productos, packs o
+          cantidades. Al guardar se recalcularán el saldo, el estado y el
+          inventario. El almacén y el flujo permanecen bloqueados por seguridad.
         </div>
       ) : null}
       {canCorrectTotal && !readOnly ? (
@@ -849,7 +854,11 @@ export function SaleOrderEditor({
             }
             onWorkflowChange={changeWorkflow}
             workflowChangeDisabled={
-              !form.editPolicy.productsEditable || supplyRecipeLoading
+              (mode === "edit" &&
+                (form.editPolicy.isFinal ||
+                  form.editPolicy.stockStatus === "RESERVED" ||
+                  form.editPolicy.stockStatus === "CONSUMED")) ||
+              supplyRecipeLoading
             }
           />
           <SaleOrderShippingSection
