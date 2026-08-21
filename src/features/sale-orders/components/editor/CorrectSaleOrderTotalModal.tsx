@@ -18,6 +18,39 @@ const money = new Intl.NumberFormat("es-PE", {
   currency: "PEN",
 });
 
+function parseCorrectedTotal(rawValue: string): {
+  total: number | null;
+  error: string | null;
+} {
+  const compactValue = rawValue
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/^s\/?/i, "");
+  if (!compactValue) {
+    return { total: null, error: "Ingresa el total correcto del pedido." };
+  }
+
+  const normalizedValue =
+    compactValue.includes(",") && compactValue.includes(".")
+      ? compactValue.replace(/,/g, "")
+      : compactValue.replace(",", ".");
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalizedValue)) {
+    return {
+      total: null,
+      error: "Ingresa un importe válido con máximo 2 decimales.",
+    };
+  }
+
+  const total = Number(normalizedValue);
+  if (!Number.isFinite(total) || total <= 0) {
+    return { total: null, error: "El total debe ser mayor a 0." };
+  }
+  if (total > 9999999999.99) {
+    return { total: null, error: "El total ingresado es demasiado alto." };
+  }
+  return { total, error: null };
+}
+
 export function CorrectSaleOrderTotalModal({
   open,
   order,
@@ -26,23 +59,31 @@ export function CorrectSaleOrderTotalModal({
   onConfirm,
 }: Props) {
   const [value, setValue] = useState(String(order.total || ""));
+  const [showValidation, setShowValidation] = useState(false);
 
   useEffect(() => {
-    if (open) setValue(order.total > 0 ? String(order.total) : "");
+    if (open) {
+      setValue(order.total > 0 ? String(order.total) : "");
+      setShowValidation(false);
+    }
   }, [open, order.total]);
 
-  const total = Number(value);
-  const decimalPlaces = value.includes(".") ? value.split(".")[1].length : 0;
-  const valid =
-    Number.isFinite(total) &&
-    total > 0 &&
-    total <= 9999999999.99 &&
-    decimalPlaces <= 2;
+  const parsedTotal = parseCorrectedTotal(value);
   const pendingAmount = useMemo(
-    () => (valid ? Math.max(total - Number(order.totalPaid || 0), 0) : 0),
-    [order.totalPaid, total, valid],
+    () =>
+      parsedTotal.total !== null
+        ? Math.max(parsedTotal.total - Number(order.totalPaid || 0), 0)
+        : 0,
+    [order.totalPaid, parsedTotal.total],
   );
   const mayInvalidatePaymentState = pendingAmount > 0;
+  const confirm = () => {
+    if (parsedTotal.total === null) {
+      setShowValidation(true);
+      return;
+    }
+    void onConfirm(parsedTotal.total);
+  };
 
   return (
     <Modal
@@ -60,8 +101,8 @@ export function CorrectSaleOrderTotalModal({
           <SystemButton
             leftIcon={<Calculator className="h-4 w-4" />}
             loading={loading}
-            disabled={!valid}
-            onClick={() => void onConfirm(total)}
+            disabled={loading}
+            onClick={confirm}
           >
             Analizar y corregir
           </SystemButton>
@@ -87,15 +128,17 @@ export function CorrectSaleOrderTotalModal({
         <FloatingInput
           label="Total correcto"
           name="correct-sale-order-total"
-          type="number"
-          min={0.01}
-          max={9999999999.99}
-          step="0.01"
+          type="text"
+          inputMode="decimal"
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          error={showValidation ? (parsedTotal.error ?? undefined) : undefined}
+          onChange={(event) => {
+            setValue(event.target.value);
+            if (showValidation) setShowValidation(false);
+          }}
         />
 
-        {valid ? (
+        {parsedTotal.total !== null ? (
           <div className="rounded-lg border border-border bg-background p-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Saldo resultante</span>
