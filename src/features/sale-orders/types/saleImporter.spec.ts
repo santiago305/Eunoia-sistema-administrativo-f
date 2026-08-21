@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { autoMapColumns } from "@/shared/components/importer/excelImporter.utils";
 import { normalizePeruvianMobile, saleOrderImportFields } from "./saleImporter";
 
 describe("sale order phone import", () => {
@@ -17,4 +18,10 @@ describe("sale order phone import", () => {
     expect(phoneField?.validate?.("818536756", {})).toContain("9 dígitos");
     expect(phoneField?.validate?.("91853675", {})).toContain("9 dígitos");
   });
+  it.each(["Importe a pagar", "Importe a cobrar"])(
+    "automatically maps the order total from %s",
+    (header) => {
+      expect(autoMapColumns(saleOrderImportFields, [header]).total).toBe(header);
+    },
+  );
 });
