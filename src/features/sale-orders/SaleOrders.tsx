@@ -1424,7 +1424,10 @@ export default function SaleOrders() {
                     closeModal();
                     await loadOrders();
                 }}
-                capabilities={{ canEdit: capabilities.canEdit }}
+                capabilities={{
+                    canEdit: capabilities.canEdit,
+                    canManageAdvancedOrders: capabilities.canManageAdvancedOrders,
+                }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />
             <SaleOrderImportLotesModal

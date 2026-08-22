@@ -17,7 +17,10 @@ type Props = {
   onClose: () => void;
   onSaved?: (saleOrderId: string) => void | Promise<void>;
   onOrderChanged?: () => void | Promise<void>;
-  capabilities?: { canEdit: boolean };
+  capabilities?: {
+    canEdit: boolean;
+    canManageAdvancedOrders?: boolean;
+  };
 };
 
 export function SaleOrderDetailsModal({
@@ -32,7 +35,10 @@ export function SaleOrderDetailsModal({
   const [dirty, setDirty] = useState(false);
   const [showCloseAlert, setShowCloseAlert] = useState(false);
   const [editorFooter, setEditorFooter] = useState<ReactNode | null>(null);
-  const capabilities = providedCapabilities ?? { canEdit: true };
+  const capabilities = providedCapabilities ?? {
+    canEdit: true,
+    canManageAdvancedOrders: true,
+  };
   const readOnly = mode === "edit" && Boolean(order) && (!capabilities.canEdit || order?.isActive === false);
   const title = useMemo(() => {
     if (mode === "create") return "Nuevo pedido";
@@ -90,6 +96,9 @@ export function SaleOrderDetailsModal({
           onFooterChange={setEditorFooter}
           onSaved={handleSaved}
           readOnly={readOnly}
+          canManageAdvancedOrders={
+            capabilities.canManageAdvancedOrders ?? true
+          }
         />
       </Modal>
 

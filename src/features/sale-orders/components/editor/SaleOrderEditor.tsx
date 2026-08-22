@@ -67,6 +67,7 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   onFooterChange?: (footer: ReactNode | null) => void;
   readOnly?: boolean;
+  canManageAdvancedOrders?: boolean;
 };
 
 const money = new Intl.NumberFormat("es-PE", {
@@ -82,6 +83,7 @@ export function SaleOrderEditor({
   onDirtyChange,
   onFooterChange,
   readOnly = false,
+  canManageAdvancedOrders = true,
 }: Props) {
   const { company } = useCompany();
   const companyId = company?.companyId ?? "";
@@ -502,7 +504,16 @@ export function SaleOrderEditor({
     [form.payments],
   );
   const pendingAmount = Math.max(0, totals.total - totalPaid);
+  const isAdvancedOrder =
+    mode === "edit" &&
+    (form.editPolicy.isFinal ||
+      form.editPolicy.stockStatus === "RESERVED" ||
+      form.editPolicy.stockStatus === "CONSUMED");
+  const advancedCommercialEditable =
+    form.editPolicy.productsEditable &&
+    (!isAdvancedOrder || canManageAdvancedOrders);
   const canCorrectTotal =
+    canManageAdvancedOrders &&
     mode === "edit" &&
     Boolean(order) &&
     Boolean(order?.workflowId && order.currentStateId);
@@ -618,10 +629,7 @@ export function SaleOrderEditor({
 
   return (
     <div className="flex min-h-full flex-col">
-      {mode === "edit" &&
-      (form.editPolicy.isFinal ||
-        form.editPolicy.stockStatus === "RESERVED" ||
-        form.editPolicy.stockStatus === "CONSUMED") ? (
+      {canManageAdvancedOrders && isAdvancedOrder ? (
         <div
           role="status"
           className="mx-4 mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
@@ -670,7 +678,7 @@ export function SaleOrderEditor({
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <SaleOrderDirectSkuSelect
                   disabled={
-                    !form.editPolicy.productsEditable || matchingProductPack
+                    !advancedCommercialEditable || matchingProductPack
                   }
                   onAddItem={addDirectSkuItem}
                 />
@@ -679,7 +687,7 @@ export function SaleOrderEditor({
                   leftIcon={<Plus className="h-4 w-4" />}
                   onClick={() => itemsSectionRef.current?.openCreate()}
                   disabled={
-                    !form.editPolicy.productsEditable || matchingProductPack
+                    !advancedCommercialEditable || matchingProductPack
                   }
                   title={
                     matchingProductPack
@@ -696,7 +704,7 @@ export function SaleOrderEditor({
               ref={itemsSectionRef}
               form={form}
               setForm={setForm}
-              productsEditable={form.editPolicy.productsEditable}
+              productsEditable={advancedCommercialEditable}
               showActions={false}
             />
           </SaleOrderEditorSection>
@@ -706,7 +714,7 @@ export function SaleOrderEditor({
               onChange={(supplies) =>
                 setForm((current) => ({ ...current, supplies }))
               }
-              disabled={!form.editPolicy.productsEditable}
+              disabled={!advancedCommercialEditable}
               loading={supplyRecipeLoading}
               error={supplyRecipeError}
               onRetry={() => {
@@ -729,6 +737,7 @@ export function SaleOrderEditor({
                         max={form.discountType === "PERCENTAGE" ? 100 : undefined}
                         step="0.01"
                         value={String(form.discount ?? 0)}
+                        disabled={!advancedCommercialEditable}
                         onChange={(event) =>
                           setForm((current) => ({
                             ...current,
@@ -743,6 +752,7 @@ export function SaleOrderEditor({
                         label="Tipo"
                         name="sale-order-discount-type"
                         value={form.discountType}
+                        disabled={!advancedCommercialEditable}
                         options={[
                           { value: "FIXED", label: "Soles" },
                           { value: "PERCENTAGE", label: "Porcentaje" },
@@ -866,6 +876,7 @@ export function SaleOrderEditor({
             setForm={setForm}
             subsidiaryOptions={subsidiaryOptions}
             onSearchSubsidiaries={setSubsidiarySearchQuery}
+            amountsEditable={advancedCommercialEditable}
           />
         </aside>
       </fieldset>

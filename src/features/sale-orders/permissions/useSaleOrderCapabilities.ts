@@ -14,6 +14,7 @@ export const useSaleOrderCapabilities = () => {
     return {
       canEnter: allowed(PAGE), canList: allowed(P.view), canCreate: allowed(P.create),
       canEdit: allowed(P.viewDetail) && allowed(P.update), canViewDeleted, canRestore,
+      canManageAdvancedOrders: allowed(P.advancedOrders),
       canSelect: [P.assignAdviser, P.changeState, P.executeWorkflowAction, P.delete, P.restore].some(allowed),
       canBulkDelete: allowed(P.delete), canBulkRestore: canRestore,
       canBulkAssign: allowed(P.assignAdviser), canBulkChangeState: allowed(P.changeState),

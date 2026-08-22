@@ -12,6 +12,7 @@ export const SALE_ORDER_PERMISSIONS = {
   viewStock: "sale_orders.stock.view",
   create: "sale_orders.create",
   update: "sale_orders.update",
+  advancedOrders: "sale_orders.advanced_orders",
   delete: "sale_orders.delete",
   restore: "sale_orders.restore",
   clientsManage: "sale_orders.clients.manage",

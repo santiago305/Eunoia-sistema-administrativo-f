@@ -97,9 +97,11 @@ vi.mock("../modal-create/SaleOrderItemsSection", () => ({
   SaleOrderItemsSection: ({
     form,
     setForm,
+    productsEditable,
   }: {
     form: SaleOrderEditorForm;
     setForm: Dispatch<SetStateAction<SaleOrderEditorForm>>;
+    productsEditable: boolean;
   }) => (
     <div data-testid="items-section">
       items:{form.items.length}
@@ -116,6 +118,7 @@ vi.mock("../modal-create/SaleOrderItemsSection", () => ({
       ))}
       <button
         type="button"
+        disabled={!productsEditable}
         onClick={() =>
           setForm((current) => ({
             ...current,
@@ -706,6 +709,70 @@ describe("SaleOrderEditor catalog loading", () => {
         screen.getByRole("button", { name: "Actualizar pedido" }),
       ).not.toBeDisabled(),
     );
+  });
+
+  it("restores the previous restrictions without Pedidos avanzados", async () => {
+    const finalizedOrder = {
+      id: "order-final-restricted",
+      workflowId: "workflow-1",
+      currentStateId: "state-delivered",
+      workflow: { id: "workflow-1", name: "ABONADO CE" },
+      warehouse: { id: "warehouse-1", name: "Principal" },
+      client: {
+        id: "client-1",
+        type: "NEW",
+        fullName: "Ana Perez",
+        docType: "DNI",
+        docNumber: "12345678",
+        departmentId: "15",
+        provinceId: "1501",
+        districtId: "150101",
+        isActive: true,
+        telephones: [],
+      },
+      items: [
+        {
+          id: "item-1",
+          description: "Producto individual",
+          quantity: 1,
+          unitPrice: 20,
+          total: 20,
+          components: [],
+        },
+      ],
+      supplies: [],
+      payments: [{ id: "payment-1", method: "EFECTIVO", amount: 20 }],
+      attachments: [],
+      editPolicy: {
+        stockStatus: "CONSUMED",
+        productsEditable: true,
+        warehouseEditable: false,
+        isFinal: true,
+        reason: "Pedido finalizado · Stock consumido",
+      },
+    } as unknown as SaleOrder;
+
+    render(
+      <SaleOrderEditor
+        mode="edit"
+        order={finalizedOrder}
+        onCancel={noopCancel}
+        onSaved={noopSaved}
+        canManageAdvancedOrders={false}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Corregir importe" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Edición de corrección:/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Producto directo" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Agregar Pack" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "aumentar primera cantidad" }),
+    ).toBeDisabled();
   });
 
   it("saves a recognized pack in a legacy imported order without workflow", async () => {

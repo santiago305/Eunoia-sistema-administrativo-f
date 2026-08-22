@@ -12,6 +12,7 @@ describe("useSaleOrderCapabilities", () => {
     permissions.current = [
       "page.sale-orders.view", "sale_orders.view", "sale_orders.view_detail", "sale_orders.update",
       "sale_orders.assign_adviser", "sale_orders.change_state", "sale_orders.delete",
+      "sale_orders.advanced_orders",
     ];
     const { result } = renderHook(() => useSaleOrderCapabilities());
     expect(result.current.canEnter).toBe(true);
@@ -21,6 +22,7 @@ describe("useSaleOrderCapabilities", () => {
     expect(result.current.canBulkAssign).toBe(true);
     expect(result.current.canBulkChangeState).toBe(true);
     expect(result.current.canBulkDelete).toBe(true);
+    expect(result.current.canManageAdvancedOrders).toBe(true);
     expect(result.current.canRestore).toBe(false);
   });
 

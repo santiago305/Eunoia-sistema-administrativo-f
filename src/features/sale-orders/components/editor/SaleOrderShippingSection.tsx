@@ -26,6 +26,7 @@ type Props = {
     generatesPayable?: boolean;
   }>;
   onSearchSubsidiaries?: (query: string) => void | Promise<void>;
+  amountsEditable?: boolean;
 };
 
 const resolveUrl = (value?: string | null) => {
@@ -43,6 +44,7 @@ export function SaleOrderShippingSection({
   setForm,
   subsidiaryOptions,
   onSearchSubsidiaries,
+  amountsEditable = true,
 }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const imageUrl = useMemo(
@@ -124,6 +126,7 @@ export function SaleOrderShippingSection({
             name="sale-order-subsidiary"
             className={inputClassName}
             value={form.agencyDetail}
+            disabled={!amountsEditable}
             options={subsidiaryOptions}
             onChange={(agencyDetail) => {
               void onSearchSubsidiaries?.(agencyDetail);
@@ -162,6 +165,7 @@ export function SaleOrderShippingSection({
           className={inputClassName}
           name="sale-order-delivery-charge"
           value={form.deliveryCost}
+          disabled={!amountsEditable}
           onChange={(event) =>
             setForm((current) => ({
               ...current,
