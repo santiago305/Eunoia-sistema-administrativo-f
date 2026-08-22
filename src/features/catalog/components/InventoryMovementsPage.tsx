@@ -73,7 +73,7 @@ type MovementRow = {
   createdAt: string;
   date: string;
   time: string;
-  documentNumber: string;
+  origin: string;
   skuLabel: string;
   warehouse: string;
   quantityLabel: string;
@@ -417,7 +417,6 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         const time = createdAt
           ? createdAt.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
           : "-";
-        const documentNumber = "-";
         const skuLabel = buildSkuLabelFromItem({
         skuItem: { sku: item.sku, attributes: item.sku.attributes ?? [] },
           fallbackName: item.sku.name || "-",
@@ -431,7 +430,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           createdAt: item.createdAt,
           date,
           time,
-          documentNumber,
+          origin: item.originLabel || "-",
           skuLabel,
           warehouse,
           quantityLabel: formatQuantityWithUnit(item.quantity ?? 0, item.baseUnit?.code),
@@ -452,6 +451,15 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
             {row.date} {row.time}
           </div>
         ),
+        headerClassName: "text-left",
+        className: "text-black/70",
+        hideable: true,
+        sortable: false,
+      },
+      {
+        id: "origin",
+        header: "Origen",
+        accessorKey: "origin",
         headerClassName: "text-left",
         className: "text-black/70",
         hideable: true,
