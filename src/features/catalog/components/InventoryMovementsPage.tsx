@@ -71,6 +71,8 @@ function useDebouncedCallback<Args extends unknown[]>(callback: (...args: Args) 
 type MovementRow = {
   id: string;
   createdAt: string;
+  effectiveDate: string;
+  effectiveDateLabel: string;
   date: string;
   time: string;
   origin: string;
@@ -411,6 +413,14 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     () =>
       items.map((item) => {
         const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+        const effectiveDate = parseDateInputValue(item.effectiveDate);
+        const effectiveDateLabel = effectiveDate
+          ? effectiveDate.toLocaleDateString("es-PE", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
+          : "-";
         const date = createdAt
           ? createdAt.toLocaleDateString("es-PE", { year: "numeric", month: "2-digit", day: "2-digit" })
           : "-";
@@ -428,6 +438,8 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         return {
           id: item.id,
           createdAt: item.createdAt,
+          effectiveDate: item.effectiveDate,
+          effectiveDateLabel,
           date,
           time,
           origin: item.originLabel || "-",
@@ -450,6 +462,18 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           <div className="text-black/70">
             {row.date} {row.time}
           </div>
+        ),
+        headerClassName: "text-left",
+        className: "text-black/70",
+        hideable: true,
+        sortable: false,
+      },
+      {
+        id: "effectiveDate",
+        header: "Fecha prevista",
+        accessorKey: "effectiveDate",
+        cell: (row) => (
+          <div className="text-black/70">{row.effectiveDateLabel}</div>
         ),
         headerClassName: "text-left",
         className: "text-black/70",

@@ -59,6 +59,7 @@ describe("InventoryMovementsPage request budget", () => {
         {
           id: "movement-1",
           createdAt: "2026-08-22T12:00:00.000Z",
+          effectiveDate: "2026-08-18",
           originLabel: "Pedido PE-001",
           quantity: 2,
           direction: "OUT",
@@ -88,8 +89,13 @@ describe("InventoryMovementsPage request budget", () => {
         data: Array<Record<string, unknown>>;
       };
       expect(props.columns.map((column) => column.id)).toContain("origin");
+      expect(props.columns.map((column) => column.id)).toContain("effectiveDate");
       expect(props.columns.map((column) => column.id)).not.toContain("documentNumber");
-      expect(props.data[0]).toMatchObject({ origin: "Pedido PE-001" });
+      expect(props.data[0]).toMatchObject({
+        origin: "Pedido PE-001",
+        effectiveDate: "2026-08-18",
+        effectiveDateLabel: "18/08/2026",
+      });
       expect(props.data[0]).not.toHaveProperty("documentNumber");
     });
   });

@@ -4,6 +4,7 @@ import type { ProductCatalogProductType } from "@/features/catalog/types/product
 export type InventoryLedgerMovementListItem = {
   id: string;
   createdAt: IsoDateString;
+  effectiveDate: IsoDateString;
   originLabel: string;
   quantity: number;
   direction: Direction;
