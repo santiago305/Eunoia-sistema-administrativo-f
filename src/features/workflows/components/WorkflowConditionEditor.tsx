@@ -39,6 +39,29 @@ type SelectSchemaOption = {
   value: string;
 };
 
+type DeliveryDateOffsetMode = "BEFORE" | "AFTER";
+
+const DELIVERY_DATE_OFFSET_OPTIONS = [
+  { value: "BEFORE", label: "Días antes" },
+  { value: "AFTER", label: "Días después (fecha pasada)" },
+] satisfies Array<{ value: DeliveryDateOffsetMode; label: string }>;
+
+function getDeliveryDateOffsetConfig(
+  config: Readonly<Record<string, unknown>>,
+): { mode: DeliveryDateOffsetMode; days: number } {
+  const mode = config.mode === "AFTER" ? "AFTER" : "BEFORE";
+  const configuredDays =
+    typeof config.days === "number" ? config.days : config.maxDaysBefore;
+  const days =
+    typeof configuredDays === "number" &&
+    Number.isInteger(configuredDays) &&
+    configuredDays >= 0
+      ? configuredDays
+      : 1;
+
+  return { mode, days };
+}
+
 function getSelectSchemaOptions(schema: unknown): SelectSchemaOption[] {
   if (!schema || typeof schema !== "object" || !("options" in schema)) {
     return [];
@@ -85,6 +108,9 @@ export function WorkflowConditionEditor({ catalog, value, onChange }: Props) {
           JSON.stringify(definition?.configSchema ?? {}).includes("date");
         const isScheduleDeliveryWindow =
           condition.type === ConditionType.SCHEDULE_DELIVERY_WINDOW;
+        const deliveryDateOffset = isScheduleDeliveryWindow
+          ? getDeliveryDateOffsetConfig(condition.config)
+          : null;
         const isSaleOrderFieldRequired =
           condition.type === ConditionType.SALE_ORDER_FIELD_REQUIRED;
         const fieldOptions = isSaleOrderFieldRequired
@@ -110,7 +136,7 @@ export function WorkflowConditionEditor({ catalog, value, onChange }: Props) {
                   type: selected as WorkflowCondition["type"],
                   config:
                     selected === ConditionType.SCHEDULE_DELIVERY_WINDOW
-                      ? { minDaysBefore: 0, maxDaysBefore: 1 }
+                      ? { mode: "BEFORE", days: 1 }
                       : selected === ConditionType.SALE_ORDER_FIELD_REQUIRED
                         ? {
                             field:
@@ -159,39 +185,41 @@ export function WorkflowConditionEditor({ catalog, value, onChange }: Props) {
 
             {isScheduleDeliveryWindow ? (
               <div className="mt-2 space-y-2">
-                {/* <FloatingInput
-                  label="Minimo de dias anteriores"
-                  name={`condition-min-days-${index}`}
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={String(condition.config.minDaysBefore ?? 0)}
-                  onChange={(event) => {
+                <FloatingSelect
+                  label="Comparar con la entrega"
+                  name={`condition-delivery-mode-${index}`}
+                  value={deliveryDateOffset?.mode ?? "BEFORE"}
+                  options={DELIVERY_DATE_OFFSET_OPTIONS}
+                  onChange={(selected) => {
                     const next = [...value];
                     next[index] = {
                       ...condition,
                       config: {
-                        ...condition.config,
-                        minDaysBefore: Math.max(0, Number(event.target.value)),
+                        mode: selected as DeliveryDateOffsetMode,
+                        days: deliveryDateOffset?.days ?? 1,
                       },
                     };
                     onChange(next);
                   }}
-                /> */}
+                />
                 <FloatingInput
-                  label="desde cuantos días anteriores"
-                  name={`condition-max-days-${index}`}
+                  label={
+                    deliveryDateOffset?.mode === "AFTER"
+                      ? "Cantidad de días después"
+                      : "Cantidad de días antes"
+                  }
+                  name={`condition-delivery-days-${index}`}
                   type="number"
                   min={0}
                   step={1}
-                  value={String(condition.config.maxDaysBefore ?? 1)}
+                  value={String(deliveryDateOffset?.days ?? 1)}
                   onChange={(event) => {
                     const next = [...value];
                     next[index] = {
                       ...condition,
                       config: {
-                        ...condition.config,
-                        maxDaysBefore: Math.max(0, Number(event.target.value)),
+                        mode: deliveryDateOffset?.mode ?? "BEFORE",
+                        days: Math.max(0, Number(event.target.value)),
                       },
                     };
                     onChange(next);
