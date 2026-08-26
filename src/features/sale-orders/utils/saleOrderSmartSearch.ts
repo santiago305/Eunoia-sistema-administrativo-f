@@ -42,11 +42,19 @@ export const SaleOrderSearchFields = {
   INVOICE_STATUS: "invoiceStatus",
   PREGUIDE_STATUS: "preguideStatus",
   PREPARED_STATUS: "preparedStatus",
+  STOCK_SITUATION: "stockSituation",
   CREATED_BY: "createdBy",
   ASSIGNED_BY: "assignedBy",
 } as const;
 
 export type SaleOrderSearchFilterKey = SaleOrderSearchField;
+
+export const SaleOrderStockSituationValues = {
+  WITHOUT_RESERVATION: "WITHOUT_RESERVATION",
+  RESERVED: "RESERVED",
+  CONSUMED: "CONSUMED",
+  REVERTED: "REVERTED",
+} as const;
 
 export const SaleOrderSearchOperators = {
   IN: "in",
@@ -96,6 +104,7 @@ const FIELD_LABELS: Record<SaleOrderSearchField, string> = {
   invoiceStatus: "Comprobante",
   preguideStatus: "Pregu\u00eda",
   preparedStatus: "Preparado",
+  stockSituation: "Situación de stock",
   createdBy: "Creado por",
   assignedBy: "Asignado a",
 };
@@ -115,6 +124,7 @@ const CATALOG_FIELDS = new Set<SaleOrderSearchField>([
   SaleOrderSearchFields.INVOICE_STATUS,
   SaleOrderSearchFields.PREGUIDE_STATUS,
   SaleOrderSearchFields.PREPARED_STATUS,
+  SaleOrderSearchFields.STOCK_SITUATION,
   SaleOrderSearchFields.CREATED_BY,
   SaleOrderSearchFields.ASSIGNED_BY,
 ]);
@@ -169,7 +179,13 @@ function sanitizeRule(rule?: Partial<SaleOrderSearchRule> | null): SaleOrderSear
 
   if (CATALOG_FIELDS.has(field)) {
     if (operator !== SaleOrderSearchOperators.IN) return null;
-    const values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : undefined));
+    let values = uniqueStrings(rule.values ?? (rule.value ? [rule.value] : undefined));
+    if (field === SaleOrderSearchFields.STOCK_SITUATION) {
+      const allowed = new Set(Object.values(SaleOrderStockSituationValues));
+      values = values.filter((value) => allowed.has(
+        value as typeof SaleOrderStockSituationValues[keyof typeof SaleOrderStockSituationValues],
+      ));
+    }
     if (!values.length) return null;
     return {
       field,
@@ -366,8 +382,10 @@ function getRuleLabel(rule: SaleOrderSearchRule, searchState?: SaleOrderSearchSt
                         ? getCatalogLabel(values, searchState?.catalogs.sources)
                         : rule.field === SaleOrderSearchFields.PREGUIDE_STATUS
                           ? getCatalogLabel(values, searchState?.catalogs.preguideStatuses)
-                          : rule.field === SaleOrderSearchFields.PREPARED_STATUS
-                            ? getCatalogLabel(values, searchState?.catalogs.preparedStatuses)
+                             : rule.field === SaleOrderSearchFields.PREPARED_STATUS
+                               ? getCatalogLabel(values, searchState?.catalogs.preparedStatuses)
+                            : rule.field === SaleOrderSearchFields.STOCK_SITUATION
+                              ? getCatalogLabel(values, searchState?.catalogs.stockSituations)
                             : rule.field === SaleOrderSearchFields.CREATED_BY
                               ? getCatalogLabel(values, searchState?.catalogs.creators)
                               : rule.field === SaleOrderSearchFields.ASSIGNED_BY
@@ -491,6 +509,7 @@ export function buildSaleOrderSmartSearchColumns(
   const invoiceStatusOptions = normalizeSearchOptions(searchState?.catalogs.invoiceStatuses);
   const preguideStatusOptions = normalizeSearchOptions(searchState?.catalogs.preguideStatuses);
   const preparedStatusOptions = normalizeSearchOptions(searchState?.catalogs.preparedStatuses);
+  const stockSituationOptions = normalizeSearchOptions(searchState?.catalogs.stockSituations);
   const creatorOptions = normalizeSearchOptions(searchState?.catalogs.creators);
   const assigneeOptions = normalizeSearchOptions(searchState?.catalogs.assignees);
 
@@ -691,6 +710,15 @@ export function buildSaleOrderSmartSearchColumns(
       operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
       supportsExclude: true,
       options: preparedStatusOptions,
+    },
+    {
+      id: SaleOrderSearchFields.STOCK_SITUATION,
+      label: "Situación de stock",
+      kind: "catalog",
+      description: "Filtra por la situación actual; Revertido conserva el historial.",
+      operators: [{ id: SaleOrderSearchOperators.IN, label: "Es alguno de" }],
+      supportsExclude: true,
+      options: stockSituationOptions,
     },
     {
       id: SaleOrderSearchFields.BANK_ACCOUNT_ID,

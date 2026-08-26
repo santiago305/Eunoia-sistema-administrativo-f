@@ -21,6 +21,12 @@ const searchState: SaleOrderSearchStateResponse = {
     sources: [{ id: "source-1", label: "Facebook Ads" }],
     preguideStatuses: [{ id: "WITH", label: "Con pregu\u00eda" }],
     preparedStatuses: [{ id: "PENDING", label: "Sin preparar" }],
+    stockSituations: [
+      { id: "WITHOUT_RESERVATION", label: "Sin reserva" },
+      { id: "RESERVED", label: "Reservado" },
+      { id: "CONSUMED", label: "Consumido" },
+      { id: "REVERTED", label: "Revertido" },
+    ],
     creators: [{ id: "user-1", label: "creador@eunoia.test" }],
     assignees: [{ id: "user-2", label: "asignado@eunoia.test" }],
   },
@@ -313,6 +319,37 @@ describe("sale order workflow and state smart filters", () => {
         removeKey: "preparedStatus",
       },
     ]);
+  });
+
+  it("builds and labels the overlapping stock situation filter", () => {
+    const column = buildSaleOrderSmartSearchColumns(searchState)
+      .find((item) => item.id === "stockSituation");
+    expect(column).toMatchObject({
+      label: "Situación de stock",
+      kind: "catalog",
+      supportsExclude: true,
+      options: searchState.catalogs.stockSituations,
+    });
+
+    const snapshot = sanitizeSaleOrderSearchSnapshot({
+      filters: [{
+        field: "stockSituation",
+        operator: "in",
+        values: ["RESERVED", "CONSUMED", "INVALID"],
+      }],
+    } as any);
+
+    expect(snapshot.filters).toEqual([{
+      field: "stockSituation",
+      operator: "in",
+      mode: "include",
+      values: ["RESERVED", "CONSUMED"],
+    }]);
+    expect(buildSaleOrderSearchChips(snapshot, searchState)).toEqual([{
+      id: "stockSituation",
+      label: "Situación de stock: Reservado, Consumido",
+      removeKey: "stockSituation",
+    }]);
   });
 });
 

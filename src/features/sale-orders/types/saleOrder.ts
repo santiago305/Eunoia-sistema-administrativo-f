@@ -596,6 +596,7 @@ export type SaleOrderSearchRule = {
     | "invoiceStatus"
     | "preguideStatus"
     | "preparedStatus"
+    | "stockSituation"
     | "createdBy"
     | "assignedBy";
   operator:
@@ -656,6 +657,7 @@ export type SaleOrderSearchStateResponse = {
     invoiceStatuses?: SaleOrderSearchOption[];
     preguideStatuses?: SaleOrderSearchOption[];
     preparedStatuses?: SaleOrderSearchOption[];
+    stockSituations?: SaleOrderSearchOption[];
     creators?: SaleOrderSearchOption[];
     assignees?: SaleOrderSearchOption[];
   };
