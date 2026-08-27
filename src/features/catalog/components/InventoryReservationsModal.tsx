@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, CalendarDays, Loader2, PackageCheck, RefreshCw } from "lucide-react";
+import { AlertTriangle, Loader2, PackageCheck, RefreshCw } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
+import { DataTable } from "@/shared/components/table/DataTable";
+import type { DataTableColumn } from "@/shared/components/table/types";
 import { getApiErrorMessage } from "@/shared/common/utils/apiError";
 import { getInventoryReservationDetails } from "@/shared/services/inventoryService";
 import type { ProductCatalogProductType } from "@/features/catalog/types/product";
@@ -46,6 +48,8 @@ const formatDate = (value?: string | null) => {
 const sourceLabel = (item: InventoryReservationDetail) =>
   item.sourceType === "PRODUCTION_ORDER" ? "Produccion" : "Pedido";
 
+const RESERVATIONS_PAGE_SIZE = 25;
+
 export function InventoryReservationsModal({
   open,
   productType,
@@ -55,6 +59,7 @@ export function InventoryReservationsModal({
   const [data, setData] = useState<InventoryReservationDetailsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const requestRef = useRef(0);
 
   const loadReservations = useCallback(async () => {
@@ -88,6 +93,7 @@ export function InventoryReservationsModal({
 
   useEffect(() => {
     if (!open || !target) return;
+    setPage(1);
     void loadReservations();
   }, [loadReservations, open, target]);
 
@@ -102,6 +108,55 @@ export function InventoryReservationsModal({
   const inventoryReserved = data?.inventoryReserved ?? target?.reserved ?? 0;
   const attributedReserved = data?.attributedReserved ?? 0;
   const difference = data?.difference ?? 0;
+  const reservationItems = data?.items ?? [];
+  const pagedReservationItems = reservationItems.slice(
+    (page - 1) * RESERVATIONS_PAGE_SIZE,
+    page * RESERVATIONS_PAGE_SIZE,
+  );
+  const reservationColumns: DataTableColumn<InventoryReservationDetail>[] = [
+    {
+      id: "source",
+      header: "Origen",
+      cell: (item) => sourceLabel(item),
+      cardTitle: true,
+    },
+    {
+      id: "document",
+      header: "Documento",
+      accessorKey: "documentNumber",
+      cell: (item) => <span className="font-semibold">{item.documentNumber}</span>,
+    },
+    {
+      id: "subject",
+      header: "Cliente / referencia",
+      cell: (item) => item.subjectName ?? "-",
+    },
+    {
+      id: "status",
+      header: "Estado",
+      cell: (item) => (
+        <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
+          {item.statusName}
+        </span>
+      ),
+    },
+    {
+      id: "plannedDate",
+      header: "Fecha prevista",
+      cell: (item) => formatDate(item.plannedDate),
+    },
+    {
+      id: "quantity",
+      header: "Cantidad",
+      cell: (item) => (
+        <span className="font-semibold tabular-nums">
+          {formatQuantity(item.quantity, target?.unitCode)}
+        </span>
+      ),
+      className: "text-right",
+      headerClassName: "text-right",
+    },
+  ];
   const sourceDescription =
     productType === "MATERIAL"
       ? "Ordenes de produccion que mantienen reservada esta materia prima."
@@ -132,16 +187,16 @@ export function InventoryReservationsModal({
       }
     >
       <div className="space-y-4 p-4 sm:p-5">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-border bg-muted/30 p-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg border border-border bg-muted/30 p-2.5">
             <p className="text-xs font-medium text-muted-foreground">Reservado en inventario</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+            <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">
               {formatQuantity(inventoryReserved, target?.unitCode)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-muted/30 p-3">
+          <div className="rounded-lg border border-border bg-muted/30 p-2.5">
             <p className="text-xs font-medium text-muted-foreground">Identificado en el detalle</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+            <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">
               {formatQuantity(attributedReserved, target?.unitCode)}
             </p>
           </div>
@@ -187,73 +242,19 @@ export function InventoryReservationsModal({
         ) : null}
 
         {!loading && !error && data && data.items.length > 0 ? (
-          <>
-            <div className="hidden overflow-hidden rounded-xl border border-border md:block">
-              <div className="max-h-[430px] overflow-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 bg-muted text-xs text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-3 font-medium">Origen</th>
-                      <th className="px-3 py-3 font-medium">Documento</th>
-                      <th className="px-3 py-3 font-medium">Cliente / referencia</th>
-                      <th className="px-3 py-3 font-medium">Estado</th>
-                      <th className="px-3 py-3 font-medium">Fecha prevista</th>
-                      <th className="px-3 py-3 text-right font-medium">Cantidad</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {data.items.map((item) => (
-                      <tr key={`${item.sourceType}:${item.sourceId}`} className="bg-background">
-                        <td className="px-3 py-3 text-muted-foreground">{sourceLabel(item)}</td>
-                        <td className="px-3 py-3 font-semibold text-foreground">{item.documentNumber}</td>
-                        <td className="max-w-64 px-3 py-3 text-foreground">
-                          <span className="line-clamp-2">{item.subjectName ?? "-"}</span>
-                        </td>
-                        <td className="px-3 py-3">
-                          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
-                            {item.statusName}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-muted-foreground">{formatDate(item.plannedDate)}</td>
-                        <td className="px-3 py-3 text-right font-semibold tabular-nums text-foreground">
-                          {formatQuantity(item.quantity, target?.unitCode)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="space-y-3 md:hidden">
-              {data.items.map((item) => (
-                <article
-                  key={`${item.sourceType}:${item.sourceId}`}
-                  className="rounded-xl border border-border bg-background p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">{sourceLabel(item)}</p>
-                      <p className="mt-1 font-semibold text-foreground">{item.documentNumber}</p>
-                    </div>
-                    <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
-                      {item.statusName}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm text-foreground">{item.subjectName ?? "Sin referencia"}</p>
-                  <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                      {formatDate(item.plannedDate)}
-                    </span>
-                    <span className="font-semibold tabular-nums text-foreground">
-                      {formatQuantity(item.quantity, target?.unitCode)}
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
+          <DataTable
+            data={pagedReservationItems}
+            columns={reservationColumns}
+            tableId="inventory-reservation-details"
+            rowKey={(item) => `${item.sourceType}:${item.sourceId}`}
+            pagination={{ page, limit: RESERVATIONS_PAGE_SIZE, total: reservationItems.length }}
+            onPageChange={setPage}
+            maxHeight="430px"
+            responsiveMode="auto"
+            emptyMessage="No se encontraron reservas activas."
+            animated={false}
+            showSelectionInfo={false}
+          />
         ) : null}
 
         {!loading && !error && data && difference !== 0 ? (
