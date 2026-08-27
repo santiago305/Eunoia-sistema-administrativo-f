@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, CircleDot, Flag, Pencil, Plus, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleDot, FileEdit, Flag, FlaskConical, Pencil, Plus, Save, UploadCloud } from "lucide-react";
 import { Modal } from "@/shared/components/modales/Modal";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -14,6 +14,7 @@ import type {
   WorkflowDraft,
   WorkflowDraftState,
   WorkflowDraftTransition,
+  WorkflowPublishPreview,
 } from "@/features/workflows/types/workflow";
 import {
   TRANSITION_EFFECTS,
@@ -42,7 +43,19 @@ import { WorkflowGlobalTransitions } from "./WorkflowGlobalTransitions";
 import { WorkflowPropertiesPanel } from "./WorkflowPropertiesPanel";
 import { SaleOrderStateFormModal } from "./SaleOrderStateFormModal";
 import { AlertModal } from "@/shared/components/components/AlertModal";
-import { listWorkflows, listWorkflowConditions, listWorkflowActions, listSaleOrderStates, getWorkflow, updateFullWorkflow, createFullWorkflow } from "@/shared/services/workflowService";
+import {
+  createFullWorkflow,
+  createWorkflowDraft,
+  getWorkflow,
+  getWorkflowPublishPreview,
+  listManagedWorkflows,
+  listSaleOrderStates,
+  listWorkflowActions,
+  listWorkflowConditions,
+  publishWorkflowDraft,
+  updateFullWorkflow,
+} from "@/shared/services/workflowService";
+import { WorkflowDraftTestModal } from "./WorkflowDraftTestModal";
 
 type Props = {
   open: boolean;
@@ -210,6 +223,10 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showValidationAlert, setShowValidationAlert] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [publishPreview, setPublishPreview] = useState<WorkflowPublishPreview | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<{ migratedOrders: number; revertedTests: number } | null>(null);
   const [showPanel, setShowPanel] = useState(true);
   const [panelWidth, setPanelWidth] = useState(320);
   const [isPanelResizing, setIsPanelResizing] = useState(false);
@@ -230,12 +247,14 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   } | null>(null);
 
   const validation = useMemo(() => validateWorkflowDraft(draft), [draft]);
+  const isPublished = draft.lifecycleStatus === "PUBLISHED";
+  const busy = loading || saving || publishing;
 
   const workflowOptions = useMemo(
     () =>
       workflows.map((workflow) => ({
         value: workflow.id,
-        label: workflow.name,
+        label: `${workflow.name} · ${workflow.lifecycleStatus === "DRAFT" ? "Borrador" : "Publicado"} r${workflow.revision ?? 1}`,
       })),
     [workflows],
   );
@@ -341,7 +360,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     try {
       const [workflowItems, stateItems] =
         await Promise.all([
-          listWorkflows(),
+          listManagedWorkflows(),
           listSaleOrderStates(),
         ]);
 
@@ -455,7 +474,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   const save = async () => {
     if (!validation.valid) {
       setShowValidationAlert(true);
-      return;
+      return null;
     }
 
     setSaving(true);
@@ -480,6 +499,11 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
           isActive: response.workflow.isActive,
           createdAt: response.workflow.createdAt,
           updatedAt: response.workflow.updatedAt,
+          familyId: response.workflow.familyId,
+          revision: response.workflow.revision,
+          lifecycleStatus: response.workflow.lifecycleStatus,
+          isCurrent: response.workflow.isCurrent,
+          basedOnWorkflowId: response.workflow.basedOnWorkflowId,
           states: response.states,
           transitions: [],
         };
@@ -493,10 +517,73 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
         return [...current, savedWorkflow];
       });
+      return response;
+    } catch (err) {
+      setError(parseApiError(err));
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openDraft = async () => {
+    if (!draft.id) return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await createWorkflowDraft(draft.id);
+      setDraft(ensureDefaultCancelTransition(mapSaveResponseToDraft(response)));
+      setCanvasRevision((current) => current + 1);
+      setSelectedId(null);
+      setWorkflows(await listManagedWorkflows());
     } catch (err) {
       setError(parseApiError(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openTests = async () => {
+    const response = await save();
+    if (!response) return;
+    setShowTestModal(true);
+  };
+
+  const preparePublish = async () => {
+    const response = await save();
+    if (!response) return;
+    setPublishing(true);
+    setError("");
+    try {
+      setPublishPreview(await getWorkflowPublishPreview(response.workflow.id));
+    } catch (err) {
+      setError(parseApiError(err));
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const confirmPublish = async () => {
+    if (!draft.id) return;
+    setPublishing(true);
+    setError("");
+    try {
+      const result = await publishWorkflowDraft(draft.id);
+      setPublishPreview(null);
+      setDraft((current) => ({
+        ...current,
+        lifecycleStatus: "PUBLISHED",
+        isCurrent: true,
+      }));
+      setWorkflows(await listManagedWorkflows());
+      setPublishResult({
+        migratedOrders: Number(result.migratedOrders ?? 0),
+        revertedTests: Number(result.revertedTests ?? 0),
+      });
+    } catch (err) {
+      setError(parseApiError(err));
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -524,7 +611,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
       onClose={onClose}
       title="Diseñador de tipos"
       closeOnOverlayClick={false}
-      preventClose={saving}
+      preventClose={busy}
       className="h-[calc(95vh-1rem)] w-[calc(100vw-1rem)] max-h-none max-w-none"
       bodyClassName="h-full p-0"
     >
@@ -536,7 +623,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                 label="Tipos"
                 name="workflow"
                 value={draft.id ?? ""}
-                disabled={loading || saving}
+                disabled={busy}
                 onChange={(value) => void loadWorkflow(value)}
                 options={workflowOptions}
                 searchable
@@ -548,7 +635,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                 label="Nombre del tipo"
                 name="workflow-name"
                 value={draft.name}
-                disabled={loading || saving}
+                disabled={busy || isPublished}
                 onChange={(event) =>
                   setDraft((current) => ({
                     ...current,
@@ -561,7 +648,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
             <SystemButton
               type="button"
               variant="outline"
-              disabled={loading || saving}
+              disabled={busy || isPublished}
               onClick={() => {
                 const emptyDraft = ensureDefaultCancelTransition(createEmptyWorkflowDraft());
                 const cancelSaleOrderState = findCancelSaleOrderState(saleOrderStates);
@@ -578,26 +665,63 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
               Limpiar
             </SystemButton>
 
-            <SystemButton
-              type="button"
-              leftIcon={<Save className="h-4 w-4" />}
-              disabled={saving || loading}
-              loading={saving}
-              onClick={() => void save()}
-            >
-              {draft.id ? "Actualizar" : "Crear"}
-            </SystemButton>
+            {isPublished ? (
+              <SystemButton
+                type="button"
+                leftIcon={<FileEdit className="h-4 w-4" />}
+                disabled={busy || !draft.id}
+                loading={saving}
+                onClick={() => void openDraft()}
+              >
+                Crear borrador
+              </SystemButton>
+            ) : (
+              <>
+                {draft.id ? (
+                  <SystemButton
+                    type="button"
+                    variant="outline"
+                    leftIcon={<FlaskConical className="h-4 w-4" />}
+                    disabled={busy}
+                    onClick={() => void openTests()}
+                  >
+                    Probar pedido
+                  </SystemButton>
+                ) : null}
+                {draft.id ? (
+                  <SystemButton
+                    type="button"
+                    variant="outline"
+                    leftIcon={<UploadCloud className="h-4 w-4" />}
+                    disabled={busy}
+                    loading={publishing}
+                    onClick={() => void preparePublish()}
+                  >
+                    Publicar
+                  </SystemButton>
+                ) : null}
+                <SystemButton
+                  type="button"
+                  leftIcon={<Save className="h-4 w-4" />}
+                  disabled={busy}
+                  loading={saving}
+                  onClick={() => void save()}
+                >
+                  Guardar borrador
+                </SystemButton>
+              </>
+            )}
           </div>
         </header>
 
-        <div className="relative flex min-h-0 overflow-hidden">          
+        <div className={`relative flex min-h-0 overflow-hidden ${isPublished ? "pointer-events-none opacity-75" : ""}`}>
           <aside className="scroll-area w-[240px] shrink-0 overflow-auto border-r border-black/10 p-3">            
             <div className="grid grid-cols-[1fr_auto_auto] gap-1">
               <FloatingSelect
                 label="Estado"
                 name="workflow-sale-order-state"
                 value={saleOrderStateId}
-                disabled={loading || saving}
+                disabled={busy || isPublished}
                 onChange={setSaleOrderStateId}
                 options={saleOrderStateOptions}
                 searchable
@@ -611,7 +735,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                 variant="outline"
                 size="icon"
                 className="h-9 w-9"
-                disabled={loading || saving}
+                disabled={busy || isPublished}
                 onClick={() => setStateModalMode("create")}
                 aria-label="Crear estado"
                 title="Crear estado"
@@ -730,7 +854,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
             <WorkflowGlobalTransitions
               draft={draft}
               selectedId={selectedId}
-              disabled={loading || saving}
+              disabled={busy || isPublished}
               onSelect={setSelectedId}
               onAddRunAction={() => {
               setDraft((current) => {
@@ -984,6 +1108,74 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
         stateId={stateModalMode === "edit" ? saleOrderStateId : null}
         onClose={() => setStateModalMode(null)}
         onSaved={(state) => void refreshSaleOrderStates(state.id)}
+      />
+
+      <WorkflowDraftTestModal
+        open={showTestModal}
+        draftWorkflowId={draft.lifecycleStatus === "DRAFT" ? draft.id ?? null : null}
+        revision={draft.revision}
+        onClose={() => setShowTestModal(false)}
+      />
+
+      <AlertModal
+        open={publishPreview !== null}
+        type="warning"
+        title="Publicar revision del flujo"
+        confirmText="Publicar y migrar"
+        loading={publishing}
+        onClose={() => setPublishPreview(null)}
+        onConfirm={() => void confirmPublish()}
+        message={publishPreview ? (
+          <div className="space-y-3 text-sm">
+            <p>
+              Se migraran <strong>{publishPreview.pendingOrders}</strong> pedidos no finalizados.
+              {publishPreview.activeTests > 0
+                ? ` Antes se revertiran ${publishPreview.activeTests} pruebas activas.`
+                : ""}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-amber-200 bg-white/70 p-3">
+                <div className="text-xs text-amber-800">Ajustes de inventario</div>
+                <div className="mt-1 text-lg font-semibold">{publishPreview.inventoryAdjustments}</div>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-white/70 p-3">
+                <div className="text-xs text-amber-800">Revision</div>
+                <div className="mt-1 text-lg font-semibold">{publishPreview.revision}</div>
+              </div>
+            </div>
+            {publishPreview.items.length ? (
+              <div className="max-h-48 overflow-auto rounded-lg border border-amber-200 bg-white">
+                {publishPreview.items.slice(0, 20).map((item) => (
+                  <div key={item.saleOrderId} className="border-b border-amber-100 px-3 py-2 last:border-b-0">
+                    <div className="font-medium">
+                      Pedido {[item.serie, item.correlative].filter(Boolean).join("-") || item.saleOrderId}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      Destino: {item.toStateName}
+                      {item.warehouseChanged ? " · Cambio de almacén" : ""}
+                      {item.stockActions.length ? ` · ${item.stockActions.join(" + ")}` : " · Sin ajuste de stock"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      />
+
+      <AlertModal
+        open={publishResult !== null}
+        type="info"
+        title="Revision publicada"
+        hideCancel
+        confirmText="Aceptar"
+        onClose={() => setPublishResult(null)}
+        onConfirm={() => setPublishResult(null)}
+        message={publishResult ? (
+          <div>
+            Se migraron {publishResult.migratedOrders} pedidos pendientes y se revirtieron {publishResult.revertedTests} pruebas activas.
+          </div>
+        ) : null}
       />
 
       <AlertModal

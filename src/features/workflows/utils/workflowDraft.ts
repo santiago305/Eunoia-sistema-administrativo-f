@@ -129,6 +129,11 @@ export function mapFullWorkflowResponseToDraft(response: SaveFullWorkflowRespons
     isActive: response.workflow.isActive,
     createdAt: response.workflow.createdAt,
     updatedAt: response.workflow.updatedAt,
+    familyId: response.workflow.familyId,
+    revision: response.workflow.revision,
+    lifecycleStatus: response.workflow.lifecycleStatus,
+    isCurrent: response.workflow.isCurrent,
+    basedOnWorkflowId: response.workflow.basedOnWorkflowId,
     states: response.states,
     transitions: response.transitions.map((transition) => ({
       ...transition,
@@ -196,6 +201,11 @@ export function mapWorkflowToDraft(workflow: Workflow): WorkflowDraft {
     name: workflow.name,
     description: workflow.description ?? "",
     isActive: workflow.isActive,
+    familyId: workflow.familyId,
+    revision: workflow.revision,
+    lifecycleStatus: workflow.lifecycleStatus,
+    isCurrent: workflow.isCurrent,
+    basedOnWorkflowId: workflow.basedOnWorkflowId,
     states,
     transitions: workflow.transitions.map((transition) => {
       const thenActions = (transition.actions ?? []).filter(
@@ -656,6 +666,11 @@ export function mapSaveResponseToDraft(response: SaveFullWorkflowResponse): Work
     isActive: response.workflow.isActive,
     createdAt: response.workflow.createdAt,
     updatedAt: response.workflow.updatedAt,
+    familyId: response.workflow.familyId,
+    revision: response.workflow.revision,
+    lifecycleStatus: response.workflow.lifecycleStatus,
+    isCurrent: response.workflow.isCurrent,
+    basedOnWorkflowId: response.workflow.basedOnWorkflowId,
     states: response.states,
     transitions: response.transitions.map((transition) => ({
       ...transition,

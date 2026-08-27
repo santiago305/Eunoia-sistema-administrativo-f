@@ -541,6 +541,13 @@ export const API_WORKFLOWS_GROUP = {
   updateFull: (id: string) => `/workflows/full/${id}`,
   saleOrderStates: "/sale-order-states",
   saleOrderStateDetail: (id: string) => `/sale-order-states/${id}`,
+  managed: "/workflows/manage/revisions",
+  createDraft: (id: string) => `/workflows/${id}/drafts`,
+  publishPreview: (id: string) => `/workflow-revisions/${id}/publish-preview`,
+  publish: (id: string) => `/workflow-revisions/${id}/publish`,
+  tests: (id: string) => `/workflow-revisions/${id}/tests`,
+  revertTest: (id: string, sessionId: string) =>
+    `/workflow-revisions/${id}/tests/${sessionId}/revert`,
 };
 export const API_IMPORTS_GROUP = {
   saleOrders: "/imports/orders/create",

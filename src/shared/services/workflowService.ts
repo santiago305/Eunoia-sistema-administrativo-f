@@ -7,10 +7,55 @@ import type {
   SaveFullWorkflowRequest,
   SaveFullWorkflowResponse,
   Workflow,
+  WorkflowDraftTestSession,
+  WorkflowPublishPreview,
 } from "@/features/workflows/types/workflow";
 
 export async function listWorkflows(): Promise<Workflow[]> {
   const response = await axiosInstance.get<Workflow[]>(API_WORKFLOWS_GROUP.list);
+  return response.data;
+}
+
+export async function listManagedWorkflows(): Promise<Workflow[]> {
+  const response = await axiosInstance.get<Workflow[]>(API_WORKFLOWS_GROUP.managed);
+  return response.data;
+}
+
+export async function createWorkflowDraft(id: string): Promise<SaveFullWorkflowResponse> {
+  const response = await axiosInstance.post<SaveFullWorkflowResponse>(
+    API_WORKFLOWS_GROUP.createDraft(id),
+  );
+  return response.data;
+}
+
+export async function getWorkflowPublishPreview(id: string): Promise<WorkflowPublishPreview> {
+  const response = await axiosInstance.get<WorkflowPublishPreview>(
+    API_WORKFLOWS_GROUP.publishPreview(id),
+  );
+  return response.data;
+}
+
+export async function publishWorkflowDraft(id: string) {
+  const response = await axiosInstance.post(API_WORKFLOWS_GROUP.publish(id));
+  return response.data;
+}
+
+export async function listWorkflowDraftTests(id: string): Promise<WorkflowDraftTestSession[]> {
+  const response = await axiosInstance.get<WorkflowDraftTestSession[]>(
+    API_WORKFLOWS_GROUP.tests(id),
+  );
+  return response.data;
+}
+
+export async function startWorkflowDraftTest(id: string, saleOrderId: string) {
+  const response = await axiosInstance.post(API_WORKFLOWS_GROUP.tests(id), { saleOrderId });
+  return response.data;
+}
+
+export async function revertWorkflowDraftTest(id: string, sessionId: string) {
+  const response = await axiosInstance.post(
+    API_WORKFLOWS_GROUP.revertTest(id, sessionId),
+  );
   return response.data;
 }
 

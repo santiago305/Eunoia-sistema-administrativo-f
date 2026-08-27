@@ -115,6 +115,12 @@ export type Workflow = {
   transitions: WorkflowTransition[];
   createdAt?: string;
   updatedAt?: string | null;
+  familyId?: string;
+  revision?: number;
+  lifecycleStatus?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  isCurrent?: boolean;
+  basedOnWorkflowId?: string | null;
+  publishedAt?: string | null;
 };
 
 export type SaleOrderState = {
@@ -175,6 +181,11 @@ export type WorkflowDraft = {
   isActive: boolean;
   states: WorkflowDraftState[];
   transitions: WorkflowDraftTransition[];
+  familyId?: string;
+  revision?: number;
+  lifecycleStatus?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  isCurrent?: boolean;
+  basedOnWorkflowId?: string | null;
 };
 
 export type SaveFullWorkflowRequest = {
@@ -239,11 +250,50 @@ export type SaveFullWorkflowResponse = {
     isActive: boolean;
     createdAt: string;
     updatedAt: string | null;
+    familyId?: string;
+    revision?: number;
+    lifecycleStatus?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+    isCurrent?: boolean;
+    basedOnWorkflowId?: string | null;
+    publishedAt?: string | null;
   };
   states: WorkflowState[];
   transitions: Array<Omit<WorkflowTransition, "conditions">>;
   conditions: Array<Required<Pick<WorkflowCondition, "id" | "transitionId" | "type" | "config" | "position">>>;
   actions: Array<Required<Pick<WorkflowAction, "id" | "transitionId" | "type" | "config" | "position">>>;
+};
+
+export type WorkflowDraftTestSession = {
+  id: string;
+  saleOrderId: string;
+  status: 'ACTIVE' | 'REVERTED';
+  startedAt: string;
+  revertedAt?: string | null;
+  serie?: string | null;
+  correlative?: number | null;
+  currentSaleOrderStateId?: string | null;
+};
+
+export type WorkflowPublishPreview = {
+  workflowId: string;
+  revision: number;
+  pendingOrders: number;
+  activeTests: number;
+  inventoryAdjustments: number;
+  items: Array<{
+    saleOrderId: string;
+    serie?: string | null;
+    correlative?: number | null;
+    toStateId: string;
+    toStateName: string;
+    currentStockStatus: string;
+    desiredStockStatus: string;
+    fromWarehouseId?: string | null;
+    toWarehouseId?: string | null;
+    warehouseChanged?: boolean;
+    stockActions: string[];
+    transitionNames: string[];
+  }>;
 };
 
 export type AvailableTransition = {
