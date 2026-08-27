@@ -12,12 +12,33 @@ import type {
   WorkflowTransitionEffect,
   WorkflowTransitionPurpose,
 } from "@/features/workflows/types/workflow";
-import { TRANSITION_EFFECTS, TRANSITION_PURPOSES } from "@/features/workflows/types/workflow";
+import {
+  ACTIONS,
+  TRANSITION_EFFECTS,
+  TRANSITION_PURPOSES,
+} from "@/features/workflows/types/workflow";
 
 type AutomaticTransitionCandidate = Pick<
   WorkflowDraftTransition,
   "clientId" | "fromStateClientId" | "autoTrigger" | "isActive"
 >;
+
+export function hasInvalidStockRestorationCombination(
+  actions: Array<Pick<WorkflowAction, "type">>,
+): boolean {
+  const restoreCount = actions.filter(
+    (action) => action.type === ACTIONS.RESTORE_STOCK,
+  ).length;
+  const hasOtherStockAction = actions.some((action) =>
+    [
+      ACTIONS.RESERVE_STOCK,
+      ACTIONS.CONSUME_STOCK,
+      ACTIONS.REVERT_STOCK,
+    ].includes(action.type as any),
+  );
+
+  return restoreCount > 1 || (restoreCount > 0 && hasOtherStockAction);
+}
 
 export function hasAutomaticTransitionSibling(
   transitions: AutomaticTransitionCandidate[],
@@ -365,6 +386,17 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
     )
   ) {
     errors.push("Las acciones sin cambio de estado requieren al menos una accion.");
+  }
+  if (
+    draft.transitions.some(
+      (transition) =>
+        hasInvalidStockRestorationCombination(transition.actions) ||
+        hasInvalidStockRestorationCombination(transition.elseActions),
+    )
+  ) {
+    errors.push(
+      "Reponer stock consumido no puede combinarse con otras acciones de stock en la misma rama.",
+    );
   }
   if (
     draft.transitions.some(

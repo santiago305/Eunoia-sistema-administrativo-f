@@ -95,12 +95,14 @@ describe("WorkflowActionEditor", () => {
       { type: "MARK_PREPARED", configSchema: {} },
       { type: "UNMARK_PREGUIDE", configSchema: {} },
       { type: "UNMARK_PREPARED", configSchema: {} },
+      { type: "RESTORE_STOCK", configSchema: {} },
     ];
     const value: WorkflowAction[] = [
       { type: "MARK_PREGUIDE", config: {}, position: 0 },
       { type: "MARK_PREPARED", config: {}, position: 1 },
       { type: "UNMARK_PREGUIDE", config: {}, position: 2 },
       { type: "UNMARK_PREPARED", config: {}, position: 3 },
+      { type: "RESTORE_STOCK", config: {}, position: 4 },
     ];
 
     render(<WorkflowActionEditor catalog={catalog} value={value} onChange={vi.fn()} />);
@@ -109,6 +111,7 @@ describe("WorkflowActionEditor", () => {
     expect(screen.getAllByText("Marcar preparado").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Quitar preguía").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Marcar sin preparar").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Reponer stock consumido").length).toBeGreaterThan(0);
   });
   it("stores mode, provinces, and warehouse for province assignment", async () => {
     const onChange = vi.fn();

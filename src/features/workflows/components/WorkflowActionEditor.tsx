@@ -25,6 +25,7 @@ export const ACTION_LABELS: Record<WorkflowActionType, string> = {
   RESERVE_STOCK: "Reservar stock",
   CONSUME_STOCK: "Consumir stock",
   REVERT_STOCK: "Liberar reserva",
+  RESTORE_STOCK: "Reponer stock consumido",
   MARK_INVOICE_SENT: "Marcar factura enviada",
   MARK_PREGUIDE: "Marcar preguia",
   UNMARK_PREGUIDE: "Quitar preguía",

@@ -9,6 +9,7 @@ import {
   associateCancelSaleOrderState,
   getAutoTriggerPatch,
   hasAutomaticTransitionSibling,
+  hasInvalidStockRestorationCombination,
   mapWorkflowToDraft,
   removeWorkflowElement,
   validateWorkflowDraft,
@@ -282,6 +283,23 @@ describe("buildFullWorkflowRequest", () => {
 });
 
 describe("validateWorkflowDraft", () => {
+  it.each([
+    [["RESTORE_STOCK", "CONSUME_STOCK"], true],
+    [["RESTORE_STOCK", "RESERVE_STOCK"], true],
+    [["RESTORE_STOCK", "REVERT_STOCK"], true],
+    [["RESTORE_STOCK", "RESTORE_STOCK"], true],
+    [["RESTORE_STOCK", "MARK_PREPARED"], false],
+  ] as const)(
+    "validates the restore stock combination %j",
+    (types, expected) => {
+      expect(
+        hasInvalidStockRestorationCombination(
+          types.map((type) => ({ type: type as any })),
+        ),
+      ).toBe(expected);
+    },
+  );
+
   it("identifies active states without a global state by name", () => {
     const validation = validateWorkflowDraft({
       name: "Ventas",
