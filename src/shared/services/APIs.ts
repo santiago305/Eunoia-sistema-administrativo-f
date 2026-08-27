@@ -581,6 +581,8 @@ export const API_INVENTORY_GROUP = {
     `/inventory/search-metrics/${metricId}`,
   availableStockSkus: "/available-stock/skus",
   skuStockSnapshots: (skuId: string) => `/skus/${skuId}/stock/snapshots`,
+  stockItemReservations: (stockItemId: string) =>
+    `/stock-items/${stockItemId}/reservations`,
   getStockQuery: (params: {
     warehouseId: string;
     itemId?: string;

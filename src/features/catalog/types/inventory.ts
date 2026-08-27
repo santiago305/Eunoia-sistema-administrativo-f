@@ -139,6 +139,30 @@ export type AvailabilityResponse = InventorySnapshotOutput[];
 
 export type GetStockResponse = InventorySnapshotOutput | null;
 
+export type InventoryReservationSourceType = "SALE_ORDER" | "PRODUCTION_ORDER";
+
+export type InventoryReservationDetail = {
+  sourceType: InventoryReservationSourceType;
+  sourceId: string;
+  documentNumber: string;
+  subjectName: string | null;
+  statusCode: string;
+  statusName: string;
+  plannedDate: string | null;
+  createdAt: string;
+  quantity: number;
+};
+
+export type InventoryReservationDetailsResponse = {
+  stockItemId: string;
+  warehouseId: string;
+  productType: "PRODUCT" | "MATERIAL" | "SUPPLY";
+  inventoryReserved: number;
+  attributedReserved: number;
+  difference: number;
+  items: InventoryReservationDetail[];
+};
+
 export type SalesTotalsQuery = {
   warehouseId?: string;
   stockItemId?: string;

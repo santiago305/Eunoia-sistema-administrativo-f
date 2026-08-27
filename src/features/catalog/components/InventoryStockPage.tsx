@@ -1,7 +1,7 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
-import { ArrowLeftRight, FileText, Menu, Settings2, Wrench } from "lucide-react";
+import { ArrowLeftRight, FileText, ListTree, Menu, Settings2, Wrench } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { PageTitle } from "@/shared/components/components/PageTitle";
 import { ActionsPopover, type ActionItem } from "@/shared/components/components/ActionsPopover";
@@ -43,6 +43,10 @@ import { useCompany } from "@/shared/hooks/useCompany";
 import { InventorySmartSearchPanel } from "@/features/catalog/components/InventorySmartSearchPanel";
 import { InventoryForecastModal } from "@/features/catalog/components/InventoryForecastModal";
 import { InventoryAlertSettingsModal } from "@/features/catalog/components/InventoryAlertSettingsModal";
+import {
+  InventoryReservationsModal,
+  type InventoryReservationTarget,
+} from "@/features/catalog/components/InventoryReservationsModal";
 import { buildSkuLabelFromItem } from "../utils/productCreateModal.helpers";
 import { listSkus } from "@/shared/services/skuService";
 import { subscribeInventoryStockUpdated } from "@/shared/services/inventoryRealtimeService";
@@ -131,6 +135,8 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [forecastLoading, setForecastLoading] = useState(false);
   const [alertSettingsOpen, setAlertSettingsOpen] = useState(false);
   const [alertSettingsTarget, setAlertSettingsTarget] = useState<InventorySnapshotRow | null>(null);
+  const [reservationTarget, setReservationTarget] = useState<InventoryReservationTarget | null>(null);
+  const [reservationsOpen, setReservationsOpen] = useState(false);
   const [alertEvaluations, setAlertEvaluations] = useState<Record<string, InventoryAlertEvaluation>>({});
   const forecastRequestRef = useRef(0);
   const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
@@ -685,6 +691,23 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     await loadExportPresets();
   }, [config.productType, loadExportPresets]);
 
+  const handleOpenReservations = useCallback((row: InventorySnapshotRow) => {
+    if (row.reserved <= 0) return;
+    setReservationTarget({
+      stockItemId: row.stockItemId,
+      warehouseId: row.warehouseId,
+      warehouseName: row.warehouseName,
+      itemName: buildSkuLabelFromItem({
+        skuItem: row.sku,
+        fallbackName: row.sku.sku.name ?? "",
+        withCode: false,
+      }),
+      unitCode: row.sku.unit?.code,
+      reserved: row.reserved,
+    });
+    setReservationsOpen(true);
+  }, []);
+
   const columns = useMemo<DataTableColumn<InventorySnapshotRow>[]>(
     () => [
       {
@@ -715,7 +738,27 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         header: "Reservado",
         className: "text-center tabular-nums",
         headerClassName: "text-center [&>div]:justify-center",
-        cell: (row) => formatQuantityWithUnit(row.reserved, row.sku.unit?.code),
+        stopRowClick: true,
+        cell: (row) => {
+          const quantity = formatQuantityWithUnit(row.reserved, row.sku.unit?.code);
+          if (row.reserved <= 0) return quantity;
+
+          return (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleOpenReservations(row);
+              }}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-2 font-semibold text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:bg-primary/10 hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label={`Ver detalle de ${quantity} reservados`}
+              title="Ver pedidos u ordenes que reservaron esta existencia"
+            >
+              <ListTree className="h-4 w-4" aria-hidden="true" />
+              {quantity}
+            </button>
+          );
+        },
       },
       {
         id: "available",
@@ -774,7 +817,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         ),
       },
     ],
-    [alertEvaluations, buildInventoryActions, config.itemLabel],
+    [alertEvaluations, buildInventoryActions, config.itemLabel, handleOpenReservations],
   );
 
   return (
@@ -894,6 +937,16 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
           warehouseLabel={alertSettingsTarget?.warehouseName ?? null}
           onSaved={loadInventory}
           canConfigure={permissions.alertSettings}
+        />
+
+        <InventoryReservationsModal
+          open={reservationsOpen}
+          productType={config.productType}
+          target={reservationTarget}
+          onClose={() => {
+            setReservationsOpen(false);
+            setReservationTarget(null);
+          }}
         />
       </div>
     </PageShell>

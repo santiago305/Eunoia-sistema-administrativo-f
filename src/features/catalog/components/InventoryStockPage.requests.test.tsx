@@ -1,4 +1,5 @@
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { DataTableColumn } from "@/shared/components/table/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InventoryStockPage } from "./InventoryStockPage";
 
@@ -33,9 +34,13 @@ vi.mock("@/shared/layouts/PageShell", () => ({ PageShell: ({ children }: { child
 vi.mock("@/shared/components/components/PageTitle", () => ({ PageTitle: () => null }));
 vi.mock("@/shared/components/components/PageActionsRow", () => ({ PageActionsRow: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/shared/components/table/DataTable", () => ({
-  DataTable: ({ data, rowKey }: { data: Array<Record<string, unknown>>; rowKey: (row: Record<string, unknown>, index: number) => string }) => (
+  DataTable: ({ data, rowKey, columns }: { data: Array<Record<string, unknown>>; rowKey: (row: Record<string, unknown>, index: number) => string; columns: DataTableColumn<Record<string, unknown>>[] }) => (
     <div data-testid="inventory-table">
-      {data.map((row, index) => <div key={rowKey(row, index)} data-testid="inventory-row" />)}
+      {data.map((row, index) => (
+        <div key={rowKey(row, index)} data-testid="inventory-row">
+          {columns.find((column) => column.id === "reserved")?.cell?.(row, index)}
+        </div>
+      ))}
     </div>
   ),
 }));
@@ -43,6 +48,10 @@ vi.mock("@/shared/components/table/search", () => ({ DataTableSearchBar: () => n
 vi.mock("@/features/catalog/components/InventorySmartSearchPanel", () => ({ InventorySmartSearchPanel: () => null }));
 vi.mock("@/features/catalog/components/InventoryForecastModal", () => ({ InventoryForecastModal: () => null }));
 vi.mock("@/features/catalog/components/InventoryAlertSettingsModal", () => ({ InventoryAlertSettingsModal: () => null }));
+vi.mock("@/features/catalog/components/InventoryReservationsModal", () => ({
+  InventoryReservationsModal: ({ open, target }: { open: boolean; target: { itemName?: string } | null }) =>
+    open ? <div data-testid="reservation-details-modal">{target?.itemName}</div> : null,
+}));
 vi.mock("@/shared/components/components/ActionsPopover", () => ({ ActionsPopover: () => null }));
 
 describe("InventoryStockPage request budget", () => {
@@ -79,5 +88,30 @@ describe("InventoryStockPage request budget", () => {
     const { findAllByTestId } = render(<InventoryStockPage config={{ productType: "PRODUCT", pageTitle: "Stock", headingTitle: "Stock", itemLabel: "Producto", tableId: "stock", searchLabel: "Buscar", searchName: "stock", routes: { kardex: "/k", transfer: "/t", adjustments: "/a" } }} />);
 
     await expect(findAllByTestId("inventory-row")).resolves.toHaveLength(1);
+  });
+
+  it("opens reservation details from the reserved quantity", async () => {
+    listInventoryMock.mockResolvedValueOnce({
+      items: [
+        {
+          stockItemId: "stock-1",
+          sku: { sku: { id: "sku-1", name: "Producto reservado" }, attributes: [] },
+          warehouseId: "warehouse-1",
+          warehouseName: "Central",
+          onHand: 10,
+          reserved: 3,
+          available: 7,
+        },
+      ],
+      total: 1,
+      page: 1,
+    });
+
+    render(<InventoryStockPage config={{ productType: "PRODUCT", pageTitle: "Stock", headingTitle: "Stock", itemLabel: "Producto", tableId: "stock", searchLabel: "Buscar", searchName: "stock", routes: { kardex: "/k", transfer: "/t", adjustments: "/a" } }} />);
+
+    const reservedButton = await screen.findByRole("button", { name: /ver detalle de 3 reservados/i });
+    fireEvent.click(reservedButton);
+
+    expect(screen.getByTestId("reservation-details-modal")).toHaveTextContent("Producto reservado");
   });
 });

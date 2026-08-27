@@ -5,6 +5,7 @@ import type {
   GetStockQuery,
   GetStockResponse,
   InventoryListResponse,
+  InventoryReservationDetailsResponse,
   ListInventoryQuery,
 } from "@/features/catalog/types/inventory";
 import type { ProductType } from "@/features/catalog/types/ProductTypes";
@@ -188,6 +189,23 @@ const normalizeInventoryAlertSetting = (setting: InventoryAlertSettingApi): Inve
   createdAt: typeof setting?.createdAt === "string" ? setting.createdAt : undefined,
   updatedAt: typeof setting?.updatedAt === "string" ? setting.updatedAt : undefined,
   });
+};
+
+export const getInventoryReservationDetails = async (params: {
+  stockItemId: string;
+  warehouseId: string;
+  productType: ProductCatalogProductType;
+}): Promise<InventoryReservationDetailsResponse> => {
+  const response = await axiosInstance.get(
+    API_INVENTORY_GROUP.stockItemReservations(params.stockItemId),
+    {
+      params: {
+        warehouseId: params.warehouseId,
+        productType: params.productType,
+      },
+    },
+  );
+  return response.data;
 };
 
 export const listInventoryAlertSettings = async (
