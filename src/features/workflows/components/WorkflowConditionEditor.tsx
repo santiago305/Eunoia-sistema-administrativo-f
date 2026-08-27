@@ -15,6 +15,7 @@ type Props = {
 
 export enum ConditionType {
   IS_PAID = "IS_PAID",
+  IS_NOT_PAID = "IS_NOT_PAID",
   HAS_STOCK = "HAS_STOCK",
   NOT_CANCELLED = "NOT_CANCELLED",
   DATE_AFTER = "DATE_AFTER",
@@ -25,6 +26,7 @@ export enum ConditionType {
 
 export const CONDITION_LABELS: Record<string, string> = {
   IS_PAID: "Pedido pagado",
+  IS_NOT_PAID: "Pedido no pagado completamente",
   HAS_STOCK: "Tiene stock",
   NOT_CANCELLED: "No cancelado",
   DATE_AFTER: "Fecha después de",
