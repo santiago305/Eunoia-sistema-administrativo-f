@@ -1112,6 +1112,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
       <WorkflowDraftTestModal
         open={showTestModal}
+        draft={draft}
         draftWorkflowId={draft.lifecycleStatus === "DRAFT" ? draft.id ?? null : null}
         revision={draft.revision}
         onClose={() => setShowTestModal(false)}
