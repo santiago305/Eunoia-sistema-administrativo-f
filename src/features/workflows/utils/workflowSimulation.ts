@@ -6,6 +6,7 @@ export type WorkflowSimulationInput = {
   deliveryDate: string;
   simulatedDate: string;
   hasStock: boolean;
+  requiredFields: Record<string, boolean>;
 };
 
 export type WorkflowSimulationStep = {
@@ -17,6 +18,20 @@ export type WorkflowSimulationStep = {
   message: string;
 };
 
+export type WorkflowSimulationConditionResult = {
+  type: string;
+  label: string;
+  passed: boolean;
+};
+
+export type WorkflowSimulationRouteResult = {
+  transitionId: string;
+  transitionName: string;
+  priority: number;
+  passed: boolean;
+  conditions: WorkflowSimulationConditionResult[];
+};
+
 export type WorkflowSimulation = {
   currentStateId: string | null;
   history: WorkflowSimulationStep[];
@@ -24,6 +39,14 @@ export type WorkflowSimulation = {
   stockConsumed: boolean;
   stockReleased: boolean;
   lastMessage: string;
+  routes: WorkflowSimulationRouteResult[];
+};
+
+export type WorkflowSimulationStart = {
+  stateId?: string | null;
+  stateCode?: string | null;
+  stateName?: string | null;
+  stockReserved?: boolean;
 };
 
 const actionLabels: Record<string, string> = {
@@ -34,6 +57,17 @@ const actionLabels: Record<string, string> = {
 };
 
 const formatAction = (type: string) => actionLabels[type] ?? type;
+
+const conditionLabels: Record<string, string> = {
+  [CONDITIONS.IS_PAID]: "Pedido pagado completamente",
+  [CONDITIONS.IS_NOT_PAID]: "Pedido con pago pendiente",
+  [CONDITIONS.HAS_STOCK]: "Stock disponible",
+  [CONDITIONS.NOT_CANCELLED]: "Pedido no cancelado",
+  [CONDITIONS.SALE_ORDER_FIELD_REQUIRED]: "Datos requeridos completos",
+  [CONDITIONS.SCHEDULE_DELIVERY_WINDOW]: "Fecha de entrega dentro del rango",
+  [CONDITIONS.DATE_AFTER]: "Fecha posterior a la configurada",
+  [CONDITIONS.DATE_BEFORE]: "Fecha anterior a la configurada",
+};
 
 const dateToUtcDay = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
@@ -83,8 +117,9 @@ const conditionPasses = (
     case CONDITIONS.HAS_STOCK:
       return input.hasStock;
     case CONDITIONS.NOT_CANCELLED:
-    case CONDITIONS.SALE_ORDER_FIELD_REQUIRED:
       return true;
+    case CONDITIONS.SALE_ORDER_FIELD_REQUIRED:
+      return input.requiredFields[String(config.field ?? "")] ?? true;
     case CONDITIONS.SCHEDULE_DELIVERY_WINDOW:
       return scheduleConditionPasses(config, input);
     case CONDITIONS.DATE_AFTER:
@@ -101,17 +136,39 @@ const sortedActions = (transition: WorkflowDraftTransition) =>
     (left, right) => (left.position ?? 0) - (right.position ?? 0),
   );
 
-export function createWorkflowSimulation(draft: WorkflowDraft): WorkflowSimulation {
-  const initialState = draft.states.find((state) => state.isInitial);
+export function createWorkflowSimulation(
+  draft: WorkflowDraft,
+  start: WorkflowSimulationStart = {},
+): WorkflowSimulation {
+  const normalizedCode = start.stateCode?.trim().toLowerCase();
+  const normalizedName = start.stateName?.trim().toLowerCase();
+  const initialState =
+    draft.states.find(
+      (state) =>
+        Boolean(start.stateId) &&
+        (state.id === start.stateId ||
+          state.clientId === start.stateId ||
+          state.saleOrderStateId === start.stateId),
+    ) ??
+    draft.states.find(
+      (state) =>
+        Boolean(normalizedCode) && state.code.trim().toLowerCase() === normalizedCode,
+    ) ??
+    draft.states.find(
+      (state) =>
+        Boolean(normalizedName) && state.name.trim().toLowerCase() === normalizedName,
+    ) ??
+    draft.states.find((state) => state.isInitial);
   return {
     currentStateId: initialState?.clientId ?? null,
     history: [],
-    stockReserved: false,
+    stockReserved: start.stockReserved ?? false,
     stockConsumed: false,
     stockReleased: false,
     lastMessage: initialState
-      ? `El pedido inicia en ${initialState.name}.`
+      ? `La simulación inicia en ${initialState.name}.`
       : "El flujo no tiene un estado inicial definido.",
+    routes: [],
   };
 }
 
@@ -138,16 +195,29 @@ export function advanceWorkflowSimulation(
     )
     .sort((left, right) => left.priority - right.priority);
 
-  const transition = candidates.find((candidate) =>
-    candidate.conditions.length > 0 &&
-    candidate.conditions.every((condition) =>
-      conditionPasses(condition.type, condition.config, input),
-    ),
+  const routes: WorkflowSimulationRouteResult[] = candidates.map((candidate) => {
+    const conditions = candidate.conditions.map((condition) => ({
+      type: condition.type,
+      label: conditionLabels[condition.type] ?? condition.type,
+      passed: conditionPasses(condition.type, condition.config, input),
+    }));
+    return {
+      transitionId: candidate.clientId,
+      transitionName: candidate.name,
+      priority: candidate.priority,
+      passed: conditions.length > 0 && conditions.every((condition) => condition.passed),
+      conditions,
+    };
+  });
+  const selectedRoute = routes.find((route) => route.passed);
+  const transition = candidates.find(
+    (candidate) => candidate.clientId === selectedRoute?.transitionId,
   );
 
   if (!transition) {
     return {
       ...simulation,
+      routes,
       lastMessage: `No hay una transición automática cumplida desde ${currentState.name} con estos datos.`,
     };
   }
@@ -188,6 +258,7 @@ export function advanceWorkflowSimulation(
     stockReserved,
     stockConsumed,
     stockReleased,
+    routes,
     lastMessage: actionSummary.length
       ? `${step.message}. Acciones: ${actionSummary.join(" + ")}.`
       : `${step.message}.`,

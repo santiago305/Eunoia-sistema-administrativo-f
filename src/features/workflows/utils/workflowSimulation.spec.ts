@@ -42,10 +42,21 @@ const input = (overrides: Partial<WorkflowSimulationInput> = {}): WorkflowSimula
   deliveryDate: "2026-08-27",
   simulatedDate: "2026-08-27",
   hasStock: true,
+  requiredFields: {},
   ...overrides,
 });
 
 describe("workflowSimulation", () => {
+  it("starts from the matching real order state instead of the initial state", () => {
+    const simulation = createWorkflowSimulation(draft, {
+      stateCode: "IN_PROGRESS",
+      stockReserved: true,
+    });
+
+    expect(simulation.currentStateId).toBe("in-progress");
+    expect(simulation.stockReserved).toBe(true);
+  });
+
   it("follows the paid route and records stock consumption", () => {
     let simulation = createWorkflowSimulation(draft);
     simulation = advanceWorkflowSimulation(draft, simulation, input({ totalPaid: 100 }));
@@ -63,6 +74,11 @@ describe("workflowSimulation", () => {
 
     expect(simulation.currentStateId).toBe("waiting");
     expect(simulation.stockReleased).toBe(true);
+    expect(simulation.routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ transitionName: "Esperando", passed: true }),
+      ]),
+    );
   });
 
   it("moves a waiting order to send after payment when stock exists", () => {

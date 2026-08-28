@@ -55,7 +55,7 @@ import {
   publishWorkflowDraft,
   updateFullWorkflow,
 } from "@/shared/services/workflowService";
-import { WorkflowDraftTestModal } from "./WorkflowDraftTestModal";
+import { WorkflowOrderSimulationModal } from "./WorkflowOrderSimulationModal";
 
 type Props = {
   open: boolean;
@@ -1110,7 +1110,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
         onSaved={(state) => void refreshSaleOrderStates(state.id)}
       />
 
-      <WorkflowDraftTestModal
+      <WorkflowOrderSimulationModal
         open={showTestModal}
         draft={draft}
         draftWorkflowId={draft.lifecycleStatus === "DRAFT" ? draft.id ?? null : null}
