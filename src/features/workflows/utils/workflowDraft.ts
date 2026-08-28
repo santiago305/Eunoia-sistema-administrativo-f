@@ -18,41 +18,20 @@ import {
   TRANSITION_PURPOSES,
 } from "@/features/workflows/types/workflow";
 
-type AutomaticTransitionCandidate = Pick<
-  WorkflowDraftTransition,
-  "clientId" | "fromStateClientId" | "autoTrigger" | "isActive"
->;
-
 export function hasInvalidStockRestorationCombination(
   actions: Array<Pick<WorkflowAction, "type">>,
 ): boolean {
   const restoreCount = actions.filter(
     (action) => action.type === ACTIONS.RESTORE_STOCK,
   ).length;
-  const hasOtherStockAction = actions.some((action) =>
-    [
-      ACTIONS.RESERVE_STOCK,
-      ACTIONS.CONSUME_STOCK,
-      ACTIONS.REVERT_STOCK,
-    ].includes(action.type as any),
+  const hasOtherStockAction = actions.some(
+    (action) =>
+      action.type === ACTIONS.RESERVE_STOCK ||
+      action.type === ACTIONS.CONSUME_STOCK ||
+      action.type === ACTIONS.REVERT_STOCK,
   );
 
   return restoreCount > 1 || (restoreCount > 0 && hasOtherStockAction);
-}
-
-export function hasAutomaticTransitionSibling(
-  transitions: AutomaticTransitionCandidate[],
-  current: Pick<WorkflowDraftTransition, "clientId" | "fromStateClientId">,
-) {
-  if (!current.fromStateClientId) return false;
-
-  return transitions.some(
-    (transition) =>
-      transition.clientId !== current.clientId &&
-      transition.fromStateClientId === current.fromStateClientId &&
-      transition.autoTrigger &&
-      transition.isActive,
-  );
 }
 
 export function getAutoTriggerPatch(
@@ -415,16 +394,24 @@ export function validateWorkflowDraft(draft: WorkflowDraft): WorkflowDraftValida
   ) {
     errors.push("Las transiciones automaticas requieren al menos una condicion.");
   }
-  const automaticSources = draft.transitions
+  const automaticTransitions = draft.transitions
     .filter(
       (transition) =>
         transition.isActive &&
         transition.autoTrigger &&
         transition.fromStateClientId,
-    )
-    .map((transition) => transition.fromStateClientId);
-  if (new Set(automaticSources).size !== automaticSources.length) {
-    errors.push("Solo puede existir una transicion automatica por estado.");
+    );
+  const automaticRoutePriorities = automaticTransitions.map(
+    (transition) =>
+      `${transition.fromStateClientId}:${transition.priority}`,
+  );
+  if (
+    new Set(automaticRoutePriorities).size !==
+    automaticRoutePriorities.length
+  ) {
+    errors.push(
+      "Las transiciones automaticas del mismo estado deben tener prioridades diferentes.",
+    );
   }
   if (
     draft.transitions.some(

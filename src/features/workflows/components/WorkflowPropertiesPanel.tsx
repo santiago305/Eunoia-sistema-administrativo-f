@@ -11,7 +11,6 @@ import {
 } from "@/features/workflows/types/workflow";
 import {
   getAutoTriggerPatch,
-  hasAutomaticTransitionSibling,
 } from "@/features/workflows/utils/workflowDraft";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -128,10 +127,6 @@ export function WorkflowPropertiesPanel(props: Props) {
     isNormalTransition &&
     transition!.purpose !== TRANSITION_PURPOSES.CANCEL;
   const elseEffect = transition!.elseEffect;
-  const automationBlocked =
-    !transition!.autoTrigger &&
-    hasAutomaticTransitionSibling(props.draft.transitions, transition!);
-
   return (
     <div className="space-y-3 p-4">
       <div>
@@ -171,13 +166,33 @@ export function WorkflowPropertiesPanel(props: Props) {
           <CheckboxRow
             label="Disparar automaticamente"
             checked={transition!.autoTrigger}
-            disabled={automationBlocked}
             onCheckedChange={(checked) => patch(getAutoTriggerPatch(checked))}
           />
-          {automationBlocked ? (
-            <p className="text-[11px] text-sky-700">
-              Este estado ya tiene una transicion automatica.
-            </p>
+          {transition!.autoTrigger ? (
+            <>
+              <FloatingInput
+                label="Prioridad automatica"
+                name="transition-priority"
+                type="number"
+                min={0}
+                step={1}
+                value={String(transition!.priority)}
+                onChange={(event) =>
+                  patch({
+                    priority: Math.max(
+                      0,
+                      Math.trunc(Number(event.target.value) || 0),
+                    ),
+                  })
+                }
+                className="h-9 text-xs"
+              />
+              <p className="text-[11px] leading-4 text-sky-700">
+                Si salen varias rutas automaticas del mismo estado, se evalua
+                primero el numero menor. Cada ruta debe tener una prioridad
+                diferente.
+              </p>
+            </>
           ) : null}
         </div>
       ) : null}

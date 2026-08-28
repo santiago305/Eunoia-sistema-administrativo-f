@@ -8,7 +8,6 @@ import {
   buildFullWorkflowRequest,
   associateCancelSaleOrderState,
   getAutoTriggerPatch,
-  hasAutomaticTransitionSibling,
   hasInvalidStockRestorationCombination,
   mapWorkflowToDraft,
   removeWorkflowElement,
@@ -294,7 +293,7 @@ describe("validateWorkflowDraft", () => {
     (types, expected) => {
       expect(
         hasInvalidStockRestorationCombination(
-          types.map((type) => ({ type: type as any })),
+          types.map((type) => ({ type })),
         ),
       ).toBe(expected);
     },
@@ -429,28 +428,68 @@ describe("validateWorkflowDraft", () => {
     );
   });
 
-  it("detects another automatic transition from the same source state", () => {
-    const current = {
-      clientId: "transition-2",
-      fromStateClientId: "state-1",
-      autoTrigger: false,
+  it("allows multiple automatic transitions with distinct priorities", () => {
+    const validation = validateWorkflowDraft({
+      name: "Ventas",
+      description: "",
       isActive: true,
-    };
+      states: [
+        { clientId: "state-1", saleOrderStateId: "global-1", name: "En curso", code: "IN_PROGRESS", color: null, positionX: 0, positionY: 0, isInitial: true, isFinal: false, isActive: true },
+        { clientId: "state-2", saleOrderStateId: "global-2", name: "Por enviar", code: "TO_SEND", color: null, positionX: 200, positionY: 0, isInitial: false, isFinal: true, isActive: true },
+        { clientId: "state-3", saleOrderStateId: "global-3", name: "Esperando", code: "WAITING", color: null, positionX: 0, positionY: 160, isInitial: false, isFinal: true, isActive: true },
+      ],
+      transitions: [
+        {
+          clientId: "transition-paid", name: "Por enviar", code: "PAID_TO_SEND",
+          fromStateClientId: "state-1", toStateClientId: "state-2", elseToStateClientId: null,
+          isGlobal: false, excludedStateClientIds: [], purpose: TRANSITION_PURPOSES.STANDARD,
+          effect: TRANSITION_EFFECTS.MOVE_STATE, elseEffect: null, isActive: true,
+          autoTrigger: true, priority: 0, conditions: [{ type: "IS_PAID", config: {} }],
+          actions: [{ type: "CONSUME_STOCK", config: {}, position: 0 }], elseActions: [],
+        },
+        {
+          clientId: "transition-overdue", name: "Esperando", code: "OVERDUE_WAITING",
+          fromStateClientId: "state-1", toStateClientId: "state-3", elseToStateClientId: null,
+          isGlobal: false, excludedStateClientIds: [], purpose: TRANSITION_PURPOSES.STANDARD,
+          effect: TRANSITION_EFFECTS.MOVE_STATE, elseEffect: null, isActive: true,
+          autoTrigger: true, priority: 1, conditions: [{ type: "IS_NOT_PAID", config: {} }],
+          actions: [{ type: "REVERT_STOCK", config: {}, position: 0 }], elseActions: [],
+        },
+      ],
+    });
 
-    expect(
-      hasAutomaticTransitionSibling(
-        [
-          {
-            clientId: "transition-1",
-            fromStateClientId: "state-1",
-            autoTrigger: true,
-            isActive: true,
-          },
-          current,
-        ],
-        current,
-      ),
-    ).toBe(true);
+    expect(validation.errors).not.toContain(
+      "Las transiciones automaticas del mismo estado deben tener prioridades diferentes.",
+    );
+  });
+
+  it("rejects duplicate automatic priorities from the same state", () => {
+    const base = {
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      states: [
+        { clientId: "state-1", saleOrderStateId: "global-1", name: "En curso", code: "IN_PROGRESS", color: null, positionX: 0, positionY: 0, isInitial: true, isFinal: false, isActive: true },
+        { clientId: "state-2", saleOrderStateId: "global-2", name: "Final", code: "FINAL", color: null, positionX: 200, positionY: 0, isInitial: false, isFinal: true, isActive: true },
+      ],
+    };
+    const automatic = (clientId: string, code: string) => ({
+      clientId, name: code, code,
+      fromStateClientId: "state-1", toStateClientId: "state-2", elseToStateClientId: null,
+      isGlobal: false, excludedStateClientIds: [], purpose: TRANSITION_PURPOSES.STANDARD,
+      effect: TRANSITION_EFFECTS.MOVE_STATE, elseEffect: null, isActive: true,
+      autoTrigger: true, priority: 0, conditions: [{ type: "IS_PAID" as const, config: {} }],
+      actions: [], elseActions: [],
+    });
+
+    const validation = validateWorkflowDraft({
+      ...base,
+      transitions: [automatic("transition-1", "AUTO_1"), automatic("transition-2", "AUTO_2")],
+    });
+
+    expect(validation.errors).toContain(
+      "Las transiciones automaticas del mismo estado deben tener prioridades diferentes.",
+    );
   });
 
   it("clears the ELSE branch when automatic execution is disabled", () => {
@@ -576,7 +615,7 @@ describe("validateWorkflowDraft", () => {
           priority: 0,
           conditions: [],
           actions: [
-            { type: "ASSIGN_WAREHOUSE_BY_WORKFLOW" as any, config: { workflowId: "", warehouseId: "" }, position: 0 },
+            { type: "ASSIGN_WAREHOUSE_BY_WORKFLOW", config: { workflowId: "", warehouseId: "" }, position: 0 },
           ],
           elseActions: [],
         },
