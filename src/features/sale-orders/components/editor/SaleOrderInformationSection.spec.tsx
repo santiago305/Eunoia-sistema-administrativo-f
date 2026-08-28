@@ -70,4 +70,23 @@ describe("SaleOrderInformationSection", () => {
 
     expect(screen.getByDisplayValue("FB-999")).toBeInTheDocument();
   });
+
+  it("uses explicit workflow and warehouse restrictions for advanced corrections", () => {
+    render(
+      <SaleOrderInformationSection
+        form={baseForm()}
+        setForm={vi.fn()}
+        workflowOptions={[{ value: "workflow-1", label: "Abonado" }]}
+        warehouseOptions={[{ value: "warehouse-1", label: "Principal" }]}
+        sourceOptions={[]}
+        adviserOptions={[]}
+        onAdviserCreated={vi.fn()}
+        workflowChangeDisabled={false}
+        warehouseChangeDisabled={false}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /^Tipo:/ })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Almacén:/ })).not.toBeDisabled();
+  });
 });

@@ -1,4 +1,4 @@
-import { PencilLine, Plus, Save, X } from "lucide-react";
+import { AlertTriangle, PencilLine, Plus, Save, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -12,6 +12,7 @@ import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import { AlertModal } from "@/shared/components/components/AlertModal";
 import type { FloatingSuggestOption } from "@/shared/components/components/FloatingSuggestInput";
 import { getClientById, listClients } from "@/shared/services/clientService";
 import type { AdviserOption } from "@/shared/services/adviserService";
@@ -68,6 +69,7 @@ type Props = {
   onFooterChange?: (footer: ReactNode | null) => void;
   readOnly?: boolean;
   canManageAdvancedOrders?: boolean;
+  canAssignWorkflow?: boolean;
 };
 
 const money = new Intl.NumberFormat("es-PE", {
@@ -84,6 +86,7 @@ export function SaleOrderEditor({
   onFooterChange,
   readOnly = false,
   canManageAdvancedOrders = true,
+  canAssignWorkflow = true,
 }: Props) {
   const { company } = useCompany();
   const companyId = company?.companyId ?? "";
@@ -95,6 +98,7 @@ export function SaleOrderEditor({
   const [saving, setSaving] = useState(false);
   const [correctingTotal, setCorrectingTotal] = useState(false);
   const [correctTotalOpen, setCorrectTotalOpen] = useState(false);
+  const [advancedReassignmentOpen, setAdvancedReassignmentOpen] = useState(false);
   const [matchingProductPack, setMatchingProductPack] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [supplyRecipeLoading, setSupplyRecipeLoading] = useState(false);
@@ -509,6 +513,16 @@ export function SaleOrderEditor({
     (form.editPolicy.isFinal ||
       form.editPolicy.stockStatus === "RESERVED" ||
       form.editPolicy.stockStatus === "CONSUMED");
+  const workflowChanged =
+    mode === "edit" &&
+    Boolean(order) &&
+    form.workflowId !== (order?.workflowId ?? "");
+  const warehouseChanged =
+    mode === "edit" &&
+    Boolean(order) &&
+    form.warehouseId !== (order?.warehouse?.id ?? "");
+  const advancedReassignmentRequested =
+    isAdvancedOrder && (workflowChanged || warehouseChanged);
   const advancedCommercialEditable =
     form.editPolicy.productsEditable &&
     (!isAdvancedOrder || canManageAdvancedOrders);
@@ -542,11 +556,7 @@ export function SaleOrderEditor({
     [onSaved, order],
   );
 
-  const save = useCallback(async () => {
-    if (validationMessage) {
-      sileo.error({ title: validationMessage });
-      return;
-    }
+  const persist = useCallback(async () => {
     setSaving(true);
     try {
       const payload = toSaveSaleOrderWithClientDto(form);
@@ -580,7 +590,19 @@ export function SaleOrderEditor({
     } finally {
       setSaving(false);
     }
-  }, [form, mode, onDirtyChange, onSaved, order?.id, validationMessage]);
+  }, [form, mode, onDirtyChange, onSaved, order?.id]);
+
+  const save = useCallback(async () => {
+    if (validationMessage) {
+      sileo.error({ title: validationMessage });
+      return;
+    }
+    if (advancedReassignmentRequested) {
+      setAdvancedReassignmentOpen(true);
+      return;
+    }
+    await persist();
+  }, [advancedReassignmentRequested, persist, validationMessage]);
 
   const saveDisabledMessage =
     validationMessage ??
@@ -632,11 +654,15 @@ export function SaleOrderEditor({
       {canManageAdvancedOrders && isAdvancedOrder ? (
         <div
           role="status"
-          className="mx-4 mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
+          className="mx-4 mt-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900"
         >
-          Edición de corrección: puedes cambiar precios, productos, packs o
-          cantidades. Al guardar se recalcularán el saldo, el estado y el
-          inventario. El almacén y el flujo permanecen bloqueados por seguridad.
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            Edición de corrección: puedes cambiar precios, productos, packs,
+            cantidades y almacén{canAssignWorkflow ? " o tipo de pedido" : ""}.
+            Si cambias el tipo o almacén, el sistema revertirá primero el
+            inventario anterior y reconstruirá el flujo de forma segura.
+          </span>
         </div>
       ) : null}
       {canCorrectTotal && !readOnly ? (
@@ -865,10 +891,14 @@ export function SaleOrderEditor({
             onWorkflowChange={changeWorkflow}
             workflowChangeDisabled={
               (mode === "edit" &&
-                (form.editPolicy.isFinal ||
-                  form.editPolicy.stockStatus === "RESERVED" ||
-                  form.editPolicy.stockStatus === "CONSUMED")) ||
+                (!canAssignWorkflow ||
+                  (isAdvancedOrder && !canManageAdvancedOrders))) ||
               supplyRecipeLoading
+            }
+            warehouseChangeDisabled={
+              mode === "edit" && isAdvancedOrder
+                ? !canManageAdvancedOrders
+                : !form.editPolicy.warehouseEditable
             }
           />
           <SaleOrderShippingSection
@@ -889,6 +919,37 @@ export function SaleOrderEditor({
           onConfirm={applyTotalCorrection}
         />
       ) : null}
+      <AlertModal
+        open={advancedReassignmentOpen}
+        type="warning"
+        title="Confirmar corrección avanzada"
+        confirmText="Revertir y aplicar cambios"
+        cancelText="Revisar pedido"
+        loading={saving}
+        onClose={() => {
+          if (!saving) setAdvancedReassignmentOpen(false);
+        }}
+        onConfirm={() => {
+          setAdvancedReassignmentOpen(false);
+          void persist();
+        }}
+        message={
+          <div className="space-y-2">
+            <p>
+              El pedido conservará su número e historial. Antes de aplicar el
+              cambio se revertirá la reserva o consumo del almacén anterior.
+            </p>
+            <ul className="list-disc space-y-1 pl-4">
+              {workflowChanged ? (
+                <li>El nuevo tipo comenzará en su estado inicial y avanzará automáticamente.</li>
+              ) : null}
+              {warehouseChanged ? (
+                <li>El inventario se volverá a reservar o consumir en el almacén seleccionado.</li>
+              ) : null}
+            </ul>
+          </div>
+        }
+      />
     </div>
   );
 }

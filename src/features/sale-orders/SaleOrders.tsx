@@ -1427,6 +1427,7 @@ export default function SaleOrders() {
                 capabilities={{
                     canEdit: capabilities.canEdit,
                     canManageAdvancedOrders: capabilities.canManageAdvancedOrders,
+                    canAssignWorkflow: capabilities.canAssignWorkflow,
                 }}
             />
             <WorkflowEditorModal open={workflowEditorOpen} onClose={() => setWorkflowEditorOpen(false)} />

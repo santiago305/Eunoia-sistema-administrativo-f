@@ -25,6 +25,7 @@ type Props = {
   onAdviserCreated: (adviser: AdviserOption) => void;
   onWorkflowChange?: (workflowId: string) => void;
   workflowChangeDisabled?: boolean;
+  warehouseChangeDisabled?: boolean;
 };
 
 export function SaleOrderInformationSection({
@@ -37,6 +38,7 @@ export function SaleOrderInformationSection({
   onAdviserCreated,
   onWorkflowChange,
   workflowChangeDisabled = false,
+  warehouseChangeDisabled,
 }: Props) {
   const { permissions = [] } = useAuth();
   const canAssignRoles =
@@ -120,7 +122,7 @@ export function SaleOrderInformationSection({
             setForm((current) => ({ ...current, warehouseId }))
           }
           searchable
-          disabled={!form.editPolicy.warehouseEditable}
+          disabled={warehouseChangeDisabled ?? !form.editPolicy.warehouseEditable}
         />
         <FloatingSelect
           label="Enganche"

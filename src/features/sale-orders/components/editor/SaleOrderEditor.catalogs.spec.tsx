@@ -253,21 +253,34 @@ vi.mock("./SaleOrderClientSection", () => ({
 
 vi.mock("./SaleOrderInformationSection", () => ({
   SaleOrderInformationSection: ({
+    form,
     setForm,
     workflowOptions,
     warehouseOptions,
     sourceOptions,
     adviserOptions,
+    warehouseChangeDisabled,
   }: {
+    form: SaleOrderEditorForm;
     setForm: React.Dispatch<React.SetStateAction<SaleOrderEditorForm>>;
     workflowOptions: Array<{ label: string }>;
-    warehouseOptions: Array<{ label: string }>;
+    warehouseOptions: Array<{ value: string; label: string }>;
     sourceOptions: Array<{ label: string }>;
     adviserOptions: Array<{ name: string }>;
+    warehouseChangeDisabled?: boolean;
   }) => (
     <div data-testid="information-section">
       {[...workflowOptions, ...warehouseOptions, ...sourceOptions].map((option) => option.label).join(",")}
       {adviserOptions.map((option) => option.name).join(",")}
+      <button
+        type="button"
+        disabled={warehouseChangeDisabled}
+        onClick={() =>
+          setForm((current) => ({ ...current, warehouseId: "warehouse-2" }))
+        }
+      >
+        cambiar almacén desde {form.warehouseId}
+      </button>
       <button
         type="button"
         onClick={() => {
@@ -708,6 +721,108 @@ describe("SaleOrderEditor catalog loading", () => {
       expect(
         screen.getByRole("button", { name: "Actualizar pedido" }),
       ).not.toBeDisabled(),
+    );
+  });
+
+  it("confirms an advanced warehouse reassignment before saving it", async () => {
+    getSaleOrderEditorCatalogsMock.mockResolvedValue({
+      clients: [],
+      warehouses: [
+        { warehouseId: "warehouse-1", name: "Piura" },
+        { warehouseId: "warehouse-2", name: "Lima" },
+      ],
+      subsidiaries: [],
+      sources: [],
+      workflows: [{ id: "workflow-1", name: "ABONADO CE", isActive: true }],
+      advisers: [],
+      paymentMethods: [],
+      companyPaymentAccounts: [],
+    });
+    saveSaleOrderWithClientMock.mockResolvedValue({
+      orderId: "order-final-transfer",
+      serie: "PE",
+      correlative: 10,
+    });
+    const finalizedOrder = {
+      id: "order-final-transfer",
+      serie: "PE",
+      correlative: 10,
+      workflowId: "workflow-1",
+      currentStateId: "state-delivered",
+      workflow: { id: "workflow-1", name: "ABONADO CE" },
+      warehouse: { id: "warehouse-1", name: "Piura" },
+      client: {
+        id: "client-1",
+        type: "NEW",
+        fullName: "Ana Perez",
+        docType: "DNI",
+        docNumber: "12345678",
+        departmentId: "15",
+        provinceId: "1501",
+        districtId: "150101",
+        isActive: true,
+        telephones: [],
+      },
+      items: [
+        {
+          id: "item-1",
+          description: "Producto individual",
+          quantity: 1,
+          unitPrice: 20,
+          total: 20,
+          components: [],
+        },
+      ],
+      supplies: [],
+      payments: [],
+      attachments: [],
+      editPolicy: {
+        stockStatus: "CONSUMED",
+        productsEditable: true,
+        warehouseEditable: false,
+        isFinal: true,
+        reason: "Pedido finalizado · Stock consumido",
+      },
+    } as unknown as SaleOrder;
+
+    function Harness() {
+      const [footer, setFooter] = useState<ReactNode | null>(null);
+      return (
+        <>
+          <SaleOrderEditor
+            mode="edit"
+            order={finalizedOrder}
+            onCancel={noopCancel}
+            onSaved={noopSaved}
+            onFooterChange={setFooter}
+            canManageAdvancedOrders
+            canAssignWorkflow
+          />
+          <div>{footer}</div>
+        </>
+      );
+    }
+
+    render(<Harness />);
+    const warehouseSelect = await screen.findByRole("button", {
+      name: /cambiar almacén desde warehouse-1/i,
+    });
+    expect(warehouseSelect).not.toBeDisabled();
+    fireEvent.click(warehouseSelect);
+    fireEvent.click(screen.getByRole("button", { name: "Actualizar pedido" }));
+
+    expect(saveSaleOrderWithClientMock).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("Confirmar corrección avanzada"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/reserva o consumo del almacén anterior/i)).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Revertir y aplicar cambios" }),
+    );
+    await waitFor(() => expect(saveSaleOrderWithClientMock).toHaveBeenCalledTimes(1));
+    expect(saveSaleOrderWithClientMock.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ warehouseId: "warehouse-2" }),
     );
   });
 

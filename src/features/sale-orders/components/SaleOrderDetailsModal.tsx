@@ -20,6 +20,7 @@ type Props = {
   capabilities?: {
     canEdit: boolean;
     canManageAdvancedOrders?: boolean;
+    canAssignWorkflow?: boolean;
   };
 };
 
@@ -38,6 +39,7 @@ export function SaleOrderDetailsModal({
   const capabilities = providedCapabilities ?? {
     canEdit: true,
     canManageAdvancedOrders: true,
+    canAssignWorkflow: true,
   };
   const readOnly = mode === "edit" && Boolean(order) && (!capabilities.canEdit || order?.isActive === false);
   const title = useMemo(() => {
@@ -99,6 +101,7 @@ export function SaleOrderDetailsModal({
           canManageAdvancedOrders={
             capabilities.canManageAdvancedOrders ?? true
           }
+          canAssignWorkflow={capabilities.canAssignWorkflow ?? true}
         />
       </Modal>
 
