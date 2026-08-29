@@ -377,6 +377,21 @@ export type SaleOrderJsonImportRow = {
   codAmount?: number;
   internalNote?: string;
   confirmedBy?: string;
+  adviserResolution?: string;
+  adviserResolutionStatus?: SaleOrderImportAdviserResolutionStatus;
+};
+
+export type SaleOrderImportAdviserResolutionStatus =
+  | "EMPTY"
+  | "UUID"
+  | "ALIAS"
+  | "NAME"
+  | "NOT_FOUND";
+
+export type SaleOrderImportAdviserResolution = {
+  value: string;
+  status: SaleOrderImportAdviserResolutionStatus;
+  adviser: { id: string; name: string; email: string } | null;
 };
 
 export type SaleOrderJsonImportPreviewResponse = {
@@ -741,6 +756,31 @@ export type SaleOrderSkuRecognitionCodesResponse = {
 
 export type SaveSaleOrderSkuRecognitionCodeInput = {
   code: string;
+  isActive?: boolean;
+  replaceDeleted?: boolean;
+};
+
+export type SaleOrderAdviserImportAlias = {
+  id: string;
+  externalName: string;
+  adviserUserId: string;
+  adviser: { id: string; name: string; email: string } | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SaleOrderAdviserImportAliasesResponse = {
+  items: SaleOrderAdviserImportAlias[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type SaveSaleOrderAdviserImportAliasInput = {
+  externalName: string;
+  adviserUserId: string;
   isActive?: boolean;
   replaceDeleted?: boolean;
 };

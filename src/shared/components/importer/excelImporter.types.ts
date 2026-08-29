@@ -10,6 +10,8 @@ export type ImportField = {
   aliases?: string[];
   validate?: (value: unknown, row: Record<string, unknown>) => string | null;
   transform?: (value: unknown) => unknown;
+  previewOnly?: boolean;
+  readOnly?: boolean;
 };
 
 export type ImportUbigeoCatalog = {
@@ -47,6 +49,7 @@ export type ExcelImportModalProps<TData extends Record<string, unknown>> = {
   fields: ImportField[];
   onClose: () => void;
   onSubmit: (data: TData[], file: File) => void | Promise<void>;
+  preparePreviewRows?: (rows: TData[]) => Promise<TData[]>;
   maxRows?: number;
   ubigeoConfig?: ImportUbigeoConfig;
 };

@@ -39,6 +39,7 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
   onSubmit,
   maxRows = DEFAULT_MAX_ROWS,
   ubigeoConfig,
+  preparePreviewRows,
 }: ExcelImportModalProps<TData>) {
   const { catalog: ubigeoCatalog } = useUbigeoCatalog(open && Boolean(ubigeoConfig));
   const [step, setStep] = useState<Step>("file");
@@ -175,17 +176,32 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
     setStep("mapping");
   }, [fields, maxRows, selectedSheet, workbook]);
 
-  const handleNextFromMapping = useCallback(() => {
+  const handleNextFromMapping = useCallback(async () => {
     if (missingRequiredMappings.length > 0) {
       setError(`Falta mapear: ${missingRequiredMappings.map((field) => field.label).join(", ")}.`);
       return;
     }
 
     setError(null);
-    setPreviewRows(mappedRows);
-    setSelectedRowIndexes(new Set(validRowIndexes));
-    setStep("preview");
-  }, [mappedRows, missingRequiredMappings, validRowIndexes]);
+    setLoading(true);
+    try {
+      const nextRows = preparePreviewRows
+        ? await preparePreviewRows(mappedRows as TData[])
+        : mappedRows;
+      const nextValidation = validateRows(nextRows, fields);
+      const invalidIndexes = new Set(nextValidation.errors.map((item) => item.rowIndex));
+      const nextValidIndexes = new Set(
+        nextRows.map((_, index) => index).filter((index) => !invalidIndexes.has(index)),
+      );
+      setPreviewRows(nextRows);
+      setSelectedRowIndexes(nextValidIndexes);
+      setStep("preview");
+    } catch {
+      setError("No se pudo validar la vista previa con el servidor.");
+    } finally {
+      setLoading(false);
+    }
+  }, [fields, mappedRows, missingRequiredMappings, preparePreviewRows]);
 
   const handleToggleRow = useCallback((rowIndex: number, checked: boolean) => {
     setSelectedRowIndexes((current) => {
@@ -248,7 +264,7 @@ export function ExcelImportModal<TData extends Record<string, unknown>>({
           <SystemButton onClick={handleReadSheet}>Siguiente</SystemButton>
         ) : null}
         {step === "mapping" ? (
-          <SystemButton onClick={handleNextFromMapping}>Siguiente</SystemButton>
+          <SystemButton onClick={() => void handleNextFromMapping()} loading={loading} disabled={loading}>Siguiente</SystemButton>
         ) : null}
         {step === "preview" ? (
           <SystemButton onClick={handleConfirm} loading={submitting} disabled={!canConfirm || submitting}>

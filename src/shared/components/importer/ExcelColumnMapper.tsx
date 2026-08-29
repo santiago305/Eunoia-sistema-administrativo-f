@@ -27,7 +27,7 @@ export function ExcelColumnMapper({
 
   return (
     <div className="space-y-3">
-      {fields.map((field) => (
+      {fields.filter((field) => !field.previewOnly).map((field) => (
         <div
           key={field.key}
           className="grid gap-2 rounded-lg border border-border bg-background p-3 sm:grid-cols-[1fr_1.4fr] sm:items-center"

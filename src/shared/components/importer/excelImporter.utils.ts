@@ -37,7 +37,7 @@ export function normalizeHeader(value: unknown): string {
 export function autoMapColumns(fields: ImportField[], excelHeaders: string[]): ExcelColumnMapping {
   const normalizedHeaders = new Map(excelHeaders.map((header) => [normalizeHeader(header), header]));
 
-  return fields.reduce<ExcelColumnMapping>((mapping, field) => {
+  return fields.filter((field) => !field.previewOnly).reduce<ExcelColumnMapping>((mapping, field) => {
     const candidates = [field.label, field.key, ...(field.aliases ?? [])].map(normalizeHeader);
     const header = candidates.map((candidate) => normalizedHeaders.get(candidate)).find(Boolean);
 

@@ -26,6 +26,8 @@ export const useSaleOrderCapabilities = () => {
       canViewImportLotes: allowed(P.viewImportLotes),
       canViewSkuRecognitionCodes: allowed(P.viewSkuRecognitionCodes),
       canManageSkuRecognitionCodes: allowed(P.manageSkuRecognitionCodes),
+      canViewAdviserImportAliases: allowed(P.viewAdviserImportAliases),
+      canManageAdviserImportAliases: allowed(P.manageAdviserImportAliases),
       canManageWorkflows: allowed(P.manageWorkflows), canViewStatistics: allowed(P.viewStatistics),
       canAssignWorkflow: allowed(P.assignWorkflow), canCancel: allowed(P.cancel),
       canConfirmDelivery: allowed(P.confirmDelivery),

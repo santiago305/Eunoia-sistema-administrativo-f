@@ -117,7 +117,18 @@ export const saleOrderImportFields: ImportField[] = [
   { 
     key: "confirmedBy", 
     label: "Confirmado por", 
+    readOnly: true,
     aliases: ["confirmado por", "Confirmado por"] },
+  {
+    key: "adviserResolution",
+    label: "Asesor identificado",
+    previewOnly: true,
+    readOnly: true,
+    validate: (_value, row) =>
+      row.adviserResolutionStatus === "NOT_FOUND"
+        ? "Configura una equivalencia para este nombre antes de importar."
+        : null,
+  },
 ];
 
 export const optionalSaleOrderImportFields = new Set<keyof SaleOrderJsonImportRow>([

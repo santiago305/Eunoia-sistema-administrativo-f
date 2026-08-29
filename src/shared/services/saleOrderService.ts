@@ -28,6 +28,10 @@ import type {
   SaleOrderSkuRecognitionCode,
   SaleOrderSkuRecognitionCodesResponse,
   SaveSaleOrderSkuRecognitionCodeInput,
+  SaleOrderAdviserImportAlias,
+  SaleOrderAdviserImportAliasesResponse,
+  SaleOrderImportAdviserResolution,
+  SaveSaleOrderAdviserImportAliasInput,
 } from "@/features/sale-orders/types/saleOrder";
 import { buildSaleOrderUnifiedRequest } from "@/features/sale-orders/utils/saleOrderUnifiedRequest";
 import type {
@@ -411,6 +415,56 @@ export const saveSaleOrderWithClient = async (
         API_SALE_ORDERS_GROUP.createWithClient,
         body,
       );
+  return response.data;
+};
+
+export const listSaleOrderAdviserImportAliases = async (params: {
+  page: number;
+  limit?: number;
+  q?: string;
+}): Promise<SaleOrderAdviserImportAliasesResponse> => {
+  const response = await axiosInstance.get<SaleOrderAdviserImportAliasesResponse>(
+    API_SALE_ORDERS_GROUP.adviserImportAliases,
+    { params },
+  );
+  return response.data;
+};
+
+export const createSaleOrderAdviserImportAlias = async (
+  input: SaveSaleOrderAdviserImportAliasInput,
+): Promise<SaleOrderAdviserImportAlias> => {
+  const response = await axiosInstance.post<SaleOrderAdviserImportAlias>(
+    API_SALE_ORDERS_GROUP.adviserImportAliases,
+    input,
+  );
+  return response.data;
+};
+
+export const updateSaleOrderAdviserImportAlias = async (
+  id: string,
+  input: SaveSaleOrderAdviserImportAliasInput,
+): Promise<SaleOrderAdviserImportAlias> => {
+  const response = await axiosInstance.patch<SaleOrderAdviserImportAlias>(
+    API_SALE_ORDERS_GROUP.adviserImportAlias(id),
+    input,
+  );
+  return response.data;
+};
+
+export const deleteSaleOrderAdviserImportAlias = async (id: string) => {
+  const response = await axiosInstance.delete<{ id: string; deleted: true }>(
+    API_SALE_ORDERS_GROUP.adviserImportAlias(id),
+  );
+  return response.data;
+};
+
+export const resolveSaleOrderImportAdvisers = async (
+  values: string[],
+): Promise<SaleOrderImportAdviserResolution[]> => {
+  const response = await axiosInstance.post<SaleOrderImportAdviserResolution[]>(
+    API_SALE_ORDERS_GROUP.resolveImportAdvisers,
+    { values },
+  );
   return response.data;
 };
 

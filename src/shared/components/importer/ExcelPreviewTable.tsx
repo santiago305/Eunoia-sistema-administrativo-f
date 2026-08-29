@@ -234,7 +234,7 @@ function RowFragment({
 
       {fields.map((field) => (
         <div key={field.key} className={cn(rowClassName, "min-w-0")}>
-          {editing ? (
+          {editing && !field.readOnly ? (
             <PreviewCellEditor
               field={field}
               row={row}
