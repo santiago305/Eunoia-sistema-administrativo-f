@@ -9,6 +9,7 @@ import type {
   Workflow,
   WorkflowDraftTestSession,
   WorkflowPublishPreview,
+  UpdatePublishedWorkflowRulesRequest,
 } from "@/features/workflows/types/workflow";
 
 export async function listWorkflows(): Promise<Workflow[]> {
@@ -86,6 +87,17 @@ export async function updateFullWorkflow(
   input: SaveFullWorkflowRequest,
 ): Promise<SaveFullWorkflowResponse> {
   const response = await axiosInstance.patch<SaveFullWorkflowResponse>(API_WORKFLOWS_GROUP.updateFull(id), input);
+  return response.data;
+}
+
+export async function updatePublishedWorkflowRules(
+  id: string,
+  input: UpdatePublishedWorkflowRulesRequest,
+): Promise<SaveFullWorkflowResponse> {
+  const response = await axiosInstance.patch<SaveFullWorkflowResponse>(
+    API_WORKFLOWS_GROUP.updatePublishedRules(id),
+    input,
+  );
   return response.data;
 }
 

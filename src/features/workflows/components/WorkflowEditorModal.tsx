@@ -22,6 +22,7 @@ import {
 } from "@/features/workflows/types/workflow";
 import {
   associateCancelSaleOrderState,
+  buildChangedPublishedWorkflowRulesRequest,
   buildFullWorkflowRequest,
   createGlobalRunActionTransition,
   createDraftState,
@@ -29,6 +30,7 @@ import {
   createEmptyWorkflowDraft,
   mapFullWorkflowResponseToDraft,
   mapSaveResponseToDraft,
+  getPublishedWorkflowRulesSnapshot,
   removeWorkflowElement,
   validateWorkflowDraft,
 } from "@/features/workflows/utils/workflowDraft";
@@ -54,6 +56,7 @@ import {
   listWorkflowConditions,
   publishWorkflowDraft,
   updateFullWorkflow,
+  updatePublishedWorkflowRules,
 } from "@/shared/services/workflowService";
 import { WorkflowOrderSimulationModal } from "./WorkflowOrderSimulationModal";
 
@@ -222,6 +225,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [showValidationAlert, setShowValidationAlert] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
   const [publishPreview, setPublishPreview] = useState<WorkflowPublishPreview | null>(null);
@@ -240,6 +244,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   const baseCatalogsLoadingRef = useRef(false);
   const transitionCatalogsLoadedRef = useRef(false);
   const transitionCatalogsLoadingRef = useRef(false);
+  const publishedRulesSnapshotRef = useRef("");
 
   const [pendingRemoval, setPendingRemoval] = useState<{
     id: string;
@@ -248,6 +253,17 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
   const validation = useMemo(() => validateWorkflowDraft(draft), [draft]);
   const isPublished = draft.lifecycleStatus === "PUBLISHED";
+  const publishedRulesDirty = useMemo(() => {
+    if (!isPublished || !publishedRulesSnapshotRef.current) return false;
+    try {
+      return (
+        getPublishedWorkflowRulesSnapshot(draft) !==
+        publishedRulesSnapshotRef.current
+      );
+    } catch {
+      return false;
+    }
+  }, [draft, isPublished]);
   const busy = loading || saving || publishing;
 
   const workflowOptions = useMemo(
@@ -419,6 +435,8 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
 
+    publishedRulesSnapshotRef.current = "";
+    setNotice("");
     const emptyDraft = ensureDefaultCancelTransition(createEmptyWorkflowDraft());
     const cancelSaleOrderState = findCancelSaleOrderState(saleOrderStatesRef.current);
     setDraft(
@@ -443,6 +461,8 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
   const loadWorkflow = async (id: string) => {
     if (!id) {
+      publishedRulesSnapshotRef.current = "";
+      setNotice("");
       const emptyDraft = ensureDefaultCancelTransition(createEmptyWorkflowDraft());
       const cancelSaleOrderState = findCancelSaleOrderState(saleOrderStates);
       setDraft(
@@ -458,10 +478,20 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
 
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       const response = await getWorkflow(id);
-      setDraft(ensureDefaultCancelTransition(mapFullWorkflowResponseToDraft(response)));
+      const mappedDraft = mapFullWorkflowResponseToDraft(response);
+      const loadedDraft =
+        mappedDraft.lifecycleStatus === "PUBLISHED"
+          ? mappedDraft
+          : ensureDefaultCancelTransition(mappedDraft);
+      setDraft(loadedDraft);
+      publishedRulesSnapshotRef.current =
+        loadedDraft.lifecycleStatus === "PUBLISHED"
+          ? getPublishedWorkflowRulesSnapshot(loadedDraft)
+          : "";
       setCanvasRevision((current) => current + 1);
       setSelectedId(null);
     } catch (err) {
@@ -526,12 +556,46 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     }
   };
 
+  const savePublishedRules = async () => {
+    if (!draft.id || !isPublished) return;
+    if (!validation.valid) {
+      setShowValidationAlert(true);
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await updatePublishedWorkflowRules(
+        draft.id,
+        buildChangedPublishedWorkflowRulesRequest(
+          draft,
+          publishedRulesSnapshotRef.current,
+        ),
+      );
+      const persisted = mapSaveResponseToDraft(response);
+      setDraft(persisted);
+      publishedRulesSnapshotRef.current =
+        getPublishedWorkflowRulesSnapshot(persisted);
+      setNotice(
+        `Condiciones y acciones guardadas en la version ${persisted.revision ?? 1}.`,
+      );
+    } catch (err) {
+      setError(parseApiError(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const openDraft = async () => {
     if (!draft.id) return;
     setSaving(true);
     setError("");
     try {
       const response = await createWorkflowDraft(draft.id);
+      publishedRulesSnapshotRef.current = "";
+      setNotice("");
       setDraft(ensureDefaultCancelTransition(mapSaveResponseToDraft(response)));
       setCanvasRevision((current) => current + 1);
       setSelectedId(null);
@@ -570,6 +634,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     try {
       const result = await publishWorkflowDraft(draft.id);
       setPublishPreview(null);
+      publishedRulesSnapshotRef.current = getPublishedWorkflowRulesSnapshot(draft);
       setDraft((current) => ({
         ...current,
         lifecycleStatus: "PUBLISHED",
@@ -600,7 +665,16 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
       ensureDefaultCancelTransition({
         ...current,
         transitions: current.transitions.map((item) =>
-          item.clientId === transition.clientId ? transition : item,
+          item.clientId === transition.clientId
+            ? isPublished
+              ? {
+                  ...item,
+                  conditions: transition.conditions,
+                  actions: transition.actions,
+                  elseActions: transition.elseActions,
+                }
+              : transition
+            : item,
         ),
       }),
     );
@@ -666,15 +740,32 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
             </SystemButton>
 
             {isPublished ? (
-              <SystemButton
-                type="button"
-                leftIcon={<FileEdit className="h-4 w-4" />}
-                disabled={busy || !draft.id}
-                loading={saving}
-                onClick={() => void openDraft()}
-              >
-                Crear borrador
-              </SystemButton>
+              <>
+                <SystemButton
+                  type="button"
+                  leftIcon={<Save className="h-4 w-4" />}
+                  disabled={busy || !draft.id || !publishedRulesDirty}
+                  loading={saving}
+                  onClick={() => void savePublishedRules()}
+                >
+                  Guardar condiciones y acciones
+                </SystemButton>
+                <SystemButton
+                  type="button"
+                  variant="outline"
+                  leftIcon={<FileEdit className="h-4 w-4" />}
+                  disabled={busy || !draft.id || publishedRulesDirty}
+                  loading={saving}
+                  title={
+                    publishedRulesDirty
+                      ? "Guarda primero los cambios de condiciones y acciones."
+                      : undefined
+                  }
+                  onClick={() => void openDraft()}
+                >
+                  Crear borrador
+                </SystemButton>
+              </>
             ) : (
               <>
                 {draft.id ? (
@@ -712,9 +803,22 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
               </>
             )}
           </div>
+
+          {isPublished ? (
+            <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+              Version publicada v{draft.revision ?? 1}: puedes cambiar solo
+              condiciones y acciones. Los estados, conexiones y estructura
+              permanecen bloqueados.
+            </div>
+          ) : null}
+          {notice ? (
+            <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+              {notice}
+            </div>
+          ) : null}
         </header>
 
-        <div className={`relative flex min-h-0 overflow-hidden ${isPublished ? "pointer-events-none opacity-75" : ""}`}>
+        <div className="relative flex min-h-0 overflow-hidden">
           <aside className="scroll-area w-[240px] shrink-0 overflow-auto border-r border-black/10 p-3">            
             <div className="grid grid-cols-[1fr_auto_auto] gap-1">
               <FloatingSelect
@@ -748,7 +852,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                 variant="outline"
                 size="icon"
                 className="h-9 w-9"
-                disabled={loading || saving || !saleOrderStateId}
+                disabled={busy || isPublished || !saleOrderStateId}
                 onClick={() => setStateModalMode("edit")}
                 aria-label="Editar estado"
                 title="Editar estado"
@@ -762,7 +866,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
               className="mt-3 w-full"
               variant="outline"
               size="sm"
-              disabled={loading || saving || !selectedSaleOrderState}
+              disabled={busy || isPublished || !selectedSaleOrderState}
               onClick={() =>
               setDraft((current) => {
                 const visibleStates = current.states.filter(
@@ -887,6 +991,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
               key={canvasRevision}
               draft={draft}
               selectedId={selectedId}
+              readOnly={isPublished}
               onSelect={setSelectedId}
               onViewportCenterChange={setViewportCenter}
               onMoveState={(id, x, y) =>
@@ -1078,6 +1183,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                   <WorkflowPropertiesPanel
                     draft={draft}
                     selectedId={selectedId}
+                    publishedRulesOnly={isPublished}
                     conditionCatalog={conditions}
                     actionCatalog={actions}
                     onStateChange={replaceState}

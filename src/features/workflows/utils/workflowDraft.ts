@@ -11,6 +11,7 @@ import type {
   WorkflowDraftValidation,
   WorkflowTransitionEffect,
   WorkflowTransitionPurpose,
+  UpdatePublishedWorkflowRulesRequest,
 } from "@/features/workflows/types/workflow";
 import {
   ACTIONS,
@@ -299,6 +300,63 @@ export function buildFullWorkflowRequest(draft: WorkflowDraft): SaveFullWorkflow
         })),
       };
     }),
+  };
+}
+
+export function buildPublishedWorkflowRulesRequest(
+  draft: WorkflowDraft,
+): UpdatePublishedWorkflowRulesRequest {
+  return {
+    transitions: draft.transitions.map((transition) => {
+      if (!transition.id) {
+        throw new Error(
+          "No se pueden guardar reglas de una transicion que aun no fue publicada.",
+        );
+      }
+
+      return {
+        transitionId: transition.id,
+        conditions: transition.conditions.map(normalizeCondition),
+        actions: transition.actions.map((action, index) => ({
+          type: action.type,
+          config: action.config ?? {},
+          position: action.position ?? index,
+        })),
+        elseActions: transition.elseActions.map((action, index) => ({
+          type: action.type,
+          config: action.config ?? {},
+          position: action.position ?? index,
+        })),
+      };
+    }),
+  };
+}
+
+export function getPublishedWorkflowRulesSnapshot(draft: WorkflowDraft): string {
+  return JSON.stringify(buildPublishedWorkflowRulesRequest(draft));
+}
+
+export function buildChangedPublishedWorkflowRulesRequest(
+  draft: WorkflowDraft,
+  baselineSnapshot: string,
+): UpdatePublishedWorkflowRulesRequest {
+  const current = buildPublishedWorkflowRulesRequest(draft);
+  const baseline = JSON.parse(
+    baselineSnapshot,
+  ) as UpdatePublishedWorkflowRulesRequest;
+  const baselineByTransition = new Map(
+    baseline.transitions.map((transition) => [
+      transition.transitionId,
+      JSON.stringify(transition),
+    ]),
+  );
+
+  return {
+    transitions: current.transitions.filter(
+      (transition) =>
+        JSON.stringify(transition) !==
+        baselineByTransition.get(transition.transitionId),
+    ),
   };
 }
 

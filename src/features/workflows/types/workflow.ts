@@ -242,6 +242,27 @@ export type SaveFullWorkflowRequest = {
   }>;
 };
 
+export type UpdatePublishedWorkflowRulesRequest = {
+  transitions: Array<{
+    transitionId: string;
+    conditions: Array<{
+      type: WorkflowConditionType;
+      config?: Record<string, unknown>;
+      position?: number;
+    }>;
+    actions: Array<{
+      type: WorkflowActionType;
+      config?: Record<string, unknown>;
+      position?: number;
+    }>;
+    elseActions: Array<{
+      type: WorkflowActionType;
+      config?: Record<string, unknown>;
+      position?: number;
+    }>;
+  }>;
+};
+
 export type SaveFullWorkflowResponse = {
   workflow: {
     id: string;
@@ -261,7 +282,15 @@ export type SaveFullWorkflowResponse = {
   states: WorkflowState[];
   transitions: Array<Omit<WorkflowTransition, "conditions">>;
   conditions: Array<Required<Pick<WorkflowCondition, "id" | "transitionId" | "type" | "config" | "position">>>;
-  actions: Array<Required<Pick<WorkflowAction, "id" | "transitionId" | "type" | "config" | "position">>>;
+  actions: Array<
+    Required<
+      Pick<
+        WorkflowAction,
+        "id" | "transitionId" | "type" | "config" | "position"
+      >
+    > &
+      Pick<WorkflowAction, "branch">
+  >;
 };
 
 export type WorkflowDraftTestSession = {

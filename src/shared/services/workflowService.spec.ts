@@ -8,6 +8,7 @@ import {
   listWorkflowConditions,
   updateSaleOrderState,
   updateFullWorkflow,
+  updatePublishedWorkflowRules,
 } from "./workflowService";
 
 vi.mock("@/shared/common/utils/axios", () => ({
@@ -40,6 +41,27 @@ describe("workflowService", () => {
     await updateFullWorkflow("wf-1", payload);
 
     expect(axiosInstance.patch).toHaveBeenCalledWith("/workflows/full/wf-1", payload);
+  });
+
+  it("updates only the rules of a published workflow", async () => {
+    vi.mocked(axiosInstance.patch).mockResolvedValueOnce({ data: {} });
+    const payload = {
+      transitions: [
+        {
+          transitionId: "transition-1",
+          conditions: [],
+          actions: [],
+          elseActions: [],
+        },
+      ],
+    };
+
+    await updatePublishedWorkflowRules("wf-1", payload);
+
+    expect(axiosInstance.patch).toHaveBeenCalledWith(
+      "/workflows/wf-1/rules",
+      payload,
+    );
   });
 
   it("uses sale order state CRUD endpoints", async () => {

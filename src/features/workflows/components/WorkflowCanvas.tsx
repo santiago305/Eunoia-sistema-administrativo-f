@@ -46,6 +46,7 @@ import { ACTION_LABELS } from "./WorkflowActionEditor";
 type Props = {
   draft: WorkflowDraft;
   selectedId: string | null;
+  readOnly?: boolean;
   onSelect: (id: string | null) => void;
   onMoveState: (clientId: string, positionX: number, positionY: number) => void;
   onMoveGlobalTransition: (
@@ -239,6 +240,7 @@ const edgeTypes = {
 export function WorkflowCanvas({
   draft,
   selectedId,
+  readOnly = false,
   onSelect,
   onMoveState,
   onMoveGlobalTransition,
@@ -321,9 +323,9 @@ export function WorkflowCanvas({
           isGlobalDestination: globalDestinationIds.has(state.clientId),
         },
         selected: selectedId === state.clientId,
-        draggable: true,
+        draggable: !readOnly,
       })),
-    [visibleStates, globalDestinationIds, selectedId],
+    [visibleStates, globalDestinationIds, selectedId, readOnly],
   );
 
   const globalTransitionNodes = useMemo<Node[]>(
@@ -356,7 +358,7 @@ export function WorkflowCanvas({
               onSelect,
             },
             selected: selectedId === transition.clientId,
-            draggable: true,
+            draggable: !readOnly,
             selectable: true,
             className:
               effect === TRANSITION_EFFECTS.RUN_ACTIONS
@@ -364,7 +366,7 @@ export function WorkflowCanvas({
                 : "workflow-global-transition-node",
           };
         }),
-    [draft.transitions, onSelect, selectedId, stateNameById, statePositionById],
+    [draft.transitions, onSelect, readOnly, selectedId, stateNameById, statePositionById],
   );
   const transitionCardNodes = useMemo<Node[]>(
     () => {
@@ -420,7 +422,7 @@ export function WorkflowCanvas({
             data: { transition, onSelect, branch: "THEN" },
             selected: selectedId === transition.clientId,
             animated: transition.isActive,
-            reconnectable: "target",
+            reconnectable: readOnly ? false : "target",
             markerEnd: {
               type: MarkerType.ArrowClosed,
               color: isCancel ? "#e11d48" : "#334155",
@@ -444,7 +446,7 @@ export function WorkflowCanvas({
                   data: { transition, onSelect, branch: "ELSE" },
                   selected: selectedId === transition.clientId,
                   animated: transition.isActive,
-                  reconnectable: "target",
+                  reconnectable: readOnly ? false : "target",
                   markerEnd: {
                     type: MarkerType.ArrowClosed,
                     color: "#d97706",
@@ -459,7 +461,7 @@ export function WorkflowCanvas({
 
           return elseEdge ? [thenEdge, elseEdge] : [thenEdge];
         }),
-    [draft.transitions, onSelect, selectedId, visibleStateIds],
+    [draft.transitions, onSelect, readOnly, selectedId, visibleStateIds],
   );
   const transitionCardEdges = useMemo<Edge[]>(
     () =>
@@ -469,7 +471,7 @@ export function WorkflowCanvas({
           data: { transition, onSelect, branch: "ELSE" },
           selected: selectedId === transition.clientId,
           animated: transition.isActive,
-          reconnectable: "target" as const,
+          reconnectable: readOnly ? false : ("target" as const),
         };
         const edges: Edge[] = [];
         if (transition.elseToStateClientId && visibleStateIds.has(transition.elseToStateClientId)) {
@@ -486,7 +488,7 @@ export function WorkflowCanvas({
         }
         return edges;
       }),
-    [draft.transitions, onSelect, selectedId, visibleStateIds],
+    [draft.transitions, onSelect, readOnly, selectedId, visibleStateIds],
   );
 
   const globalEdges = useMemo<Edge[]>(
@@ -543,7 +545,10 @@ export function WorkflowCanvas({
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       connectionMode={ConnectionMode.Loose}
-      edgesReconnectable
+      edgesReconnectable={!readOnly}
+      nodesDraggable={!readOnly}
+      nodesConnectable={!readOnly}
+      deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
       reconnectRadius={24}
       fitView
       fitViewOptions={{ padding: 0.35, maxZoom: 0.8 }}
@@ -571,6 +576,7 @@ export function WorkflowCanvas({
         onSelect(data?.transition?.clientId ?? edge.id);
       }}
       onEdgesDelete={(deletedEdges) => {
+        if (readOnly) return;
         deletedEdges.forEach((edge) => {
           if (edge.id.endsWith(":else")) {
             onDeleteElseBranch(edge.id.slice(0, -":else".length));
@@ -578,6 +584,7 @@ export function WorkflowCanvas({
         });
       }}
       onNodesDelete={(deletedNodes) => {
+        if (readOnly) return;
         const node = deletedNodes[0];
         if (!node) return;
 
@@ -592,6 +599,7 @@ export function WorkflowCanvas({
         }
       }}
       onNodeDragStop={(_, node) => {
+        if (readOnly) return;
         if (node.type === "workflowState") {
           onMoveState(node.id, node.position.x, node.position.y);
           return;
@@ -617,6 +625,7 @@ export function WorkflowCanvas({
         }
       }}
       onReconnect={(oldEdge, connection) => {
+        if (readOnly) return;
         if (!connection.source || !connection.target) return;
 
         const data = oldEdge.data as
@@ -646,6 +655,7 @@ export function WorkflowCanvas({
         );
       }}
       onConnect={(connection: Connection) => {
+        if (readOnly) return;
         if (!connection.source || !connection.target) return;
 
         if (connection.source.startsWith(GLOBAL_NODE_PREFIX)) return;

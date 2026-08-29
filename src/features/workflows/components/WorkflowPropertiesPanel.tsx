@@ -28,6 +28,7 @@ type Props = {
   onTransitionChange: (transition: WorkflowDraftTransition) => void;
   onRemoveState: (clientId: string) => void;
   onRemoveTransition: (clientId: string) => void;
+  publishedRulesOnly?: boolean;
 };
 
 export function WorkflowPropertiesPanel(props: Props) {
@@ -42,12 +43,27 @@ export function WorkflowPropertiesPanel(props: Props) {
   if (!state && !transition) {
     return (
       <div className="p-4 text-xs text-black/50">
-        Selecciona un estado o una transición para editarlo.
+        {props.publishedRulesOnly
+          ? "Selecciona una transición para editar sus condiciones y acciones."
+          : "Selecciona un estado o una transición para editarlo."}
       </div>
     );
   }
 
   if (state) {
+    if (props.publishedRulesOnly) {
+      return (
+        <div className="space-y-3 p-4">
+          <div className="text-sm font-semibold">Estado bloqueado</div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            La estructura de esta versión publicada no se puede modificar.
+            Selecciona una transición para editar solo sus condiciones y
+            acciones.
+          </div>
+        </div>
+      );
+    }
+
     const patch = (next: Partial<WorkflowDraftState>) =>
       props.onStateChange({ ...state, ...next });
 
@@ -127,6 +143,49 @@ export function WorkflowPropertiesPanel(props: Props) {
     isNormalTransition &&
     transition!.purpose !== TRANSITION_PURPOSES.CANCEL;
   const elseEffect = transition!.elseEffect;
+
+  if (props.publishedRulesOnly) {
+    return (
+      <div className="space-y-3 p-4">
+        <div>
+          <div className="text-sm font-semibold">Condiciones y acciones</div>
+          <div className="mt-1 truncate text-xs text-black/55">
+            {transition!.name || "Transición sin nombre"}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-[11px] leading-4 text-sky-800">
+          Estás editando las reglas de una versión publicada. El nombre, los
+          estados, las conexiones y la estructura permanecen bloqueados.
+        </div>
+
+        <WorkflowConditionEditor
+          catalog={props.conditionCatalog}
+          value={transition!.conditions}
+          onChange={(conditions) => patch({ conditions })}
+        />
+        <WorkflowActionEditor
+          catalog={props.actionCatalog}
+          value={transition!.actions}
+          onChange={(actions) => patch({ actions })}
+        />
+
+        {elseEffect ? (
+          <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/30 p-3">
+            <div className="text-xs font-bold text-amber-700">
+              Acciones de la rama SI NO
+            </div>
+            <WorkflowActionEditor
+              catalog={props.actionCatalog}
+              value={transition!.elseActions}
+              onChange={(elseActions) => patch({ elseActions })}
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 p-4">
       <div>

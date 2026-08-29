@@ -543,6 +543,7 @@ export const API_WORKFLOWS_GROUP = {
   saleOrderStateDetail: (id: string) => `/sale-order-states/${id}`,
   managed: "/workflows/manage/revisions",
   createDraft: (id: string) => `/workflows/${id}/drafts`,
+  updatePublishedRules: (id: string) => `/workflows/${id}/rules`,
   publishPreview: (id: string) => `/workflow-revisions/${id}/publish-preview`,
   publish: (id: string) => `/workflow-revisions/${id}/publish`,
   tests: (id: string) => `/workflow-revisions/${id}/tests`,

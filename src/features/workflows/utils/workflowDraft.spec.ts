@@ -6,8 +6,10 @@ import {
 } from "@/features/workflows/types/workflow";
 import {
   buildFullWorkflowRequest,
+  buildChangedPublishedWorkflowRulesRequest,
   associateCancelSaleOrderState,
   getAutoTriggerPatch,
+  getPublishedWorkflowRulesSnapshot,
   hasInvalidStockRestorationCombination,
   mapWorkflowToDraft,
   removeWorkflowElement,
@@ -699,5 +701,93 @@ describe("removeWorkflowElement", () => {
       elseToStateClientId: null,
       elseActions: [],
     });
+  });
+});
+
+describe("published workflow rules", () => {
+  it("sends only changed conditions and actions without structural fields", () => {
+    const draft = {
+      id: "workflow-v1",
+      name: "Ventas",
+      description: "",
+      isActive: true,
+      lifecycleStatus: "PUBLISHED" as const,
+      revision: 1,
+      states: [],
+      transitions: [
+        {
+          id: "transition-1",
+          clientId: "transition-transition-1",
+          name: "Pago completo",
+          code: "PAY",
+          fromStateClientId: "state-1",
+          toStateClientId: "state-2",
+          elseToStateClientId: null,
+          isGlobal: false,
+          excludedStateClientIds: [],
+          effect: TRANSITION_EFFECTS.MOVE_STATE,
+          purpose: TRANSITION_PURPOSES.STANDARD,
+          isActive: true,
+          autoTrigger: false,
+          priority: 0,
+          elseEffect: null,
+          conditions: [],
+          actions: [],
+          elseActions: [],
+        },
+        {
+          id: "transition-2",
+          clientId: "transition-transition-2",
+          name: "Sin cambios",
+          code: "UNCHANGED",
+          fromStateClientId: "state-1",
+          toStateClientId: "state-2",
+          elseToStateClientId: null,
+          isGlobal: false,
+          excludedStateClientIds: [],
+          effect: TRANSITION_EFFECTS.MOVE_STATE,
+          purpose: TRANSITION_PURPOSES.STANDARD,
+          isActive: true,
+          autoTrigger: false,
+          priority: 0,
+          elseEffect: null,
+          conditions: [],
+          actions: [],
+          elseActions: [],
+        },
+      ],
+    };
+    const baseline = getPublishedWorkflowRulesSnapshot(draft);
+    const edited = {
+      ...draft,
+      transitions: draft.transitions.map((transition) =>
+        transition.id === "transition-1"
+          ? {
+              ...transition,
+              conditions: [
+                { type: "IS_PAID" as const, config: {}, position: 0 },
+              ],
+            }
+          : transition,
+      ),
+    };
+
+    const request = buildChangedPublishedWorkflowRulesRequest(
+      edited,
+      baseline,
+    );
+
+    expect(request).toEqual({
+      transitions: [
+        {
+          transitionId: "transition-1",
+          conditions: [{ type: "IS_PAID", config: {}, position: 0 }],
+          actions: [],
+          elseActions: [],
+        },
+      ],
+    });
+    expect(request.transitions[0]).not.toHaveProperty("name");
+    expect(request.transitions[0]).not.toHaveProperty("fromStateRef");
   });
 });
