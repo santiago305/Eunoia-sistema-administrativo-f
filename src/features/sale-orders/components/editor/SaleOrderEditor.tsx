@@ -59,6 +59,7 @@ import {
   buildSaleOrderPaymentMethodOptions,
   type SaleOrderPaymentSelectOption,
 } from "../useSaleOrderPaymentOptions";
+import { buildSaleOrderWorkflowOptions } from "../../utils/saleOrderWorkflowOptions";
 
 type Props = {
   mode: "create" | "edit";
@@ -214,12 +215,7 @@ export function SaleOrderEditor({
           })),
         );
         setWorkflowOptions(
-          catalogs.workflows
-            .filter((workflow) => workflow.isActive)
-            .map((workflow) => ({
-              value: workflow.id,
-              label: workflow.name,
-            })),
+          buildSaleOrderWorkflowOptions(catalogs.workflows),
         );
         setAdviserOptions(catalogs.advisers);
         setPaymentMethodOptions(

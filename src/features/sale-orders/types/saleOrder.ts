@@ -538,7 +538,14 @@ export type SaleOrderEditorCatalogsResponse = {
     basePrice?: number | null;
   }>;
   sources: Array<{ id: string; name: string }>;
-  workflows: Array<{ id: string; name: string; isActive: boolean }>;
+  workflows: Array<{
+    id: string;
+    name: string;
+    isActive: boolean;
+    revision?: number;
+    createdAt?: string;
+    publishedAt?: string | null;
+  }>;
   advisers: Array<{ id: string; name: string; email: string }>;
   paymentMethods: PaymentMethodPivot[];
   companyPaymentAccounts: CompanyPaymentAccount[];

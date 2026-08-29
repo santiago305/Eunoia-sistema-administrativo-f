@@ -15,6 +15,7 @@ import { getDateKey } from "@/shared/components/components/date-picker/dateUtils
 import { Modal } from "@/shared/components/modales/Modal";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { getWorkflow, listSaleOrderStates, listWorkflows } from "@/shared/services/workflowService";
+import { buildSaleOrderWorkflowOptions } from "@/features/sale-orders/utils/saleOrderWorkflowOptions";
 
 type BulkExecutionMode = "state" | "global_action";
 
@@ -77,7 +78,7 @@ export function SaleOrderBulkChangeStateModal({
     const [loadingStates, setLoadingStates] = useState(false);
     const [error, setError] = useState("");
     const [stateFilter, setStateFilter] = useState<string[]>([]);
-    const [workflows, setWorkflows] = useState<Array<Pick<WorkflowDefinition, "id" | "name" | "isActive">>>([]);
+    const [workflows, setWorkflows] = useState<WorkflowDefinition[]>([]);
     const [workflowDetails, setWorkflowDetails] = useState<SaveFullWorkflowResponse[]>([]);
     const [workflowFilter, setWorkflowFilter] = useState<string[]>([]);
     const [range, setRange] = useState<{ startDate: Date | null; endDate: Date | null }>({ startDate: null, endDate: null });
@@ -140,13 +141,7 @@ export function SaleOrderBulkChangeStateModal({
     }, [previewRows, states]);
 
     const workflowOptions = useMemo(() => {
-        const options = workflows
-            .filter((workflow) => Boolean(workflow.id))
-            .map((workflow) => ({
-                value: workflow.id,
-                label: workflow.name,
-            }))
-            .sort((a, b) => a.label.localeCompare(b.label, "es"));
+        const options = buildSaleOrderWorkflowOptions(workflows);
 
         if (previewRows.some((row) => row.workflowId === "__none__")) {
             options.unshift({ value: "__none__", label: "Sin tipo" });
