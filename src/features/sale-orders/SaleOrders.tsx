@@ -808,13 +808,27 @@ export default function SaleOrders() {
 
     const loadBulkFilteredOrders = useCallback(
         async (input: { page: 1; limit: 100; filters: SaleOrderSearchRule[] }) => {
-            const response = await listSaleOrders({
-                page: input.page,
-                limit: input.limit,
-                filters: input.filters.length ? input.filters : undefined,
-                isActive: showDeletedOrders ? false : true,
-            });
-            return response.items ?? [];
+            const pageSize = input.limit;
+            const allItems: SaleOrder[] = [];
+            let currentPage = input.page;
+            let total = Number.POSITIVE_INFINITY;
+
+            while (allItems.length < total) {
+                const response = await listSaleOrders({
+                    page: currentPage,
+                    limit: pageSize,
+                    filters: input.filters.length ? input.filters : undefined,
+                    isActive: showDeletedOrders ? false : true,
+                });
+                const pageItems = response.items ?? [];
+                allItems.push(...pageItems);
+                total = response.total ?? allItems.length;
+
+                if (pageItems.length === 0 || allItems.length >= total) break;
+                currentPage += 1;
+            }
+
+            return allItems;
         },
         [showDeletedOrders],
     );
