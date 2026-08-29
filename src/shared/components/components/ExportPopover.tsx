@@ -22,6 +22,7 @@ type Props<TColumn extends ExportColumn = ExportColumn> = {
   onSavePreset?: (payload: { name: string; columns: TColumn[] }) => Promise<void> | void;
   onDeletePreset?: (metricId: string) => Promise<void> | void;
   onExport: (columns: TColumn[]) => Promise<void> | void;
+  onOpen?: () => Promise<void> | void;
   buttonLabel?: string;
   buttonSize?: ButtonSize;
   buttonClass?: string;
@@ -36,6 +37,7 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
   onSavePreset,
   onDeletePreset,
   onExport,
+  onOpen,
   buttonLabel = "Exportar",
   buttonSize="sm",
   buttonClass,
@@ -47,6 +49,7 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [selected, setSelected] = useState<TColumn[]>(columns);
   const [presetName, setPresetName] = useState("");
+  const loadedRef = useRef(false);
 
   const selectedKeys = useMemo(() => new Set(selected.map((column) => column.key)), [selected]);
   const orderedColumns = useMemo(() => {
@@ -86,7 +89,13 @@ export function ExportPopover<TColumn extends ExportColumn = ExportColumn>({
   return (
     <div className="relative inline-block">
       <SystemButton ref={buttonRef} size={buttonSize} variant={buttonVariant} className={buttonClass}
-      tooltip={buttonTooltip} aria-label={buttonTooltip ?? (buttonLabel || "Exportar")} leftIcon={<Download className="h-4 w-4" />} onClick={() => setOpen((v) => !v)}>
+      tooltip={buttonTooltip} aria-label={buttonTooltip ?? (buttonLabel || "Exportar")} leftIcon={<Download className="h-4 w-4" />} onClick={() => {
+        setOpen((v) => !v);
+        if (!loadedRef.current) {
+          loadedRef.current = true;
+          void onOpen?.();
+        }
+      }}>
         {buttonLabel}
       </SystemButton>
 

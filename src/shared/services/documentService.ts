@@ -112,6 +112,11 @@ export const getStockSku = async (
   return response.data;
 };
 
+export const getStockSkuBatch = async (items: Array<{ warehouseId: string; skuId: string; locationId?: string }>) => {
+  const response = await axiosInstance.post(`${API_DOCUMENT_INVENTORY_GROUP.getStock}/batch`, { items });
+  return response.data.items as Array<{ warehouseId: string; skuId: string; stock: skuStock }>;
+};
+
 export const createInventoryMovement = async (payload: CreateInventoryMovement): Promise<InventoryMovementResponse> => {
   const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.movementCreated, payload);
   return response.data;

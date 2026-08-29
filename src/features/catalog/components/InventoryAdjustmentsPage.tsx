@@ -222,16 +222,6 @@ export function InventoryAdjustmentsPage({
   }, [config.documentProductType]);
 
   useEffect(() => {
-    if (!permissions.export) {
-      setExportColumns([]);
-      setExportPresets([]);
-      return;
-    }
-    void loadExportColumns();
-    void loadExportPresets();
-  }, [loadExportColumns, loadExportPresets, permissions.export]);
-
-  useEffect(() => {
     if (prefillHandledRef.current) return;
     const shouldOpen = searchParams.get("openAdjustmentModal") === "1";
     const skuId = searchParams.get("skuId")?.trim();
@@ -455,6 +445,9 @@ export function InventoryAdjustmentsPage({
         realtimeRefreshTimeoutRef.current = null;
         void loadDocuments();
       }, 350);
+    }, {
+      docTypes: [DocType.ADJUSTMENT],
+      productTypes: [config.documentProductType],
     });
     return () => {
       unsubscribe();
@@ -463,7 +456,7 @@ export function InventoryAdjustmentsPage({
         realtimeRefreshTimeoutRef.current = null;
       }
     };
-  }, [loadDocuments]);
+  }, [config.documentProductType, loadDocuments]);
 
   const openDocumentPdf = (documentId: string) => {
     setSelectedDocumentId(documentId);
@@ -673,7 +666,7 @@ export function InventoryAdjustmentsPage({
   return (
     <PageShell className="bg-white">
       <PageActionsRow>
-          {permissions.export && exportColumns.length ? (
+          {permissions.export ? (
             <ExportPopover
               columns={exportColumns}
               presets={exportPresets}
@@ -681,6 +674,10 @@ export function InventoryAdjustmentsPage({
               onSavePreset={handleSaveExportPreset}
               onDeletePreset={handleDeleteExportPreset}
               onExport={handleExport}
+              onOpen={async () => {
+                if (!exportColumns.length) await loadExportColumns();
+                if (!exportPresets.length) await loadExportPresets();
+              }}
             />
           ) : null}
           <SystemButton

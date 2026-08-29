@@ -10,7 +10,7 @@ import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
-import { createTransfer, getStockSku } from "@/shared/services/documentService";
+import { createTransfer, getStockSkuBatch } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
 import { parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
@@ -32,7 +32,6 @@ import {
     buildStockSummary,
     buildSkuLabelWithAttributes,
 } from "@/features/catalog/types/transfer";
-import { skuStock } from "@/features/catalog/types/documentInventory";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 
 export default function TransferProducts({ onClose, onSaved, type, open, initialSku }: TransferProductsProps) {
@@ -396,18 +395,14 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
             to: null,
         });
         try {
-            const [fromStock, toStock] = await Promise.all([
-                getStockSku({
-                    warehouseId: form.fromWarehouseId,
-                    skuId: row.skuId,
-                }) as Promise<skuStock>,
-                form.toWarehouseId
-                    ? (getStockSku({
-                          warehouseId: form.toWarehouseId,
-                          skuId: row.skuId,
-                      }) as Promise<skuStock>)
-                    : Promise.resolve(null),
+            const stocks = await getStockSkuBatch([
+                { warehouseId: form.fromWarehouseId, skuId: row.skuId },
+                ...(form.toWarehouseId ? [{ warehouseId: form.toWarehouseId, skuId: row.skuId }] : []),
             ]);
+            const fromStock = stocks.find((entry) => entry.warehouseId === form.fromWarehouseId)?.stock ?? null;
+            const toStock = form.toWarehouseId
+                ? stocks.find((entry) => entry.warehouseId === form.toWarehouseId)?.stock ?? null
+                : null;
 
             setStockDetail({
                 loading: false,
@@ -504,6 +499,12 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
             const reasons: string[] = [];
 
+            const stockResults = await getStockSkuBatch(
+                (form.items ?? []).filter((item) => Number(item.quantity) > 0).map((item) => ({
+                    warehouseId: form.fromWarehouseId,
+                    skuId: item.skuId,
+                })),
+            );
             await Promise.all(
                 (form.items ?? []).map(async (item) => {
                     const skuData = selectedSkus.find((s) => s.sku.id === item.skuId);
@@ -516,10 +517,7 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
                     }
 
                     try {
-                        const stock = await getStockSku({
-                            warehouseId: form.fromWarehouseId,
-                            skuId: item.skuId,
-                        });
+                        const stock = stockResults.find((entry) => entry.skuId === item.skuId)?.stock;
 
                         const available = Number(stock?.available ?? 0);
                         if (available <= 0) {

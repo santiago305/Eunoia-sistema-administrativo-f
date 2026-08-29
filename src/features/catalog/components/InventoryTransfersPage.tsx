@@ -211,16 +211,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     })));
   }, [config.productType]);
 
-  useEffect(() => {
-    if (!permissions.export) {
-      setExportColumns([]);
-      setExportPresets([]);
-      return;
-    }
-    void loadExportColumns();
-    void loadExportPresets();
-  }, [loadExportColumns, loadExportPresets, permissions.export]);
-
   const [initialTransferSku, setInitialTransferSku] = useState<{
     skuId: string;
     name?: string;
@@ -450,6 +440,9 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         realtimeRefreshTimeoutRef.current = null;
         void loadDocuments();
       }, 350);
+    }, {
+      docTypes: [DocType.TRANSFER],
+      productTypes: [config.productType],
     });
     return () => {
       unsubscribe();
@@ -458,7 +451,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
         realtimeRefreshTimeoutRef.current = null;
       }
     };
-  }, [loadDocuments]);
+  }, [config.productType, loadDocuments]);
 
   const openDocumentPdf = (id: string) => {
     clearFeedback();
@@ -690,7 +683,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
     <PageShell>
         <PageTitle title={config.pageTitle} />
         <PageActionsRow>
-            {permissions.export && exportColumns.length ? (
+          {permissions.export ? (
               <ExportPopover
                 columns={exportColumns}
                 presets={exportPresets}
@@ -698,6 +691,10 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
                 onSavePreset={handleSaveExportPreset}
                 onDeletePreset={handleDeleteExportPreset}
                 onExport={handleExport}
+                onOpen={async () => {
+                  if (!exportColumns.length) await loadExportColumns();
+                  if (!exportPresets.length) await loadExportPresets();
+                }}
               />
             ) : null}
             <SystemButton

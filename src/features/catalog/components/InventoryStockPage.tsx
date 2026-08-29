@@ -376,16 +376,6 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     void loadSearchState();
   }, [loadSearchState]);
 
-  useEffect(() => {
-    if (!permissions.export) {
-      setExportColumns([]);
-      setExportPresets([]);
-      return;
-    }
-    void loadExportColumns();
-    void loadExportPresets();
-  }, [loadExportColumns, loadExportPresets, permissions.export]);
-
   const loadForecast = async (skuId: string, warehouseId?: string) => {
     const requestId = (forecastRequestRef.current += 1);
     setForecastLoading(true);
@@ -825,7 +815,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       <PageTitle title={config.pageTitle} />
       <div className="space-y-2">
         <PageActionsRow>
-          {permissions.export && exportColumns.length ? (
+          {permissions.export ? (
             <ExportPopover
               columns={exportColumns}
               presets={exportPresets}
@@ -833,6 +823,10 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
               onSavePreset={handleSaveExportPreset}
               onDeletePreset={handleDeleteExportPreset}
               onExport={handleExport}
+              onOpen={async () => {
+                if (!exportColumns.length) await loadExportColumns();
+                if (!exportPresets.length) await loadExportPresets();
+              }}
             />
           ) : null}
         </PageActionsRow>
