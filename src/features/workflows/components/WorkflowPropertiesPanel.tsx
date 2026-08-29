@@ -148,16 +148,66 @@ export function WorkflowPropertiesPanel(props: Props) {
     return (
       <div className="space-y-3 p-4">
         <div>
-          <div className="text-sm font-semibold">Condiciones y acciones</div>
+          <div className="text-sm font-semibold">Configuración y reglas</div>
           <div className="mt-1 truncate text-xs text-black/55">
             {transition!.name || "Transición sin nombre"}
           </div>
         </div>
 
         <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-[11px] leading-4 text-sky-800">
-          Estás editando las reglas de una versión publicada. El nombre, los
-          estados, las conexiones y la estructura permanecen bloqueados.
+          Puedes cambiar la ejecución automática, la prioridad, las
+          condiciones y las acciones. El nombre, los estados, las conexiones
+          y la estructura permanecen bloqueados.
         </div>
+
+        {supportsAutomation ? (
+          <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+            <CheckboxRow
+              label="Disparar automáticamente"
+              checked={transition!.autoTrigger}
+              onCheckedChange={(checked) =>
+                patch({
+                  autoTrigger: checked,
+                  priority: checked ? transition!.priority : 0,
+                })
+              }
+            />
+            {transition!.autoTrigger ? (
+              <>
+                <FloatingInput
+                  label="Prioridad automática"
+                  name="published-transition-priority"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={String(transition!.priority)}
+                  onChange={(event) =>
+                    patch({
+                      priority: Math.max(
+                        0,
+                        Math.trunc(Number(event.target.value) || 0),
+                      ),
+                    })
+                  }
+                  className="h-9 text-xs"
+                />
+                <p className="text-[11px] leading-4 text-sky-700">
+                  Una transición automática necesita al menos una condición.
+                  Si hay varias desde el mismo estado, usa prioridades
+                  diferentes; el número menor se evalúa primero.
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] leading-4 text-slate-600">
+                Esta transición se ejecuta manualmente.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-700">
+            Este tipo de transición no admite ejecución automática.
+          </div>
+        )}
 
         <WorkflowConditionEditor
           catalog={props.conditionCatalog}

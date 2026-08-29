@@ -49,6 +49,8 @@ describe("workflowService", () => {
       transitions: [
         {
           transitionId: "transition-1",
+          autoTrigger: false,
+          priority: 0,
           conditions: [],
           actions: [],
           elseActions: [],

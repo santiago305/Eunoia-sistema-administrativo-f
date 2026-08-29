@@ -579,7 +579,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
       publishedRulesSnapshotRef.current =
         getPublishedWorkflowRulesSnapshot(persisted);
       setNotice(
-        `Condiciones y acciones guardadas en la version ${persisted.revision ?? 1}.`,
+        `Configuracion y reglas guardadas en la version ${persisted.revision ?? 1}.`,
       );
     } catch (err) {
       setError(parseApiError(err));
@@ -661,14 +661,16 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
     }));
 
   const replaceTransition = (transition: WorkflowDraftTransition) =>
-    setDraft((current) =>
-      ensureDefaultCancelTransition({
+    setDraft((current) => {
+      const updatedDraft: WorkflowDraft = {
         ...current,
         transitions: current.transitions.map((item) =>
           item.clientId === transition.clientId
             ? isPublished
               ? {
                   ...item,
+                  autoTrigger: transition.autoTrigger,
+                  priority: transition.priority,
                   conditions: transition.conditions,
                   actions: transition.actions,
                   elseActions: transition.elseActions,
@@ -676,8 +678,12 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
               : transition
             : item,
         ),
-      }),
-    );
+      };
+
+      return isPublished
+        ? updatedDraft
+        : ensureDefaultCancelTransition(updatedDraft);
+    });
 
   return (
     <Modal
@@ -748,7 +754,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                   loading={saving}
                   onClick={() => void savePublishedRules()}
                 >
-                  Guardar condiciones y acciones
+                  Guardar configuración y reglas
                 </SystemButton>
                 <SystemButton
                   type="button"
@@ -758,7 +764,7 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
                   loading={saving}
                   title={
                     publishedRulesDirty
-                      ? "Guarda primero los cambios de condiciones y acciones."
+                      ? "Guarda primero los cambios de configuración y reglas."
                       : undefined
                   }
                   onClick={() => void openDraft()}
@@ -807,8 +813,9 @@ export function WorkflowEditorModal({ open, onClose }: Props) {
           {isPublished ? (
             <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
               Version publicada v{draft.revision ?? 1}: puedes cambiar solo
-              condiciones y acciones. Los estados, conexiones y estructura
-              permanecen bloqueados.
+              la ejecución automática, la prioridad, las condiciones y las
+              acciones. Los estados, conexiones y estructura permanecen
+              bloqueados.
             </div>
           ) : null}
           {notice ? (

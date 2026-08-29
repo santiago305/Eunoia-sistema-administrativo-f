@@ -128,7 +128,7 @@ describe("WorkflowEditorModal", () => {
     });
   });
 
-  it("edits only conditions and actions on the same published revision", async () => {
+  it("edits allowed configuration and rules on the same published revision", async () => {
     const user = userEvent.setup();
     const publishedResponse = {
       workflow: {
@@ -247,11 +247,11 @@ describe("WorkflowEditorModal", () => {
     await user.click(
       screen.getByRole("button", { name: "Agregar pago completo" }),
     );
-    await user.click(
-      screen.getByRole("button", {
-        name: "Guardar condiciones y acciones",
-      }),
-    );
+    const saveRulesButton = screen.getByRole("button", {
+      name: "Guardar configuración y reglas",
+    });
+    await waitFor(() => expect(saveRulesButton).toBeEnabled());
+    await user.click(saveRulesButton);
 
     await waitFor(() =>
       expect(
@@ -260,6 +260,8 @@ describe("WorkflowEditorModal", () => {
         transitions: [
           expect.objectContaining({
             transitionId: "transition-pay",
+            autoTrigger: false,
+            priority: 0,
             conditions: [
               { type: "IS_PAID", config: {}, position: 0 },
             ],

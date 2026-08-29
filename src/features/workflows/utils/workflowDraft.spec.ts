@@ -781,6 +781,8 @@ describe("published workflow rules", () => {
       transitions: [
         {
           transitionId: "transition-1",
+          autoTrigger: false,
+          priority: 0,
           conditions: [{ type: "IS_PAID", config: {}, position: 0 }],
           actions: [],
           elseActions: [],

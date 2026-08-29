@@ -120,6 +120,25 @@ const getTransitionLabel = (transition: WorkflowDraftTransition) => {
         <span className="truncate">
           {transition.name || "Transición sin nombre"}
         </span>
+        {!isGlobal && !isCancel ? (
+          <span
+            className={[
+              "shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide",
+              transition.autoTrigger
+                ? "bg-sky-100 text-sky-700"
+                : "bg-slate-100 text-slate-600",
+            ].join(" ")}
+            title={
+              transition.autoTrigger
+                ? `Automática, prioridad ${transition.priority}`
+                : "Ejecución manual"
+            }
+          >
+            {transition.autoTrigger
+              ? `Auto · P${transition.priority}`
+              : "Manual"}
+          </span>
+        ) : null}
       </div>
 
       {transition.conditions.length ? (

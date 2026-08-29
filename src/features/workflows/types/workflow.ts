@@ -245,6 +245,8 @@ export type SaveFullWorkflowRequest = {
 export type UpdatePublishedWorkflowRulesRequest = {
   transitions: Array<{
     transitionId: string;
+    autoTrigger: boolean;
+    priority: number;
     conditions: Array<{
       type: WorkflowConditionType;
       config?: Record<string, unknown>;

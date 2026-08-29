@@ -316,6 +316,8 @@ export function buildPublishedWorkflowRulesRequest(
 
       return {
         transitionId: transition.id,
+        autoTrigger: transition.autoTrigger,
+        priority: transition.priority,
         conditions: transition.conditions.map(normalizeCondition),
         actions: transition.actions.map((action, index) => ({
           type: action.type,
