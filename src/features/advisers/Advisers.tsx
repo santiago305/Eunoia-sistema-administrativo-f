@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
-import { Edit3, Plus, Power, PowerOff, ScanLine } from "lucide-react";
+import { Plus, Power, PowerOff, ScanLine } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -8,11 +8,10 @@ import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchIte
 import { DataTableActionsPopover } from "@/shared/components/components/DataTableActionsPopover";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { Modal } from "@/shared/components/modales/Modal";
-import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { createAdviser, deleteAdviserSearchMetric, getAdviserSearchState, listAdviserOrders, listAdviserSummary, saveAdviserSearchMetric, setAdviserActive, updateAdviser, type AdviserOption, type AdviserOrderListItem } from "@/shared/services/adviserService";
+import { createAdviser, deleteAdviserSearchMetric, getAdviserSearchState, listAdviserOrders, listAdviserSummary, saveAdviserSearchMetric, setAdviserActive, type AdviserOption, type AdviserOrderListItem } from "@/shared/services/adviserService";
 import { listUsers, type UserApiListItem } from "@/shared/services/userService";
 import { SaleOrderAdviserImportAliasesModal } from "@/features/sale-orders/components/SaleOrderAdviserImportAliasesModal";
 import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
@@ -60,9 +59,6 @@ export default function Advisers() {
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState<AdviserOption | null>(null);
   const [codesFor, setCodesFor] = useState<AdviserOption | null>(null);
-  const [editing, setEditing] = useState<AdviserOption | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
   const [ordersFor, setOrdersFor] = useState<AdviserOption | null>(null);
   const [adviserOrders, setAdviserOrders] = useState<AdviserOrderListItem[]>([]);
   const [ordersPage, setOrdersPage] = useState(1);
@@ -97,7 +93,6 @@ export default function Advisers() {
   const openAdd = async () => { const response = await listUsers({ status: "active", page: 1 }); setUsers(response.items ?? []); setSelectedUser(""); setAddOpen(true); };
   const add = async () => { if (!selectedUser) return; setSaving(true); try { await createAdviser(selectedUser); setAddOpen(false); await load(); } finally { setSaving(false); } };
   const toggle = async () => { if (!pending) return; setSaving(true); try { await setAdviserActive(pending.id, !pending.isActive); setPending(null); await load(); } finally { setSaving(false); } };
-  const saveEdit = async () => { if (!editing) return; setSaving(true); try { await updateAdviser(editing.id, { name: editName, email: editEmail }); setEditing(null); await load(); } finally { setSaving(false); } };
 
   const changePeriod = ({ startDate, endDate }: { startDate: Date | null; endDate: Date | null }) => {
     if (!startDate && !endDate) {
@@ -146,7 +141,7 @@ export default function Advisers() {
     { id: "soldTotal", header: "Total dinero vendido", cell: (row) => money.format(row.soldTotal ?? 0), sortAccessor: (row) => row.soldTotal ?? 0, headerClassName: centeredHeader, className: centered },
     { id: "collectedTotal", header: "Total dinero recaudado", cell: (row) => money.format(row.collectedTotal ?? 0), sortAccessor: (row) => row.collectedTotal ?? 0, headerClassName: centeredHeader, className: centered },
     { id: "status", header: "Estado", cell: (row) => <StatusPill active={row.isActive !== false} PRIMARY="hsl(var(--primary))" />, headerClassName: centeredHeader, className: centered },
-    { id: "actions", header: "Acciones", stopRowClick: true, visible: canManage, headerClassName: centeredHeader, className: centered, cell: (row) => <div className="flex justify-center"><DataTableActionsPopover actions={[{ id: "codes", label: "Códigos", icon: <ScanLine className="h-4 w-4" />, onClick: () => setCodesFor(row) }, { id: "edit", label: "Editar", icon: <Edit3 className="h-4 w-4" />, onClick: () => { setEditing(row); setEditName(row.name); setEditEmail(row.email); } }, { id: "toggle", label: row.isActive ? "Desactivar" : "Activar", icon: row.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />, onClick: () => setPending(row) }]} /></div> },
+    { id: "actions", header: "Acciones", stopRowClick: true, visible: canManage, headerClassName: centeredHeader, className: centered, cell: (row) => <div className="flex justify-center"><DataTableActionsPopover actions={[{ id: "codes", label: "Códigos", icon: <ScanLine className="h-4 w-4" />, onClick: () => setCodesFor(row) }, { id: "toggle", label: row.isActive ? "Desactivar" : "Activar", icon: row.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />, onClick: () => setPending(row) }]} /></div> },
   ], [canManage]);
 
   return <PageShell>
@@ -165,7 +160,6 @@ export default function Advisers() {
       capabilities={{ canEdit: false, canManageAdvancedOrders: false, canAssignWorkflow: false }}
     />
     <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar asesor"><div className="space-y-4"><FloatingSelect label="Usuario del sistema" name="adviser-user" value={selectedUser} options={users.filter((user) => !user.deleted).map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))} onChange={setSelectedUser} searchable emptyMessage="No hay usuarios disponibles" /><div className="flex justify-end"><SystemButton onClick={() => void add()} loading={saving} disabled={!selectedUser}>Agregar</SystemButton></div></div></Modal>
-    <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Editar asesor"><div className="space-y-3"><FloatingInput label="Nombre" name="adviser-name" value={editName} onChange={(event) => setEditName(event.target.value)} /><FloatingInput label="Correo" name="adviser-email" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} /><div className="flex justify-end"><SystemButton onClick={() => void saveEdit()} loading={saving}>Guardar</SystemButton></div></div></Modal>
     <AlertModal open={Boolean(pending)} onClose={() => setPending(null)} onConfirm={() => void toggle()} type={pending?.isActive ? "warning" : "restore"} title={pending?.isActive ? "Desactivar asesor" : "Activar asesor"} message={pending?.isActive ? "El asesor no podrá recibir nuevas asignaciones." : "El asesor podrá recibir nuevas asignaciones."} confirmText={pending?.isActive ? "Desactivar" : "Activar"} loading={saving} />
     <SaleOrderAdviserImportAliasesModal open={Boolean(codesFor)} adviserUserId={codesFor?.id} adviserName={codesFor?.name} canManage={canManage} onClose={() => setCodesFor(null)} />
   </PageShell>;
