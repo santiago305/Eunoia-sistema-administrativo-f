@@ -1,5 +1,6 @@
 import axiosInstance from "@/shared/common/utils/axios";
 import { API_ADVISERS_GROUP } from "./APIs";
+import type { AdviserSearchSnapshot, AdviserSearchStateResponse } from "@/features/advisers/types/adviserSearch";
 
 export type AdviserOption = {
   id: string;
@@ -30,11 +31,15 @@ export const createAdviser = async (
   return response.data;
 };
 
-export const listAdviserSummary = async (params: { page: number; limit?: number; q?: string }) =>
-  (await axiosInstance.get<AdviserSummaryResponse>(API_ADVISERS_GROUP.summary, { params })).data;
+export const listAdviserSummary = async (params: { page: number; limit?: number; q?: string; filters?: AdviserSearchSnapshot["filters"] }) =>
+  (await axiosInstance.get<AdviserSummaryResponse>(API_ADVISERS_GROUP.summary, { params: { ...params, filters: params.filters?.length ? JSON.stringify(params.filters) : undefined } })).data;
 
 export const setAdviserActive = async (id: string, isActive: boolean) =>
   (await axiosInstance.patch(API_ADVISERS_GROUP.active(id), { isActive })).data;
 
 export const updateAdviser = async (id: string, payload: { name: string; email: string }) =>
   (await axiosInstance.patch(`/advisers/${id}`, payload)).data;
+
+export const getAdviserSearchState = async () => (await axiosInstance.get<AdviserSearchStateResponse>(API_ADVISERS_GROUP.searchState)).data;
+export const saveAdviserSearchMetric = async (name: string, snapshot: AdviserSearchSnapshot) => (await axiosInstance.post(API_ADVISERS_GROUP.searchMetrics, { name, snapshot })).data;
+export const deleteAdviserSearchMetric = async (id: string) => (await axiosInstance.delete(API_ADVISERS_GROUP.searchMetric(id))).data;

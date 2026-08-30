@@ -535,6 +535,9 @@ export const API_ADVISERS_GROUP = {
   create: "/advisers",
   summary: "/advisers/summary",
   active: (id: string) => `/advisers/${id}/active`,
+  searchState: "/advisers/search-state",
+  searchMetrics: "/advisers/search-metrics",
+  searchMetric: (id: string) => `/advisers/search-metrics/${id}`,
 };
 
 export const API_WORKFLOWS_GROUP = {
