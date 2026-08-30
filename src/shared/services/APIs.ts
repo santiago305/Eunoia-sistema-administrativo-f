@@ -533,6 +533,8 @@ export const API_SALE_ORDERS_GROUP = {
 export const API_ADVISERS_GROUP = {
   list: "/advisers",
   create: "/advisers",
+  summary: "/advisers/summary",
+  active: (id: string) => `/advisers/${id}/active`,
 };
 
 export const API_WORKFLOWS_GROUP = {

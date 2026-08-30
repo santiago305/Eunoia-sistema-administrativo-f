@@ -422,6 +422,7 @@ export const listSaleOrderAdviserImportAliases = async (params: {
   page: number;
   limit?: number;
   q?: string;
+  adviserUserId?: string;
 }): Promise<SaleOrderAdviserImportAliasesResponse> => {
   const response = await axiosInstance.get<SaleOrderAdviserImportAliasesResponse>(
     API_SALE_ORDERS_GROUP.adviserImportAliases,

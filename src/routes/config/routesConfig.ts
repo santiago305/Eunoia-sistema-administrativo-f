@@ -84,6 +84,7 @@ export const routesConfig: RouteMetadata[] = [
   { path: RoutesPaths.paymentAccounts, name: "paymentAccounts", isProtected: true, permissionsAllowed: ["page.payment-accounts.view", "payment_accounts.view"] },
   { path: RoutesPaths.paymentMethods, name: "paymentMethods", isProtected: true, permissionsAllowed: ["page.payment-methods.view"] },
   { path: RoutesPaths.saleOrders, name: "saleOrders", isProtected: true, permissionsAllowed: ["page.sale-orders.view", "sale_orders.view"] },
+  { path: RoutesPaths.advisers, name: "advisers", isProtected: true, permissionsAllowed: ["advisers.view"] },
 
   { path: RoutesPaths.production, name: "production", isProtected: true, permissionsAllowed: ["page.production.view"] },
   { path: RoutesPaths.productionCreate, name: "productionCreate", isProtected: true, permissionsAllowed: ["page.production.view"] },

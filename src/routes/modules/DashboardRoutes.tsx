@@ -55,6 +55,7 @@ const AccountsPayablePage = lazy(() => import("@/features/payments/pages/Account
 const PaymentAccountsPage = lazy(() => import("@/features/payments/pages/PaymentAccountsPage"));
 const PaymentMethodsPage = lazy(() => import("@/features/payment-methods/PaymentMethodsPage"));
 const SaleOrders = lazy(() => import("@/features/sale-orders/SaleOrders"));
+const Advisers = lazy(() => import("@/features/advisers/Advisers"));
 const Company = lazy(() => import("@/features/company/Company"));
 const Production = lazy(() => import("@/features/production/Productions"));
 const KardexPrima = lazy(() => import("@/features/catalog/raw-material/KardexPrima"));
@@ -270,6 +271,10 @@ export const dashboardRoutes: RouteObject[] = [
             {
                 path: RoutesPaths.saleOrders,
                 element: withCompanyRouteGuard(RoutesPaths.saleOrders, <SaleOrders />),
+            },
+            {
+                path: RoutesPaths.advisers,
+                element: withCompanyRouteGuard(RoutesPaths.advisers, <Advisers />),
             },
             {
                 path: RoutesPaths.security,

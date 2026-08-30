@@ -22,11 +22,13 @@ type Props = {
   open: boolean;
   canManage: boolean;
   onClose: () => void;
+  adviserUserId?: string;
+  adviserName?: string;
 };
 
 const PAGE_SIZE = 25;
 
-export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose }: Props) {
+export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose, adviserUserId: adviserFilterUserId, adviserName }: Props) {
   const [items, setItems] = useState<SaleOrderAdviserImportAlias[]>([]);
   const [advisers, setAdvisers] = useState<AdviserOption[]>([]);
   const [page, setPage] = useState(1);
@@ -58,8 +60,9 @@ export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose }:
           page,
           limit: PAGE_SIZE,
           q: query.trim() || undefined,
+          adviserUserId: adviserFilterUserId,
         }),
-        listAdvisers(),
+        adviserFilterUserId ? Promise.resolve([]) : listAdvisers(),
       ]);
       setItems(aliasesResponse.items ?? []);
       setTotal(aliasesResponse.total ?? 0);
@@ -69,7 +72,7 @@ export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose }:
     } finally {
       setLoading(false);
     }
-  }, [open, page, query]);
+  }, [adviserFilterUserId, open, page, query]);
 
   useEffect(() => {
     if (!open) {
@@ -90,7 +93,7 @@ export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose }:
   const startCreate = () => {
     setEditing(null);
     setExternalName("");
-    setAdviserUserId("");
+    setAdviserUserId(adviserFilterUserId ?? "");
     setError("");
     setFormOpen(true);
   };
@@ -242,7 +245,7 @@ export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose }:
       <Modal
         open={open}
         onClose={onClose}
-        title="Asesores código"
+        title={adviserName ? `Códigos de ${adviserName}` : "Asesores código"}
         description="Relaciona los nombres recibidos en Confirmado por con usuarios asesores del sistema."
         className="w-auto max-w-[calc(100vw-2rem)]"
         bodyClassName="p-3"
@@ -262,7 +265,7 @@ export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose }:
                   maxLength={160}
                   onChange={(event) => setExternalName(event.target.value)}
                 />
-                <FloatingSelect
+                {!adviserFilterUserId ? <FloatingSelect
                   label="Asesor del sistema"
                   name="adviser-import-user"
                   value={adviserUserId}
@@ -271,7 +274,7 @@ export function SaleOrderAdviserImportAliasesModal({ open, canManage, onClose }:
                   searchable
                   panelWidthMode="min-trigger"
                   emptyMessage="Sin asesores disponibles"
-                />
+                /> : null}
                 <SystemButton type="button" size="icon" variant="outline" className="h-10 w-10" tooltip="Cancelar" onClick={resetForm} disabled={saving}>
                   <X className="h-4 w-4" />
                 </SystemButton>

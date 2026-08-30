@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Plus, ScanLine, Sheet, UserRoundCog, Workflow } from "lucide-react";
+import { Boxes, Plus, ScanLine, Sheet, Workflow } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import {
     ClientType,
@@ -51,7 +51,6 @@ import { DataTableSearchBar, DataTableSearchChips, type DataTableRecentSearchIte
 import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
 import { SaleOrderImportLotesModal } from "@/features/sale-orders/components/SaleOrderImportLotesModal";
 import { SaleOrderSkuRecognitionCodesModal } from "@/features/sale-orders/components/SaleOrderSkuRecognitionCodesModal";
-import { SaleOrderAdviserImportAliasesModal } from "@/features/sale-orders/components/SaleOrderAdviserImportAliasesModal";
 import { SaleOrderAuditHistoryModal } from "@/features/sale-orders/components/SaleOrderAuditHistoryModal";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
@@ -183,7 +182,6 @@ export default function SaleOrders() {
     const [importOpen, setImportOpen] = useState(false);
     const [importLotesOpen, setImportLotesOpen] = useState(false);
     const [skuRecognitionCodesOpen, setSkuRecognitionCodesOpen] = useState(false);
-    const [adviserImportAliasesOpen, setAdviserImportAliasesOpen] = useState(false);
     const [importLotesRefreshKey, setImportLotesRefreshKey] = useState(0);
     const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
     const [bulkChangeStateOpen, setBulkChangeStateOpen] = useState(false);
@@ -1355,9 +1353,6 @@ export default function SaleOrders() {
                             {capabilities.canManageWorkflows ? <SystemButton size="icon" variant="outline"  className="rounded-md h-11 shadow" tooltip="Tipos"
                                 leftIcon={<Workflow className="h-4 w-4" />} onClick={() => setWorkflowEditorOpen(true)} title="Tipos">
                             </SystemButton> : null}
-                            {capabilities.canViewAdviserImportAliases ? <SystemButton size="icon" variant="outline" className="rounded-md h-11 shadow" tooltip="Asesores código"
-                                leftIcon={<UserRoundCog className="h-4 w-4" />} onClick={() => setAdviserImportAliasesOpen(true)} title="Asesores código">
-                            </SystemButton> : null}
                             {capabilities.canViewImportLotes ? <SystemButton size="icon" variant="outline" className="rounded-md h-11 shadow" tooltip="Lotes"
                                 leftIcon={<Boxes className="h-4 w-4" />} onClick={() => setImportLotesOpen(true)} title="Lotes importados">
                             </SystemButton> : null}
@@ -1486,11 +1481,6 @@ export default function SaleOrders() {
                 open={skuRecognitionCodesOpen}
                 canManage={capabilities.canManageSkuRecognitionCodes}
                 onClose={() => setSkuRecognitionCodesOpen(false)}
-            />
-            <SaleOrderAdviserImportAliasesModal
-                open={adviserImportAliasesOpen}
-                canManage={capabilities.canManageAdviserImportAliases}
-                onClose={() => setAdviserImportAliasesOpen(false)}
             />
             <SaleOrderBulkAssignModal
                 open={bulkAssignOpen}

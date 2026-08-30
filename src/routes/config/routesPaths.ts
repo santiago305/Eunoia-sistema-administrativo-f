@@ -84,6 +84,7 @@ export const RoutesPaths = {
 
   // sale orders
   saleOrders: "/pedidos",
+  advisers: "/asesores",
 
   //company
   company:'/empresa',

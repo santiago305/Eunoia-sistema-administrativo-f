@@ -26,6 +26,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         href: RoutesPaths.saleOrders,
     },
     {
+        label: "Asesores",
+        icon: <IconUsers className="text-sidebar-foreground" />,
+        href: RoutesPaths.advisers,
+    },
+    {
         label: "Clientes",
         icon: <IconUsers className="text-sidebar-foreground" />,
         href: RoutesPaths.clients,
