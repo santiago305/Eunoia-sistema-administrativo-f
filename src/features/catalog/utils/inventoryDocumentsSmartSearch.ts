@@ -82,7 +82,7 @@ function uniqueStrings(values: string[] | undefined) {
 
 function allowedStatusIds(searchState?: InventoryDocumentsSearchStateResponse | null) {
   const ids = (searchState?.catalogs.statuses ?? []).map((option) => option.id);
-  return new Set(ids.length ? ids : ["DRAFT", "POSTED", "CANCELLED"]);
+  return new Set(ids.length ? ids : ["DRAFT", "IN_TRANSIT", "POSTED", "CANCELLED"]);
 }
 
 function sanitizeRule(

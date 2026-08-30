@@ -189,3 +189,8 @@ export const processInventoryDocument = async (docId: string): Promise<{ type: s
   const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.processDocument(docId));
   return response.data;
 };
+
+export const receiveInventoryTransfer = async (docId: string): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_DOCUMENT_INVENTORY_GROUP.receiveTransfer(docId));
+  return response.data;
+};

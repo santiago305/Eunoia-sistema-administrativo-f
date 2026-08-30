@@ -620,6 +620,7 @@ export const API_DOCUMENT_INVENTORY_GROUP = {
   adjustmentCreated: "/stock-items/movements/create",
   transfertCreated: "/stock-items/movements/transfer",
   processDocument: (id: string) => `/inventory-documents/${id}/process`,
+  receiveTransfer: (id: string) => `/inventory-documents/${id}/receive`,
   listDocuments: "/inventory-documents",
   exportColumns: "/inventory-documents/export-columns",
   exportExcel: "/inventory-documents/export-excel",

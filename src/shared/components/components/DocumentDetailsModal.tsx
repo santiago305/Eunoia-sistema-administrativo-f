@@ -36,6 +36,7 @@ const docTypeLabels: Record<DocType, string> = {
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
+  [DocStatus.IN_TRANSIT]: "En tránsito",
   [DocStatus.POSTED]: "Contabilizado",
   [DocStatus.CANCELLED]: "Anulado",
 };
@@ -146,6 +147,12 @@ const getItemLabel = (item: InventoryDocumentDetailItem) => {
     item.skuId ??
     "Item"
   );
+};
+
+const formatDateOnly = (value?: string | null) => {
+  if (!value) return "-";
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("es-PE");
 };
 
 const getItemCode = (item: InventoryDocumentDetailItem) => {
@@ -759,6 +766,30 @@ export function DocumentDetailsModal({
                       <FieldItem
                         label="Almacén destino"
                         value={toWarehouseLabel}
+                      />
+                      <FieldItem
+                        label="Salida programada"
+                        value={formatDateOnly(resolvedDocument.scheduledDepartureDate)}
+                      />
+                      <FieldItem
+                        label="Llegada estimada"
+                        value={formatDateOnly(resolvedDocument.expectedArrivalDate)}
+                      />
+                      <FieldItem
+                        label="Salida real"
+                        value={formatDateTime(resolvedDocument.dispatchedAt)}
+                      />
+                      <FieldItem
+                        label="Recepción real"
+                        value={formatDateTime(resolvedDocument.receivedAt)}
+                      />
+                      <FieldItem
+                        label="Despachado por"
+                        value={resolvedDocument.dispatchedBy?.name ?? resolvedDocument.dispatchedBy?.email ?? "-"}
+                      />
+                      <FieldItem
+                        label="Recibido por"
+                        value={resolvedDocument.receivedBy?.name ?? resolvedDocument.receivedBy?.email ?? "-"}
                       />
                     </>
                   ) : (

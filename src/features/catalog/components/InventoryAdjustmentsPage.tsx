@@ -66,6 +66,7 @@ import { parseSkuLabelAttributes } from "@/features/catalog/utils/skuLabel";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
+  [DocStatus.IN_TRANSIT]: "En tránsito",
   [DocStatus.POSTED]: "Contabilizado",
   [DocStatus.CANCELLED]: "Anulado",
 };

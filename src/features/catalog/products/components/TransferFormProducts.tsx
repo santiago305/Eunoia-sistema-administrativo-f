@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { Boxes, Trash2 } from "lucide-react";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
@@ -12,7 +13,7 @@ import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
 import { createTransfer, getStockSkuBatch } from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
-import { parseDecimalInput } from "@/shared/utils/functionPurchases";
+import { parseDateInputValue, parseDecimalInput, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { DocType, type WarehouseSelectOption } from "@/features/warehouse/types/warehouse";
 import { ProductTypes } from "@/features/catalog/types/ProductTypes";
 import { findOwnUser } from "@/shared/services/userService";
@@ -331,6 +332,14 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
         if (!form.fromWarehouseId || !form.toWarehouseId || !form.serieId) {
             showFeedback(errorResponse("Completa los datos del documento"));
+            return;
+        }
+        if (!form.scheduledDepartureDate || !form.expectedArrivalDate) {
+            showFeedback(errorResponse("Selecciona las fechas de salida y llegada estimada"));
+            return;
+        }
+        if (form.expectedArrivalDate < form.scheduledDepartureDate) {
+            showFeedback(errorResponse("La llegada estimada no puede ser anterior a la salida"));
             return;
         }
 
@@ -695,6 +704,41 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
 
                                 <FloatingInput label="Serie" name="transfer-serie" value={serie.label} disabled className="h-11 text-xs text-black/90" />
 
+                                <FloatingDatePicker
+                                    label="Fecha de salida"
+                                    name="transfer-departure-date"
+                                    value={parseDateInputValue(form.scheduledDepartureDate)}
+                                    onChange={(date) => {
+                                        const nextDeparture = date ? toLocalDateKey(date) : "";
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            scheduledDepartureDate: nextDeparture,
+                                            expectedArrivalDate:
+                                                nextDeparture && (!prev.expectedArrivalDate || prev.expectedArrivalDate < nextDeparture)
+                                                    ? nextDeparture
+                                                    : prev.expectedArrivalDate,
+                                        }));
+                                    }}
+                                    disablePast
+                                    clearable={false}
+                                    requiredIndicator
+                                    className="h-11 text-xs"
+                                />
+
+                                <FloatingDatePicker
+                                    label="Llegada estimada"
+                                    name="transfer-arrival-date"
+                                    value={parseDateInputValue(form.expectedArrivalDate)}
+                                    onChange={(date) => setForm((prev) => ({
+                                        ...prev,
+                                        expectedArrivalDate: date ? toLocalDateKey(date) : "",
+                                    }))}
+                                    minDate={parseDateInputValue(form.scheduledDepartureDate) ?? undefined}
+                                    clearable={false}
+                                    requiredIndicator
+                                    className="h-11 text-xs"
+                                />
+
                                 <FloatingInput
                                     label="Nota"
                                     name="transfer-note"
@@ -760,6 +804,8 @@ export default function TransferProducts({ onClose, onSaved, type, open, initial
                                         !form.fromWarehouseId ||
                                         !form.toWarehouseId ||
                                         !form.serieId ||
+                                        !form.scheduledDepartureDate ||
+                                        !form.expectedArrivalDate ||
                                         !(form.items ?? []).length
                                     }
                                     onClick={saveTransfer}

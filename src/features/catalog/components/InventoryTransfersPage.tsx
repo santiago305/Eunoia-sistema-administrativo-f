@@ -1,6 +1,6 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Menu, Play, Plus } from "lucide-react";
+import { Menu, PackageCheck, Plus, Truck } from "lucide-react";
 import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import {
@@ -31,6 +31,7 @@ import {
   getInventoryDocumentsSearchState,
   saveInventoryDocumentsSearchMetric,
   processInventoryDocument,
+  receiveInventoryTransfer,
 } from "@/shared/services/documentService";
 import { TransferProductsModal } from "@/features/catalog/products/components/TransferProductsModal";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -67,6 +68,7 @@ import { parseSkuLabelAttributes } from "@/features/catalog/utils/skuLabel";
 
 const statusLabels: Record<DocStatus, string> = {
   [DocStatus.DRAFT]: "Borrador",
+  [DocStatus.IN_TRANSIT]: "En tránsito",
   [DocStatus.POSTED]: "Contabilizado",
   [DocStatus.CANCELLED]: "Anulado",
 };
@@ -86,6 +88,42 @@ const buildNumero = (document: InventoryDocument) => {
   const num = document.correlative != null ? String(document.correlative) : "";
   const padded = document.seriePadding ? num.padStart(document.seriePadding, "0") : num;
   return [serie, padded].filter(Boolean).join(sep) || document.id;
+};
+
+const DATE_MS = 24 * 60 * 60 * 1000;
+
+const parseTransferDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatTransferDate = (value?: string | null) => {
+  const date = parseTransferDate(value);
+  return date ? date.toLocaleDateString("es-PE") : "-";
+};
+
+const dayDistance = (from?: string | null, to?: string | null) => {
+  if (!from || !to) return null;
+  const fromMs = Date.parse(`${from}T00:00:00Z`);
+  const toMs = Date.parse(`${to}T00:00:00Z`);
+  if (Number.isNaN(fromMs) || Number.isNaN(toMs)) return null;
+  return Math.max(0, Math.round((toMs - fromMs) / DATE_MS));
+};
+
+const buildTransitLabel = (document: InventoryDocument) => {
+  const plannedDays = dayDistance(document.scheduledDepartureDate, document.expectedArrivalDate);
+  const plannedLabel = plannedDays == null ? "-" : `${plannedDays} día${plannedDays === 1 ? "" : "s"}`;
+  if (document.status !== DocStatus.IN_TRANSIT || !document.expectedArrivalDate) return plannedLabel;
+
+  const today = toLocalDateKey(new Date());
+  if (today === document.expectedArrivalDate) return `${plannedLabel} · llega hoy`;
+  if (today > document.expectedArrivalDate) {
+    const overdueDays = dayDistance(document.expectedArrivalDate, today) ?? 0;
+    return `${plannedLabel} · atraso ${overdueDays}d`;
+  }
+  const remainingDays = dayDistance(today, document.expectedArrivalDate) ?? 0;
+  return `${plannedLabel} · faltan ${remainingDays}d`;
 };
 
 type InventoryTransfersPageConfig = {
@@ -145,6 +183,7 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [processingDocumentId, setProcessingDocumentId] = useState<string | null>(null);
+  const [receivingDocumentId, setReceivingDocumentId] = useState<string | null>(null);
   const showFeedbackRef = useRef(showFeedback);
   const realtimeRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -462,11 +501,14 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const handleProcessDocument = useCallback(async (documentId: string) => {
     if (!permissions.process) return;
     if (!documentId) return;
+    if (!window.confirm("¿Confirmas el despacho? Se descontará el stock del almacén de origen y la transferencia quedará en tránsito.")) {
+      return;
+    }
     setProcessingDocumentId(documentId);
     try {
       const response = await processInventoryDocument(documentId);
       if (response.type === "success") {
-        showFeedback(successResponse(response.message));
+        showFeedback(successResponse(response.message || "Transferencia despachada"));
         await loadDocuments();
       } else {
         showFeedback(errorResponse(response.message));
@@ -475,6 +517,27 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       showFeedback(errorResponse("Error al procesar documento"));
     } finally {
       setProcessingDocumentId(null);
+    }
+  }, [loadDocuments, permissions.process, showFeedback]);
+
+  const handleReceiveTransfer = useCallback(async (documentId: string) => {
+    if (!permissions.process || !documentId) return;
+    if (!window.confirm("¿Confirmas que la mercadería llegó? Se ingresará al stock del almacén destino.")) {
+      return;
+    }
+    setReceivingDocumentId(documentId);
+    try {
+      const response = await receiveInventoryTransfer(documentId);
+      if (response.type === "success") {
+        showFeedback(successResponse(response.message || "Transferencia recibida"));
+        await loadDocuments();
+      } else {
+        showFeedback(errorResponse(response.message));
+      }
+    } catch {
+      showFeedback(errorResponse("Error al confirmar la recepción"));
+    } finally {
+      setReceivingDocumentId(null);
     }
   }, [loadDocuments, permissions.process, showFeedback]);
 
@@ -505,6 +568,10 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
           createdBy,
           date,
           time,
+          scheduledDepartureDate: formatTransferDate(document.scheduledDepartureDate),
+          expectedArrivalDate: formatTransferDate(document.expectedArrivalDate),
+          transitLabel: buildTransitLabel(document),
+          totalQuantity: (document.items ?? []).reduce((sum, item) => sum + Number(item.quantity ?? 0), 0),
         };
       }),
     [documents],
@@ -521,6 +588,42 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       ),
       headerClassName: "text-left",
       className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "scheduledDepartureDate",
+      header: "Salida",
+      accessorKey: "scheduledDepartureDate",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "expectedArrivalDate",
+      header: "Llegada estimada",
+      accessorKey: "expectedArrivalDate",
+      className: "text-black/70",
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "transit",
+      header: "Tiempo de traslado",
+      cell: (row) => (
+        <span className={row.document.status === DocStatus.IN_TRANSIT && row.transitLabel?.includes("atraso") ? "text-rose-600" : "text-black/70"}>
+          {row.transitLabel ?? "-"}
+        </span>
+      ),
+      hideable: true,
+      sortable: false,
+    },
+    {
+      id: "totalQuantity",
+      header: "Cant. en tránsito",
+      cell: (row) => row.document.status === DocStatus.IN_TRANSIT ? row.totalQuantity : "-",
+      className: "text-center tabular-nums text-black/70",
+      headerClassName: "text-center [&>div]:justify-center",
       hideable: true,
       sortable: false,
     },
@@ -565,7 +668,11 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
       header: "Estado",
       cell: (row) => (
         <div className="flex justify-center">
-          <span className="inline-flex rounded-lg px-2 py-1 text-[10px] font-medium bg-slate-50 text-slate-700">
+          <span className={`inline-flex rounded-lg px-2 py-1 text-[10px] font-medium ${
+            row.document.status === DocStatus.IN_TRANSIT
+              ? "bg-sky-50 text-sky-700"
+              : "bg-slate-50 text-slate-700"
+          }`}>
             {row.statusLabel}
           </span>
         </div>
@@ -588,10 +695,20 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
                 && permissions.process
                 ? [{
                     id: "process",
-                    label: "Procesar",
-                    icon: <Play className="h-4 w-4 text-black/60" />,
+                    label: "Despachar",
+                    icon: <Truck className="h-4 w-4 text-black/60" />,
                     onClick: () => handleProcessDocument(row.document.id ?? row.id),
                     disabled: processingDocumentId === (row.document.id ?? row.id),
+                  }]
+                  : []),
+              ...(row.document.status === DocStatus.IN_TRANSIT
+                && permissions.process
+                ? [{
+                    id: "receive",
+                    label: "Confirmar recepción",
+                    icon: <PackageCheck className="h-4 w-4 text-black/60" />,
+                    onClick: () => handleReceiveTransfer(row.document.id ?? row.id),
+                    disabled: receivingDocumentId === (row.document.id ?? row.id),
                   }]
                 : []),
               {

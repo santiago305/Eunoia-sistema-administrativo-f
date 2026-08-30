@@ -76,6 +76,14 @@ export type InventoryDocument = {
   postedBy: InventoryDocumentUserRef | null;
 
   postedAt: string | null;
+  scheduledDepartureDate?: string | null;
+  expectedArrivalDate?: string | null;
+  dispatchedById?: string | null;
+  dispatchedBy?: InventoryDocumentUserRef | null;
+  dispatchedAt?: string | null;
+  receivedById?: string | null;
+  receivedBy?: InventoryDocumentUserRef | null;
+  receivedAt?: string | null;
   createdAt: string;
   items?: InventoryDocumentListItem[];
 };
@@ -127,5 +135,9 @@ export type InventoryDocumentRow = {
   createdBy: string;
   date: string;
   time?: string;
+  scheduledDepartureDate?: string;
+  expectedArrivalDate?: string;
+  transitLabel?: string;
+  totalQuantity?: number;
 };
 
