@@ -12,7 +12,20 @@ export type AdviserOption = {
   collectedTotal?: number;
 };
 
-export type AdviserSummaryResponse = { items: AdviserOption[]; total: number; page: number; limit: number; totalPages: number };
+export type AdviserPeriod = { startDate: string; endDate: string };
+export type AdviserSummaryResponse = { items: AdviserOption[]; total: number; page: number; limit: number; totalPages: number; period: AdviserPeriod };
+export type AdviserOrderListItem = {
+  id: string;
+  serie: string | null;
+  correlative: number | null;
+  createdAt: string;
+  clientName: string;
+  total: number;
+  collectedTotal: number;
+  stateName: string;
+  stateColor: string | null;
+};
+export type AdviserOrdersResponse = { items: AdviserOrderListItem[]; total: number; page: number; limit: number; totalPages: number; period: AdviserPeriod };
 
 export const listAdvisers = async (): Promise<AdviserOption[]> => {
   const response = await axiosInstance.get<AdviserOption[]>(
@@ -31,8 +44,11 @@ export const createAdviser = async (
   return response.data;
 };
 
-export const listAdviserSummary = async (params: { page: number; limit?: number; q?: string; filters?: AdviserSearchSnapshot["filters"] }) =>
+export const listAdviserSummary = async (params: { page: number; limit?: number; q?: string; filters?: AdviserSearchSnapshot["filters"]; startDate?: string; endDate?: string }) =>
   (await axiosInstance.get<AdviserSummaryResponse>(API_ADVISERS_GROUP.summary, { params: { ...params, filters: params.filters?.length ? JSON.stringify(params.filters) : undefined } })).data;
+
+export const listAdviserOrders = async (id: string, params: { page: number; limit?: number; startDate: string; endDate: string }) =>
+  (await axiosInstance.get<AdviserOrdersResponse>(API_ADVISERS_GROUP.orders(id), { params })).data;
 
 export const setAdviserActive = async (id: string, isActive: boolean) =>
   (await axiosInstance.patch(API_ADVISERS_GROUP.active(id), { isActive })).data;
