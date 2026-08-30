@@ -5,6 +5,9 @@ import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { getApiErrorMessage } from "@/shared/common/utils/apiError";
 import { getInventoryReservationDetails } from "@/shared/services/inventoryService";
+import { fetchSaleOrderById } from "@/shared/services/saleOrderService";
+import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
+import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import type { ProductCatalogProductType } from "@/features/catalog/types/product";
 import type {
   InventoryReservationDetail,
@@ -60,6 +63,7 @@ export function InventoryReservationsModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [selectedSaleOrder, setSelectedSaleOrder] = useState<SaleOrder | null>(null);
   const requestRef = useRef(0);
 
   const loadReservations = useCallback(async () => {
@@ -102,7 +106,16 @@ export function InventoryReservationsModal({
     setData(null);
     setError(null);
     setLoading(false);
+    setSelectedSaleOrder(null);
     onClose();
+  };
+
+  const openSaleOrder = async (saleOrderId: string) => {
+    try {
+      setSelectedSaleOrder(await fetchSaleOrderById(saleOrderId));
+    } catch {
+      // La modal de reservas permanece abierta si el detalle no está disponible.
+    }
   };
 
   const inventoryReserved = data?.inventoryReserved ?? target?.reserved ?? 0;
@@ -163,6 +176,7 @@ export function InventoryReservationsModal({
       : "Pedidos que mantienen reservada esta existencia.";
 
   return (
+    <>
     <Modal
       open={open}
       onClose={close}
@@ -254,6 +268,9 @@ export function InventoryReservationsModal({
             emptyMessage="No se encontraron reservas activas."
             animated={false}
             showSelectionInfo={false}
+            onRowClick={(item) => {
+              if (item.sourceType === "SALE_ORDER") void openSaleOrder(item.sourceId);
+            }}
           />
         ) : null}
 
@@ -269,5 +286,12 @@ export function InventoryReservationsModal({
         ) : null}
       </div>
     </Modal>
+    <SaleOrderDetailsModal
+      open={Boolean(selectedSaleOrder)}
+      order={selectedSaleOrder}
+      onClose={() => setSelectedSaleOrder(null)}
+      capabilities={{ canEdit: false, canManageAdvancedOrders: false, canAssignWorkflow: false }}
+    />
+    </>
   );
 }
