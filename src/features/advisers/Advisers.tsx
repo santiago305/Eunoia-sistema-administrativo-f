@@ -15,6 +15,9 @@ import { usePermissions } from "@/shared/hooks/usePermissions";
 import { createAdviser, deleteAdviserSearchMetric, getAdviserSearchState, listAdviserOrders, listAdviserSummary, saveAdviserSearchMetric, setAdviserActive, updateAdviser, type AdviserOption, type AdviserOrderListItem } from "@/shared/services/adviserService";
 import { listUsers, type UserApiListItem } from "@/shared/services/userService";
 import { SaleOrderAdviserImportAliasesModal } from "@/features/sale-orders/components/SaleOrderAdviserImportAliasesModal";
+import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
+import { fetchSaleOrderById } from "@/shared/services/saleOrderService";
+import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { AdviserSmartSearchPanel } from "./components/AdviserSmartSearchPanel";
 import type { AdviserSearchRule, AdviserSearchSnapshot, AdviserSearchStateResponse } from "./types/adviserSearch";
 import { applyAdviserSearchRule, buildAdviserSearchChips, removeAdviserSearchKey, sanitizeAdviserSearchSnapshot, type AdviserSearchFilterKey } from "./utils/adviserSmartSearch";
@@ -65,6 +68,7 @@ export default function Advisers() {
   const [ordersPage, setOrdersPage] = useState(1);
   const [ordersTotal, setOrdersTotal] = useState(0);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
 
   const draftSnapshot = useMemo(() => sanitizeAdviserSearchSnapshot({ q: searchText, filters: searchFilters }), [searchFilters, searchText]);
   const executedSnapshot = useMemo(() => sanitizeAdviserSearchSnapshot({ q: appliedSearchText, filters: searchFilters }), [appliedSearchText, searchFilters]);
@@ -109,6 +113,13 @@ export default function Advisers() {
 
   const openOrders = (adviser: AdviserOption) => { setAdviserOrders([]); setOrdersTotal(0); setOrdersFor(adviser); setOrdersPage(1); };
   const closeOrders = () => { setOrdersFor(null); setAdviserOrders([]); setOrdersTotal(0); };
+  const openOrderDetail = async (order: AdviserOrderListItem) => {
+    try {
+      setSelectedOrder(await fetchSaleOrderById(order.id));
+    } catch {
+      setSelectedOrder(null);
+    }
+  };
   useEffect(() => {
     if (!ordersFor) return;
     let active = true;
@@ -145,8 +156,14 @@ export default function Advisers() {
       toolbarSearchContent={<DataTableSearchBar value={searchText} onChange={setSearchText} onSubmitSearch={submitSearch} searchLabel="Busca tu asesor" searchName="adviser-smart-search" canSaveMetric={Boolean(draftSnapshot.q || draftSnapshot.filters.length)} saveLoading={savingMetric} onSaveMetric={saveMetric}><AdviserSmartSearchPanel recent={recentSearches} saved={savedMetrics} snapshot={draftSnapshot} catalogs={searchState?.catalogs} filterQuery={searchText} onApplySnapshot={applySnapshot} onApplyRule={applyRule} onRemoveRule={removeRule} onDeleteMetric={(id) => void deleteMetric(id)} /></DataTableSearchBar>}
       toolbarActions={canManage ? <SystemButton size="icon" variant="outline" className="h-11 w-11 rounded-md shadow-sm" tooltip="Agregar asesor" title="Agregar asesor" leftIcon={<Plus className="h-4 w-4" />} onClick={() => void openAdd()} /> : null} />
     <Modal open={Boolean(ordersFor)} onClose={closeOrders} title={`Pedidos asignados · ${ordersFor?.name ?? ""}`} description={`${dateFormatter.format(period.startDate)} - ${dateFormatter.format(period.endDate)}`} className="w-[min(820px,calc(100vw-2rem))]" bodyClassName="p-3">
-      <DataTable tableId="adviser-orders-detail" data={adviserOrders} columns={orderColumns} rowKey="id" loading={ordersLoading} responsiveMode="table" stickyHeader maxHeight="min(58vh,560px)" pagination={{ page: ordersPage, limit: PAGE_SIZE, total: ordersTotal }} onPageChange={setOrdersPage} emptyMessage="Este asesor no tiene pedidos asignados en el período seleccionado." paddingTablePaginated="py-1" />
+      <DataTable tableId="adviser-orders-detail" data={adviserOrders} columns={orderColumns} rowKey="id" loading={ordersLoading} responsiveMode="table" stickyHeader maxHeight="min(58vh,560px)" pagination={{ page: ordersPage, limit: PAGE_SIZE, total: ordersTotal }} onPageChange={setOrdersPage} onRowClick={(order) => void openOrderDetail(order)} emptyMessage="Este asesor no tiene pedidos asignados en el período seleccionado." paddingTablePaginated="py-1" />
     </Modal>
+    <SaleOrderDetailsModal
+      open={Boolean(selectedOrder)}
+      order={selectedOrder}
+      onClose={() => setSelectedOrder(null)}
+      capabilities={{ canEdit: false, canManageAdvancedOrders: false, canAssignWorkflow: false }}
+    />
     <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar asesor"><div className="space-y-4"><FloatingSelect label="Usuario del sistema" name="adviser-user" value={selectedUser} options={users.filter((user) => !user.deleted).map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))} onChange={setSelectedUser} searchable emptyMessage="No hay usuarios disponibles" /><div className="flex justify-end"><SystemButton onClick={() => void add()} loading={saving} disabled={!selectedUser}>Agregar</SystemButton></div></div></Modal>
     <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Editar asesor"><div className="space-y-3"><FloatingInput label="Nombre" name="adviser-name" value={editName} onChange={(event) => setEditName(event.target.value)} /><FloatingInput label="Correo" name="adviser-email" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} /><div className="flex justify-end"><SystemButton onClick={() => void saveEdit()} loading={saving}>Guardar</SystemButton></div></div></Modal>
     <AlertModal open={Boolean(pending)} onClose={() => setPending(null)} onConfirm={() => void toggle()} type={pending?.isActive ? "warning" : "restore"} title={pending?.isActive ? "Desactivar asesor" : "Activar asesor"} message={pending?.isActive ? "El asesor no podrá recibir nuevas asignaciones." : "El asesor podrá recibir nuevas asignaciones."} confirmText={pending?.isActive ? "Desactivar" : "Activar"} loading={saving} />
