@@ -24,7 +24,7 @@ import {
   getInventoryExportPresets,
   getInventorySearchState,
   getSkuStockSnapshots,
-  getInventoryAlertSetting,
+  evaluateInventoryAlertsBatch,
   listInventory,
   saveInventoryExportPreset,
   saveInventorySearchMetric,
@@ -129,6 +129,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>>([]);
   const [exporting, setExporting] = useState(false);
   const [inventoryRows, setInventoryRows] = useState<InventorySnapshotRow[]>([]);
+  const inventoryRowsRef = useRef<InventorySnapshotRow[]>([]);
   const [inventoryTotal, setInventoryTotal] = useState(0);
   const [forecastModalOpen, setForecastModalOpen] = useState(false);
   const [selectedForecast, setSelectedForecast] = useState<SkuStockForecast | null>(null);
@@ -438,6 +439,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
       const items = (res.items ?? []).filter(
         (item): item is InventorySnapshotRow => Boolean(item?.sku?.sku?.id),
       );
+      inventoryRowsRef.current = items;
       setInventoryRows(items);
       setInventoryTotal(res.total ?? items.length);
       
@@ -450,6 +452,7 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
         void loadSearchState();
       }
     } catch {
+      inventoryRowsRef.current = [];
       setInventoryRows([]);
       setInventoryTotal(0);
       showFeedback(errorResponse("Error al cargar inventario"));
@@ -521,23 +524,42 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     void loadWarehouses();
   }, [loadWarehouses]);
 
+  const alertEvaluationTargetsKey = useMemo(
+    () =>
+      inventoryRows
+        .map((row) => `${row.stockItemId}:${row.warehouseId}`)
+        .sort()
+        .join("|"),
+    [inventoryRows],
+  );
+
   useEffect(() => {
-    if (!permissions.alertSettings || inventoryRows.length === 0) {
+    if (!permissions.alertSettings || !alertEvaluationTargetsKey) {
       setAlertEvaluations({});
       return;
     }
     let active = true;
-    void Promise.all(inventoryRows.map(async (row) => {
-      try {
-        const setting = await getInventoryAlertSetting(row.stockItemId, { warehouseId: row.warehouseId });
-        return setting.evaluation ? [`${row.stockItemId}:${row.warehouseId}`, setting.evaluation] as const : null;
-      } catch { return null; }
-    })).then((entries) => {
-      if (!active) return;
-      setAlertEvaluations(Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null)));
+    const targets = alertEvaluationTargetsKey.split("|").map((target) => {
+      const [stockItemId, warehouseId] = target.split(":");
+      return { stockItemId, warehouseId };
     });
+    void evaluateInventoryAlertsBatch(targets)
+      .then((settings) => {
+        if (!active) return;
+        setAlertEvaluations(Object.fromEntries(
+          settings
+            .filter((setting) => setting.evaluation)
+            .map((setting) => [
+              `${setting.stockItemId}:${setting.warehouseId ?? ""}`,
+              setting.evaluation!,
+            ]),
+        ));
+      })
+      .catch(() => {
+        if (active) setAlertEvaluations({});
+      });
     return () => { active = false; };
-  }, [inventoryRows, permissions.alertSettings]);
+  }, [alertEvaluationTargetsKey, permissions.alertSettings]);
 
   // Referencia para evitar dobles peticiones consecutivas o loops
   const fetchLockRef = useRef(false);
@@ -557,21 +579,28 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
   useEffect(() => {
     if (!permissions.realtime) return;
     const unsubscribe = subscribeInventoryStockUpdated((event) => {
-      let updatedAnyRow = false;
-
-      setInventoryRows((current) =>
-        current.map((row) => {
-          if (row.warehouseId !== event.warehouseId) return row;
-          if (row.stockItemId !== event.stockItemId) return row;
-          updatedAnyRow = true;
-          return {
-            ...row,
-            onHand: Number(event.onHand ?? row.onHand),
-            reserved: Number(event.reserved ?? row.reserved),
-            available: Number(event.available ?? row.available),
-          };
-        }),
+      const updatedAnyRow = inventoryRowsRef.current.some(
+        (row) =>
+          row.warehouseId === event.warehouseId &&
+          row.stockItemId === event.stockItemId,
       );
+
+      if (updatedAnyRow) {
+        setInventoryRows((current) => {
+          const next = current.map((row) => {
+            if (row.warehouseId !== event.warehouseId) return row;
+            if (row.stockItemId !== event.stockItemId) return row;
+            return {
+              ...row,
+              onHand: Number(event.onHand ?? row.onHand),
+              reserved: Number(event.reserved ?? row.reserved),
+              available: Number(event.available ?? row.available),
+            };
+          });
+          inventoryRowsRef.current = next;
+          return next;
+        });
+      }
 
       // Si el evento no corresponde a filas visibles (por paginación/filtros),
       // hacemos refresh ligero con debounce para mantener coherencia.

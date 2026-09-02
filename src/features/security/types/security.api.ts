@@ -16,6 +16,8 @@ export type SecurityActiveBanItem = {
   manualPermanentBan: boolean;
   notes?: string | null;
   lastReason?: string | null;
+  lastReasonLabel?: string | null;
+  lastReasonDescription?: string | null;
   createdBy?: string | null;
   reviewedBy?: string | null;
   createdAt?: string;
@@ -45,11 +47,30 @@ export type SecurityListResponse<T> = {
 };
 
 export type SecurityViolationItem = {
+  id?: string;
   reason: string;
-  path: string;
-  method: string;
+  reasonLabel?: string | null;
+  reasonDescription?: string | null;
+  path: string | null;
+  method: string | null;
   userAgent: string | null;
+  requestId?: string | null;
+  actor?: string | null;
+  throttlerName?: string | null;
+  trackerType?: "session" | "login" | "ip" | string | null;
+  trackerKeyHash?: string | null;
+  userId?: string | null;
+  sessionId?: string | null;
+  totalHits?: number | null;
+  requestLimit?: number | null;
+  windowSeconds?: number | null;
+  retryAfterSeconds?: number | null;
+  countedForBan?: boolean;
+  banLevelAfter?: number | null;
+  bannedUntilAfter?: string | null;
+  bannedUntilAfterLocal?: string | null;
   createdAt: string;
+  createdAtLocal?: string | null;
 };
 
 export type SecurityIpBanStatus = {
@@ -113,6 +134,7 @@ export type SecurityReasonDistributionResponse = SecurityWindowResponse & {
 export type SecurityReasonCatalogItem = {
   key: string;
   label: string;
+  description?: string | null;
   count: number;
   active: boolean;
 };

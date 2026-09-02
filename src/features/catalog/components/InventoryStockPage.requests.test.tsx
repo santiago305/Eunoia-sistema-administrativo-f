@@ -1,11 +1,22 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { DataTableColumn } from "@/shared/components/table/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InventoryStockPage } from "./InventoryStockPage";
 
-const { listInventoryMock, listSkusMock } = vi.hoisted(() => ({
+const {
+  evaluateInventoryAlertsBatchMock,
+  inventoryPermissionsMock,
+  listInventoryMock,
+  listSkusMock,
+  showFeedbackMock,
+  subscribeInventoryStockUpdatedMock,
+} = vi.hoisted(() => ({
+  evaluateInventoryAlertsBatchMock: vi.fn(),
+  inventoryPermissionsMock: vi.fn(),
   listInventoryMock: vi.fn(),
   listSkusMock: vi.fn(),
+  showFeedbackMock: vi.fn(),
+  subscribeInventoryStockUpdatedMock: vi.fn(),
 }));
 
 vi.mock("@/shared/services/inventoryService", () => ({
@@ -14,6 +25,7 @@ vi.mock("@/shared/services/inventoryService", () => ({
   getInventoryExportColumns: vi.fn(),
   getInventoryExportPresets: vi.fn(),
   getSkuStockSnapshots: vi.fn(),
+  evaluateInventoryAlertsBatch: evaluateInventoryAlertsBatchMock,
   deleteInventoryExportPreset: vi.fn(),
   deleteInventorySearchMetric: vi.fn(),
   exportInventoryExcel: vi.fn(),
@@ -22,11 +34,16 @@ vi.mock("@/shared/services/inventoryService", () => ({
 }));
 vi.mock("@/shared/services/skuService", () => ({ listSkus: listSkusMock }));
 vi.mock("@/shared/services/warehouseServices", () => ({ listActive: vi.fn().mockResolvedValue([]) }));
-vi.mock("@/shared/hooks/useFeedbackToast", () => ({ useFeedbackToast: () => ({ showFeedback: vi.fn() }) }));
+vi.mock("@/shared/services/inventoryRealtimeService", () => ({
+  subscribeInventoryStockUpdated: subscribeInventoryStockUpdatedMock,
+}));
+vi.mock("@/shared/hooks/useFeedbackToast", () => ({
+  useFeedbackToast: () => ({ showFeedback: showFeedbackMock }),
+}));
 vi.mock("@/shared/hooks/useCompany", () => ({ useCompany: () => ({ hasCompany: true }) }));
 vi.mock("@/shared/hooks/usePermissions", () => ({ usePermissions: () => ({ can: vi.fn() }) }));
 vi.mock("@/features/catalog/utils/catalogPermissions", () => ({
-  getInventoryPermissions: () => ({ export: false, realtime: false }),
+  getInventoryPermissions: inventoryPermissionsMock,
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("framer-motion", () => ({ useReducedMotion: () => true }));
@@ -58,6 +75,14 @@ describe("InventoryStockPage request budget", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listInventoryMock.mockResolvedValue({ items: [], total: 0, page: 1 });
+    evaluateInventoryAlertsBatchMock.mockResolvedValue([]);
+    inventoryPermissionsMock.mockReturnValue({
+      alertSettings: false,
+      export: false,
+      forecast: false,
+      realtime: false,
+    });
+    subscribeInventoryStockUpdatedMock.mockReturnValue(vi.fn());
   });
 
   it("loads stock once on mount without preloading SKUs", async () => {
@@ -112,6 +137,80 @@ describe("InventoryStockPage request budget", () => {
     const reservedButton = await screen.findByRole("button", { name: /ver detalle de 3 reservados/i });
     fireEvent.click(reservedButton);
 
-    expect(screen.getByTestId("reservation-details-modal")).toHaveTextContent("Producto reservado");
+    await waitFor(() => {
+      expect(screen.getByTestId("reservation-details-modal")).toHaveTextContent("Producto reservado");
+    });
+  });
+
+  it("evaluates 25 visible alert rows with one batch request", async () => {
+    inventoryPermissionsMock.mockReturnValue({
+      alertSettings: true,
+      export: false,
+      forecast: false,
+      realtime: false,
+    });
+    const items = Array.from({ length: 25 }, (_, index) => ({
+      stockItemId: `stock-${index + 1}`,
+      sku: { sku: { id: `sku-${index + 1}`, name: `Producto ${index + 1}` }, attributes: [] },
+      warehouseId: "warehouse-1",
+      warehouseName: "Central",
+      onHand: 10,
+      reserved: 0,
+      available: 10,
+    }));
+    listInventoryMock.mockResolvedValueOnce({ items, total: 25, page: 1 });
+
+    render(<InventoryStockPage config={{ productType: "PRODUCT", pageTitle: "Stock", headingTitle: "Stock", itemLabel: "Producto", tableId: "stock", searchLabel: "Buscar", searchName: "stock", routes: { kardex: "/k", transfer: "/t", adjustments: "/a" } }} />);
+
+    await waitFor(() => expect(evaluateInventoryAlertsBatchMock).toHaveBeenCalledTimes(1));
+    expect(evaluateInventoryAlertsBatchMock).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        { stockItemId: "stock-1", warehouseId: "warehouse-1" },
+        { stockItemId: "stock-25", warehouseId: "warehouse-1" },
+      ]),
+    );
+  });
+
+  it("updates a visible row from realtime without reloading inventory", async () => {
+    inventoryPermissionsMock.mockReturnValue({
+      alertSettings: false,
+      export: false,
+      forecast: false,
+      realtime: true,
+    });
+    listInventoryMock.mockResolvedValueOnce({
+      items: [{
+        stockItemId: "stock-1",
+        sku: { sku: { id: "sku-1", name: "Producto" }, attributes: [] },
+        warehouseId: "warehouse-1",
+        warehouseName: "Central",
+        onHand: 10,
+        reserved: 0,
+        available: 10,
+      }],
+      total: 1,
+      page: 1,
+    });
+
+    render(<InventoryStockPage config={{ productType: "PRODUCT", pageTitle: "Stock", headingTitle: "Stock", itemLabel: "Producto", tableId: "stock", searchLabel: "Buscar", searchName: "stock", routes: { kardex: "/k", transfer: "/t", adjustments: "/a" } }} />);
+    await waitFor(() => expect(listInventoryMock).toHaveBeenCalledTimes(1));
+    const handler = subscribeInventoryStockUpdatedMock.mock.calls[0]?.[0];
+
+    vi.useFakeTimers();
+    act(() => {
+      handler({
+        warehouseId: "warehouse-1",
+        stockItemId: "stock-1",
+        onHand: 9,
+        reserved: 0,
+        available: 9,
+        occurredAt: new Date().toISOString(),
+      });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(listInventoryMock).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });

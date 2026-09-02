@@ -122,7 +122,7 @@ export const QuickActionPanel = memo(function QuickActionPanel({
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs"
             leftIcon={!loading && <Ban className="h-3 w-3" />}
           >
-            Blacklist manual
+              Bloqueo manual
           </SystemButton>
         </form>
 

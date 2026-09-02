@@ -38,7 +38,7 @@ export function ActivitySeriesChart({
             fill="url(#violationsFill)"
             name="Violaciones"
           />
-          <Area type="monotone" dataKey="bans" stroke="#0f172a" strokeWidth={2} fill="transparent" name="Bans" />
+        <Area type="monotone" dataKey="bans" stroke="#0f172a" strokeWidth={2} fill="transparent" name="Bloqueos" />
           <Area
             type="monotone"
             dataKey="uniqueIps"

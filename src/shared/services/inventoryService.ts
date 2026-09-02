@@ -227,6 +227,18 @@ export const getInventoryAlertSetting = async (
   return normalizeInventoryAlertSetting(response.data);
 };
 
+export const evaluateInventoryAlertsBatch = async (
+  items: Array<{ stockItemId: string; warehouseId?: string | null }>,
+): Promise<InventoryAlertSetting[]> => {
+  const response = await axiosInstance.post(
+    API_INVENTORY_ALERT_SETTINGS_GROUP.evaluateBatch,
+    { items },
+  );
+  return Array.isArray(response.data)
+    ? response.data.map(normalizeInventoryAlertSetting)
+    : [];
+};
+
 export const updateInventoryAlertSetting = async (
   stockItemId: string,
   payload: UpdateInventoryAlertSettingPayload,

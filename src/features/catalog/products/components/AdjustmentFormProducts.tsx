@@ -11,7 +11,11 @@ import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { listActive } from "@/shared/services/warehouseServices";
 import { listDocumentSeries } from "@/shared/services/documentSeriesService";
-import { createInventoryMovement, getStockSku } from "@/shared/services/documentService";
+import {
+  createInventoryMovement,
+  getStockSku,
+  getStockSkuBatch,
+} from "@/shared/services/documentService";
 import { listSkus } from "@/shared/services/skuService";
 import { findOwnUser } from "@/shared/services/userService";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -506,11 +510,34 @@ export default function AdjustmentFormProducts({
 
       setAdjustmentCheck((prev) => ({ ...prev, loading: true }));
       const reasons: string[] = [];
+      const negativeItems = items.filter((item) => Number(item.quantity) < 0);
+      let stockBySkuId = new Map<string, skuStock>();
 
-      await Promise.all(
-        items.map(async (item) => {
+      if (negativeItems.length) {
+        try {
+          const stockResults = await getStockSkuBatch(
+            negativeItems.map((item) => ({
+              warehouseId: form.warehouseId,
+              skuId: item.skuId,
+            })),
+          );
+          stockBySkuId = new Map(
+            stockResults.map((entry) => [entry.skuId, entry.stock]),
+          );
+        } catch {
+          negativeItems.forEach((item) => {
+            const skuData = selectedSkus.find((sku) => sku.sku.id === item.skuId);
+            const skuLabel = skuData
+              ? buildSkuLabelWithAttributes(skuData)
+              : item.skuId;
+            reasons.push(`No se pudo validar stock de ${skuLabel}`);
+          });
+        }
+      }
+
+      items.forEach((item) => {
           const skuData = selectedSkus.find((s) => s.sku.id === item.skuId);
-        const skuLabel = skuData ? buildSkuLabelWithAttributes(skuData) : item.skuId;
+          const skuLabel = skuData ? buildSkuLabelWithAttributes(skuData) : item.skuId;
           const qty = Number(item.quantity) || 0;
 
           if (qty === 0) {
@@ -519,22 +546,15 @@ export default function AdjustmentFormProducts({
           }
 
           if (qty < 0) {
-            try {
-              const stock = await getStockSku({
-                warehouseId: form.warehouseId,
-                skuId: item.skuId,
-              });
-              const available = Number(stock?.available ?? 0);
-              const requested = Math.abs(qty);
-              if (available <= 0 || available < requested) {
-                reasons.push(`Stock de ${skuLabel} no es suficiente para el ajuste`);
-              }
-            } catch {
-              reasons.push(`No se pudo validar stock de ${skuLabel}`);
+            const stock = stockBySkuId.get(item.skuId);
+            if (!stock) return;
+            const available = Number(stock.available ?? 0);
+            const requested = Math.abs(qty);
+            if (available <= 0 || available < requested) {
+              reasons.push(`Stock de ${skuLabel} no es suficiente para el ajuste`);
             }
           }
-        }),
-      );
+        });
 
       if (!cancelled) {
         setAdjustmentCheck({

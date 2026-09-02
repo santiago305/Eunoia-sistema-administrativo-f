@@ -111,7 +111,7 @@ export const AnalyticsSection = memo(function AnalyticsSection({
 
           <div className="mt-2 rounded-2xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-white p-4">
             <p className="text-xs leading-6 text-zinc-600">
-              Este score se construye a partir de señales como bans activos, reincidencias, IPs
+              Este indicador se construye a partir de señales como bloqueos activos, reincidencias, IP
               únicas, crecimiento de violaciones y rutas críticas afectadas.
             </p>
           </div>

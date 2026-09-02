@@ -13,7 +13,11 @@ const { clearFeedbackMock, listActiveMock, listSkusMock, showFeedbackMock } = vi
 vi.mock("@/shared/services/skuService", () => ({ listSkus: listSkusMock }));
 vi.mock("@/shared/services/warehouseServices", () => ({ listActive: listActiveMock }));
 vi.mock("@/shared/services/documentSeriesService", () => ({ listDocumentSeries: vi.fn() }));
-vi.mock("@/shared/services/documentService", () => ({ createInventoryMovement: vi.fn(), getStockSku: vi.fn() }));
+vi.mock("@/shared/services/documentService", () => ({
+  createInventoryMovement: vi.fn(),
+  getStockSku: vi.fn(),
+  getStockSkuBatch: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("@/shared/services/userService", () => ({ findOwnUser: vi.fn().mockResolvedValue({ data: { name: "Usuario" } }) }));
 vi.mock("@/shared/services/inventoryRealtimeService", () => ({ subscribeInventoryStockUpdated: vi.fn(() => vi.fn()) }));
 vi.mock("@/shared/hooks/useAuth", () => ({ useAuth: () => ({ userId: "user-1" }) }));

@@ -22,7 +22,12 @@ import type {
 import { DashboardShell } from "./components/DashboardShell";
 import { SectionCard } from "./components/SectionCard";
 import { StatCard } from "./components/StatCard";
-import { cn, formatDate, getBanBadgeStyles } from "./components/security.utils";
+import {
+  cn,
+  formatDate,
+  getBanBadgeStyles,
+  getSecurityReasonLabel,
+} from "./components/security.utils";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { FloatingTextarea } from "@/shared/components/components/FloatingTextarea";
 
@@ -125,7 +130,13 @@ export default function IpDetailPage() {
     }
   };
 
-  const ban = data?.ban;
+  const banRecord = data?.ban;
+  const hasActiveTemporaryBan = Boolean(
+    banRecord?.bannedUntil &&
+      new Date(banRecord.bannedUntil).getTime() > Date.now(),
+  );
+  const ban =
+    banRecord?.manualPermanentBan || hasActiveTemporaryBan ? banRecord : null;
   const violations = data?.violations ?? [];
   const topMethods = Object.entries(summary.byMethod).sort((a, b) => b[1] - a[1]);
 
@@ -146,7 +157,7 @@ export default function IpDetailPage() {
 
                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
                   <Shield className="h-3.5 w-3.5" />
-                  Detalle Forense
+                  Detalle forense
                 </div>
 
                 <div>
@@ -154,7 +165,7 @@ export default function IpDetailPage() {
                     {ip || "IP no encontrada"}
                   </h1>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                    Estado operativo, historial de violaciones y contexto tecnico consolidado para esta IP.
+                    Estado operativo, solicitudes que originaron límites y explicación completa de cada bloqueo.
                   </p>
                 </div>
               </div>
@@ -197,15 +208,15 @@ export default function IpDetailPage() {
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatCard
             label="Estado"
-            value={ban ? "Baneada" : "Sin ban"}
-            subtitle={ban ? "La IP tiene un bloqueo activo" : "No hay bloqueo vigente"}
+            value={ban ? "Bloqueada" : "Sin bloqueo"}
+            subtitle={ban ? "La IP tiene un bloqueo vigente" : "No hay bloqueo vigente"}
             icon={ban ? ShieldAlert : Shield}
             variant={ban ? "warning" : "default"}
           />
           <StatCard
             label="Nivel"
             value={ban?.manualPermanentBan ? "PERMANENTE" : ban?.banLevel || "NINGUNO"}
-            subtitle={ban?.manualPermanentBan ? "Ban manual sin vencimiento" : "Clasificacion aplicada"}
+            subtitle={ban?.manualPermanentBan ? "Bloqueo manual sin vencimiento" : "Clasificación aplicada"}
             icon={Ban}
             variant={ban ? "destructive" : "default"}
           />
@@ -227,7 +238,7 @@ export default function IpDetailPage() {
         <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
           <div className="space-y-4">
             <SectionCard
-              title="Estado del ban"
+              title="Estado del bloqueo"
               subtitle="Situacion actual y acciones de respuesta inmediata."
             >
               {loading ? (
@@ -252,10 +263,10 @@ export default function IpDetailPage() {
 
                   <div className="rounded-lg border border-border bg-muted/40 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Notas
+                      Motivo registrado
                     </p>
                     <p className="mt-2 text-sm text-foreground">
-                      {ban.notes?.trim() || "Sin notas registradas para este ban."}
+                      {ban.notes?.trim() || "Sin notas adicionales para este bloqueo."}
                     </p>
                   </div>
 
@@ -265,17 +276,17 @@ export default function IpDetailPage() {
                     loading={mutating}
                     className="w-full"
                   >
-                    Quitar ban
+                    Quitar bloqueo y reiniciar reincidencia
                   </SystemButton>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground">
-                    Esta IP no tiene un ban activo actualmente.
+                    Esta IP no tiene un bloqueo activo actualmente.
                   </div>
 
                   <FloatingTextarea
-                    label="Notas del blacklist"
+                    label="Notas del bloqueo"
                     name="security-ip-blacklist-notes"
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
@@ -289,7 +300,7 @@ export default function IpDetailPage() {
                     disabled={!ip}
                     className="w-full"
                   >
-                    Aplicar blacklist manual
+                    Aplicar bloqueo manual
                   </SystemButton>
                 </div>
               )}
@@ -348,8 +359,8 @@ export default function IpDetailPage() {
           </div>
 
           <SectionCard
-            title="Historial de violaciones"
-            subtitle="Eventos mas recientes asociados a esta direccion IP."
+            title="Historial de seguridad"
+            subtitle="Cada evento indica qué petición ocurrió, cuál era el límite y si aumentó el bloqueo."
           >
             {loading ? (
               <div className="space-y-3">
@@ -385,8 +396,68 @@ export default function IpDetailPage() {
                         </div>
 
                         <h3 className="mt-3 text-sm font-semibold text-foreground">
-                          {item.reason?.trim() || "Sin motivo registrado"}
+                          {item.reasonLabel?.trim() || getSecurityReasonLabel(item.reason)}
                         </h3>
+
+                        {item.reasonDescription?.trim() ? (
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {item.reasonDescription}
+                          </p>
+                        ) : null}
+
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                          <span
+                            className={cn(
+                              "rounded-full border px-2.5 py-1 font-semibold",
+                              item.countedForBan
+                                ? "border-amber-200 bg-amber-50 text-amber-700"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                            )}
+                          >
+                            {item.countedForBan
+                              ? "Sí aumentó la reincidencia"
+                              : "Solo auditoría: no aumentó el bloqueo"}
+                          </span>
+                          {item.throttlerName ? (
+                            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground">
+                              Política: {item.throttlerName === "default" ? "operador/sesión" : item.throttlerName === "ip-safety" ? "IP secundaria" : item.throttlerName}
+                            </span>
+                          ) : null}
+                          {item.trackerType ? (
+                            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground">
+                              Contador: {item.trackerType === "session" ? "sesión autenticada" : item.trackerType === "login" ? "IP + cuenta" : "IP"}
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {item.requestLimit != null ? (
+                          <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                            <div className="rounded-lg border border-border bg-muted/35 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Solicitudes</p>
+                              <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                                {item.totalHits ?? "-"} de {item.requestLimit}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-border bg-muted/35 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Ventana</p>
+                              <p className="mt-1 text-sm font-semibold text-foreground">
+                                {item.windowSeconds ?? "-"} segundos
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-border bg-muted/35 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Reintento</p>
+                              <p className="mt-1 text-sm font-semibold text-foreground">
+                                {item.retryAfterSeconds ?? "-"} segundos
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-border bg-muted/35 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Nivel posterior</p>
+                              <p className="mt-1 text-sm font-semibold text-foreground">
+                                {item.banLevelAfter ? `Nivel ${item.banLevelAfter}` : "Sin bloqueo"}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
 
                         <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                           <div className="rounded-lg border border-border bg-muted/35 px-3 py-2 text-sm text-foreground">
@@ -396,6 +467,21 @@ export default function IpDetailPage() {
                             <p className="mt-1 break-all font-mono text-xs text-foreground">
                               {item.path?.trim() || "Sin ruta"}
                             </p>
+                            {item.requestId ? (
+                              <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">
+                                ID: {item.requestId}
+                              </p>
+                            ) : null}
+                            {item.userId ? (
+                              <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">
+                                Usuario: {item.userId}
+                              </p>
+                            ) : null}
+                            {item.sessionId ? (
+                              <p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">
+                                Sesión: {item.sessionId}
+                              </p>
+                            ) : null}
                           </div>
 
                           <div className="rounded-lg border border-border bg-muted/35 px-3 py-2 text-sm text-foreground">
@@ -405,8 +491,19 @@ export default function IpDetailPage() {
                             <p className="mt-1 line-clamp-3 text-xs leading-5 text-muted-foreground">
                               {item.userAgent?.trim() || "No disponible"}
                             </p>
+                            {item.actor?.trim() ? (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Administrador: {item.actor}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
+
+                        {item.bannedUntilAfter ? (
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            El bloqueo resultante quedó vigente hasta {formatDate(item.bannedUntilAfter)}.
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </article>

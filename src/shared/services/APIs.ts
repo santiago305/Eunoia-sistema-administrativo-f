@@ -611,6 +611,7 @@ export const API_INVENTORY_GROUP = {
 
 export const API_INVENTORY_ALERT_SETTINGS_GROUP = {
   list: "/inventory-alert-settings",
+  evaluateBatch: "/inventory-alert-settings/evaluate-batch",
   byStockItem: (stockItemId: string) =>
     `/inventory-alert-settings/${stockItemId}`,
 };

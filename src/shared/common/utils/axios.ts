@@ -45,8 +45,11 @@ axiosInstance.interceptors.request.use((config) => {
   const method = String(config.method ?? "get").toLowerCase();
   const needsCsrf = ["post", "put", "patch", "delete"].includes(method);
   const csrfToken = getCookieValue("csrf_token");
+  config.headers = config.headers ?? {};
+  if (!config.headers["x-request-id"] && typeof globalThis.crypto?.randomUUID === "function") {
+    config.headers["x-request-id"] = globalThis.crypto.randomUUID();
+  }
   if (needsCsrf && csrfToken) {
-    config.headers = config.headers ?? {};
     config.headers["x-csrf-token"] = csrfToken;
   }
   return config;

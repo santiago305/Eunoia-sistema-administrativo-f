@@ -286,7 +286,7 @@ export default function SecurityPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard
-          label="Bans activos"
+          label="Bloqueos activos"
           value={summary?.data.activeBans ?? 0}
           subtitle="IPs bloqueadas actualmente"
           icon={Ban}
@@ -295,7 +295,7 @@ export default function SecurityPage() {
         <StatCard
           label="Temporales"
           value={summary?.data.temporaryBans ?? 0}
-          subtitle="Baneos con vencimiento"
+          subtitle="Bloqueos con vencimiento"
           icon={Clock}
         />
         <StatCard
@@ -306,7 +306,7 @@ export default function SecurityPage() {
           variant="warning"
         />
         <StatCard
-          label="Violaciones top"
+          label="Eventos principales"
           value={summary?.data.topViolations ?? 0}
           subtitle="Suma visible del ranking actual"
           icon={Activity}

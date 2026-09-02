@@ -17,7 +17,14 @@ export function parseApiError(
     const axiosError = error as AxiosError<ApiErrorPayload>;
 
     if (axiosError?.response?.status === 429) {
-      return "Demasiados intentos. Intenta de nuevo en 1 minuto.";
+      const serverMessage = formatApiMessage(axiosError.response.data?.message);
+      const retryAfter = axiosError.response.headers?.["retry-after"];
+      return (
+        serverMessage ||
+        (retryAfter
+          ? `Se alcanzó el límite de solicitudes. Intenta nuevamente en ${retryAfter} segundos.`
+          : "Se alcanzó el límite de solicitudes. Intenta nuevamente en un minuto.")
+      );
     }
     if (axiosError?.response?.status === 423) {
       return formatApiMessage(axiosError?.response?.data?.message) || "Cuenta bloqueada temporalmente.";

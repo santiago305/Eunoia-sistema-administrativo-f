@@ -75,3 +75,21 @@ export const getBanBadgeStyles = (
   }
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
 };
+
+const SECURITY_REASON_LABELS: Record<string, string> = {
+  rate_limit_exceeded: "Límite de solicitudes superado",
+  rate_limit_blocked_request: "Petición rechazada durante un límite activo",
+  operator_rate_limit_exceeded: "Límite del operador superado",
+  operator_rate_limit_blocked_request:
+    "Petición del operador rechazada durante un límite activo",
+  temporary_ban_request: "Petición rechazada por bloqueo temporal",
+  manual_permanent_ban_request: "Petición rechazada por bloqueo permanente",
+  manual_permanent_ban: "Bloqueo permanente aplicado manualmente",
+  manual_unban: "Desbloqueo manual",
+};
+
+export const getSecurityReasonLabel = (reason?: string | null) => {
+  const normalized = reason?.trim();
+  if (!normalized) return "Sin motivo registrado";
+  return SECURITY_REASON_LABELS[normalized] ?? normalized.replace(/_/g, " ");
+};

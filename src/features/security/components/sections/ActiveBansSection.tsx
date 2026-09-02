@@ -3,7 +3,13 @@ import { DataTable } from "@/shared/components/table/DataTable";
 import type { DataTableColumn, DataTablePaginationMeta } from "@/shared/components/table/types";
 import type { SecurityActiveBanItem } from "../../types/security.api";
 import { SectionCard } from "../SectionCard";
-import { buildIpDetailPath, cn, formatDate, getBanBadgeStyles } from "../security.utils";
+import {
+  buildIpDetailPath,
+  cn,
+  formatDate,
+  getBanBadgeStyles,
+  getSecurityReasonLabel,
+} from "../security.utils";
 
 export const ActiveBansSection = memo(function ActiveBansSection({
   loading,
@@ -57,7 +63,9 @@ export const ActiveBansSection = memo(function ActiveBansSection({
       header: "Motivo",
       cell: (item) => (
         <div className="max-w-[280px] line-clamp-2 text-xs text-zinc-600">
-          {item.notes?.trim() || item.lastReason?.trim() || "Sin detalle"}
+          {item.notes?.trim() ||
+            item.lastReasonLabel?.trim() ||
+            getSecurityReasonLabel(item.lastReason)}
         </div>
       ),
     },
@@ -65,7 +73,7 @@ export const ActiveBansSection = memo(function ActiveBansSection({
 
   return (
     <SectionCard
-      title="Bans activos"
+      title="Bloqueos activos"
       subtitle="Bloqueos aplicados de forma automatica o manual."
     >
       <DataTable
@@ -74,7 +82,7 @@ export const ActiveBansSection = memo(function ActiveBansSection({
         columns={columns}
         loading={loading}
         rowKey={(item) => item.id ?? item.ip}
-        emptyMessage="No hay bans activos en este momento."
+        emptyMessage="No hay bloqueos activos en este momento."
         pagination={pagination}
         onPageChange={onPageChange}
         onRowClick={(item) => onNavigate(buildIpDetailPath(item.ip))}
