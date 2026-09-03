@@ -37,6 +37,7 @@ import {
   saveInventoryLedgerSearchMetric,
 } from "@/shared/services/kardexService";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
+import { AlertModal } from "@/shared/components/components/AlertModal";
 import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { InventoryLedgerSmartSearchPanel } from "@/features/catalog/components/InventoryLedgerSmartSearchPanel";
 import {
@@ -127,7 +128,20 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
   const [exportColumns, setExportColumns] = useState<Array<{ key: string; label: string }>>([]);
   const [exportPresets, setExportPresets] = useState<Array<{ metricId: string; name: string; columns: Array<{ key: string; label: string }> }>>([]);
   const [exporting, setExporting] = useState(false);
-  const [useTableDateRangeForExport, setUseTableDateRangeForExport] = useState(true);
+  const [pendingFullHistoryColumns, setPendingFullHistoryColumns] = useState<Array<{ key: string; label: string }> | null>(null);
+
+  const compatibleExportPresets = useMemo(() => {
+    const availableColumns = new Map(exportColumns.map((column) => [column.key, column]));
+
+    return exportPresets
+      .map((preset) => ({
+        ...preset,
+        columns: preset.columns
+          .map((column) => availableColumns.get(column.key))
+          .filter((column): column is { key: string; label: string } => Boolean(column)),
+      }))
+      .filter((preset) => preset.columns.length > 0);
+  }, [exportColumns, exportPresets]);
 
   const [skuOptions, setSkuOptions] = useState<DataTableSearchOption[]>([]);
   const loadSkus = useCallback(async (q?: string) => {
@@ -554,12 +568,15 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     [config.itemLabel],
   );
 
-  const handleExport = useCallback(async (columnsToExport: Array<{ key: string; label: string }>) => {
+  const downloadExport = useCallback(async (
+    columnsToExport: Array<{ key: string; label: string }>,
+    dateRange: { from?: string; to?: string },
+  ) => {
     setExporting(true);
     try {
       const file = await exportInventoryLedgerExcel({
-        from: useTableDateRangeForExport ? (fromDate || undefined) : undefined,
-        to: useTableDateRangeForExport ? (toDate || undefined) : undefined,
+        from: dateRange.from,
+        to: dateRange.to,
         productType: config.productType,
         q: executedSnapshot.q,
         filters: JSON.stringify(executedSnapshot.filters),
@@ -577,17 +594,36 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     } finally {
       setExporting(false);
     }
-  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, fromDate, showFeedback, toDate, useTableDateRangeForExport]);
+  }, [config.productType, executedSnapshot.filters, executedSnapshot.q, showFeedback]);
+
+  const handleExport = useCallback(async (columnsToExport: Array<{ key: string; label: string }>) => {
+    if (!fromDate && !toDate) {
+      setPendingFullHistoryColumns(columnsToExport);
+      return;
+    }
+
+    await downloadExport(columnsToExport, {
+      from: fromDate || undefined,
+      to: toDate || undefined,
+    });
+  }, [downloadExport, fromDate, toDate]);
+
+  const handleConfirmFullHistoryExport = useCallback(async () => {
+    if (!pendingFullHistoryColumns) return;
+
+    await downloadExport(pendingFullHistoryColumns, {});
+    setPendingFullHistoryColumns(null);
+  }, [downloadExport, pendingFullHistoryColumns]);
 
   const handleSaveExportPreset = useCallback(async (payload: { name: string; columns: Array<{ key: string; label: string }> }) => {
     await saveInventoryLedgerExportPreset({
       name: payload.name,
       columns: payload.columns,
       productType: config.productType,
-      useDateRange: useTableDateRangeForExport,
+      useDateRange: true,
     });
     await loadExportPresets();
-  }, [config.productType, loadExportPresets, useTableDateRangeForExport]);
+  }, [config.productType, loadExportPresets]);
 
   const handleDeleteExportPreset = useCallback(async (metricId: string) => {
     await deleteInventoryLedgerExportPreset({
@@ -605,7 +641,7 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
         {permissions.export && exportColumns.length ? (
           <ExportPopover
             columns={exportColumns}
-            presets={exportPresets}
+            presets={compatibleExportPresets}
             loading={exporting}
             onSavePreset={handleSaveExportPreset}
             onDeletePreset={handleDeleteExportPreset}
@@ -666,8 +702,6 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
               });
             },
           }}
-          useRangeDatesForExternalExport
-          onExternalExportRangeStateChange={(state) => setUseTableDateRangeForExport(state.useDateRange)}
           pagination={{ page, limit, total }}
           onPageChange={(nextPage) => startTransition(() => setPage(nextPage))}
           tableClassName="text-[10px]"
@@ -675,6 +709,27 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
 
         {error ? <div className="px-5 py-4 text-[10px] text-rose-600">{error}</div> : null}
       </div>
+
+      <AlertModal
+        open={pendingFullHistoryColumns !== null}
+        type="warning"
+        title="Exportar historial completo"
+        message={
+          <div className="space-y-2">
+            <p>
+              No has seleccionado un rango de fechas. Se descargará todo el historial de movimientos y el proceso puede demorar.
+            </p>
+            <p className="font-medium">
+              Te recomendamos elegir primero un plazo en el calendario de la tabla.
+            </p>
+          </div>
+        }
+        confirmText="Exportar todo"
+        cancelText="Elegir fechas"
+        loading={exporting}
+        onClose={() => setPendingFullHistoryColumns(null)}
+        onConfirm={() => void handleConfirmFullHistoryExport()}
+      />
     </PageShell>
   );
 }

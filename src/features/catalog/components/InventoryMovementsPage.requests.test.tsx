@@ -1,23 +1,41 @@
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InventoryMovementsPage } from "./InventoryMovementsPage";
 
-const { clearFeedbackMock, dataTablePropsMock, getInventoryLedgerMovementsMock, listSkusMock, showFeedbackMock } = vi.hoisted(() => ({
+const {
+  alertModalPropsMock,
+  clearFeedbackMock,
+  dataTablePropsMock,
+  exportInventoryLedgerExcelMock,
+  exportPopoverPropsMock,
+  getInventoryLedgerExportColumnsMock,
+  getInventoryLedgerExportPresetsMock,
+  getInventoryLedgerMovementsMock,
+  listSkusMock,
+  permissionState,
+  showFeedbackMock,
+} = vi.hoisted(() => ({
+  alertModalPropsMock: vi.fn(),
   clearFeedbackMock: vi.fn(),
   dataTablePropsMock: vi.fn(),
+  exportInventoryLedgerExcelMock: vi.fn(),
+  exportPopoverPropsMock: vi.fn(),
+  getInventoryLedgerExportColumnsMock: vi.fn(),
+  getInventoryLedgerExportPresetsMock: vi.fn(),
   getInventoryLedgerMovementsMock: vi.fn(),
   listSkusMock: vi.fn(),
+  permissionState: { export: false },
   showFeedbackMock: vi.fn(),
 }));
 
 vi.mock("@/shared/services/kardexService", () => ({
   getInventoryLedgerMovements: getInventoryLedgerMovementsMock,
   getInventoryLedgerSearchState: vi.fn().mockResolvedValue({ catalogs: {}, recent: [], saved: [] }),
-  getInventoryLedgerExportColumns: vi.fn(),
-  getInventoryLedgerExportPresets: vi.fn(),
+  getInventoryLedgerExportColumns: getInventoryLedgerExportColumnsMock,
+  getInventoryLedgerExportPresets: getInventoryLedgerExportPresetsMock,
   deleteInventoryLedgerExportPreset: vi.fn(),
   deleteInventoryLedgerSearchMetric: vi.fn(),
-  exportInventoryLedgerExcel: vi.fn(),
+  exportInventoryLedgerExcel: exportInventoryLedgerExcelMock,
   saveInventoryLedgerExportPreset: vi.fn(),
   saveInventoryLedgerSearchMetric: vi.fn(),
 }));
@@ -26,11 +44,23 @@ vi.mock("@/shared/hooks/useFeedbackToast", () => ({
   useFeedbackToast: () => ({ showFeedback: showFeedbackMock, clearFeedback: clearFeedbackMock }),
 }));
 vi.mock("@/shared/hooks/usePermissions", () => ({ usePermissions: () => ({ can: vi.fn() }) }));
-vi.mock("@/features/catalog/utils/catalogPermissions", () => ({ getInventoryMovementPermissions: () => ({ export: false }) }));
+vi.mock("@/features/catalog/utils/catalogPermissions", () => ({ getInventoryMovementPermissions: () => ({ export: permissionState.export }) }));
 vi.mock("react-router-dom", () => ({ useSearchParams: () => [new URLSearchParams()] }));
 vi.mock("@/shared/layouts/PageShell", () => ({ PageShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/shared/components/components/PageTitle", () => ({ PageTitle: () => null }));
 vi.mock("@/shared/components/components/PageActionsRow", () => ({ PageActionsRow: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+vi.mock("@/shared/components/components/ExportPopover", () => ({
+  ExportPopover: (props: unknown) => {
+    exportPopoverPropsMock(props);
+    return null;
+  },
+}));
+vi.mock("@/shared/components/components/AlertModal", () => ({
+  AlertModal: (props: unknown) => {
+    alertModalPropsMock(props);
+    return null;
+  },
+}));
 vi.mock("@/shared/components/table/DataTable", () => ({
   DataTable: (props: unknown) => {
     dataTablePropsMock(props);
@@ -43,7 +73,14 @@ vi.mock("@/features/catalog/components/InventoryLedgerSmartSearchPanel", () => (
 describe("InventoryMovementsPage request budget", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    permissionState.export = false;
     getInventoryLedgerMovementsMock.mockResolvedValue({ items: [], total: 0 });
+    getInventoryLedgerExportColumnsMock.mockResolvedValue([]);
+    getInventoryLedgerExportPresetsMock.mockResolvedValue([]);
+    exportInventoryLedgerExcelMock.mockResolvedValue({
+      blob: new Blob(["excel"]),
+      filename: "movimientos.xlsx",
+    });
   });
 
   it("loads movements once on mount without preloading SKUs", async () => {
@@ -98,5 +135,87 @@ describe("InventoryMovementsPage request budget", () => {
       });
       expect(props.data[0]).not.toHaveProperty("documentNumber");
     });
+  });
+
+  it("exports every movement from the date range selected in the table", async () => {
+    permissionState.export = true;
+    getInventoryLedgerExportColumnsMock.mockResolvedValue([
+      { key: "createdAt", label: "Fecha" },
+    ]);
+
+    render(<InventoryMovementsPage config={{ productType: "PRODUCT", pageTitle: "Movimientos", headingTitle: "Movimientos", itemLabel: "Producto", tableId: "movements", searchName: "movements", dateRangeName: "range" }} />);
+
+    await waitFor(() => expect(exportPopoverPropsMock).toHaveBeenCalled());
+    const tableProps = dataTablePropsMock.mock.calls.at(-1)?.[0] as {
+      rangeDates: {
+        onChange: (range: { startDate: Date | null; endDate: Date | null }) => void;
+      };
+    };
+
+    act(() => {
+      tableProps.rangeDates.onChange({
+        startDate: new Date(2026, 7, 1),
+        endDate: new Date(2026, 7, 31),
+      });
+    });
+
+    await waitFor(() => {
+      const props = exportPopoverPropsMock.mock.calls.at(-1)?.[0] as {
+        onExport: (columns: Array<{ key: string; label: string }>) => Promise<void>;
+      };
+      expect(props).toBeDefined();
+    });
+
+    const exportProps = exportPopoverPropsMock.mock.calls.at(-1)?.[0] as {
+      onExport: (columns: Array<{ key: string; label: string }>) => Promise<void>;
+    };
+    await act(async () => {
+      await exportProps.onExport([{ key: "createdAt", label: "Fecha" }]);
+    });
+
+    expect(exportInventoryLedgerExcelMock).toHaveBeenCalledWith(expect.objectContaining({
+      from: "2026-08-01",
+      to: "2026-08-31",
+    }));
+  });
+
+  it("warns before exporting the complete history without a date range", async () => {
+    permissionState.export = true;
+    getInventoryLedgerExportColumnsMock.mockResolvedValue([
+      { key: "createdAt", label: "Fecha" },
+    ]);
+
+    render(<InventoryMovementsPage config={{ productType: "PRODUCT", pageTitle: "Movimientos", headingTitle: "Movimientos", itemLabel: "Producto", tableId: "movements", searchName: "movements", dateRangeName: "range" }} />);
+
+    await waitFor(() => expect(exportPopoverPropsMock).toHaveBeenCalled());
+    const exportProps = exportPopoverPropsMock.mock.calls.at(-1)?.[0] as {
+      onExport: (columns: Array<{ key: string; label: string }>) => Promise<void>;
+    };
+
+    await act(async () => {
+      await exportProps.onExport([{ key: "createdAt", label: "Fecha" }]);
+    });
+
+    expect(exportInventoryLedgerExcelMock).not.toHaveBeenCalled();
+    const alertProps = alertModalPropsMock.mock.calls.at(-1)?.[0] as {
+      open: boolean;
+      confirmText: string;
+      cancelText: string;
+      onConfirm: () => void;
+    };
+    expect(alertProps).toMatchObject({
+      open: true,
+      confirmText: "Exportar todo",
+      cancelText: "Elegir fechas",
+    });
+
+    await act(async () => {
+      alertProps.onConfirm();
+    });
+
+    await waitFor(() => expect(exportInventoryLedgerExcelMock).toHaveBeenCalledWith(expect.objectContaining({
+      from: undefined,
+      to: undefined,
+    })));
   });
 });
