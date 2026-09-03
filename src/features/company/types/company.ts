@@ -22,6 +22,7 @@ export type Company = {
   logoPath?: string | null;
   isotypePath?: string | null;
   certPath?: string | null;
+  primaryColor: string;
   production: boolean;
   isActive: boolean;
   createdAt?: string;
@@ -33,4 +34,5 @@ export type CompanyBranding = {
   name: string | null;
   logoPath: string | null;
   isotypePath: string | null;
+  primaryColor: string | null;
 };

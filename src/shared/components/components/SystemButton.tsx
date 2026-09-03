@@ -37,7 +37,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-white shadow-sm hover:brightness-110 active:scale-[0.98] focus-visible:ring-primary/30",
+    "bg-primary text-primary-foreground shadow-sm hover:brightness-110 active:scale-[0.98] focus-visible:ring-primary/30",
   secondary:
     "bg-zinc-900 text-white shadow-sm hover:bg-zinc-800 active:scale-[0.98] focus-visible:ring-zinc-300",
   success:

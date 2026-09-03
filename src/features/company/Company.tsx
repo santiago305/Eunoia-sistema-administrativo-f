@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardHeader } from "@/shared/components/components/AppCard";
 import { SystemButton } from "@/shared/components/components/SystemButton";
@@ -34,6 +34,7 @@ import { useCompany } from "@/shared/hooks/useCompany";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { BankAccountListModal } from "./components/BankAccountListModal";
+import { applyCompanyTheme } from "@/shared/utils/companyTheme";
 
 const COMPANY_PRIMARY = "hsl(var(--primary))";
 
@@ -53,9 +54,25 @@ export default function CompanyPage() {
   const [savingCompany, setSavingCompany] = useState(false);
   const [company, setCompany] = useState<Company | null>(null);
   const [openPaymentMethods, setOpenPaymentMethods] = useState(false);
-  const [formValues, setFormValues] = useState<CompanyFormValues>(emptyCompanyForm);
+  const [formValues, setFormValues] = useState<CompanyFormValues>(() =>
+    contextCompany ? mapCompanyToFormValues(contextCompany) : emptyCompanyForm,
+  );
   const [formErrors, setFormErrors] = useState<CompanyFormErrors>({});
   const [openBankAccounts, setOpenBankAccounts] = useState(false);
+  const savedPrimaryColorRef = useRef(contextCompany?.primaryColor);
+
+  savedPrimaryColorRef.current = contextCompany?.primaryColor;
+
+  useEffect(() => {
+    applyCompanyTheme(formValues.primaryColor);
+  }, [formValues.primaryColor]);
+
+  useEffect(
+    () => () => {
+      applyCompanyTheme(savedPrimaryColorRef.current);
+    },
+    [],
+  );
 
   const hasCompany = Boolean(company && (company.companyId || company.ruc || company.name));
   const logoUrl = useMemo(

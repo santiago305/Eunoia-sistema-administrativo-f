@@ -1,5 +1,5 @@
 
-import { Building2, Key, MapPin, Phone } from "lucide-react";
+import { Building2, Key, MapPin, Palette, Phone } from "lucide-react";
 import { CompanyFormSectionProps } from "../types/companyComponentTypes";
 import { SectionHeaderForm } from "@/shared/components/components/SectionHederForm";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -108,6 +108,46 @@ export function CompanyFormSection({
             error={formErrors.email}
             disabled={disabled}
           />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeaderForm icon={Palette} title="Apariencia" />
+        <div className="rounded-lg border border-border bg-muted/25 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <label
+                htmlFor="company-primary-color"
+                className="text-sm font-medium text-foreground"
+              >
+                Color principal del sistema
+              </label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                El cambio se previsualiza ahora y se conserva al guardar.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-sm font-medium text-foreground">
+                {formValues.primaryColor}
+              </span>
+              <input
+                id="company-primary-color"
+                name="primaryColor"
+                type="color"
+                value={formValues.primaryColor}
+                onChange={(event) =>
+                  onFieldChange("primaryColor", event.target.value.toUpperCase())
+                }
+                disabled={disabled}
+                aria-label="Color principal del sistema"
+                className="h-10 w-14 rounded-lg border border-border bg-background p-1 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+          </div>
+          {formErrors.primaryColor ? (
+            <p className="mt-2 text-xs text-red-600">{formErrors.primaryColor}</p>
+          ) : null}
         </div>
       </div>
 

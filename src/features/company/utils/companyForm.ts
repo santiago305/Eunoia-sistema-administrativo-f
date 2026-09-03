@@ -1,6 +1,10 @@
 import { createCompanySchema } from "@/shared/schemas/companySchemas";
 import { Company } from "../types/company";
 import { CompanyFormErrors, CompanyFormValues } from "../types/companyFormTypes";
+import {
+  DEFAULT_COMPANY_PRIMARY_COLOR,
+  normalizeCompanyPrimaryColor,
+} from "@/shared/utils/companyTheme";
 
 /**
  * Estado inicial del formulario de empresa para creación o reinicio.
@@ -19,6 +23,7 @@ export const emptyCompanyForm: CompanyFormValues = {
   codLocal: "",
   solUser: "",
   solPass: "",
+  primaryColor: DEFAULT_COMPANY_PRIMARY_COLOR,
   production: false,
   isActive: true,
 };
@@ -42,6 +47,7 @@ export function mapCompanyToFormValues(company: Company): CompanyFormValues {
     codLocal: company.codLocal ?? "",
     solUser: company.solUser ?? "",
     solPass: company.solPass ?? "",
+    primaryColor: normalizeCompanyPrimaryColor(company.primaryColor),
     production: Boolean(company.production),
     isActive: Boolean(company.isActive),
   };
@@ -69,6 +75,7 @@ export function normalizeCompanyFormValues(
     codLocal: values.codLocal?.trim() ?? "",
     solUser: values.solUser?.trim() ?? "",
     solPass: values.solPass?.trim() ?? "",
+    primaryColor: normalizeCompanyPrimaryColor(values.primaryColor),
   };
 
   return {

@@ -57,7 +57,7 @@ export function RolePermissionsMatrix({
               checked={checked}
               disabled={!canAssignRolePermissions}
               onCheckedChange={() => onTogglePermission(permission.code)}
-              className="mt-0.5 rounded-sm border-zinc-300 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-white"
+              className="mt-0.5 rounded-sm border-zinc-300 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
             />
 
             <span className="min-w-0 flex-1">
@@ -160,7 +160,7 @@ export function RolePermissionsMatrix({
                               checked={allSubgroupSelected}
                               disabled={!canAssignRolePermissions}
                               onCheckedChange={() => onToggleEveryPermissionInModule(subgroup.permissions)}
-                              className="rounded-sm border-zinc-300 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-white"
+                              className="rounded-sm border-zinc-300 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                             />
                             <button
                               type="button"

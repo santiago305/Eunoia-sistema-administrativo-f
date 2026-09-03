@@ -7,6 +7,7 @@ import { NotificationProvider } from "./providers/NotificationProvider";
 import { Toaster } from "sileo";
 import { useEffect } from "react";
 import { resolveCompanyAssetUrl } from "@/features/company/utils/companyAssets";
+import { applyCompanyTheme } from "@/shared/utils/companyTheme";
 /*
  * Componente raiz de la aplicacion.
  *
@@ -37,11 +38,22 @@ function FaviconSync() {
   return null;
 }
 
+function CompanyThemeSync() {
+  const { company } = useCompany();
+
+  useEffect(() => {
+    applyCompanyTheme(company?.primaryColor);
+  }, [company?.primaryColor]);
+
+  return null;
+}
+
 function App({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <CompanyProvider>
         <FaviconSync />
+        <CompanyThemeSync />
         <Toaster position="bottom-left" theme="light"/>
         <NotificationProvider>
           <TooltipProvider delayDuration={200}>{children}</TooltipProvider>

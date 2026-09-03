@@ -12,6 +12,7 @@ import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { getFirstAccessibleProtectedPath } from "@/routes/config/routeAccess";
 import { getCompanyBranding } from "@/shared/services/companyService";
 import { resolveCompanyAssetUrl } from "@/features/company/utils/companyAssets";
+import { applyCompanyTheme } from "@/shared/utils/companyTheme";
 
 function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [submitting, setSubmitting] = useState(false);
@@ -38,6 +39,7 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
       try {
         const branding = await getCompanyBranding();
         setCompanyLogoUrl(resolveCompanyAssetUrl(branding.logoPath));
+        applyCompanyTheme(branding.primaryColor);
       } catch {
         setCompanyLogoUrl("");
       }
@@ -171,8 +173,8 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
             type="submit"
             disabled={submitting || isTemporarilyBlocked}
             className={cn(
-              "w-full rounded-xl text-white cursor-pointer",
-              "bg-primary hover:bg-[#19a897]",
+              "w-full cursor-pointer rounded-xl text-primary-foreground",
+              "bg-primary hover:bg-primary/90",
               "shadow-sm",
               "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               "disabled:cursor-not-allowed disabled:opacity-70"

@@ -60,7 +60,7 @@ export function DashboardSaleOrderSmartFilter({
         >
           Filtros
           {snapshot.filters.length > 0 ? (
-            <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-white">
+            <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
               {snapshot.filters.length}
             </span>
           ) : null}

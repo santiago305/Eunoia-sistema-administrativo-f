@@ -230,7 +230,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
         item.isComposeAction && isSidebarCollapsed ? "size-4" : "size-[18px]",
         // Redactar: color del icono (solo boton especial).
         item.isComposeAction
-          ? "text-white"
+          ? "text-primary-foreground"
           : isParentHighlighted
           ? "text-primary"
           : "text-sidebar-foreground/90 group-hover:text-sidebar-foreground"
@@ -269,7 +269,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
       : "px-2 py-1.5",
     // Redactar: fondo principal + texto blanco.
     item.isComposeAction
-      ? "bg-primary text-white shadow-sm hover:shadow-md"
+      ? "bg-primary text-primary-foreground shadow-sm hover:shadow-md"
       : isParentHighlighted
       ? "bg-primary/10 text-primary shadow-sm"
       : "text-sidebar-foreground hover:bg-sidebar-accent/70"
@@ -290,7 +290,7 @@ const SidebarItemComponent = ({ item }: SidebarItemProps) => {
     "group flex w-full items-center rounded-xl transition-all duration-200",
     item.isComposeAction ? "min-h-10" : "min-h-8",
     item.isComposeAction
-      ? "bg-primary text-white shadow-sm hover:shadow-md"
+      ? "bg-primary text-primary-foreground shadow-sm hover:shadow-md"
       : isParentHighlighted
       ? "bg-primary/10 text-primary shadow-sm"
       : "text-sidebar-foreground hover:bg-sidebar-accent/70"

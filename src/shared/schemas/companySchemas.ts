@@ -26,6 +26,10 @@ export const createCompanySchema = z.object({
   codLocal: optionalText,
   solUser: optionalText,
   solPass: optionalText,
+  primaryColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Selecciona un color vÃ¡lido"),
   production: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
