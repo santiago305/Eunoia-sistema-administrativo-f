@@ -122,9 +122,6 @@ export function CompanyFormSection({
               >
                 Color principal del sistema
               </label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                El cambio se previsualiza ahora y se conserva al guardar.
-              </p>
             </div>
 
             <div className="flex items-center gap-3">
