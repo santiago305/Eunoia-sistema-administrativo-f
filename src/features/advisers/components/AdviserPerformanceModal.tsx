@@ -144,7 +144,7 @@ export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
           <div>
             <h3 className="text-base font-semibold text-foreground">Análisis mensual</h3>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Todos los gráficos usan el mismo periodo e incluyen el mes actual.
+              Los gráficos comienzan con la primera actividad del periodo e incluyen el mes actual.
             </p>
           </div>
           <div
@@ -184,8 +184,6 @@ export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
 
         {analytics ? (
           <>
-            <PerformanceChart data={data} analytics={analytics} loading={loading} />
-
             {!hasActivity ? (
               <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center">
                 <BarChart3 className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden="true" />
@@ -195,13 +193,15 @@ export function AdviserPerformanceModal({ open, adviser, onClose }: Props) {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 lg:grid-cols-2">
-                <OrdersChart data={data} />
-                <FinancialChart data={data} />
-              </div>
+              <>
+                <PerformanceChart data={data} analytics={analytics} loading={loading} />
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <OrdersChart data={data} />
+                  <FinancialChart data={data} />
+                </div>
+                <MonthlyTable data={data} />
+              </>
             )}
-
-            <MonthlyTable data={data} />
           </>
         ) : null}
       </div>
