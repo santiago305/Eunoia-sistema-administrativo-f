@@ -54,6 +54,13 @@ export const listAdvisers = async (): Promise<AdviserOption[]> => {
   return response.data;
 };
 
+export const listAdviserCandidates = async (): Promise<AdviserOption[]> => {
+  const response = await axiosInstance.get<AdviserOption[]>(
+    API_ADVISERS_GROUP.candidates,
+  );
+  return response.data;
+};
+
 export const createAdviser = async (
   userId: string,
 ): Promise<AdviserOption> => {

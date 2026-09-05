@@ -11,15 +11,14 @@ import { Modal } from "@/shared/components/modales/Modal";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { createAdviser, deleteAdviserSearchMetric, getAdviserSearchState, listAdviserOrders, listAdviserSummary, saveAdviserSearchMetric, setAdviserActive, type AdviserOption, type AdviserOrderListItem } from "@/shared/services/adviserService";
-import { listUsers, type UserApiListItem } from "@/shared/services/userService";
+import { createAdviser, deleteAdviserSearchMetric, getAdviserSearchState, listAdviserCandidates, listAdviserOrders, listAdviserSummary, saveAdviserSearchMetric, setAdviserActive, type AdviserOption, type AdviserOrderListItem } from "@/shared/services/adviserService";
 import { SaleOrderAdviserImportAliasesModal } from "@/features/sale-orders/components/SaleOrderAdviserImportAliasesModal";
 import { SaleOrderDetailsModal } from "@/features/sale-orders/components/SaleOrderDetailsModal";
 import { fetchSaleOrderById } from "@/shared/services/saleOrderService";
 import type { SaleOrder } from "@/features/sale-orders/types/saleOrder";
 import { AdviserSmartSearchPanel } from "./components/AdviserSmartSearchPanel";
 import type { AdviserSearchRule, AdviserSearchSnapshot, AdviserSearchStateResponse } from "./types/adviserSearch";
-import { applyAdviserSearchRule, buildAdviserSearchChips, removeAdviserSearchKey, sanitizeAdviserSearchSnapshot, type AdviserSearchFilterKey } from "./utils/adviserSmartSearch";
+import { applyAdviserSearchRule, buildAdviserSearchChips, filterAdviserSearchSnapshotByCapabilities, removeAdviserSearchKey, type AdviserSearchCapabilities, type AdviserSearchFilterKey } from "./utils/adviserSmartSearch";
 import { endOfMonth, getDateKey, startOfMonth } from "@/shared/components/components/date-picker/dateUtils";
 import { AdviserPerformanceModal } from "./components/AdviserPerformanceModal";
 
@@ -43,6 +42,11 @@ const orderNumber = (order: AdviserOrderListItem) => {
 export default function Advisers() {
   const { can } = usePermissions();
   const canManage = can("advisers.manage");
+  const canViewOrders = can("advisers.view_orders");
+  const canViewPerformance = can("advisers.view_performance");
+  const canManageCodes = can("sale_orders.adviser_import_aliases.manage");
+  const canViewCodes = canManageCodes || can("sale_orders.adviser_import_aliases.view");
+  const searchCapabilities = useMemo<AdviserSearchCapabilities>(() => ({ canViewOrders, canViewPerformance }), [canViewOrders, canViewPerformance]);
   const [items, setItems] = useState<AdviserOption[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -55,7 +59,7 @@ export default function Advisers() {
   const [searchState, setSearchState] = useState<AdviserSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [users, setUsers] = useState<UserApiListItem[]>([]);
+  const [users, setUsers] = useState<AdviserOption[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState<AdviserOption | null>(null);
@@ -68,8 +72,8 @@ export default function Advisers() {
   const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
   const [performanceFor, setPerformanceFor] = useState<AdviserOption | null>(null);
 
-  const draftSnapshot = useMemo(() => sanitizeAdviserSearchSnapshot({ q: searchText, filters: searchFilters }), [searchFilters, searchText]);
-  const executedSnapshot = useMemo(() => sanitizeAdviserSearchSnapshot({ q: appliedSearchText, filters: searchFilters }), [appliedSearchText, searchFilters]);
+  const draftSnapshot = useMemo(() => filterAdviserSearchSnapshotByCapabilities({ q: searchText, filters: searchFilters }, searchCapabilities), [searchCapabilities, searchFilters, searchText]);
+  const executedSnapshot = useMemo(() => filterAdviserSearchSnapshotByCapabilities({ q: appliedSearchText, filters: searchFilters }, searchCapabilities), [appliedSearchText, searchCapabilities, searchFilters]);
   const loadSearchState = useCallback(async () => { try { setSearchState(await getAdviserSearchState()); } catch { setSearchState(null); } }, []);
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,17 +86,17 @@ export default function Advisers() {
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void loadSearchState(); }, [loadSearchState]);
 
-  const recentSearches = useMemo<DataTableRecentSearchItem<AdviserSearchSnapshot>[]>(() => (searchState?.recent ?? []).map((item) => ({ id: item.recentId, label: item.label, snapshot: item.snapshot })), [searchState]);
-  const savedMetrics = useMemo<DataTableSavedSearchItem<AdviserSearchSnapshot>[]>(() => (searchState?.saved ?? []).map((item) => ({ id: item.metricId, name: item.name, label: item.label, snapshot: item.snapshot })), [searchState]);
+  const recentSearches = useMemo<DataTableRecentSearchItem<AdviserSearchSnapshot>[]>(() => (searchState?.recent ?? []).map((item) => ({ id: item.recentId, label: item.label, snapshot: filterAdviserSearchSnapshotByCapabilities(item.snapshot, searchCapabilities) })), [searchCapabilities, searchState]);
+  const savedMetrics = useMemo<DataTableSavedSearchItem<AdviserSearchSnapshot>[]>(() => (searchState?.saved ?? []).map((item) => ({ id: item.metricId, name: item.name, label: item.label, snapshot: filterAdviserSearchSnapshotByCapabilities(item.snapshot, searchCapabilities) })), [searchCapabilities, searchState]);
   const chips = useMemo(() => buildAdviserSearchChips(executedSnapshot, searchState?.catalogs), [executedSnapshot, searchState]);
   const submitSearch = () => startTransition(() => { setAppliedSearchText(searchText.trim()); setPage(1); });
-  const applySnapshot = (snapshot: AdviserSearchSnapshot) => startTransition(() => { const next = sanitizeAdviserSearchSnapshot(snapshot); setSearchText(next.q ?? ""); setAppliedSearchText(next.q ?? ""); setSearchFilters(next.filters); setPage(1); });
+  const applySnapshot = (snapshot: AdviserSearchSnapshot) => startTransition(() => { const next = filterAdviserSearchSnapshotByCapabilities(snapshot, searchCapabilities); setSearchText(next.q ?? ""); setAppliedSearchText(next.q ?? ""); setSearchFilters(next.filters); setPage(1); });
   const applyRule = (rule: AdviserSearchRule) => startTransition(() => { setSearchFilters((current) => applyAdviserSearchRule({ q: searchText, filters: current }, rule).filters); setPage(1); });
   const removeRule = (key: "q" | AdviserSearchFilterKey) => startTransition(() => { const next = removeAdviserSearchKey(executedSnapshot, key); setSearchText(next.q ?? ""); setAppliedSearchText(next.q ?? ""); setSearchFilters(next.filters); setPage(1); });
   const saveMetric = async (name: string) => { setSavingMetric(true); try { const response = await saveAdviserSearchMetric(name, draftSnapshot); if (response.type === "error") return false; await loadSearchState(); return true; } finally { setSavingMetric(false); } };
   const deleteMetric = async (id: string) => { await deleteAdviserSearchMetric(id); await loadSearchState(); };
 
-  const openAdd = async () => { const response = await listUsers({ status: "active", page: 1 }); setUsers(response.items ?? []); setSelectedUser(""); setAddOpen(true); };
+  const openAdd = async () => { setUsers(await listAdviserCandidates()); setSelectedUser(""); setAddOpen(true); };
   const add = async () => { if (!selectedUser) return; setSaving(true); try { await createAdviser(selectedUser); setAddOpen(false); await load(); } finally { setSaving(false); } };
   const toggle = async () => { if (!pending) return; setSaving(true); try { await setAdviserActive(pending.id, !pending.isActive); setPending(null); await load(); } finally { setSaving(false); } };
 
@@ -138,22 +142,22 @@ export default function Advisers() {
   ], []);
 
   const columns = useMemo<DataTableColumn<AdviserOption>[]>(() => [
-    { id: "name", header: "Asesor", accessorKey: "name", cardTitle: true, cell: (row) => <button type="button" className="group flex min-h-11 min-w-0 items-center gap-2 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40" onClick={(event) => { event.stopPropagation(); setPerformanceFor(row); }} aria-label={`Ver rendimiento de ${row.name}`}><span className="min-w-0"><span className="block truncate font-semibold text-zinc-900 transition-colors group-hover:text-primary">{row.name}</span><span className="block truncate text-xs text-zinc-500">{row.email}</span></span><BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" /></button> },
-    { id: "assignedOrders", header: "Pedidos asignados", cardLabel: "Pedidos", cell: (row) => <button type="button" className="group inline-flex min-w-[148px] items-center gap-3 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-left outline-none transition hover:border-primary/30 hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40" onClick={() => openOrders(row)} aria-label={`Ver ${row.assignedOrders ?? 0} pedidos asignados a ${row.name}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background text-primary shadow-sm"><ShoppingBag className="h-4 w-4" aria-hidden="true" /></span><span className="min-w-0"><span className="block text-sm font-bold tabular-nums text-foreground">{row.assignedOrders ?? 0} pedidos</span><span className="flex items-center text-[11px] font-medium text-primary">Ver detalle <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" /></span></span></button>, sortAccessor: (row) => row.assignedOrders ?? 0, headerClassName: centeredHeader, className: centered, stopRowClick: true },
-    { id: "soldTotal", header: "Total dinero vendido", cell: (row) => money.format(row.soldTotal ?? 0), sortAccessor: (row) => row.soldTotal ?? 0, headerClassName: centeredHeader, className: centered },
-    { id: "collectedTotal", header: "Total dinero recaudado", cell: (row) => money.format(row.collectedTotal ?? 0), sortAccessor: (row) => row.collectedTotal ?? 0, headerClassName: centeredHeader, className: centered },
+    { id: "name", header: "Asesor", accessorKey: "name", cardTitle: true, cell: (row) => canViewPerformance ? <button type="button" className="group flex min-h-11 min-w-0 items-center gap-2 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40" onClick={(event) => { event.stopPropagation(); setPerformanceFor(row); }} aria-label={`Ver rendimiento de ${row.name}`}><span className="min-w-0"><span className="block truncate font-semibold text-zinc-900 transition-colors group-hover:text-primary">{row.name}</span><span className="block truncate text-xs text-zinc-500">{row.email}</span></span><BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" /></button> : <span className="min-w-0"><span className="block truncate font-semibold text-zinc-900">{row.name}</span><span className="block truncate text-xs text-zinc-500">{row.email}</span></span> },
+    { id: "assignedOrders", header: "Pedidos asignados", cardLabel: "Pedidos", visible: canViewOrders || canViewPerformance, cell: (row) => canViewOrders ? <button type="button" className="group inline-flex min-w-[148px] items-center gap-3 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-left outline-none transition hover:border-primary/30 hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40" onClick={() => openOrders(row)} aria-label={`Ver ${row.assignedOrders ?? 0} pedidos asignados a ${row.name}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background text-primary shadow-sm"><ShoppingBag className="h-4 w-4" aria-hidden="true" /></span><span className="min-w-0"><span className="block text-sm font-bold tabular-nums text-foreground">{row.assignedOrders ?? 0} pedidos</span><span className="flex items-center text-[11px] font-medium text-primary">Ver detalle <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" /></span></span></button> : <span className="font-semibold tabular-nums">{row.assignedOrders ?? 0}</span>, sortAccessor: (row) => row.assignedOrders ?? 0, headerClassName: centeredHeader, className: centered, stopRowClick: true },
+    { id: "soldTotal", header: "Total dinero vendido", visible: canViewPerformance, cell: (row) => money.format(row.soldTotal ?? 0), sortAccessor: (row) => row.soldTotal ?? 0, headerClassName: centeredHeader, className: centered },
+    { id: "collectedTotal", header: "Total dinero recaudado", visible: canViewPerformance, cell: (row) => money.format(row.collectedTotal ?? 0), sortAccessor: (row) => row.collectedTotal ?? 0, headerClassName: centeredHeader, className: centered },
     { id: "status", header: "Estado", cell: (row) => <StatusPill active={row.isActive !== false} PRIMARY="hsl(var(--primary))" />, headerClassName: centeredHeader, className: centered },
-    { id: "actions", header: "Acciones", stopRowClick: true, visible: canManage, headerClassName: centeredHeader, className: centered, cell: (row) => <div className="flex justify-center"><DataTableActionsPopover actions={[{ id: "codes", label: "Códigos", icon: <ScanLine className="h-4 w-4" />, onClick: () => setCodesFor(row) }, { id: "toggle", label: row.isActive ? "Desactivar" : "Activar", icon: row.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />, onClick: () => setPending(row) }]} /></div> },
-  ], [canManage]);
+    { id: "actions", header: "Acciones", stopRowClick: true, visible: canManage || canViewCodes, headerClassName: centeredHeader, className: centered, cell: (row) => <div className="flex justify-center"><DataTableActionsPopover actions={[...(canViewCodes ? [{ id: "codes", label: "Códigos", icon: <ScanLine className="h-4 w-4" />, onClick: () => setCodesFor(row) }] : []), ...(canManage ? [{ id: "toggle", label: row.isActive ? "Desactivar" : "Activar", icon: row.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />, onClick: () => setPending(row) }] : [])]} /></div> },
+  ], [canManage, canViewCodes, canViewOrders, canViewPerformance]);
 
   return <PageShell>
     <DataTableSearchChips chips={chips} onRemove={(chip) => removeRule(chip.removeKey)} />
     <DataTable tableId="advisers-table" data={items} columns={columns} rowKey="id" loading={loading} selectableColumns searchMode="server" pagination={{ page, limit: PAGE_SIZE, total }} onPageChange={setPage} emptyMessage="No hay asesores con los filtros actuales."
       rangeDates={{ startDate: periodDraft.startDate, endDate: periodDraft.endDate, onChange: changePeriod, label: "Período", name: "advisers-period" }}
-      toolbarSearchContent={<DataTableSearchBar value={searchText} onChange={setSearchText} onSubmitSearch={submitSearch} searchLabel="Busca tu asesor" searchName="adviser-smart-search" canSaveMetric={Boolean(draftSnapshot.q || draftSnapshot.filters.length)} saveLoading={savingMetric} onSaveMetric={saveMetric}><AdviserSmartSearchPanel recent={recentSearches} saved={savedMetrics} snapshot={draftSnapshot} catalogs={searchState?.catalogs} filterQuery={searchText} onApplySnapshot={applySnapshot} onApplyRule={applyRule} onRemoveRule={removeRule} onDeleteMetric={(id) => void deleteMetric(id)} /></DataTableSearchBar>}
+      toolbarSearchContent={<DataTableSearchBar value={searchText} onChange={setSearchText} onSubmitSearch={submitSearch} searchLabel="Busca tu asesor" searchName="adviser-smart-search" canSaveMetric={Boolean(draftSnapshot.q || draftSnapshot.filters.length)} saveLoading={savingMetric} onSaveMetric={saveMetric}><AdviserSmartSearchPanel recent={recentSearches} saved={savedMetrics} snapshot={draftSnapshot} catalogs={searchState?.catalogs} capabilities={searchCapabilities} filterQuery={searchText} onApplySnapshot={applySnapshot} onApplyRule={applyRule} onRemoveRule={removeRule} onDeleteMetric={(id) => void deleteMetric(id)} /></DataTableSearchBar>}
       toolbarActions={canManage ? <SystemButton size="icon" variant="outline" className="h-11 w-11 rounded-md shadow-sm" tooltip="Agregar asesor" title="Agregar asesor" leftIcon={<Plus className="h-4 w-4" />} onClick={() => void openAdd()} /> : null}
-      onRowClick={(adviser) => setPerformanceFor(adviser)}
-      rowClassName={() => "hover:ring-1 hover:ring-inset hover:ring-primary/15"} />
+      onRowClick={canViewPerformance ? (adviser) => setPerformanceFor(adviser) : undefined}
+      rowClassName={canViewPerformance ? () => "hover:ring-1 hover:ring-inset hover:ring-primary/15" : undefined} />
     <AdviserPerformanceModal open={Boolean(performanceFor)} adviser={performanceFor} onClose={() => setPerformanceFor(null)} />
     <Modal open={Boolean(ordersFor)} onClose={closeOrders} title={`Pedidos asignados · ${ordersFor?.name ?? ""}`} description={`${dateFormatter.format(period.startDate)} - ${dateFormatter.format(period.endDate)}`} className="w-[min(820px,calc(100vw-2rem))]" bodyClassName="p-3">
       <DataTable tableId="adviser-orders-detail" data={adviserOrders} columns={orderColumns} rowKey="id" loading={ordersLoading} responsiveMode="table" stickyHeader maxHeight="min(58vh,560px)" pagination={{ page: ordersPage, limit: PAGE_SIZE, total: ordersTotal }} onPageChange={setOrdersPage} onRowClick={(order) => void openOrderDetail(order)} emptyMessage="Este asesor no tiene pedidos asignados en el período seleccionado." paddingTablePaginated="py-1" />
@@ -178,9 +182,7 @@ export default function Advisers() {
           label="Usuario del sistema"
           name="adviser-user"
           value={selectedUser}
-          options={users
-            .filter((user) => !user.deleted)
-            .map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))}
+          options={users.map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))}
           onChange={setSelectedUser}
           searchable
           panelWidthMode="min-trigger"
@@ -195,6 +197,6 @@ export default function Advisers() {
       </div>
     </Modal>
     <AlertModal open={Boolean(pending)} onClose={() => setPending(null)} onConfirm={() => void toggle()} type={pending?.isActive ? "warning" : "restore"} title={pending?.isActive ? "Desactivar asesor" : "Activar asesor"} message={pending?.isActive ? "El asesor no podrá recibir nuevas asignaciones." : "El asesor podrá recibir nuevas asignaciones."} confirmText={pending?.isActive ? "Desactivar" : "Activar"} loading={saving} />
-    <SaleOrderAdviserImportAliasesModal open={Boolean(codesFor)} adviserUserId={codesFor?.id} adviserName={codesFor?.name} canManage={canManage} onClose={() => setCodesFor(null)} />
+    <SaleOrderAdviserImportAliasesModal open={Boolean(codesFor)} adviserUserId={codesFor?.id} adviserName={codesFor?.name} canManage={canManageCodes} onClose={() => setCodesFor(null)} />
   </PageShell>;
 }

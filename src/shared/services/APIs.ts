@@ -532,6 +532,7 @@ export const API_SALE_ORDERS_GROUP = {
 
 export const API_ADVISERS_GROUP = {
   list: "/advisers",
+  candidates: "/advisers/candidates",
   create: "/advisers",
   summary: "/advisers/summary",
   orders: (id: string) => `/advisers/${id}/orders`,

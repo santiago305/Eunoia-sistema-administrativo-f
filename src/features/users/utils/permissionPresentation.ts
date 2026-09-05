@@ -21,6 +21,7 @@ export type PermissionGroup = {
 };
 
 const MODULE_LABELS: Record<string, string> = {
+  advisers: "Asesores",
   dashboard: "Dashboard",
   users: "Usuarios",
   roles: "Permisos",
