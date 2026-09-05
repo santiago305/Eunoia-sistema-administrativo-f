@@ -159,7 +159,36 @@ export default function Advisers() {
       onClose={() => setSelectedOrder(null)}
       capabilities={{ canEdit: false, canManageAdvancedOrders: false, canAssignWorkflow: false }}
     />
-    <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar asesor"><div className="space-y-4"><FloatingSelect label="Usuario del sistema" name="adviser-user" value={selectedUser} options={users.filter((user) => !user.deleted).map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))} onChange={setSelectedUser} searchable emptyMessage="No hay usuarios disponibles" /><div className="flex justify-end"><SystemButton onClick={() => void add()} loading={saving} disabled={!selectedUser}>Agregar</SystemButton></div></div></Modal>
+    <Modal
+      open={addOpen}
+      onClose={() => setAddOpen(false)}
+      title="Agregar asesor"
+      description="Selecciona el usuario que trabajará como asesor."
+      className="w-[min(560px,calc(100vw-2rem))]"
+      headerClassName="px-5 py-4"
+      bodyClassName="p-5 sm:p-6"
+    >
+      <div className="space-y-6">
+        <FloatingSelect
+          label="Usuario del sistema"
+          name="adviser-user"
+          value={selectedUser}
+          options={users
+            .filter((user) => !user.deleted)
+            .map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))}
+          onChange={setSelectedUser}
+          searchable
+          panelWidthMode="min-trigger"
+          emptyMessage="No hay usuarios disponibles"
+          className="h-11 text-sm"
+        />
+        <div className="flex justify-end border-t border-border pt-4">
+          <SystemButton onClick={() => void add()} loading={saving} disabled={!selectedUser}>
+            Agregar asesor
+          </SystemButton>
+        </div>
+      </div>
+    </Modal>
     <AlertModal open={Boolean(pending)} onClose={() => setPending(null)} onConfirm={() => void toggle()} type={pending?.isActive ? "warning" : "restore"} title={pending?.isActive ? "Desactivar asesor" : "Activar asesor"} message={pending?.isActive ? "El asesor no podrá recibir nuevas asignaciones." : "El asesor podrá recibir nuevas asignaciones."} confirmText={pending?.isActive ? "Desactivar" : "Activar"} loading={saving} />
     <SaleOrderAdviserImportAliasesModal open={Boolean(codesFor)} adviserUserId={codesFor?.id} adviserName={codesFor?.name} canManage={canManage} onClose={() => setCodesFor(null)} />
   </PageShell>;
