@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Power, PowerOff, ScanLine } from "lucide-react";
+import { BarChart3, ChevronRight, Plus, Power, PowerOff, ScanLine, ShoppingBag } from "lucide-react";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -21,6 +21,7 @@ import { AdviserSmartSearchPanel } from "./components/AdviserSmartSearchPanel";
 import type { AdviserSearchRule, AdviserSearchSnapshot, AdviserSearchStateResponse } from "./types/adviserSearch";
 import { applyAdviserSearchRule, buildAdviserSearchChips, removeAdviserSearchKey, sanitizeAdviserSearchSnapshot, type AdviserSearchFilterKey } from "./utils/adviserSmartSearch";
 import { endOfMonth, getDateKey, startOfMonth } from "@/shared/components/components/date-picker/dateUtils";
+import { AdviserPerformanceModal } from "./components/AdviserPerformanceModal";
 
 const PAGE_SIZE = 25;
 const money = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
@@ -65,6 +66,7 @@ export default function Advisers() {
   const [ordersTotal, setOrdersTotal] = useState(0);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
+  const [performanceFor, setPerformanceFor] = useState<AdviserOption | null>(null);
 
   const draftSnapshot = useMemo(() => sanitizeAdviserSearchSnapshot({ q: searchText, filters: searchFilters }), [searchFilters, searchText]);
   const executedSnapshot = useMemo(() => sanitizeAdviserSearchSnapshot({ q: appliedSearchText, filters: searchFilters }), [appliedSearchText, searchFilters]);
@@ -136,8 +138,8 @@ export default function Advisers() {
   ], []);
 
   const columns = useMemo<DataTableColumn<AdviserOption>[]>(() => [
-    { id: "name", header: "Asesor", accessorKey: "name", cell: (row) => <div><div className="font-semibold text-zinc-900">{row.name}</div><div className="text-xs text-zinc-500">{row.email}</div></div> },
-    { id: "assignedOrders", header: "Pedidos asignados", cell: (row) => <button type="button" className="inline-flex min-w-9 items-center justify-center rounded-md px-2 py-1 font-semibold text-primary transition hover:bg-primary/10 hover:underline" onClick={() => openOrders(row)} aria-label={`Ver pedidos asignados a ${row.name}`}>{row.assignedOrders ?? 0}</button>, sortAccessor: (row) => row.assignedOrders ?? 0, headerClassName: centeredHeader, className: centered, stopRowClick: true },
+    { id: "name", header: "Asesor", accessorKey: "name", cardTitle: true, cell: (row) => <button type="button" className="group flex min-h-11 min-w-0 items-center gap-2 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40" onClick={(event) => { event.stopPropagation(); setPerformanceFor(row); }} aria-label={`Ver rendimiento de ${row.name}`}><span className="min-w-0"><span className="block truncate font-semibold text-zinc-900 transition-colors group-hover:text-primary">{row.name}</span><span className="block truncate text-xs text-zinc-500">{row.email}</span></span><BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" /></button> },
+    { id: "assignedOrders", header: "Pedidos asignados", cardLabel: "Pedidos", cell: (row) => <button type="button" className="group inline-flex min-w-[148px] items-center gap-3 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-left outline-none transition hover:border-primary/30 hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40" onClick={() => openOrders(row)} aria-label={`Ver ${row.assignedOrders ?? 0} pedidos asignados a ${row.name}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background text-primary shadow-sm"><ShoppingBag className="h-4 w-4" aria-hidden="true" /></span><span className="min-w-0"><span className="block text-sm font-bold tabular-nums text-foreground">{row.assignedOrders ?? 0} pedidos</span><span className="flex items-center text-[11px] font-medium text-primary">Ver detalle <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" /></span></span></button>, sortAccessor: (row) => row.assignedOrders ?? 0, headerClassName: centeredHeader, className: centered, stopRowClick: true },
     { id: "soldTotal", header: "Total dinero vendido", cell: (row) => money.format(row.soldTotal ?? 0), sortAccessor: (row) => row.soldTotal ?? 0, headerClassName: centeredHeader, className: centered },
     { id: "collectedTotal", header: "Total dinero recaudado", cell: (row) => money.format(row.collectedTotal ?? 0), sortAccessor: (row) => row.collectedTotal ?? 0, headerClassName: centeredHeader, className: centered },
     { id: "status", header: "Estado", cell: (row) => <StatusPill active={row.isActive !== false} PRIMARY="hsl(var(--primary))" />, headerClassName: centeredHeader, className: centered },
@@ -149,7 +151,10 @@ export default function Advisers() {
     <DataTable tableId="advisers-table" data={items} columns={columns} rowKey="id" loading={loading} selectableColumns searchMode="server" pagination={{ page, limit: PAGE_SIZE, total }} onPageChange={setPage} emptyMessage="No hay asesores con los filtros actuales."
       rangeDates={{ startDate: periodDraft.startDate, endDate: periodDraft.endDate, onChange: changePeriod, label: "Período", name: "advisers-period" }}
       toolbarSearchContent={<DataTableSearchBar value={searchText} onChange={setSearchText} onSubmitSearch={submitSearch} searchLabel="Busca tu asesor" searchName="adviser-smart-search" canSaveMetric={Boolean(draftSnapshot.q || draftSnapshot.filters.length)} saveLoading={savingMetric} onSaveMetric={saveMetric}><AdviserSmartSearchPanel recent={recentSearches} saved={savedMetrics} snapshot={draftSnapshot} catalogs={searchState?.catalogs} filterQuery={searchText} onApplySnapshot={applySnapshot} onApplyRule={applyRule} onRemoveRule={removeRule} onDeleteMetric={(id) => void deleteMetric(id)} /></DataTableSearchBar>}
-      toolbarActions={canManage ? <SystemButton size="icon" variant="outline" className="h-11 w-11 rounded-md shadow-sm" tooltip="Agregar asesor" title="Agregar asesor" leftIcon={<Plus className="h-4 w-4" />} onClick={() => void openAdd()} /> : null} />
+      toolbarActions={canManage ? <SystemButton size="icon" variant="outline" className="h-11 w-11 rounded-md shadow-sm" tooltip="Agregar asesor" title="Agregar asesor" leftIcon={<Plus className="h-4 w-4" />} onClick={() => void openAdd()} /> : null}
+      onRowClick={(adviser) => setPerformanceFor(adviser)}
+      rowClassName={() => "hover:ring-1 hover:ring-inset hover:ring-primary/15"} />
+    <AdviserPerformanceModal open={Boolean(performanceFor)} adviser={performanceFor} onClose={() => setPerformanceFor(null)} />
     <Modal open={Boolean(ordersFor)} onClose={closeOrders} title={`Pedidos asignados · ${ordersFor?.name ?? ""}`} description={`${dateFormatter.format(period.startDate)} - ${dateFormatter.format(period.endDate)}`} className="w-[min(820px,calc(100vw-2rem))]" bodyClassName="p-3">
       <DataTable tableId="adviser-orders-detail" data={adviserOrders} columns={orderColumns} rowKey="id" loading={ordersLoading} responsiveMode="table" stickyHeader maxHeight="min(58vh,560px)" pagination={{ page: ordersPage, limit: PAGE_SIZE, total: ordersTotal }} onPageChange={setOrdersPage} onRowClick={(order) => void openOrderDetail(order)} emptyMessage="Este asesor no tiene pedidos asignados en el período seleccionado." paddingTablePaginated="py-1" />
     </Modal>

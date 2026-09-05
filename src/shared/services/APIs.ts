@@ -535,6 +535,7 @@ export const API_ADVISERS_GROUP = {
   create: "/advisers",
   summary: "/advisers/summary",
   orders: (id: string) => `/advisers/${id}/orders`,
+  analytics: (id: string) => `/advisers/${id}/analytics`,
   active: (id: string) => `/advisers/${id}/active`,
   searchState: "/advisers/search-state",
   searchMetrics: "/advisers/search-metrics",

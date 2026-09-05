@@ -26,6 +26,26 @@ export type AdviserOrderListItem = {
   stateColor: string | null;
 };
 export type AdviserOrdersResponse = { items: AdviserOrderListItem[]; total: number; page: number; limit: number; totalPages: number; period: AdviserPeriod };
+export type AdviserAnalyticsMonths = 3 | 6 | 12;
+export type AdviserMonthlyAnalytics = {
+  monthKey: string;
+  orders: number;
+  soldTotal: number;
+  collectedTotal: number;
+  collectionRate: number;
+  performanceScore: number;
+};
+export type AdviserAnalyticsResponse = {
+  months: AdviserAnalyticsMonths;
+  period: AdviserPeriod;
+  items: AdviserMonthlyAnalytics[];
+  trend: {
+    current: number;
+    previous: number;
+    delta: number;
+    direction: "improved" | "worsened" | "stable";
+  };
+};
 
 export const listAdvisers = async (): Promise<AdviserOption[]> => {
   const response = await axiosInstance.get<AdviserOption[]>(
@@ -49,6 +69,17 @@ export const listAdviserSummary = async (params: { page: number; limit?: number;
 
 export const listAdviserOrders = async (id: string, params: { page: number; limit?: number; startDate: string; endDate: string }) =>
   (await axiosInstance.get<AdviserOrdersResponse>(API_ADVISERS_GROUP.orders(id), { params })).data;
+
+export const getAdviserAnalytics = async (
+  id: string,
+  months: AdviserAnalyticsMonths,
+) =>
+  (
+    await axiosInstance.get<AdviserAnalyticsResponse>(
+      API_ADVISERS_GROUP.analytics(id),
+      { params: { months } },
+    )
+  ).data;
 
 export const setAdviserActive = async (id: string, isActive: boolean) =>
   (await axiosInstance.patch(API_ADVISERS_GROUP.active(id), { isActive })).data;
