@@ -147,6 +147,7 @@ export function buildPurchaseExtendedDetailsConfig({
   const totalLabel = money(total, currency);
   const paidLabel = money(totalPaid, currency);
   const pendingLabel = money(totalToPay, currency);
+  const receivedOrExpectedAt = detail?.receivedAt ?? detail?.expectedAt;
 
   const itemCountLabel = `${items.length} item${items.length === 1 ? "" : "s"}`;
   const paymentCountLabel = `${payments.length} pago${payments.length === 1 ? "" : "s"}`;
@@ -175,8 +176,8 @@ export function buildPurchaseExtendedDetailsConfig({
     },
     {
       label: "Ingreso",
-      value: detail?.expectedAt
-        ? formatDateTime(detail.expectedAt)
+      value: receivedOrExpectedAt
+        ? formatDateTime(receivedOrExpectedAt)
         : `${purchase.dateEnter ?? "-"}${purchase.timeEnter ? ` ${purchase.timeEnter}` : ""}`,
     },
     {

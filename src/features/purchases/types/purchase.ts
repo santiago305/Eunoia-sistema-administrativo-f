@@ -212,6 +212,7 @@ export type PurchaseOrder = {
   requiresStockEntry?: boolean;
   requiresAssetCreation?: boolean;
   expectedAt?: string | null;
+  receivedAt?: string | null;
   dateIssue?: string | null;
   dateExpiration?: string | null;
   isActive?: boolean;

@@ -702,9 +702,10 @@ export default function Purchases() {
                         minute: "2-digit",
                     })
                     : undefined;
-                const dateEnter = formatDate(new Date(purchase.expectedAt ?? ""));
-                const timeEnter = purchase.expectedAt
-                    ? new Date(purchase.expectedAt).toLocaleTimeString("es-PE", {
+                const entryDate = purchase.receivedAt ?? purchase.expectedAt;
+                const dateEnter = entryDate ? formatDate(new Date(entryDate)) : "-";
+                const timeEnter = entryDate
+                    ? new Date(entryDate).toLocaleTimeString("es-PE", {
                         hour: "2-digit",
                         minute: "2-digit",
                     })
