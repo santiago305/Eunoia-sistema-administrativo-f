@@ -9,6 +9,7 @@ import {
   getAvailableSaleOrderTransitions,
 } from "@/shared/services/saleOrderService";
 import { showTransitionWarnings } from "@/features/sale-orders/utils/showTransitionWarnings";
+import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { SaleOrderWorkflowHistoryModal } from "./SaleOrderWorkflowHistoryModal";
 
 type Props = {
@@ -24,25 +25,29 @@ function parseTransitionError(error: unknown) {
         status?: number;
         data?: {
           message?: string;
-          failures?: Array<{ reason?: string; type?: string } | string>;
+          details?: {
+            failures?: Array<{ reason?: string; type?: string } | string>;
+          };
         };
       };
     }
   ).response;
-  if (response?.status !== 422 || !Array.isArray(response.data?.failures)) {
+  const failures = response?.data?.details?.failures;
+  if (response?.status !== 422 || !Array.isArray(failures)) {
     return parseApiError(error);
   }
-  const reasons = response.data.failures
+  const reasons = failures
     .map((failure) =>
       typeof failure === "string" ? failure : failure.reason ?? failure.type,
     )
     .filter(Boolean);
   return reasons.length
     ? reasons.join(". ")
-    : response.data.message ?? parseApiError(error);
+    : response.data?.message ?? parseApiError(error);
 }
 
 export function SaleOrderStatusPopover({ order, onOrderChanged }: Props) {
+  const { showFeedback } = useFeedbackToast();
   const [transitions, setTransitions] = useState<AvailableTransition[]>([]);
   const [loadingTransitionId, setLoadingTransitionId] = useState<string | null>(
     null,
@@ -85,12 +90,18 @@ export function SaleOrderStatusPopover({ order, onOrderChanged }: Props) {
         await loadTransitions();
         showTransitionWarnings(result.warnings);
       } catch (error) {
-        setTransitionError(parseTransitionError(error));
+        const message = parseTransitionError(error);
+        setTransitionError(message);
+        showFeedback({
+          type: "error",
+          title: "No se pudo cambiar el estado",
+          message,
+        });
       } finally {
         setLoadingTransitionId(null);
       }
     },
-    [loadTransitions, onOrderChanged, order.id],
+    [loadTransitions, onOrderChanged, order.id, showFeedback],
   );
 
   const transitionByActionId = useMemo(
