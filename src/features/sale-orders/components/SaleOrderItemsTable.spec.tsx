@@ -166,7 +166,7 @@ describe("SaleOrderItemsTable", () => {
       screen.getByRole("columnheader", { name: "Mostrar componentes de packs" }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("columnheader", { name: "Precio base" })).toHaveLength(2);
-    expect(screen.getByRole("columnheader", { name: "Reservado" })).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader", { name: "Reservado" })).toHaveLength(2);
     expect(screen.getByText("Pack verano")).toBeInTheDocument();
 
     const packRow = screen.getByText("Pack verano").closest("tr");
@@ -528,7 +528,7 @@ describe("SaleOrderItemsTable", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("pack-stock-item-1")).toHaveTextContent("Sí");
-      expect(screen.getByTestId("pack-reserved-item-1")).toHaveTextContent("Sí");
+      expect(screen.getByTestId("pack-reserved-item-1")).toHaveTextContent("Completo");
     });
     expect(screen.getByTestId("component-stock-sku-1")).toHaveTextContent("5");
     expect(screen.getByTestId("component-stock-sku-2")).toHaveTextContent("3");
@@ -716,10 +716,115 @@ describe("SaleOrderItemsTable", () => {
     );
 
     expect(screen.getByTestId("pack-stock-item-1")).toHaveTextContent("OUT");
-    expect(screen.getByTestId("pack-reserved-item-1")).toHaveTextContent("OUT");
+    expect(screen.getByTestId("pack-reserved-item-1")).toHaveTextContent("Consumido");
     expect(screen.getByTestId("component-stock-sku-1")).toHaveTextContent("OUT");
     expect(screen.getByTestId("component-stock-sku-2")).toHaveTextContent("OUT");
     expect(getSaleOrderStocksBySkuIds).not.toHaveBeenCalled();
+  });
+
+  it("shows the real reservation health for every component and the worst pack state", () => {
+    const item = {
+      ...packItem,
+      components: packItem.components?.map((component, index) => ({
+        ...component,
+        stockItemId: `stock-${index + 1}`,
+      })),
+    };
+
+    render(
+      <SaleOrderItemsTable
+        items={[item]}
+        warehouseId="warehouse-1"
+        reserveBool
+        reservationHealth={{
+          checked: true,
+          status: "INCONSISTENT",
+          warehouseId: "warehouse-1",
+          items: [
+            {
+              stockItemId: "stock-1",
+              skuCode: "POL-001",
+              productName: "Polo azul",
+              orderQuantity: 2,
+              onHand: 8,
+              actualReserved: 2,
+              expectedReserved: 2,
+              difference: 0,
+              status: "COMPLETE",
+            },
+            {
+              stockItemId: "stock-2",
+              skuCode: "GOR-001",
+              productName: "Gorra roja",
+              orderQuantity: 1,
+              onHand: 4,
+              actualReserved: 0,
+              expectedReserved: 1,
+              difference: 1,
+              status: "INCONSISTENT",
+            },
+          ],
+        }}
+        productsEditable
+        onChangeItem={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("pack-reserved-item-1")).toHaveTextContent(
+      "Inconsistente",
+    );
+    expect(screen.getByTestId("component-reserved-sku-1")).toHaveTextContent(
+      "Completo",
+    );
+    expect(screen.getByTestId("component-reserved-sku-2")).toHaveTextContent(
+      "Inconsistente",
+    );
+  });
+
+  it("shows an incomplete reservation while physical stock is missing", () => {
+    render(
+      <SaleOrderItemsTable
+        items={[
+          {
+            ...productItem,
+            components: productItem.components?.map((component) => ({
+              ...component,
+              stockItemId: "stock-product",
+            })),
+          },
+        ]}
+        warehouseId="warehouse-1"
+        reserveBool
+        reservationHealth={{
+          checked: true,
+          status: "INSUFFICIENT_STOCK",
+          warehouseId: "warehouse-1",
+          items: [
+            {
+              stockItemId: "stock-product",
+              skuCode: "JAB-001",
+              productName: "Jabón individual",
+              orderQuantity: 2,
+              onHand: 1,
+              actualReserved: 0,
+              expectedReserved: 2,
+              difference: 2,
+              status: "INSUFFICIENT_STOCK",
+            },
+          ],
+        }}
+        productsEditable
+        onChangeItem={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("product-reserved-item-product"),
+    ).toHaveTextContent("Incompleto");
   });
 
   it("edits pack values directly without opening a modal from the row", () => {

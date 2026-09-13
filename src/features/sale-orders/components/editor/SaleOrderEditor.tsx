@@ -60,6 +60,7 @@ import {
   type SaleOrderPaymentSelectOption,
 } from "../useSaleOrderPaymentOptions";
 import { buildSaleOrderWorkflowOptions } from "../../utils/saleOrderWorkflowOptions";
+import { buildSaleOrderReservationFeedback } from "../../utils/saleOrderReservationFeedback";
 
 type Props = {
   mode: "create" | "edit";
@@ -572,12 +573,11 @@ export function SaleOrderEditor({
       );
       initialSnapshot.current = getSaleOrderEditorSnapshot(form);
       onDirtyChange?.(false);
-      sileo.success({
-        title:
-          mode === "edit"
-            ? "Pedido actualizado correctamente."
-            : `Pedido creado: ${result.serie}-${result.correlative}`,
-      });
+      sileo.success(
+        mode === "edit"
+          ? buildSaleOrderReservationFeedback(result.stockReservation)
+          : { title: `Pedido creado: ${result.serie}-${result.correlative}` },
+      );
       await onSaved(result.orderId);
     } catch (error) {
       sileo.error({

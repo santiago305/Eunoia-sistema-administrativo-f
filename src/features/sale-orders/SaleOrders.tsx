@@ -506,6 +506,14 @@ export default function SaleOrders() {
             const saleOrderIds = Array.isArray(payload?.saleOrderIds) ? payload.saleOrderIds : [];
             const hasSaleOrdersPayload = Array.isArray(payload?.saleOrders);
             const updatedOrders = hasSaleOrdersPayload ? (payload.saleOrders ?? []) : [];
+            if (payload?.source === "automatic-workflow" && payload?.trigger === "inventory-updated" && Number(payload?.updated ?? 0) > 0) {
+                const count = Number(payload.updated);
+                showFeedbackRef.current(
+                    successResponse(
+                        `Inventario actualizado: se corrigió automáticamente la reserva de ${count} pedido${count === 1 ? "" : "s"}.`,
+                    ),
+                );
+            }
             const updatedOrdersById = new Map(updatedOrders.filter((order) => order?.id).map((order) => [order.id, order]));
             const currentSelectedOrder = selectedOrderRef.current;
             const openOrderId = currentSelectedOrder?.id ?? (modalStateRef.current.open && modalStateRef.current.mode === "edit" ? modalStateRef.current.orderId : null);

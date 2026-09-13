@@ -9,6 +9,7 @@ import type {
   SaleOrderAttachment,
   SaleOrderEditPolicy,
   SaleOrderItemInput,
+  SaleOrderReservationHealth,
   SaleOrderSupplyInput,
   SaveSaleOrderWithClientDto,
 } from "../../types/saleOrder";
@@ -81,6 +82,7 @@ export type SaleOrderEditorForm = {
   sendAddress: string;
   assignedBy: string;
   reserveBool: boolean | null;
+  reservationHealth: SaleOrderReservationHealth | null;
   items: SaleOrderItemInput[];
   supplies: SaleOrderEditorSupply[];
   payments: SaleOrderEditorPayment[];
@@ -161,6 +163,7 @@ export function buildEmptySaleOrderEditorForm(): SaleOrderEditorForm {
     sendAddress: "",
     assignedBy: "",
     reserveBool: null,
+    reservationHealth: null,
     items: [],
     supplies: [],
     payments: [],
@@ -271,6 +274,7 @@ export function mapSaleOrderToEditorForm(
     sendAddress: order.sendAddress ?? "",
     assignedBy: order.assignedBy?.id ?? "",
     reserveBool: order.reserveBool ?? null,
+    reservationHealth: order.reservationHealth ?? null,
     items: normalizeSaleOrderItems(order.items ?? []),
     supplies: (order.supplies ?? []).map((supply) => ({
       ...supply,

@@ -5,6 +5,8 @@ import type {
   SaleOrderEditPolicy,
   SaleOrderItemComponentInput,
   SaleOrderItemInput,
+  SaleOrderReservationHealth,
+  SaleOrderReservationHealthStatus,
 } from "@/features/sale-orders/types/saleOrder";
 import type { skuStock } from "@/features/catalog/types/documentInventory";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
@@ -26,6 +28,7 @@ type Props = {
   items: SaleOrderItemInput[];
   warehouseId?: string;
   reserveBool?: boolean | null;
+  reservationHealth?: SaleOrderReservationHealth | null;
   stockStatus?: SaleOrderEditPolicy["stockStatus"];
   productsEditable: boolean;
   onChangeItem: (item: SaleOrderItemInput, index: number) => void;
@@ -349,6 +352,7 @@ export function SaleOrderItemsTable({
   items,
   warehouseId,
   reserveBool,
+  reservationHealth,
   stockStatus = "NONE",
   productsEditable,
   onChangeItem,
@@ -556,10 +560,12 @@ export function SaleOrderItemsTable({
                         stockStatus,
                         available: stock?.available,
                       })}
-                      reservedLabel={resolveReserveLabel(
+                      reservationStatus={resolveReservationStatus({
+                        reservationHealth,
+                        stockItemId: component.stockItemId,
                         reserveBool,
                         stockStatus,
-                      )}
+                      })}
                       productsEditable={productsEditable}
                       onChangeItem={onChangeItem}
                       onDelete={onDelete}
@@ -571,6 +577,7 @@ export function SaleOrderItemsTable({
                   components,
                   warehouseId,
                   reserveBool,
+                  reservationHealth,
                   stocksBySkuId,
                   loadingStock,
                   stockStatus,
@@ -585,11 +592,13 @@ export function SaleOrderItemsTable({
                     index={index}
                     expanded={expanded}
                     stockLabel={flags.stock}
-                    reservedLabel={flags.reserved}
+                    reservationStatus={flags.reservation}
                     warehouseId={warehouseId}
                     stocksBySkuId={stocksBySkuId}
                     loadingStock={loadingStock}
                     stockStatus={stockStatus}
+                    reserveBool={reserveBool}
+                    reservationHealth={reservationHealth}
                     productsEditable={productsEditable}
                     recentPackOptions={recentPackOptions}
                     onToggle={() => toggleItem(itemKey)}
@@ -614,7 +623,7 @@ function ProductRow({
   index,
   component,
   stockLabel,
-  reservedLabel,
+  reservationStatus,
   productsEditable,
   onChangeItem,
   onDelete,
@@ -625,7 +634,7 @@ function ProductRow({
   index: number;
   component: SaleOrderItemComponentInput;
   stockLabel: string;
-  reservedLabel: string;
+  reservationStatus: ReservationDisplayStatus;
   productsEditable: boolean;
   onChangeItem: Props["onChangeItem"];
   onDelete: Props["onDelete"];
@@ -702,7 +711,7 @@ function ProductRow({
         {stockLabel}
       </StatusCell>
       <StatusCell testId={`product-reserved-${item.id ?? itemKey}`}>
-        {reservedLabel}
+        <ReservationStatusBadge status={reservationStatus} />
       </StatusCell>
       <td className="px-2 py-2 align-middle">
         <div className="flex justify-center gap-2">
@@ -729,11 +738,13 @@ function PackRows({
   index,
   expanded,
   stockLabel,
-  reservedLabel,
+  reservationStatus,
   warehouseId,
   stocksBySkuId,
   loadingStock,
   stockStatus,
+  reserveBool,
+  reservationHealth,
   productsEditable,
   recentPackOptions,
   onToggle,
@@ -748,11 +759,13 @@ function PackRows({
   index: number;
   expanded: boolean;
   stockLabel: string;
-  reservedLabel: string;
+  reservationStatus: ReservationDisplayStatus;
   warehouseId?: string;
   stocksBySkuId: Record<string, skuStock | null>;
   loadingStock: boolean;
   stockStatus: SaleOrderEditPolicy["stockStatus"];
+  reserveBool?: boolean | null;
+  reservationHealth?: SaleOrderReservationHealth | null;
   productsEditable: boolean;
   recentPackOptions: PackSelectOption[];
   onToggle: () => void;
@@ -846,7 +859,7 @@ function PackRows({
           {stockLabel}
         </StatusCell>
         <StatusCell testId={`pack-reserved-${item.id ?? itemKey}`}>
-          {reservedLabel}
+          <ReservationStatusBadge status={reservationStatus} />
         </StatusCell>
         <td className="px-2 py-2 align-middle">
           <div className="flex justify-center gap-2">
@@ -872,6 +885,8 @@ function PackRows({
               stocksBySkuId={stocksBySkuId}
               loadingStock={loadingStock}
               stockStatus={stockStatus}
+              reserveBool={reserveBool}
+              reservationHealth={reservationHealth}
               productsEditable={productsEditable}
               onChangeItem={onChangeItem}
               onOpenDetail={(component) =>
@@ -892,6 +907,8 @@ function ComponentsSubtable({
   stocksBySkuId,
   loadingStock,
   stockStatus,
+  reserveBool,
+  reservationHealth,
   productsEditable,
   onChangeItem,
   onOpenDetail,
@@ -902,6 +919,8 @@ function ComponentsSubtable({
   stocksBySkuId: Record<string, skuStock | null>;
   loadingStock: boolean;
   stockStatus: SaleOrderEditPolicy["stockStatus"];
+  reserveBool?: boolean | null;
+  reservationHealth?: SaleOrderReservationHealth | null;
   productsEditable: boolean;
   onChangeItem: Props["onChangeItem"];
   onOpenDetail: (component: SaleOrderItemComponentInput) => void;
@@ -938,13 +957,14 @@ function ComponentsSubtable({
             <SubHeaderCell>Precio u.</SubHeaderCell>
             <SubHeaderCell>Total</SubHeaderCell>
             <SubHeaderCell>Stock</SubHeaderCell>
+            <SubHeaderCell>Reservado</SubHeaderCell>
           </tr>
         </thead>
         <tbody>
           {components.length === 0 ? (
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className="px-3 py-5 text-center text-muted-foreground"
               >
                 Esta agrupación no tiene productos.
@@ -1044,6 +1064,18 @@ function ComponentsSubtable({
                   >
                     {stockLabel}
                   </td>
+                  <StatusCell
+                    testId={`component-reserved-${skuId || componentIndex}`}
+                  >
+                    <ReservationStatusBadge
+                      status={resolveReservationStatus({
+                        reservationHealth,
+                        stockItemId: component.stockItemId,
+                        reserveBool,
+                        stockStatus,
+                      })}
+                    />
+                  </StatusCell>
                 </tr>
               );
             })
@@ -1084,13 +1116,106 @@ function ComponentsSubtable({
   );
 }
 
-function resolveReserveLabel(
-  reserveBool: boolean | null | undefined,
-  stockStatus: SaleOrderEditPolicy["stockStatus"],
-) {
-  if (stockStatus === "CONSUMED") return "OUT";
-  if (reserveBool == null) return "—";
-  return reserveBool ? "Sí" : "No";
+type ReservationDisplayStatus =
+  | SaleOrderReservationHealthStatus
+  | "CONSUMED"
+  | "UNKNOWN";
+
+function resolveReservationStatus({
+  reservationHealth,
+  stockItemId,
+  reserveBool,
+  stockStatus,
+}: {
+  reservationHealth?: SaleOrderReservationHealth | null;
+  stockItemId?: string | null;
+  reserveBool: boolean | null | undefined;
+  stockStatus: SaleOrderEditPolicy["stockStatus"];
+}): ReservationDisplayStatus {
+  if (stockStatus === "CONSUMED") return "CONSUMED";
+
+  const itemStatus = stockItemId
+    ? reservationHealth?.items.find(
+        (item) => item.stockItemId === stockItemId,
+      )?.status
+    : undefined;
+  if (itemStatus) return itemStatus;
+  if (reservationHealth?.status) return reservationHealth.status;
+  if (reserveBool == null) return "UNKNOWN";
+  return reserveBool ? "COMPLETE" : "NO_RESERVATION";
+}
+
+function getWorstReservationStatus(
+  statuses: ReservationDisplayStatus[],
+): ReservationDisplayStatus {
+  const priority: ReservationDisplayStatus[] = [
+    "INSUFFICIENT_STOCK",
+    "INCONSISTENT",
+    "NO_RESERVATION",
+    "COMPLETE",
+    "CONSUMED",
+    "UNKNOWN",
+  ];
+  return priority.find((status) => statuses.includes(status)) ?? "UNKNOWN";
+}
+
+function ReservationStatusBadge({
+  status,
+}: {
+  status: ReservationDisplayStatus;
+}) {
+  const presentation: Record<
+    ReservationDisplayStatus,
+    { label: string; title: string; className: string }
+  > = {
+    COMPLETE: {
+      label: "Completo",
+      title: "Todos los productos requeridos están cubiertos por la reserva.",
+      className:
+        "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+    },
+    NO_RESERVATION: {
+      label: "No",
+      title: "El pedido no mantiene una reserva activa.",
+      className: "border-border bg-muted/40 text-muted-foreground",
+    },
+    INCONSISTENT: {
+      label: "Inconsistente",
+      title: "El pedido figura reservado, pero el inventario no coincide.",
+      className:
+        "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
+    },
+    INSUFFICIENT_STOCK: {
+      label: "Incompleto",
+      title: "El stock físico no permite reconstruir la reserva completa.",
+      className:
+        "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200",
+    },
+    CONSUMED: {
+      label: "Consumido",
+      title: "El stock de este pedido ya fue consumido.",
+      className:
+        "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200",
+    },
+    UNKNOWN: {
+      label: "—",
+      title: "Estado de reserva no disponible.",
+      className: "border-border bg-background text-muted-foreground",
+    },
+  };
+  const current = presentation[status];
+
+  return (
+    <span
+      title={current.title}
+      className={cn(
+        "inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold",
+        current.className,
+      )}
+    >
+      {current.label}
+    </span>
+  );
 }
 
 function resolveComponentStockLabel({
@@ -1114,21 +1239,31 @@ function getPackStockFlags(
   components: SaleOrderItemComponentInput[],
   warehouseId: string | undefined,
   reserveBool: boolean | null | undefined,
+  reservationHealth: SaleOrderReservationHealth | null | undefined,
   stocksBySkuId: Record<string, skuStock | null>,
   loadingStock: boolean,
   stockStatus: SaleOrderEditPolicy["stockStatus"],
 ) {
-  const reserved = resolveReserveLabel(reserveBool, stockStatus);
+  const reservation = getWorstReservationStatus(
+    components.map((component) =>
+      resolveReservationStatus({
+        reservationHealth,
+        stockItemId: component.stockItemId,
+        reserveBool,
+        stockStatus,
+      }),
+    ),
+  );
 
   if (stockStatus === "CONSUMED") {
-    return { stock: "OUT", reserved };
+    return { stock: "OUT", reservation };
   }
 
   if (!warehouseId || components.length === 0) {
-    return { stock: "—", reserved };
+    return { stock: "—", reservation };
   }
   if (loadingStock) {
-    return { stock: "...", reserved };
+    return { stock: "...", reservation };
   }
 
   const hasEnough = components.every((component) => {
@@ -1137,7 +1272,7 @@ function getPackStockFlags(
   });
   return {
     stock: hasEnough ? "Sí" : "No",
-    reserved,
+    reservation,
   };
 }
 

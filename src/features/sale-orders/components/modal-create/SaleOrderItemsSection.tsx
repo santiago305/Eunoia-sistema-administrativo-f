@@ -17,6 +17,7 @@ import type {
     SaleOrderEditPolicy,
     SaleOrderItemComponentInput,
     SaleOrderItemInput,
+    SaleOrderReservationHealth,
 } from "@/features/sale-orders/types/saleOrder";
 import { SaleOrderItemEditorModal } from "@/features/sale-orders/components/modal-create/SaleOrderItemEditorModal";
 import { buildEmptySaleOrderItem } from "@/features/sale-orders/utils/saleOrderForm";
@@ -33,6 +34,7 @@ type SaleOrderItemsForm = {
     discount?: number | null;
     warehouseId?: string | null;
     reserveBool?: boolean | null;
+    reservationHealth?: SaleOrderReservationHealth | null;
     editPolicy?: SaleOrderEditPolicy;
 };
 
@@ -161,6 +163,7 @@ function SaleOrderItemsSectionInner<T extends SaleOrderItemsForm>(
                     items={form.items ?? []}
                     warehouseId={form.warehouseId ?? undefined}
                     reserveBool={form.reserveBool ?? null}
+                    reservationHealth={form.reservationHealth ?? null}
                     stockStatus={form.editPolicy?.stockStatus ?? "NONE"}
                     productsEditable={productsEditable}
                     onChangeItem={(nextItem, index) => {

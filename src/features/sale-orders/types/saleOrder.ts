@@ -355,6 +355,52 @@ export type CreateSaleOrderResponse = {
   correlative: number;
   workflowId: string | null;
   currentStateId: string | null;
+  stockReservation?: SaleOrderReservationReconciliation | null;
+};
+
+export type SaleOrderReservationReconciliationItem = {
+  stockItemId: string;
+  skuCode: string;
+  productName: string;
+  orderQuantity: number;
+  onHand: number;
+  previousReserved: number;
+  expectedReserved: number;
+  adjustment: number;
+  availableAfter: number;
+  status: "UNCHANGED" | "COMPLETED" | "RELEASED_EXCESS";
+};
+
+export type SaleOrderReservationReconciliation = {
+  checked: boolean;
+  adjusted: boolean;
+  warehouseId: string | null;
+  items: SaleOrderReservationReconciliationItem[];
+};
+
+export type SaleOrderReservationHealthStatus =
+  | "COMPLETE"
+  | "NO_RESERVATION"
+  | "INCONSISTENT"
+  | "INSUFFICIENT_STOCK";
+
+export type SaleOrderReservationHealthItem = {
+  stockItemId: string;
+  skuCode: string;
+  productName: string;
+  orderQuantity: number;
+  onHand: number;
+  actualReserved: number;
+  expectedReserved: number;
+  difference: number;
+  status: Exclude<SaleOrderReservationHealthStatus, "NO_RESERVATION">;
+};
+
+export type SaleOrderReservationHealth = {
+  checked: boolean;
+  status: SaleOrderReservationHealthStatus;
+  warehouseId: string | null;
+  items: SaleOrderReservationHealthItem[];
 };
 
 export type SaleOrderJsonImportRow = {
@@ -530,6 +576,7 @@ export type SaleOrder = {
   payments: SaleOrderPayment[];
   attachments?: SaleOrderAttachment[];
   editPolicy?: SaleOrderEditPolicy;
+  reservationHealth?: SaleOrderReservationHealth | null;
   items?: SaleOrderItemInput[];
   supplies?: SaleOrderSupplyInput[];
   SKUS?: string | null;
