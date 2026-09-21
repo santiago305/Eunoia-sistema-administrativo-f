@@ -24,16 +24,18 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         label: "Pedidos",
         icon: <IconSaleOrder className="text-sidebar-foreground" />,
         href: RoutesPaths.saleOrders,
-    },
-    {
-        label: "Asesores",
-        icon: <IconUsers className="text-sidebar-foreground" />,
-        href: RoutesPaths.advisers,
-    },
-    {
-        label: "Clientes",
-        icon: <IconUsers className="text-sidebar-foreground" />,
-        href: RoutesPaths.clients,
+        children: [
+            {
+                label: "Asesores",
+                icon: <IconUsers className="text-sidebar-foreground" />,
+                href: RoutesPaths.advisers,
+            },
+            {
+                label: "Clientes",
+                icon: <IconUsers className="text-sidebar-foreground" />,
+                href: RoutesPaths.clients,
+            },
+        ],
     },
     {
         label: "Compras",
