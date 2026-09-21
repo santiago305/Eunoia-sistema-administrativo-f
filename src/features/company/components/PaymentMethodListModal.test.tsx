@@ -269,9 +269,6 @@ describe("PaymentMethodListModal", () => {
       "grid-cols-1",
       "lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.65fr)_auto]",
     );
-    expect(
-      screen.getByRole("region", { name: "Agregar método" }),
-    ).toBeInTheDocument();
     expect(screen.getAllByText("Método de pago")).toHaveLength(2);
     expect(screen.getByLabelText("Comprobante obligatorio")).toBeDisabled();
     expect(

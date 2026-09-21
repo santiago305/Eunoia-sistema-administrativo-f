@@ -266,22 +266,7 @@ export function PaymentMethodListModal({
       className={["w-full max-w-3xl", className].filter(Boolean).join(" ")}
     >
       <div className="space-y-5">
-        <section
-          aria-labelledby="add-payment-method-title"
-          className="rounded-xl border border-border bg-muted/20 p-4"
-        >
-          <div className="mb-4">
-            <h3
-              id="add-payment-method-title"
-              className="text-sm font-semibold text-foreground"
-            >
-              Agregar método
-            </h3>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Selecciona un método disponible y define si requiere comprobante.
-            </p>
-          </div>
-
+        <section>
           <form
             data-testid="company-payment-method-form"
             className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.65fr)_auto] lg:items-start"
@@ -343,9 +328,6 @@ export function PaymentMethodListModal({
               >
                 Métodos configurados
               </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Métodos disponibles para registrar cobros y pagos de la empresa.
-              </p>
             </div>
             <span
               className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
