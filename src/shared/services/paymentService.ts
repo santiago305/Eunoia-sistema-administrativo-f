@@ -12,7 +12,7 @@ import type {
 export type ListPaymentsQuery = {
   poId?: string;
   quotaId?: string;
-  status?: "SCHEDULED" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+  status?: "DRAFT" | "SCHEDULED" | "PENDING_APPROVAL" | "POSTED" | "APPROVED" | "REJECTED" | "VOIDED";
   page?: number;
   limit?: number;
   q?: string;
@@ -125,6 +125,11 @@ export const approvePayment = async (id: string): Promise<{ type: string; messag
 
 export const rejectPayment = async (id: string, reason?: string): Promise<{ type: string; message: string }> => {
   const response = await axiosInstance.post(API_PAYMENT_GROUP.reject(id), { reason });
+  return response.data;
+};
+
+export const voidPayment = async (id: string, reason: string): Promise<{ type: string; message: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.void(id), { reason });
   return response.data;
 };
 

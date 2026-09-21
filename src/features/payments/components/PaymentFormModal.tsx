@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Banknote, CalendarClock, CircleHelp, FileText, ImageIcon, Paperclip, UploadCloud, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Banknote, CalendarClock, CircleHelp, FileText, ImageIcon, Paperclip, UploadCloud, X } from "lucide-react";
 import { FloatingDatePicker } from "@/shared/components/components/date-picker/FloatingDatePicker";
 import { FloatingInput } from "@/shared/components/components/FloatingInput";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
@@ -11,6 +11,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shar
 import { createPayment } from "@/shared/services/paymentService";
 import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
 import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
+import {
+  listSupplierPaymentDestinations,
+  type SupplierPaymentDestination,
+} from "@/shared/services/supplierService";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { parseApiError } from "@/shared/common/utils/handleApiError";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -32,6 +36,8 @@ export type PaymentFormInitialPayment = {
   poId?: string | null;
   quotaId?: string | null;
   accountPayableId?: string | null;
+  supplierId?: string | null;
+  supplierPaymentDestinationId?: string | null;
   currency?: CurrencyType;
   amount?: number | string | null;
   scheduledAt?: string | null;
@@ -45,7 +51,7 @@ type Props = {
   initialPayment?: PaymentFormInitialPayment | null;
 };
 
-type FormErrors = Partial<Record<"poId" | "amount" | "scheduledAt" | "evidence", string>>;
+type FormErrors = Partial<Record<"poId" | "amount" | "scheduledAt" | "evidence" | "account" | "destination" | "operationNumber", string>>;
 
 const todayKey = () => toLocalDateKey(new Date());
 const tomorrowKey = () => {
@@ -53,7 +59,6 @@ const tomorrowKey = () => {
   date.setDate(date.getDate() + 1);
   return toLocalDateKey(date);
 };
-const isCashMethod = (method?: string | null) => (method ?? "").trim().toUpperCase() === PaymentTypes.EFECTIVO;
 const isImageFile = (file?: File | null) => Boolean(file?.type.startsWith("image/"));
 const fileMeta = (file: File) => {
   if (file.size < 1024) return `${file.type || "Archivo"} · ${file.size} B`;
@@ -73,6 +78,10 @@ export function PaymentFormModal({
   const [poId, setPoId] = useState("");
   const [quotaId, setQuotaId] = useState("");
   const [accountPayableId, setAccountPayableId] = useState("");
+  const [selectedPayable, setSelectedPayable] = useState<AccountPayable | null>(null);
+  const [supplierDestinations, setSupplierDestinations] = useState<SupplierPaymentDestination[]>([]);
+  const [supplierPaymentDestinationId, setSupplierPaymentDestinationId] = useState("");
+  const [loadingDestinations, setLoadingDestinations] = useState(false);
   const [method, setMethod] = useState("");
   const [currency, setCurrency] = useState<CurrencyType>("PEN");
   const [amount, setAmount] = useState("");
@@ -84,6 +93,7 @@ export function PaymentFormModal({
   const [evidencePreviewUrl, setEvidencePreviewUrl] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
   const { can } = usePermissions();
   const { company } = useCompany();
   const { showFeedback } = useFeedbackToast();
@@ -98,7 +108,7 @@ export function PaymentFormModal({
     () => selectedMethod?.methodId ?? (selectedMethod as { id?: string } | null)?.id ?? null,
     [selectedMethod],
   );
-  const showAccountSelect = !isCashMethod(method);
+  const showAccountSelect = selectedMethod?.requiresSourceAccount ?? true;
   const selectedMethodRequiresVoucher = showAccountSelect && (selectedMethod?.requiresVoucher ?? false);
   const showEvidenceUploader = showAccountSelect && (canAttachEvidence || selectedMethodRequiresVoucher);
   const title = mode === "schedule" ? "Programar pago" : "Registrar pago";
@@ -110,6 +120,8 @@ export function PaymentFormModal({
     setPoId(initialPayment?.poId ?? "");
     setQuotaId(initialPayment?.quotaId ?? "");
     setAccountPayableId(initialPayment?.accountPayableId ?? "");
+    setSelectedPayable(null);
+    setSupplierPaymentDestinationId(initialPayment?.supplierPaymentDestinationId ?? "");
     setCurrency(initialPayment?.currency ?? "PEN");
     setAmount(initialPayment?.amount === null || initialPayment?.amount === undefined ? "" : String(initialPayment.amount));
     setDate(todayKey());
@@ -120,6 +132,45 @@ export function PaymentFormModal({
     setEvidenceFile(null);
     setErrors({});
   }, [initialPayment, mode, open]);
+
+  const supplierId = selectedPayable?.supplierId ?? initialPayment?.supplierId ?? null;
+
+  useEffect(() => {
+    if (!open || !selectedMethod?.requiresDestination || !supplierId || !selectedPaymentMethodId) {
+      setSupplierDestinations([]);
+      if (!selectedMethod?.requiresDestination) setSupplierPaymentDestinationId("");
+      return;
+    }
+
+    let alive = true;
+    setLoadingDestinations(true);
+    listSupplierPaymentDestinations(supplierId)
+      .then((records) => {
+        if (!alive) return;
+        const compatible = records.filter((item) =>
+          item.isActive
+          && !item.requiresManualReview
+          && item.currency === currency
+          && item.methodId === selectedPaymentMethodId,
+        );
+        setSupplierDestinations(compatible);
+        setSupplierPaymentDestinationId((current) => {
+          if (compatible.some((item) => item.supplierPaymentDestinationId === current)) return current;
+          return compatible.find((item) => item.isDefault)?.supplierPaymentDestinationId
+            ?? (compatible.length === 1 ? compatible[0].supplierPaymentDestinationId : "");
+        });
+      })
+      .catch(() => {
+        if (alive) setSupplierDestinations([]);
+      })
+      .finally(() => {
+        if (alive) setLoadingDestinations(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [currency, open, selectedMethod?.requiresDestination, selectedPaymentMethodId, supplierId]);
 
   useEffect(() => {
     if (!open) return;
@@ -169,8 +220,20 @@ export function PaymentFormModal({
   const validate = () => {
     const nextErrors: FormErrors = {};
     const amountNumber = normalizeMoney(parseDecimalInput(amount));
-    if (!poId.trim()) nextErrors.poId = "Ingresa la compra asociada.";
+    if (!poId.trim()) nextErrors.poId = "Selecciona una cuenta por pagar.";
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) nextErrors.amount = "Ingresa un monto valido.";
+    if (selectedPayable && amountNumber > Number(selectedPayable.amountPending) + 0.01) {
+      nextErrors.amount = "El monto supera el saldo pendiente.";
+    }
+    if (showAccountSelect && !selectedAccount) nextErrors.account = "Selecciona la cuenta de origen.";
+    if (selectedMethod?.requiresDestination && !supplierPaymentDestinationId) {
+      nextErrors.destination = supplierId
+        ? "Selecciona un destino confirmado del proveedor."
+        : "La cuenta por pagar no tiene un proveedor asociado.";
+    }
+    if (selectedMethod?.requiresOperationReference && !operationNumber.trim()) {
+      nextErrors.operationNumber = "Ingresa la referencia exigida por el metodo.";
+    }
     if (mode === "schedule") {
       if (!scheduledAt) {
         nextErrors.scheduledAt = "Selecciona una fecha programada.";
@@ -183,11 +246,18 @@ export function PaymentFormModal({
     }
 
     setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      requestAnimationFrame(() => errorSummaryRef.current?.focus());
+    }
     return Object.keys(nextErrors).length === 0;
   };
 
   const applyPayable = (payable: AccountPayable | null) => {
-    if (!payable) return;
+    if (!payable) {
+      setSelectedPayable(null);
+      return;
+    }
+    setSelectedPayable(payable);
     setPoId(payable.purchaseId);
     setQuotaId(payable.quotaId ?? "");
     setAccountPayableId(payable.accountPayableId);
@@ -212,6 +282,7 @@ export function PaymentFormModal({
         quotaId: quotaId.trim() || undefined,
         accountPayableId: accountPayableId.trim() || undefined,
         paymentMethodId: selectedPaymentMethodId,
+        supplierPaymentDestinationId: selectedMethod?.requiresDestination ? supplierPaymentDestinationId : undefined,
         companyPaymentAccountId: showAccountSelect ? selectedAccount?.id ?? null : null,
         bankName: showAccountSelect ? selectedAccount?.bankName ?? null : null,
         cardLastFour: showAccountSelect ? selectedAccount?.cardLastFour ?? selectedAccount?.accountLastFour ?? null : null,
@@ -267,6 +338,12 @@ export function PaymentFormModal({
         </div>
       }
     >
+      {Object.keys(errors).length > 0 ? (
+        <div ref={errorSummaryRef} tabIndex={-1} role="alert" aria-labelledby="payment-form-errors" className="mb-4 rounded-sm border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+          <p id="payment-form-errors" className="flex items-center gap-2 font-semibold"><AlertCircle className="h-4 w-4" /> Revisa los campos marcados</p>
+          <p className="mt-1 text-xs">El pago no se registró hasta corregir estos datos.</p>
+        </div>
+      ) : null}
       <div className="mb-4 flex items-start justify-between gap-3 rounded-sm border border-border bg-muted/25 px-3 py-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
@@ -306,6 +383,14 @@ export function PaymentFormModal({
             />
           </div>
         ) : null}
+        {selectedPayable ? (
+          <div className="sm:col-span-2 grid gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm sm:grid-cols-4" aria-live="polite">
+            <div><p className="text-[11px] uppercase text-muted-foreground">Obligación</p><p className="font-semibold">{selectedPayable.description || "Compra"}</p></div>
+            <div><p className="text-[11px] uppercase text-muted-foreground">Moneda</p><p className="font-semibold">{selectedPayable.currency}</p></div>
+            <div><p className="text-[11px] uppercase text-muted-foreground">Saldo actual</p><p className="font-semibold">{selectedPayable.currency} {Number(selectedPayable.amountPending).toFixed(2)}</p></div>
+            <div><p className="text-[11px] uppercase text-muted-foreground">Saldo posterior</p><p className="font-semibold">{selectedPayable.currency} {Math.max(0, Number(selectedPayable.amountPending) - normalizeMoney(parseDecimalInput(amount))).toFixed(2)}</p></div>
+          </div>
+        ) : null}
         <FloatingInput
           label="Compra"
           name="payment-po-id"
@@ -314,7 +399,7 @@ export function PaymentFormModal({
           onChange={(event) => setPoId(event.target.value)}
           disabled={Boolean(initialPayment?.poId)}
         />
-        <MoneyInput
+          <MoneyInput
           label="Monto"
           name="payment-amount"
           currency={currency}
@@ -364,6 +449,7 @@ export function PaymentFormModal({
           label="Numero de operacion"
           name="payment-operation-number"
           value={operationNumber}
+          error={errors.operationNumber}
           onChange={(event) => setOperationNumber(event.target.value)}
         />
         {showAccountSelect ? (
@@ -373,23 +459,36 @@ export function PaymentFormModal({
               value={selectedAccount?.id ?? ""}
               onChange={setSelectedAccount}
               disabled={saving}
+              usage="OUTFLOW"
+              currency={currency}
+              paymentMethodCode={selectedMethod?.code}
             />
           </div>
         ) : null}
-        <FloatingInput
-          label="Cuenta por pagar"
-          name="payment-account-payable-id"
-          value={accountPayableId}
-          onChange={(event) => setAccountPayableId(event.target.value)}
-          disabled={Boolean(initialPayment?.accountPayableId)}
-        />
-        <FloatingInput
-          label="Cuota"
-          name="payment-quota-id"
-          value={quotaId}
-          onChange={(event) => setQuotaId(event.target.value)}
-          disabled={Boolean(initialPayment?.quotaId)}
-        />
+        {errors.account ? <p className="sm:col-span-2 text-xs text-rose-700">{errors.account}</p> : null}
+        {selectedMethod?.requiresDestination ? (
+          <div className="sm:col-span-2">
+            <FloatingSelect
+              label="Destino del proveedor"
+              name="payment-supplier-destination"
+              value={supplierPaymentDestinationId}
+              onChange={setSupplierPaymentDestinationId}
+              options={supplierDestinations.map((item) => ({
+                value: item.supplierPaymentDestinationId,
+                label: item.maskedLabel || item.name,
+              }))}
+              placeholder={loadingDestinations ? "Cargando destinos..." : "Selecciona un destino confirmado"}
+              disabled={saving || loadingDestinations || !supplierId}
+              searchable={supplierDestinations.length > 6}
+            />
+            {errors.destination ? <p role="alert" className="mt-1 text-xs text-rose-700">{errors.destination}</p> : null}
+            {!loadingDestinations && supplierId && supplierDestinations.length === 0 ? (
+              <p className="mt-1 text-xs text-amber-700">
+                El proveedor no tiene destinos activos y confirmados compatibles con este metodo y moneda.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="sm:col-span-2">
           <FloatingTextarea
             label="Nota"

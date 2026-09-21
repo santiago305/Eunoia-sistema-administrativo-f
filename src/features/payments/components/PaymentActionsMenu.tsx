@@ -1,4 +1,4 @@
-import { Check, Eye, FileUp, Menu, ReceiptText, Trash2, X } from "lucide-react";
+import { Ban, Check, Eye, FileUp, Menu, ReceiptText, Trash2, X } from "lucide-react";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import {
   canShowPaymentApprovalActions,
@@ -14,6 +14,7 @@ type Props = {
   canDeletePayment: boolean;
   canViewEvidence: boolean;
   canAttachEvidence: boolean;
+  canVoidPayment: boolean;
   busy?: boolean;
   onApprove: (payment: PaymentRecord) => void;
   onReject: (payment: PaymentRecord) => void;
@@ -21,6 +22,7 @@ type Props = {
   onViewDetail: (payment: PaymentRecord) => void;
   onViewEvidence: (payment: PaymentRecord) => void;
   onAttachEvidence: (payment: PaymentRecord) => void;
+  onVoid: (payment: PaymentRecord) => void;
 };
 
 export function PaymentActionsMenu({
@@ -30,6 +32,7 @@ export function PaymentActionsMenu({
   canDeletePayment,
   canViewEvidence,
   canAttachEvidence,
+  canVoidPayment,
   busy = false,
   onApprove,
   onReject,
@@ -37,6 +40,7 @@ export function PaymentActionsMenu({
   onViewDetail,
   onViewEvidence,
   onAttachEvidence,
+  onVoid,
 }: Props) {
   const canReview = canShowPaymentApprovalActions(
     payment.status,
@@ -48,6 +52,15 @@ export function PaymentActionsMenu({
   return (
     <ActionsPopover
       actions={[
+        {
+          id: "void",
+          label: "Anular pago",
+          icon: <Ban className="h-4 w-4 text-rose-600" />,
+          danger: true,
+          hidden: !canVoidPayment || (payment.status !== "POSTED" && payment.status !== "APPROVED"),
+          disabled: !hasPaymentId || busy,
+          onClick: () => onVoid(payment),
+        },
         {
           id: "detail",
           label: "Ver detalle",
@@ -93,7 +106,7 @@ export function PaymentActionsMenu({
           label: "Eliminar",
           icon: <Trash2 className="h-4 w-4 text-rose-600" />,
           danger: true,
-          hidden: !canShowPaymentDeleteAction(canDeletePayment),
+          hidden: !canShowPaymentDeleteAction(canDeletePayment, payment.status),
           disabled: !hasPaymentId || busy,
           onClick: () => onDelete(payment),
         },

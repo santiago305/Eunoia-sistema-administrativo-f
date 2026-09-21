@@ -39,6 +39,12 @@ export function PaymentMethodsTable({
         ),
       },
       {
+        id: "code",
+        header: "Código",
+        accessorKey: "code",
+        cell: (row) => <span className="font-mono text-xs text-black/60">{row.code ?? "-"}</span>,
+      },
+      {
         id: "requiresVoucher",
         header: "Voucher",
         accessorKey: "requiresVoucher",

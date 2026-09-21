@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
 import { listCompanyPaymentAccountsByCompany } from "@/shared/services/companyPaymentAccountService";
-import type { CompanyPaymentAccount } from "../types/payment-account.types";
-import { getCompanyPaymentAccountDisplay } from "../paymentAccountView";
+import type {
+  CompanyPaymentAccount,
+  CompanyPaymentAccountType,
+  CompanyPaymentAccountUsage,
+} from "../types/payment-account.types";
+import type { CurrencyType } from "@/features/purchases/types/purchaseEnums";
+import { getCompanyPaymentAccountDisplay, isTreasuryAccountOperational } from "../paymentAccountView";
 
 type Props = {
   companyId?: string | null;
@@ -12,6 +17,10 @@ type Props = {
   label?: string;
   name?: string;
   className?: string;
+  usage?: CompanyPaymentAccountUsage;
+  currency?: CurrencyType | null;
+  allowedTypes?: CompanyPaymentAccountType[];
+  paymentMethodCode?: string | null;
 };
 
 export function CompanyPaymentAccountSelect({
@@ -19,9 +28,13 @@ export function CompanyPaymentAccountSelect({
   value,
   onChange,
   disabled,
-  label = "Cuenta/tarjeta de empresa",
+  label = "Cuenta de origen",
   name = "company-payment-account",
   className,
+  usage = "OUTFLOW",
+  currency,
+  allowedTypes,
+  paymentMethodCode,
 }: Props) {
   const [accounts, setAccounts] = useState<CompanyPaymentAccount[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +52,12 @@ export function CompanyPaymentAccountSelect({
     listCompanyPaymentAccountsByCompany(companyId)
       .then((items) => {
         if (!alive) return;
-        setAccounts(items.filter((item) => item.isActive));
+        setAccounts(items.filter((item) => isTreasuryAccountOperational(item, {
+          usage,
+          currency,
+          paymentMethodCode,
+          allowedTypes,
+        })));
       })
       .catch(() => {
         if (alive) setAccounts([]);
@@ -51,7 +69,7 @@ export function CompanyPaymentAccountSelect({
     return () => {
       alive = false;
     };
-  }, [companyId]);
+  }, [allowedTypes, companyId, currency, paymentMethodCode, usage]);
 
   const effectiveValue = value || internalValue;
 
@@ -62,7 +80,10 @@ export function CompanyPaymentAccountSelect({
 
   useEffect(() => {
     if (loading || selected || effectiveValue || accounts.length === 0) return;
-    const defaultAccount = accounts.find((account) => account.isDefault) ?? accounts[0] ?? null;
+    const defaultAccount = accounts.find((account) => account.isDefault && account.usage === usage)
+      ?? accounts.find((account) => account.isDefault)
+      ?? accounts[0]
+      ?? null;
     setInternalValue(defaultAccount?.id ?? "");
     onChange(defaultAccount);
   }, [accounts, effectiveValue, loading, onChange, selected]);

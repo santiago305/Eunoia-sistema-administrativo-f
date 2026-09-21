@@ -24,7 +24,11 @@ import {
   setCompanyPaymentAccountActive,
 } from "@/shared/services/companyPaymentAccountService";
 import type { CompanyPaymentAccount } from "../types/payment-account.types";
-import { getCompanyPaymentAccountDisplay, getCompanyPaymentAccountTypeLabel } from "../paymentAccountView";
+import {
+  getCompanyPaymentAccountDisplay,
+  getCompanyPaymentAccountTypeLabel,
+  getCompanyPaymentAccountUsageLabel,
+} from "../paymentAccountView";
 import { CompanyPaymentAccountFormModal } from "../components/CompanyPaymentAccountFormModal";
 import { PaymentAccountActionsMenu } from "../components/PaymentAccountActionsMenu";
 import { PaymentAccountSmartSearchPanel } from "../components/PaymentAccountSmartSearchPanel";
@@ -122,9 +126,11 @@ export default function PaymentAccountsPage() {
       const searchableText = [
         account.name,
         account.maskedLabel,
-        account.bankName,
-        account.walletName,
+        account.institutionName ?? account.bankName,
+        account.walletProvider ?? account.walletName,
+        account.holderName,
         account.currency,
+        getCompanyPaymentAccountUsageLabel(account.usage),
         getCompanyPaymentAccountTypeLabel(account.type),
       ].map(normalize).join(" ");
 
@@ -256,10 +262,16 @@ export default function PaymentAccountsPage() {
         cell: (row) => <span className="text-black/70">{getCompanyPaymentAccountTypeLabel(row.type)}</span>,
       },
       {
-        id: "bankName",
-        header: "Banco/Billetera",
-        searchValue: (row) => row.bankName || row.walletName || "",
-        cell: (row) => <span className="text-black/70">{row.bankName || row.walletName || "-"}</span>,
+        id: "institution",
+        header: "Institución/Proveedor",
+        searchValue: (row) => row.institutionName || row.walletProvider || row.bankName || row.walletName || "",
+        cell: (row) => <span className="text-black/70">{row.institutionName || row.walletProvider || row.bankName || row.walletName || "-"}</span>,
+      },
+      {
+        id: "usage",
+        header: "Uso",
+        accessorKey: "usage",
+        cell: (row) => <span className="text-black/70">{getCompanyPaymentAccountUsageLabel(row.usage)}</span>,
       },
       {
         id: "identifier",
@@ -267,7 +279,7 @@ export default function PaymentAccountsPage() {
         visible: false,
         searchValue: (row) => row.maskedLabel,
         cell: (row) => {
-          const sensitiveValue = row.accountNumber || row.cardLastFour || row.accountLastFour || null;
+          const sensitiveValue = row.accountNumber || row.cci || row.walletPhone || row.cardLastFour || row.accountLastFour || row.cciLastFour || row.walletPhoneLastFour || null;
           return (
             <span className="text-black/70">
               {canViewSensitive && sensitiveValue ? sensitiveValue : row.maskedLabel || "-"}
@@ -358,7 +370,7 @@ export default function PaymentAccountsPage() {
               setFormOpen(true);
             }}
           >
-            Nueva cuenta
+            Nueva cuenta de tesorería
           </SystemButton>
         ) : null}
       </PageActionsRow>
@@ -374,7 +386,7 @@ export default function PaymentAccountsPage() {
         columns={columns}
         rowKey="id"
         loading={loading}
-        emptyMessage="No hay cuentas de pago registradas."
+        emptyMessage="No hay cuentas de tesorería registradas."
         selectableColumns
         toolbarSearchContent={toolbarSearchContent}
         hoverable={false}

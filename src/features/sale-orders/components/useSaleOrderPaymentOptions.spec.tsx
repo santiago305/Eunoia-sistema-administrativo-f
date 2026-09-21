@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSaleOrderPaymentOptions } from "./useSaleOrderPaymentOptions";
+import { filterSaleOrderBankAccountOptions, useSaleOrderPaymentOptions } from "./useSaleOrderPaymentOptions";
 
 const {
   getPaymentMethodsByCompanyMock,
@@ -49,9 +49,22 @@ describe("useSaleOrderPaymentOptions", () => {
         {
           value: "company-account-1",
           label: "BCP Empresa ****0001 · PEN",
+          accountType: undefined,
         },
       ]);
     });
     expect(listCompanyPaymentAccountsByCompanyMock).toHaveBeenCalledWith("company-1");
+  });
+
+  it("filters receiver accounts by the selected payment method", () => {
+    const accounts = [
+      { value: "bank", label: "Banco", accountType: "BANK_ACCOUNT" as const },
+      { value: "cash", label: "Caja", accountType: "CASH" as const },
+      { value: "wallet", label: "Billetera", accountType: "DIGITAL_WALLET" as const },
+    ];
+
+    expect(filterSaleOrderBankAccountOptions(accounts, "BANK_TRANSFER").map((item) => item.value)).toEqual(["bank"]);
+    expect(filterSaleOrderBankAccountOptions(accounts, "BANK_DEPOSIT").map((item) => item.value)).toEqual(["bank", "cash"]);
+    expect(filterSaleOrderBankAccountOptions(accounts, "DIGITAL_WALLET").map((item) => item.value)).toEqual(["wallet"]);
   });
 });

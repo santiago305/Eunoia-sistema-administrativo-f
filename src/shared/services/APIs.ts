@@ -92,14 +92,6 @@ export const packRoutes = {
   exportExcel: "/packs/export-excel",
 };
 
-export const API_BANK_ACCOUNTS_GROUP = {
-  create: "/bank-accounts",
-  byCompany: (companyId: string) => `/bank-accounts/by-company/${companyId}`,
-  byId: (id: string) => `/bank-accounts/${id}`,
-  update: (id: string) => `/bank-accounts/${id}`,
-  setActive: (id: string) => `/bank-accounts/${id}/active`,
-};
-
 export const agencyRoutes = {
   list: "/agencies",
   create: "/agencies",
@@ -423,6 +415,7 @@ export const API_PAYMENT_GROUP = {
   listByPo: (id: string) => `/payments/get-by-po/${id}`,
   approve: (id: string) => `/payments/${id}/approve`,
   reject: (id: string) => `/payments/${id}/reject`,
+  void: (id: string) => `/payments/${id}/void`,
   remove: (id: string) => `/payments/${id}`,
 };
 
@@ -644,8 +637,6 @@ export const API_PAYMENT_METHODS_GROUP = {
   listAll: "/payment-methods/records",
   byId: (id: string) => `/payment-methods/${id}`,
   byCompany: (companyId: string) => `/payment-methods/by-company/${companyId}`,
-  bySupplier: (supplierId: string) =>
-    `/payment-methods/by-supplier/${supplierId}`,
   update: (id: string) => `/payment-methods/${id}`,
   setActive: (id: string) => `/payment-methods/${id}/active`,
 };
@@ -656,10 +647,9 @@ export const API_COMPANY_METHODS_GROUP = {
   remove: (companyMethodId: string) => `/company-methods/${companyMethodId}`,
 };
 
-export const API_SUPPLIER_METHODS_GROUP = {
-  create: "/supplier-methods",
-  listBySupplier: (supplierId: string) =>
-    `/supplier-methods/by-supplier/${supplierId}`,
-  byId: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
-  remove: (supplierMethodId: string) => `/supplier-methods/${supplierMethodId}`,
+export const API_SUPPLIER_PAYMENT_DESTINATIONS_GROUP = {
+  create: "/supplier-payment-destinations",
+  listBySupplier: (supplierId: string) => `/supplier-payment-destinations/by-supplier/${supplierId}`,
+  update: (id: string) => `/supplier-payment-destinations/${id}`,
+  setDefault: (id: string) => `/supplier-payment-destinations/${id}/default`,
 };

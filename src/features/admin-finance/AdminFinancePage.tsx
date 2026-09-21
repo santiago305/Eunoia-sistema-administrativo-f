@@ -14,10 +14,16 @@ import type {
 const money = (value: number, currency = "PEN") =>
   new Intl.NumberFormat("es-PE", { style: "currency", currency }).format(value);
 
+const moneyByCurrency = (values: Record<string, number>) =>
+  Object.entries(values)
+    .filter(([, value]) => Number(value) !== 0)
+    .map(([currency, value]) => money(Number(value), currency))
+    .join(" · ") || "—";
+
 const emptySummary: AdminFinanceSummary = {
-  income: { collected: 0, pending: 0 },
-  expenses: { paid: 0, pending: 0, overdue: 0, scheduled: 0 },
-  net: { collectedMinusPaid: 0, projectedAfterPending: 0 },
+  income: { collected: 0, pending: 0, byCurrency: {} },
+  expenses: { paid: 0, pending: 0, overdue: 0, scheduled: 0, byCurrency: {} },
+  net: { collectedMinusPaid: 0, projectedAfterPending: 0, byCurrency: {} },
 };
 
 export default function AdminFinancePage() {
@@ -53,14 +59,14 @@ export default function AdminFinancePage() {
   }, [filters]);
 
   const cards = [
-    { label: "Ingresos cobrados", value: money(summary.income.collected) },
-    { label: "Por cobrar", value: money(summary.income.pending) },
-    { label: "Egresos pagados", value: money(summary.expenses.paid) },
-    { label: "Por pagar", value: money(summary.expenses.pending) },
-    { label: "Vencido", value: money(summary.expenses.overdue) },
-    { label: "Programado", value: money(summary.expenses.scheduled) },
-    { label: "Neto cobrado", value: money(summary.net.collectedMinusPaid) },
-    { label: "Proyectado", value: money(summary.net.projectedAfterPending) },
+    { label: "Ingresos cobrados", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.income.byCurrency).map(([currency, value]) => [currency, value.collected]))) },
+    { label: "Por cobrar", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.income.byCurrency).map(([currency, value]) => [currency, value.pending]))) },
+    { label: "Egresos pagados", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.expenses.byCurrency).map(([currency, value]) => [currency, value.paid]))) },
+    { label: "Por pagar", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.expenses.byCurrency).map(([currency, value]) => [currency, value.pending]))) },
+    { label: "Vencido", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.expenses.byCurrency).map(([currency, value]) => [currency, value.overdue]))) },
+    { label: "Programado", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.expenses.byCurrency).map(([currency, value]) => [currency, value.scheduled]))) },
+    { label: "Neto cobrado", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.net.byCurrency).map(([currency, value]) => [currency, value.collectedMinusPaid]))) },
+    { label: "Proyectado", value: moneyByCurrency(Object.fromEntries(Object.entries(summary.net.byCurrency).map(([currency, value]) => [currency, value.projectedAfterPending]))) },
   ];
 
   return (
@@ -73,6 +79,7 @@ export default function AdminFinancePage() {
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-row md:max-w-xl">
             <label className="relative block flex-1">
+              <span className="sr-only">Buscar movimiento financiero</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-black/40" />
               <input
                 className="h-10 w-full rounded-md border border-black/15 bg-white pl-9 pr-3 text-sm outline-none ring-teal-600/20 transition focus:border-teal-600 focus:ring-4"
@@ -82,6 +89,7 @@ export default function AdminFinancePage() {
               />
             </label>
             <select
+              aria-label="Filtrar movimientos por tipo"
               className="h-10 rounded-md border border-black/15 bg-white px-3 text-sm"
               value={type ?? ""}
               onChange={(event) =>
@@ -105,7 +113,8 @@ export default function AdminFinancePage() {
         </section>
 
         <section className="overflow-hidden rounded-md border border-black/10 bg-white">
-          <table className="w-full border-collapse text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead className="bg-black/[0.03] text-xs uppercase text-black/55">
               <tr>
                 <th className="px-3 py-2">Tipo</th>
@@ -136,6 +145,7 @@ export default function AdminFinancePage() {
               ) : null}
             </tbody>
           </table>
+          </div>
         </section>
       </div>
     </PageShell>

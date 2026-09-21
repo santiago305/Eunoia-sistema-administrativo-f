@@ -25,6 +25,7 @@ type Props = {
   canDeletePayment: boolean;
   canViewEvidence: boolean;
   canAttachEvidence: boolean;
+  canVoidPayment: boolean;
   busyPaymentId?: string | null;
   onPageChange: (page: number) => void;
   onApprove: (payment: PaymentRecord) => void;
@@ -33,6 +34,7 @@ type Props = {
   onViewDetail: (payment: PaymentRecord) => void;
   onViewEvidence: (payment: PaymentRecord) => void;
   onAttachEvidence: (payment: PaymentRecord) => void;
+  onVoid: (payment: PaymentRecord) => void;
 };
 
 export function PaymentsTable({
@@ -45,6 +47,7 @@ export function PaymentsTable({
   canDeletePayment,
   canViewEvidence,
   canAttachEvidence,
+  canVoidPayment,
   busyPaymentId,
   onPageChange,
   onApprove,
@@ -53,6 +56,7 @@ export function PaymentsTable({
   onViewDetail,
   onViewEvidence,
   onAttachEvidence,
+  onVoid,
 }: Props) {
   const columns = useMemo<DataTableColumn<PaymentRecord>[]>(
     () => [
@@ -150,6 +154,7 @@ export function PaymentsTable({
             canDeletePayment={canDeletePayment}
             canViewEvidence={canViewEvidence}
             canAttachEvidence={canAttachEvidence}
+            canVoidPayment={canVoidPayment}
             busy={busyPaymentId === row.payDocId}
             onApprove={onApprove}
             onReject={onReject}
@@ -157,6 +162,7 @@ export function PaymentsTable({
             onViewDetail={onViewDetail}
             onViewEvidence={onViewEvidence}
             onAttachEvidence={onAttachEvidence}
+            onVoid={onVoid}
           />
         ),
         className: "text-center",
@@ -171,12 +177,14 @@ export function PaymentsTable({
       canDeletePayment,
       canRejectPayment,
       canViewEvidence,
+      canVoidPayment,
       onApprove,
       onAttachEvidence,
       onDelete,
       onReject,
       onViewDetail,
       onViewEvidence,
+      onVoid,
     ],
   );
 

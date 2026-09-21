@@ -239,7 +239,7 @@ export type Payment = {
   quotaId?: string | null;
   poId?: string | null;
   accountPayableId?: string | null;
-  status?: "SCHEDULED" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+  status?: "DRAFT" | "SCHEDULED" | "PENDING_APPROVAL" | "POSTED" | "APPROVED" | "REJECTED" | "VOIDED";
   requestedByUserId?: string | null;
   approvedByUserId?: string | null;
   rejectedByUserId?: string | null;
@@ -248,6 +248,7 @@ export type Payment = {
   rejectionReason?: string | null;
   companyPaymentAccountId?: string | null;
   paymentMethodId?: string | null;
+  supplierPaymentDestinationId?: string | null;
   paidByUserId?: string | null;
   scheduledByUserId?: string | null;
   scheduledAt?: string | null;

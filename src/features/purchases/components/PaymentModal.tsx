@@ -328,6 +328,9 @@ export function PaymentModal({
                     value={selectedPaymentAccount?.id ?? ""}
                     disabled={saving}
                     onChange={setSelectedPaymentAccount}
+                    usage="OUTFLOW"
+                    currency={form.currency}
+                    paymentMethodCode={selectedPaymentMethod?.code}
                   />
                 </div>
               ) : null}

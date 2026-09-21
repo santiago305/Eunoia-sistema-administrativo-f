@@ -23,7 +23,7 @@ describe("paymentView", () => {
   });
 
   it("only shows delete action when user can manage payments", () => {
-    expect(canShowPaymentDeleteAction(true)).toBe(true);
+    expect(canShowPaymentDeleteAction(true, "DRAFT")).toBe(true);
     expect(canShowPaymentDeleteAction(false)).toBe(false);
   });
 

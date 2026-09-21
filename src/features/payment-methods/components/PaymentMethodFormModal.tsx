@@ -4,6 +4,7 @@ import { Modal } from "@/shared/components/settings/modal";
 import { getPaymentMethodById, createPaymentMethod, updatePaymentMethod, setPaymentMethodActive } from "@/shared/services/paymentMethodService";
 import { PaymentMethodFormFields, type PaymentMethodFormState } from "./PaymentMethodFormFields";
 import { SystemButton } from "@/shared/components/components/SystemButton";
+import type { PaymentMethodCode } from "../paymentMethodCatalog";
 
 type PaymentMethodFormModalProps = {
     open: boolean;
@@ -17,6 +18,7 @@ type PaymentMethodFormModalProps = {
 };
 
 const DEFAULT_FORM: PaymentMethodFormState = {
+    code: "OTHER",
     name: "",
     isActive: true,
     requiresVoucher: true,
@@ -55,6 +57,7 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
                 const method = await getPaymentMethodById(paymentMethodId);
                 if (cancelled) return;
                 setForm({
+                    code: (method.code as PaymentMethodCode) ?? "OTHER",
                     name: method.name ?? "",
                     isActive: method.isActive ?? true,
                     requiresVoucher: method.requiresVoucher ?? true,
@@ -94,6 +97,7 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
                 await setPaymentMethodActive(paymentMethodId, { isActive: form.isActive });
             } else {
                 await createPaymentMethod({
+                    code: form.code,
                     name: form.name.trim(),
                     isActive: form.isActive,
                     requiresVoucher: form.requiresVoucher,
@@ -115,7 +119,13 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
                 {loading ? (
                     <div className="px-1 py-6 text-sm text-black/60">Cargando metodo de pago...</div>
                 ) : (
-                    <PaymentMethodFormFields form={form} setForm={setForm} primaryColor={primaryColor} disabled={loading || !canManage} />
+                    <PaymentMethodFormFields
+                        form={form}
+                        setForm={setForm}
+                        primaryColor={primaryColor}
+                        disabled={loading || !canManage}
+                        codeDisabled={mode === "edit"}
+                    />
                 )}
 
                 {error && <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>}

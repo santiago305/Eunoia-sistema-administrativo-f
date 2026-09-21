@@ -51,11 +51,11 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         ],
     },
     {
-        label: "Pagos",
+        label: "Tesorería",
         icon: <IconPurchase className="text-sidebar-foreground" />,
         children: [
             {
-                label: "Pagos",
+                label: "Pagos y cobros",
                 href: RoutesPaths.payments,
             },
             {
@@ -71,7 +71,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 href: RoutesPaths.accountsPayable,
             },
             {
-                label: "Cuentas de pago",
+                label: "Cuentas de tesorería",
                 href: RoutesPaths.paymentAccounts,
             },
             {

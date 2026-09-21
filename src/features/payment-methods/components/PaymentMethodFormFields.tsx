@@ -1,6 +1,8 @@
 import type { CSSProperties, Dispatch, SetStateAction } from "react";
+import { PAYMENT_METHOD_OPTIONS, getPaymentMethodLabel, type PaymentMethodCode } from "../paymentMethodCatalog";
 
 export type PaymentMethodFormState = {
+  code: PaymentMethodCode;
   name: string;
   isActive: boolean;
   requiresVoucher: boolean;
@@ -11,6 +13,7 @@ type PaymentMethodFormFieldsProps = {
   setForm: Dispatch<SetStateAction<PaymentMethodFormState>>;
   primaryColor: string;
   disabled?: boolean;
+  codeDisabled?: boolean;
 };
 
 export function PaymentMethodFormFields({
@@ -18,11 +21,34 @@ export function PaymentMethodFormFields({
   setForm,
   primaryColor,
   disabled,
+  codeDisabled,
 }: PaymentMethodFormFieldsProps) {
   const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties;
 
   return (
     <div className="space-y-3">
+      <label className="text-xs">
+        Tipo de método
+        <select
+          className="mt-2 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
+          style={ringStyle}
+          value={form.code}
+          onChange={(event) => {
+            const code = event.target.value as PaymentMethodCode;
+            setForm((prev) => ({
+              ...prev,
+              code,
+              name: code === "OTHER" ? prev.name : getPaymentMethodLabel(code),
+              requiresVoucher: code === "CASH" ? false : true,
+            }));
+          }}
+          disabled={disabled || codeDisabled}
+        >
+          {PAYMENT_METHOD_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
       <label className="text-xs">
         Nombre
         <input
@@ -34,7 +60,7 @@ export function PaymentMethodFormFields({
             setForm((prev) => ({
               ...prev,
               name,
-              requiresVoucher: name.trim().toUpperCase() === "EFECTIVO" ? false : prev.requiresVoucher,
+               requiresVoucher: prev.code === "CASH" ? false : prev.requiresVoucher,
             }));
           }}
           disabled={disabled}

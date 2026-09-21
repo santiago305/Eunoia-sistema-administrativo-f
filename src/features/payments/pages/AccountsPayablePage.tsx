@@ -81,6 +81,7 @@ const toInitialPayment = (payable: AccountPayable): PaymentFormInitialPayment =>
   poId: payable.purchaseId,
   quotaId: payable.quotaId ?? undefined,
   accountPayableId: payable.accountPayableId,
+  supplierId: payable.supplierId ?? undefined,
   currency: payable.currency,
   amount: payable.amountPending,
 });

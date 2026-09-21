@@ -13,7 +13,8 @@ import type { CreditQuota, Payment, PurchaseOrder } from "@/features/purchases/t
 import { todayIso, toDateInputValue, parseDateInputValue, toLocalDateKey, clampQuotas, buildQuotas, normalizeMoney, parseDecimalInput } from "@/shared/utils/functionPurchases";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { errorResponse } from "@/shared/common/utils/response";
-import { getPaymentMethodsBySupplier } from "@/shared/services/paymentMethodService";
+import { getPaymentMethodsByCompany } from "@/shared/services/paymentMethodService";
+import { listSupplierPaymentDestinations, type SupplierPaymentDestination } from "@/shared/services/supplierService";
 import { CompanyPaymentAccountSelect } from "@/features/payments/components/CompanyPaymentAccountSelect";
 import type { CompanyPaymentAccount } from "@/features/payments/types/payment-account.types";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -22,11 +23,7 @@ import { paymentRequiresEvidence } from "@/features/purchases/utils/purchasePaym
 
 const DEFAULT_PRIMARY = "hsl(var(--primary))";
 
-type SupplierPaymentMethodOption = PaymentMethodPivot & {
-  supplierMethodId?: string;
-  methodName?: string;
-  isDefault?: boolean;
-};
+type SupplierPaymentMethodOption = PaymentMethodPivot;
 
 const isCashMethod = (method?: string | null) => (method ?? "").trim().toUpperCase() === PaymentTypes.EFECTIVO;
 
@@ -68,6 +65,7 @@ export function PurchasePaymentModal({
   const totalPaid = (form.payments ?? []).reduce((acc, p) => acc + (p.amount ?? 0), 0);
   const pendingAmount = Math.max(0, totalPrice - totalPaid);
   const [paymentMethods, setPaymentMethods] = useState<SupplierPaymentMethodOption[]>([]);
+  const [supplierDestinations, setSupplierDestinations] = useState<SupplierPaymentDestination[]>([]);
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const { company } = useCompany();
 
@@ -90,13 +88,13 @@ export function PurchasePaymentModal({
     }));
   };
 
-  const loadSupplierMethods = useCallback(async (id: string) => {
+  const loadCompanyMethods = useCallback(async (id: string) => {
     clearFeedback();
     try {
-      const data = await getPaymentMethodsBySupplier(id);
+      const data = await getPaymentMethodsByCompany(id);
       const normalized = (data ?? []).map((m: SupplierPaymentMethodOption) => ({
         ...m,
-        name: (m.name ?? m.methodName ?? "").trim().toUpperCase(),
+        name: (m.name ?? "").trim().toUpperCase(),
       }));
 
       normalized.sort((a, b) => {
@@ -114,8 +112,26 @@ export function PurchasePaymentModal({
   }, [clearFeedback, showFeedback]);
 
   useEffect(() => {
-    void loadSupplierMethods(form.supplierId);
-  }, [form.supplierId, loadSupplierMethods]);
+    if (company?.companyId) void loadCompanyMethods(company.companyId);
+  }, [company?.companyId, loadCompanyMethods]);
+
+  useEffect(() => {
+    if (!form.supplierId) {
+      setSupplierDestinations([]);
+      return;
+    }
+    let alive = true;
+    listSupplierPaymentDestinations(form.supplierId)
+      .then((records) => {
+        if (alive) setSupplierDestinations(records.filter((item) => item.isActive && !item.requiresManualReview));
+      })
+      .catch(() => {
+        if (alive) setSupplierDestinations([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [form.supplierId]);
 
   const updatePayment = useCallback((index: number, patch: Partial<Payment>) => {
     setForm((prev) => ({
@@ -180,22 +196,12 @@ export function PurchasePaymentModal({
   ];
 
   const methodOptions = useMemo(
-    () =>
-      (paymentMethods ?? []).map((m) => {
-        const label = `${m.name} ${m.number ? `- ${m.number}` : ""}`.trim();
-        return {
-          value: label,
-          label,
-        };
-      }),
+    () => (paymentMethods ?? []).map((m) => ({ value: m.name, label: m.name })),
     [paymentMethods],
   );
 
   const methodByLabel = useMemo(() => {
-    const entries = (paymentMethods ?? []).map((m) => {
-      const label = `${m.name} ${m.number ? `- ${m.number}` : ""}`.trim();
-      return [label, m] as const;
-    });
+    const entries = (paymentMethods ?? []).map((m) => [m.name, m] as const);
     return new Map(entries);
   }, [paymentMethods]);
 
@@ -205,6 +211,7 @@ export function PurchasePaymentModal({
     updatePayment(index, {
       method: label as Payment["method"],
       paymentMethodId: cash ? null : selected?.methodId ?? null,
+      supplierPaymentDestinationId: null,
       companyPaymentAccountId: cash ? null : form.payments?.[index]?.companyPaymentAccountId ?? null,
       bankName: cash ? null : form.payments?.[index]?.bankName ?? null,
       cardLastFour: cash ? null : form.payments?.[index]?.cardLastFour ?? null,
@@ -232,6 +239,16 @@ export function PurchasePaymentModal({
       .filter((payment) => (payment.amount ?? 0) > 0)
       .some((payment) => paymentRequiresEvidence(payment) && !payment.paymentEvidenceFile);
   }, [form.payments, showCredit]);
+
+  const hasMissingRequiredDestination = useMemo(() => {
+    if (showCredit) return false;
+    return (form.payments ?? [])
+      .filter((payment) => (payment.amount ?? 0) > 0)
+      .some((payment) => {
+        const method = methodByLabel.get((payment.method ?? "").trim());
+        return Boolean(method?.requiresDestination && !payment.supplierPaymentDestinationId);
+      });
+  }, [form.payments, methodByLabel, showCredit]);
 
   type QuotaRow = CreditQuota & {
     id: string;
@@ -472,7 +489,27 @@ export function PurchasePaymentModal({
                         value={payment.companyPaymentAccountId ?? ""}
                         onChange={(account) => updateCompanyPaymentAccount(index, account)}
                         className="h-9 text-xs"
+                        usage="OUTFLOW"
+                        currency={form.currency}
+                        paymentMethodCode={methodByLabel.get(payment.method)?.code}
                       />
+                      {methodByLabel.get(payment.method)?.requiresDestination ? (
+                        <FloatingSelect
+                          label="Destino del proveedor"
+                          name={`supplier-payment-destination-${index}`}
+                          value={payment.supplierPaymentDestinationId ?? ""}
+                          onChange={(value) => updatePayment(index, { supplierPaymentDestinationId: value || null })}
+                          options={supplierDestinations
+                            .filter((item) => item.methodId === payment.paymentMethodId && item.currency === payment.currency)
+                            .map((item) => ({
+                              value: item.supplierPaymentDestinationId,
+                              label: item.maskedLabel || item.name,
+                            }))}
+                          placeholder="Selecciona un destino confirmado"
+                          searchable={supplierDestinations.length > 6}
+                          className="h-9 text-xs"
+                        />
+                      ) : null}
                       <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-dashed border-black/20 bg-slate-50 px-3 text-xs text-black/65 hover:border-primary/40 hover:bg-primary/5">
                         <FileUp className="h-4 w-4 shrink-0 text-black/45" />
                         <input
@@ -549,7 +586,7 @@ export function PurchasePaymentModal({
           </SystemButton>
           <SystemButton
             style={{ backgroundColor: accent, borderColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
-            disabled={saveDisabled || hasInvalidPayment || hasMissingRequiredEvidence}
+            disabled={saveDisabled || hasInvalidPayment || hasMissingRequiredEvidence || hasMissingRequiredDestination}
             onClick={onSave}
           >
             {isEdit ? "Actualizar Comprobante" : "Generar Comprobante"}

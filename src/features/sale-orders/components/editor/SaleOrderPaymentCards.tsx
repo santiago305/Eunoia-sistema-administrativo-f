@@ -14,6 +14,7 @@ import {
 } from "@/shared/utils/functionPurchases";
 import {
   useSaleOrderPaymentOptions,
+  filterSaleOrderBankAccountOptions,
   type SaleOrderPaymentSelectOption,
 } from "../useSaleOrderPaymentOptions";
 import type {
@@ -126,6 +127,8 @@ export function SaleOrderPaymentCards({
       draft: {
         clientKey: nextClientKey(),
         method: "",
+        paymentMethodId: null,
+        companyPaymentAccountId: null,
         amount: pending,
         date: toLocalDateKey(new Date()),
         photo: null,
@@ -148,17 +151,52 @@ export function SaleOrderPaymentCards({
         : current,
     );
 
+  const availableForDraft = useMemo(() => {
+    if (!modalState) return 0;
+    const total = calculateSaleOrderTotals(
+      form.items,
+      form.deliveryCost,
+      form.discount,
+      form.discountType,
+    ).total;
+    const paidByOtherPayments = form.payments.reduce(
+      (sum, payment, index) =>
+        modalState.mode === "edit" && index === modalState.index
+          ? sum
+          : sum + Number(payment.amount || 0),
+      0,
+    );
+    return Math.max(0, Number((total - paidByOtherPayments).toFixed(2)));
+  }, [form, modalState]);
+
+  const amountError =
+    modalState && Number(modalState.draft.amount || 0) > availableForDraft + 0.01
+      ? `El monto no puede superar el saldo disponible de ${money.format(availableForDraft)}.`
+      : undefined;
+
+  const compatibleBankAccountOptions = useMemo(() => {
+    if (!modalState) return bankAccountOptions;
+    const method = methodOptions.find(
+      (option) => option.value === (modalState.draft.paymentMethodId ?? modalState.draft.method),
+    );
+    return filterSaleOrderBankAccountOptions(bankAccountOptions, method?.paymentMethodCode);
+  }, [bankAccountOptions, methodOptions, modalState]);
+
   const saveDraft = () => {
     if (!modalState) return;
     if (
       !modalState.draft.amount ||
       !modalState.draft.method ||
       !modalState.draft.date ||
-      !modalState.draft.bankAccountId
+      !modalState.draft.companyPaymentAccountId && !modalState.draft.bankAccountId
     ) {
       sileo.error({
         title: "Completa monto, metodo, fecha y cuenta para guardar el pago.",
       });
+      return;
+    }
+    if (amountError) {
+      sileo.error({ title: amountError });
       return;
     }
     setForm((current) => {
@@ -280,8 +318,10 @@ export function SaleOrderPaymentCards({
                 name={`payment-amount-${modalState.draft.clientKey}`}
                 type="number"
                 min={0}
+                max={availableForDraft}
                 step="0.01"
                 value={String(modalState.draft.amount)}
+                error={amountError}
                 requiredIndicator
                 onChange={(event) =>
                   updateDraft({
@@ -301,21 +341,33 @@ export function SaleOrderPaymentCards({
                 }
               />
               <FloatingSelect
-                label="Metodo"
+                label="Método de cobro"
                 name={`payment-method-${modalState.draft.clientKey}`}
-                value={modalState.draft.method}
+                value={modalState.draft.paymentMethodId ?? modalState.draft.method}
                 options={methodOptions}
                 requiredIndicator
-                onChange={(method) => updateDraft({ method })}
+                onChange={(paymentMethodId) => {
+                  const selected = methodOptions.find((option) => option.value === paymentMethodId);
+                  const selectedAccountId = modalState.draft.companyPaymentAccountId ?? modalState.draft.bankAccountId;
+                  const keepAccount = !selectedAccountId || filterSaleOrderBankAccountOptions(
+                    bankAccountOptions,
+                    selected?.paymentMethodCode,
+                  ).some((option) => option.value === selectedAccountId);
+                  updateDraft({
+                    paymentMethodId,
+                    method: selected?.label ?? paymentMethodId,
+                    ...(keepAccount ? {} : { companyPaymentAccountId: null, bankAccountId: null }),
+                  });
+                }}
               />
               <FloatingSelect
-                label="Cuenta"
+                label="Cuenta receptora"
                 name={`payment-account-${modalState.draft.clientKey}`}
-                value={modalState.draft.bankAccountId ?? ""}
-                options={bankAccountOptions}
+                value={modalState.draft.companyPaymentAccountId ?? modalState.draft.bankAccountId ?? ""}
+                options={compatibleBankAccountOptions}
                 requiredIndicator
-                onChange={(bankAccountId) =>
-                  updateDraft({ bankAccountId: bankAccountId || null })
+                onChange={(companyPaymentAccountId) =>
+                  updateDraft({ companyPaymentAccountId: companyPaymentAccountId || null, bankAccountId: companyPaymentAccountId || null })
                 }
               />
               <FloatingInput

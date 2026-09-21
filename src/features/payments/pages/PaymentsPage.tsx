@@ -23,6 +23,7 @@ import {
   getPaymentSearchState,
   listPayments,
   rejectPayment,
+  voidPayment,
   removePayment,
   savePaymentExportPreset,
   savePaymentSearchMetric,
@@ -36,6 +37,7 @@ import { PaymentFormModal } from "../components/PaymentFormModal";
 import { PaymentsTable } from "../components/PaymentsTable";
 import { PaymentSmartSearchPanel } from "../components/PaymentSmartSearchPanel";
 import { RejectPaymentModal } from "../components/RejectPaymentModal";
+import { VoidPaymentModal } from "../components/VoidPaymentModal";
 import type {
   PaymentSearchRule,
   PaymentSearchSnapshot,
@@ -72,6 +74,7 @@ export default function PaymentsPage() {
   const canDeletePayment = can("payments.delete");
   const canViewEvidence = can("payments.view_evidence");
   const canAttachEvidence = can("payments.attach_evidence");
+  const canVoidPayment = can("payments.approve");
   const canExportPayments = can("payments.export");
 
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -92,6 +95,7 @@ export default function PaymentsPage() {
   const [searchFilters, setSearchFilters] = useState(() => createEmptyPaymentSearchFilters());
   const [paymentFormMode, setPaymentFormMode] = useState<"create" | "schedule" | null>(null);
   const [rejectingPayment, setRejectingPayment] = useState<PaymentRecord | null>(null);
+  const [voidingPayment, setVoidingPayment] = useState<PaymentRecord | null>(null);
   const [evidencePayment, setEvidencePayment] = useState<PaymentRecord | null>(null);
   const [detailPayment, setDetailPayment] = useState<PaymentRecord | null>(null);
 
@@ -338,6 +342,21 @@ export default function PaymentsPage() {
     }
   }, [busyPaymentId, canDeletePayment, loadPayments, showFeedback]);
 
+  const handleConfirmVoid = useCallback(async (reason: string) => {
+    const payment = voidingPayment;
+    if (!canVoidPayment || !payment?.payDocId || busyPaymentId) return;
+    setBusyPaymentId(payment.payDocId);
+    try {
+      const response = await voidPayment(payment.payDocId, reason);
+      if (response.type === "success") {
+        showFeedback(successResponse(response.message));
+        setVoidingPayment(null);
+        await loadPayments();
+      } else showFeedback(errorResponse(response.message));
+    } catch { showFeedback(errorResponse("No se pudo anular el pago.")); }
+    finally { setBusyPaymentId(null); }
+  }, [busyPaymentId, canVoidPayment, loadPayments, showFeedback, voidingPayment]);
+
   const handleExport = useCallback(async (columnsToExport: PaymentExportColumn[]) => {
     setExporting(true);
     try {
@@ -480,6 +499,7 @@ export default function PaymentsPage() {
         canDeletePayment={canDeletePayment}
         canViewEvidence={canViewEvidence}
         canAttachEvidence={canAttachEvidence}
+        canVoidPayment={canVoidPayment}
         busyPaymentId={busyPaymentId}
         onPageChange={(nextPage) => setPagination((prev) => ({ ...prev, page: nextPage }))}
         onApprove={handleApprove}
@@ -488,6 +508,7 @@ export default function PaymentsPage() {
         onViewDetail={setDetailPayment}
         onViewEvidence={setEvidencePayment}
         onAttachEvidence={setEvidencePayment}
+        onVoid={setVoidingPayment}
       />
 
       <PaymentFormModal
@@ -502,6 +523,13 @@ export default function PaymentsPage() {
         onClose={() => setRejectingPayment(null)}
         onConfirm={(reason) => void handleConfirmReject(reason)}
         loading={Boolean(rejectingPayment?.payDocId && busyPaymentId === rejectingPayment.payDocId)}
+      />
+      <VoidPaymentModal
+        open={Boolean(voidingPayment)}
+        paymentId={voidingPayment?.payDocId}
+        onClose={() => setVoidingPayment(null)}
+        onConfirm={(reason) => void handleConfirmVoid(reason)}
+        loading={Boolean(voidingPayment?.payDocId && busyPaymentId === voidingPayment.payDocId)}
       />
       <PaymentEvidenceModal
         open={Boolean(evidencePayment)}

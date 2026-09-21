@@ -18,7 +18,7 @@ import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { ProviderMethodListModal } from "./components/ProviderMethodListModal";
+import { ProviderPaymentDestinationListModal } from "./components/ProviderPaymentDestinationListModal";
 import { ProviderSmartSearchPanel } from "./components/ProviderSmartSearchPanel";
 import { SupplierFormModal } from "./components/SupplierFormModal";
 import type {
@@ -354,7 +354,7 @@ export default function Providers() {
               },
               {
                 id: "methods",
-                label: "Metodos de pago",
+                label: "Destinos de pago",
                 icon: <IconPaymentMethod />,
                 hidden: !canManageSupplierPaymentMethods,
                 onClick: () => setMethodSupplierId(row.supplierId),
@@ -661,8 +661,8 @@ export default function Providers() {
       />
 
       {methodSupplierId && canManageSupplierPaymentMethods && (
-        <ProviderMethodListModal
-          title="Metodos de pago del proveedor"
+        <ProviderPaymentDestinationListModal
+          title="Destinos de pago del proveedor"
           supplierId={methodSupplierId}
           close={() => setMethodSupplierId(null)}
           className="w-[600px] max-h-[600px]"

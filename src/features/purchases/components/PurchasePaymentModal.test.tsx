@@ -6,17 +6,23 @@ import { CurrencyTypes, PaymentFormTypes, PaymentTypes, PurchaseOrderStatuses, V
 import type { Payment, PurchaseOrder } from "@/features/purchases/types/purchase";
 
 const {
-  getPaymentMethodsBySupplierMock,
+  getPaymentMethodsByCompanyMock,
   listCompanyPaymentAccountsByCompanyMock,
+  listSupplierPaymentDestinationsMock,
   setFormMock,
 } = vi.hoisted(() => ({
-  getPaymentMethodsBySupplierMock: vi.fn(),
+  getPaymentMethodsByCompanyMock: vi.fn(),
   listCompanyPaymentAccountsByCompanyMock: vi.fn(),
+  listSupplierPaymentDestinationsMock: vi.fn(),
   setFormMock: vi.fn(),
 }));
 
 vi.mock("@/shared/services/paymentMethodService", () => ({
-  getPaymentMethodsBySupplier: getPaymentMethodsBySupplierMock,
+  getPaymentMethodsByCompany: getPaymentMethodsByCompanyMock,
+}));
+
+vi.mock("@/shared/services/supplierService", () => ({
+  listSupplierPaymentDestinations: listSupplierPaymentDestinationsMock,
 }));
 
 vi.mock("@/shared/services/companyPaymentAccountService", () => ({
@@ -123,9 +129,23 @@ function PurchasePaymentModalWithoutMethod() {
 describe("PurchasePaymentModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getPaymentMethodsBySupplierMock.mockResolvedValue([
-      { supplierMethodId: "supplier-method-cash", methodId: "method-cash", name: "EFECTIVO", number: null, isActive: true, isDefault: false },
-      { supplierMethodId: "supplier-method-bank", methodId: "method-bank", name: "TRANSFERENCIA", number: "001-222", isActive: true, isDefault: true },
+    getPaymentMethodsByCompanyMock.mockResolvedValue([
+      { companyMethodId: "company-method-cash", methodId: "method-cash", name: "EFECTIVO", code: "CASH", isActive: true, isDefault: false },
+      { companyMethodId: "company-method-bank", methodId: "method-bank", name: "TRANSFERENCIA", code: "BANK_TRANSFER", requiresDestination: true, isActive: true, isDefault: true },
+    ]);
+    listSupplierPaymentDestinationsMock.mockResolvedValue([
+      {
+        supplierPaymentDestinationId: "supplier-destination-1",
+        supplierId: "supplier-1",
+        methodId: "method-bank",
+        type: "BANK_ACCOUNT",
+        currency: "PEN",
+        name: "BCP proveedor",
+        maskedLabel: "BCP proveedor ****2222",
+        isActive: true,
+        isDefault: true,
+        requiresManualReview: false,
+      },
     ]);
     listCompanyPaymentAccountsByCompanyMock.mockResolvedValue([
       {
@@ -148,22 +168,25 @@ describe("PurchasePaymentModal", () => {
   it("hides origin and destination account selects for cash payments", async () => {
     render(<StatefulPurchasePaymentModal />);
 
-    await waitFor(() => expect(getPaymentMethodsBySupplierMock).toHaveBeenCalledWith("supplier-1"));
+    await waitFor(() => expect(getPaymentMethodsByCompanyMock).toHaveBeenCalledWith("company-1"));
+    expect(listSupplierPaymentDestinationsMock).toHaveBeenCalledWith("supplier-1");
 
     expect(screen.queryByText("Desde cuenta de empresa")).not.toBeInTheDocument();
-    expect(screen.queryByText("A cuenta del proveedor")).not.toBeInTheDocument();
+    expect(screen.queryByText("Destino del proveedor")).not.toBeInTheDocument();
   });
 
-  it("uses supplier method as destination and only shows company origin for non-cash payments", async () => {
+  it("separates the company origin from the supplier destination for non-cash payments", async () => {
     render(<StatefulPurchasePaymentModal />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Metodo: EFECTIVO" }));
-    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA - 001-222" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA" }));
 
     expect(await screen.findByText("Desde cuenta de empresa")).toBeInTheDocument();
     expect(await screen.findByText("BCP Soles ****1234 · PEN")).toBeInTheDocument();
-    expect(screen.queryByText("A cuenta del proveedor")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Metodo: TRANSFERENCIA - 001-222" })).toBeInTheDocument();
+    expect(await screen.findByText("Destino del proveedor")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Destino del proveedor" }));
+    expect(await screen.findByRole("option", { name: "BCP proveedor ****2222" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Metodo: TRANSFERENCIA" })).toBeInTheDocument();
   });
 
   it("does not allow saving a payment without selecting a supplier payment method", async () => {
@@ -176,7 +199,7 @@ describe("PurchasePaymentModal", () => {
     render(<StatefulPurchasePaymentModal />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Metodo: EFECTIVO" }));
-    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA - 001-222" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA" }));
 
     expect(await screen.findByText("Comprobante requerido para este metodo de pago.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generar Comprobante" })).toBeDisabled();
@@ -186,7 +209,10 @@ describe("PurchasePaymentModal", () => {
     render(<StatefulPurchasePaymentModal />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Metodo: EFECTIVO" }));
-    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA - 001-222" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Destino del proveedor" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "BCP proveedor ****2222" }));
 
     const file = new File(["voucher"], "voucher.png", { type: "image/png" });
     fireEvent.change(await screen.findByLabelText("Comprobante de pago 1"), {
@@ -202,7 +228,7 @@ describe("PurchasePaymentModal", () => {
     render(<StatefulPurchasePaymentModal />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Metodo: EFECTIVO" }));
-    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA - 001-222" }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: "TRANSFERENCIA" }));
 
     const input = await screen.findByLabelText("Comprobante de pago 1") as HTMLInputElement;
     expect(input.accept).toContain("application/pdf");

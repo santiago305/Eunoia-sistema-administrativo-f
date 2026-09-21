@@ -1,5 +1,5 @@
 import axiosInstance from "@/shared/common/utils/axios";
-import { API_SUPPLIERS_GROUP } from "@/shared/services/APIs";
+import { API_SUPPLIERS_GROUP, API_SUPPLIER_PAYMENT_DESTINATIONS_GROUP } from "@/shared/services/APIs";
 import type {
   CreateSupplierDto,
   UpdateSupplierDto,
@@ -79,6 +79,51 @@ export const lookupSupplierIdentity = async (params: {
 }): Promise<SupplierIdentityLookupResult> => {
   const response = await axiosInstance.get(API_SUPPLIERS_GROUP.identityLookup, { params });
   return response.data;
+};
+
+export type SupplierPaymentDestination = {
+  supplierPaymentDestinationId: string;
+  supplierId: string;
+  methodId: string;
+  type: "BANK_ACCOUNT" | "DIGITAL_WALLET" | "CARD" | "CASH";
+  currency: "PEN" | "USD";
+  name: string;
+  maskedLabel: string;
+  institutionName?: string | null;
+  providerName?: string | null;
+  accountLastFour?: string | null;
+  cciLastFour?: string | null;
+  walletIdentifierLastFour?: string | null;
+  holderName?: string | null;
+  isActive: boolean;
+  isDefault: boolean;
+  requiresManualReview: boolean;
+};
+
+export const listSupplierPaymentDestinations = async (
+  supplierId: string,
+  options: { includeInactive?: boolean } = {},
+): Promise<SupplierPaymentDestination[]> => {
+  const response = await axiosInstance.get(
+    API_SUPPLIER_PAYMENT_DESTINATIONS_GROUP.listBySupplier(supplierId),
+    { params: options.includeInactive ? { includeInactive: true } : undefined },
+  );
+  return response.data;
+};
+
+export const createSupplierPaymentDestination = async (payload: Record<string, unknown>) => {
+  const response = await axiosInstance.post(API_SUPPLIER_PAYMENT_DESTINATIONS_GROUP.create, payload);
+  return response.data as SupplierPaymentDestination;
+};
+
+export const updateSupplierPaymentDestination = async (id: string, payload: Record<string, unknown>) => {
+  const response = await axiosInstance.patch(API_SUPPLIER_PAYMENT_DESTINATIONS_GROUP.update(id), payload);
+  return response.data as SupplierPaymentDestination;
+};
+
+export const setDefaultSupplierPaymentDestination = async (id: string) => {
+  const response = await axiosInstance.post(API_SUPPLIER_PAYMENT_DESTINATIONS_GROUP.setDefault(id));
+  return response.data as SupplierPaymentDestination;
 };
 
 

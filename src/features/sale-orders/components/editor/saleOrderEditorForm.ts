@@ -45,10 +45,13 @@ export type SaleOrderEditorPayment = {
   id?: string;
   clientKey: string;
   bankAccountId?: string | null;
+  companyPaymentAccountId?: string | null;
+  paymentMethodId?: string | null;
   method: string;
   amount: number;
   date?: string;
   operationNumber?: string | null;
+  operationCode?: string | null;
   note?: string | null;
   photo?: File | null;
   existingPhotoUrl?: string | null;
@@ -286,6 +289,8 @@ export function mapSaleOrderToEditorForm(
         id: payment.id,
         clientKey: payment.clientKey ?? payment.id,
         bankAccountId: payment.bankAccount?.id ?? null,
+        companyPaymentAccountId: payment.companyPaymentAccountId ?? payment.bankAccount?.id ?? null,
+        paymentMethodId: payment.paymentMethodId ?? null,
         method: payment.method,
         amount: Number(payment.amount ?? 0),
         date: payment.date?.slice(0, 10),
@@ -404,10 +409,13 @@ export function toSaveSaleOrderWithClientDto(
       id: payment.id,
       clientKey: payment.clientKey,
       bankAccountId: payment.bankAccountId ?? null,
+      companyPaymentAccountId: payment.companyPaymentAccountId ?? payment.bankAccountId ?? null,
+      paymentMethodId: payment.paymentMethodId ?? null,
       method: payment.method,
       amount: Number(payment.amount || 0),
       date: payment.date || undefined,
       operationNumber: payment.operationNumber?.trim() || null,
+      operationCode: payment.operationCode?.trim() || payment.operationNumber?.trim() || null,
       note: payment.note?.trim() || null,
     })),
     removedAttachmentIds: form.removedAttachmentIds,

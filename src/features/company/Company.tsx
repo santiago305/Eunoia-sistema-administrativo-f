@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Card, CardHeader } from "@/shared/components/components/AppCard";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import type { UbigeoSelection } from "@/shared/types/ubigeo";
@@ -33,12 +34,13 @@ import {
 import { useCompany } from "@/shared/hooks/useCompany";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { PageShell } from "@/shared/layouts/PageShell";
-import { BankAccountListModal } from "./components/BankAccountListModal";
 import { applyCompanyTheme } from "@/shared/utils/companyTheme";
+import { RoutesPaths } from "@/routes/config/routesPaths";
 
 const COMPANY_PRIMARY = "hsl(var(--primary))";
 
 export default function CompanyPage() {
+  const navigate = useNavigate();
   const { showFeedback, clearFeedback } = useFeedbackToast();
   const {
     refreshCompany,
@@ -58,7 +60,6 @@ export default function CompanyPage() {
     contextCompany ? mapCompanyToFormValues(contextCompany) : emptyCompanyForm,
   );
   const [formErrors, setFormErrors] = useState<CompanyFormErrors>({});
-  const [openBankAccounts, setOpenBankAccounts] = useState(false);
   const savedPrimaryColorRef = useRef(contextCompany?.primaryColor);
 
   savedPrimaryColorRef.current = contextCompany?.primaryColor;
@@ -312,10 +313,10 @@ export default function CompanyPage() {
                   disabled={loading}
                   onClick={(event) => {
                     event.preventDefault();
-                    setOpenBankAccounts(true);
+                    navigate(RoutesPaths.paymentAccounts);
                   }}
                 >
-                  Ver cuentas de pago
+                  Ver cuentas de tesorería
                 </SystemButton>
                 <SystemButton
                   fullWidth
@@ -359,13 +360,6 @@ export default function CompanyPage() {
         <PaymentMethodListModal
           title="Métodos de pago"
           close={() => setOpenPaymentMethods(false)}
-          companyId={company.companyId}
-        />
-      )}
-      {openBankAccounts && company?.companyId && (
-        <BankAccountListModal
-          title="Cuentas de pago"
-          close={() => setOpenBankAccounts(false)}
           companyId={company.companyId}
         />
       )}

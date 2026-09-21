@@ -5,6 +5,8 @@ import type { Payment } from "@/features/purchases/types/purchase";
 export type PaymentStatus = NonNullable<Payment["status"]>;
 
 export const getPaymentStatusView = (status: Payment["status"]) => {
+  if (status === "VOIDED") return { label: "Anulado", className: "bg-slate-100 text-slate-700 border-slate-300" };
+  if (status === "DRAFT") return { label: "Borrador", className: "bg-zinc-100 text-zinc-700 border-zinc-300" };
   if (status === "PENDING_APPROVAL") {
     return {
       label: "Pendiente",
@@ -27,7 +29,7 @@ export const getPaymentStatusView = (status: Payment["status"]) => {
   }
 
   return {
-    label: "Aprobado",
+    label: status === "POSTED" ? "Contabilizado" : status === "APPROVED" ? "Aprobado" : "Pendiente",
     className: "bg-emerald-100 text-emerald-700 border-emerald-200",
   };
 };
@@ -37,7 +39,8 @@ export const canShowPaymentApprovalActions = (
   canApprovePayment: boolean,
 ) => canApprovePayment && (status === "PENDING_APPROVAL" || status === "SCHEDULED");
 
-export const canShowPaymentDeleteAction = (canManagePayments: boolean) => canManagePayments;
+export const canShowPaymentDeleteAction = (canManagePayments: boolean, status?: Payment["status"]) =>
+  canManagePayments && (status === "DRAFT" || status === "REJECTED" || status === "PENDING_APPROVAL" || status === "SCHEDULED");
 
 export const hasPaymentEvidence = (payment: Pick<Payment, "paymentEvidenceFileId" | "paymentEvidenceCount" | "hasEvidence">) =>
   Boolean(payment.hasEvidence || payment.paymentEvidenceFileId || Number(payment.paymentEvidenceCount ?? 0) > 0);

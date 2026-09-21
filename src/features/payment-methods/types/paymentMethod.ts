@@ -2,23 +2,27 @@ import { z } from "zod";
 import {
   createCompanyMethodSchema,
   createPaymentMethodSchema,
-  createSupplierMethodSchema,
   listPaymentMethodsQuerySchema,
   setPaymentMethodActiveSchema,
   updatePaymentMethodSchema,
 } from "@/shared/schemas/paymentMethodSchemas";
+import type { PaymentMethodCode } from "../paymentMethodCatalog";
 
 export type CreatePaymentMethodDto = z.infer<typeof createPaymentMethodSchema>;
 export type UpdatePaymentMethodDto = z.infer<typeof updatePaymentMethodSchema>;
 export type SetPaymentMethodActiveDto = z.infer<typeof setPaymentMethodActiveSchema>;
 export type CreateCompanyMethodDto = z.infer<typeof createCompanyMethodSchema>;
-export type CreateSupplierMethodDto = z.infer<typeof createSupplierMethodSchema>;
-export type UpdateSupplierMethodDto = Partial<CreateSupplierMethodDto>;
 export type ListPaymentMethodsQuery = z.infer<typeof listPaymentMethodsQuerySchema>;
 
 export type PaymentMethod = {
   methodId: string;
   name: string;
+  code?: PaymentMethodCode | string;
+  category?: string;
+  requiresSourceAccount?: boolean;
+  requiresDestination?: boolean;
+  requiresOperationReference?: boolean;
+  isSystem?: boolean;
   isActive: boolean;
   requiresVoucher?: boolean;
   createdAt?: string;
@@ -29,23 +33,17 @@ export type PaymentMethodPivot = {
   companyMethodId: string;
   methodId: string;
   name: string;
-  number?: string;
+  code?: PaymentMethodCode | string;
+  category?: string;
+  requiresSourceAccount?: boolean;
+  requiresDestination?: boolean;
+  requiresOperationReference?: boolean;
   isActive: boolean;
   isDefault?: boolean;
   requiresVoucher?: boolean;
+  enabled?: boolean;
   createdAt?: string;
   updatedAt?: string;
-};
-
-export type SupplierMethodRelation = {
-  supplierMethodId: string;
-  supplierId: string;
-  methodId: string;
-  methodName: string;
-  number?: string | null;
-  isActive: boolean;
-  isDefault?: boolean;
-  requiresVoucher?: boolean;
 };
 
 export type PaymentMethodListResponse = {
@@ -65,17 +63,6 @@ export type PaymentMethodGetByIdResponse = {
 export type CompanyMethod = {
   companyId: string;
   methodId: string;
-  number: string;
   requiresVoucher?: boolean;
 };
 
-export type SupplierMethod = {
-  supplierMethodId: string;
-  supplierId: string;
-  methodId: string;
-  methodName?: string;
-  number?: string | null;
-  isActive?: boolean;
-  isDefault?: boolean;
-  requiresVoucher?: boolean;
-};

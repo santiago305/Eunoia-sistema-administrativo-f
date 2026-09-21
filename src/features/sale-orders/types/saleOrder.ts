@@ -248,6 +248,8 @@ export type SaleOrderPaymentInput = {
   method: string;
   amount: number;
   bankAccountId?: string;
+  companyPaymentAccountId?: string;
+  paymentMethodId?: string;
   date?: string;
   operationNumber?: string;
   note?: string;
@@ -289,10 +291,13 @@ export type UnifiedSaleOrderPaymentInput = {
   id?: string;
   clientKey: string;
   bankAccountId?: string | null;
+  companyPaymentAccountId?: string | null;
+  paymentMethodId?: string | null;
   method: string;
   amount: number;
   date?: string;
   operationNumber?: string | null;
+  operationCode?: string | null;
   note?: string | null;
 };
 
@@ -471,6 +476,11 @@ export type SaleOrderPayment = {
   id: string;
   clientKey?: string;
   bankAccount: { id: string; name: string; number?: string | null } | null;
+  companyPaymentAccountId?: string | null;
+  paymentMethodId?: string | null;
+  currency?: string;
+  status?: "DRAFT" | "POSTED" | "VOIDED";
+  operationCode?: string | null;
   date: string;
   method: string;
   operationNumber: string | null;

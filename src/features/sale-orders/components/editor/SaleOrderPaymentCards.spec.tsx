@@ -19,6 +19,7 @@ vi.mock("sileo", () => ({
 }));
 
 vi.mock("../useSaleOrderPaymentOptions", () => ({
+  filterSaleOrderBankAccountOptions: (accounts: unknown[]) => accounts,
   useSaleOrderPaymentOptions: () => ({
     methodOptions: [{ value: "EFECTIVO", label: "EFECTIVO" }],
     bankAccountOptions: [{ value: "account-1", label: "BCP 123" }],
@@ -154,7 +155,7 @@ describe("SaleOrderPaymentCards", () => {
     expect(payments).toHaveLength(1);
   });
 
-  it("allows saving a payment greater than the pending balance", async () => {
+  it("blocks saving a payment greater than the pending balance", async () => {
     const user = userEvent.setup();
     render(<PaymentHarness />);
 
@@ -165,12 +166,11 @@ describe("SaleOrderPaymentCards", () => {
     await user.type(screen.getByLabelText("Monto"), "150");
     await user.click(screen.getByRole("button", { name: "Guardar pago" }));
 
-    expect(sileoError).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("dialog", { name: "Detalle de pago" }),
-      ).not.toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("payment-state")).toHaveTextContent('"amount":150');
+    expect(sileoError).toHaveBeenCalledWith({
+      title: "El monto no puede superar el saldo disponible de S/ 100.00.",
+    });
+    expect(screen.getByText(/El monto no puede superar el saldo disponible/)).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Detalle de pago" })).toBeInTheDocument();
+    expect(screen.getByTestId("payment-state")).toHaveTextContent('"amount":10');
   });
 });
