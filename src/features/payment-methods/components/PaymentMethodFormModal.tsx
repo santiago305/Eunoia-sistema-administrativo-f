@@ -122,7 +122,6 @@ export function PaymentMethodFormModal({ open, mode, paymentMethodId, canManage 
                     <PaymentMethodFormFields
                         form={form}
                         setForm={setForm}
-                        primaryColor={primaryColor}
                         disabled={loading || !canManage}
                         codeDisabled={mode === "edit"}
                     />

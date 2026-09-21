@@ -58,7 +58,16 @@ export const getPaymentMethodsByCompany = async (
   companyId: string,
 ): Promise<PaymentMethodPivot[]> => {
   const response = await axiosInstance.get(API_COMPANY_METHODS_GROUP.byCompany(companyId));
-  return response.data.data as PaymentMethodPivot[];
+  const records = Array.isArray(response.data?.data) ? response.data.data : [];
+
+  return records.map((record: PaymentMethodPivot & {
+    methodName?: string;
+    methodCode?: PaymentMethod["code"];
+  }) => ({
+    ...record,
+    name: record.name ?? record.methodName ?? "",
+    code: record.code ?? record.methodCode,
+  }));
 };
 
 export const createCompanyMethod = async (

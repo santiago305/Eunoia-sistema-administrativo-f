@@ -1,5 +1,12 @@
-import type { CSSProperties, Dispatch, SetStateAction } from "react";
-import { PAYMENT_METHOD_OPTIONS, getPaymentMethodLabel, type PaymentMethodCode } from "../paymentMethodCatalog";
+import type { Dispatch, SetStateAction } from "react";
+import { FloatingInput } from "@/shared/components/components/FloatingInput";
+import { FloatingSelect } from "@/shared/components/components/FloatingSelect";
+import { Checkbox } from "@/shared/components/ui/checkbox";
+import {
+  PAYMENT_METHOD_OPTIONS,
+  getPaymentMethodLabel,
+  type PaymentMethodCode,
+} from "../paymentMethodCatalog";
 
 export type PaymentMethodFormState = {
   code: PaymentMethodCode;
@@ -11,7 +18,6 @@ export type PaymentMethodFormState = {
 type PaymentMethodFormFieldsProps = {
   form: PaymentMethodFormState;
   setForm: Dispatch<SetStateAction<PaymentMethodFormState>>;
-  primaryColor: string;
   disabled?: boolean;
   codeDisabled?: boolean;
 };
@@ -19,62 +25,69 @@ type PaymentMethodFormFieldsProps = {
 export function PaymentMethodFormFields({
   form,
   setForm,
-  primaryColor,
   disabled,
   codeDisabled,
 }: PaymentMethodFormFieldsProps) {
-  const ringStyle = { "--tw-ring-color": `color-mix(in srgb, ${primaryColor} 20%, transparent)` } as CSSProperties;
-
   return (
-    <div className="space-y-3">
-      <label className="text-xs">
-        Tipo de método
-        <select
-          className="mt-2 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-xs outline-none focus:ring-2"
-          style={ringStyle}
-          value={form.code}
-          onChange={(event) => {
-            const code = event.target.value as PaymentMethodCode;
-            setForm((prev) => ({
-              ...prev,
-              code,
-              name: code === "OTHER" ? prev.name : getPaymentMethodLabel(code),
-              requiresVoucher: code === "CASH" ? false : true,
-            }));
-          }}
-          disabled={disabled || codeDisabled}
-        >
-          {PAYMENT_METHOD_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-      </label>
-      <label className="text-xs">
-        Nombre
-        <input
-          className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-xs outline-none focus:ring-2"
-          style={ringStyle}
-          value={form.name}
-          onChange={(e) => {
-            const name = e.target.value;
-            setForm((prev) => ({
-              ...prev,
-              name,
-               requiresVoucher: prev.code === "CASH" ? false : prev.requiresVoucher,
-            }));
-          }}
-          disabled={disabled}
-        />
-      </label>
-      <label className="flex h-10 items-center gap-2 rounded-md border border-black/10 px-3 text-xs text-black/70">
-        <input
-          type="checkbox"
+    <div className="space-y-4">
+      <FloatingSelect
+        label="Tipo de método"
+        name="payment-method-code"
+        value={form.code}
+        options={PAYMENT_METHOD_OPTIONS.map((option) => ({ ...option }))}
+        onChange={(value) => {
+          const code = value as PaymentMethodCode;
+          setForm((previous) => ({
+            ...previous,
+            code,
+            name: code === "OTHER" ? previous.name : getPaymentMethodLabel(code),
+            requiresVoucher: code !== "CASH",
+          }));
+        }}
+        disabled={disabled || codeDisabled}
+        requiredIndicator
+      />
+
+      <FloatingInput
+        label="Nombre"
+        name="payment-method-name"
+        value={form.name}
+        onChange={(event) => {
+          const name = event.target.value;
+          setForm((previous) => ({
+            ...previous,
+            name,
+            requiresVoucher:
+              previous.code === "CASH" ? false : previous.requiresVoucher,
+          }));
+        }}
+        disabled={disabled}
+        requiredIndicator
+      />
+
+      <label
+        htmlFor="payment-method-requires-voucher"
+        className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted/35 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
+      >
+        <Checkbox
+          id="payment-method-requires-voucher"
           checked={form.requiresVoucher}
-          onChange={(event) => setForm((prev) => ({ ...prev, requiresVoucher: event.target.checked }))}
-          className="h-4 w-4 accent-primary"
-          disabled={disabled}
+          onCheckedChange={(checked) =>
+            setForm((previous) => ({
+              ...previous,
+              requiresVoucher: checked === true,
+            }))
+          }
+          disabled={disabled || form.code === "CASH"}
+          aria-label="Voucher obligatorio"
+          className="mt-0.5"
         />
-        Voucher obligatorio
+        <span className="min-w-0">
+          <span className="block font-medium">Voucher obligatorio</span>
+          <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+            Solicita una evidencia al registrar pagos con este método.
+          </span>
+        </span>
       </label>
     </div>
   );

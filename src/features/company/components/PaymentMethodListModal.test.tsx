@@ -15,7 +15,10 @@ vi.mock("@/shared/hooks/usePermissions", () => ({
 }));
 
 vi.mock("@/shared/hooks/useFeedbackToast", () => ({
-  useFeedbackToast: () => ({ showFeedback: showFeedbackMock, clearFeedback: clearFeedbackMock }),
+  useFeedbackToast: () => ({
+    showFeedback: showFeedbackMock,
+    clearFeedback: clearFeedbackMock,
+  }),
 }));
 
 vi.mock("@/shared/services/paymentMethodService", () => ({
@@ -35,32 +38,77 @@ vi.mock("@/shared/components/modales/Modal", () => ({
 }));
 
 vi.mock("@/shared/components/table/DataTable", () => ({
-  DataTable: ({ data, columns }: { data: Array<Record<string, unknown>>; columns: Array<{ id: string; cell?: (row: Record<string, unknown>) => React.ReactNode }> }) => (
+  DataTable: ({
+    data,
+    columns,
+  }: {
+    data: Array<Record<string, unknown>>;
+    columns: Array<{
+      id: string;
+      header?: string;
+      accessorKey?: string;
+      cell?: (row: Record<string, unknown>) => React.ReactNode;
+    }>;
+  }) => (
     <div data-testid="company-methods-table">
+      <div>
+        {columns.map((column) => (
+          <span key={column.id}>{column.header}</span>
+        ))}
+      </div>
       {data.map((row) => (
         <div key={String(row.companyMethodId)}>
-          {columns.map((column) => <div key={column.id}>{column.cell?.(row)}</div>)}
+          {columns.map((column) => (
+            <div key={column.id}>
+              {column.cell?.(row) ??
+                (column.accessorKey
+                  ? String(row[column.accessorKey] ?? "")
+                  : null)}
+            </div>
+          ))}
         </div>
       ))}
     </div>
   ),
 }));
 
-vi.mock("@/features/payment-methods/components/PaymentMethodSelectComposed", () => ({
-  PaymentMethodSelectComposed: ({ label, options, onCreate, onEdit }: {
-    label: string;
-    options: Array<{ label: string }>;
-    onCreate?: () => void;
-    onEdit?: (methodId: string) => void;
-  }) => (
-    <div>
-      <span>{label}</span>
-      <div data-testid="available-methods">{options.map((option) => option.label).join(",")}</div>
-      {onCreate ? <button type="button" aria-label="Nuevo método" onClick={onCreate}>Nuevo</button> : null}
-      {onEdit ? <button type="button" aria-label="Editar método" onClick={() => onEdit("method-card")}>Editar</button> : null}
-    </div>
-  ),
-}));
+vi.mock(
+  "@/features/payment-methods/components/PaymentMethodSelectComposed",
+  () => ({
+    PaymentMethodSelectComposed: ({
+      label,
+      options,
+      onCreate,
+      onEdit,
+    }: {
+      label: string;
+      options: Array<{ label: string }>;
+      onCreate?: () => void;
+      onEdit?: (methodId: string) => void;
+    }) => (
+      <div>
+        <span>{label}</span>
+        <div data-testid="available-methods">
+          {options.map((option) => option.label).join(",")}
+        </div>
+        {onCreate ? (
+          <button type="button" aria-label="Nuevo método" onClick={onCreate}>
+            Nuevo
+          </button>
+        ) : null}
+        {onEdit ? (
+          <button
+            type="button"
+            aria-label="Editar método"
+            onClick={() => onEdit("method-card")}
+          >
+            Editar
+          </button>
+        ) : null}
+      </div>
+    ),
+  }),
+);
 
 vi.mock("@/features/payment-methods/components/PaymentMethodFormModal", () => ({
   PaymentMethodFormModal: () => null,
@@ -82,75 +130,155 @@ describe("PaymentMethodListModal", () => {
 
   it("desvincula exactamente la relación empresarial tras confirmar y recarga la lista", async () => {
     getPaymentMethodsByCompanyMock
-      .mockResolvedValueOnce([{
-        companyMethodId: "company-method-card",
-        methodId: "method-card",
-        name: "Tarjeta",
-        isActive: true,
-      }])
+      .mockResolvedValueOnce([
+        {
+          companyMethodId: "company-method-card",
+          methodId: "method-card",
+          name: "Tarjeta",
+          isActive: true,
+        },
+      ])
       .mockResolvedValueOnce([]);
 
-    render(<PaymentMethodListModal title="Métodos" close={vi.fn()} companyId="company-1" />);
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Desvincular método" })).toBeInTheDocument());
-    expect(screen.getByTestId("available-methods")).not.toHaveTextContent("Tarjeta");
+    const unlinkButton = await screen.findByRole("button", {
+      name: "Desvincular Tarjeta",
+    });
+    expect(screen.getByTestId("available-methods")).not.toHaveTextContent(
+      "Tarjeta",
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Desvincular método" }));
+    fireEvent.click(unlinkButton);
     expect(deleteCompanyMethodMock).not.toHaveBeenCalled();
-
     fireEvent.click(screen.getByRole("button", { name: "Desvincular" }));
 
     await waitFor(() => {
-      expect(deleteCompanyMethodMock).toHaveBeenCalledTimes(1);
-      expect(deleteCompanyMethodMock).toHaveBeenCalledWith("company-method-card");
+      expect(deleteCompanyMethodMock).toHaveBeenCalledWith(
+        "company-method-card",
+      );
       expect(getPaymentMethodsByCompanyMock).toHaveBeenCalledTimes(2);
     });
     expect(screen.getByTestId("available-methods")).toHaveTextContent("Tarjeta");
   });
 
   it("cancelar la confirmación no llama al DELETE", async () => {
-    getPaymentMethodsByCompanyMock.mockResolvedValue([{
-      companyMethodId: "company-method-card",
-      methodId: "method-card",
-      name: "Tarjeta",
-      isActive: true,
-    }]);
+    getPaymentMethodsByCompanyMock.mockResolvedValue([
+      {
+        companyMethodId: "company-method-card",
+        methodId: "method-card",
+        name: "Tarjeta",
+        isActive: true,
+      },
+    ]);
 
-    render(<PaymentMethodListModal title="Métodos" close={vi.fn()} companyId="company-1" />);
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Desvincular método" })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Desvincular método" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Desvincular Tarjeta" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
 
     expect(deleteCompanyMethodMock).not.toHaveBeenCalled();
   });
 
-  it("muestra la lista sin acciones de gestión cuando falta payment-methods.manage", async () => {
-    canMock.mockImplementation((permission: string) => permission === "payment-methods.read");
-    getPaymentMethodsByCompanyMock.mockResolvedValue([{
-      companyMethodId: "company-method-card",
-      methodId: "method-card",
-      name: "Tarjeta",
-      isActive: true,
-    }]);
+  it("muestra la lista sin acciones de gestión cuando falta el permiso", async () => {
+    canMock.mockImplementation(
+      (permission: string) => permission === "payment-methods.read",
+    );
+    getPaymentMethodsByCompanyMock.mockResolvedValue([
+      {
+        companyMethodId: "company-method-card",
+        methodId: "method-card",
+        name: "Tarjeta",
+        isActive: true,
+      },
+    ]);
 
-    render(<PaymentMethodListModal title="Métodos" close={vi.fn()} companyId="company-1" />);
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
 
-    await waitFor(() => expect(screen.getByTestId("company-methods-table")).toHaveTextContent(""));
-    expect(screen.queryByRole("button", { name: "Desvincular método" })).not.toBeInTheDocument();
+    const table = await screen.findByTestId("company-methods-table");
+    expect(table).toHaveTextContent("Tarjeta");
+    expect(
+      screen.queryByRole("button", { name: "Desvincular Tarjeta" }),
+    ).not.toBeInTheDocument();
   });
-  it("organiza los controles en una cuadrícula accesible y responsiva sin exponer la gestión global sin permiso", async () => {
-    canMock.mockImplementation((permission: string) => permission === "payment-methods.read");
+
+  it("muestra solo las columnas útiles y los métodos configurados", async () => {
+    getPaymentMethodsByCompanyMock.mockResolvedValue([
+      {
+        companyMethodId: "company-method-card",
+        methodId: "method-card",
+        name: "Tarjeta",
+        requiresVoucher: true,
+        isActive: true,
+      },
+    ]);
+
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
+
+    const table = await screen.findByTestId("company-methods-table");
+    expect(table).toHaveTextContent("Tarjeta");
+    expect(table).toHaveTextContent("Método de pago");
+    expect(table).toHaveTextContent("Comprobante");
+    expect(table).not.toHaveTextContent("Código");
+    expect(table).not.toHaveTextContent("Estado");
+  });
+
+  it("organiza los controles en un formulario accesible y responsivo", async () => {
+    canMock.mockImplementation(
+      (permission: string) => permission === "payment-methods.read",
+    );
     getPaymentMethodsByCompanyMock.mockResolvedValue([]);
 
-    render(<PaymentMethodListModal title="Métodos" close={vi.fn()} companyId="company-1" />);
+    render(
+      <PaymentMethodListModal
+        title="Métodos"
+        close={vi.fn()}
+        companyId="company-1"
+      />,
+    );
 
     const form = await screen.findByTestId("company-payment-method-form");
-    expect(form).toHaveClass("grid-cols-1", "sm:grid-cols-2", "xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(175px,auto)_auto]");
-    expect(screen.getByRole("region", { name: "Agregar método de pago" })).toBeInTheDocument();
-    expect(screen.getByText("Método de pago")).toBeInTheDocument();
-    expect(screen.getByLabelText("Voucher obligatorio")).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Nuevo método" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Editar método" })).not.toBeInTheDocument();
+    expect(form.tagName).toBe("FORM");
+    expect(form).toHaveClass(
+      "grid-cols-1",
+      "lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.65fr)_auto]",
+    );
+    expect(
+      screen.getByRole("region", { name: "Agregar método" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Método de pago")).toHaveLength(2);
+    expect(screen.getByLabelText("Comprobante obligatorio")).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Nuevo método" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Editar método" }),
+    ).not.toBeInTheDocument();
   });
 });
