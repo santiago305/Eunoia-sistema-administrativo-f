@@ -3,7 +3,6 @@ import { Menu, Plus, Pencil, Trash2 } from "lucide-react";
 import { isAxiosError } from "axios";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { PageTitle } from "@/shared/components/components/PageTitle";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { DataTable } from "@/shared/components/table/DataTable";
@@ -585,35 +584,6 @@ export default function CatalogPacks() {
     <PageShell>
       <PageTitle title="Packs" />
 
-      <PageActionsRow>
-        <div className="flex flex-wrap items-center gap-2">
-          {permissions.export && exportColumns.length ? (
-            <ExportPopover
-              columns={exportColumns}
-              loading={exporting}
-              presets={exportPresets}
-              onExport={handleExportExcel}
-              onSavePreset={handleSaveExportPreset}
-              onDeletePreset={handleDeleteExportPreset}
-            />
-          ) : null}
-          {permissions.create ? (
-            <SystemButton
-              size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={() => setOpenCreate(true)}
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-              }}
-            >
-              Crear pack
-            </SystemButton>
-          ) : null}
-        </div>
-      </PageActionsRow>
-
       <DataTableSearchChips
         chips={searchChips}
         onRemove={(chip) => {
@@ -631,6 +601,36 @@ export default function CatalogPacks() {
         selectableColumns
         hoverable={false}
         animated={false}
+        toolbarActions={
+          <>
+            {permissions.export && exportColumns.length ? (
+              <ExportPopover
+                buttonLabel=""
+                buttonSize="icon"
+                buttonClass="h-11 w-11 rounded-md shadow-sm"
+                buttonVariant="outline"
+                buttonTooltip="Exportar"
+                columns={exportColumns}
+                loading={exporting}
+                presets={exportPresets}
+                onExport={handleExportExcel}
+                onSavePreset={handleSaveExportPreset}
+                onDeletePreset={handleDeleteExportPreset}
+              />
+            ) : null}
+            {permissions.create ? (
+              <SystemButton
+                size="icon"
+                className="h-11 w-11 rounded-md shadow-sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => setOpenCreate(true)}
+                title="Crear pack"
+                tooltip="Crear pack"
+                aria-label="Crear pack"
+              />
+            ) : null}
+          </>
+        }
         onRowClick={(row) => {
           if (!permissions.viewDetail) return;
           setDetailPackId(row.packId);

@@ -53,7 +53,6 @@ import {
 } from "@/features/catalog/utils/inventoryDocumentsSmartSearch";
 import { InventoryDocumentsSmartSearchPanel } from "@/features/catalog/components/InventoryDocumentsSmartSearchPanel";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import {
   deleteInventoryDocumentsExportPreset,
   exportInventoryDocumentsExcel,
@@ -166,7 +165,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   const [searchFilters, setSearchFilters] = useState(() => createEmptyInventoryDocumentsSearchFilters());
   const [page, setPage] = useState(1);
 
-  const PRIMARY = "hsl(var(--primary))";
   const limit = 25;
 
   const [searchState, setSearchState] = useState<InventoryDocumentsSearchStateResponse | null>(null);
@@ -799,39 +797,6 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
   return (
     <PageShell>
         <PageTitle title={config.pageTitle} />
-        <PageActionsRow>
-          {permissions.export ? (
-              <ExportPopover
-                columns={exportColumns}
-                presets={exportPresets}
-                loading={exporting}
-                onSavePreset={handleSaveExportPreset}
-                onDeletePreset={handleDeleteExportPreset}
-                onExport={handleExport}
-                onOpen={async () => {
-                  if (!exportColumns.length) await loadExportColumns();
-                  if (!exportPresets.length) await loadExportPresets();
-                }}
-              />
-            ) : null}
-            <SystemButton
-              size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-              }}
-              onClick={() => {
-                if (!permissions.create) return;
-                setOpenTransferModal(true);
-              }}
-              disabled={companyActionDisabled || !permissions.create}
-              title={companyActionTitle}
-            >
-              Crear transferencia
-            </SystemButton>
-        </PageActionsRow>
 
         <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 
@@ -845,6 +810,42 @@ export function InventoryTransfersPage({ config }: InventoryTransfersPageProps) 
           hoverable={false}
           animated={false}
           selectableColumns
+          toolbarActions={
+            <>
+              {permissions.export ? (
+                <ExportPopover
+                  buttonLabel=""
+                  buttonSize="icon"
+                  buttonClass="h-11 w-11 rounded-md shadow-sm"
+                  buttonVariant="outline"
+                  buttonTooltip="Exportar"
+                  columns={exportColumns}
+                  presets={exportPresets}
+                  loading={exporting}
+                  onSavePreset={handleSaveExportPreset}
+                  onDeletePreset={handleDeleteExportPreset}
+                  onExport={handleExport}
+                  onOpen={async () => {
+                    if (!exportColumns.length) await loadExportColumns();
+                    if (!exportPresets.length) await loadExportPresets();
+                  }}
+                />
+              ) : null}
+              <SystemButton
+                size="icon"
+                className="h-11 w-11 rounded-md shadow-sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  if (!permissions.create) return;
+                  setOpenTransferModal(true);
+                }}
+                disabled={companyActionDisabled || !permissions.create}
+                title={companyActionTitle ?? "Crear transferencia"}
+                tooltip="Crear transferencia"
+                aria-label="Crear transferencia"
+              />
+            </>
+          }
           onRowClick={(row) => {
             setSelectedDocument(row.document);
             setOpenDetailsModal(true);

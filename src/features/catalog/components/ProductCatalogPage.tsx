@@ -2,7 +2,6 @@ import { startTransition, useCallback, useEffect, useMemo, useState, type MouseE
 import { FlaskConical, Menu, Plus } from "lucide-react";
 import { StatusPill } from "@/shared/components/components/StatusTag";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { DataTable } from "@/shared/components/table/DataTable";
 import {
     DataTableSearchBar,
@@ -537,30 +536,6 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
     return (
         <PageShell>
             <PageTitle title={config.pageTitle} />
-            <PageActionsRow>
-                    {permissions.export && exportColumns.length ? (
-                        <ExportPopover
-                            columns={exportColumns}
-                            loading={exporting}
-                            presets={exportPresets}
-                            onExport={handleExportExcel}
-                            onSavePreset={handleSaveExportPreset}
-                            onDeletePreset={handleDeleteExportPreset}
-                        />
-                    ) : null}
-                    {permissions.create ? (
-                        <SystemButton
-                            size="sm"
-                            onClick={startCreate}
-                            leftIcon={<Plus className="h-4 w-4" />}
-                            title={config.createTitle}
-                            disabled={companyActionDisabled}
-                        >
-                            {config.createLabel}
-                        </SystemButton>
-                    ) : null}
-            </PageActionsRow>
-
             <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 
             <DataTable
@@ -598,22 +573,51 @@ export function ProductCatalogPage({ config }: { config: ProductCatalogPageConfi
                     </DataTableSearchBar>
                 }
                 toolbarActions={
-                    config.mode === "supply" ? (
-                        <Tooltip delayDuration={0}>
-                            <TooltipTrigger asChild>
-                                <button
-                                    type="button"
-                                    onClick={() => setOpenWorkflowSupplyRecipes(true)}
-                                    disabled={companyActionDisabled}
-                                    aria-label="Recetas por flujo"
-                                    className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border/70 bg-background text-foreground shadow-sm transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <FlaskConical className="h-4 w-4" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">Recetas por flujo</TooltipContent>
-                        </Tooltip>
-                    ) : null
+                    <>
+                        {permissions.export && exportColumns.length ? (
+                            <ExportPopover
+                                buttonLabel=""
+                                buttonSize="icon"
+                                buttonClass="h-11 w-11 rounded-md shadow-sm"
+                                buttonVariant="outline"
+                                buttonTooltip="Exportar"
+                                columns={exportColumns}
+                                loading={exporting}
+                                presets={exportPresets}
+                                onExport={handleExportExcel}
+                                onSavePreset={handleSaveExportPreset}
+                                onDeletePreset={handleDeleteExportPreset}
+                            />
+                        ) : null}
+                        {config.mode === "supply" ? (
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpenWorkflowSupplyRecipes(true)}
+                                        disabled={companyActionDisabled}
+                                        aria-label="Recetas por flujo"
+                                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border/70 bg-background text-foreground shadow-sm transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <FlaskConical className="h-4 w-4" />
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">Recetas por flujo</TooltipContent>
+                            </Tooltip>
+                        ) : null}
+                        {permissions.create ? (
+                            <SystemButton
+                                size="icon"
+                                className="h-11 w-11 rounded-md shadow-sm"
+                                onClick={startCreate}
+                                leftIcon={<Plus className="h-4 w-4" />}
+                                title={config.createTitle}
+                                tooltip={config.createLabel}
+                                aria-label={config.createLabel}
+                                disabled={companyActionDisabled}
+                            />
+                        ) : null}
+                    </>
                 }
                 hoverable={false}
                 animated={false}

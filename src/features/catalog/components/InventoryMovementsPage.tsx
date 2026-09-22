@@ -38,7 +38,6 @@ import {
 } from "@/shared/services/kardexService";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
 import { AlertModal } from "@/shared/components/components/AlertModal";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { InventoryLedgerSmartSearchPanel } from "@/features/catalog/components/InventoryLedgerSmartSearchPanel";
 import {
   buildInventoryLedgerSearchChips,
@@ -637,19 +636,6 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
     <PageShell>
       <PageTitle title={config.pageTitle} />
 
-      <PageActionsRow>
-        {permissions.export && exportColumns.length ? (
-          <ExportPopover
-            columns={exportColumns}
-            presets={compatibleExportPresets}
-            loading={exporting}
-            onSavePreset={handleSaveExportPreset}
-            onDeletePreset={handleDeleteExportPreset}
-            onExport={handleExport}
-          />
-        ) : null}
-      </PageActionsRow>
-
       <div className="space-y-3">
         <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 
@@ -663,6 +649,23 @@ export function InventoryMovementsPage({ config }: InventoryMovementsPageProps) 
           hoverable={false}
           animated={false}
           selectableColumns
+          toolbarActions={
+            permissions.export && exportColumns.length ? (
+              <ExportPopover
+                buttonLabel=""
+                buttonSize="icon"
+                buttonClass="h-11 w-11 rounded-md shadow-sm"
+                buttonVariant="outline"
+                buttonTooltip="Exportar"
+                columns={exportColumns}
+                presets={compatibleExportPresets}
+                loading={exporting}
+                onSavePreset={handleSaveExportPreset}
+                onDeletePreset={handleDeleteExportPreset}
+                onExport={handleExport}
+              />
+            ) : null
+          }
           toolbarSearchContent={
             <DataTableSearchBar
               value={searchText}

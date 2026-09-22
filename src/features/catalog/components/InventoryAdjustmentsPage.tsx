@@ -51,7 +51,6 @@ import {
 } from "@/features/catalog/utils/inventoryDocumentsSmartSearch";
 import { InventoryDocumentsSmartSearchPanel } from "@/features/catalog/components/InventoryDocumentsSmartSearchPanel";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import {
   deleteInventoryDocumentsExportPreset,
   exportInventoryDocumentsExcel,
@@ -131,8 +130,6 @@ export function InventoryAdjustmentsPage({
   const [searchFilters, setSearchFilters] = useState(() => createEmptyInventoryDocumentsSearchFilters());
   const [page, setPage] = useState(1);
   const limit = 25;
-
-  const PRIMARY = "hsl(var(--primary))";
 
   const [searchState, setSearchState] = useState<InventoryDocumentsSearchStateResponse | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
@@ -666,40 +663,6 @@ export function InventoryAdjustmentsPage({
 
   return (
     <PageShell className="bg-white">
-      <PageActionsRow>
-          {permissions.export ? (
-            <ExportPopover
-              columns={exportColumns}
-              presets={exportPresets}
-              loading={exporting}
-              onSavePreset={handleSaveExportPreset}
-              onDeletePreset={handleDeleteExportPreset}
-              onExport={handleExport}
-              onOpen={async () => {
-                if (!exportColumns.length) await loadExportColumns();
-                if (!exportPresets.length) await loadExportPresets();
-              }}
-            />
-          ) : null}
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-            onClick={() => {
-              if (!permissions.create) return;
-              setOpenAdjustmentModal(true);
-            }}
-            disabled={companyActionDisabled || !permissions.create}
-            title={companyActionTitle}
-          >
-            Crear ajuste
-          </SystemButton>
-      </PageActionsRow>
-
       <DataTableSearchChips chips={searchChips} onRemove={(chip) => handleRemoveChip(chip.removeKey)} />
 
       <DataTable
@@ -712,6 +675,42 @@ export function InventoryAdjustmentsPage({
         hoverable={false}
         animated={false}
         selectableColumns
+        toolbarActions={
+          <>
+            {permissions.export ? (
+              <ExportPopover
+                buttonLabel=""
+                buttonSize="icon"
+                buttonClass="h-11 w-11 rounded-md shadow-sm"
+                buttonVariant="outline"
+                buttonTooltip="Exportar"
+                columns={exportColumns}
+                presets={exportPresets}
+                loading={exporting}
+                onSavePreset={handleSaveExportPreset}
+                onDeletePreset={handleDeleteExportPreset}
+                onExport={handleExport}
+                onOpen={async () => {
+                  if (!exportColumns.length) await loadExportColumns();
+                  if (!exportPresets.length) await loadExportPresets();
+                }}
+              />
+            ) : null}
+            <SystemButton
+              size="icon"
+              className="h-11 w-11 rounded-md shadow-sm"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => {
+                if (!permissions.create) return;
+                setOpenAdjustmentModal(true);
+              }}
+              disabled={companyActionDisabled || !permissions.create}
+              title={companyActionTitle ?? "Crear ajuste"}
+              tooltip="Crear ajuste"
+              aria-label="Crear ajuste"
+            />
+          </>
+        }
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}

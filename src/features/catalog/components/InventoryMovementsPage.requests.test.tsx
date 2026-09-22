@@ -62,9 +62,9 @@ vi.mock("@/shared/components/components/AlertModal", () => ({
   },
 }));
 vi.mock("@/shared/components/table/DataTable", () => ({
-  DataTable: (props: unknown) => {
+  DataTable: (props: { toolbarActions?: React.ReactNode }) => {
     dataTablePropsMock(props);
-    return null;
+    return <>{props.toolbarActions}</>;
   },
 }));
 vi.mock("@/shared/components/table/search", () => ({ DataTableSearchBar: () => null, DataTableSearchChips: () => null }));

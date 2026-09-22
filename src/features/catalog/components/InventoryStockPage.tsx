@@ -32,7 +32,6 @@ import {
 } from "@/shared/services/inventoryService";
 import type { InventoryAlertEvaluation } from "@/features/catalog/types/inventoryAlertSettings";
 import { ExportPopover } from "@/shared/components/components/ExportPopover";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import type { Warehouse } from "@/features/warehouse/types/warehouse";
 import type {
   ProductCatalogProductType,
@@ -843,23 +842,6 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
     <PageShell>
       <PageTitle title={config.pageTitle} />
       <div className="space-y-2">
-        <PageActionsRow>
-          {permissions.export ? (
-            <ExportPopover
-              columns={exportColumns}
-              presets={exportPresets}
-              loading={exporting}
-              onSavePreset={handleSaveExportPreset}
-              onDeletePreset={handleDeleteExportPreset}
-              onExport={handleExport}
-              onOpen={async () => {
-                if (!exportColumns.length) await loadExportColumns();
-                if (!exportPresets.length) await loadExportPresets();
-              }}
-            />
-          ) : null}
-        </PageActionsRow>
-
         <section>
           <div className="space-y-3">
             <div className="xl:col-span-2">
@@ -880,6 +862,27 @@ export function InventoryStockPage({ config }: { config: InventoryStockPageConfi
                 animated={!shouldReduceMotion}
                 showSearch={false}
                 selectableColumns
+                toolbarActions={
+                  permissions.export ? (
+                    <ExportPopover
+                      buttonLabel=""
+                      buttonSize="icon"
+                      buttonClass="h-11 w-11 rounded-md shadow-sm"
+                      buttonVariant="outline"
+                      buttonTooltip="Exportar"
+                      columns={exportColumns}
+                      presets={exportPresets}
+                      loading={exporting}
+                      onSavePreset={handleSaveExportPreset}
+                      onDeletePreset={handleDeleteExportPreset}
+                      onExport={handleExport}
+                      onOpen={async () => {
+                        if (!exportColumns.length) await loadExportColumns();
+                        if (!exportPresets.length) await loadExportPresets();
+                      }}
+                    />
+                  ) : null
+                }
                 toolbarSearchContent={
                   <DataTableSearchBar
                     value={searchText}
