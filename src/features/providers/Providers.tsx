@@ -13,7 +13,6 @@ import {
 } from "@/shared/components/table/search";
 import { IconPaymentMethod } from "@/shared/components/components/dashboard/icons";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -48,7 +47,7 @@ import {
 import { PageShell } from "@/shared/layouts/PageShell";
 
 const PRIMARY = "hsl(var(--primary))";
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 25;
 
 export default function Providers() {
   const { showFeedback } = useFeedbackToast();
@@ -557,25 +556,6 @@ export default function Providers() {
 
   return (
     <PageShell>
-      <PageActionsRow>
-        {canCreateSuppliers ? (
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={startCreate}
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-            disabled={companyActionDisabled}
-            title={manageSupplierTitle}
-          >
-            Crear proveedor
-          </SystemButton>
-        ) : null}
-      </PageActionsRow>
-
       <DataTableSearchChips
         chips={searchChips}
         onRemove={(chip) => handleRemoveChip(chip.removeKey)}
@@ -591,6 +571,20 @@ export default function Providers() {
         selectableColumns
         hoverable={false}
         animated={false}
+        toolbarActions={
+          canCreateSuppliers ? (
+            <SystemButton
+              size="icon"
+              className="h-11 w-11 rounded-md shadow-sm"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={startCreate}
+              disabled={companyActionDisabled}
+              title={manageSupplierTitle ?? "Crear proveedor"}
+              tooltip="Crear proveedor"
+              aria-label="Crear proveedor"
+            />
+          ) : null
+        }
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}

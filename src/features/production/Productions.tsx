@@ -48,7 +48,6 @@ import TimerToEnd from "@/shared/components/components/TimerToEnd";
 import { PdfViewerModal } from "@/shared/components/components/ModalOpenPdf";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { ProductionOrderDetailModal } from "@/features/production/components/ProductionOrderDetailModal";
 import { ProductionOrderFormModal } from "@/features/production/components/ProductionOrderFormModal";
 import { useCompany } from "@/shared/hooks/useCompany";
@@ -71,8 +70,7 @@ import {
 } from "@/features/production/utils/productionSmartSearch";
 import { buildProductionItemSummaryLabel } from "@/features/production/utils/productionSkus";
 
-const PRIMARY = "hsl(var(--primary))";
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 25;
 const PHOTO_MODAL_SKIP_KEY = "production-photo-modal-skipped";
 
 const parseStockError = (message: string) => {
@@ -1108,35 +1106,6 @@ export default function Production() {
     <PageShell className="bg-white">
 
       <div className="space-y-4">
-        <PageActionsRow>
-          {canExportProduction && exportColumns.length ? (
-            <ExportPopover
-              columns={exportColumns}
-              loading={exporting}
-              presets={exportPresets}
-              onSavePreset={handleSaveExportPreset}
-              onDeletePreset={handleDeleteExportPreset}
-              onExport={handleExport}
-            />
-          ) : null}
-          {canCreateProduction ? (
-            <SystemButton
-              size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
-              style={{
-                backgroundColor: PRIMARY,
-                borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-                boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-              }}
-              onClick={handleCreate}
-              disabled={companyActionDisabled}
-              title={companyActionTitle}
-            >
-              Nueva orden
-            </SystemButton>
-          ) : null}
-        </PageActionsRow>
-
         <DataTableSearchChips
           chips={searchChips}
           onRemove={(chip) => handleRemoveChip(chip.removeKey)}
@@ -1152,6 +1121,37 @@ export default function Production() {
           hoverable={false}
           animated={false}
           selectableColumns
+          toolbarActions={
+            <>
+              {canExportProduction && exportColumns.length ? (
+                <ExportPopover
+                  buttonLabel=""
+                  buttonSize="icon"
+                  buttonClass="h-11 w-11 rounded-md shadow-sm"
+                  buttonVariant="outline"
+                  buttonTooltip="Exportar"
+                  columns={exportColumns}
+                  loading={exporting}
+                  presets={exportPresets}
+                  onSavePreset={handleSaveExportPreset}
+                  onDeletePreset={handleDeleteExportPreset}
+                  onExport={handleExport}
+                />
+              ) : null}
+              {canCreateProduction ? (
+                <SystemButton
+                  size="icon"
+                  className="h-11 w-11 rounded-md shadow-sm"
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  onClick={handleCreate}
+                  disabled={companyActionDisabled}
+                  title={companyActionTitle ?? "Nueva orden"}
+                  tooltip="Nueva orden"
+                  aria-label="Nueva orden"
+                />
+              ) : null}
+            </>
+          }
           toolbarSearchContent={
             <DataTableSearchBar
               value={searchText}

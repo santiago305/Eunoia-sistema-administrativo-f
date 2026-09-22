@@ -670,7 +670,7 @@ export default function Agencies() {
               <SystemButton
                 size="icon"
                 variant="outline"
-                className="h-11 rounded-md shadow"
+                className="h-11 w-11 rounded-md shadow"
                 leftIcon={<Sheet className="h-4 w-4" />}
                 onClick={() => setImportOpen(true)}
                 disabled={!canManageAgencies || importLoading}
@@ -681,7 +681,7 @@ export default function Agencies() {
                 <ExportPopover
                   buttonLabel=""
                   buttonSize="icon"
-                  buttonClass="h-11"
+                  buttonClass="h-11 w-11"
                   buttonVariant="outline"
                   buttonTooltip="Exportar"
                   columns={exportColumns}
@@ -694,7 +694,7 @@ export default function Agencies() {
               ) : null}
               <SystemButton
                 size="icon"
-                className="h-11 rounded-md shadow"
+                className="h-11 w-11 rounded-md shadow"
                 leftIcon={<Plus className="h-4 w-4" />}
                 onClick={() => setOpenCreate(true)}
                 disabled={!canManageAgencies}

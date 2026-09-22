@@ -54,11 +54,10 @@ import { StatusPill } from "@/shared/components/components/StatusTag";
 import { ActionsPopover } from "@/shared/components/components/ActionsPopover";
 import { PageShell } from "@/shared/layouts/PageShell";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { AlertModal } from "@/shared/components/components/AlertModal";
 
 const PRIMARY = "hsl(var(--primary))";
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 25;
 
 const EMPTY_WAREHOUSE_SEARCH_CATALOGS: WarehouseSearchCatalogs = {
   departments: [],
@@ -811,25 +810,6 @@ export default function Warehouses() {
 
   return (
     <PageShell>
-      <PageActionsRow>
-        {canCreateWarehouses ? (
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={startCreate}
-            style={{
-              backgroundColor: PRIMARY,
-              borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-              boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-            }}
-            disabled={manageActionDisabled}
-            title={manageActionTitle}
-          >
-            Crear almacen
-          </SystemButton>
-        ) : null}
-      </PageActionsRow>
-
       <DataTableSearchChips
         chips={searchChips}
         onRemove={(chip) => handleRemoveChip(chip.removeKey)}
@@ -845,6 +825,20 @@ export default function Warehouses() {
         selectableColumns
         hoverable={false}
         animated={false}
+        toolbarActions={
+          canCreateWarehouses ? (
+            <SystemButton
+              size="icon"
+              className="h-11 w-11 rounded-md shadow-sm"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={startCreate}
+              disabled={manageActionDisabled}
+              title={manageActionTitle ?? "Crear almacen"}
+              tooltip="Crear almacen"
+              aria-label="Crear almacen"
+            />
+          ) : null
+        }
         toolbarSearchContent={
           <DataTableSearchBar
             value={searchText}
