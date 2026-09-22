@@ -95,7 +95,7 @@ export function DataTableToolbar({
       </div>
 
       {rightContent || filtersConfig || rangeDates || smartRangeDate || refreshAction?.visible ? (
-        <div className="flex w-full gap-3 sm:w-auto sm:flex-row sm:items-center justify-end">
+        <div className="flex w-full gap-2 sm:w-auto sm:flex-row sm:items-center justify-end">
           {refreshAction?.visible ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
