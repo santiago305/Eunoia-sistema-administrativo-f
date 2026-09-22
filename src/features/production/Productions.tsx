@@ -70,6 +70,7 @@ import {
 } from "@/features/production/utils/productionSmartSearch";
 import { buildProductionItemSummaryLabel } from "@/features/production/utils/productionSkus";
 
+const PRIMARY = "hsl(var(--primary))";
 const DEFAULT_LIMIT = 25;
 const PHOTO_MODAL_SKIP_KEY = "production-photo-modal-skipped";
 
