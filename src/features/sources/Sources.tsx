@@ -13,7 +13,6 @@ import {
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
 import { SystemButton } from "@/shared/components/components/SystemButton";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { errorResponse, successResponse } from "@/shared/common/utils/response";
 import { useFeedbackToast } from "@/shared/hooks/useFeedbackToast";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -44,7 +43,7 @@ import {
 } from "@/features/sources/utils/sourceSmartSearch";
 
 const PRIMARY = "hsl(var(--primary))";
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 25;
 
 type BackendErrorPayload = {
   message?: string | string[];
@@ -506,23 +505,6 @@ export default function Sources() {
 
   return (
     <PageShell>
-      <PageActionsRow>
-        <SystemButton
-          size="sm"
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={startCreate}
-          style={{
-            backgroundColor: PRIMARY,
-            borderColor: `color-mix(in srgb, ${PRIMARY} 20%, transparent)`,
-            boxShadow: "0 10px 25px -15px rgba(0,0,0,0.4)",
-          }}
-          disabled={!canManageSources}
-          title={actionTitle}
-        >
-          Crear enganche
-        </SystemButton>
-      </PageActionsRow>
-
       <DataTableSearchChips
         chips={searchChips}
         onRemove={(chip) => {
@@ -540,6 +522,18 @@ export default function Sources() {
         selectableColumns
         hoverable={false}
         animated={false}
+        toolbarActions={
+          <SystemButton
+            size="icon"
+            className="h-11 w-11 rounded-md shadow-sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={startCreate}
+            disabled={!canManageSources}
+            title={actionTitle ?? "Crear enganche"}
+            tooltip="Crear enganche"
+            aria-label="Crear enganche"
+          />
+        }
         onRowClick={(row) => setDetailSourceId(row.id)}
         toolbarSearchContent={
           <DataTableSearchBar
