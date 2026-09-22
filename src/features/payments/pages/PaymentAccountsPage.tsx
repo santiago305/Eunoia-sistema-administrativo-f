@@ -8,7 +8,6 @@ import {
   DataTableSearchChips,
   type DataTableSavedSearchItem,
 } from "@/shared/components/table/search";
-import { PageActionsRow } from "@/shared/components/components/PageActionsRow";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { useCompany } from "@/shared/hooks/useCompany";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -25,14 +24,12 @@ import {
 } from "@/shared/services/companyPaymentAccountService";
 import type { CompanyPaymentAccount } from "../types/payment-account.types";
 import {
-  getCompanyPaymentAccountDisplay,
   getCompanyPaymentAccountTypeLabel,
   getCompanyPaymentAccountUsageLabel,
 } from "../paymentAccountView";
 import { CompanyPaymentAccountFormModal } from "../components/CompanyPaymentAccountFormModal";
 import { PaymentAccountActionsMenu } from "../components/PaymentAccountActionsMenu";
 import { PaymentAccountSmartSearchPanel } from "../components/PaymentAccountSmartSearchPanel";
-import { PaymentAccountStatusBadge } from "../components/PaymentAccountStatusBadge";
 import {
   PaymentAccountSearchFields,
   type PaymentAccountSearchRule,
@@ -52,6 +49,7 @@ import {
 
 const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
 const PAYMENT_ACCOUNT_SAVED_METRICS_KEY = "eunoia:payment-accounts:saved-search-metrics";
+const PAGE_SIZE = 25;
 
 export default function PaymentAccountsPage() {
   const { company } = useCompany();
@@ -69,6 +67,7 @@ export default function PaymentAccountsPage() {
     loadLocalSavedSearchMetrics<PaymentAccountSearchSnapshot>(PAYMENT_ACCOUNT_SAVED_METRICS_KEY),
   );
   const [busyAccountId, setBusyAccountId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const canCreate = can("payment_accounts.create");
   const canEdit = can("payment_accounts.edit");
   const canDisable = can("payment_accounts.disable");
@@ -138,6 +137,12 @@ export default function PaymentAccountsPage() {
     });
   }, [executedSnapshot, items]);
 
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE)));
+  const paginatedItems = useMemo(
+    () => filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [currentPage, filteredItems],
+  );
+
   const closeForm = useCallback(() => {
     setFormOpen(false);
     setEditingAccount(null);
@@ -160,7 +165,10 @@ export default function PaymentAccountsPage() {
   }, [busyAccountId, canDisable, load]);
 
   const submitSearch = useCallback(() => {
-    startTransition(() => setAppliedSearchText(searchText.trim()));
+    startTransition(() => {
+      setAppliedSearchText(searchText.trim());
+      setPage(1);
+    });
   }, [searchText]);
 
   const applySmartSnapshot = useCallback((snapshot: PaymentAccountSearchSnapshot) => {
@@ -169,11 +177,13 @@ export default function PaymentAccountsPage() {
       setSearchText(normalized.q ?? "");
       setAppliedSearchText(normalized.q ?? "");
       setSearchFilters(normalized.filters);
+      setPage(1);
     });
   }, []);
 
   const handleApplySearchRule = useCallback((rule: PaymentAccountSearchRule) => {
     startTransition(() => {
+      setPage(1);
       setSearchFilters((current) => {
         const next = upsertPaymentAccountSearchRule(
           sanitizePaymentAccountSearchSnapshot({ q: searchText, filters: current }),
@@ -186,6 +196,7 @@ export default function PaymentAccountsPage() {
 
   const handleRemoveSearchRule = useCallback((fieldId: PaymentAccountSearchFilterKey) => {
     startTransition(() => {
+      setPage(1);
       setSearchFilters((current) => {
         const next = removePaymentAccountSearchKey(
           sanitizePaymentAccountSearchSnapshot({ q: searchText, filters: current }),
@@ -202,6 +213,7 @@ export default function PaymentAccountsPage() {
       setSearchText(nextSnapshot.q ?? "");
       setAppliedSearchText(nextSnapshot.q ?? "");
       setSearchFilters(nextSnapshot.filters);
+      setPage(1);
     });
   }, [executedSnapshot]);
 
@@ -220,7 +232,7 @@ export default function PaymentAccountsPage() {
         snapshot,
       });
       setSavedMetrics(next);
-      showFeedback(successResponse("Metrica de cuentas de pago guardada."));
+      showFeedback(successResponse("Métrica de cuentas guardada."));
       return true;
     } finally {
       setSavingMetric(false);
@@ -230,7 +242,7 @@ export default function PaymentAccountsPage() {
   const handleDeleteMetric = useCallback((metricId: string) => {
     const next = deleteLocalSearchMetric<PaymentAccountSearchSnapshot>(PAYMENT_ACCOUNT_SAVED_METRICS_KEY, metricId);
     setSavedMetrics(next);
-    showFeedback(successResponse("Metrica de cuentas de pago eliminada."));
+    showFeedback(successResponse("Métrica de cuentas eliminada."));
   }, [showFeedback]);
 
   const columns = useMemo<DataTableColumn<CompanyPaymentAccount>[]>(
@@ -238,18 +250,15 @@ export default function PaymentAccountsPage() {
       {
         id: "maskedLabel",
         header: "Cuenta",
-        searchValue: (row) => getCompanyPaymentAccountDisplay(row),
+        searchValue: (row) => [row.name, row.maskedLabel, row.currency].filter(Boolean).join(" "),
         cell: (row) => (
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-black/80">{getCompanyPaymentAccountDisplay(row)}</span>
-              {row.isDefault ? (
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  Predeterminada
-                </span>
-              ) : null}
-            </div>
-            <p className="text-[11px] text-black/45">{row.name}</p>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="truncate font-medium text-foreground">{row.name}</span>
+            {row.isDefault ? (
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                Predeterminada
+              </span>
+            ) : null}
           </div>
         ),
         hideable: false,
@@ -291,14 +300,9 @@ export default function PaymentAccountsPage() {
         id: "currency",
         header: "Moneda",
         accessorKey: "currency",
-        cell: (row) => <span className="font-medium text-black/70">{row.currency}</span>,
-      },
-      {
-        id: "isActive",
-        header: "Estado",
-        accessorKey: "isActive",
-        sortAccessor: "isActive",
-        cell: (row) => <PaymentAccountStatusBadge isActive={row.isActive} />,
+        className: "text-center",
+        headerClassName: "text-center [&>div]:justify-center",
+        cell: (row) => <span className="font-medium text-foreground/70">{row.currency}</span>,
       },
       {
         id: "actions",
@@ -337,7 +341,7 @@ export default function PaymentAccountsPage() {
       value={searchText}
       onChange={(value) => startTransition(() => setSearchText(value))}
       onSubmitSearch={submitSearch}
-      searchLabel="Buscar cuentas de pago"
+      searchLabel="Buscar cuentas"
       searchName="payment-accounts-smart-search"
       canSaveMetric={hasPaymentAccountSearchCriteria(executedSnapshot)}
       saveLoading={savingMetric}
@@ -360,21 +364,6 @@ export default function PaymentAccountsPage() {
 
   return (
     <PageShell>
-      <PageActionsRow>
-        {canCreate && company?.companyId ? (
-          <SystemButton
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => {
-              setEditingAccount(null);
-              setFormOpen(true);
-            }}
-          >
-            Nueva cuenta de tesorería
-          </SystemButton>
-        ) : null}
-      </PageActionsRow>
-
       <DataTableSearchChips
         chips={searchChips}
         onRemove={(chip) => handleRemoveChip(chip.removeKey)}
@@ -382,13 +371,27 @@ export default function PaymentAccountsPage() {
 
       <DataTable
         tableId="payment-accounts-table"
-        data={filteredItems}
+        data={paginatedItems}
         columns={columns}
         rowKey="id"
         loading={loading}
-        emptyMessage="No hay cuentas de tesorería registradas."
+        emptyMessage="No hay cuentas registradas."
         selectableColumns
         toolbarSearchContent={toolbarSearchContent}
+        toolbarActions={canCreate && company?.companyId ? (
+          <SystemButton
+            size="sm"
+            leftIcon={<Plus aria-hidden="true" className="h-4 w-4" />}
+            onClick={() => {
+              setEditingAccount(null);
+              setFormOpen(true);
+            }}
+          >
+            Nueva cuenta bancaria
+          </SystemButton>
+        ) : null}
+        pagination={{ page: currentPage, limit: PAGE_SIZE, total: filteredItems.length }}
+        onPageChange={setPage}
         hoverable={false}
         animated={false}
       />

@@ -32,17 +32,37 @@ vi.mock("@/shared/components/table/DataTable", () => ({
     data,
     columns,
     toolbarSearchContent,
+    toolbarActions,
+    pagination,
   }: {
     data: Array<Record<string, unknown>>;
     columns: Array<{
       id: string;
       header: string;
+      className?: string;
+      headerClassName?: string;
       cell: (row: Record<string, unknown>) => React.ReactNode;
     }>;
     toolbarSearchContent?: React.ReactNode;
+    toolbarActions?: React.ReactNode;
+    pagination?: { page: number; limit: number; total: number };
   }) => (
     <div>
       <div>{toolbarSearchContent}</div>
+      <div data-testid="table-toolbar-actions">{toolbarActions}</div>
+      <div data-testid="table-columns">
+        {columns.map((column) => (
+          <span
+            key={column.id}
+            data-testid={`column-${column.id}`}
+            data-cell-class={column.className}
+            data-header-class={column.headerClassName}
+          >
+            {column.header}
+          </span>
+        ))}
+      </div>
+      <div data-testid="table-page-size">{pagination?.limit}</div>
       <div data-testid="payment-accounts-table">
         {data.map((row) => (
           <div data-testid="payment-account-row" key={String(row.id)}>
@@ -118,18 +138,53 @@ describe("PaymentAccountsPage", () => {
   it("filters payment accounts by visible account text", async () => {
     render(<PaymentAccountsPage />);
 
-    expect(await screen.findByText("BCP Operaciones ****6677 · PEN")).toBeInTheDocument();
-    expect(screen.getByText("Visa compras ****1234 · USD")).toBeInTheDocument();
+    expect(await screen.findByText("BCP Operaciones")).toBeInTheDocument();
+    expect(screen.getByText("Visa compras")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Buscar cuentas de pago"), {
+    fireEvent.change(screen.getByLabelText("Buscar cuentas"), {
       target: { value: "visa" },
     });
     fireEvent.click(screen.getByLabelText("Buscar"));
 
     await waitFor(() => {
-      expect(screen.queryByText("BCP Operaciones ****6677 · PEN")).not.toBeInTheDocument();
+      expect(screen.queryByText("BCP Operaciones")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("Visa compras ****1234 · USD")).toBeInTheDocument();
+    expect(screen.getByText("Visa compras")).toBeInTheDocument();
+  });
+
+  it("keeps the account table concise and places creation in its toolbar", async () => {
+    render(<PaymentAccountsPage />);
+
+    expect(await screen.findByText("BCP Operaciones")).toBeInTheDocument();
+    expect(screen.queryByText("BCP Operaciones ****6677 · PEN")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("table-toolbar-actions")).getByRole("button", {
+        name: "Nueva cuenta bancaria",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("table-page-size")).toHaveTextContent("25");
+    expect(screen.queryByTestId("column-isActive")).not.toBeInTheDocument();
+    expect(screen.getByTestId("column-currency")).toHaveAttribute("data-cell-class", "text-center");
+    expect(screen.getByTestId("column-currency")).toHaveAttribute(
+      "data-header-class",
+      "text-center [&>div]:justify-center",
+    );
+  });
+
+  it("shows at most 25 accounts per page", async () => {
+    listAccountsMock.mockResolvedValue(
+      Array.from({ length: 26 }, (_, index) => ({
+        ...accounts[0],
+        id: `account-${index + 1}`,
+        name: `Cuenta ${index + 1}`,
+        maskedLabel: `Cuenta ${index + 1} ****${String(index + 1).padStart(4, "0")}`,
+      })),
+    );
+
+    render(<PaymentAccountsPage />);
+
+    expect(await screen.findAllByTestId("payment-account-row")).toHaveLength(25);
+    expect(screen.getByTestId("table-page-size")).toHaveTextContent("25");
   });
 
   it("edits an existing payment account from the actions menu", async () => {
@@ -154,7 +209,7 @@ describe("PaymentAccountsPage", () => {
   it("does not render raw sensitive account numbers without sensitive permission", async () => {
     render(<PaymentAccountsPage />);
 
-    await screen.findByText("BCP Operaciones ****6677 · PEN");
+    await screen.findByText("BCP Operaciones");
 
     expect(screen.queryByText("0011223344556677")).not.toBeInTheDocument();
   });
@@ -162,26 +217,26 @@ describe("PaymentAccountsPage", () => {
   it("uses smart filters, chips and saved metrics for payment accounts", async () => {
     render(<PaymentAccountsPage />);
 
-    expect(await screen.findByText("BCP Operaciones ****6677 · PEN")).toBeInTheDocument();
+    expect(await screen.findByText("BCP Operaciones")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Buscar cuentas de pago"), {
+    fireEvent.change(screen.getByLabelText("Buscar cuentas"), {
       target: { value: "interbank" },
     });
     fireEvent.click(screen.getByLabelText("Buscar"));
 
     await waitFor(() => {
-      expect(screen.queryByText("BCP Operaciones ****6677 · PEN")).not.toBeInTheDocument();
+      expect(screen.queryByText("BCP Operaciones")).not.toBeInTheDocument();
     });
     expect(screen.getByText("Busqueda: interbank")).toBeInTheDocument();
 
-    fireEvent.focus(screen.getByLabelText("Buscar cuentas de pago"));
+    fireEvent.focus(screen.getByLabelText("Buscar cuentas"));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     fireEvent.change(screen.getByLabelText("Nombre de la metrica"), {
       target: { value: "Interbank guardado" },
     });
     const dialog = screen.getByRole("dialog", { name: "Guardar metrica" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
-    fireEvent.focus(screen.getByLabelText("Buscar cuentas de pago"));
+    fireEvent.focus(screen.getByLabelText("Buscar cuentas"));
 
     await waitFor(() => {
       expect(screen.getByText("Interbank guardado")).toBeInTheDocument();

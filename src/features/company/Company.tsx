@@ -316,7 +316,7 @@ export default function CompanyPage() {
                     navigate(RoutesPaths.paymentAccounts);
                   }}
                 >
-                  Ver cuentas de tesorería
+                  Ver cuentas
                 </SystemButton>
                 <SystemButton
                   fullWidth

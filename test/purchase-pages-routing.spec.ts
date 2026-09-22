@@ -58,13 +58,14 @@ describe("purchase pages routing", () => {
     expect(purchaseHrefs).toContain(RoutesPaths.recurringPurchases);
   });
 
-  it("adds payment methods to the payment sidebar group", () => {
-    const paymentsMenu = getSidebarItems().find((item) => item.label === "Tesorería");
+  it("adds payment methods to the finance sidebar group", () => {
+    const paymentsMenu = getSidebarItems().find((item) => item.label === "Finanzas");
     const paymentHrefs = paymentsMenu?.children?.map((child) => child.href) ?? [];
 
     expect(paymentHrefs).toContain(RoutesPaths.payments);
     expect(paymentHrefs).toContain(RoutesPaths.accountsPayable);
     expect(paymentHrefs).toContain(RoutesPaths.paymentAccounts);
     expect(paymentHrefs).toContain(RoutesPaths.paymentMethods);
+    expect(paymentsMenu?.children?.find((child) => child.href === RoutesPaths.paymentAccounts)?.label).toBe("Cuentas");
   });
 });

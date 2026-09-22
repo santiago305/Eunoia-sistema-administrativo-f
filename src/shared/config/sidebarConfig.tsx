@@ -53,7 +53,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
         ],
     },
     {
-        label: "Tesorería",
+        label: "Finanzas",
         icon: <IconPurchase className="text-sidebar-foreground" />,
         children: [
             {
@@ -73,7 +73,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
                 href: RoutesPaths.accountsPayable,
             },
             {
-                label: "Cuentas de tesorería",
+                label: "Cuentas",
                 href: RoutesPaths.paymentAccounts,
             },
             {

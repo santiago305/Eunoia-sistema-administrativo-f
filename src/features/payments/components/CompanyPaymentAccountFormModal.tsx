@@ -75,7 +75,7 @@ const errorMessage = (error: unknown) => {
     if (typeof response?.data?.message === "string") return response.data.message;
     if (Array.isArray(response?.data?.message)) return response.data.message.join(". ");
   }
-  return "No se pudo guardar la cuenta de tesorería.";
+  return "No se pudo guardar la cuenta.";
 };
 
 export function CompanyPaymentAccountFormModal({ open, companyId, account, onClose, onSaved }: Props) {
@@ -193,7 +193,7 @@ export function CompanyPaymentAccountFormModal({ open, companyId, account, onClo
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={account ? "Editar cuenta de tesorería" : "Nueva cuenta de tesorería"} className="max-w-2xl">
+    <Modal open={open} onClose={onClose} title={account ? "Editar cuenta" : "Nueva cuenta"} className="max-w-2xl">
       <div className="space-y-4">
         {submitError ? (
           <div ref={errorRef} tabIndex={-1} role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 outline-none">

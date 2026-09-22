@@ -43,9 +43,10 @@ export function PaymentAccountActionsMenu({
       compact
       showLabels
       triggerIcon={<Menu className="h-4 w-4" />}
-      popoverClassName="min-w-36"
-      popoverBodyClassName="p-2"
-      itemClassName="justify-start px-2 py-2"
+      popoverClassName="min-w-32"
+      popoverBodyClassName="p-1"
+      gridClassName="gap-0.5"
+      itemClassName="justify-start gap-1.5 px-2 py-1"
     />
   );
 }
