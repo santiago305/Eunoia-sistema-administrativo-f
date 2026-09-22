@@ -59,6 +59,9 @@ export function PurchasePaymentModal({
   isEdit
 }: PurchasePaymentModalProps) {
 
+  // Legacy purchase-editor adapter: persisted payment entry points use PaymentFlowModal.
+  // This editor remains until the purchase+payable+draft transaction is exposed by the backend.
+
   const accent = primaryColor ?? DEFAULT_PRIMARY;
 
   const showCredit = form.paymentForm === PaymentFormTypes.CREDITO;

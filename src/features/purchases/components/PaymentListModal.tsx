@@ -22,6 +22,7 @@ import type { PurchaseAttachment } from "@/features/purchases/types/purchase-att
 import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-attachment.types";
 import { ImagePreviewModal } from "@/shared/components/components/ImagePreviewModal";
 import { env } from "@/env";
+import type { CurrencyType } from "@/features/purchases/types/purchaseEnums";
 
 const PRIMARY = "hsl(var(--primary))";
 
@@ -56,6 +57,7 @@ export type PaymentListModalProps = {
   loadPurchases: () => void;
   credit?: boolean;
   open: boolean;
+  currency?: CurrencyType;
 };
 
 type PaymentRow = Payment & {
@@ -71,7 +73,8 @@ export function PaymentListModal({
   total,
   loadPurchases,
   credit,
-  open
+  open,
+  currency,
 }: PaymentListModalProps) {
   const [rows, setRows] = useState<Payment[]>(payments ?? []);
   const [loading, setLoading] = useState(false);
@@ -436,6 +439,7 @@ export function PaymentListModal({
         totalPaid={totalPaid}
         totalToPay={totalToPay}
         poId={poId}
+        currency={currency}
         onSaved={async () => {
           await reloadPayments({ silent: true });
           await reloadAttachments();

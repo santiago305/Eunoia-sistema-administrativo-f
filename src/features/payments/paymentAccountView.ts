@@ -3,6 +3,9 @@ import type {
   CompanyPaymentAccountType,
   CompanyPaymentAccountUsage,
 } from "./types/payment-account.types";
+import { getCompatibleTreasuryAccountTypes } from "./paymentPolicy";
+
+export { getCompatibleTreasuryAccountTypes } from "./paymentPolicy";
 
 export const getCompanyPaymentAccountTypeLabel = (type: CompanyPaymentAccountType) => {
   const labels: Record<CompanyPaymentAccountType, string> = {
@@ -24,15 +27,6 @@ export const getCompanyPaymentAccountDisplay = (account?: CompanyPaymentAccount 
   if (!account) return "-";
   return `${account.maskedLabel || account.name} · ${account.currency}`;
 };
-
-export const getCompatibleTreasuryAccountTypes = (paymentMethodCode?: string | null): CompanyPaymentAccountType[] => ({
-  CASH: ["CASH"],
-  BANK_TRANSFER: ["BANK_ACCOUNT"],
-  BANK_DEPOSIT: ["BANK_ACCOUNT", "CASH"],
-  CARD: ["CREDIT_CARD"],
-  DIGITAL_WALLET: ["DIGITAL_WALLET"],
-  CHECK: ["BANK_ACCOUNT"],
-} as Record<string, CompanyPaymentAccountType[]>)[(paymentMethodCode ?? "").toUpperCase()] ?? [];
 
 export const isTreasuryAccountOperational = (
   account: CompanyPaymentAccount,

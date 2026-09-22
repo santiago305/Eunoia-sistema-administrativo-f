@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AfectType } from "@/features/purchases/types/purchaseEnums";
 import { PurchaseItemTypes, PurchaseTypes } from "./types/purchase-classification.types";
 import type { PurchaseOrder, PurchaseOrderItem } from "./types/purchase";
@@ -59,6 +59,11 @@ vi.mock("@/shared/services/purchaseService", () => ({
   updatePurchaseOrder: vi.fn(),
   validatePurchaseOrderNumber: vi.fn().mockResolvedValue({ exists: false }),
 }));
+
+beforeEach(async () => {
+  const { getNextPurchaseOrderCorrelative } = await import("@/shared/services/purchaseService");
+  vi.mocked(getNextPurchaseOrderCorrelative).mockResolvedValue({ correlative: 15 });
+});
 
 vi.mock("sileo", () => ({
   sileo: {

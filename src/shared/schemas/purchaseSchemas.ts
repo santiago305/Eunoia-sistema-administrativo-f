@@ -125,6 +125,7 @@ export const createPaymentSchema = z.object({
   accountPayableId: uuidSchema.optional(),
   companyPaymentAccountId: uuidSchema.nullable().optional(),
   paymentMethodId: uuidSchema.nullable().optional(),
+  supplierPaymentDestinationId: uuidSchema.nullable().optional(),
   bankName: z.string().nullable().optional(),
   cardLastFour: z.string().nullable().optional(),
   operationCode: z.string().nullable().optional(),

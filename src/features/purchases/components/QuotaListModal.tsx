@@ -210,6 +210,7 @@ export function QuotaListModal({
         totalToPay={selectedTotals.totalToPay}
         poId={poId}
         quotaId={qtaId}
+        currency={currency}
         loadQuotas={loadQuotas}
         loadPurchases={loadPurchases}
       />

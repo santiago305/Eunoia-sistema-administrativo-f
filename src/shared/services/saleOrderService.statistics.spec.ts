@@ -40,6 +40,7 @@ describe("getSaleOrderStatistics", () => {
         q: "pedido",
         filters: JSON.stringify(filters),
         includeCancelled: true,
+        isActive: true,
       },
     });
   });
@@ -61,6 +62,7 @@ describe("getSaleOrderStatistics", () => {
         q: undefined,
         filters: undefined,
         includeCancelled: false,
+        isActive: true,
       },
     });
   });

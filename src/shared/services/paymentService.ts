@@ -128,6 +128,28 @@ export const rejectPayment = async (id: string, reason?: string): Promise<{ type
   return response.data;
 };
 
+export const createPaymentDraft = async (
+  payload: Payment,
+): Promise<{ type: string; message: string; paymentId?: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.createDraft, payload);
+  return response.data;
+};
+
+export const updatePaymentDraft = async (
+  id: string,
+  payload: Partial<Payment>,
+): Promise<{ type: string; message: string; paymentId?: string }> => {
+  const response = await axiosInstance.patch(API_PAYMENT_GROUP.updateDraft(id), payload);
+  return response.data;
+};
+
+export const submitPaymentDraft = async (
+  id: string,
+): Promise<{ type: string; message: string; paymentId?: string }> => {
+  const response = await axiosInstance.post(API_PAYMENT_GROUP.submitDraft(id));
+  return response.data;
+};
+
 export const voidPayment = async (id: string, reason: string): Promise<{ type: string; message: string }> => {
   const response = await axiosInstance.post(API_PAYMENT_GROUP.void(id), { reason });
   return response.data;

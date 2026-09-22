@@ -655,7 +655,7 @@ export default function PurchaseCreateLocal({
         });
         if (cancelled) return;
 
-        setForm((prev) => ({ ...prev, correlative: response.correlative }));
+        setForm((prev) => ({ ...prev, correlative: response?.correlative ?? 0 }));
       } catch {
         if (cancelled) return;
         setAutomaticNumberError("No se pudo calcular el siguiente número. Intenta nuevamente.");

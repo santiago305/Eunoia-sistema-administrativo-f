@@ -8,7 +8,7 @@ import { MoneyInput } from "@/shared/components/components/MoneyInput";
 import { SystemButton } from "@/shared/components/components/SystemButton";
 import { Modal } from "@/shared/components/modales/Modal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
-import { createPayment } from "@/shared/services/paymentService";
+import { createPaymentDraft, submitPaymentDraft } from "@/shared/services/paymentService";
 import { getAllPaymentMethods } from "@/shared/services/paymentMethodService";
 import { uploadPurchaseAttachment } from "@/shared/services/purchaseAttachmentService";
 import {
@@ -27,6 +27,7 @@ import { PurchaseAttachmentTypes } from "@/features/purchases/types/purchase-att
 import { normalizeMoney, parseDateInputValue, parseDecimalInput, toLocalDateKey } from "@/shared/utils/functionPurchases";
 import { CompanyPaymentAccountSelect } from "./CompanyPaymentAccountSelect";
 import { PurchasePayableSelect } from "./PurchasePayableSelect";
+import { PaymentReview } from "./PaymentReview";
 import type { CompanyPaymentAccount } from "../types/payment-account.types";
 import type { AccountPayable } from "../types/payable.types";
 
@@ -271,7 +272,7 @@ export function PaymentFormModal({
     const amountNumber = normalizeMoney(parseDecimalInput(amount));
     setSaving(true);
     try {
-      const response = await createPayment({
+      const payload = {
         method,
         date,
         operationNumber: operationNumber.trim() || undefined,
@@ -289,21 +290,29 @@ export function PaymentFormModal({
         operationCode: operationNumber.trim() || undefined,
         scheduledAt: mode === "schedule" ? scheduledAt : undefined,
         isPartial: initialPayment?.amount ? amountNumber < normalizeMoney(Number(initialPayment.amount)) : undefined,
-      });
+      };
+      const response = await createPaymentDraft({ ...payload, scheduledAt: mode === "schedule" ? scheduledAt : undefined });
 
       if (response.type !== "success") {
         showFeedback(errorResponse(response.message || "No se pudo guardar el pago."));
         return;
       }
 
-      if (evidenceFile && response.paymentId) {
-        await uploadPurchaseAttachment({
-          purchaseId: poId.trim(),
-          paymentId: response.paymentId,
-          type: PurchaseAttachmentTypes.PAYMENT_PROOF,
-          file: evidenceFile,
-          note: "Evidencia cargada al registrar el pago.",
-        });
+      if (response.paymentId) {
+        if (evidenceFile) {
+          await uploadPurchaseAttachment({
+            purchaseId: poId.trim(),
+            paymentId: response.paymentId,
+            type: PurchaseAttachmentTypes.PAYMENT_PROOF,
+            file: evidenceFile,
+            note: "Evidencia cargada al registrar el pago.",
+          });
+        }
+        const submitted = await submitPaymentDraft(response.paymentId);
+        if (submitted.type !== "success") {
+          showFeedback(errorResponse(submitted.message || "No se pudo enviar el pago."));
+          return;
+        }
       }
 
       showFeedback(successResponse(response.message || "Pago guardado correctamente."));
@@ -539,6 +548,24 @@ export function PaymentFormModal({
             ) : null}
           </div>
         ) : null}
+        <div className="sm:col-span-2">
+          <PaymentReview
+            payment={{
+              source: "PAYMENTS",
+              mode: mode === "schedule" ? "SCHEDULED" : "IMMEDIATE",
+              currency,
+              amount: normalizeMoney(parseDecimalInput(amount)) || 0,
+              paymentMethodId: selectedPaymentMethodId ?? "",
+              companyPaymentAccountId: selectedAccount?.id ?? null,
+              supplierPaymentDestinationId: supplierPaymentDestinationId || null,
+              operationNumber: operationNumber || null,
+            }}
+            methodLabel={selectedMethod?.name ?? method}
+            accountLabel={selectedAccount?.maskedLabel || selectedAccount?.name}
+            destinationLabel={supplierDestinations.find((item) => item.supplierPaymentDestinationId === supplierPaymentDestinationId)?.maskedLabel}
+            evidenceName={evidenceFile?.name}
+          />
+        </div>
       </div>
     </Modal>
   );

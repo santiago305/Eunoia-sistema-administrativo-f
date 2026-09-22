@@ -1543,6 +1543,7 @@ export default function Purchases() {
                 poId={poId}
                 open={modalPaymentList}
                 total={totalPo}
+                currency={selectedPurchaseRow?.purchase.currency}
                 className="w-[800px]"
                 loadPurchases={loadPurchases}
                 credit={paymentForm === PaymentFormTypes.CONTADO ? false : true}

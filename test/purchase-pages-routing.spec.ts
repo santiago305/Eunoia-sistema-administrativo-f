@@ -59,7 +59,7 @@ describe("purchase pages routing", () => {
   });
 
   it("adds payment methods to the payment sidebar group", () => {
-    const paymentsMenu = getSidebarItems().find((item) => item.label === "Pagos");
+    const paymentsMenu = getSidebarItems().find((item) => item.label === "Tesorería");
     const paymentHrefs = paymentsMenu?.children?.map((child) => child.href) ?? [];
 
     expect(paymentHrefs).toContain(RoutesPaths.payments);

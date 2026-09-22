@@ -4,11 +4,15 @@ import { PaymentFormModal } from "./PaymentFormModal";
 
 const {
   createPaymentMock,
+  createPaymentDraftMock,
+  submitPaymentDraftMock,
   getAllPaymentMethodsMock,
   listAccountPayablesMock,
   uploadPurchaseAttachmentMock,
 } = vi.hoisted(() => ({
   createPaymentMock: vi.fn(),
+  createPaymentDraftMock: vi.fn(),
+  submitPaymentDraftMock: vi.fn(),
   getAllPaymentMethodsMock: vi.fn(),
   listAccountPayablesMock: vi.fn(),
   uploadPurchaseAttachmentMock: vi.fn(),
@@ -16,6 +20,8 @@ const {
 
 vi.mock("@/shared/services/paymentService", () => ({
   createPayment: createPaymentMock,
+  createPaymentDraft: createPaymentDraftMock,
+  submitPaymentDraft: submitPaymentDraftMock,
 }));
 
 vi.mock("@/shared/services/paymentMethodService", () => ({
@@ -68,6 +74,8 @@ describe("PaymentFormModal", () => {
       limit: 20,
     });
     createPaymentMock.mockResolvedValue({ type: "success", message: "Pago registrado.", paymentId: "payment-1" });
+    createPaymentDraftMock.mockResolvedValue({ type: "success", message: "Borrador creado.", paymentId: "payment-1" });
+    submitPaymentDraftMock.mockResolvedValue({ type: "success", message: "Pago enviado.", paymentId: "payment-1" });
     uploadPurchaseAttachmentMock.mockResolvedValue({ type: "success", message: "Comprobante subido." });
   });
 
@@ -94,7 +102,7 @@ describe("PaymentFormModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /guardar pago/i }));
 
     await waitFor(() => {
-      expect(createPaymentMock).toHaveBeenCalledWith(
+      expect(createPaymentDraftMock).toHaveBeenCalledWith(
         expect.objectContaining({
           poId: "purchase-1",
           accountPayableId: "payable-1",
@@ -148,7 +156,7 @@ describe("PaymentFormModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /guardar pago/i }));
 
     await waitFor(() => {
-      expect(createPaymentMock).toHaveBeenCalledWith(
+      expect(createPaymentDraftMock).toHaveBeenCalledWith(
         expect.objectContaining({
           poId: "purchase-1",
           accountPayableId: "payable-1",

@@ -23,7 +23,7 @@ import {
 import { AccountPayableKpiStrip } from "../components/AccountPayableKpiStrip";
 import { AccountPayableSmartSearchPanel } from "../components/AccountPayableSmartSearchPanel";
 import { AccountsPayableTable } from "../components/AccountsPayableTable";
-import { PaymentFormModal, type PaymentFormInitialPayment } from "../components/PaymentFormModal";
+import { PaymentFlowModal } from "../components/PaymentFlowModal";
 import type {
   AccountPayableSearchRule,
   AccountPayableSearchSnapshot,
@@ -76,15 +76,6 @@ const buildInitialFilters = (purchaseId: string) => {
     ],
   }).filters;
 };
-
-const toInitialPayment = (payable: AccountPayable): PaymentFormInitialPayment => ({
-  poId: payable.purchaseId,
-  quotaId: payable.quotaId ?? undefined,
-  accountPayableId: payable.accountPayableId,
-  supplierId: payable.supplierId ?? undefined,
-  currency: payable.currency,
-  amount: payable.amountPending,
-});
 
 export default function AccountsPayablePage() {
   const { can } = usePermissions();
@@ -310,10 +301,19 @@ export default function AccountsPayablePage() {
         onSchedulePayment={(payable) => openPaymentForm(payable, "schedule")}
       />
 
-      <PaymentFormModal
+      <PaymentFlowModal
         open={Boolean(selected && paymentFormMode)}
-        mode={paymentFormMode ?? "create"}
-        initialPayment={selected ? toInitialPayment(selected) : null}
+        context={{
+          source: "PAYABLE",
+          mode: paymentFormMode === "schedule" ? "SCHEDULED" : "IMMEDIATE",
+          purchaseId: selected?.purchaseId,
+          quotaId: selected?.quotaId ?? undefined,
+          accountPayableId: selected?.accountPayableId,
+          supplierId: selected?.supplierId ?? undefined,
+          currency: selected?.currency,
+          suggestedAmount: selected?.amountPending,
+          lockObligation: true,
+        }}
         onClose={() => {
           setSelected(null);
           setPaymentFormMode(null);

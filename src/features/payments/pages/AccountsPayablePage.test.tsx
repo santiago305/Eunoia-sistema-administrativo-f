@@ -33,8 +33,8 @@ vi.mock("../components/AccountsPayableTable", () => ({
   ),
 }));
 
-vi.mock("../components/PaymentFormModal", () => ({
-  PaymentFormModal: () => null,
+vi.mock("../components/PaymentFlowModal", () => ({
+  PaymentFlowModal: () => null,
 }));
 
 describe("AccountsPayablePage", () => {

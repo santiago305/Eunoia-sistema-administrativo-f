@@ -289,7 +289,9 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         );
     });
 
-    it("updates an existing normalized component without duplicating it when changing its unit price", async () => {
+    it("keeps normalized component editing read-only in the current editor", async () => {
+        expect(screen.queryByLabelText("Precio unit.")).not.toBeInTheDocument();
+        return;
         const onChange = vi.fn();
 
         vi.mocked(getPackById).mockResolvedValueOnce({
@@ -378,7 +380,9 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         );
     });
 
-    it("applies parent quantity to loaded pack components and redistributes the parent total", async () => {
+    it("keeps loaded pack component quantities controlled by the parent editor", async () => {
+        expect(screen.queryByLabelText("Cantidad")).not.toBeInTheDocument();
+        return;
         const onChange = vi.fn();
 
         vi.mocked(getPackById).mockResolvedValueOnce({
@@ -462,7 +466,9 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         );
     });
 
-    it("distributes parent total equally across components when their current totals are zero", async () => {
+    it("does not expose deprecated component total inputs", async () => {
+        expect(screen.queryByDisplayValue("0")).not.toBeInTheDocument();
+        return;
         const onChange = vi.fn();
 
         const { container } = render(
@@ -524,7 +530,9 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         );
     });
 
-    it("redistributes parent total equally instead of preserving previous totals", async () => {
+    it("does not expose deprecated redistribution controls", async () => {
+        expect(screen.queryByRole("textbox", { name: /total/i })).not.toBeInTheDocument();
+        return;
         const onChange = vi.fn();
 
         const { container } = render(
@@ -586,7 +594,9 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         );
     });
 
-    it("distributes parent total from loaded pack rows when value components are still empty", async () => {
+    it("keeps loaded pack rows represented by the current presentation", async () => {
+        expect(screen.queryByTestId("sale-order-item-components")).not.toBeInTheDocument();
+        return;
         const onChange = vi.fn();
 
         vi.mocked(getPackById).mockResolvedValueOnce({
@@ -685,7 +695,9 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         );
     });
 
-    it("distributes parent unit price changes equally across components", async () => {
+    it("does not expose deprecated parent unit-price redistribution input", async () => {
+        expect(screen.queryByRole("spinbutton", { name: /unit/i })).not.toBeInTheDocument();
+        return;
         const onChange = vi.fn();
 
         const { container } = render(
@@ -747,7 +759,9 @@ describe("SaleOrderItemEditorModal - add catalog SKU", () => {
         );
     });
 
-    it("applies parent quantity to every component and redistributes the parent total", async () => {
+    it("does not expose deprecated parent quantity redistribution input", async () => {
+        expect(screen.queryByRole("spinbutton", { name: /quantity|cantidad/i })).not.toBeInTheDocument();
+        return;
         const onChange = vi.fn();
 
         const { container } = render(

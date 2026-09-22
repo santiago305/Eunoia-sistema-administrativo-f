@@ -33,7 +33,7 @@ import {
 import { PaymentKpiStrip } from "../components/PaymentKpiStrip";
 import { PaymentDetailModal } from "../components/PaymentDetailModal";
 import { PaymentEvidenceModal } from "../components/PaymentEvidenceModal";
-import { PaymentFormModal } from "../components/PaymentFormModal";
+import { PaymentFlowModal } from "../components/PaymentFlowModal";
 import { PaymentsTable } from "../components/PaymentsTable";
 import { PaymentSmartSearchPanel } from "../components/PaymentSmartSearchPanel";
 import { RejectPaymentModal } from "../components/RejectPaymentModal";
@@ -511,9 +511,12 @@ export default function PaymentsPage() {
         onVoid={setVoidingPayment}
       />
 
-      <PaymentFormModal
+      <PaymentFlowModal
         open={paymentFormMode !== null}
-        mode={paymentFormMode ?? "create"}
+        context={{
+          source: "PAYMENTS",
+          mode: paymentFormMode === "schedule" ? "SCHEDULED" : "IMMEDIATE",
+        }}
         onClose={() => setPaymentFormMode(null)}
         onSaved={loadPayments}
       />

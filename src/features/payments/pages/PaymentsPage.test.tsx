@@ -145,18 +145,16 @@ vi.mock("../components/PaymentSmartSearchPanel", () => ({
   PaymentSmartSearchPanel: () => <div data-testid="payments-smart-search-panel" />,
 }));
 
-vi.mock("../components/PaymentFormModal", () => ({
-  PaymentFormModal: ({
+vi.mock("../components/PaymentFlowModal", () => ({
+  PaymentFlowModal: ({
     open,
-    mode,
     onSaved,
   }: {
     open: boolean;
-    mode: "create" | "schedule";
     onSaved: () => void;
   }) =>
     open ? (
-      <div data-testid={`payment-form-modal-${mode}`}>
+      <div data-testid="payment-flow-modal">
         <button type="button" onClick={onSaved}>
           Guardar modal
         </button>

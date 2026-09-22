@@ -240,7 +240,7 @@ describe("DataTable range dates", () => {
     fireEvent.click(screen.getByRole("button", { name: "Fechas" }));
 
     const option = await screen.findByRole("button", { name: "Hoy" });
-    const calendarTitle = await screen.findByText("Julio 2026");
+    const calendarTitle = await screen.findByRole("button", { name: "Mes anterior" });
 
     expect(option.compareDocumentPosition(calendarTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

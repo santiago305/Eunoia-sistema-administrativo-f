@@ -401,6 +401,7 @@ export const API_PRODUCTION_ORDERS_GROUP = {
 
 export const API_PAYMENT_GROUP = {
   create: "/payments",
+  createDraft: "/payments/drafts",
   list: "/payments",
   searchState: "/payments/search-state",
   saveSearchMetric: "/payments/search-metrics",
@@ -417,6 +418,8 @@ export const API_PAYMENT_GROUP = {
   reject: (id: string) => `/payments/${id}/reject`,
   void: (id: string) => `/payments/${id}/void`,
   remove: (id: string) => `/payments/${id}`,
+  updateDraft: (id: string) => `/payments/${id}/draft`,
+  submitDraft: (id: string) => `/payments/${id}/submit`,
 };
 
 export const API_INCOME_GROUP = {

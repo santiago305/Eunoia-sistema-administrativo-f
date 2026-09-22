@@ -43,6 +43,6 @@ describe("PurchaseItemsSection", () => {
       "min-h-0",
     );
     expect(screen.getByTestId("purchase-items-table")).toHaveAttribute("data-table-class-name", "");
-    expect(screen.getByTestId("purchase-items-table")).toHaveAttribute("data-max-height", "200px");
+    expect(screen.getByTestId("purchase-items-table")).toHaveAttribute("data-max-height", "300px");
   });
 });

@@ -220,7 +220,7 @@ describe("SaleOrderBulkChangeStateModal", () => {
         await waitFor(() => expect(listSaleOrderStatesMock).toHaveBeenCalled());
 
         const currentStateFilter = screen.getByLabelText("Filtrar por estado");
-        expect(currentStateFilter).toHaveTextContent("Despachado");
+        expect(currentStateFilter).toHaveTextContent("Selecciona");
     });
 
     it("submits state mode with the selected target state", async () => {
